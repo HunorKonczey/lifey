@@ -1,0 +1,469 @@
+{
+  "info": {
+    "name": "Lifey API",
+    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*.\n\nExercises are seeded reference data (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank) and can also be managed via the *Exercises* CRUD endpoints. Deleting an exercise still referenced by a template/session returns 409.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "weightId", "value": "", "type": "string" },
+    { "key": "foodId", "value": "", "type": "string" },
+    { "key": "recipeId", "value": "", "type": "string" },
+    { "key": "mealId", "value": "", "type": "string" },
+    { "key": "templateId", "value": "", "type": "string" },
+    { "key": "sessionId", "value": "", "type": "string" },
+    { "key": "exerciseId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Weight Tracking",
+      "description": "Implemented feature. Daily body-weight entries.",
+      "item": [
+        {
+          "name": "List weights",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/weights",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "weights"]
+            },
+            "description": "Returns all weight entries ordered by date descending."
+          },
+          "response": []
+        },
+        {
+          "name": "Create weight",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('weightId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-06-18\",\n  \"weight\": 82.5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/weights",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "weights"]
+            },
+            "description": "Creates a weight entry. `date` must be today or in the past; `weight` must be positive. Returns 201 and stores the new id in the `weightId` variable."
+          },
+          "response": []
+        },
+        {
+          "name": "Create weight - validation error (example)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2030-01-01\",\n  \"weight\": -5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/weights",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "weights"]
+            },
+            "description": "Demonstrates the 400 validation response (future date + non-positive weight)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete weight",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/weights/{{weightId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "weights", "{{weightId}}"]
+            },
+            "description": "Deletes the weight entry with the captured id. Returns 204, or 404 if not found."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Nutrition - Foods",
+      "description": "Implemented feature. Manually-created foods with per-100g macros.",
+      "item": [
+        {
+          "name": "List foods",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/foods", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods"] },
+            "description": "Returns all foods."
+          },
+          "response": []
+        },
+        {
+          "name": "Get food",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/foods/{{foodId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods", "{{foodId}}"] },
+            "description": "Returns a single food by id, or 404 if not found."
+          },
+          "response": []
+        },
+        {
+          "name": "Create food",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('foodId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken breast\",\n  \"caloriesPer100g\": 165,\n  \"proteinPer100g\": 31,\n  \"carbsPer100g\": 0,\n  \"fatPer100g\": 3.6\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/foods", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods"] },
+            "description": "Creates a food. `name` is required; `caloriesPer100g` and `proteinPer100g` are required and must be >= 0; `carbsPer100g`/`fatPer100g` are optional. Returns 201 and stores the new id in the `foodId` variable."
+          },
+          "response": []
+        },
+        {
+          "name": "Create food - validation error (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"caloriesPer100g\": -10,\n  \"proteinPer100g\": null\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/foods", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods"] },
+            "description": "Demonstrates the 400 validation response (blank name, negative calories, missing protein)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update food",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken breast (grilled)\",\n  \"caloriesPer100g\": 165,\n  \"proteinPer100g\": 31,\n  \"carbsPer100g\": 0,\n  \"fatPer100g\": 3.6\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/foods/{{foodId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods", "{{foodId}}"] },
+            "description": "Updates the food with the captured id. Returns 200, or 404 if not found."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete food",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/foods/{{foodId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods", "{{foodId}}"] },
+            "description": "Deletes the food with the captured id. Returns 204, or 404 if not found."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Nutrition - Recipes",
+      "description": "Implemented feature. Recipes with a nested ingredient list referencing foods by id. The example bodies use the `{{foodId}}` captured by the Foods > Create food request, so run that first.",
+      "item": [
+        {
+          "name": "List recipes",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/recipes", "host": ["{{baseUrl}}"], "path": ["api", "v1", "recipes"] }, "description": "Returns all recipes with their ingredients." },
+          "response": []
+        },
+        {
+          "name": "Get recipe",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "recipes", "{{recipeId}}"] }, "description": "Returns a single recipe by id, or 404 if not found." },
+          "response": []
+        },
+        {
+          "name": "Create recipe",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('recipeId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken & rice\",\n  \"description\": \"Simple meal prep\",\n  \"ingredients\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 200 }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/recipes", "host": ["{{baseUrl}}"], "path": ["api", "v1", "recipes"] },
+            "description": "Creates a recipe. `name` required, at least one ingredient required, each ingredient needs an existing `foodId` and positive `quantityInGrams`. Returns 201 and stores the new id in `recipeId`. Unknown foodId returns 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Create recipe - validation error (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"ingredients\": []\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/recipes", "host": ["{{baseUrl}}"], "path": ["api", "v1", "recipes"] },
+            "description": "Demonstrates the 400 validation response (blank name, empty ingredients)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update recipe",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken & rice (bigger portion)\",\n  \"description\": \"Updated\",\n  \"ingredients\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 250 }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "recipes", "{{recipeId}}"] },
+            "description": "Replaces the recipe's fields and ingredient list. Returns 200, or 404 if recipe/food not found."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete recipe",
+          "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "recipes", "{{recipeId}}"] }, "description": "Deletes the recipe (and its ingredients) by id. Returns 204, or 404 if not found." },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Nutrition - Meals",
+      "description": "Implemented feature. Logged meals with a nested entry list referencing foods by id and a meal type (BREAKFAST/LUNCH/DINNER/SNACK). The example bodies use the `{{foodId}}` captured by Foods > Create food, so run that first.",
+      "item": [
+        {
+          "name": "List meals",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/meals", "host": ["{{baseUrl}}"], "path": ["api", "v1", "meals"] }, "description": "Returns all meals (newest first) with their entries." },
+          "response": []
+        },
+        {
+          "name": "Create meal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('mealId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"dateTime\": \"2026-06-18T08:00:00\",\n  \"mealType\": \"BREAKFAST\",\n  \"entries\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 150 }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/meals", "host": ["{{baseUrl}}"], "path": ["api", "v1", "meals"] },
+            "description": "Logs a meal. `dateTime` (today or past) and `mealType` required, at least one entry required, each entry needs an existing `foodId` and positive `quantityInGrams`. Returns 201 and stores the id in `mealId`. Unknown foodId returns 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Create meal - validation error (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"dateTime\": \"2030-01-01T08:00:00\",\n  \"mealType\": null,\n  \"entries\": []\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/meals", "host": ["{{baseUrl}}"], "path": ["api", "v1", "meals"] },
+            "description": "Demonstrates the 400 validation response (future dateTime, missing mealType, empty entries)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update meal",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"dateTime\": \"2026-06-18T08:30:00\",\n  \"mealType\": \"BREAKFAST\",\n  \"entries\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 180 }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/meals/{{mealId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "meals", "{{mealId}}"] },
+            "description": "Replaces the meal's fields and entry list. Returns 200, or 404 if meal/food not found."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete meal",
+          "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/meals/{{mealId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "meals", "{{mealId}}"] }, "description": "Deletes the meal (and its entries) by id. Returns 204, or 404 if not found." },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Exercises",
+      "description": "Implemented feature. CRUD for the exercise master list referenced by workout templates and sessions. Comes pre-seeded with ids 1-8.",
+      "item": [
+        {
+          "name": "List exercises",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/exercises", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exercises"] }, "description": "Returns all exercises ordered by name." },
+          "response": []
+        },
+        {
+          "name": "Get exercise",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/exercises/{{exerciseId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exercises", "{{exerciseId}}"] }, "description": "Returns a single exercise by id, or 404." },
+          "response": []
+        },
+        {
+          "name": "Create exercise",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('exerciseId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Lateral Raise\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/exercises", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exercises"] },
+            "description": "Creates an exercise. `name` required. Returns 201 and stores the id in `exerciseId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update exercise",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Lateral Raise (cable)\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/exercises/{{exerciseId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exercises", "{{exerciseId}}"] },
+            "description": "Renames the exercise. Returns 200, or 404 if not found."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete exercise",
+          "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/exercises/{{exerciseId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exercises", "{{exerciseId}}"] }, "description": "Deletes the exercise. Returns 204, 404 if not found, or 409 if still referenced by a template/session." },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Workouts",
+      "description": "Implemented feature. Workout templates (named lists of exercises) and logged workout sessions (sets with reps/weight). Both reference exercises by id (manage them via the Exercises folder; ids 1-8 are pre-seeded).",
+      "item": [
+        {
+          "name": "List workout templates",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/workout-templates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-templates"] }, "description": "Returns all workout templates with their exercise ids." },
+          "response": []
+        },
+        {
+          "name": "Create workout template",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('templateId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Push day\",\n  \"exerciseIds\": [1, 4]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/workout-templates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-templates"] },
+            "description": "Creates a template. `name` required, at least one exerciseId required, each must reference an existing exercise (else 404). Returns 201 and stores the id in `templateId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create workout template - validation error (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"exerciseIds\": []\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/workout-templates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-templates"] },
+            "description": "Demonstrates the 400 validation response (blank name, empty exerciseIds)."
+          },
+          "response": []
+        },
+        {
+          "name": "List workout sessions",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] }, "description": "Returns all sessions (newest first) with their sets." },
+          "response": []
+        },
+        {
+          "name": "Create workout session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('sessionId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"finishedAt\": \"2026-06-18T06:00:00Z\",\n  \"sets\": [\n    { \"exerciseId\": 1, \"reps\": 10, \"weight\": 60 },\n    { \"exerciseId\": 1, \"reps\": 8, \"weight\": 65 }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] },
+            "description": "Logs a session. `startedAt` required (today or past), `finishedAt` optional, at least one set required. Each set needs an existing exerciseId, positive reps, and weight >= 0. Returns 201 and stores the id in `sessionId`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Statistics",
+      "description": "Implemented feature. Aggregated totals over rolling periods: total calories & protein from logged meals, workout session count, and the latest weight entry.",
+      "item": [
+        {
+          "name": "Daily statistics",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/statistics/daily", "host": ["{{baseUrl}}"], "path": ["api", "v1", "statistics", "daily"] } },
+          "response": []
+        },
+        {
+          "name": "Weekly statistics",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/statistics/weekly", "host": ["{{baseUrl}}"], "path": ["api", "v1", "statistics", "weekly"] } },
+          "response": []
+        },
+        {
+          "name": "Monthly statistics",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/statistics/monthly", "host": ["{{baseUrl}}"], "path": ["api", "v1", "statistics", "monthly"] } },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
