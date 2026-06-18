@@ -1,0 +1,9 @@
+- Use Java 24
+- Use records for DTOs
+- Constructor injection only
+- No field injection
+- Lombok allowed
+- Flyway mandatory
+- OpenAPI mandatory
+- JUnit 5
+- Testcontainers preferred

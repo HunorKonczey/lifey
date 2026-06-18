@@ -1,0 +1,28 @@
+name: lifey
+description: Fitness and nutrition tracker mobile app.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.2.0
+  dio: ^5.5.0
+  isar: ^3.1.0
+  isar_flutter_libs: ^3.1.0
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.0
+  isar_generator: ^3.1.0
+  riverpod_generator: ^2.4.0
+
+flutter:
+  uses-material-design: true
