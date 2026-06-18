@@ -5,6 +5,7 @@ import com.lifey.weight.dto.WeightRequest;
 import com.lifey.weight.dto.WeightResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,7 +31,7 @@ class WeightServiceImplTest {
 
     @Test
     void findAll_mapsEntriesToResponses() {
-        when(repository.findAllByOrderByDateDesc())
+        when(repository.findAllByOrderByDateDescRecordedAtDesc())
                 .thenReturn(List.of(entry(1L, LocalDate.of(2026, 6, 18), 80.0)));
 
         List<WeightResponse> result = service.findAll();
@@ -43,9 +44,10 @@ class WeightServiceImplTest {
     }
 
     @Test
-    void create_savesAndReturnsResponse() {
+    void create_savesWithServerStampedRecordedAt() {
         WeightRequest request = new WeightRequest(LocalDate.of(2026, 6, 18), 80.0);
-        when(repository.save(any(WeightEntry.class))).thenAnswer(inv -> {
+        ArgumentCaptor<WeightEntry> captor = ArgumentCaptor.forClass(WeightEntry.class);
+        when(repository.save(captor.capture())).thenAnswer(inv -> {
             WeightEntry e = inv.getArgument(0);
             e.setId(5L);
             return e;
@@ -56,6 +58,8 @@ class WeightServiceImplTest {
         assertThat(result.id()).isEqualTo(5L);
         assertThat(result.date()).isEqualTo(LocalDate.of(2026, 6, 18));
         assertThat(result.weight()).isEqualTo(80.0);
+        // The recording instant is stamped server-side so same-day entries stay ordered.
+        assertThat(captor.getValue().getRecordedAt()).isNotNull();
     }
 
     @Test

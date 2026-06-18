@@ -8,8 +8,11 @@ import '../../domain/exercise.dart';
 typedef SetDraft = ({Exercise exercise, int reps, double weight});
 
 /// Bottom sheet to add a set (exercise + reps + weight). Pops with a [SetDraft].
+/// Pass [initialExercise] to pre-select it (e.g. when adding a template exercise).
 class AddSetSheet extends ConsumerStatefulWidget {
-  const AddSetSheet({super.key});
+  const AddSetSheet({super.key, this.initialExercise});
+
+  final Exercise? initialExercise;
 
   @override
   ConsumerState<AddSetSheet> createState() => _AddSetSheetState();
@@ -20,6 +23,12 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
   final _reps = TextEditingController();
   final _weight = TextEditingController();
   Exercise? _exercise;
+
+  @override
+  void initState() {
+    super.initState();
+    _exercise = widget.initialExercise;
+  }
 
   @override
   void dispose() {

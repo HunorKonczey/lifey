@@ -37,8 +37,39 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         WorkoutSession session = new WorkoutSession();
         session.setStartedAt(request.startedAt());
         session.setFinishedAt(request.finishedAt());
+        replaceSets(session, request.sets());
+        return WorkoutSessionMapper.toResponse(sessionRepository.save(session));
+    }
 
-        for (ExerciseSetRequest item : request.sets()) {
+    @Override
+    public WorkoutSessionResponse update(Long id, WorkoutSessionRequest request) {
+        WorkoutSession session = getOrThrow(id);
+        session.setStartedAt(request.startedAt());
+        session.setFinishedAt(request.finishedAt());
+        replaceSets(session, request.sets());
+        return WorkoutSessionMapper.toResponse(session);
+    }
+
+    @Override
+    public void delete(Long id) {
+        if (!sessionRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Workout session not found: " + id);
+        }
+        sessionRepository.deleteById(id);
+    }
+
+    private WorkoutSession getOrThrow(Long id) {
+        return sessionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Workout session not found: " + id));
+    }
+
+    /**
+     * Rebuilds the session's set list from the request, resolving each
+     * {@code exerciseId}. Relies on {@code orphanRemoval} to delete dropped sets.
+     */
+    private void replaceSets(WorkoutSession session, List<ExerciseSetRequest> requested) {
+        session.getSets().clear();
+        for (ExerciseSetRequest item : requested) {
             Exercise exercise = exerciseRepository.findById(item.exerciseId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + item.exerciseId()));
 
@@ -49,7 +80,5 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             set.setWeight(item.weight());
             session.getSets().add(set);
         }
-
-        return WorkoutSessionMapper.toResponse(sessionRepository.save(session));
     }
 }

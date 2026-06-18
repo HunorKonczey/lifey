@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_client.dart';
 import '../domain/workout_template.dart';
 
-/// REST access to the `/workout-templates` endpoints (list + create).
+/// REST access to the `/workout-templates` endpoints (list, create, update, delete).
 class WorkoutTemplateRepository {
   WorkoutTemplateRepository(this._dio);
 
@@ -26,6 +26,22 @@ class WorkoutTemplateRepository {
       data: {'name': name, 'exerciseIds': exerciseIds},
     );
     return WorkoutTemplate.fromJson(response.data!);
+  }
+
+  Future<WorkoutTemplate> update({
+    required int id,
+    required String name,
+    required List<int> exerciseIds,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/workout-templates/$id',
+      data: {'name': name, 'exerciseIds': exerciseIds},
+    );
+    return WorkoutTemplate.fromJson(response.data!);
+  }
+
+  Future<void> delete(int id) async {
+    await _dio.delete('/workout-templates/$id');
   }
 }
 

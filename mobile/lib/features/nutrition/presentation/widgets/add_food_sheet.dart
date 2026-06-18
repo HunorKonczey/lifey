@@ -73,6 +73,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return; // guard against a fast double-tap saving twice
     if (!_formKey.currentState!.validate()) return;
     final carbsText = _carbs.text.trim();
     final fatText = _fat.text.trim();

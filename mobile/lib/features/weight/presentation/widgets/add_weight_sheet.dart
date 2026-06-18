@@ -39,6 +39,7 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return; // guard against a fast double-tap saving twice
     if (!_formKey.currentState!.validate()) return;
     final weight = double.parse(_weightController.text.replaceAll(',', '.'));
 

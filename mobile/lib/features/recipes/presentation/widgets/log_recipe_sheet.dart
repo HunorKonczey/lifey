@@ -53,6 +53,7 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return; // guard against a fast double-tap creating two meals
     setState(() => _submitting = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);

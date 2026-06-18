@@ -1,5 +1,6 @@
 package com.lifey.workout.session;
 
+import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.workout.session.dto.ExerciseSetResponse;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
 import org.junit.jupiter.api.Test;
@@ -13,10 +14,14 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -62,5 +67,38 @@ class WorkoutSessionControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(workoutSessionService, never()).create(any());
+    }
+
+    @Test
+    void update_returnsOk() throws Exception {
+        when(workoutSessionService.update(eq(2L), any())).thenReturn(new WorkoutSessionResponse(2L,
+                Instant.parse("2026-06-01T05:00:00Z"),
+                Instant.parse("2026-06-01T06:00:00Z"),
+                List.of(new ExerciseSetResponse(1L, "Bench Press", 8, 70.0))));
+
+        mockMvc.perform(put("/api/v1/workout-sessions/2").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","
+                                + "\"finishedAt\":\"2026-06-01T06:00:00Z\","
+                                + "\"sets\":[{\"exerciseId\":1,\"reps\":8,\"weight\":70}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.finishedAt").value("2026-06-01T06:00:00Z"))
+                .andExpect(jsonPath("$.sets[0].reps").value(8));
+    }
+
+    @Test
+    void delete_returnsNoContent() throws Exception {
+        mockMvc.perform(delete("/api/v1/workout-sessions/2"))
+                .andExpect(status().isNoContent());
+
+        verify(workoutSessionService).delete(2L);
+    }
+
+    @Test
+    void delete_notFoundReturns404() throws Exception {
+        doThrow(new ResourceNotFoundException("Workout session not found: 99"))
+                .when(workoutSessionService).delete(99L);
+
+        mockMvc.perform(delete("/api/v1/workout-sessions/99"))
+                .andExpect(status().isNotFound());
     }
 }

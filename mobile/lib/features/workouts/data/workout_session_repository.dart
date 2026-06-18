@@ -52,6 +52,33 @@ class WorkoutSessionRepository {
     );
     return WorkoutSession.fromJson(response.data!);
   }
+
+  Future<WorkoutSession> update(
+    int id, {
+    required DateTime startedAt,
+    DateTime? finishedAt,
+    required List<ExerciseSetInput> sets,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/workout-sessions/$id',
+      data: {
+        'startedAt': startedAt.toUtc().toIso8601String(),
+        if (finishedAt != null) 'finishedAt': finishedAt.toUtc().toIso8601String(),
+        'sets': sets
+            .map((s) => {
+                  'exerciseId': s.exerciseId,
+                  'reps': s.reps,
+                  'weight': s.weight,
+                })
+            .toList(),
+      },
+    );
+    return WorkoutSession.fromJson(response.data!);
+  }
+
+  Future<void> delete(int id) async {
+    await _dio.delete('/workout-sessions/$id');
+  }
 }
 
 final workoutSessionRepositoryProvider =

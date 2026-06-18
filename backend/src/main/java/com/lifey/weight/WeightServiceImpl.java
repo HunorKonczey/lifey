@@ -6,6 +6,7 @@ import com.lifey.weight.dto.WeightResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -21,14 +22,17 @@ public class WeightServiceImpl implements WeightService {
     @Override
     @Transactional(readOnly = true)
     public List<WeightResponse> findAll() {
-        return repository.findAllByOrderByDateDesc().stream()
+        return repository.findAllByOrderByDateDescRecordedAtDesc().stream()
                 .map(WeightMapper::toResponse)
                 .toList();
     }
 
     @Override
     public WeightResponse create(WeightRequest request) {
-        WeightEntry saved = repository.save(WeightMapper.toEntity(request));
+        WeightEntry entry = WeightMapper.toEntity(request);
+        // Stamp the recording instant server-side so same-day entries keep their order.
+        entry.setRecordedAt(Instant.now());
+        WeightEntry saved = repository.save(entry);
         return WeightMapper.toResponse(saved);
     }
 

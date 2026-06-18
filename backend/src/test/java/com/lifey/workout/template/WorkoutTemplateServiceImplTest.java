@@ -59,6 +59,43 @@ class WorkoutTemplateServiceImplTest {
                 .hasMessageContaining("Exercise not found: 99");
     }
 
+    @Test
+    void update_replacesNameAndExercises() {
+        WorkoutTemplate existing = new WorkoutTemplate();
+        existing.setId(9L);
+        existing.setName("Push day");
+        WorkoutTemplateExercise oldLink = new WorkoutTemplateExercise();
+        oldLink.setExercise(exercise(1L, "Bench Press"));
+        existing.getExercises().add(oldLink);
+        when(templateRepository.findById(9L)).thenReturn(Optional.of(existing));
+        when(exerciseRepository.findById(4L)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
+
+        WorkoutTemplateResponse result =
+                service.update(9L, new WorkoutTemplateRequest("Shoulders", List.of(4L)));
+
+        assertThat(result.id()).isEqualTo(9L);
+        assertThat(result.name()).isEqualTo("Shoulders");
+        assertThat(result.exerciseIds()).containsExactly(4L);
+    }
+
+    @Test
+    void update_throwsWhenTemplateMissing() {
+        when(templateRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.update(99L, new WorkoutTemplateRequest("X", List.of(1L))))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Workout template not found: 99");
+    }
+
+    @Test
+    void delete_throwsWhenMissing() {
+        when(templateRepository.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.delete(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Workout template not found: 99");
+    }
+
     private static Exercise exercise(Long id, String name) {
         Exercise e = new Exercise();
         e.setId(id);

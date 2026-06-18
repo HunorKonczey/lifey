@@ -44,6 +44,22 @@ class MealRepository {
     return Meal.fromJson(response.data!);
   }
 
+  Future<Meal> update(
+    int id, {
+    required DateTime dateTime,
+    required MealType mealType,
+    required List<MealEntryInput> entries,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>('/meals/$id', data: {
+      'dateTime': _dateTimeFormat.format(dateTime),
+      'mealType': mealType.apiValue,
+      'entries': entries
+          .map((e) => {'foodId': e.foodId, 'quantityInGrams': e.grams})
+          .toList(),
+    });
+    return Meal.fromJson(response.data!);
+  }
+
   Future<void> delete(int id) async {
     await _dio.delete('/meals/$id');
   }

@@ -19,6 +19,16 @@ class MealController extends AsyncNotifier<List<Meal>> {
     state = await AsyncValue.guard(_repo.fetchAll);
   }
 
+  Future<void> updateMeal(
+    int id, {
+    required DateTime dateTime,
+    required MealType mealType,
+    required List<MealEntryInput> entries,
+  }) async {
+    await _repo.update(id, dateTime: dateTime, mealType: mealType, entries: entries);
+    state = await AsyncValue.guard(_repo.fetchAll);
+  }
+
   Future<void> deleteMeal(int id) async {
     await _repo.delete(id);
     state = await AsyncValue.guard(_repo.fetchAll);

@@ -12,10 +12,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -56,6 +60,35 @@ class WorkoutTemplateControllerTest {
 
         mockMvc.perform(post("/api/v1/workout-templates").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Bad\",\"exerciseIds\":[99]}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void update_returnsOk() throws Exception {
+        when(workoutTemplateService.update(eq(9L), any()))
+                .thenReturn(new WorkoutTemplateResponse(9L, "Shoulders", List.of(4L)));
+
+        mockMvc.perform(put("/api/v1/workout-templates/9").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Shoulders\",\"exerciseIds\":[4]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Shoulders"))
+                .andExpect(jsonPath("$.exerciseIds[0]").value(4));
+    }
+
+    @Test
+    void delete_returnsNoContent() throws Exception {
+        mockMvc.perform(delete("/api/v1/workout-templates/9"))
+                .andExpect(status().isNoContent());
+
+        verify(workoutTemplateService).delete(9L);
+    }
+
+    @Test
+    void delete_notFoundReturns404() throws Exception {
+        doThrow(new ResourceNotFoundException("Workout template not found: 99"))
+                .when(workoutTemplateService).delete(99L);
+
+        mockMvc.perform(delete("/api/v1/workout-templates/99"))
                 .andExpect(status().isNotFound());
     }
 }

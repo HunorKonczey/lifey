@@ -56,7 +56,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         double totalCarbs = mealRepository.sumCarbsSince(fromDateTime);
         double totalFat = mealRepository.sumFatSince(fromDateTime);
         long workoutCount = workoutSessionRepository.countByStartedAtGreaterThanEqual(fromInstant);
-        Double latestWeight = weightEntryRepository.findFirstByOrderByDateDesc()
+        Double latestWeight = weightEntryRepository.findFirstByOrderByDateDescRecordedAtDesc()
                 .map(WeightEntry::getWeight)
                 .orElse(null);
 

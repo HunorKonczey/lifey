@@ -9,5 +9,11 @@ public interface WorkoutTemplateService {
 
     List<WorkoutTemplateResponse> findAll();
 
+    WorkoutTemplateResponse findById(Long id);
+
     WorkoutTemplateResponse create(WorkoutTemplateRequest request);
+
+    WorkoutTemplateResponse update(Long id, WorkoutTemplateRequest request);
+
+    void delete(Long id);
 }

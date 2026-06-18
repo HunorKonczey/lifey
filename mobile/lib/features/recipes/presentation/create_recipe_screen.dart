@@ -67,6 +67,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   }
 
   Future<void> _save() async {
+    if (_saving) return; // guard against a fast double-tap creating two recipes
     final messenger = ScaffoldMessenger.of(context);
     if (_name.text.trim().isEmpty) {
       messenger.showSnackBar(const SnackBar(content: Text('Enter a name')));

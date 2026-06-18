@@ -3,10 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
+import '../domain/workout_template.dart';
 
-/// Full-screen form for creating a workout template: a name + chosen exercises.
+/// Full-screen form for creating a workout template, or editing one when
+/// [template] is given: a name + chosen exercises.
 class CreateTemplateScreen extends ConsumerStatefulWidget {
-  const CreateTemplateScreen({super.key});
+  const CreateTemplateScreen({super.key, this.template});
+
+  final WorkoutTemplate? template;
 
   @override
   ConsumerState<CreateTemplateScreen> createState() =>
@@ -18,6 +22,18 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
   final Set<int> _selected = {};
   bool _saving = false;
 
+  bool get _isEditing => widget.template != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final template = widget.template;
+    if (template != null) {
+      _name.text = template.name;
+      _selected.addAll(template.exerciseIds);
+    }
+  }
+
   @override
   void dispose() {
     _name.dispose();
@@ -25,6 +41,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
   }
 
   Future<void> _save() async {
+    if (_saving) return; // guard against a fast double-tap creating two templates
     final messenger = ScaffoldMessenger.of(context);
     if (_name.text.trim().isEmpty) {
       messenger.showSnackBar(const SnackBar(content: Text('Enter a name')));
@@ -38,10 +55,19 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
     setState(() => _saving = true);
     final navigator = Navigator.of(context);
     try {
-      await ref.read(workoutTemplateControllerProvider.notifier).createTemplate(
-            name: _name.text.trim(),
-            exerciseIds: _selected.toList(),
-          );
+      final notifier = ref.read(workoutTemplateControllerProvider.notifier);
+      if (_isEditing) {
+        await notifier.updateTemplate(
+          id: widget.template!.id,
+          name: _name.text.trim(),
+          exerciseIds: _selected.toList(),
+        );
+      } else {
+        await notifier.createTemplate(
+          name: _name.text.trim(),
+          exerciseIds: _selected.toList(),
+        );
+      }
       navigator.pop();
     } catch (_) {
       setState(() => _saving = false);
@@ -57,7 +83,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New template'),
+        title: Text(_isEditing ? 'Edit template' : 'New template'),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,

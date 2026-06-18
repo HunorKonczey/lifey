@@ -24,6 +24,7 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return; // guard against a fast double-tap saving twice
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _submitting = true;

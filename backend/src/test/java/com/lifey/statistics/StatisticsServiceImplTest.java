@@ -83,11 +83,11 @@ class StatisticsServiceImplTest {
         when(mealRepository.sumFatSince(any())).thenReturn(10.0);
         when(workoutSessionRepository.countByStartedAtGreaterThanEqual(any())).thenReturn(workouts);
         if (weight == null) {
-            when(weightEntryRepository.findFirstByOrderByDateDesc()).thenReturn(Optional.empty());
+            when(weightEntryRepository.findFirstByOrderByDateDescRecordedAtDesc()).thenReturn(Optional.empty());
         } else {
             WeightEntry e = new WeightEntry();
             e.setWeight(weight);
-            when(weightEntryRepository.findFirstByOrderByDateDesc()).thenReturn(Optional.of(e));
+            when(weightEntryRepository.findFirstByOrderByDateDescRecordedAtDesc()).thenReturn(Optional.of(e));
         }
     }
 

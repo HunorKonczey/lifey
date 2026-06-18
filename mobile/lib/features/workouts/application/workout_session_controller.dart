@@ -19,6 +19,21 @@ class WorkoutSessionController extends AsyncNotifier<List<WorkoutSession>> {
     state = await AsyncValue.guard(_repo.fetchAll);
   }
 
+  Future<void> updateSession(
+    int id, {
+    required DateTime startedAt,
+    DateTime? finishedAt,
+    required List<ExerciseSetInput> sets,
+  }) async {
+    await _repo.update(id, startedAt: startedAt, finishedAt: finishedAt, sets: sets);
+    state = await AsyncValue.guard(_repo.fetchAll);
+  }
+
+  Future<void> deleteSession(int id) async {
+    await _repo.delete(id);
+    state = await AsyncValue.guard(_repo.fetchAll);
+  }
+
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(_repo.fetchAll);

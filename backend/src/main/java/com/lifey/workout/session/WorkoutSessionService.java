@@ -10,4 +10,8 @@ public interface WorkoutSessionService {
     List<WorkoutSessionResponse> findAll();
 
     WorkoutSessionResponse create(WorkoutSessionRequest request);
+
+    WorkoutSessionResponse update(Long id, WorkoutSessionRequest request);
+
+    void delete(Long id);
 }
