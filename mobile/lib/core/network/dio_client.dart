@@ -1,12 +1,16 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Provides the configured Dio HTTP client.
+import 'api_config.dart';
+
+/// Provides the configured Dio HTTP client pointed at the Lifey backend.
 final dioClientProvider = Provider<Dio>((ref) {
-  final dio = Dio(
+  return Dio(
     BaseOptions(
-      baseUrl: 'http://localhost:8080/api/v1',
+      baseUrl: ApiConfig.baseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+      headers: {'Content-Type': 'application/json'},
     ),
   );
-  return dio;
 });

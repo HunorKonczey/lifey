@@ -44,6 +44,8 @@ class StatisticsServiceImplTest {
 
         assertThat(result.totalCalories()).isEqualTo(200.0);
         assertThat(result.totalProtein()).isEqualTo(20.0);
+        assertThat(result.totalCarbs()).isEqualTo(30.0);
+        assertThat(result.totalFat()).isEqualTo(10.0);
         assertThat(result.workoutCount()).isEqualTo(1);
         assertThat(result.latestWeight()).isEqualTo(78.4);
         assertThat(capturedFrom()).isEqualTo(LocalDate.now().atStartOfDay());
@@ -77,6 +79,8 @@ class StatisticsServiceImplTest {
     private void stubAggregates(double calories, double protein, long workouts, Double weight) {
         when(mealRepository.sumCaloriesSince(any())).thenReturn(calories);
         when(mealRepository.sumProteinSince(any())).thenReturn(protein);
+        when(mealRepository.sumCarbsSince(any())).thenReturn(30.0);
+        when(mealRepository.sumFatSince(any())).thenReturn(10.0);
         when(workoutSessionRepository.countByStartedAtGreaterThanEqual(any())).thenReturn(workouts);
         if (weight == null) {
             when(weightEntryRepository.findFirstByOrderByDateDesc()).thenReturn(Optional.empty());

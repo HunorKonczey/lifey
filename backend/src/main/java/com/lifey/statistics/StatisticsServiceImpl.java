@@ -53,11 +53,14 @@ public class StatisticsServiceImpl implements StatisticsService {
 
         double totalCalories = mealRepository.sumCaloriesSince(fromDateTime);
         double totalProtein = mealRepository.sumProteinSince(fromDateTime);
+        double totalCarbs = mealRepository.sumCarbsSince(fromDateTime);
+        double totalFat = mealRepository.sumFatSince(fromDateTime);
         long workoutCount = workoutSessionRepository.countByStartedAtGreaterThanEqual(fromInstant);
         Double latestWeight = weightEntryRepository.findFirstByOrderByDateDesc()
                 .map(WeightEntry::getWeight)
                 .orElse(null);
 
-        return new StatisticsResponse(totalCalories, totalProtein, (int) workoutCount, latestWeight);
+        return new StatisticsResponse(totalCalories, totalProtein, totalCarbs, totalFat,
+                (int) workoutCount, latestWeight);
     }
 }

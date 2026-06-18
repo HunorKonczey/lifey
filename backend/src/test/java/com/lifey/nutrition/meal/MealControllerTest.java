@@ -33,7 +33,7 @@ class MealControllerTest {
     void create_returnsCreated() throws Exception {
         when(mealService.create(any())).thenReturn(new MealResponse(4L,
                 LocalDateTime.of(2026, 6, 1, 8, 0), MealType.BREAKFAST,
-                List.of(new MealEntryResponse(1L, "Oats", 80.0))));
+                List.of(new MealEntryResponse(1L, "Oats", 80.0, 311.2, 13.6))));
 
         mockMvc.perform(post("/api/v1/meals").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"dateTime\":\"2026-06-01T08:00:00\",\"mealType\":\"BREAKFAST\","

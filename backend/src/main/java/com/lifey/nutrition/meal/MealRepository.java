@@ -24,4 +24,18 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
             where e.meal.dateTime >= :from
             """)
     double sumProteinSince(@Param("from") LocalDateTime from);
+
+    @Query("""
+            select coalesce(sum(coalesce(f.carbsPer100g, 0) * e.quantityInGrams / 100.0), 0)
+            from MealEntry e join e.food f
+            where e.meal.dateTime >= :from
+            """)
+    double sumCarbsSince(@Param("from") LocalDateTime from);
+
+    @Query("""
+            select coalesce(sum(coalesce(f.fatPer100g, 0) * e.quantityInGrams / 100.0), 0)
+            from MealEntry e join e.food f
+            where e.meal.dateTime >= :from
+            """)
+    double sumFatSince(@Param("from") LocalDateTime from);
 }

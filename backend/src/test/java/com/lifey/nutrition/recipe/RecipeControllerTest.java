@@ -32,7 +32,7 @@ class RecipeControllerTest {
     @Test
     void create_returnsCreatedWithIngredients() throws Exception {
         when(recipeService.create(any())).thenReturn(new RecipeResponse(7L, "Chicken & rice", "prep",
-                List.of(new RecipeIngredientResponse(1L, "Chicken", 200.0))));
+                List.of(new RecipeIngredientResponse(1L, "Chicken", 200.0, 330.0, 62.0))));
 
         mockMvc.perform(post("/api/v1/recipes").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Chicken & rice\",\"description\":\"prep\","

@@ -1,5 +1,6 @@
 package com.lifey.nutrition.recipe;
 
+import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.recipe.dto.RecipeIngredientResponse;
 import com.lifey.nutrition.recipe.dto.RecipeResponse;
 
@@ -16,10 +17,16 @@ final class RecipeMapper {
 
     static RecipeResponse toResponse(Recipe recipe) {
         List<RecipeIngredientResponse> ingredients = recipe.getIngredients().stream()
-                .map(ingredient -> new RecipeIngredientResponse(
-                        ingredient.getFood().getId(),
-                        ingredient.getFood().getName(),
-                        ingredient.getQuantityInGrams()))
+                .map(ingredient -> {
+                    Food food = ingredient.getFood();
+                    double grams = ingredient.getQuantityInGrams();
+                    return new RecipeIngredientResponse(
+                            food.getId(),
+                            food.getName(),
+                            grams,
+                            food.getCaloriesPer100g() * grams / 100.0,
+                            food.getProteinPer100g() * grams / 100.0);
+                })
                 .toList();
 
         return new RecipeResponse(

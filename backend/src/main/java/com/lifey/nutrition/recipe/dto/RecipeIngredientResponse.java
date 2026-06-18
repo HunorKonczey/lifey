@@ -3,6 +3,8 @@ package com.lifey.nutrition.recipe.dto;
 public record RecipeIngredientResponse(
         Long foodId,
         String foodName,
-        Double quantityInGrams
+        Double quantityInGrams,
+        Double calories,
+        Double protein
 ) {
 }

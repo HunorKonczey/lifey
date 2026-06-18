@@ -1,0 +1,81 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../shared/widgets/empty_view.dart';
+import '../../../shared/widgets/error_view.dart';
+import '../application/exercise_controller.dart';
+import '../domain/exercise.dart';
+
+/// "Exercises" tab: manage the exercise master list (add / swipe-to-delete).
+class ExercisesTab extends ConsumerWidget {
+  const ExercisesTab({super.key});
+
+  Future<void> _delete(BuildContext context, WidgetRef ref, Exercise exercise) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(exerciseControllerProvider.notifier).deleteExercise(exercise.id);
+      messenger.showSnackBar(SnackBar(content: Text('Deleted ${exercise.name}')));
+    } on DioException catch (e) {
+      final used = e.response?.statusCode == 409;
+      messenger.showSnackBar(SnackBar(
+        content: Text(used
+            ? '${exercise.name} is used in a template or workout'
+            : "Couldn't delete ${exercise.name}"),
+      ));
+      await ref.read(exerciseControllerProvider.notifier).refresh();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(exerciseControllerProvider);
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(exerciseControllerProvider.notifier).refresh(),
+      child: state.when(
+        data: (exercises) {
+          if (exercises.isEmpty) {
+            return const EmptyView(
+              icon: Icons.sports_gymnastics_outlined,
+              title: 'No exercises yet',
+              subtitle: 'Tap + to add one',
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: exercises.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final exercise = exercises[index];
+              return Dismissible(
+                key: ValueKey(exercise.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Icon(Icons.delete,
+                      color: Theme.of(context).colorScheme.onErrorContainer),
+                ),
+                confirmDismiss: (_) async {
+                  await _delete(context, ref, exercise);
+                  return false;
+                },
+                child: ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.fitness_center)),
+                  title: Text(exercise.name),
+                ),
+              );
+            },
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => ErrorView(
+          error: error,
+          onRetry: () => ref.read(exerciseControllerProvider.notifier).refresh(),
+        ),
+      ),
+    );
+  }
+}

@@ -1,4 +1,4 @@
-/// Domain model for a body weight entry.
+/// Domain model for a body weight entry (`/weights`).
 class WeightEntry {
   const WeightEntry({
     required this.id,
@@ -9,4 +9,12 @@ class WeightEntry {
   final int id;
   final DateTime date;
   final double weight;
+
+  factory WeightEntry.fromJson(Map<String, dynamic> json) {
+    return WeightEntry(
+      id: json['id'] as int,
+      date: DateTime.parse(json['date'] as String),
+      weight: (json['weight'] as num).toDouble(),
+    );
+  }
 }

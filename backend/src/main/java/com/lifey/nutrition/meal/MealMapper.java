@@ -1,5 +1,6 @@
 package com.lifey.nutrition.meal;
 
+import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.meal.dto.MealEntryResponse;
 import com.lifey.nutrition.meal.dto.MealResponse;
 
@@ -16,10 +17,16 @@ final class MealMapper {
 
     static MealResponse toResponse(Meal meal) {
         List<MealEntryResponse> entries = meal.getEntries().stream()
-                .map(entry -> new MealEntryResponse(
-                        entry.getFood().getId(),
-                        entry.getFood().getName(),
-                        entry.getQuantityInGrams()))
+                .map(entry -> {
+                    Food food = entry.getFood();
+                    double grams = entry.getQuantityInGrams();
+                    return new MealEntryResponse(
+                            food.getId(),
+                            food.getName(),
+                            grams,
+                            food.getCaloriesPer100g() * grams / 100.0,
+                            food.getProteinPer100g() * grams / 100.0);
+                })
                 .toList();
 
         return new MealResponse(
