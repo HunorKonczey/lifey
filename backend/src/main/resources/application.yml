@@ -10,6 +10,13 @@ spring:
       # app's and Postgres' side, not worth it for a low-traffic free-tier
       # deployment with a capped heap.
       maximum-pool-size: 5
+      # Let the pool shrink to zero connections when idle, and do it well
+      # within Railway's ~10-minute Serverless inactivity window — a pool
+      # that always keeps a connection open to Postgres is itself outbound
+      # traffic, which stops the service from ever being seen as idle and
+      # put to sleep.
+      minimum-idle: 0
+      idle-timeout: 60000
   jpa:
     hibernate:
       ddl-auto: validate
