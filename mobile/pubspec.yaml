@@ -14,9 +14,14 @@ dependencies:
   dio: ^5.5.0
   intl: ^0.20.2
   flutter_secure_storage: ^10.3.1
-  # Offline/local storage will be added when the offline feature lands.
-  # Avoid Isar 3.1.0 — it lacks an Android `namespace` and breaks AGP 8 builds.
-  # Use an AGP-8-compatible option then (e.g. drift, hive_ce, or Isar 4.x).
+  # Offline-first local cache (see lib/core/local_db/). Chosen over Isar:
+  # Isar 3.1.0 lacks an Android `namespace` and breaks AGP 8 builds, and
+  # Isar 4.x was still unstable when this was picked.
+  drift: ^2.20.0
+  sqlite3_flutter_libs: ^0.5.0
+  path_provider: ^2.1.0
+  path: ^1.9.0
+  uuid: ^4.4.0
 
 dev_dependencies:
   flutter_test:
@@ -24,6 +29,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.4.0
   riverpod_generator: ^4.0.4
+  drift_dev: ^2.20.0
 
 flutter:
   uses-material-design: true

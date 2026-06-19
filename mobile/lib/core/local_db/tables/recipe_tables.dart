@@ -1,0 +1,28 @@
+import 'package:drift/drift.dart';
+
+import 'food_table.dart';
+
+@DataClassName('RecipeRow')
+class Recipes extends Table {
+  TextColumn get clientId => text()();
+  IntColumn get serverId => integer().nullable()();
+  TextColumn get name => text()();
+  TextColumn get description => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {clientId};
+}
+
+/// References [Recipes] and [Foods] by `clientId`, not `serverId` — the FK
+/// must resolve locally even before either side has synced.
+@DataClassName('RecipeIngredientRow')
+class RecipeIngredients extends Table {
+  TextColumn get clientId => text()();
+  IntColumn get serverId => integer().nullable()();
+  TextColumn get recipeClientId => text().references(Recipes, #clientId)();
+  TextColumn get foodClientId => text().references(Foods, #clientId)();
+  RealColumn get quantityInGrams => real()();
+
+  @override
+  Set<Column> get primaryKey => {clientId};
+}
