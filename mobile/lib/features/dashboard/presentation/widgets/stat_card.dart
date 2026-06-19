@@ -9,6 +9,7 @@ class StatCard extends StatelessWidget {
     this.unit,
     this.icon,
     this.color,
+    this.ratio,
   });
 
   final String label;
@@ -16,6 +17,10 @@ class StatCard extends StatelessWidget {
   final String? unit;
   final IconData? icon;
   final Color? color;
+
+  /// Optional 0..1 share rendered as a small bar at the bottom (e.g. a macro's
+  /// proportion of the day's total macros).
+  final double? ratio;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +67,18 @@ class StatCard extends StatelessWidget {
                 ],
               ],
             ),
+            if (ratio != null) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: ratio!.clamp(0.0, 1.0),
+                  minHeight: 5,
+                  backgroundColor: accent.withValues(alpha: 0.15),
+                  valueColor: AlwaysStoppedAnimation<Color>(accent),
+                ),
+              ),
+            ],
           ],
         ),
       ),

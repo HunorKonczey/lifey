@@ -46,6 +46,8 @@ class _DashboardBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final stats = data.stats;
     final weight = stats.latestWeight;
+    final totalMacros = stats.protein + stats.carbs + stats.fat;
+    double share(double grams) => totalMacros > 0 ? grams / totalMacros : 0;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -69,6 +71,7 @@ class _DashboardBody extends StatelessWidget {
                 unit: 'g',
                 icon: Icons.egg_alt,
                 color: Colors.teal,
+                ratio: share(stats.protein),
               ),
             ),
             const SizedBox(width: 12),
@@ -79,6 +82,7 @@ class _DashboardBody extends StatelessWidget {
                 unit: 'g',
                 icon: Icons.bakery_dining,
                 color: Colors.amber,
+                ratio: share(stats.carbs),
               ),
             ),
             const SizedBox(width: 12),
@@ -89,6 +93,7 @@ class _DashboardBody extends StatelessWidget {
                 unit: 'g',
                 icon: Icons.water_drop,
                 color: Colors.indigo,
+                ratio: share(stats.fat),
               ),
             ),
           ],

@@ -147,9 +147,22 @@ class _MealCard extends StatelessWidget {
                       visualDensity: VisualDensity.compact,
                       backgroundColor: theme.colorScheme.primaryContainer,
                     ),
-                    const Spacer(),
-                    Text(dateLabel.format(meal.dateTime.toLocal()),
-                        style: theme.textTheme.bodySmall),
+                    const SizedBox(width: 8),
+                    Chip(
+                      avatar: const Icon(Icons.local_fire_department,
+                          size: 16, color: Colors.deepOrange),
+                      label: Text('${meal.totalCalories.toStringAsFixed(0)} kcal'),
+                      visualDensity: VisualDensity.compact,
+                      backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                    ),
+                    Expanded(
+                      child: Text(
+                        dateLabel.format(meal.dateTime.toLocal()),
+                        textAlign: TextAlign.end,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -162,7 +175,6 @@ class _MealCard extends StatelessWidget {
                 ),
                 const Divider(height: 16),
                 Text(
-                  '≈ ${meal.totalCalories.toStringAsFixed(0)} kcal · '
                   '${meal.totalProtein.toStringAsFixed(0)} g protein',
                   style: theme.textTheme.labelLarge
                       ?.copyWith(fontWeight: FontWeight.bold),
