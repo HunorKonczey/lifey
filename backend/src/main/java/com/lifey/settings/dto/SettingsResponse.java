@@ -9,6 +9,7 @@ public record SettingsResponse(
         Integer dailyProteinGoal,
         Integer dailyCarbsGoal,
         Integer dailyFatGoal,
+        Double dailyWaterGoalLiters,
         ThemePreference theme
 ) {
 }

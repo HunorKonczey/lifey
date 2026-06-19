@@ -3,6 +3,7 @@ package com.lifey.statistics;
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.statistics.dto.StatisticsResponse;
+import com.lifey.water.WaterEntryRepository;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
 import com.lifey.workout.session.WorkoutSessionRepository;
@@ -41,6 +42,9 @@ class StatisticsServiceImplTest {
     WeightEntryRepository weightEntryRepository;
 
     @Mock
+    WaterEntryRepository waterEntryRepository;
+
+    @Mock
     CurrentUserProvider currentUserProvider;
 
     @InjectMocks
@@ -63,6 +67,7 @@ class StatisticsServiceImplTest {
         assertThat(result.totalFat()).isEqualTo(10.0);
         assertThat(result.workoutCount()).isEqualTo(1);
         assertThat(result.latestWeight()).isEqualTo(78.4);
+        assertThat(result.totalWater()).isEqualTo(1.5);
         assertThat(capturedFrom()).isEqualTo(LocalDate.now().atStartOfDay());
     }
 
@@ -107,6 +112,8 @@ class StatisticsServiceImplTest {
             when(weightEntryRepository.findFirstByUserIdOrderByDateDescRecordedAtDesc(USER_ID))
                     .thenReturn(Optional.of(e));
         }
+        lenient().when(waterEntryRepository.sumVolumeLitersSince(eq(USER_ID), any(Instant.class)))
+                .thenReturn(1.5);
     }
 
     private LocalDateTime capturedFrom() {

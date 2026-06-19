@@ -3,6 +3,7 @@ package com.lifey.statistics;
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.statistics.dto.StatisticsResponse;
+import com.lifey.water.WaterEntryRepository;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
 import com.lifey.workout.session.WorkoutSessionRepository;
@@ -25,15 +26,18 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final MealRepository mealRepository;
     private final WorkoutSessionRepository workoutSessionRepository;
     private final WeightEntryRepository weightEntryRepository;
+    private final WaterEntryRepository waterEntryRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public StatisticsServiceImpl(MealRepository mealRepository,
                                  WorkoutSessionRepository workoutSessionRepository,
                                  WeightEntryRepository weightEntryRepository,
+                                 WaterEntryRepository waterEntryRepository,
                                  CurrentUserProvider currentUserProvider) {
         this.mealRepository = mealRepository;
         this.workoutSessionRepository = workoutSessionRepository;
         this.weightEntryRepository = weightEntryRepository;
+        this.waterEntryRepository = waterEntryRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -65,8 +69,9 @@ public class StatisticsServiceImpl implements StatisticsService {
         Double latestWeight = weightEntryRepository.findFirstByUserIdOrderByDateDescRecordedAtDesc(userId)
                 .map(WeightEntry::getWeight)
                 .orElse(null);
+        double totalWater = waterEntryRepository.sumVolumeLitersSince(userId, fromInstant);
 
         return new StatisticsResponse(totalCalories, totalProtein, totalCarbs, totalFat,
-                (int) workoutCount, latestWeight);
+                (int) workoutCount, latestWeight, totalWater);
     }
 }

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Lifey API",
-    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*, *Settings*.\n\nAll `/api/v1/**` routes except `/api/v1/auth/register`, `/api/v1/auth/login`, and `/api/v1/auth/refresh` require a JWT access token. The collection is set up to send it automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nExercises are seeded reference data (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank) and can also be managed via the *Exercises* CRUD endpoints. Deleting an exercise still referenced by a template/session returns 409.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace).",
+    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*, *Settings*, *Water Tracking*.\n\nAll `/api/v1/**` routes except `/api/v1/auth/register`, `/api/v1/auth/login`, and `/api/v1/auth/refresh` require a JWT access token. The collection is set up to send it automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nExercises are seeded reference data (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank) and can also be managed via the *Exercises* CRUD endpoints. Deleting an exercise still referenced by a template/session returns 409.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall; `totalWater` sums water entries over the same period.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace).\n\nWater Tracking has two parts: *Water Sources* (reusable presets like \"Creatine Shake\" = 0.9L, full CRUD) and *Water Entries* (logged intake, list/create/delete only — like Weight Tracking). An entry's `volumeLiters` is always client-supplied (picking a source just pre-fills it); `sourceId` is optional and purely informational.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -20,7 +20,9 @@
     { "key": "mealId", "value": "", "type": "string" },
     { "key": "templateId", "value": "", "type": "string" },
     { "key": "sessionId", "value": "", "type": "string" },
-    { "key": "exerciseId", "value": "", "type": "string" }
+    { "key": "exerciseId", "value": "", "type": "string" },
+    { "key": "waterSourceId", "value": "", "type": "string" },
+    { "key": "waterEntryId", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -746,9 +748,9 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": \"METRIC\",\n  \"dailyCalorieGoal\": 2200,\n  \"dailyProteinGoal\": 150,\n  \"dailyCarbsGoal\": 220,\n  \"dailyFatGoal\": 70,\n  \"theme\": \"DARK\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": \"METRIC\",\n  \"dailyCalorieGoal\": 2200,\n  \"dailyProteinGoal\": 150,\n  \"dailyCarbsGoal\": 220,\n  \"dailyFatGoal\": 70,\n  \"dailyWaterGoalLiters\": 2.5,\n  \"theme\": \"DARK\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/settings", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings"] },
-            "description": "Replaces the current user's settings. `unitSystem` (METRIC/IMPERIAL) and `theme` (LIGHT/DARK/SYSTEM) are required; the daily goal fields are optional (omit/null for no goal) and must be >= 0 if present. Returns 200."
+            "description": "Replaces the current user's settings. `unitSystem` (METRIC/IMPERIAL) and `theme` (LIGHT/DARK/SYSTEM) are required; the daily goal fields (including `dailyWaterGoalLiters`) are optional (omit/null for no goal) and must be >= 0 if present. Returns 200."
           },
           "response": []
         },
@@ -760,6 +762,154 @@
             "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": null,\n  \"dailyCalorieGoal\": -100,\n  \"theme\": null\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/settings", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings"] },
             "description": "Demonstrates the 400 validation response (missing unitSystem/theme, negative calorie goal)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Water Tracking",
+      "description": "Implemented feature. Reusable water-intake presets (*Water Sources*) and logged intake (*Water Entries*).",
+      "item": [
+        {
+          "name": "List water sources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources"] },
+            "description": "Returns all of the current user's water sources."
+          },
+          "response": []
+        },
+        {
+          "name": "Create water source",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('waterSourceId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Creatine Shake\",\n  \"volumeLiters\": 0.9\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources"] },
+            "description": "Creates a water source. `name` required; `volumeLiters` required and must be > 0. Returns 201 and stores the new id in `waterSourceId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create water source - validation error (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"volumeLiters\": -1\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources"] },
+            "description": "Demonstrates the 400 validation response (blank name, non-positive volume)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get water source",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources/{{waterSourceId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources", "{{waterSourceId}}"] },
+            "description": "Returns a single water source by id, or 404 if not found."
+          },
+          "response": []
+        },
+        {
+          "name": "Update water source",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Creatine Shake (large)\",\n  \"volumeLiters\": 1.0\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources/{{waterSourceId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources", "{{waterSourceId}}"] },
+            "description": "Renames the source and/or changes its preset volume. Returns 200, or 404 if not found. Past entries logged from this source keep their original (snapshotted) volume."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete water source",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-sources/{{waterSourceId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-sources", "{{waterSourceId}}"] },
+            "description": "Deletes the water source. Returns 204, or 404 if not found. Past entries logged from it are kept, with their `sourceId` cleared."
+          },
+          "response": []
+        },
+        {
+          "name": "List water entries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-entries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-entries"] },
+            "description": "Returns all of the current user's logged water entries (newest first)."
+          },
+          "response": []
+        },
+        {
+          "name": "Log water entry - manual",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('waterEntryId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"consumedAt\": \"2026-06-18T08:00:00Z\",\n  \"volumeLiters\": 0.5\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/water-entries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-entries"] },
+            "description": "Logs a manual entry (no source). `consumedAt` required (today or past); `volumeLiters` required and must be > 0. Returns 201 and stores the id in `waterEntryId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Log water entry - from a source (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"consumedAt\": \"2026-06-18T09:00:00Z\",\n  \"sourceId\": {{waterSourceId}},\n  \"volumeLiters\": 0.9\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/water-entries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-entries"] },
+            "description": "Demonstrates logging from a water source: the client reads the source's `volumeLiters` (List water sources) and sends it here as a pre-filled value the user could still adjust. `sourceId` must reference an existing source (else 404) but is purely informational — the server always uses the `volumeLiters` sent, never re-derives it from the source."
+          },
+          "response": []
+        },
+        {
+          "name": "Log water entry - validation error (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"consumedAt\": \"2030-01-01T08:00:00Z\",\n  \"volumeLiters\": -1\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/water-entries", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-entries"] },
+            "description": "Demonstrates the 400 validation response (future consumedAt, non-positive volume)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete water entry",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/water-entries/{{waterEntryId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "water-entries", "{{waterEntryId}}"] },
+            "description": "Deletes the water entry. Returns 204, or 404 if not found."
           },
           "response": []
         }

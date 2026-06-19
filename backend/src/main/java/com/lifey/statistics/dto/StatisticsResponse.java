@@ -6,6 +6,7 @@ public record StatisticsResponse(
         Double totalCarbs,
         Double totalFat,
         Integer workoutCount,
-        Double latestWeight
+        Double latestWeight,
+        Double totalWater
 ) {
 }

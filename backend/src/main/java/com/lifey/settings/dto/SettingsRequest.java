@@ -22,6 +22,9 @@ public record SettingsRequest(
         @PositiveOrZero
         Integer dailyFatGoal,
 
+        @PositiveOrZero
+        Double dailyWaterGoalLiters,
+
         @NotNull
         ThemePreference theme
 ) {
