@@ -1,6 +1,7 @@
 package com.lifey.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,9 +48,17 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 
+    /**
+     * Spring Boot 4's auto-configured mapper is a Jackson 3 {@code tools.jackson}
+     * {@code JsonMapper}, not the Jackson 2 {@code com.fasterxml.jackson} type this
+     * codebase uses (jjwt, {@link com.lifey.common.exception.ApiError}) — so there's
+     * no compatible bean to inject here. JavaTimeModule is registered explicitly
+     * since this mapper isn't Boot-managed and won't get it automatically; without
+     * it, serializing an {@code Instant} (e.g. in {@code ApiError.timestamp}) fails.
+     */
     @Bean
     public ObjectMapper objectMapper() {
-        return new ObjectMapper();
+        return new ObjectMapper().registerModule(new JavaTimeModule());
     }
 
     @Bean

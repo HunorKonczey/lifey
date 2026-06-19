@@ -1,6 +1,7 @@
 package com.lifey.workout.session;
 
 import com.lifey.workout.session.dto.ExerciseSetResponse;
+import com.lifey.workout.session.dto.ExerciseSummary;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
 
 import java.util.List;
@@ -15,6 +16,10 @@ final class WorkoutSessionMapper {
     }
 
     static WorkoutSessionResponse toResponse(WorkoutSession session) {
+        List<ExerciseSummary> exercises = session.getPlannedExercises().stream()
+                .map(link -> new ExerciseSummary(link.getExercise().getId(), link.getExercise().getName()))
+                .toList();
+
         List<ExerciseSetResponse> sets = session.getSets().stream()
                 .map(set -> new ExerciseSetResponse(
                         set.getExercise().getId(),
@@ -27,6 +32,7 @@ final class WorkoutSessionMapper {
                 session.getId(),
                 session.getStartedAt(),
                 session.getFinishedAt(),
+                exercises,
                 sets
         );
     }

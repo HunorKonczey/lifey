@@ -46,6 +46,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         session.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         session.setStartedAt(request.startedAt());
         session.setFinishedAt(request.finishedAt());
+        replacePlannedExercises(session, request.exerciseIds());
         replaceSets(session, request.sets());
         return WorkoutSessionMapper.toResponse(sessionRepository.save(session));
     }
@@ -55,6 +56,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         WorkoutSession session = getOrThrow(id);
         session.setStartedAt(request.startedAt());
         session.setFinishedAt(request.finishedAt());
+        replacePlannedExercises(session, request.exerciseIds());
         replaceSets(session, request.sets());
         return WorkoutSessionMapper.toResponse(session);
     }
@@ -71,6 +73,23 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     private WorkoutSession getOrThrow(Long id) {
         return sessionRepository.findByIdAndUserId(id, currentUserProvider.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Workout session not found: " + id));
+    }
+
+    /**
+     * Rebuilds the session's planned-exercise list from the request, resolving each
+     * {@code exerciseId}. Relies on {@code orphanRemoval} to delete dropped links.
+     */
+    private void replacePlannedExercises(WorkoutSession session, List<Long> exerciseIds) {
+        session.getPlannedExercises().clear();
+        for (Long exerciseId : exerciseIds) {
+            Exercise exercise = exerciseRepository.findById(exerciseId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + exerciseId));
+
+            WorkoutSessionExercise link = new WorkoutSessionExercise();
+            link.setWorkoutSession(session);
+            link.setExercise(exercise);
+            session.getPlannedExercises().add(link);
+        }
     }
 
     /**

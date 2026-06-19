@@ -8,4 +8,10 @@ class AppTheme {
         useMaterial3: true,
         colorSchemeSeed: Colors.teal,
       );
+
+  static ThemeData get dark => ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.teal,
+        brightness: Brightness.dark,
+      );
 }

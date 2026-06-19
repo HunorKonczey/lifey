@@ -33,6 +33,7 @@ class WorkoutSessionRepository {
   Future<WorkoutSession> create({
     required DateTime startedAt,
     DateTime? finishedAt,
+    required List<int> exerciseIds,
     required List<ExerciseSetInput> sets,
   }) async {
     // Backend uses Instant (UTC) — send ISO-8601 with a zone.
@@ -41,6 +42,7 @@ class WorkoutSessionRepository {
       data: {
         'startedAt': startedAt.toUtc().toIso8601String(),
         if (finishedAt != null) 'finishedAt': finishedAt.toUtc().toIso8601String(),
+        'exerciseIds': exerciseIds,
         'sets': sets
             .map((s) => {
                   'exerciseId': s.exerciseId,
@@ -57,6 +59,7 @@ class WorkoutSessionRepository {
     int id, {
     required DateTime startedAt,
     DateTime? finishedAt,
+    required List<int> exerciseIds,
     required List<ExerciseSetInput> sets,
   }) async {
     final response = await _dio.put<Map<String, dynamic>>(
@@ -64,6 +67,7 @@ class WorkoutSessionRepository {
       data: {
         'startedAt': startedAt.toUtc().toIso8601String(),
         if (finishedAt != null) 'finishedAt': finishedAt.toUtc().toIso8601String(),
+        'exerciseIds': exerciseIds,
         'sets': sets
             .map((s) => {
                   'exerciseId': s.exerciseId,

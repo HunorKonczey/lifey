@@ -13,9 +13,11 @@ class WorkoutSessionController extends AsyncNotifier<List<WorkoutSession>> {
   Future<void> logSession({
     required DateTime startedAt,
     DateTime? finishedAt,
+    required List<int> exerciseIds,
     required List<ExerciseSetInput> sets,
   }) async {
-    await _repo.create(startedAt: startedAt, finishedAt: finishedAt, sets: sets);
+    await _repo.create(
+        startedAt: startedAt, finishedAt: finishedAt, exerciseIds: exerciseIds, sets: sets);
     state = await AsyncValue.guard(_repo.fetchAll);
   }
 
@@ -23,9 +25,11 @@ class WorkoutSessionController extends AsyncNotifier<List<WorkoutSession>> {
     int id, {
     required DateTime startedAt,
     DateTime? finishedAt,
+    required List<int> exerciseIds,
     required List<ExerciseSetInput> sets,
   }) async {
-    await _repo.update(id, startedAt: startedAt, finishedAt: finishedAt, sets: sets);
+    await _repo.update(id,
+        startedAt: startedAt, finishedAt: finishedAt, exerciseIds: exerciseIds, sets: sets);
     state = await AsyncValue.guard(_repo.fetchAll);
   }
 

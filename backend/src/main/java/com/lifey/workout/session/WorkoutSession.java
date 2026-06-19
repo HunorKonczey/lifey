@@ -35,4 +35,12 @@ public class WorkoutSession extends BaseEntity {
 
     @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExerciseSet> sets = new ArrayList<>();
+
+    /**
+     * Exercises planned for this session (e.g. copied in from a template at
+     * creation time), independent of how many {@link #sets} have been logged
+     * for them yet. A plain snapshot — no link back to the source template.
+     */
+    @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WorkoutSessionExercise> plannedExercises = new ArrayList<>();
 }

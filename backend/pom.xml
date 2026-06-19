@@ -41,6 +41,14 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- Jackson 2: used directly by SecurityConfig's ObjectMapper bean and by
+             jjwt-jackson below. Boot 4's auto-configured mapper is Jackson 3
+             (tools.jackson), so this isn't pulled in for us automatically. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>

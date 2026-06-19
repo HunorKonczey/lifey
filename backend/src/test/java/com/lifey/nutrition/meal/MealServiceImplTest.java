@@ -1,11 +1,15 @@
 package com.lifey.nutrition.meal;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.meal.dto.MealEntryRequest;
 import com.lifey.nutrition.meal.dto.MealRequest;
 import com.lifey.nutrition.meal.dto.MealResponse;
+import com.lifey.user.User;
+import com.lifey.user.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,6 +23,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,14 +31,28 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MealServiceImplTest {
 
+    private static final Long USER_ID = 1L;
+
     @Mock
     MealRepository mealRepository;
 
     @Mock
     FoodRepository foodRepository;
 
+    @Mock
+    UserRepository userRepository;
+
+    @Mock
+    CurrentUserProvider currentUserProvider;
+
     @InjectMocks
     MealServiceImpl service;
+
+    @BeforeEach
+    void stubCurrentUser() {
+        lenient().when(currentUserProvider.getUserId()).thenReturn(USER_ID);
+        lenient().when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+    }
 
     @Test
     void create_resolvesFoodsAndReturnsResponse() {
@@ -72,11 +91,11 @@ class MealServiceImplTest {
 
     @Test
     void delete_throwsWhenMissing() {
-        when(mealRepository.existsById(99L)).thenReturn(false);
+        when(mealRepository.existsByIdAndUserId(99L, USER_ID)).thenReturn(false);
 
         assertThatThrownBy(() -> service.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
-        verify(mealRepository, never()).deleteById(any());
+        verify(mealRepository, never()).deleteByIdAndUserId(any(), any());
     }
 
     private static Food food(Long id, String name) {

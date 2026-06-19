@@ -1,10 +1,12 @@
 package com.lifey.statistics;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.statistics.dto.StatisticsResponse;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
 import com.lifey.workout.session.WorkoutSessionRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -12,17 +14,22 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class StatisticsServiceImplTest {
+
+    private static final Long USER_ID = 1L;
 
     @Mock
     MealRepository mealRepository;
@@ -33,8 +40,16 @@ class StatisticsServiceImplTest {
     @Mock
     WeightEntryRepository weightEntryRepository;
 
+    @Mock
+    CurrentUserProvider currentUserProvider;
+
     @InjectMocks
     StatisticsServiceImpl service;
+
+    @BeforeEach
+    void stubCurrentUser() {
+        lenient().when(currentUserProvider.getUserId()).thenReturn(USER_ID);
+    }
 
     @Test
     void daily_aggregatesFromStartOfToday() {
@@ -77,23 +92,26 @@ class StatisticsServiceImplTest {
     }
 
     private void stubAggregates(double calories, double protein, long workouts, Double weight) {
-        when(mealRepository.sumCaloriesSince(any())).thenReturn(calories);
-        when(mealRepository.sumProteinSince(any())).thenReturn(protein);
-        when(mealRepository.sumCarbsSince(any())).thenReturn(30.0);
-        when(mealRepository.sumFatSince(any())).thenReturn(10.0);
-        when(workoutSessionRepository.countByStartedAtGreaterThanEqual(any())).thenReturn(workouts);
+        when(mealRepository.sumCaloriesSince(eq(USER_ID), any())).thenReturn(calories);
+        when(mealRepository.sumProteinSince(eq(USER_ID), any())).thenReturn(protein);
+        when(mealRepository.sumCarbsSince(eq(USER_ID), any())).thenReturn(30.0);
+        when(mealRepository.sumFatSince(eq(USER_ID), any())).thenReturn(10.0);
+        when(workoutSessionRepository.countByUserIdAndStartedAtGreaterThanEqual(eq(USER_ID), any(Instant.class)))
+                .thenReturn(workouts);
         if (weight == null) {
-            when(weightEntryRepository.findFirstByOrderByDateDescRecordedAtDesc()).thenReturn(Optional.empty());
+            when(weightEntryRepository.findFirstByUserIdOrderByDateDescRecordedAtDesc(USER_ID))
+                    .thenReturn(Optional.empty());
         } else {
             WeightEntry e = new WeightEntry();
             e.setWeight(weight);
-            when(weightEntryRepository.findFirstByOrderByDateDescRecordedAtDesc()).thenReturn(Optional.of(e));
+            when(weightEntryRepository.findFirstByUserIdOrderByDateDescRecordedAtDesc(USER_ID))
+                    .thenReturn(Optional.of(e));
         }
     }
 
     private LocalDateTime capturedFrom() {
         ArgumentCaptor<LocalDateTime> captor = ArgumentCaptor.forClass(LocalDateTime.class);
-        verify(mealRepository).sumCaloriesSince(captor.capture());
+        verify(mealRepository).sumCaloriesSince(eq(USER_ID), captor.capture());
         return captor.getValue();
     }
 }

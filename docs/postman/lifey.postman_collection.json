@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Lifey API",
-    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*.\n\nAll `/api/v1/**` routes except `/api/v1/auth/register`, `/api/v1/auth/login`, and `/api/v1/auth/refresh` require a JWT access token. The collection is set up to send it automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nExercises are seeded reference data (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank) and can also be managed via the *Exercises* CRUD endpoints. Deleting an exercise still referenced by a template/session returns 409.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall.",
+    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*, *Settings*.\n\nAll `/api/v1/**` routes except `/api/v1/auth/register`, `/api/v1/auth/login`, and `/api/v1/auth/refresh` require a JWT access token. The collection is set up to send it automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nExercises are seeded reference data (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank) and can also be managed via the *Exercises* CRUD endpoints. Deleting an exercise still referenced by a template/session returns 409.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -564,7 +564,7 @@
     },
     {
       "name": "Workouts",
-      "description": "Implemented feature. Workout templates (named lists of exercises) and logged workout sessions (sets with reps/weight). Both reference exercises by id (manage them via the Exercises folder; ids 1-8 are pre-seeded).",
+      "description": "Implemented feature. Workout templates (named lists of exercises) and logged workout sessions. Both reference exercises by id (manage them via the Exercises folder; ids 1-8 are pre-seeded).\n\nA session has two independent lists: `exerciseIds` (planned exercises — e.g. copied client-side from a template's `exerciseIds` when starting from one) and `sets` (sets actually logged, with reps/weight). Both can be empty: a session can be started blank with neither, and exercises/sets are filled in as the workout progresses. Planned exercises are a snapshot only — there's no link back to the template, so editing a session never affects it.",
       "item": [
         {
           "name": "List workout templates",
@@ -634,7 +634,7 @@
         },
         {
           "name": "List workout sessions",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] }, "description": "Returns all sessions (newest first) with their sets." },
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] }, "description": "Returns all sessions (newest first) with their planned exercises and logged sets." },
           "response": []
         },
         {
@@ -655,9 +655,31 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"finishedAt\": \"2026-06-18T06:00:00Z\",\n  \"sets\": [\n    { \"exerciseId\": 1, \"reps\": 10, \"weight\": 60 },\n    { \"exerciseId\": 1, \"reps\": 8, \"weight\": 65 }\n  ]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"finishedAt\": \"2026-06-18T06:00:00Z\",\n  \"exerciseIds\": [1],\n  \"sets\": [\n    { \"exerciseId\": 1, \"reps\": 10, \"weight\": 60 },\n    { \"exerciseId\": 1, \"reps\": 8, \"weight\": 65 }\n  ]\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] },
-            "description": "Logs a session. `startedAt` required (today or past), `finishedAt` optional, at least one set required. Each set needs an existing exerciseId, positive reps, and weight >= 0. Returns 201 and stores the id in `sessionId`."
+            "description": "Logs a session. `startedAt` required (today or past), `finishedAt` optional. `exerciseIds` and `sets` are both required fields but may be empty arrays. Each entry needs an existing exerciseId (else 404); sets additionally need positive reps and weight >= 0. Returns 201 and stores the id in `sessionId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Start session from a template (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"exerciseIds\": [1, 4],\n  \"sets\": []\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] },
+            "description": "Demonstrates starting a session from a template: the client resolves the template's `exerciseIds` (Workouts > Get workout template) and sends them here as the session's planned exercises, with no sets logged yet. The response's `exercises` array lists them; `sets` fills in as the workout progresses via Update workout session."
+          },
+          "response": []
+        },
+        {
+          "name": "Start an empty session (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"exerciseIds\": [],\n  \"sets\": []\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] },
+            "description": "Demonstrates starting a session with nothing planned (no template, no sets yet). Returns 201; both `exercises` and `sets` are empty in the response."
           },
           "response": []
         },
@@ -666,9 +688,9 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"finishedAt\": \"2026-06-18T06:30:00Z\",\n  \"sets\": [\n    { \"exerciseId\": 1, \"reps\": 12, \"weight\": 62.5 }\n  ]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"finishedAt\": \"2026-06-18T06:30:00Z\",\n  \"exerciseIds\": [1],\n  \"sets\": [\n    { \"exerciseId\": 1, \"reps\": 12, \"weight\": 62.5 }\n  ]\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions/{{sessionId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions", "{{sessionId}}"] },
-            "description": "Replaces the session's start/finish time and set list (e.g. finish an in-progress workout). Returns 200, or 404 if the session/exercise is not found."
+            "description": "Replaces the session's start/finish time, planned-exercise list, and set list (e.g. finish an in-progress workout, or log sets for a session that was started empty/from a template). Returns 200, or 404 if the session/exercise is not found."
           },
           "response": []
         },
@@ -701,6 +723,44 @@
         {
           "name": "Monthly statistics",
           "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/statistics/monthly", "host": ["{{baseUrl}}"], "path": ["api", "v1", "statistics", "monthly"] } },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "description": "Implemented feature. Per-user preferences: unit system, optional daily calorie/macro goals, theme. One row per user, created with defaults on first access — there's no separate create endpoint.",
+      "item": [
+        {
+          "name": "Get settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/settings", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings"] },
+            "description": "Returns the current user's settings, creating the row with defaults (`unitSystem: METRIC`, `theme: SYSTEM`, no goals set) if this is the first access."
+          },
+          "response": []
+        },
+        {
+          "name": "Update settings",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": \"METRIC\",\n  \"dailyCalorieGoal\": 2200,\n  \"dailyProteinGoal\": 150,\n  \"dailyCarbsGoal\": 220,\n  \"dailyFatGoal\": 70,\n  \"theme\": \"DARK\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/settings", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings"] },
+            "description": "Replaces the current user's settings. `unitSystem` (METRIC/IMPERIAL) and `theme` (LIGHT/DARK/SYSTEM) are required; the daily goal fields are optional (omit/null for no goal) and must be >= 0 if present. Returns 200."
+          },
+          "response": []
+        },
+        {
+          "name": "Update settings - validation error (example)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": null,\n  \"dailyCalorieGoal\": -100,\n  \"theme\": null\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/settings", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings"] },
+            "description": "Demonstrates the 400 validation response (missing unitSystem/theme, negative calorie goal)."
+          },
           "response": []
         }
       ]

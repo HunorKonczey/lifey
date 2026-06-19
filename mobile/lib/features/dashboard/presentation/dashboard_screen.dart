@@ -1,13 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/widgets/error_view.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../settings/application/settings_controller.dart';
+import '../../settings/domain/user_settings.dart';
+import '../../weight/application/weight_controller.dart';
+import '../../weight/domain/weight_entry.dart';
 import '../application/dashboard_controller.dart';
 import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
 import 'widgets/stat_card.dart';
+
+enum WeightTrend { up, down }
+
+/// Compares the two most recent entries (newest first). Null when there
+/// aren't at least two entries, or the weight didn't change.
+WeightTrend? _weightTrend(List<WeightEntry> entries) {
+  if (entries.length < 2) return null;
+  final diff = entries[0].weight - entries[1].weight;
+  if (diff > 0) return WeightTrend.up;
+  if (diff < 0) return WeightTrend.down;
+  return null;
+}
 
 /// Dashboard: today's calories & macros, current weight, recent workouts.
 /// Auto-refreshes when its tab is re-selected (see MainShell).
@@ -17,12 +34,19 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(dashboardControllerProvider);
+    final settings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
+    final weightTrend = _weightTrend(ref.watch(weightControllerProvider).value ?? const []);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Log out',
@@ -33,7 +57,8 @@ class DashboardScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () => ref.read(dashboardControllerProvider.notifier).refresh(),
         child: dashboard.when(
-          data: (data) => _DashboardBody(data: data),
+          data: (data) =>
+              _DashboardBody(data: data, settings: settings, weightTrend: weightTrend),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => ErrorView(
             error: error,
@@ -46,16 +71,25 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _DashboardBody extends StatelessWidget {
-  const _DashboardBody({required this.data});
+  const _DashboardBody({required this.data, required this.settings, this.weightTrend});
 
   final DashboardData data;
+  final UserSettings settings;
+  final WeightTrend? weightTrend;
+
+  /// Actual-over-goal ratio, or null when no goal is set (no bar shown then).
+  double? _ratio(double actual, int? goal) =>
+      (goal == null || goal <= 0) ? null : actual / goal;
 
   @override
   Widget build(BuildContext context) {
     final stats = data.stats;
     final weight = stats.latestWeight;
-    final totalMacros = stats.protein + stats.carbs + stats.fat;
-    double share(double grams) => totalMacros > 0 ? grams / totalMacros : 0;
+
+    final calorieRatio = _ratio(stats.calories, settings.dailyCalorieGoal);
+    final proteinRatio = _ratio(stats.protein, settings.dailyProteinGoal);
+    final carbsRatio = _ratio(stats.carbs, settings.dailyCarbsGoal);
+    final fatRatio = _ratio(stats.fat, settings.dailyFatGoal);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -68,6 +102,10 @@ class _DashboardBody extends StatelessWidget {
           unit: 'kcal',
           icon: Icons.local_fire_department,
           color: Colors.deepOrange,
+          ratio: calorieRatio,
+          goalReached: (calorieRatio ?? 0) >= 1,
+          goalTone: GoalTone.negative,
+          onTap: () => context.go('/nutrition'),
         ),
         const SizedBox(height: 12),
         Row(
@@ -79,7 +117,9 @@ class _DashboardBody extends StatelessWidget {
                 unit: 'g',
                 icon: Icons.egg_alt,
                 color: Colors.teal,
-                ratio: share(stats.protein),
+                ratio: proteinRatio,
+                goalReached: (proteinRatio ?? 0) >= 1,
+                goalTone: GoalTone.positive,
               ),
             ),
             const SizedBox(width: 12),
@@ -90,7 +130,8 @@ class _DashboardBody extends StatelessWidget {
                 unit: 'g',
                 icon: Icons.bakery_dining,
                 color: Colors.amber,
-                ratio: share(stats.carbs),
+                ratio: carbsRatio,
+                goalReached: (carbsRatio ?? 0) >= 1,
               ),
             ),
             const SizedBox(width: 12),
@@ -101,7 +142,8 @@ class _DashboardBody extends StatelessWidget {
                 unit: 'g',
                 icon: Icons.water_drop,
                 color: Colors.indigo,
-                ratio: share(stats.fat),
+                ratio: fatRatio,
+                goalReached: (fatRatio ?? 0) >= 1,
               ),
             ),
           ],
@@ -115,6 +157,14 @@ class _DashboardBody extends StatelessWidget {
           unit: weight != null ? 'kg' : null,
           icon: Icons.monitor_weight,
           color: Colors.blueGrey,
+          onTap: () => context.go('/weight'),
+          trailing: weightTrend == null
+              ? null
+              : Icon(
+                  weightTrend == WeightTrend.up ? Icons.arrow_upward : Icons.arrow_downward,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
         ),
         const SizedBox(height: 24),
         const _SectionTitle('Recent workouts'),
@@ -122,16 +172,19 @@ class _DashboardBody extends StatelessWidget {
         if (data.recentWorkouts.isEmpty)
           const _EmptyHint('No workouts logged yet.')
         else
-          ...data.recentWorkouts.map((w) => _WorkoutTile(workout: w)),
+          ...data.recentWorkouts.map(
+            (w) => _WorkoutTile(workout: w, onTap: () => context.go('/workouts')),
+          ),
       ],
     );
   }
 }
 
 class _WorkoutTile extends StatelessWidget {
-  const _WorkoutTile({required this.workout});
+  const _WorkoutTile({required this.workout, this.onTap});
 
   final RecentWorkout workout;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -146,6 +199,7 @@ class _WorkoutTile extends StatelessWidget {
       color: theme.colorScheme.surfaceContainerHighest,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
+        onTap: onTap,
         leading: CircleAvatar(
           backgroundColor: theme.colorScheme.primaryContainer,
           child: const Icon(Icons.fitness_center),

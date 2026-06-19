@@ -8,11 +8,17 @@ import '../data/workout_session_repository.dart';
 import '../domain/exercise.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
+import 'widgets/add_exercise_to_session_sheet.dart';
 import 'widgets/add_set_sheet.dart';
 
 /// Full-screen form for logging a session, or editing one when [session] is given.
-/// When [template] is given, the session starts pre-seeded with that template's
-/// exercises offered as one-tap "add set" chips.
+///
+/// When [template] is given (starting a fresh session from it), the template's
+/// exercises are added to the session immediately as quick-add chips — no set
+/// needs to be logged for an exercise for it to be "in" the session. When
+/// [session] is given (resuming/editing), the session's own persisted planned
+/// exercises (`session.exercises`) are used instead, so this works the same
+/// whether or not the session originally came from a template.
 class LogSessionScreen extends ConsumerStatefulWidget {
   const LogSessionScreen({super.key, this.session, this.template});
 
@@ -28,6 +34,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   late DateTime _startedAt;
   DateTime? _finishedAt;
+
+  /// Exercises planned for this session — template-seeded and/or ad-hoc added.
+  /// Names are resolved at render time from the exercise master list.
+  final Set<int> _plannedExerciseIds = {};
+
   final List<({Exercise exercise, int reps, double weight})> _sets = [];
   bool _saving = false;
 
@@ -40,6 +51,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _startedAt = session?.startedAt ?? DateTime.now();
     _finishedAt = session?.finishedAt;
     if (session != null) {
+      _plannedExerciseIds.addAll(session.exercises.map((e) => e.exerciseId));
       for (final set in session.sets) {
         // Only id + name are needed downstream; macros aren't sent on save.
         _sets.add((
@@ -48,6 +60,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           weight: set.weight,
         ));
       }
+    } else if (widget.template != null) {
+      _plannedExerciseIds.addAll(widget.template!.exerciseIds);
     }
   }
 
@@ -77,19 +91,29 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       builder: (_) => AddSetSheet(initialExercise: initial),
     );
     if (draft != null) {
-      setState(() => _sets.add(
-          (exercise: draft.exercise, reps: draft.reps, weight: draft.weight)));
+      setState(() {
+        _sets.add((exercise: draft.exercise, reps: draft.reps, weight: draft.weight));
+        // Logging a set for an exercise implicitly plans it too, so it shows
+        // up as a quick-add chip for the rest of the workout.
+        _plannedExerciseIds.add(draft.exercise.id);
+      });
+    }
+  }
+
+  Future<void> _addPlannedExercise() async {
+    final exercise = await showModalBottomSheet<Exercise>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AddExerciseToSessionSheet(excludeIds: _plannedExerciseIds),
+    );
+    if (exercise != null) {
+      setState(() => _plannedExerciseIds.add(exercise.id));
     }
   }
 
   Future<void> _save() async {
     if (_saving) return; // guard against a fast double-tap creating two sessions
-    if (_sets.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least one set')),
-      );
-      return;
-    }
     setState(() => _saving = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -101,10 +125,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       final notifier = ref.read(workoutSessionControllerProvider.notifier);
       if (_isEditing) {
         await notifier.updateSession(widget.session!.id,
-            startedAt: _startedAt, finishedAt: _finishedAt, sets: sets);
+            startedAt: _startedAt,
+            finishedAt: _finishedAt,
+            exerciseIds: _plannedExerciseIds.toList(),
+            sets: sets);
       } else {
         await notifier.logSession(
-            startedAt: _startedAt, finishedAt: _finishedAt, sets: sets);
+            startedAt: _startedAt,
+            finishedAt: _finishedAt,
+            exerciseIds: _plannedExerciseIds.toList(),
+            sets: sets);
       }
       navigator.pop();
     } catch (_) {
@@ -177,33 +207,41 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 ),
             ],
           ),
-          if (template != null) ...[
-            const SizedBox(height: 20),
-            Text('From "${template.name}"',
-                style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 4),
-            Text('Tap an exercise to log a set',
-                style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 8),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Exercises', style: Theme.of(context).textTheme.labelLarge),
+              TextButton.icon(
+                onPressed: _addPlannedExercise,
+                icon: const Icon(Icons.add),
+                label: const Text('Add exercise'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('Tap an exercise to log a set',
+              style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 8),
+          if (_plannedExerciseIds.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('No exercises planned yet — tap "Add exercise" to add one'),
+            )
+          else
             Wrap(
               spacing: 8,
               runSpacing: 4,
               children: [
-                for (final id in template.exerciseIds)
+                for (final id in _plannedExerciseIds)
                   if (exercisesById[id] != null)
                     ActionChip(
                       avatar: const Icon(Icons.add, size: 18),
                       label: Text(exercisesById[id]!.name),
                       onPressed: () => _addSet(initial: exercisesById[id]),
                     ),
-                ActionChip(
-                  avatar: const Icon(Icons.add, size: 18),
-                  label: const Text('Other exercise'),
-                  onPressed: _addSet,
-                ),
               ],
             ),
-          ],
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

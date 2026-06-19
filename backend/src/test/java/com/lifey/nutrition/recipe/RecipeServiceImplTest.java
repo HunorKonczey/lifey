@@ -1,11 +1,15 @@
 package com.lifey.nutrition.recipe;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.recipe.dto.RecipeIngredientRequest;
 import com.lifey.nutrition.recipe.dto.RecipeRequest;
 import com.lifey.nutrition.recipe.dto.RecipeResponse;
+import com.lifey.user.User;
+import com.lifey.user.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,10 +22,13 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RecipeServiceImplTest {
+
+    private static final Long USER_ID = 1L;
 
     @Mock
     RecipeRepository recipeRepository;
@@ -29,8 +36,20 @@ class RecipeServiceImplTest {
     @Mock
     FoodRepository foodRepository;
 
+    @Mock
+    UserRepository userRepository;
+
+    @Mock
+    CurrentUserProvider currentUserProvider;
+
     @InjectMocks
     RecipeServiceImpl service;
+
+    @BeforeEach
+    void stubCurrentUser() {
+        lenient().when(currentUserProvider.getUserId()).thenReturn(USER_ID);
+        lenient().when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+    }
 
     @Test
     void create_resolvesFoodsAndReturnsResponse() {
@@ -76,7 +95,7 @@ class RecipeServiceImplTest {
         old.setQuantityInGrams(50.0);
         existing.getIngredients().add(old);
 
-        when(recipeRepository.findById(3L)).thenReturn(Optional.of(existing));
+        when(recipeRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
         when(foodRepository.findById(1L)).thenReturn(Optional.of(food(1L, "Chicken")));
         RecipeRequest request = new RecipeRequest("New", "desc",
                 List.of(new RecipeIngredientRequest(1L, 300.0)));
@@ -94,7 +113,7 @@ class RecipeServiceImplTest {
 
     @Test
     void findById_throwsWhenMissing() {
-        when(recipeRepository.findById(99L)).thenReturn(Optional.empty());
+        when(recipeRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.findById(99L))
                 .isInstanceOf(ResourceNotFoundException.class);

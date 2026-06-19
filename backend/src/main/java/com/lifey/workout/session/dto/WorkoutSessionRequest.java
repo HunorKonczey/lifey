@@ -1,7 +1,6 @@
 package com.lifey.workout.session.dto;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 
@@ -17,7 +16,18 @@ public record WorkoutSessionRequest(
         @PastOrPresent
         Instant finishedAt,
 
-        @NotEmpty
+        /**
+         * Exercises planned for this session (e.g. resolved client-side from a
+         * template's exerciseIds). May be empty for a session started from scratch.
+         */
+        @NotNull
+        List<Long> exerciseIds,
+
+        /**
+         * Sets actually logged so far. May be empty — a session can be started
+         * with no sets recorded yet and filled in as the workout progresses.
+         */
+        @NotNull
         List<@Valid ExerciseSetRequest> sets
 ) {
 }

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_controller.dart';
+import 'features/settings/application/settings_controller.dart';
+import 'features/settings/domain/user_settings.dart';
 
 /// Root application widget.
 class LifeyApp extends ConsumerWidget {
@@ -22,10 +24,26 @@ class LifeyApp extends ConsumerWidget {
     }
 
     final router = ref.watch(appRouterProvider);
+    final themePreference =
+        ref.watch(settingsControllerProvider).value?.theme ?? ThemePreference.system;
+
     return MaterialApp.router(
       title: 'Lifey',
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: _themeMode(themePreference),
       routerConfig: router,
     );
+  }
+
+  ThemeMode _themeMode(ThemePreference preference) {
+    switch (preference) {
+      case ThemePreference.light:
+        return ThemeMode.light;
+      case ThemePreference.dark:
+        return ThemeMode.dark;
+      case ThemePreference.system:
+        return ThemeMode.system;
+    }
   }
 }

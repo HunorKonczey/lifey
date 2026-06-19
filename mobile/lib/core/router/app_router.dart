@@ -7,6 +7,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/nutrition/presentation/nutrition_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/weight/presentation/weight_screen.dart';
 import '../../features/workouts/presentation/workouts_screen.dart';
 import '../../shared/widgets/main_shell.dart';
@@ -32,7 +33,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authControllerProvider);
       if (auth.isLoading) return null;
 
-      final isLoggedIn = auth.valueOrNull != null;
+      final isLoggedIn = auth.value != null;
       final isAuthRoute =
           state.matchedLocation == '/login' || state.matchedLocation == '/register';
 
@@ -43,6 +44,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             MainShell(navigationShell: navigationShell),

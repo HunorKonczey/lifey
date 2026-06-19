@@ -7,6 +7,7 @@ public record WorkoutSessionResponse(
         Long id,
         Instant startedAt,
         Instant finishedAt,
+        List<ExerciseSummary> exercises,
         List<ExerciseSetResponse> sets
 ) {
 }

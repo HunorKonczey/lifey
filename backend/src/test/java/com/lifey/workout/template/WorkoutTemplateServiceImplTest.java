@@ -1,10 +1,14 @@
 package com.lifey.workout.template;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.user.User;
+import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.template.dto.WorkoutTemplateRequest;
 import com.lifey.workout.template.dto.WorkoutTemplateResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,10 +21,13 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class WorkoutTemplateServiceImplTest {
+
+    private static final Long USER_ID = 1L;
 
     @Mock
     WorkoutTemplateRepository templateRepository;
@@ -28,8 +35,20 @@ class WorkoutTemplateServiceImplTest {
     @Mock
     ExerciseRepository exerciseRepository;
 
+    @Mock
+    UserRepository userRepository;
+
+    @Mock
+    CurrentUserProvider currentUserProvider;
+
     @InjectMocks
     WorkoutTemplateServiceImpl service;
+
+    @BeforeEach
+    void stubCurrentUser() {
+        lenient().when(currentUserProvider.getUserId()).thenReturn(USER_ID);
+        lenient().when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+    }
 
     @Test
     void create_resolvesExercisesAndReturnsResponse() {
@@ -67,7 +86,7 @@ class WorkoutTemplateServiceImplTest {
         WorkoutTemplateExercise oldLink = new WorkoutTemplateExercise();
         oldLink.setExercise(exercise(1L, "Bench Press"));
         existing.getExercises().add(oldLink);
-        when(templateRepository.findById(9L)).thenReturn(Optional.of(existing));
+        when(templateRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(existing));
         when(exerciseRepository.findById(4L)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
 
         WorkoutTemplateResponse result =
@@ -80,7 +99,7 @@ class WorkoutTemplateServiceImplTest {
 
     @Test
     void update_throwsWhenTemplateMissing() {
-        when(templateRepository.findById(99L)).thenReturn(Optional.empty());
+        when(templateRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.update(99L, new WorkoutTemplateRequest("X", List.of(1L))))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -89,7 +108,7 @@ class WorkoutTemplateServiceImplTest {
 
     @Test
     void delete_throwsWhenMissing() {
-        when(templateRepository.existsById(99L)).thenReturn(false);
+        when(templateRepository.existsByIdAndUserId(99L, USER_ID)).thenReturn(false);
 
         assertThatThrownBy(() -> service.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class)
