@@ -16,7 +16,7 @@ Important rules:
 - Never modify generated files.
 - All business entities belong to a user.
 - Authentication uses JWT + Refresh Tokens.
-- Use Java 21.
+- Use Java 24.
 - Use Maven.
 - Prefer constructor injection.
 - Use feature-based packaging.

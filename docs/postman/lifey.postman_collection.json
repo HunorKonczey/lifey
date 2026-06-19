@@ -1,11 +1,19 @@
 {
   "info": {
     "name": "Lifey API",
-    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*.\n\nExercises are seeded reference data (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank) and can also be managed via the *Exercises* CRUD endpoints. Deleting an exercise still referenced by a template/session returns 409.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall.",
+    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*.\n\nAll `/api/v1/**` routes except `/api/v1/auth/register`, `/api/v1/auth/login`, and `/api/v1/auth/refresh` require a JWT access token. The collection is set up to send it automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nExercises are seeded reference data (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank) and can also be managed via the *Exercises* CRUD endpoints. Deleting an exercise still referenced by a template/session returns 409.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
     { "key": "weightId", "value": "", "type": "string" },
     { "key": "foodId", "value": "", "type": "string" },
     { "key": "recipeId", "value": "", "type": "string" },
@@ -15,6 +23,180 @@
     { "key": "exerciseId", "value": "", "type": "string" }
   ],
   "item": [
+    {
+      "name": "Auth",
+      "description": "Implemented feature. Registration, login, JWT access/refresh-token issuance, refresh-token rotation, and logout (single device / all devices).",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@lifey.app\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Creates an account. `email` must be unique (case-insensitive); `password` must be 8-100 characters. Every new account gets `ROLE_USER`. Returns 201 with the created user, or 409 if the email is already registered."
+          },
+          "response": []
+        },
+        {
+          "name": "Register - duplicate email (example)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@lifey.app\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Demonstrates the 409 response when the email is already registered. Run 'Register' first."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body && body.accessToken) { pm.collectionVariables.set('accessToken', body.accessToken); }",
+                  "if (body && body.refreshToken) { pm.collectionVariables.set('refreshToken', body.refreshToken); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@lifey.app\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Validates credentials and issues a token pair: a 15-minute JWT access token and a 30-day opaque refresh token (stored hashed server-side). Stores both in the `accessToken`/`refreshToken` collection variables, which every other request in this collection sends as `Authorization: Bearer {{accessToken}}`. Returns 401 on a wrong email/password (same message either way, so login can't be used to enumerate accounts)."
+          },
+          "response": []
+        },
+        {
+          "name": "Login - invalid credentials (example)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@lifey.app\",\n  \"password\": \"wrong-password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Demonstrates the 401 response for a wrong password."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body && body.accessToken) { pm.collectionVariables.set('accessToken', body.accessToken); }",
+                  "if (body && body.refreshToken) { pm.collectionVariables.set('refreshToken', body.refreshToken); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "description": "Rotates the refresh token: the given token is revoked and a brand-new access/refresh pair is issued and stored. Returns 401 if the refresh token is unknown, expired, or already revoked (reuse of an already-rotated token is treated as a possible leak)."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "Revokes the given refresh token (logs out this device only). Returns 204 regardless of whether the token was already revoked/unknown."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout all devices",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout-all"]
+            },
+            "description": "Revokes every active refresh token belonging to the authenticated user (logs out all devices). Requires a valid access token. Returns 204."
+          },
+          "response": []
+        }
+      ]
+    },
     {
       "name": "Weight Tracking",
       "description": "Implemented feature. Daily body-weight entries.",

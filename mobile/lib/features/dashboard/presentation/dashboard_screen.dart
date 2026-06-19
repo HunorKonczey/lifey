@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/widgets/error_view.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/dashboard_controller.dart';
 import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
@@ -21,6 +22,13 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Dashboard'),
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Log out',
+            onPressed: () => ref.read(authControllerProvider.notifier).logout(),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(dashboardControllerProvider.notifier).refresh(),

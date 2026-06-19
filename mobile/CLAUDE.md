@@ -1,28 +1,26 @@
-# Lifey
+# Lifey Mobile (Flutter)
 
-Architecture:
+See root `../CLAUDE.md` for project-wide rules (Java/Maven backend rules don't apply here).
 
-- Frontend: Flutter
-- Backend: Spring Boot 4 (Java 24)
-- Database: PostgreSQL
+## Stack
 
-Project structure:
+- State management: `flutter_riverpod` (+ `riverpod_generator`/`build_runner` for generated providers — never hand-edit `*.g.dart`)
+- Routing: `go_router`
+- HTTP: `dio` (`lib/core/network/dio_client.dart`, `lib/core/network/api_config.dart`)
+- No local/offline storage yet. Avoid Isar 3.1.0 specifically — it lacks an Android `namespace` and breaks AGP 8 builds. If offline storage is needed, prefer drift, hive_ce, or Isar 4.x.
 
-- mobile/ = Flutter application
-- backend/src/ = Spring Boot backend
+## Package structure
 
-Important rules:
+Feature-based, under `lib/features/<feature>/`:
 
-- Never modify generated files.
-- All business entities belong to a user.
-- Authentication uses JWT + Refresh Tokens.
-- Use Java 21.
-- Use Maven.
-- Prefer constructor injection.
-- Use feature-based packaging.
-- Do not introduce new frameworks without justification.
-- Flyway migrations for database changes
-- REST API only
+- `domain/` — plain model classes
+- `data/` — repositories (talk to backend via `dio`)
+- `application/` — Riverpod controllers/providers (business logic, state)
+- `presentation/` — screens and widgets
 
-When implementing features, read only the files directly related to the task.
-Do not scan the entire repository unless explicitly requested.
+Shared cross-feature code lives in `lib/shared/widgets/` and `lib/core/` (theme, router, network, storage).
+
+## Conventions
+
+- Run `dart run build_runner build` after changing any `@riverpod`-annotated provider.
+- New features should follow the same four-layer split even if a layer is thin.

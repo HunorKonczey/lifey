@@ -13,6 +13,7 @@ dependencies:
   go_router: ^14.2.0
   dio: ^5.5.0
   intl: ^0.19.0
+  flutter_secure_storage: ^9.2.2
   # Offline/local storage will be added when the offline feature lands.
   # Avoid Isar 3.1.0 — it lacks an Android `namespace` and breaks AGP 8 builds.
   # Use an AGP-8-compatible option then (e.g. drift, hive_ce, or Isar 4.x).

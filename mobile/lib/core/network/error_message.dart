@@ -12,6 +12,8 @@ String friendlyError(Object error) {
         return "Can't reach the server. Is the backend running?";
       case DioExceptionType.badResponse:
         final code = error.response?.statusCode;
+        final serverMessage = _serverMessage(error.response?.data);
+        if (serverMessage != null) return serverMessage;
         switch (code) {
           case 400:
             return 'Some of the details were invalid.';
@@ -32,4 +34,13 @@ String friendlyError(Object error) {
     }
   }
   return 'Something went wrong.';
+}
+
+/// Extracts the backend's `ApiError.message` field, when present, so e.g.
+/// "Invalid email or password" reaches the user instead of a generic string.
+String? _serverMessage(Object? data) {
+  if (data is Map && data['message'] is String) {
+    return data['message'] as String;
+  }
+  return null;
 }
