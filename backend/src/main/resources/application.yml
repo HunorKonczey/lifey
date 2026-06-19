@@ -5,6 +5,11 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/lifey}
     username: ${SPRING_DATASOURCE_USERNAME:lifey}
     password: ${SPRING_DATASOURCE_PASSWORD:lifey}
+    hikari:
+      # Default is 10 — each pooled connection holds buffers on both this
+      # app's and Postgres' side, not worth it for a low-traffic free-tier
+      # deployment with a capped heap.
+      maximum-pool-size: 5
   jpa:
     hibernate:
       ddl-auto: validate
@@ -21,6 +26,12 @@ server:
   # $PORT and route their public proxy to it — the app must bind to that, not
   # a fixed port. Falls back to 8080 for local/dev where $PORT isn't set.
   port: ${PORT:8080}
+  tomcat:
+    threads:
+      # Default max is 200 — each thread reserves its own stack, which adds
+      # up fast against a capped heap. 200 concurrent requests is far more
+      # than this deployment needs anyway.
+      max: 50
 
 springdoc:
   swagger-ui:
