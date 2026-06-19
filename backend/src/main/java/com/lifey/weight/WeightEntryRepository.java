@@ -7,7 +7,11 @@ import java.util.Optional;
 
 public interface WeightEntryRepository extends JpaRepository<WeightEntry, Long> {
 
-    List<WeightEntry> findAllByOrderByDateDescRecordedAtDesc();
+    List<WeightEntry> findAllByUserIdOrderByDateDescRecordedAtDesc(Long userId);
 
-    Optional<WeightEntry> findFirstByOrderByDateDescRecordedAtDesc();
+    Optional<WeightEntry> findFirstByUserIdOrderByDateDescRecordedAtDesc(Long userId);
+
+    boolean existsByIdAndUserId(Long id, Long userId);
+
+    void deleteByIdAndUserId(Long id, Long userId);
 }

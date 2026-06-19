@@ -1,9 +1,13 @@
 package com.lifey.workout.session;
 
 import com.lifey.common.domain.BaseEntity;
+import com.lifey.user.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -18,6 +22,10 @@ import java.util.List;
 @Entity
 @Table(name = "workout_sessions")
 public class WorkoutSession extends BaseEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "started_at", nullable = false)
     private Instant startedAt;

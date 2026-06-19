@@ -1,10 +1,16 @@
 package com.lifey.common.exception;
 
+import com.lifey.auth.InvalidCredentialsException;
+import com.lifey.auth.InvalidTokenException;
+import com.lifey.auth.TokenExpiredException;
+import com.lifey.auth.TokenRevokedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -51,6 +57,17 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT,
                 "Operation violates a data integrity constraint (the resource may still be referenced)",
                 request, List.of());
+    }
+
+    @ExceptionHandler({InvalidCredentialsException.class, InvalidTokenException.class,
+            TokenExpiredException.class, TokenRevokedException.class, AuthenticationException.class})
+    public ResponseEntity<ApiError> handleAuthentication(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "Access denied", request, List.of());
     }
 
     private ResponseEntity<ApiError> build(HttpStatus status, String message,

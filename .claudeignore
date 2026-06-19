@@ -1,0 +1,31 @@
+# Flutter SDK
+flutter/
+
+# Flutter generated
+mobile/.dart_tool/
+mobile/build/
+
+# IntelliJ / IDE
+.idea/
+.vscode/
+*.iml
+
+# Java build outputs
+backend/target/
+backend/build/
+
+# Git internals
+.git/
+
+# Logs
+*.log
+logs/
+
+# Claude internals
+.claude/
+
+# AI generated artifacts
+agent-artifacts/
+
+# OS files
+.DS_Store

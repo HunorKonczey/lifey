@@ -15,6 +15,9 @@ public class WebCorsConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
                 .allowedOriginPatterns("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                // Explicit so the `Authorization: Bearer <token>` header always survives
+                // CORS preflight, regardless of Spring's default-header behavior.
+                .allowedHeaders("*");
     }
 }

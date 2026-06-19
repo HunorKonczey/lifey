@@ -1,11 +1,13 @@
 package com.lifey.nutrition.recipe;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.recipe.dto.RecipeIngredientRequest;
 import com.lifey.nutrition.recipe.dto.RecipeRequest;
 import com.lifey.nutrition.recipe.dto.RecipeResponse;
+import com.lifey.user.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,16 +19,21 @@ public class RecipeServiceImpl implements RecipeService {
 
     private final RecipeRepository recipeRepository;
     private final FoodRepository foodRepository;
+    private final UserRepository userRepository;
+    private final CurrentUserProvider currentUserProvider;
 
-    public RecipeServiceImpl(RecipeRepository recipeRepository, FoodRepository foodRepository) {
+    public RecipeServiceImpl(RecipeRepository recipeRepository, FoodRepository foodRepository,
+                             UserRepository userRepository, CurrentUserProvider currentUserProvider) {
         this.recipeRepository = recipeRepository;
         this.foodRepository = foodRepository;
+        this.userRepository = userRepository;
+        this.currentUserProvider = currentUserProvider;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<RecipeResponse> findAll() {
-        return recipeRepository.findAll().stream()
+        return recipeRepository.findAllByUserId(currentUserProvider.getUserId()).stream()
                 .map(RecipeMapper::toResponse)
                 .toList();
     }
@@ -40,6 +47,7 @@ public class RecipeServiceImpl implements RecipeService {
     @Override
     public RecipeResponse create(RecipeRequest request) {
         Recipe recipe = new Recipe();
+        recipe.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         recipe.setName(request.name());
         recipe.setDescription(request.description());
         replaceIngredients(recipe, request.ingredients());
@@ -57,14 +65,15 @@ public class RecipeServiceImpl implements RecipeService {
 
     @Override
     public void delete(Long id) {
-        if (!recipeRepository.existsById(id)) {
+        Long userId = currentUserProvider.getUserId();
+        if (!recipeRepository.existsByIdAndUserId(id, userId)) {
             throw new ResourceNotFoundException("Recipe not found: " + id);
         }
-        recipeRepository.deleteById(id);
+        recipeRepository.deleteByIdAndUserId(id, userId);
     }
 
     private Recipe getOrThrow(Long id) {
-        return recipeRepository.findById(id)
+        return recipeRepository.findByIdAndUserId(id, currentUserProvider.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + id));
     }
 

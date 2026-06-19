@@ -1,6 +1,8 @@
 package com.lifey.workout.template;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.template.dto.WorkoutTemplateRequest;
@@ -16,17 +18,23 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
 
     private final WorkoutTemplateRepository templateRepository;
     private final ExerciseRepository exerciseRepository;
+    private final UserRepository userRepository;
+    private final CurrentUserProvider currentUserProvider;
 
     public WorkoutTemplateServiceImpl(WorkoutTemplateRepository templateRepository,
-                                      ExerciseRepository exerciseRepository) {
+                                      ExerciseRepository exerciseRepository,
+                                      UserRepository userRepository,
+                                      CurrentUserProvider currentUserProvider) {
         this.templateRepository = templateRepository;
         this.exerciseRepository = exerciseRepository;
+        this.userRepository = userRepository;
+        this.currentUserProvider = currentUserProvider;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<WorkoutTemplateResponse> findAll() {
-        return templateRepository.findAll().stream()
+        return templateRepository.findAllByUserId(currentUserProvider.getUserId()).stream()
                 .map(WorkoutTemplateMapper::toResponse)
                 .toList();
     }
@@ -40,6 +48,7 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
     @Override
     public WorkoutTemplateResponse create(WorkoutTemplateRequest request) {
         WorkoutTemplate template = new WorkoutTemplate();
+        template.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         template.setName(request.name());
         replaceExercises(template, request.exerciseIds());
         return WorkoutTemplateMapper.toResponse(templateRepository.save(template));
@@ -55,14 +64,15 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
 
     @Override
     public void delete(Long id) {
-        if (!templateRepository.existsById(id)) {
+        Long userId = currentUserProvider.getUserId();
+        if (!templateRepository.existsByIdAndUserId(id, userId)) {
             throw new ResourceNotFoundException("Workout template not found: " + id);
         }
-        templateRepository.deleteById(id);
+        templateRepository.deleteByIdAndUserId(id, userId);
     }
 
     private WorkoutTemplate getOrThrow(Long id) {
-        return templateRepository.findById(id)
+        return templateRepository.findByIdAndUserId(id, currentUserProvider.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Workout template not found: " + id));
     }
 

@@ -1,0 +1,22 @@
+package com.lifey.auth;
+
+import com.lifey.auth.dto.AuthResponse;
+import com.lifey.auth.dto.LoginRequest;
+import com.lifey.auth.dto.RegisterRequest;
+import com.lifey.auth.dto.UserResponse;
+
+public interface AuthService {
+
+    UserResponse register(RegisterRequest request);
+
+    AuthResponse login(LoginRequest request);
+
+    /** Validates {@code refreshToken}, revokes it, and issues a new access/refresh pair. */
+    AuthResponse refresh(String refreshToken);
+
+    /** Revokes a single refresh token (logout from the device that holds it). Idempotent. */
+    void logout(String refreshToken);
+
+    /** Revokes every live refresh token for the current user (logout from all devices). */
+    void logoutAll();
+}

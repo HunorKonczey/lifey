@@ -1,0 +1,24 @@
+# Flutter generated
+.dart_tool/
+build/
+
+# IntelliJ / IDE
+.idea/
+.vscode/
+*.iml
+
+# Git internals
+.git/
+
+# Logs
+*.log
+logs/
+
+# Claude internals
+.claude/
+
+# AI generated artifacts
+agent-artifacts/
+
+# OS files
+.DS_Store

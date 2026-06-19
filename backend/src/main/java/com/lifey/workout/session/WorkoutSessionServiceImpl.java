@@ -1,6 +1,8 @@
 package com.lifey.workout.session;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.session.dto.ExerciseSetRequest;
@@ -17,17 +19,23 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
 
     private final WorkoutSessionRepository sessionRepository;
     private final ExerciseRepository exerciseRepository;
+    private final UserRepository userRepository;
+    private final CurrentUserProvider currentUserProvider;
 
     public WorkoutSessionServiceImpl(WorkoutSessionRepository sessionRepository,
-                                     ExerciseRepository exerciseRepository) {
+                                     ExerciseRepository exerciseRepository,
+                                     UserRepository userRepository,
+                                     CurrentUserProvider currentUserProvider) {
         this.sessionRepository = sessionRepository;
         this.exerciseRepository = exerciseRepository;
+        this.userRepository = userRepository;
+        this.currentUserProvider = currentUserProvider;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<WorkoutSessionResponse> findAll() {
-        return sessionRepository.findAllByOrderByStartedAtDesc().stream()
+        return sessionRepository.findAllByUserIdOrderByStartedAtDesc(currentUserProvider.getUserId()).stream()
                 .map(WorkoutSessionMapper::toResponse)
                 .toList();
     }
@@ -35,6 +43,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     @Override
     public WorkoutSessionResponse create(WorkoutSessionRequest request) {
         WorkoutSession session = new WorkoutSession();
+        session.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         session.setStartedAt(request.startedAt());
         session.setFinishedAt(request.finishedAt());
         replaceSets(session, request.sets());
@@ -52,14 +61,15 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
 
     @Override
     public void delete(Long id) {
-        if (!sessionRepository.existsById(id)) {
+        Long userId = currentUserProvider.getUserId();
+        if (!sessionRepository.existsByIdAndUserId(id, userId)) {
             throw new ResourceNotFoundException("Workout session not found: " + id);
         }
-        sessionRepository.deleteById(id);
+        sessionRepository.deleteByIdAndUserId(id, userId);
     }
 
     private WorkoutSession getOrThrow(Long id) {
-        return sessionRepository.findById(id)
+        return sessionRepository.findByIdAndUserId(id, currentUserProvider.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Workout session not found: " + id));
     }
 

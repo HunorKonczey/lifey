@@ -1,5 +1,6 @@
 package com.lifey.statistics;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.statistics.dto.StatisticsResponse;
 import com.lifey.weight.WeightEntry;
@@ -14,7 +15,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
- * Aggregates nutrition, workout and weight data over rolling periods ending now.
+ * Aggregates nutrition, workout and weight data over rolling periods ending now,
+ * scoped to the current user.
  */
 @Service
 @Transactional(readOnly = true)
@@ -23,13 +25,16 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final MealRepository mealRepository;
     private final WorkoutSessionRepository workoutSessionRepository;
     private final WeightEntryRepository weightEntryRepository;
+    private final CurrentUserProvider currentUserProvider;
 
     public StatisticsServiceImpl(MealRepository mealRepository,
                                  WorkoutSessionRepository workoutSessionRepository,
-                                 WeightEntryRepository weightEntryRepository) {
+                                 WeightEntryRepository weightEntryRepository,
+                                 CurrentUserProvider currentUserProvider) {
         this.mealRepository = mealRepository;
         this.workoutSessionRepository = workoutSessionRepository;
         this.weightEntryRepository = weightEntryRepository;
+        this.currentUserProvider = currentUserProvider;
     }
 
     @Override
@@ -48,15 +53,16 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     private StatisticsResponse forPeriodSince(LocalDate fromDate) {
+        Long userId = currentUserProvider.getUserId();
         LocalDateTime fromDateTime = fromDate.atStartOfDay();
         Instant fromInstant = fromDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
 
-        double totalCalories = mealRepository.sumCaloriesSince(fromDateTime);
-        double totalProtein = mealRepository.sumProteinSince(fromDateTime);
-        double totalCarbs = mealRepository.sumCarbsSince(fromDateTime);
-        double totalFat = mealRepository.sumFatSince(fromDateTime);
-        long workoutCount = workoutSessionRepository.countByStartedAtGreaterThanEqual(fromInstant);
-        Double latestWeight = weightEntryRepository.findFirstByOrderByDateDescRecordedAtDesc()
+        double totalCalories = mealRepository.sumCaloriesSince(userId, fromDateTime);
+        double totalProtein = mealRepository.sumProteinSince(userId, fromDateTime);
+        double totalCarbs = mealRepository.sumCarbsSince(userId, fromDateTime);
+        double totalFat = mealRepository.sumFatSince(userId, fromDateTime);
+        long workoutCount = workoutSessionRepository.countByUserIdAndStartedAtGreaterThanEqual(userId, fromInstant);
+        Double latestWeight = weightEntryRepository.findFirstByUserIdOrderByDateDescRecordedAtDesc(userId)
                 .map(WeightEntry::getWeight)
                 .orElse(null);
 

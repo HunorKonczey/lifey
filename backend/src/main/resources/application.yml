@@ -22,3 +22,12 @@ server:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+lifey:
+  jwt:
+    # Dev-only default. MUST be overridden via JWT_SECRET in any shared/production
+    # environment — anyone with this value can forge access tokens for any user.
+    secret: ${JWT_SECRET:dev-only-secret-do-not-use-in-production-please-change-me-1234567890}
+    access-token-ttl: ${JWT_ACCESS_TTL:15m}
+    refresh-token-ttl: ${JWT_REFRESH_TTL:30d}
+    issuer: lifey-api

@@ -55,7 +55,7 @@ public class FoodServiceImpl implements FoodService {
     private void requireUniqueName(String name, Long ignoreId) {
         repository.findByNameIgnoreCase(name)
                 .filter(existing -> !existing.getId().equals(ignoreId))
-                .ifPresent(existing -> {
+                .ifPresent(_ -> {
                     throw new DuplicateResourceException("A food named '" + name + "' already exists");
                 });
     }
