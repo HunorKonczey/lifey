@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -77,6 +78,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     if (!_formKey.currentState!.validate()) return;
     final carbsText = _carbs.text.trim();
     final fatText = _fat.text.trim();
+    final name = _name.text.trim();
 
     setState(() {
       _submitting = true;
@@ -84,7 +86,6 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     });
     try {
       final notifier = ref.read(foodControllerProvider.notifier);
-      final name = _name.text.trim();
       final calories = _parse(_calories.text)!;
       final protein = _parse(_protein.text)!;
       final carbs = carbsText.isEmpty ? null : _parse(carbsText);
@@ -106,8 +107,11 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             fat: fat);
       }
       if (mounted) Navigator.of(context).pop();
-    } catch (_) {
-      setState(() => _error = "Couldn't save the food. Please try again.");
+    } catch (e) {
+      final isDuplicate = e is DioException && e.response?.statusCode == 409;
+      setState(() => _error = isDuplicate
+          ? 'A food named "$name" already exists.'
+          : "Couldn't save the food. Please try again.");
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

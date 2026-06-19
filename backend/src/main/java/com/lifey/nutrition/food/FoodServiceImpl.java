@@ -1,5 +1,6 @@
 package com.lifey.nutrition.food;
 
+import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.dto.FoodRequest;
 import com.lifey.nutrition.food.dto.FoodResponse;
@@ -34,6 +35,7 @@ public class FoodServiceImpl implements FoodService {
 
     @Override
     public FoodResponse create(FoodRequest request) {
+        requireUniqueName(request.name().trim(), null);
         Food saved = repository.save(FoodMapper.toEntity(request));
         return FoodMapper.toResponse(saved);
     }
@@ -41,8 +43,21 @@ public class FoodServiceImpl implements FoodService {
     @Override
     public FoodResponse update(Long id, FoodRequest request) {
         Food food = getOrThrow(id);
+        requireUniqueName(request.name().trim(), id);
         FoodMapper.apply(food, request);
         return FoodMapper.toResponse(food);
+    }
+
+    /**
+     * Foods are matched by name (case-insensitive) when logging meals and recipes,
+     * so two entries with the same name would be indistinguishable in those pickers.
+     */
+    private void requireUniqueName(String name, Long ignoreId) {
+        repository.findByNameIgnoreCase(name)
+                .filter(existing -> !existing.getId().equals(ignoreId))
+                .ifPresent(existing -> {
+                    throw new DuplicateResourceException("A food named '" + name + "' already exists");
+                });
     }
 
     @Override

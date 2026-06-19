@@ -1,5 +1,6 @@
 package com.lifey.nutrition.food;
 
+import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.dto.FoodResponse;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,17 @@ class FoodControllerTest {
                 .andExpect(jsonPath("$.details").isArray());
 
         verify(foodService, never()).create(any());
+    }
+
+    @Test
+    void create_duplicateNameReturns409() throws Exception {
+        when(foodService.create(any()))
+                .thenThrow(new DuplicateResourceException("A food named 'Rice' already exists"));
+
+        mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Rice\",\"caloriesPer100g\":130,\"proteinPer100g\":2.7}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409));
     }
 
     @Test

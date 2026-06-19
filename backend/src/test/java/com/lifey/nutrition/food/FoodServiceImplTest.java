@@ -1,5 +1,6 @@
 package com.lifey.nutrition.food;
 
+import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.dto.FoodRequest;
 import com.lifey.nutrition.food.dto.FoodResponse;
@@ -60,6 +61,7 @@ class FoodServiceImplTest {
     @Test
     void create_savesAndReturnsResponse() {
         FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null);
+        when(repository.findByNameIgnoreCase("Rice")).thenReturn(Optional.empty());
         when(repository.save(any(Food.class))).thenAnswer(inv -> {
             Food f = inv.getArgument(0);
             f.setId(7L);
@@ -74,9 +76,20 @@ class FoodServiceImplTest {
     }
 
     @Test
+    void create_throwsWhenNameAlreadyExists() {
+        FoodRequest request = new FoodRequest(" Rice ", 130.0, 2.7, null, null);
+        when(repository.findByNameIgnoreCase("Rice")).thenReturn(Optional.of(food(1L, "Rice", 130, 2.7)));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(DuplicateResourceException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void update_appliesChangesToExistingFood() {
         Food existing = food(3L, "Old", 100, 10);
         when(repository.findById(3L)).thenReturn(Optional.of(existing));
+        when(repository.findByNameIgnoreCase("New")).thenReturn(Optional.empty());
         FoodRequest request = new FoodRequest("New", 200.0, 25.0, 5.0, 1.0);
 
         FoodResponse result = service.update(3L, request);
@@ -85,6 +98,28 @@ class FoodServiceImplTest {
         assertThat(result.name()).isEqualTo("New");
         assertThat(result.caloriesPer100g()).isEqualTo(200.0);
         assertThat(existing.getName()).isEqualTo("New");
+    }
+
+    @Test
+    void update_allowsKeepingItsOwnName() {
+        Food existing = food(3L, "Rice", 100, 10);
+        when(repository.findById(3L)).thenReturn(Optional.of(existing));
+        when(repository.findByNameIgnoreCase("Rice")).thenReturn(Optional.of(existing));
+        FoodRequest request = new FoodRequest("Rice", 110.0, 10.0, null, null);
+
+        FoodResponse result = service.update(3L, request);
+
+        assertThat(result.caloriesPer100g()).isEqualTo(110.0);
+    }
+
+    @Test
+    void update_throwsWhenNameTakenByAnotherFood() {
+        Food existing = food(3L, "Old", 100, 10);
+        when(repository.findById(3L)).thenReturn(Optional.of(existing));
+        when(repository.findByNameIgnoreCase("Rice")).thenReturn(Optional.of(food(9L, "Rice", 130, 2.7)));
+
+        assertThatThrownBy(() -> service.update(3L, new FoodRequest("Rice", 200.0, 25.0, null, null)))
+                .isInstanceOf(DuplicateResourceException.class);
     }
 
     @Test

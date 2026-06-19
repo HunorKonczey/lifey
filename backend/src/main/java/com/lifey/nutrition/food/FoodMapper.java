@@ -18,7 +18,7 @@ final class FoodMapper {
     }
 
     static void apply(Food food, FoodRequest request) {
-        food.setName(request.name());
+        food.setName(request.name().trim());
         food.setCaloriesPer100g(request.caloriesPer100g());
         food.setProteinPer100g(request.proteinPer100g());
         food.setCarbsPer100g(request.carbsPer100g());

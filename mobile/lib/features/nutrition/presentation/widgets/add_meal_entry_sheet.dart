@@ -15,10 +15,15 @@ class AddMealEntrySheet extends ConsumerStatefulWidget {
   ConsumerState<AddMealEntrySheet> createState() => _AddMealEntrySheetState();
 }
 
+/// Cap on how many matching foods are shown at once, so the suggestion list
+/// stays short even as the food catalog grows.
+const _maxSuggestions = 20;
+
 class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   final _formKey = GlobalKey<FormState>();
   final _grams = TextEditingController(text: '100');
   Food? _food;
+  String? _foodError;
 
   @override
   void dispose() {
@@ -27,8 +32,10 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   }
 
   void _submit() {
-    if (_food == null) return;
-    if (!_formKey.currentState!.validate()) return;
+    final formValid = _formKey.currentState!.validate();
+    final foodPicked = _food != null;
+    setState(() => _foodError = foodPicked ? null : 'Pick a food');
+    if (!formValid || !foodPicked) return;
     final grams = double.parse(_grams.text.replaceAll(',', '.'));
     Navigator.of(context).pop<MealEntryDraft>((food: _food!, grams: grams));
   }
@@ -65,18 +72,42 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                 Text('Add food to meal',
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<Food>(
-                  initialValue: _food,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Food',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: foods
-                      .map((f) => DropdownMenuItem(value: f, child: Text(f.name)))
-                      .toList(),
-                  onChanged: (f) => setState(() => _food = f),
-                  validator: (f) => f == null ? 'Pick a food' : null,
+                Autocomplete<Food>(
+                  displayStringForOption: (f) => f.name,
+                  optionsBuilder: (textEditingValue) {
+                    final query = textEditingValue.text.trim().toLowerCase();
+                    final matches = query.isEmpty
+                        ? foods
+                        : foods.where((f) => f.name.toLowerCase().contains(query));
+                    return matches.take(_maxSuggestions);
+                  },
+                  fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                    return TextFormField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        labelText: 'Food',
+                        border: const OutlineInputBorder(),
+                        errorText: _foodError,
+                        suffixIcon: _food == null
+                            ? const Icon(Icons.search)
+                            : IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  controller.clear();
+                                  setState(() => _food = null);
+                                },
+                              ),
+                      ),
+                      onChanged: (_) {
+                        if (_food != null) setState(() => _food = null);
+                      },
+                    );
+                  },
+                  onSelected: (food) => setState(() {
+                    _food = food;
+                    _foodError = null;
+                  }),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(

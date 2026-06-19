@@ -146,7 +146,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken breast\",\n  \"caloriesPer100g\": 165,\n  \"proteinPer100g\": 31,\n  \"carbsPer100g\": 0,\n  \"fatPer100g\": 3.6\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/foods", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods"] },
-            "description": "Creates a food. `name` is required; `caloriesPer100g` and `proteinPer100g` are required and must be >= 0; `carbsPer100g`/`fatPer100g` are optional. Returns 201 and stores the new id in the `foodId` variable."
+            "description": "Creates a food. `name` is required and must be unique (case-insensitive); `caloriesPer100g` and `proteinPer100g` are required and must be >= 0; `carbsPer100g`/`fatPer100g` are optional. Returns 201, or 409 if the name is already taken. Stores the new id in the `foodId` variable."
           },
           "response": []
         },
@@ -158,6 +158,17 @@
             "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"caloriesPer100g\": -10,\n  \"proteinPer100g\": null\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/foods", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods"] },
             "description": "Demonstrates the 400 validation response (blank name, negative calories, missing protein)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create food - duplicate name (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken breast\",\n  \"caloriesPer100g\": 165,\n  \"proteinPer100g\": 31\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/foods", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods"] },
+            "description": "Demonstrates the 409 response when a food with this name (case-insensitive) already exists. Run 'Create food' first so the name is taken."
           },
           "response": []
         },
