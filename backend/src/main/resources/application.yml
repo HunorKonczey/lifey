@@ -17,7 +17,10 @@ spring:
     locations: classpath:db/migration
 
 server:
-  port: 8080
+  # Railway (and most PaaS hosts) assign the container a port at runtime via
+  # $PORT and route their public proxy to it — the app must bind to that, not
+  # a fixed port. Falls back to 8080 for local/dev where $PORT isn't set.
+  port: ${PORT:8080}
 
 springdoc:
   swagger-ui:

@@ -1,0 +1,12 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Public, unauthenticated endpoint (see SecurityConfig.PUBLIC_ENDPOINTS) —
+# used so Railway's healthcheck gets a 200 instead of a 401/403 from the JWT
+# filter on every other route.
+healthcheckPath = "/swagger-ui.html"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
