@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/error_message.dart';
-import '../../../dashboard/application/dashboard_controller.dart';
 import '../../application/water_source_controller.dart';
 import '../../data/water_entry_repository.dart';
 import '../../domain/water_source.dart';
 
 /// Bottom sheet for logging water intake: one-tap quick-add from a saved
 /// source, or a custom amount (preset chips or a free-form liter value).
-/// Pops on success; the dashboard's daily total refreshes automatically.
+/// Pops on success; the dashboard's daily total updates on its own (it reads
+/// the local water_entries table live — see `todayWaterTotalProvider`).
 class AddWaterSheet extends ConsumerStatefulWidget {
   const AddWaterSheet({super.key});
 
@@ -51,7 +51,6 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
             sourceClientId: sourceClientId,
             volumeLiters: liters,
           );
-      await ref.read(dashboardControllerProvider.notifier).refresh();
       if (mounted) Navigator.of(context).pop();
     } catch (error) {
       setState(() {

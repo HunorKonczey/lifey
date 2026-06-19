@@ -43,17 +43,32 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse daily() {
-        return forPeriodSince(LocalDate.now());
+        return daily(LocalDate.now());
+    }
+
+    @Override
+    public StatisticsResponse daily(LocalDate today) {
+        return forPeriodSince(today);
     }
 
     @Override
     public StatisticsResponse weekly() {
-        return forPeriodSince(LocalDate.now().minusDays(6));
+        return weekly(LocalDate.now());
+    }
+
+    @Override
+    public StatisticsResponse weekly(LocalDate today) {
+        return forPeriodSince(today.minusDays(6));
     }
 
     @Override
     public StatisticsResponse monthly() {
-        return forPeriodSince(LocalDate.now().minusDays(29));
+        return monthly(LocalDate.now());
+    }
+
+    @Override
+    public StatisticsResponse monthly(LocalDate today) {
+        return forPeriodSince(today.minusDays(29));
     }
 
     private StatisticsResponse forPeriodSince(LocalDate fromDate) {

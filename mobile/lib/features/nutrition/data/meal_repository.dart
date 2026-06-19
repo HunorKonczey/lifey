@@ -46,6 +46,8 @@ class MealRepository {
                 quantityInGrams: grams,
                 calories: (food?.caloriesPer100g ?? 0) * grams / 100,
                 protein: (food?.proteinPer100g ?? 0) * grams / 100,
+                carbs: (food?.carbsPer100g ?? 0) * grams / 100,
+                fat: (food?.fatPer100g ?? 0) * grams / 100,
               ),
             );
       }

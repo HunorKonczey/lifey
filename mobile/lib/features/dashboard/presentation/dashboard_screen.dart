@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../shared/widgets/error_view.dart';
+import '../../../core/sync/pull_engine.dart';
+import '../../../core/sync/sync_engine_provider.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
@@ -38,13 +39,30 @@ WeightTrend? _weightTrend(List<WeightEntry> entries) {
 }
 
 /// Dashboard: today's calories & macros, current weight, recent workouts.
-/// Auto-refreshes when its tab is re-selected (see MainShell).
+/// Fully local-first — works offline, and updates the instant a write lands
+/// in any of the underlying feature repositories (see
+/// `dashboardControllerProvider`), so unlike before, no manual refresh is
+/// needed to see a just-logged meal/weight/workout/water entry show up.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
+  /// Pull-to-refresh now means "sync now" (push then pull) rather than
+  /// re-fetching this screen's own data, since that's already live —
+  /// useful for forcing a sync attempt without waiting for the next
+  /// automatic trigger.
+  Future<void> _forceSync(WidgetRef ref) async {
+    try {
+      await ref.read(syncEngineProvider).sync();
+      await ref.read(pullEngineProvider).pullAll();
+    } catch (_) {
+      // Best-effort, same as the automatic triggers — no connectivity or a
+      // backend error just means try again later.
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboard = ref.watch(dashboardControllerProvider);
+    final data = ref.watch(dashboardControllerProvider);
     final settings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
     final weightTrend = _weightTrend(ref.watch(weightControllerProvider).value ?? const []);
 
@@ -66,16 +84,8 @@ class DashboardScreen extends ConsumerWidget {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(dashboardControllerProvider.notifier).refresh(),
-        child: dashboard.when(
-          data: (data) =>
-              _DashboardBody(data: data, settings: settings, weightTrend: weightTrend),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => ErrorView(
-            error: error,
-            onRetry: () => ref.read(dashboardControllerProvider.notifier).refresh(),
-          ),
-        ),
+        onRefresh: () => _forceSync(ref),
+        child: _DashboardBody(data: data, settings: settings, weightTrend: weightTrend),
       ),
     );
   }
