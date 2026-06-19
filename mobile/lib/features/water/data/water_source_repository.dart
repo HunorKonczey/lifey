@@ -1,43 +1,57 @@
-import 'package:dio/dio.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/dio_client.dart';
+import '../../../core/local_db/app_database.dart';
+import '../../../core/local_db/database_provider.dart';
+import '../../../core/sync/client_id.dart';
+import '../../../core/sync/outbox_writer.dart';
 import '../domain/water_source.dart';
 
-/// REST access to the `/water-sources` endpoints.
+/// Local-first access to water sources. Reads stream from the on-device
+/// cache; writes land there immediately and queue an outbox operation.
 class WaterSourceRepository {
-  WaterSourceRepository(this._dio);
+  WaterSourceRepository(this._db, this._outbox);
 
-  final Dio _dio;
+  final AppDatabase _db;
+  final OutboxWriter _outbox;
 
-  Future<List<WaterSource>> fetchAll() async {
-    final response = await _dio.get<List<dynamic>>('/water-sources');
-    return (response.data ?? const [])
-        .map((e) => WaterSource.fromJson(e as Map<String, dynamic>))
-        .toList();
+  Stream<List<WaterSource>> watchAll() {
+    return (_db.select(_db.waterSources)..orderBy([(t) => OrderingTerm.asc(t.name)]))
+        .watch()
+        .map((rows) => rows.map(_toDomain).toList());
   }
 
-  Future<WaterSource> create({required String name, required double volumeLiters}) async {
-    final response = await _dio.post<Map<String, dynamic>>('/water-sources', data: {
-      'name': name,
-      'volumeLiters': volumeLiters,
-    });
-    return WaterSource.fromJson(response.data!);
+  Future<void> create({required String name, required double volumeLiters}) async {
+    final clientId = newClientId();
+    await _db.into(_db.waterSources).insert(
+        WaterSourcesCompanion.insert(clientId: clientId, name: name, volumeLiters: volumeLiters));
+    await _outbox.enqueueCreate(
+      clientId: clientId,
+      entityType: 'water_source',
+      payload: {'name': name, 'volumeLiters': volumeLiters},
+    );
   }
 
-  Future<WaterSource> update(int id, {required String name, required double volumeLiters}) async {
-    final response = await _dio.put<Map<String, dynamic>>('/water-sources/$id', data: {
-      'name': name,
-      'volumeLiters': volumeLiters,
-    });
-    return WaterSource.fromJson(response.data!);
+  Future<void> update(String clientId, {required String name, required double volumeLiters}) async {
+    await (_db.update(_db.waterSources)..where((t) => t.clientId.equals(clientId)))
+        .write(WaterSourcesCompanion(name: Value(name), volumeLiters: Value(volumeLiters)));
+    await _outbox.enqueueUpdate(
+      clientId: clientId,
+      entityType: 'water_source',
+      payload: {'name': name, 'volumeLiters': volumeLiters},
+    );
   }
 
-  Future<void> delete(int id) async {
-    await _dio.delete('/water-sources/$id');
+  Future<void> delete(String clientId) async {
+    await (_db.delete(_db.waterSources)..where((t) => t.clientId.equals(clientId))).go();
+    await _outbox.enqueueDelete(clientId: clientId, entityType: 'water_source');
+  }
+
+  WaterSource _toDomain(WaterSourceRow row) {
+    return WaterSource(clientId: row.clientId, id: row.serverId, name: row.name, volumeLiters: row.volumeLiters);
   }
 }
 
 final waterSourceRepositoryProvider = Provider<WaterSourceRepository>((ref) {
-  return WaterSourceRepository(ref.watch(dioClientProvider));
+  return WaterSourceRepository(ref.watch(appDatabaseProvider), ref.watch(outboxWriterProvider));
 });

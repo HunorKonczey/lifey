@@ -12,17 +12,23 @@ import 'package:drift/drift.dart';
 /// rather than enforced by the database.
 @DataClassName('PendingOperationRow')
 class PendingOperations extends Table {
+  @override
+  String get tableName => 'pending_operations';
+
   IntColumn get id => integer().autoIncrement()();
 
   /// The clientId of the entity this operation targets (in the table named
   /// by [entityType]).
   TextColumn get clientId => text()();
 
-  /// Which entity table [clientId] belongs to, e.g. `weight_entry`, `food`,
-  /// `recipe`, `recipe_ingredient`, `meal`, `meal_entry`, `exercise`,
-  /// `workout_template`, `workout_template_exercise`, `workout_session`,
-  /// `workout_session_exercise`, `exercise_set`, `water_source`,
-  /// `water_entry`, `user_settings`.
+  /// Which top-level entity this operation is for: `weight_entry`, `food`,
+  /// `recipe`, `meal`, `exercise`, `workout_template`, `workout_session`,
+  /// `water_source`, `water_entry`, or `user_settings` (see
+  /// `core/sync/entity_sync_config.dart`). Child/junction data (recipe
+  /// ingredients, meal entries, template/session exercises, sets) is
+  /// embedded directly in its parent's payload — the backend's own
+  /// create/update endpoints expect it nested, so it never gets its own row
+  /// here.
   TextColumn get entityType => text()();
 
   /// create / update / delete.

@@ -4,6 +4,9 @@ import 'exercise_table.dart';
 
 @DataClassName('WorkoutSessionRow')
 class WorkoutSessions extends Table {
+  @override
+  String get tableName => 'workout_sessions';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
   DateTimeColumn get startedAt => dateTime()();
@@ -18,6 +21,9 @@ class WorkoutSessions extends Table {
 /// `workout_session_exercises` snapshot table.
 @DataClassName('WorkoutSessionExerciseRow')
 class WorkoutSessionExercises extends Table {
+  @override
+  String get tableName => 'workout_session_exercises';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
   TextColumn get sessionClientId => text().references(WorkoutSessions, #clientId)();
@@ -29,6 +35,9 @@ class WorkoutSessionExercises extends Table {
 
 @DataClassName('ExerciseSetRow')
 class ExerciseSets extends Table {
+  @override
+  String get tableName => 'exercise_sets';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
   TextColumn get sessionClientId => text().references(WorkoutSessions, #clientId)();

@@ -51,7 +51,7 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
     try {
       final notifier = ref.read(waterSourceControllerProvider.notifier);
       if (_isEditing) {
-        await notifier.updateSource(widget.initial!.id, name: name, volumeLiters: volume);
+        await notifier.updateSource(widget.initial!.clientId, name: name, volumeLiters: volume);
       } else {
         await notifier.addSource(name: name, volumeLiters: volume);
       }

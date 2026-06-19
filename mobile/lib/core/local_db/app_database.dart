@@ -22,11 +22,11 @@ part 'app_database.g.dart';
 /// local `clientId` (its primary key, assigned on creation whether online or
 /// offline) and a nullable `serverId`, filled in once a create has synced.
 ///
-/// This is schema-only for now: repositories still talk to the API directly.
-/// [PendingOperations] is the offline-write queue ("outbox") that the sync
-/// engine will drain — connectivity-triggered draining, clientId/serverId
-/// reconciliation, and dependency ordering are separate, later pieces of
-/// work that build on this database.
+/// Repositories under `lib/features/*/data/` read and write this database
+/// exclusively (never `dio` directly). [PendingOperations] is the
+/// offline-write queue ("outbox") that `SyncEngine` drains; `PullEngine`
+/// refreshes this cache from the backend. Both are driven by
+/// `ConnectivitySyncController` (see `lib/core/sync/`).
 @DriftDatabase(tables: [
   WeightEntries,
   Foods,

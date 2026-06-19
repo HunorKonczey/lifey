@@ -1,53 +1,37 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/sync/sync_engine_provider.dart';
 import '../data/recipe_repository.dart';
 import '../domain/recipe.dart';
 
-/// Loads and mutates the list of recipes.
-class RecipeController extends AsyncNotifier<List<Recipe>> {
+/// Streams recipes from the local cache and exposes the mutations.
+class RecipeController extends StreamNotifier<List<Recipe>> {
   RecipeRepository get _repo => ref.read(recipeRepositoryProvider);
 
   @override
-  Future<List<Recipe>> build() => _repo.fetchAll();
+  Stream<List<Recipe>> build() => _repo.watchAll();
 
   Future<void> createRecipe({
     required String name,
     String? description,
     required List<RecipeIngredientInput> ingredients,
-  }) async {
-    await _repo.create(
-      name: name,
-      description: description,
-      ingredients: ingredients,
-    );
-    state = await AsyncValue.guard(_repo.fetchAll);
+  }) {
+    return _repo.create(name: name, description: description, ingredients: ingredients);
   }
 
   Future<void> updateRecipe(
-    int id, {
+    String clientId, {
     required String name,
     String? description,
     required List<RecipeIngredientInput> ingredients,
-  }) async {
-    await _repo.update(
-      id,
-      name: name,
-      description: description,
-      ingredients: ingredients,
-    );
-    state = await AsyncValue.guard(_repo.fetchAll);
+  }) {
+    return _repo.update(clientId, name: name, description: description, ingredients: ingredients);
   }
 
-  Future<void> deleteRecipe(int id) async {
-    await _repo.delete(id);
-    state = await AsyncValue.guard(_repo.fetchAll);
-  }
+  Future<void> deleteRecipe(String clientId) => _repo.delete(clientId);
 
-  Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.fetchAll);
-  }
+  Future<void> refresh() => ref.read(syncEngineProvider).sync();
 }
 
 final recipeControllerProvider =
-    AsyncNotifierProvider<RecipeController, List<Recipe>>(RecipeController.new);
+    StreamNotifierProvider<RecipeController, List<Recipe>>(RecipeController.new);

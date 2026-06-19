@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
 import '../domain/workout_template.dart';
@@ -51,7 +52,7 @@ class TemplatesTab extends ConsumerWidget {
     try {
       await ref
           .read(workoutTemplateControllerProvider.notifier)
-          .deleteTemplate(template.id);
+          .deleteTemplate(template.clientId);
       messenger.showSnackBar(const SnackBar(content: Text('Template deleted')));
     } catch (_) {
       messenger
@@ -64,8 +65,8 @@ class TemplatesTab extends ConsumerWidget {
     final state = ref.watch(workoutTemplateControllerProvider);
     // Resolve exercise ids to names when the list is available.
     final names = ref.watch(exerciseControllerProvider).maybeWhen(
-          data: (exercises) => {for (final e in exercises) e.id: e.name},
-          orElse: () => const <int, String>{},
+          data: (exercises) => {for (final e in exercises) e.clientId: e.name},
+          orElse: () => const <String, String>{},
         );
 
     return RefreshIndicator(
@@ -117,41 +118,47 @@ class _TemplateTile extends StatelessWidget {
   });
 
   final WorkoutTemplate template;
-  final Map<int, String> names;
+  final Map<String, String> names;
   final VoidCallback onStart;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final resolved = template.exerciseIds
+    final resolved = template.exerciseClientIds
         .map((id) => names[id])
         .whereType<String>()
         .toList();
     final subtitle = resolved.isNotEmpty
         ? resolved.join(', ')
-        : '${template.exerciseIds.length} exercises';
+        : '${template.exerciseClientIds.length} exercises';
 
     return ListTile(
       leading: const CircleAvatar(child: Icon(Icons.list_alt)),
       title: Text(template.name),
       subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
       onTap: onStart,
-      trailing: PopupMenuButton<String>(
-        onSelected: (value) {
-          switch (value) {
-            case 'start':
-              onStart();
-            case 'edit':
-              onEdit();
-            case 'delete':
-              onDelete();
-          }
-        },
-        itemBuilder: (_) => const [
-          PopupMenuItem(value: 'start', child: Text('Start session')),
-          PopupMenuItem(value: 'edit', child: Text('Edit')),
-          PopupMenuItem(value: 'delete', child: Text('Delete')),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SyncStatusIndicator(clientId: template.clientId),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              switch (value) {
+                case 'start':
+                  onStart();
+                case 'edit':
+                  onEdit();
+                case 'delete':
+                  onDelete();
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'start', child: Text('Start session')),
+              PopupMenuItem(value: 'edit', child: Text('Edit')),
+              PopupMenuItem(value: 'delete', child: Text('Delete')),
+            ],
+          ),
         ],
       ),
     );

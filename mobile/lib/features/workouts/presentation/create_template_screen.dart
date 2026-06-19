@@ -19,7 +19,7 @@ class CreateTemplateScreen extends ConsumerStatefulWidget {
 
 class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
   final _name = TextEditingController();
-  final Set<int> _selected = {};
+  final Set<String> _selected = {};
   bool _saving = false;
 
   bool get _isEditing => widget.template != null;
@@ -30,7 +30,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
     final template = widget.template;
     if (template != null) {
       _name.text = template.name;
-      _selected.addAll(template.exerciseIds);
+      _selected.addAll(template.exerciseClientIds);
     }
   }
 
@@ -58,14 +58,14 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
       final notifier = ref.read(workoutTemplateControllerProvider.notifier);
       if (_isEditing) {
         await notifier.updateTemplate(
-          id: widget.template!.id,
+          clientId: widget.template!.clientId,
           name: _name.text.trim(),
-          exerciseIds: _selected.toList(),
+          exerciseClientIds: _selected.toList(),
         );
       } else {
         await notifier.createTemplate(
           name: _name.text.trim(),
-          exerciseIds: _selected.toList(),
+          exerciseClientIds: _selected.toList(),
         );
       }
       navigator.pop();
@@ -120,12 +120,12 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
                   children: exercises.map((ex) {
                     return CheckboxListTile(
                       title: Text(ex.name),
-                      value: _selected.contains(ex.id),
+                      value: _selected.contains(ex.clientId),
                       onChanged: (checked) => setState(() {
                         if (checked ?? false) {
-                          _selected.add(ex.id);
+                          _selected.add(ex.clientId);
                         } else {
-                          _selected.remove(ex.id);
+                          _selected.remove(ex.clientId);
                         }
                       }),
                     );

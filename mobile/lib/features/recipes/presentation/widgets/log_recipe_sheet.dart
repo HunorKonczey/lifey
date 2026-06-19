@@ -62,8 +62,8 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
             dateTime: _dateTime,
             mealType: _mealType,
             entries: widget.recipe.ingredients
-                .map((i) =>
-                    MealEntryInput(foodId: i.foodId, grams: i.quantityInGrams))
+                .map((i) => MealEntryInput(
+                    foodClientId: i.foodClientId, grams: i.quantityInGrams))
                 .toList(),
           );
       navigator.pop();

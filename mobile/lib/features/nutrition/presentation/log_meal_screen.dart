@@ -36,10 +36,10 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     _dateTime = meal?.dateTime ?? DateTime.now();
     if (meal != null) {
       for (final entry in meal.entries) {
-        // Only id + name are needed downstream; macros aren't sent on save.
+        // Only clientId + name are needed downstream; macros aren't sent on save.
         _entries.add((
           food: Food(
-            id: entry.foodId,
+            clientId: entry.foodClientId,
             name: entry.foodName,
             caloriesPer100g: 0,
             proteinPer100g: 0,
@@ -99,12 +99,12 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final entries = _entries
-        .map((e) => MealEntryInput(foodId: e.food.id, grams: e.grams))
+        .map((e) => MealEntryInput(foodClientId: e.food.clientId, grams: e.grams))
         .toList();
     try {
       final notifier = ref.read(mealControllerProvider.notifier);
       if (_isEditing) {
-        await notifier.updateMeal(widget.meal!.id,
+        await notifier.updateMeal(widget.meal!.clientId,
             dateTime: _dateTime, mealType: _mealType, entries: entries);
       } else {
         await notifier.logMeal(

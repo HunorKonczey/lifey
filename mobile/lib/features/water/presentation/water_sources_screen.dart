@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/water_source_controller.dart';
 import '../domain/water_source.dart';
 import 'widgets/add_water_source_sheet.dart';
@@ -36,7 +37,7 @@ class WaterSourcesScreen extends ConsumerWidget {
 
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(waterSourceControllerProvider.notifier).deleteSource(source.id);
+      await ref.read(waterSourceControllerProvider.notifier).deleteSource(source.clientId);
     } catch (_) {
       messenger.showSnackBar(const SnackBar(content: Text("Couldn't delete the water source")));
     }
@@ -72,9 +73,15 @@ class WaterSourcesScreen extends ConsumerWidget {
                       title: Text(source.name),
                       subtitle: Text('${source.volumeLiters.toStringAsFixed(2)} L'),
                       onTap: () => _openAddSheet(context, initial: source),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => _delete(context, ref, source),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SyncStatusIndicator(clientId: source.clientId),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () => _delete(context, ref, source),
+                          ),
+                        ],
                       ),
                     );
                   },

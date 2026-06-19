@@ -1,38 +1,59 @@
-import 'package:dio/dio.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/network/dio_client.dart';
+import '../../../core/local_db/app_database.dart';
+import '../../../core/local_db/database_provider.dart';
+import '../../../core/sync/client_id.dart';
+import '../../../core/sync/outbox_writer.dart';
 import '../domain/weight_entry.dart';
 
-/// REST access to the `/weights` endpoints.
+/// Local-first access to weight entries. Reads stream from the on-device
+/// cache; writes land there immediately and queue an outbox operation for
+/// the sync engine — this never calls the network directly.
 class WeightRepository {
-  WeightRepository(this._dio);
+  WeightRepository(this._db, this._outbox);
 
-  final Dio _dio;
+  final AppDatabase _db;
+  final OutboxWriter _outbox;
 
   static final _dateFormat = DateFormat('yyyy-MM-dd');
 
-  Future<List<WeightEntry>> fetchAll() async {
-    final response = await _dio.get<List<dynamic>>('/weights');
-    return (response.data ?? const [])
-        .map((e) => WeightEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
+  Stream<List<WeightEntry>> watchAll() {
+    return (_db.select(_db.weightEntries)
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.date),
+            (t) => OrderingTerm.desc(t.recordedAt),
+          ]))
+        .watch()
+        .map((rows) => rows.map(_toDomain).toList());
   }
 
-  Future<WeightEntry> create({required DateTime date, required double weight}) async {
-    final response = await _dio.post<Map<String, dynamic>>('/weights', data: {
-      'date': _dateFormat.format(date),
-      'weight': weight,
-    });
-    return WeightEntry.fromJson(response.data!);
+  Future<void> create({required DateTime date, required double weight}) async {
+    final clientId = newClientId();
+    await _db.into(_db.weightEntries).insert(WeightEntriesCompanion.insert(
+          clientId: clientId,
+          date: date,
+          weight: weight,
+          recordedAt: DateTime.now(),
+        ));
+    await _outbox.enqueueCreate(
+      clientId: clientId,
+      entityType: 'weight_entry',
+      payload: {'date': _dateFormat.format(date), 'weight': weight},
+    );
   }
 
-  Future<void> delete(int id) async {
-    await _dio.delete('/weights/$id');
+  Future<void> delete(String clientId) async {
+    await (_db.delete(_db.weightEntries)..where((t) => t.clientId.equals(clientId))).go();
+    await _outbox.enqueueDelete(clientId: clientId, entityType: 'weight_entry');
+  }
+
+  WeightEntry _toDomain(WeightEntryRow row) {
+    return WeightEntry(clientId: row.clientId, id: row.serverId, date: row.date, weight: row.weight);
   }
 }
 
 final weightRepositoryProvider = Provider<WeightRepository>((ref) {
-  return WeightRepository(ref.watch(dioClientProvider));
+  return WeightRepository(ref.watch(appDatabaseProvider), ref.watch(outboxWriterProvider));
 });

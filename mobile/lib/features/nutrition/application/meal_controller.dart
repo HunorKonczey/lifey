@@ -1,44 +1,37 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/sync/sync_engine_provider.dart';
 import '../data/meal_repository.dart';
 import '../domain/meal.dart';
 
-/// Loads and mutates the list of logged meals.
-class MealController extends AsyncNotifier<List<Meal>> {
+/// Streams logged meals from the local cache and exposes the mutations.
+class MealController extends StreamNotifier<List<Meal>> {
   MealRepository get _repo => ref.read(mealRepositoryProvider);
 
   @override
-  Future<List<Meal>> build() => _repo.fetchAll();
+  Stream<List<Meal>> build() => _repo.watchAll();
 
   Future<void> logMeal({
     required DateTime dateTime,
     required MealType mealType,
     required List<MealEntryInput> entries,
-  }) async {
-    await _repo.create(dateTime: dateTime, mealType: mealType, entries: entries);
-    state = await AsyncValue.guard(_repo.fetchAll);
+  }) {
+    return _repo.create(dateTime: dateTime, mealType: mealType, entries: entries);
   }
 
   Future<void> updateMeal(
-    int id, {
+    String clientId, {
     required DateTime dateTime,
     required MealType mealType,
     required List<MealEntryInput> entries,
-  }) async {
-    await _repo.update(id, dateTime: dateTime, mealType: mealType, entries: entries);
-    state = await AsyncValue.guard(_repo.fetchAll);
+  }) {
+    return _repo.update(clientId, dateTime: dateTime, mealType: mealType, entries: entries);
   }
 
-  Future<void> deleteMeal(int id) async {
-    await _repo.delete(id);
-    state = await AsyncValue.guard(_repo.fetchAll);
-  }
+  Future<void> deleteMeal(String clientId) => _repo.delete(clientId);
 
-  Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.fetchAll);
-  }
+  Future<void> refresh() => ref.read(syncEngineProvider).sync();
 }
 
 final mealControllerProvider =
-    AsyncNotifierProvider<MealController, List<Meal>>(MealController.new);
+    StreamNotifierProvider<MealController, List<Meal>>(MealController.new);

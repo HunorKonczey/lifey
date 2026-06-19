@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
+import 'core/sync/connectivity_sync_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'features/settings/application/settings_controller.dart';
 import 'features/settings/domain/user_settings.dart';
+import 'shared/widgets/offline_banner.dart';
 
 /// Root application widget.
 class LifeyApp extends ConsumerWidget {
@@ -23,6 +25,9 @@ class LifeyApp extends ConsumerWidget {
       );
     }
 
+    // Keeps itself alive for the app's lifetime; the return value is unused.
+    ref.watch(connectivitySyncControllerProvider);
+
     final router = ref.watch(appRouterProvider);
     final themePreference =
         ref.watch(settingsControllerProvider).value?.theme ?? ThemePreference.system;
@@ -33,6 +38,14 @@ class LifeyApp extends ConsumerWidget {
       darkTheme: AppTheme.dark,
       themeMode: _themeMode(themePreference),
       routerConfig: router,
+      // Wraps every routed screen with the global offline strip, so it
+      // shows up app-wide without each screen needing to know about it.
+      builder: (context, child) => Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(child: child ?? const SizedBox.shrink()),
+        ],
+      ),
     );
   }
 

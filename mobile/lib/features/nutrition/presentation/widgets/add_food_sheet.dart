@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -92,7 +91,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       final fat = fatText.isEmpty ? null : _parse(fatText);
 
       if (_isEditing) {
-        await notifier.updateFood(widget.food!.id,
+        await notifier.updateFood(widget.food!.clientId,
             name: name,
             calories: calories,
             protein: protein,
@@ -107,11 +106,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             fat: fat);
       }
       if (mounted) Navigator.of(context).pop();
-    } catch (e) {
-      final isDuplicate = e is DioException && e.response?.statusCode == 409;
-      setState(() => _error = isDuplicate
-          ? 'A food named "$name" already exists.'
-          : "Couldn't save the food. Please try again.");
+    } catch (_) {
+      // A duplicate name only surfaces once this syncs (no synchronous 409
+      // anymore — the write already landed locally before any network call).
+      setState(() => _error = "Couldn't save the food. Please try again.");
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

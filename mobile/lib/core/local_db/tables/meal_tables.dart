@@ -4,9 +4,14 @@ import 'food_table.dart';
 
 @DataClassName('MealRow')
 class Meals extends Table {
+  @override
+  String get tableName => 'meals';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
-  DateTimeColumn get dateTime => dateTime()();
+  // Named mealDateTime, not dateTime — that name collides with Table's own
+  // dateTime() column builder method.
+  DateTimeColumn get mealDateTime => dateTime()();
   TextColumn get mealType => text()(); // BREAKFAST / LUNCH / DINNER / SNACK
 
   @override
@@ -15,6 +20,9 @@ class Meals extends Table {
 
 @DataClassName('MealEntryRow')
 class MealEntries extends Table {
+  @override
+  String get tableName => 'meal_entries';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
   TextColumn get mealClientId => text().references(Meals, #clientId)();

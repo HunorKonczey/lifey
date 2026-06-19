@@ -1,9 +1,9 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/exercise_controller.dart';
 import '../domain/exercise.dart';
 
@@ -14,15 +14,10 @@ class ExercisesTab extends ConsumerWidget {
   Future<void> _delete(BuildContext context, WidgetRef ref, Exercise exercise) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(exerciseControllerProvider.notifier).deleteExercise(exercise.id);
+      await ref.read(exerciseControllerProvider.notifier).deleteExercise(exercise.clientId);
       messenger.showSnackBar(SnackBar(content: Text('Deleted ${exercise.name}')));
-    } on DioException catch (e) {
-      final used = e.response?.statusCode == 409;
-      messenger.showSnackBar(SnackBar(
-        content: Text(used
-            ? '${exercise.name} is used in a template or workout'
-            : "Couldn't delete ${exercise.name}"),
-      ));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text("Couldn't delete ${exercise.name}")));
       await ref.read(exerciseControllerProvider.notifier).refresh();
     }
   }
@@ -49,7 +44,7 @@ class ExercisesTab extends ConsumerWidget {
             itemBuilder: (context, index) {
               final exercise = exercises[index];
               return Dismissible(
-                key: ValueKey(exercise.id),
+                key: ValueKey(exercise.clientId),
                 direction: DismissDirection.endToStart,
                 background: Container(
                   color: Theme.of(context).colorScheme.errorContainer,
@@ -65,6 +60,7 @@ class ExercisesTab extends ConsumerWidget {
                 child: ListTile(
                   leading: const CircleAvatar(child: Icon(Icons.fitness_center)),
                   title: Text(exercise.name),
+                  trailing: SyncStatusIndicator(clientId: exercise.clientId),
                 ),
               );
             },

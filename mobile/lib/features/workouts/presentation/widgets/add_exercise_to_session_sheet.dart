@@ -11,8 +11,8 @@ import '../../domain/exercise.dart';
 class AddExerciseToSessionSheet extends ConsumerWidget {
   const AddExerciseToSessionSheet({super.key, required this.excludeIds});
 
-  /// Exercise ids already planned for this session — hidden from the list.
-  final Set<int> excludeIds;
+  /// Exercise clientIds already planned for this session — hidden from the list.
+  final Set<String> excludeIds;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,7 +40,7 @@ class AddExerciseToSessionSheet extends ConsumerWidget {
                 ),
                 data: (exercises) {
                   final available =
-                      exercises.where((e) => !excludeIds.contains(e.id)).toList();
+                      exercises.where((e) => !excludeIds.contains(e.clientId)).toList();
                   if (available.isEmpty) {
                     return const Padding(
                       padding: EdgeInsets.all(24),

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/workout_session.dart';
 import 'log_session_screen.dart';
@@ -32,7 +33,7 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
   Future<void> _delete(BuildContext context, WidgetRef ref, WorkoutSession session) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(workoutSessionControllerProvider.notifier).deleteSession(session.id);
+      await ref.read(workoutSessionControllerProvider.notifier).deleteSession(session.clientId);
       messenger.showSnackBar(const SnackBar(content: Text('Workout deleted')));
     } catch (_) {
       messenger.showSnackBar(const SnackBar(content: Text("Couldn't delete the workout")));
@@ -145,7 +146,7 @@ class _SessionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Dismissible(
-      key: ValueKey(session.id),
+      key: ValueKey(session.clientId),
       direction: DismissDirection.endToStart,
       background: Container(
         decoration: BoxDecoration(
@@ -184,6 +185,7 @@ class _SessionCard extends StatelessWidget {
                     else
                       Text('${session.sets.length} sets',
                           style: theme.textTheme.labelLarge),
+                    SyncStatusIndicator(clientId: session.clientId),
                     IconButton(
                       tooltip: 'Delete workout',
                       icon: const Icon(Icons.delete_outline),

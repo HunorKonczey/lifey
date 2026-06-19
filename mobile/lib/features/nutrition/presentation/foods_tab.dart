@@ -1,9 +1,9 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/food_controller.dart';
 import '../domain/food.dart';
 import 'widgets/add_food_sheet.dart';
@@ -38,16 +38,13 @@ class FoodsTab extends ConsumerWidget {
   Future<void> _delete(BuildContext context, WidgetRef ref, Food food) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(foodControllerProvider.notifier).deleteFood(food.id);
+      // Deletes immediately offline-first; if the food still turns out to be
+      // used in a meal/recipe, that 409 only surfaces later when this syncs
+      // (no UI for failed-operation review yet, so it just stays queued).
+      await ref.read(foodControllerProvider.notifier).deleteFood(food.clientId);
       messenger.showSnackBar(SnackBar(content: Text('Deleted ${food.name}')));
-    } on DioException catch (e) {
-      final used = e.response?.statusCode == 409;
-      messenger.showSnackBar(SnackBar(
-        content: Text(used
-            ? '${food.name} is used in a meal or recipe'
-            : "Couldn't delete ${food.name}"),
-      ));
-      await ref.read(foodControllerProvider.notifier).refresh();
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text("Couldn't delete ${food.name}")));
     }
   }
 
@@ -73,7 +70,7 @@ class FoodsTab extends ConsumerWidget {
             itemBuilder: (context, index) {
               final food = foods[index];
               return Dismissible(
-                key: ValueKey(food.id),
+                key: ValueKey(food.clientId),
                 direction: DismissDirection.endToStart,
                 background: Container(
                   color: Theme.of(context).colorScheme.errorContainer,
@@ -84,14 +81,20 @@ class FoodsTab extends ConsumerWidget {
                 ),
                 confirmDismiss: (_) async {
                   await _delete(context, ref, food);
-                  // We refresh from the server ourselves, so never let the
-                  // Dismissible remove the tile optimistically.
+                  // The local cache stream removes the tile on its own once
+                  // the delete lands; don't let Dismissible do it too.
                   return false;
                 },
                 child: ListTile(
                   title: Text(food.name),
                   subtitle: Text(_macroLine(food)),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SyncStatusIndicator(clientId: food.clientId),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
                   onTap: () => _edit(context, food),
                 ),
               );

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/meal_controller.dart';
 import '../domain/meal.dart';
 import 'log_meal_screen.dart';
@@ -31,7 +32,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
   Future<void> _delete(BuildContext context, WidgetRef ref, Meal meal) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(mealControllerProvider.notifier).deleteMeal(meal.id);
+      await ref.read(mealControllerProvider.notifier).deleteMeal(meal.clientId);
       messenger.showSnackBar(const SnackBar(content: Text('Meal deleted')));
     } catch (_) {
       messenger.showSnackBar(
@@ -115,7 +116,7 @@ class _MealCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Dismissible(
-      key: ValueKey(meal.id),
+      key: ValueKey(meal.clientId),
       direction: DismissDirection.endToStart,
       background: Container(
         decoration: BoxDecoration(
@@ -163,6 +164,7 @@ class _MealCard extends StatelessWidget {
                         style: theme.textTheme.bodySmall,
                       ),
                     ),
+                    SyncStatusIndicator(clientId: meal.clientId),
                   ],
                 ),
                 const SizedBox(height: 8),

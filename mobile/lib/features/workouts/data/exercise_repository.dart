@@ -1,35 +1,47 @@
-import 'package:dio/dio.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/dio_client.dart';
+import '../../../core/local_db/app_database.dart';
+import '../../../core/local_db/database_provider.dart';
+import '../../../core/sync/client_id.dart';
+import '../../../core/sync/outbox_writer.dart';
 import '../domain/exercise.dart';
 
-/// REST access to the `/exercises` master list (read + manage).
+/// Local-first access to the shared exercise master list.
 class ExerciseRepository {
-  ExerciseRepository(this._dio);
+  ExerciseRepository(this._db, this._outbox);
 
-  final Dio _dio;
+  final AppDatabase _db;
+  final OutboxWriter _outbox;
 
-  Future<List<Exercise>> fetchAll() async {
-    final response = await _dio.get<List<dynamic>>('/exercises');
-    return (response.data ?? const [])
-        .map((e) => Exercise.fromJson(e as Map<String, dynamic>))
-        .toList();
+  Stream<List<Exercise>> watchAll() {
+    return (_db.select(_db.exercises)..orderBy([(t) => OrderingTerm.asc(t.name)]))
+        .watch()
+        .map((rows) => rows.map(_toDomain).toList());
   }
 
-  Future<Exercise> create(String name) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      '/exercises',
-      data: {'name': name},
+  Future<void> create(String name) async {
+    final clientId = newClientId();
+    await _db.into(_db.exercises).insert(
+          ExercisesCompanion.insert(clientId: clientId, name: name),
+        );
+    await _outbox.enqueueCreate(
+      clientId: clientId,
+      entityType: 'exercise',
+      payload: {'name': name},
     );
-    return Exercise.fromJson(response.data!);
   }
 
-  Future<void> delete(int id) async {
-    await _dio.delete('/exercises/$id');
+  Future<void> delete(String clientId) async {
+    await (_db.delete(_db.exercises)..where((t) => t.clientId.equals(clientId))).go();
+    await _outbox.enqueueDelete(clientId: clientId, entityType: 'exercise');
+  }
+
+  Exercise _toDomain(ExerciseRow row) {
+    return Exercise(clientId: row.clientId, id: row.serverId, name: row.name);
   }
 }
 
 final exerciseRepositoryProvider = Provider<ExerciseRepository>((ref) {
-  return ExerciseRepository(ref.watch(dioClientProvider));
+  return ExerciseRepository(ref.watch(appDatabaseProvider), ref.watch(outboxWriterProvider));
 });

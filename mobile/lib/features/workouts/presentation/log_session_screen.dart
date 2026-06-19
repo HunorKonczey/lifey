@@ -37,7 +37,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   /// Exercises planned for this session — template-seeded and/or ad-hoc added.
   /// Names are resolved at render time from the exercise master list.
-  final Set<int> _plannedExerciseIds = {};
+  final Set<String> _plannedExerciseIds = {};
 
   final List<({Exercise exercise, int reps, double weight})> _sets = [];
   bool _saving = false;
@@ -51,17 +51,17 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _startedAt = session?.startedAt ?? DateTime.now();
     _finishedAt = session?.finishedAt;
     if (session != null) {
-      _plannedExerciseIds.addAll(session.exercises.map((e) => e.exerciseId));
+      _plannedExerciseIds.addAll(session.exercises.map((e) => e.exerciseClientId));
       for (final set in session.sets) {
-        // Only id + name are needed downstream; macros aren't sent on save.
+        // Only clientId + name are needed downstream; macros aren't sent on save.
         _sets.add((
-          exercise: Exercise(id: set.exerciseId, name: set.exerciseName),
+          exercise: Exercise(clientId: set.exerciseClientId, name: set.exerciseName),
           reps: set.reps,
           weight: set.weight,
         ));
       }
     } else if (widget.template != null) {
-      _plannedExerciseIds.addAll(widget.template!.exerciseIds);
+      _plannedExerciseIds.addAll(widget.template!.exerciseClientIds);
     }
   }
 
@@ -95,7 +95,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         _sets.add((exercise: draft.exercise, reps: draft.reps, weight: draft.weight));
         // Logging a set for an exercise implicitly plans it too, so it shows
         // up as a quick-add chip for the rest of the workout.
-        _plannedExerciseIds.add(draft.exercise.id);
+        _plannedExerciseIds.add(draft.exercise.clientId);
       });
     }
   }
@@ -108,7 +108,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       builder: (_) => AddExerciseToSessionSheet(excludeIds: _plannedExerciseIds),
     );
     if (exercise != null) {
-      setState(() => _plannedExerciseIds.add(exercise.id));
+      setState(() => _plannedExerciseIds.add(exercise.clientId));
     }
   }
 
@@ -119,21 +119,21 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final navigator = Navigator.of(context);
     final sets = _sets
         .map((s) => ExerciseSetInput(
-            exerciseId: s.exercise.id, reps: s.reps, weight: s.weight))
+            exerciseClientId: s.exercise.clientId, reps: s.reps, weight: s.weight))
         .toList();
     try {
       final notifier = ref.read(workoutSessionControllerProvider.notifier);
       if (_isEditing) {
-        await notifier.updateSession(widget.session!.id,
+        await notifier.updateSession(widget.session!.clientId,
             startedAt: _startedAt,
             finishedAt: _finishedAt,
-            exerciseIds: _plannedExerciseIds.toList(),
+            exerciseClientIds: _plannedExerciseIds.toList(),
             sets: sets);
       } else {
         await notifier.logSession(
             startedAt: _startedAt,
             finishedAt: _finishedAt,
-            exerciseIds: _plannedExerciseIds.toList(),
+            exerciseClientIds: _plannedExerciseIds.toList(),
             sets: sets);
       }
       navigator.pop();
@@ -149,8 +149,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   Widget build(BuildContext context) {
     final template = widget.template;
     final exercisesById = ref.watch(exerciseControllerProvider).maybeWhen(
-          data: (list) => {for (final e in list) e.id: e},
-          orElse: () => const <int, Exercise>{},
+          data: (list) => {for (final e in list) e.clientId: e},
+          orElse: () => const <String, Exercise>{},
         );
 
     return Scaffold(

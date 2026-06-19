@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/weight_controller.dart';
 import '../domain/weight_entry.dart';
 import 'widgets/add_weight_sheet.dart';
@@ -26,7 +27,7 @@ class WeightScreen extends ConsumerWidget {
   Future<void> _delete(BuildContext context, WidgetRef ref, WeightEntry entry) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(weightControllerProvider.notifier).deleteEntry(entry.id);
+      await ref.read(weightControllerProvider.notifier).deleteEntry(entry.clientId);
       messenger.showSnackBar(const SnackBar(content: Text('Entry deleted')));
     } catch (_) {
       messenger.showSnackBar(const SnackBar(content: Text("Couldn't delete the entry")));
@@ -90,7 +91,7 @@ class _WeightList extends StatelessWidget {
       itemBuilder: (context, index) {
         final entry = entries[index];
         return Dismissible(
-          key: ValueKey(entry.id),
+          key: ValueKey(entry.clientId),
           direction: DismissDirection.endToStart,
           background: Container(
             color: theme.colorScheme.errorContainer,
@@ -106,6 +107,7 @@ class _WeightList extends StatelessWidget {
               style: theme.textTheme.titleMedium,
             ),
             subtitle: Text(dateLabel.format(entry.date)),
+            trailing: SyncStatusIndicator(clientId: entry.clientId),
           ),
         );
       },

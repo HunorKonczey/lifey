@@ -1,32 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/sync/sync_engine_provider.dart';
 import '../data/exercise_repository.dart';
 import '../domain/exercise.dart';
 
 /// The exercise master list: read by the template/session pickers and managed
 /// (add/delete) from the Workouts > Exercises tab.
-class ExerciseController extends AsyncNotifier<List<Exercise>> {
+class ExerciseController extends StreamNotifier<List<Exercise>> {
   ExerciseRepository get _repo => ref.read(exerciseRepositoryProvider);
 
   @override
-  Future<List<Exercise>> build() => _repo.fetchAll();
+  Stream<List<Exercise>> build() => _repo.watchAll();
 
-  Future<void> addExercise(String name) async {
-    await _repo.create(name);
-    state = await AsyncValue.guard(_repo.fetchAll);
-  }
+  Future<void> addExercise(String name) => _repo.create(name);
 
-  Future<void> deleteExercise(int id) async {
-    await _repo.delete(id);
-    state = await AsyncValue.guard(_repo.fetchAll);
-  }
+  Future<void> deleteExercise(String clientId) => _repo.delete(clientId);
 
-  Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.fetchAll);
-  }
+  Future<void> refresh() => ref.read(syncEngineProvider).sync();
 }
 
 final exerciseControllerProvider =
-    AsyncNotifierProvider<ExerciseController, List<Exercise>>(
-        ExerciseController.new);
+    StreamNotifierProvider<ExerciseController, List<Exercise>>(ExerciseController.new);

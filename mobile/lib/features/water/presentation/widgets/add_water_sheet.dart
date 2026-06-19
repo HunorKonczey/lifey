@@ -28,7 +28,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
   String? _loading;
   String? _error;
 
-  String _sourceKey(int sourceId) => 'source:$sourceId';
+  String _sourceKey(String sourceId) => 'source:$sourceId';
   String _amountKey(double amount) => 'amount:$amount';
   static const _customKey = 'custom';
 
@@ -38,7 +38,8 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
     super.dispose();
   }
 
-  Future<void> _log({required double liters, int? sourceId, required String loadingKey}) async {
+  Future<void> _log(
+      {required double liters, String? sourceClientId, required String loadingKey}) async {
     if (_loading != null) return;
     setState(() {
       _loading = loadingKey;
@@ -47,7 +48,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
     try {
       await ref.read(waterEntryRepositoryProvider).create(
             consumedAt: DateTime.now(),
-            sourceId: sourceId,
+            sourceClientId: sourceClientId,
             volumeLiters: liters,
           );
       await ref.read(dashboardControllerProvider.notifier).refresh();
@@ -104,11 +105,11 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
                       for (final source in sources)
                         _SourceChip(
                           source: source,
-                          loading: _loading == _sourceKey(source.id),
+                          loading: _loading == _sourceKey(source.clientId),
                           onTap: () => _log(
                             liters: source.volumeLiters,
-                            sourceId: source.id,
-                            loadingKey: _sourceKey(source.id),
+                            sourceClientId: source.clientId,
+                            loadingKey: _sourceKey(source.clientId),
                           ),
                         ),
                     ],

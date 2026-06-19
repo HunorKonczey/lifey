@@ -4,6 +4,9 @@ import 'food_table.dart';
 
 @DataClassName('RecipeRow')
 class Recipes extends Table {
+  @override
+  String get tableName => 'recipes';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
   TextColumn get name => text()();
@@ -17,6 +20,9 @@ class Recipes extends Table {
 /// must resolve locally even before either side has synced.
 @DataClassName('RecipeIngredientRow')
 class RecipeIngredients extends Table {
+  @override
+  String get tableName => 'recipe_ingredients';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
   TextColumn get recipeClientId => text().references(Recipes, #clientId)();

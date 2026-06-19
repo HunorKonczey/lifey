@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/recipes_controller.dart';
 import '../domain/recipe.dart';
 import 'create_recipe_screen.dart';
@@ -31,7 +32,7 @@ class RecipesTab extends ConsumerWidget {
       BuildContext context, WidgetRef ref, Recipe recipe) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(recipeControllerProvider.notifier).deleteRecipe(recipe.id);
+      await ref.read(recipeControllerProvider.notifier).deleteRecipe(recipe.clientId);
       messenger.showSnackBar(SnackBar(content: Text('Deleted ${recipe.name}')));
     } catch (_) {
       messenger.showSnackBar(
@@ -97,7 +98,7 @@ class _RecipeCard extends StatelessWidget {
         .join(', ');
 
     return Dismissible(
-      key: ValueKey(recipe.id),
+      key: ValueKey(recipe.clientId),
       direction: DismissDirection.endToStart,
       background: Container(
         decoration: BoxDecoration(
@@ -122,7 +123,14 @@ class _RecipeCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(recipe.name, style: theme.textTheme.titleMedium),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(recipe.name, style: theme.textTheme.titleMedium),
+                    ),
+                    SyncStatusIndicator(clientId: recipe.clientId),
+                  ],
+                ),
                 if (recipe.description != null &&
                     recipe.description!.trim().isNotEmpty) ...[
                   const SizedBox(height: 4),

@@ -33,16 +33,16 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     _description = TextEditingController(text: recipe?.description ?? '');
     if (recipe != null) {
       for (final ing in recipe.ingredients) {
-        // Only id + name are needed downstream; macros aren't sent on save.
+        // Only clientId + name are needed downstream; macros aren't sent on save.
         _ingredients.add((
           food: Food(
-            id: ing.foodId,
+            clientId: ing.foodClientId,
             name: ing.foodName,
             caloriesPer100g: 0,
             proteinPer100g: 0,
           ),
           grams: ing.quantityInGrams,
-        ));
+          ));
       }
     }
   }
@@ -82,13 +82,13 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     final navigator = Navigator.of(context);
     final description = _description.text.trim();
     final ingredients = _ingredients
-        .map((e) => RecipeIngredientInput(foodId: e.food.id, grams: e.grams))
+        .map((e) => RecipeIngredientInput(foodClientId: e.food.clientId, grams: e.grams))
         .toList();
     try {
       final notifier = ref.read(recipeControllerProvider.notifier);
       if (_isEditing) {
         await notifier.updateRecipe(
-          widget.recipe!.id,
+          widget.recipe!.clientId,
           name: _name.text.trim(),
           description: description.isEmpty ? null : description,
           ingredients: ingredients,

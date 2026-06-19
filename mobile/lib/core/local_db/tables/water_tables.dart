@@ -2,6 +2,9 @@ import 'package:drift/drift.dart';
 
 @DataClassName('WaterSourceRow')
 class WaterSources extends Table {
+  @override
+  String get tableName => 'water_sources';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
   TextColumn get name => text()();
@@ -13,6 +16,9 @@ class WaterSources extends Table {
 
 @DataClassName('WaterEntryRow')
 class WaterEntries extends Table {
+  @override
+  String get tableName => 'water_entries';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
   // Nullable + informational only — see the backend's WaterEntry: the volume

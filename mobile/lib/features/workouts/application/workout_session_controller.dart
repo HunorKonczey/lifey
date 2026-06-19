@@ -1,49 +1,51 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/sync/sync_engine_provider.dart';
 import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
 
-/// Loads and creates workout sessions (the API has no update/delete).
-class WorkoutSessionController extends AsyncNotifier<List<WorkoutSession>> {
+/// Streams workout sessions from the local cache and exposes the mutations.
+class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
   WorkoutSessionRepository get _repo => ref.read(workoutSessionRepositoryProvider);
 
   @override
-  Future<List<WorkoutSession>> build() => _repo.fetchAll();
+  Stream<List<WorkoutSession>> build() => _repo.watchAll();
 
   Future<void> logSession({
     required DateTime startedAt,
     DateTime? finishedAt,
-    required List<int> exerciseIds,
+    required List<String> exerciseClientIds,
     required List<ExerciseSetInput> sets,
-  }) async {
-    await _repo.create(
-        startedAt: startedAt, finishedAt: finishedAt, exerciseIds: exerciseIds, sets: sets);
-    state = await AsyncValue.guard(_repo.fetchAll);
+  }) {
+    return _repo.create(
+      startedAt: startedAt,
+      finishedAt: finishedAt,
+      exerciseClientIds: exerciseClientIds,
+      sets: sets,
+    );
   }
 
   Future<void> updateSession(
-    int id, {
+    String clientId, {
     required DateTime startedAt,
     DateTime? finishedAt,
-    required List<int> exerciseIds,
+    required List<String> exerciseClientIds,
     required List<ExerciseSetInput> sets,
-  }) async {
-    await _repo.update(id,
-        startedAt: startedAt, finishedAt: finishedAt, exerciseIds: exerciseIds, sets: sets);
-    state = await AsyncValue.guard(_repo.fetchAll);
+  }) {
+    return _repo.update(
+      clientId,
+      startedAt: startedAt,
+      finishedAt: finishedAt,
+      exerciseClientIds: exerciseClientIds,
+      sets: sets,
+    );
   }
 
-  Future<void> deleteSession(int id) async {
-    await _repo.delete(id);
-    state = await AsyncValue.guard(_repo.fetchAll);
-  }
+  Future<void> deleteSession(String clientId) => _repo.delete(clientId);
 
-  Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_repo.fetchAll);
-  }
+  Future<void> refresh() => ref.read(syncEngineProvider).sync();
 }
 
 final workoutSessionControllerProvider =
-    AsyncNotifierProvider<WorkoutSessionController, List<WorkoutSession>>(
+    StreamNotifierProvider<WorkoutSessionController, List<WorkoutSession>>(
         WorkoutSessionController.new);

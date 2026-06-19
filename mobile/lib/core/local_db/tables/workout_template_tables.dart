@@ -4,6 +4,9 @@ import 'exercise_table.dart';
 
 @DataClassName('WorkoutTemplateRow')
 class WorkoutTemplates extends Table {
+  @override
+  String get tableName => 'workout_templates';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
   TextColumn get name => text()();
@@ -14,6 +17,9 @@ class WorkoutTemplates extends Table {
 
 @DataClassName('WorkoutTemplateExerciseRow')
 class WorkoutTemplateExercises extends Table {
+  @override
+  String get tableName => 'workout_template_exercises';
+
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
   TextColumn get templateClientId => text().references(WorkoutTemplates, #clientId)();

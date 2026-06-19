@@ -1,27 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../auth/application/auth_controller.dart';
 import '../data/settings_repository.dart';
 import '../domain/user_settings.dart';
 
-/// Loads and updates the signed-in user's settings. Resolves to in-memory
-/// defaults (no API call) while signed out, and reloads from the server
-/// whenever the signed-in user changes.
-class SettingsController extends AsyncNotifier<UserSettings> {
+/// Streams the signed-in user's settings from the local cache.
+///
+/// NOTE: the local cache isn't currently scoped per signed-in user — if a
+/// second account ever logs in on the same device, it would see the first
+/// account's cached settings until something overwrites them. Today the app
+/// is effectively single-user-per-device, but if multi-account-per-device
+/// support is ever needed, clearing (or partitioning) the local db on logout
+/// has to be added — see AuthController.logout().
+class SettingsController extends StreamNotifier<UserSettings> {
   SettingsRepository get _repo => ref.read(settingsRepositoryProvider);
 
   @override
-  Future<UserSettings> build() async {
-    final user = ref.watch(authControllerProvider).value;
-    if (user == null) return const UserSettings.defaults();
-    return _repo.fetch();
-  }
+  Stream<UserSettings> build() => _repo.watch();
 
-  Future<void> save(UserSettings settings) async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _repo.update(settings));
-  }
+  Future<void> save(UserSettings settings) => _repo.save(settings);
 }
 
 final settingsControllerProvider =
-    AsyncNotifierProvider<SettingsController, UserSettings>(SettingsController.new);
+    StreamNotifierProvider<SettingsController, UserSettings>(SettingsController.new);
