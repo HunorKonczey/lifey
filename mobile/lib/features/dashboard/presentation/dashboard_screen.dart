@@ -7,12 +7,23 @@ import '../../../shared/widgets/error_view.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
+import '../../water/presentation/widgets/add_water_sheet.dart';
+import '../../water/presentation/widgets/water_card.dart';
 import '../../weight/application/weight_controller.dart';
 import '../../weight/domain/weight_entry.dart';
 import '../application/dashboard_controller.dart';
 import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
 import 'widgets/stat_card.dart';
+
+Future<void> _openAddWaterSheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => const AddWaterSheet(),
+  );
+}
 
 enum WeightTrend { up, down }
 
@@ -94,6 +105,12 @@ class _DashboardBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        WaterCard(
+          currentLiters: stats.water,
+          goalLiters: settings.dailyWaterGoalLiters,
+          onAdd: () => _openAddWaterSheet(context),
+        ),
+        const SizedBox(height: 24),
         const _SectionTitle('Today'),
         const SizedBox(height: 8),
         StatCard(

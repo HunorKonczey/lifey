@@ -6,6 +6,7 @@ class DailyStats {
     required this.carbs,
     required this.fat,
     required this.workoutCount,
+    required this.water,
     this.latestWeight,
   });
 
@@ -14,6 +15,7 @@ class DailyStats {
   final double carbs;
   final double fat;
   final int workoutCount;
+  final double water;
   final double? latestWeight;
 
   factory DailyStats.fromJson(Map<String, dynamic> json) {
@@ -24,6 +26,7 @@ class DailyStats {
       carbs: num0('totalCarbs'),
       fat: num0('totalFat'),
       workoutCount: (json['workoutCount'] as num?)?.toInt() ?? 0,
+      water: num0('totalWater'),
       latestWeight: (json['latestWeight'] as num?)?.toDouble(),
     );
   }

@@ -12,6 +12,7 @@ class UserSettings {
     this.dailyProteinGoal,
     this.dailyCarbsGoal,
     this.dailyFatGoal,
+    this.dailyWaterGoalLiters,
   });
 
   const UserSettings.defaults()
@@ -20,7 +21,8 @@ class UserSettings {
         dailyCalorieGoal = null,
         dailyProteinGoal = null,
         dailyCarbsGoal = null,
-        dailyFatGoal = null;
+        dailyFatGoal = null,
+        dailyWaterGoalLiters = null;
 
   final UnitSystem unitSystem;
   final ThemePreference theme;
@@ -28,6 +30,7 @@ class UserSettings {
   final int? dailyProteinGoal;
   final int? dailyCarbsGoal;
   final int? dailyFatGoal;
+  final double? dailyWaterGoalLiters;
 
   factory UserSettings.fromJson(Map<String, dynamic> json) {
     return UserSettings(
@@ -37,6 +40,7 @@ class UserSettings {
       dailyProteinGoal: json['dailyProteinGoal'] as int?,
       dailyCarbsGoal: json['dailyCarbsGoal'] as int?,
       dailyFatGoal: json['dailyFatGoal'] as int?,
+      dailyWaterGoalLiters: (json['dailyWaterGoalLiters'] as num?)?.toDouble(),
     );
   }
 
@@ -46,6 +50,7 @@ class UserSettings {
         'dailyProteinGoal': dailyProteinGoal,
         'dailyCarbsGoal': dailyCarbsGoal,
         'dailyFatGoal': dailyFatGoal,
+        'dailyWaterGoalLiters': dailyWaterGoalLiters,
         'theme': theme.name.toUpperCase(),
       };
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/error_message.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../water/presentation/water_sources_screen.dart';
 import '../application/settings_controller.dart';
 import '../domain/user_settings.dart';
 
@@ -45,6 +46,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   late final TextEditingController _proteinController;
   late final TextEditingController _carbsController;
   late final TextEditingController _fatController;
+  late final TextEditingController _waterController;
   bool _submitting = false;
   String? _submitError;
 
@@ -57,6 +59,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     _proteinController = TextEditingController(text: widget.initial.dailyProteinGoal?.toString() ?? '');
     _carbsController = TextEditingController(text: widget.initial.dailyCarbsGoal?.toString() ?? '');
     _fatController = TextEditingController(text: widget.initial.dailyFatGoal?.toString() ?? '');
+    _waterController =
+        TextEditingController(text: widget.initial.dailyWaterGoalLiters?.toString() ?? '');
   }
 
   @override
@@ -65,16 +69,28 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     _proteinController.dispose();
     _carbsController.dispose();
     _fatController.dispose();
+    _waterController.dispose();
     super.dispose();
   }
 
   int? _parseGoal(String text) => text.trim().isEmpty ? null : int.parse(text.trim());
+
+  double? _parseWaterGoal(String text) =>
+      text.trim().isEmpty ? null : double.parse(text.replaceAll(',', '.').trim());
 
   String? _goalValidator(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return null;
     final parsed = int.tryParse(text);
     if (parsed == null || parsed < 0) return 'Enter a non-negative whole number';
+    return null;
+  }
+
+  String? _waterGoalValidator(String? value) {
+    final text = value?.replaceAll(',', '.').trim() ?? '';
+    if (text.isEmpty) return null;
+    final parsed = double.tryParse(text);
+    if (parsed == null || parsed < 0) return 'Enter a non-negative number';
     return null;
   }
 
@@ -95,6 +111,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               dailyProteinGoal: _parseGoal(_proteinController.text),
               dailyCarbsGoal: _parseGoal(_carbsController.text),
               dailyFatGoal: _parseGoal(_fatController.text),
+              dailyWaterGoalLiters: _parseWaterGoal(_waterController.text),
             ),
           );
       if (mounted) {
@@ -188,6 +205,32 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               border: OutlineInputBorder(),
             ),
             validator: _goalValidator,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _waterController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Water',
+              suffixText: 'L',
+              border: OutlineInputBorder(),
+            ),
+            validator: _waterGoalValidator,
+          ),
+          const SizedBox(height: 24),
+          Text('Water sources', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Reusable presets for one-tap logging, e.g. "Water Bottle" = 0.75L',
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const WaterSourcesScreen()),
+            ),
+            icon: const Icon(Icons.water_drop_outlined),
+            label: const Text('Manage water sources'),
           ),
           if (_submitError != null) ...[
             const SizedBox(height: 12),
