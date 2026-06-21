@@ -53,7 +53,4 @@ class PendingOperations extends Table {
   /// backend's validation message), shown to the user so they can fix or
   /// discard the operation rather than have it retried forever.
   TextColumn get lastError => text().nullable()();
-
-  @override
-  Set<Column> get primaryKey => {id};
 }

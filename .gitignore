@@ -26,3 +26,5 @@ replay_pid*
 /flutter/
 /.idea/
 /lifey.iml
+/out/
+/errors/
