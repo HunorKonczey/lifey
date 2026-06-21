@@ -19,6 +19,7 @@ final class SettingsMapper {
         settings.setDailyFatGoal(request.dailyFatGoal());
         settings.setDailyWaterGoalLiters(request.dailyWaterGoalLiters());
         settings.setTheme(request.theme());
+        settings.setLanguage(request.language());
     }
 
     static SettingsResponse toResponse(UserSettings settings) {
@@ -29,7 +30,8 @@ final class SettingsMapper {
                 settings.getDailyCarbsGoal(),
                 settings.getDailyFatGoal(),
                 settings.getDailyWaterGoalLiters(),
-                settings.getTheme()
+                settings.getTheme(),
+                settings.getLanguage()
         );
     }
 }

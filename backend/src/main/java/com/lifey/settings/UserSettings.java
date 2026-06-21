@@ -49,4 +49,8 @@ public class UserSettings extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "theme", nullable = false, length = 20)
     private ThemePreference theme = ThemePreference.SYSTEM;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "language", nullable = false, length = 20)
+    private LanguagePreference language = LanguagePreference.SYSTEM;
 }

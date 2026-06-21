@@ -1,5 +1,6 @@
 package com.lifey.settings.dto;
 
+import com.lifey.settings.LanguagePreference;
 import com.lifey.settings.ThemePreference;
 import com.lifey.settings.UnitSystem;
 import jakarta.validation.constraints.NotNull;
@@ -26,6 +27,9 @@ public record SettingsRequest(
         Double dailyWaterGoalLiters,
 
         @NotNull
-        ThemePreference theme
+        ThemePreference theme,
+
+        @NotNull
+        LanguagePreference language
 ) {
 }

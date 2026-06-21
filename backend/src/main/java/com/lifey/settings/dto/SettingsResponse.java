@@ -1,5 +1,6 @@
 package com.lifey.settings.dto;
 
+import com.lifey.settings.LanguagePreference;
 import com.lifey.settings.ThemePreference;
 import com.lifey.settings.UnitSystem;
 
@@ -10,6 +11,7 @@ public record SettingsResponse(
         Integer dailyCarbsGoal,
         Integer dailyFatGoal,
         Double dailyWaterGoalLiters,
-        ThemePreference theme
+        ThemePreference theme,
+        LanguagePreference language
 ) {
 }
