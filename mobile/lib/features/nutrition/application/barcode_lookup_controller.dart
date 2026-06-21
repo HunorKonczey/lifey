@@ -66,5 +66,5 @@ class BarcodeLookupController extends Notifier<BarcodeLookupState> {
 }
 
 final barcodeLookupControllerProvider =
-    NotifierProvider.autoDispose<BarcodeLookupController, BarcodeLookupState>(
-        BarcodeLookupController.new);
+  NotifierProvider<BarcodeLookupController, BarcodeLookupState>(
+    BarcodeLookupController.new);
