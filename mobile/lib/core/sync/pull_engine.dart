@@ -55,6 +55,7 @@ class PullEngine {
         proteinPer100g: Value((json['proteinPer100g'] as num).toDouble()),
         carbsPer100g: Value((json['carbsPer100g'] as num?)?.toDouble()),
         fatPer100g: Value((json['fatPer100g'] as num?)?.toDouble()),
+        barcode: Value(json['barcode'] as String?),
       );
       if (existingClientId != null) {
         await (_db.update(_db.foods)..where((t) => t.clientId.equals(existingClientId)))

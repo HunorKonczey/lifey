@@ -13,6 +13,7 @@ class Foods extends Table {
   RealColumn get proteinPer100g => real()();
   RealColumn get carbsPer100g => real().nullable()();
   RealColumn get fatPer100g => real().nullable()();
+  TextColumn get barcode => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {clientId};

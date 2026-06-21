@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../application/barcode_lookup_controller.dart';
 import '../../application/food_controller.dart';
 import '../../domain/food.dart';
+import '../barcode_scanner_screen.dart';
 
 /// Bottom sheet form to create a food, or edit one when [food] is provided.
 /// Pops on success.
@@ -23,7 +25,9 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
   late final TextEditingController _carbs;
   late final TextEditingController _fat;
   bool _submitting = false;
+  bool _scanning = false;
   String? _error;
+  String? _barcode;
 
   bool get _isEditing => widget.food != null;
 
@@ -39,6 +43,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
         text: food == null ? '' : _trim(food.proteinPer100g));
     _carbs = TextEditingController(text: num(food?.carbsPer100g));
     _fat = TextEditingController(text: num(food?.fatPer100g));
+    _barcode = food?.barcode;
   }
 
   static String _trim(double v) =>
@@ -72,6 +77,50 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     return null;
   }
 
+  Future<void> _scanBarcode() async {
+    final barcode = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+    );
+    if (barcode == null || !mounted) return;
+
+    setState(() => _scanning = true);
+    try {
+      await ref.read(barcodeLookupControllerProvider.notifier).lookup(barcode);
+      if (!mounted) return;
+      switch (ref.read(barcodeLookupControllerProvider)) {
+        case BarcodeLookupFound(result: final result):
+          setState(() {
+            _name.text = result.name;
+            _calories.text = _trim(result.caloriesPer100g);
+            _protein.text = _trim(result.proteinPer100g);
+            _carbs.text = result.carbsPer100g == null ? '' : _trim(result.carbsPer100g!);
+            _fat.text = result.fatPer100g == null ? '' : _trim(result.fatPer100g!);
+            _barcode = result.barcode;
+          });
+        case BarcodeLookupNotFound():
+          setState(() => _barcode = barcode);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("No match for that barcode — it's saved, just fill in the details."),
+          ));
+        case BarcodeLookupOffline():
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("You're offline — can't look up barcodes right now."),
+          ));
+        case BarcodeLookupIdle():
+        case BarcodeLookupLoading():
+          break; // unreachable: lookup() above always resolves to a terminal state
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Couldn't look up that barcode. Please try again."),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _scanning = false);
+    }
+  }
+
   Future<void> _submit() async {
     if (_submitting) return; // guard against a fast double-tap saving twice
     if (!_formKey.currentState!.validate()) return;
@@ -96,14 +145,16 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             calories: calories,
             protein: protein,
             carbs: carbs,
-            fat: fat);
+            fat: fat,
+            barcode: _barcode);
       } else {
         await notifier.addFood(
             name: name,
             calories: calories,
             protein: protein,
             carbs: carbs,
-            fat: fat);
+            fat: fat,
+            barcode: _barcode);
       }
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
@@ -132,6 +183,25 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
             Text('Values are per 100 g',
                 style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 16),
+            if (!_isEditing) ...[
+              OutlinedButton.icon(
+                onPressed: _scanning ? null : _scanBarcode,
+                icon: _scanning
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.qr_code_scanner),
+                label: Text(_scanning ? 'Looking up...' : 'Scan barcode'),
+              ),
+              if (_barcode != null) ...[
+                const SizedBox(height: 4),
+                Text('Linked to barcode $_barcode',
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
+              const SizedBox(height: 12),
+            ],
             TextFormField(
               controller: _name,
               autofocus: !_isEditing,

@@ -17,8 +17,10 @@ class FoodController extends StreamNotifier<List<Food>> {
     required double protein,
     double? carbs,
     double? fat,
+    String? barcode,
   }) {
-    return _repo.create(name: name, calories: calories, protein: protein, carbs: carbs, fat: fat);
+    return _repo.create(
+        name: name, calories: calories, protein: protein, carbs: carbs, fat: fat, barcode: barcode);
   }
 
   Future<void> updateFood(
@@ -28,9 +30,10 @@ class FoodController extends StreamNotifier<List<Food>> {
     required double protein,
     double? carbs,
     double? fat,
+    String? barcode,
   }) {
     return _repo.update(clientId,
-        name: name, calories: calories, protein: protein, carbs: carbs, fat: fat);
+        name: name, calories: calories, protein: protein, carbs: carbs, fat: fat, barcode: barcode);
   }
 
   Future<void> deleteFood(String clientId) {

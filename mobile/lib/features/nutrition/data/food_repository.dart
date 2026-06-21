@@ -26,6 +26,7 @@ class FoodRepository {
     required double protein,
     double? carbs,
     double? fat,
+    String? barcode,
   }) async {
     final clientId = newClientId();
     await _db.into(_db.foods).insert(FoodsCompanion.insert(
@@ -35,6 +36,7 @@ class FoodRepository {
           proteinPer100g: protein,
           carbsPer100g: Value(carbs),
           fatPer100g: Value(fat),
+          barcode: Value(barcode),
         ));
     await _outbox.enqueueCreate(
       clientId: clientId,
@@ -45,6 +47,7 @@ class FoodRepository {
         'proteinPer100g': protein,
         'carbsPer100g': carbs,
         'fatPer100g': fat,
+        'barcode': barcode,
       },
     );
   }
@@ -56,6 +59,7 @@ class FoodRepository {
     required double protein,
     double? carbs,
     double? fat,
+    String? barcode,
   }) async {
     await (_db.update(_db.foods)..where((t) => t.clientId.equals(clientId))).write(
       FoodsCompanion(
@@ -64,6 +68,7 @@ class FoodRepository {
         proteinPer100g: Value(protein),
         carbsPer100g: Value(carbs),
         fatPer100g: Value(fat),
+        barcode: Value(barcode),
       ),
     );
     await _outbox.enqueueUpdate(
@@ -75,6 +80,7 @@ class FoodRepository {
         'proteinPer100g': protein,
         'carbsPer100g': carbs,
         'fatPer100g': fat,
+        'barcode': barcode,
       },
     );
   }
@@ -93,6 +99,7 @@ class FoodRepository {
       proteinPer100g: row.proteinPer100g,
       carbsPer100g: row.carbsPer100g,
       fatPer100g: row.fatPer100g,
+      barcode: row.barcode,
     );
   }
 }
