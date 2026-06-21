@@ -50,6 +50,7 @@ class WaterSourcesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Water sources'), centerTitle: false),
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
         onPressed: () => _openAddSheet(context),
         child: const Icon(Icons.add),
       ),

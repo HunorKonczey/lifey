@@ -91,6 +91,9 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        // See nutrition_screen.dart: shell tabs stay mounted simultaneously
+        // (IndexedStack), so each FAB needs a non-default hero tag.
+        heroTag: null,
         onPressed: fab.onPressed,
         icon: Icon(fab.icon),
         label: Text(fab.label),

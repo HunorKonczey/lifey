@@ -92,6 +92,10 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        // Without an explicit tag, every shell tab's FAB shares Flutter's
+        // default hero tag — since StatefulShellRoute.indexedStack keeps all
+        // branches mounted at once, that throws a duplicate-hero assertion.
+        heroTag: null,
         onPressed: fab.onPressed,
         icon: Icon(fab.icon),
         label: Text(fab.label),

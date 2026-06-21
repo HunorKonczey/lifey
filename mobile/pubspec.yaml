@@ -18,13 +18,13 @@ dependencies:
   # Isar 3.1.0 lacks an Android `namespace` and breaks AGP 8 builds, and
   # Isar 4.x was still unstable when this was picked.
   drift: ^2.20.0
-  sqlite3_flutter_libs: ^0.5.0
+  sqlite3_flutter_libs: ^0.6.0+eol
   path_provider: ^2.1.0
   path: ^1.9.0
   uuid: ^4.4.0
   # Drives the SyncEngine: fires on connectivity restore so queued writes go
   # out without the user needing to pull-to-refresh.
-  connectivity_plus: ^6.1.0
+  connectivity_plus: ^7.1.1
   mobile_scanner: ^7.2.0
 
 dev_dependencies:

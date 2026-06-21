@@ -42,6 +42,9 @@ class WeightScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Weight'), centerTitle: false),
       floatingActionButton: FloatingActionButton(
+        // See nutrition_screen.dart: shell tabs stay mounted simultaneously
+        // (IndexedStack), so each FAB needs a non-default hero tag.
+        heroTag: null,
         onPressed: () => _openAddSheet(context),
         child: const Icon(Icons.add),
       ),
