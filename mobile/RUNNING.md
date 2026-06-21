@@ -26,6 +26,26 @@ backend running on your Mac instead.
 
 ---
 
+## 0.5. Generate Drift/Riverpod code
+
+`*.g.dart` files (Drift tables, Riverpod providers) are gitignored and not
+committed. After a fresh checkout, switching branches, or any change to a
+Drift table or `@riverpod`-annotated provider, regenerate them:
+
+```bash
+cd mobile
+dart run build_runner build --delete-conflicting-outputs
+```
+
+Skipping this causes build failures like `Error: Type 'FooRow' not found` or
+`No named parameter with the name 'bar'` — the generated code is out of sync
+with the table/provider source. Emulators and simulators often mask this
+because a prior debug session left a stale-but-working `.g.dart` in place;
+a release build for a physical device (section 2, step 3) is where it
+typically surfaces.
+
+---
+
 ## 1. Android emulator (recommended on Windows)
 
 One-time setup:
