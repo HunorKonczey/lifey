@@ -34,7 +34,7 @@ public class BarcodeLookupServiceImpl implements BarcodeLookupService {
 
         return new BarcodeLookupResponse(
                 null,
-                product.name(),
+                product.name() != null ? product.name() : "",
                 product.energyKcalPer100g(),
                 product.proteinsPer100g(),
                 product.carbohydratesPer100g(),

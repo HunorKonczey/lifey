@@ -61,6 +61,17 @@ class BarcodeLookupServiceImplTest {
     }
 
     @Test
+    void lookup_fallsBackToEmptyNameWhenOpenFoodFactsOmitsProductName() {
+        when(foodRepository.findByBarcode("8586022215544")).thenReturn(Optional.empty());
+        when(openFoodFactsClient.findByBarcode("8586022215544"))
+                .thenReturn(Optional.of(new OffProduct(null, "Acme", 42.0, 0.0, 10.6, 0.0)));
+
+        BarcodeLookupResponse result = service.lookup("8586022215544");
+
+        assertThat(result.name()).isEqualTo("");
+    }
+
+    @Test
     void lookup_throwsWhenOpenFoodFactsHasNoProduct() {
         when(foodRepository.findByBarcode("0000000000000")).thenReturn(Optional.empty());
         when(openFoodFactsClient.findByBarcode("0000000000000")).thenReturn(Optional.empty());
