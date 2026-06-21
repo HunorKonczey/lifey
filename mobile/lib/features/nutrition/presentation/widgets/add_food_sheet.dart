@@ -110,17 +110,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
         case BarcodeLookupLoading():
           break; // unreachable: lookup() above always resolves to a terminal state
       }
-    } catch (e, st) {
-      debugPrint('Barcode lookup failed: $e\n$st');
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Error'),
-            content: SelectableText('$e'),
-          ),
-        );
-      }
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Couldn't look up that barcode. Please try again."),
