@@ -12,11 +12,17 @@ cd backend && ./mvnw spring-boot:run     # serves http://localhost:8080
 
 The base URL is resolved automatically (`lib/core/network/api_config.dart`):
 
-| Target                | Base URL used                       |
-|-----------------------|-------------------------------------|
-| Android emulator      | `http://10.0.2.2:8080/api/v1`       |
-| Web / iOS simulator   | `http://localhost:8080/api/v1`      |
-| Physical device       | pass `--dart-define=API_BASE_URL=…` |
+| Target                  | Base URL used                                                  |
+|-------------------------|-----------------------------------------------------------------|
+| Android emulator        | `http://10.0.2.2:8080/api/v1`                                    |
+| Web                     | `http://localhost:8080/api/v1`                                   |
+| iOS — **any** target (simulator or physical) | the deployed Railway backend, `https://lifey-production-7aa5.up.railway.app/api/v1` |
+| Physical Android device, or a local backend on iOS | pass `--dart-define=API_BASE_URL=…` to override |
+
+iOS defaults to the deployed backend because a physical iPhone can't reach
+`localhost` (that resolves to the phone itself, not your Mac) — see the
+override examples in section 2 if you want the simulator talking to a
+backend running on your Mac instead.
 
 ---
 
@@ -63,7 +69,8 @@ Mac too (section 0), or point at a backend elsewhere with `--dart-define`.
    ```
 
 > Cleartext HTTP for dev is already enabled in `ios/Runner/Info.plist`
-> (`NSAllowsArbitraryLoads`), so the app can call the `http://` backend.
+> (`NSAllowsArbitraryLoads`), so the app can call a plain `http://` backend
+> when you override the URL (e.g. testing against a local backend).
 
 ### iOS Simulator
 ```bash
@@ -72,29 +79,92 @@ cd mobile
 flutter devices        # confirm the simulator shows up
 flutter run            # pick the simulator
 ```
-The simulator shares the Mac's network, so `http://localhost:8080` works with
-no extra config.
+By default this hits the deployed Railway backend (see the table above). To
+point the simulator at a backend running on your Mac instead:
+```bash
+flutter run --dart-define=API_BASE_URL=http://localhost:8080/api/v1
+```
+(The simulator shares the Mac's network, so plain `localhost` works there —
+unlike on a physical device.)
 
-### Physical iPhone (USB)
-1. Plug in the iPhone and tap **Trust** on the phone.
-2. Set up signing once in Xcode:
+### Physical iPhone (USB) — full walkthrough
+
+#### 1. Connect the phone
+1. Plug the iPhone into the Mac with a USB/USB-C cable.
+2. On the phone, tap **Trust This Computer** when prompted, then enter your
+   passcode.
+3. **iOS 16+: enable Developer Mode** (one-time, required to run
+   Xcode-built apps on the device):
+   - On the iPhone: **Settings → Privacy & Security → Developer Mode → On**.
+   - The phone asks to restart — let it.
+   - After the restart, confirm **Turn On** in the dialog that appears.
+4. Confirm the Mac sees it:
+   ```bash
+   cd mobile
+   flutter devices
+   ```
+   The iPhone's name and a device id should show up in the list.
+
+#### 2. Set up code signing (one-time per Mac)
+1. Open the workspace — **not** the `.xcodeproj`:
    ```bash
    open ios/Runner.xcworkspace
    ```
-   - Select the **Runner** target → **Signing & Capabilities**.
-   - Tick **Automatically manage signing** and choose your **Team**
-     (a free personal Apple ID works for on-device development).
-   - If the bundle id is rejected, change it to something unique, e.g.
-     `com.lifey.lifey.<yourname>`.
-3. The phone reaches the Mac's backend over the LAN, so pass the Mac's IP:
-   ```bash
-   ipconfig getifaddr en0     # Mac's LAN IP, e.g. 192.168.0.42
-   cd mobile
-   flutter run --dart-define=API_BASE_URL=http://192.168.0.42:8080/api/v1
-   ```
-   Keep the iPhone and Mac on the same Wi-Fi. With a free Apple ID the signing
-   certificate expires after 7 days (just re-run to re-sign); a paid Apple
-   Developer account removes that limit and enables TestFlight.
+2. In the left sidebar select the **Runner** project → **Runner** target →
+   **Signing & Capabilities** tab.
+3. If no Apple ID is configured yet in Xcode: **Xcode → Settings →
+   Accounts → "+"** → sign in. A free personal Apple ID is enough for
+   on-device development (no paid account needed).
+4. Back on **Signing & Capabilities**: tick **Automatically manage
+   signing**, then pick your **Team** (your name / "Personal Team").
+5. If Xcode rejects the bundle id (`com.lifey.lifey`) as already taken —
+   rare with a free personal team, but possible — change it to something
+   unique, e.g. `com.lifey.lifey.<yourname>`, in that same tab.
+6. The first time Xcode generates your signing certificate, **macOS will
+   prompt**: *"codesign wants to access key 'Apple Development: ...' in
+   your keychain."* This is asking for **your Mac's login password** (the
+   one you unlock the screen with) — it is not a project or Apple ID
+   password. Enter it and click **Always Allow** (not just "Allow"), so it
+   doesn't ask again on every rebuild.
+
+> **Free Apple ID limitation:** the signing certificate this generates
+> expires after **7 days**. After that, the app on the phone shows as
+> "expired" until you re-run step 3 below to re-sign it. A paid Apple
+> Developer Program membership ($99/yr) removes this limit and also
+> enables TestFlight distribution.
+
+#### 3. Run it
+```bash
+cd mobile
+flutter run --release -d <device-id>
+```
+- Get `<device-id>` from `flutter devices`; you can omit `-d ...` entirely
+  if the iPhone is the only device connected.
+- `--release` is recommended for a phone you're just using day-to-day
+  (faster, no attached debug session needed). Drop it if you want to set
+  breakpoints / hot reload from the Mac.
+- No `--dart-define` needed — iOS already defaults to the deployed Railway
+  backend. Only add `--dart-define=API_BASE_URL=...` if you want this
+  build to talk to a *different* backend instead — e.g. one running
+  locally on the Mac, reached over the LAN (the phone can't use
+  `localhost`, that's itself):
+  ```bash
+  ipconfig getifaddr en0     # Mac's LAN IP, e.g. 192.168.0.42
+  flutter run --release -d <device-id> \
+    --dart-define=API_BASE_URL=http://192.168.0.42:8080/api/v1
+  ```
+  Keep the iPhone and Mac on the same Wi-Fi for this to work.
+
+#### 4. First launch: trust the developer profile
+The very first time you open the app on the phone, iOS blocks it with an
+**"Untrusted Developer"** alert. Fix once:
+**Settings → General → VPN & Device Management** → tap your Apple ID under
+**Developer App** → **Trust "<your Apple ID>"** → confirm **Trust**.
+
+After that, the app icon launches normally from the home screen like any
+other app — until the 7-day free-signing expiry mentioned above, at which
+point repeat step 3 (no need to redo steps 1-2 or the trust step unless
+something else changed).
 
 ---
 
