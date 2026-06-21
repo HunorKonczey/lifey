@@ -1,5 +1,6 @@
 package com.lifey.nutrition.food;
 
+import com.lifey.nutrition.food.dto.BarcodeLookupResponse;
 import com.lifey.nutrition.food.dto.FoodRequest;
 import com.lifey.nutrition.food.dto.FoodResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,9 +25,11 @@ import java.util.List;
 public class FoodController {
 
     private final FoodService foodService;
+    private final BarcodeLookupService barcodeLookupService;
 
-    public FoodController(FoodService foodService) {
+    public FoodController(FoodService foodService, BarcodeLookupService barcodeLookupService) {
         this.foodService = foodService;
+        this.barcodeLookupService = barcodeLookupService;
     }
 
     @Operation(summary = "List all foods")
@@ -52,6 +55,15 @@ public class FoodController {
     @PutMapping("/{id}")
     public FoodResponse update(@PathVariable Long id, @Valid @RequestBody FoodRequest request) {
         return foodService.update(id, request);
+    }
+
+    @Operation(summary = "Look up a food by barcode",
+            description = "Returns the existing catalog entry if one is already tagged with this "
+                    + "barcode (source=LOCAL), otherwise queries OpenFoodFacts (source=OPENFOODFACTS). "
+                    + "The OpenFoodFacts result is not persisted — POST /foods to save it.")
+    @GetMapping("/barcode/{barcode}")
+    public BarcodeLookupResponse findByBarcode(@PathVariable String barcode) {
+        return barcodeLookupService.lookup(barcode);
     }
 
     @Operation(summary = "Delete a food")

@@ -2,6 +2,8 @@ package com.lifey.nutrition.food;
 
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.nutrition.food.dto.BarcodeLookupResponse;
+import com.lifey.nutrition.food.dto.BarcodeSource;
 import com.lifey.nutrition.food.dto.FoodResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,10 +33,13 @@ class FoodControllerTest {
     @MockitoBean
     FoodService foodService;
 
+    @MockitoBean
+    BarcodeLookupService barcodeLookupService;
+
     @Test
     void list_returnsOkWithJson() throws Exception {
         when(foodService.findAll())
-                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6)));
+                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null)));
 
         mockMvc.perform(get("/api/v1/foods"))
                 .andExpect(status().isOk())
@@ -45,7 +50,7 @@ class FoodControllerTest {
     @Test
     void create_returnsCreated() throws Exception {
         when(foodService.create(any()))
-                .thenReturn(new FoodResponse(7L, "Rice", 130.0, 2.7, null, null));
+                .thenReturn(new FoodResponse(7L, "Rice", 130.0, 2.7, null, null, null));
 
         mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Rice\",\"caloriesPer100g\":130,\"proteinPer100g\":2.7}"))
@@ -92,5 +97,41 @@ class FoodControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(foodService).delete(1L);
+    }
+
+    @Test
+    void findByBarcode_returnsOkForLocalHit() throws Exception {
+        when(barcodeLookupService.lookup("5901234123457"))
+                .thenReturn(new BarcodeLookupResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6,
+                        "5901234123457", BarcodeSource.LOCAL));
+
+        mockMvc.perform(get("/api/v1/foods/barcode/5901234123457"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Chicken"))
+                .andExpect(jsonPath("$.source").value("LOCAL"));
+    }
+
+    @Test
+    void findByBarcode_returnsOkForOpenFoodFactsHit() throws Exception {
+        when(barcodeLookupService.lookup("5901234123457"))
+                .thenReturn(new BarcodeLookupResponse(null, "Cola", 42.0, 0.0, 10.6, 0.0,
+                        "5901234123457", BarcodeSource.OPENFOODFACTS));
+
+        mockMvc.perform(get("/api/v1/foods/barcode/5901234123457"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").doesNotExist())
+                .andExpect(jsonPath("$.name").value("Cola"))
+                .andExpect(jsonPath("$.source").value("OPENFOODFACTS"));
+    }
+
+    @Test
+    void findByBarcode_notFoundReturns404() throws Exception {
+        when(barcodeLookupService.lookup("0000000000000"))
+                .thenThrow(new ResourceNotFoundException("No food found for barcode: 0000000000000"));
+
+        mockMvc.perform(get("/api/v1/foods/barcode/0000000000000"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
     }
 }

@@ -21,6 +21,8 @@ public record FoodRequest(
         Double carbsPer100g,
 
         @PositiveOrZero
-        Double fatPer100g
+        Double fatPer100g,
+
+        String barcode
 ) {
 }

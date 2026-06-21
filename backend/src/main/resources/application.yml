@@ -52,3 +52,8 @@ lifey:
     access-token-ttl: ${JWT_ACCESS_TTL:15m}
     refresh-token-ttl: ${JWT_REFRESH_TTL:30d}
     issuer: lifey-api
+  openfoodfacts:
+    base-url: ${OPENFOODFACTS_BASE_URL:https://world.openfoodfacts.org}
+    # OpenFoodFacts requires a descriptive User-Agent identifying the app and a
+    # contact. Override the contact in deployments via OPENFOODFACTS_USER_AGENT.
+    user-agent: ${OPENFOODFACTS_USER_AGENT:Lifey/1.0 (hunorkonczey@gmail.com)}

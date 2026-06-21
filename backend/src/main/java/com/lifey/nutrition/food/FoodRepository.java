@@ -7,4 +7,6 @@ import java.util.Optional;
 public interface FoodRepository extends JpaRepository<Food, Long> {
 
     Optional<Food> findByNameIgnoreCase(String name);
+
+    Optional<Food> findByBarcode(String barcode);
 }

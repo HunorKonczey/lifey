@@ -23,6 +23,7 @@ final class FoodMapper {
         food.setProteinPer100g(request.proteinPer100g());
         food.setCarbsPer100g(request.carbsPer100g());
         food.setFatPer100g(request.fatPer100g());
+        food.setBarcode(request.barcode());
     }
 
     static FoodResponse toResponse(Food food) {
@@ -32,7 +33,8 @@ final class FoodMapper {
                 food.getCaloriesPer100g(),
                 food.getProteinPer100g(),
                 food.getCarbsPer100g(),
-                food.getFatPer100g()
+                food.getFatPer100g(),
+                food.getBarcode()
         );
     }
 }

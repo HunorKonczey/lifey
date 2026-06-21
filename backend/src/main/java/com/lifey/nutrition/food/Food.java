@@ -27,4 +27,7 @@ public class Food extends BaseEntity {
 
     @Column(name = "fat_per_100g")
     private Double fatPer100g;
+
+    @Column(name = "barcode")
+    private String barcode;
 }

@@ -16,6 +16,7 @@
     { "key": "refreshToken", "value": "", "type": "string" },
     { "key": "weightId", "value": "", "type": "string" },
     { "key": "foodId", "value": "", "type": "string" },
+    { "key": "barcode", "value": "5449000000996", "type": "string" },
     { "key": "recipeId", "value": "", "type": "string" },
     { "key": "mealId", "value": "", "type": "string" },
     { "key": "templateId", "value": "", "type": "string" },
@@ -328,9 +329,19 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken breast\",\n  \"caloriesPer100g\": 165,\n  \"proteinPer100g\": 31,\n  \"carbsPer100g\": 0,\n  \"fatPer100g\": 3.6\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken breast\",\n  \"caloriesPer100g\": 165,\n  \"proteinPer100g\": 31,\n  \"carbsPer100g\": 0,\n  \"fatPer100g\": 3.6,\n  \"barcode\": null\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/foods", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods"] },
-            "description": "Creates a food. `name` is required and must be unique (case-insensitive); `caloriesPer100g` and `proteinPer100g` are required and must be >= 0; `carbsPer100g`/`fatPer100g` are optional. Returns 201, or 409 if the name is already taken. Stores the new id in the `foodId` variable."
+            "description": "Creates a food. `name` is required and must be unique (case-insensitive); `caloriesPer100g` and `proteinPer100g` are required and must be >= 0; `carbsPer100g`/`fatPer100g`/`barcode` are optional. `barcode`, when set, must be unique across the catalog. Returns 201, or 409 if the name (or barcode) is already taken. Stores the new id in the `foodId` variable."
+          },
+          "response": []
+        },
+        {
+          "name": "Get food by barcode",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/foods/barcode/{{barcode}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods", "barcode", "{{barcode}}"] },
+            "description": "Looks up a food by barcode. Returns the existing catalog entry if one is already tagged with this barcode (`source: LOCAL`), otherwise queries OpenFoodFacts (`source: OPENFOODFACTS`, `id` is null since it isn't persisted yet — POST /foods to save it). Returns 404 if neither has usable nutrition data for this barcode."
           },
           "response": []
         },
