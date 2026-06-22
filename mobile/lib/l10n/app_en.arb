@@ -646,6 +646,12 @@
     "logAsMealButton": "Log as meal",
     "@logAsMealButton": {"description": "Button on a recipe card to log it as a meal"},
 
+    "markFavorite": "Mark as favorite",
+    "@markFavorite": {"description": "Tooltip for the star button on a recipe card when it is not yet a favorite"},
+
+    "removeFavorite": "Remove from favorites",
+    "@removeFavorite": {"description": "Tooltip for the star button on a recipe card when it is currently a favorite"},
+
     "logAsPartMealButton": "Log as part meal",
     "@logAsPartMealButton": {"description": "Toggle in the log-recipe sheet to log only a fraction of the recipe instead of the whole thing"},
 

@@ -33,6 +33,7 @@ final class RecipeMapper {
                 recipe.getId(),
                 recipe.getName(),
                 recipe.getDescription(),
+                recipe.isFavorite(),
                 ingredients
         );
     }

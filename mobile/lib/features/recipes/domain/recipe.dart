@@ -29,12 +29,14 @@ class Recipe {
     required this.ingredients,
     this.id,
     this.description,
+    this.favorite = false,
   });
 
   final String clientId;
   final int? id;
   final String name;
   final String? description;
+  final bool favorite;
   final List<RecipeIngredient> ingredients;
 
   double get totalCalories =>

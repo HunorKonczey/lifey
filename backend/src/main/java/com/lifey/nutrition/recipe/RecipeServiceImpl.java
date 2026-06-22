@@ -33,7 +33,7 @@ public class RecipeServiceImpl implements RecipeService {
     @Override
     @Transactional(readOnly = true)
     public List<RecipeResponse> findAll() {
-        return recipeRepository.findAllByUserId(currentUserProvider.getUserId()).stream()
+        return recipeRepository.findAllByUserIdOrderByFavoriteDescNameAsc(currentUserProvider.getUserId()).stream()
                 .map(RecipeMapper::toResponse)
                 .toList();
     }
@@ -50,6 +50,7 @@ public class RecipeServiceImpl implements RecipeService {
         recipe.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         recipe.setName(request.name());
         recipe.setDescription(request.description());
+        recipe.setFavorite(request.favorite());
         replaceIngredients(recipe, request.ingredients());
         return RecipeMapper.toResponse(recipeRepository.save(recipe));
     }
@@ -59,6 +60,7 @@ public class RecipeServiceImpl implements RecipeService {
         Recipe recipe = getOrThrow(id);
         recipe.setName(request.name());
         recipe.setDescription(request.description());
+        recipe.setFavorite(request.favorite());
         replaceIngredients(recipe, request.ingredients());
         return RecipeMapper.toResponse(recipe);
     }

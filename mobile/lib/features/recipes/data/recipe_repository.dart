@@ -80,7 +80,10 @@ class RecipeRepository {
       final recipes = recipeRowsByClientId.values
           .map((row) => _toDomain(row, ingredientsByRecipe[row.clientId] ?? const []))
           .toList()
-        ..sort((a, b) => a.name.compareTo(b.name));
+        ..sort((a, b) {
+          if (a.favorite != b.favorite) return a.favorite ? -1 : 1;
+          return a.name.compareTo(b.name);
+        });
       return recipes;
     });
   }
@@ -88,6 +91,7 @@ class RecipeRepository {
   Future<void> create({
     required String name,
     String? description,
+    bool favorite = false,
     required List<RecipeIngredientInput> ingredients,
   }) async {
     final clientId = newClientId();
@@ -97,6 +101,7 @@ class RecipeRepository {
               clientId: clientId,
               name: name,
               description: Value(description),
+              favorite: Value(favorite),
             ),
           );
       await _insertIngredients(clientId, ingredients);
@@ -104,7 +109,8 @@ class RecipeRepository {
     await _outbox.enqueueCreate(
       clientId: clientId,
       entityType: 'recipe',
-      payload: _payload(name: name, description: description, ingredients: ingredients),
+      payload: _payload(
+          name: name, description: description, favorite: favorite, ingredients: ingredients),
     );
   }
 
@@ -112,11 +118,13 @@ class RecipeRepository {
     String clientId, {
     required String name,
     String? description,
+    bool favorite = false,
     required List<RecipeIngredientInput> ingredients,
   }) async {
     await _db.transaction(() async {
       await (_db.update(_db.recipes)..where((t) => t.clientId.equals(clientId))).write(
-        RecipesCompanion(name: Value(name), description: Value(description)),
+        RecipesCompanion(
+            name: Value(name), description: Value(description), favorite: Value(favorite)),
       );
       await (_db.delete(_db.recipeIngredients)..where((t) => t.recipeClientId.equals(clientId)))
           .go();
@@ -125,7 +133,37 @@ class RecipeRepository {
     await _outbox.enqueueUpdate(
       clientId: clientId,
       entityType: 'recipe',
-      payload: _payload(name: name, description: description, ingredients: ingredients),
+      payload: _payload(
+          name: name, description: description, favorite: favorite, ingredients: ingredients),
+    );
+  }
+
+  /// Flips a recipe's favorite flag and queues a full-aggregate update —
+  /// the backend's recipe PUT requires the complete payload (it validates
+  /// `ingredients` as non-empty), so a favorite-only toggle can't send just
+  /// `{favorite}`. The recipe's current name/description/ingredients are
+  /// read back from the local cache to build that payload.
+  Future<void> toggleFavorite(String clientId, bool value) async {
+    await (_db.update(_db.recipes)..where((t) => t.clientId.equals(clientId)))
+        .write(RecipesCompanion(favorite: Value(value)));
+
+    final recipeRow = await (_db.select(_db.recipes)..where((t) => t.clientId.equals(clientId)))
+        .getSingle();
+    final ingredientRows = await (_db.select(_db.recipeIngredients)
+          ..where((t) => t.recipeClientId.equals(clientId)))
+        .get();
+
+    await _outbox.enqueueUpdate(
+      clientId: clientId,
+      entityType: 'recipe',
+      payload: _payload(
+        name: recipeRow.name,
+        description: recipeRow.description,
+        favorite: value,
+        ingredients: ingredientRows
+            .map((r) => RecipeIngredientInput(foodClientId: r.foodClientId, grams: r.quantityInGrams))
+            .toList(),
+      ),
     );
   }
 
@@ -164,11 +202,13 @@ class RecipeRepository {
   Map<String, dynamic> _payload({
     required String name,
     String? description,
+    required bool favorite,
     required List<RecipeIngredientInput> ingredients,
   }) {
     return {
       'name': name,
       'description': description,
+      'favorite': favorite,
       'ingredients': ingredients
           .map((i) => {'foodId': clientRef(i.foodClientId), 'quantityInGrams': i.grams})
           .toList(),
@@ -181,6 +221,7 @@ class RecipeRepository {
       id: row.serverId,
       name: row.name,
       description: row.description,
+      favorite: row.favorite,
       ingredients: ingredients,
     );
   }

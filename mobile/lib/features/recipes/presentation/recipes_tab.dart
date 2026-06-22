@@ -29,6 +29,12 @@ class RecipesTab extends ConsumerWidget {
     );
   }
 
+  Future<void> _toggleFavorite(WidgetRef ref, Recipe recipe) {
+    return ref
+        .read(recipeControllerProvider.notifier)
+        .toggleFavorite(recipe.clientId, !recipe.favorite);
+  }
+
   Future<void> _delete(
       BuildContext context, WidgetRef ref, Recipe recipe) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -67,6 +73,7 @@ class RecipesTab extends ConsumerWidget {
               onDelete: () => _delete(context, ref, recipes[index]),
               onLogAsMeal: () => _logAsMeal(context, recipes[index]),
               onEdit: () => _edit(context, recipes[index]),
+              onToggleFavorite: () => _toggleFavorite(ref, recipes[index]),
             ),
           );
         },
@@ -86,12 +93,14 @@ class _RecipeCard extends StatelessWidget {
     required this.onDelete,
     required this.onLogAsMeal,
     required this.onEdit,
+    required this.onToggleFavorite,
   });
 
   final Recipe recipe;
   final VoidCallback onDelete;
   final VoidCallback onLogAsMeal;
   final VoidCallback onEdit;
+  final VoidCallback onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -131,6 +140,12 @@ class _RecipeCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(recipe.name, style: theme.textTheme.titleMedium),
+                    ),
+                    IconButton(
+                      tooltip: recipe.favorite ? l10n.removeFavorite : l10n.markFavorite,
+                      icon: Icon(recipe.favorite ? Icons.star : Icons.star_border),
+                      color: recipe.favorite ? theme.colorScheme.primary : null,
+                      onPressed: onToggleFavorite,
                     ),
                     SyncStatusIndicator(clientId: recipe.clientId),
                   ],

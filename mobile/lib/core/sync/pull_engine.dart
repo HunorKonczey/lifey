@@ -353,6 +353,7 @@ class PullEngine {
       final values = RecipesCompanion(
         name: Value(json['name'] as String),
         description: Value(json['description'] as String?),
+        favorite: Value(json['favorite'] as bool? ?? false),
       );
       final ingredientsJson =
           (json['ingredients'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();

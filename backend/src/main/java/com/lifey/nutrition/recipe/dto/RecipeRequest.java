@@ -15,6 +15,8 @@ public record RecipeRequest(
         @Size(max = 2000)
         String description,
 
+        boolean favorite,
+
         @NotEmpty
         List<@Valid RecipeIngredientRequest> ingredients
 ) {

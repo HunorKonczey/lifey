@@ -222,6 +222,8 @@
     "noIngredientsMessage": "Nincs hozzávaló",
     "totalCaloriesProteinLabel": "≈ {calories} kcal · {protein} g fehérje",
     "logAsMealButton": "Naplózás mint étkezés",
+    "markFavorite": "Kedvencnek jelölés",
+    "removeFavorite": "Kedvenc eltávolítása",
     "logAsPartMealButton": "Részmennyiségként naplózom",
     "divideIntoPartsLabel": "Hányadrészét eszed meg?",
     "perPortionCaloriesLabel": "1 adag: {calories} kcal",

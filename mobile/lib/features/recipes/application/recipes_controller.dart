@@ -31,6 +31,9 @@ class RecipeController extends StreamNotifier<List<Recipe>> {
 
   Future<void> deleteRecipe(String clientId) => _repo.delete(clientId);
 
+  Future<void> toggleFavorite(String clientId, bool value) =>
+      _repo.toggleFavorite(clientId, value);
+
   /// Drains the outbox, then re-pulls from the server — matching what the
   /// dashboard's pull-to-refresh does. Without the pull half, swiping to
   /// refresh only pushes local edits and never reconciles a stale/corrupted

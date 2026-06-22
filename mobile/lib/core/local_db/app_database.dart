@@ -51,7 +51,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -73,6 +73,10 @@ class AppDatabase extends _$AppDatabase {
           // still-correct local row and let them retry.
           if (from < 4) {
             await _fixStaleMealOutboxPayloads();
+          }
+          // V5: recipes can be marked as favorite.
+          if (from < 5) {
+            await m.addColumn(recipes, recipes.favorite);
           }
         },
       );

@@ -59,13 +59,14 @@ class RecipeServiceImplTest {
             r.setId(7L);
             return r;
         });
-        RecipeRequest request = new RecipeRequest("Chicken & rice", "prep",
+        RecipeRequest request = new RecipeRequest("Chicken & rice", "prep", true,
                 List.of(new RecipeIngredientRequest(1L, 200.0)));
 
         RecipeResponse result = service.create(request);
 
         assertThat(result.id()).isEqualTo(7L);
         assertThat(result.name()).isEqualTo("Chicken & rice");
+        assertThat(result.favorite()).isTrue();
         assertThat(result.ingredients()).singleElement().satisfies(i -> {
             assertThat(i.foodId()).isEqualTo(1L);
             assertThat(i.foodName()).isEqualTo("Chicken");
@@ -76,7 +77,7 @@ class RecipeServiceImplTest {
     @Test
     void create_throwsWhenFoodMissing() {
         when(foodRepository.findById(99L)).thenReturn(Optional.empty());
-        RecipeRequest request = new RecipeRequest("Bad", null,
+        RecipeRequest request = new RecipeRequest("Bad", null, false,
                 List.of(new RecipeIngredientRequest(99L, 100.0)));
 
         assertThatThrownBy(() -> service.create(request))
@@ -97,12 +98,14 @@ class RecipeServiceImplTest {
 
         when(recipeRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
         when(foodRepository.findById(1L)).thenReturn(Optional.of(food(1L, "Chicken")));
-        RecipeRequest request = new RecipeRequest("New", "desc",
+        RecipeRequest request = new RecipeRequest("New", "desc", true,
                 List.of(new RecipeIngredientRequest(1L, 300.0)));
 
         RecipeResponse result = service.update(3L, request);
 
         assertThat(result.name()).isEqualTo("New");
+        assertThat(result.favorite()).isTrue();
+        assertThat(existing.isFavorite()).isTrue();
         assertThat(result.ingredients()).singleElement().satisfies(i -> {
             assertThat(i.foodId()).isEqualTo(1L);
             assertThat(i.quantityInGrams()).isEqualTo(300.0);
@@ -117,6 +120,31 @@ class RecipeServiceImplTest {
 
         assertThatThrownBy(() -> service.findById(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void findAll_returnsFavoritesFirstInRepositoryOrder() {
+        Recipe favorite = recipe(1L, "Apple pie", true);
+        Recipe nonFavorite = recipe(2L, "Banana bread", false);
+        // The repository's ORDER BY favorite DESC, name ASC is what actually
+        // ranks favorites first; the service just needs to preserve that order.
+        when(recipeRepository.findAllByUserIdOrderByFavoriteDescNameAsc(USER_ID))
+                .thenReturn(List.of(favorite, nonFavorite));
+
+        List<RecipeResponse> result = service.findAll();
+
+        assertThat(result).extracting(RecipeResponse::name)
+                .containsExactly("Apple pie", "Banana bread");
+        assertThat(result).extracting(RecipeResponse::favorite)
+                .containsExactly(true, false);
+    }
+
+    private static Recipe recipe(Long id, String name, boolean favorite) {
+        Recipe r = new Recipe();
+        r.setId(id);
+        r.setName(name);
+        r.setFavorite(favorite);
+        return r;
     }
 
     private static Food food(Long id, String name) {
