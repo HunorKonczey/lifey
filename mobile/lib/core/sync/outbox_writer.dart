@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../local_db/app_database.dart';
 import '../local_db/database_provider.dart';
+import 'entity_sync_config.dart';
 import 'sync_engine.dart';
 import 'sync_engine_provider.dart';
 
@@ -58,12 +59,33 @@ class OutboxWriter {
   /// If the create for this entity never synced, deleting it locally is the
   /// whole story — every queued operation for it is dropped instead of
   /// enqueueing a delete the backend has no row for.
+  ///
+  /// Must be called *before* the caller removes its local row: the
+  /// serverId the backend DELETE needs only exists in that row, and once
+  /// it's gone there's no way to recover it — a later lookup at send-time
+  /// would find nothing and the delete would silently fail forever instead
+  /// of ever reaching the server.
   Future<void> enqueueDelete({required String clientId, required String entityType}) async {
     final createPending = await _hasPendingOperation(clientId, 'create');
     await (_db.delete(_db.pendingOperations)..where((t) => t.clientId.equals(clientId))).go();
     if (createPending) return;
 
-    await _insert(clientId: clientId, entityType: entityType, operation: 'delete', payload: const {});
+    final tableName = entitySyncConfigs[entityType]!.tableName;
+    final row = await _db
+        .customSelect(
+          'SELECT server_id FROM $tableName WHERE client_id = ?',
+          variables: [Variable.withString(clientId)],
+        )
+        .getSingleOrNull();
+    final serverId = row?.read<int?>('server_id');
+    if (serverId == null) return; // never synced — nothing to delete server-side
+
+    await _insert(
+      clientId: clientId,
+      entityType: entityType,
+      operation: 'delete',
+      payload: {'serverId': serverId},
+    );
     _kick();
   }
 

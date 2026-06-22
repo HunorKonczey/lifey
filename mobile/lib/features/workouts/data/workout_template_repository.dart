@@ -77,13 +77,15 @@ class WorkoutTemplateRepository {
   }
 
   Future<void> delete(String clientId) async {
+    // Must enqueue before the local row is gone — enqueueDelete needs to
+    // read its serverId while the row still exists.
+    await _outbox.enqueueDelete(clientId: clientId, entityType: 'workout_template');
     await _db.transaction(() async {
       await (_db.delete(_db.workoutTemplateExercises)
             ..where((t) => t.templateClientId.equals(clientId)))
           .go();
       await (_db.delete(_db.workoutTemplates)..where((t) => t.clientId.equals(clientId))).go();
     });
-    await _outbox.enqueueDelete(clientId: clientId, entityType: 'workout_template');
   }
 
   Future<void> _insertLinks(String templateClientId, List<String> exerciseClientIds) async {

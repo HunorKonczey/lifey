@@ -136,6 +136,9 @@ class WorkoutSessionRepository {
   }
 
   Future<void> delete(String clientId) async {
+    // Must enqueue before the local row is gone — enqueueDelete needs to
+    // read its serverId while the row still exists.
+    await _outbox.enqueueDelete(clientId: clientId, entityType: 'workout_session');
     await _db.transaction(() async {
       await (_db.delete(_db.workoutSessionExercises)
             ..where((t) => t.sessionClientId.equals(clientId)))
@@ -143,7 +146,6 @@ class WorkoutSessionRepository {
       await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId))).go();
       await (_db.delete(_db.workoutSessions)..where((t) => t.clientId.equals(clientId))).go();
     });
-    await _outbox.enqueueDelete(clientId: clientId, entityType: 'workout_session');
   }
 
   Future<void> _insertChildren(

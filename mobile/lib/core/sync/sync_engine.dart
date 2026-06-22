@@ -150,7 +150,12 @@ class SyncEngine {
         final serverId = await _requireServerId(config, op.clientId);
         return _dio.put<dynamic>('${config.basePath}/$serverId', data: payload);
       case 'delete':
-        final serverId = await _requireServerId(config, op.clientId);
+        // The entity's local row is already gone by the time this runs
+        // (the repository deletes it immediately for a responsive UI), so
+        // unlike update there's no row left to look the serverId up from
+        // — [OutboxWriter.enqueueDelete] captures it into the payload
+        // while the row still existed.
+        final serverId = payload['serverId'] as int;
         return _dio.delete<dynamic>('${config.basePath}/$serverId');
       default:
         throw StateError('Unknown operation: ${op.operation}');

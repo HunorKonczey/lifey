@@ -33,8 +33,10 @@ class ExerciseRepository {
   }
 
   Future<void> delete(String clientId) async {
-    await (_db.delete(_db.exercises)..where((t) => t.clientId.equals(clientId))).go();
+    // Must enqueue before the local row is gone — enqueueDelete needs to
+    // read its serverId while the row still exists.
     await _outbox.enqueueDelete(clientId: clientId, entityType: 'exercise');
+    await (_db.delete(_db.exercises)..where((t) => t.clientId.equals(clientId))).go();
   }
 
   Exercise _toDomain(ExerciseRow row) {

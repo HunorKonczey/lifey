@@ -104,11 +104,13 @@ class MealRepository {
   }
 
   Future<void> delete(String clientId) async {
+    // Must enqueue before the local row is gone — enqueueDelete needs to
+    // read its serverId while the row still exists.
+    await _outbox.enqueueDelete(clientId: clientId, entityType: 'meal');
     await _db.transaction(() async {
       await (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
       await (_db.delete(_db.meals)..where((t) => t.clientId.equals(clientId))).go();
     });
-    await _outbox.enqueueDelete(clientId: clientId, entityType: 'meal');
   }
 
   Future<void> _insertEntries(String mealClientId, List<MealEntryInput> entries) async {
