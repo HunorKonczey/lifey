@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
-import '../../../core/sync/sync_status_provider.dart';
 import '../data/weight_repository.dart';
 import '../domain/weight_entry.dart';
 
@@ -12,15 +11,7 @@ class WeightController extends StreamNotifier<List<WeightEntry>> {
   WeightRepository get _repo => ref.read(weightRepositoryProvider);
 
   @override
-  Stream<List<WeightEntry>> build() {
-    // An entry with a delete in flight stays in storage (so a server
-    // rejection can bring it back with a failed marker), so it must be
-    // filtered out here rather than relying on the row being gone.
-    final activelyDeleting = ref.watch(activelyDeletingClientIdsProvider);
-    return _repo
-        .watchAll()
-        .map((entries) => entries.where((e) => !activelyDeleting.contains(e.clientId)).toList());
-  }
+  Stream<List<WeightEntry>> build() => _repo.watchAll();
 
   Future<void> addEntry({required DateTime date, required double weight}) {
     return _repo.create(date: date, weight: weight);

@@ -6,6 +6,8 @@ import '../../../core/local_db/database_provider.dart';
 import '../../../core/sync/client_id.dart';
 import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/outbox_writer.dart';
+import '../../../core/sync/pending_delete_filter.dart';
+import '../../../core/utils/combine_latest.dart';
 import '../domain/workout_session.dart';
 
 /// One set to record when logging a session (request side).
@@ -33,7 +35,12 @@ class WorkoutSessionRepository {
   final OutboxWriter _outbox;
 
   Stream<List<WorkoutSession>> watchAll() {
-    return _db.select(_db.workoutSessions).watch().asyncMap((sessionRows) async {
+    final sessions$ = _db.select(_db.workoutSessions).watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(sessions$, pendingOps$, (rows, ops) => (rows, ops)).asyncMap((pair) async {
+      final (allSessionRows, ops) = pair;
+      final blocked = blockedByActiveDelete(ops);
+      final sessionRows = allSessionRows.where((r) => !blocked.contains(r.clientId)).toList();
       if (sessionRows.isEmpty) return const <WorkoutSession>[];
 
       final exerciseNames = {

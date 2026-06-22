@@ -6,6 +6,8 @@ import '../../../core/local_db/database_provider.dart';
 import '../../../core/sync/client_id.dart';
 import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/outbox_writer.dart';
+import '../../../core/sync/pending_delete_filter.dart';
+import '../../../core/utils/combine_latest.dart';
 import '../domain/meal.dart';
 
 /// One food + quantity to include when logging a meal (request side).
@@ -26,7 +28,12 @@ class MealRepository {
   final OutboxWriter _outbox;
 
   Stream<List<Meal>> watchAll() {
-    return _db.select(_db.meals).watch().asyncMap((mealRows) async {
+    final meals$ = _db.select(_db.meals).watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(meals$, pendingOps$, (rows, ops) => (rows, ops)).asyncMap((pair) async {
+      final (allMealRows, ops) = pair;
+      final blocked = blockedByActiveDelete(ops);
+      final mealRows = allMealRows.where((r) => !blocked.contains(r.clientId)).toList();
       if (mealRows.isEmpty) return const <Meal>[];
 
       final foods = {for (final f in await _db.select(_db.foods).get()) f.clientId: f};

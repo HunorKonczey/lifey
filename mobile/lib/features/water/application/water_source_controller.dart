@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
-import '../../../core/sync/sync_status_provider.dart';
 import '../data/water_source_repository.dart';
 import '../domain/water_source.dart';
 
@@ -12,15 +11,7 @@ class WaterSourceController extends StreamNotifier<List<WaterSource>> {
   WaterSourceRepository get _repo => ref.read(waterSourceRepositoryProvider);
 
   @override
-  Stream<List<WaterSource>> build() {
-    // A source with a delete in flight stays in storage (so a server
-    // rejection can bring it back with a failed marker), so it must be
-    // filtered out here rather than relying on the row being gone.
-    final activelyDeleting = ref.watch(activelyDeletingClientIdsProvider);
-    return _repo
-        .watchAll()
-        .map((sources) => sources.where((s) => !activelyDeleting.contains(s.clientId)).toList());
-  }
+  Stream<List<WaterSource>> build() => _repo.watchAll();
 
   Future<void> addSource({required String name, required double volumeLiters}) {
     return _repo.create(name: name, volumeLiters: volumeLiters);

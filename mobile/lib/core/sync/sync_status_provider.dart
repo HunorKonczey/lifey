@@ -21,22 +21,6 @@ final pendingOperationsProvider = StreamProvider<List<PendingOperationRow>>((ref
   return db.select(db.pendingOperations).watch();
 });
 
-/// ClientIds with a delete still in flight (queued or syncing, not yet
-/// failed). A delete leaves its row in storage until the server confirms it
-/// (so a rejection can bring the row back with its content intact — see
-/// `EntitySyncConfig.cleanupChildren`'s doc), so every entity controller's
-/// `build()` filters its list against this set to hide those rows in the
-/// meantime. A *failed* delete is deliberately excluded here so the row
-/// reappears — with [SyncStatusIndicator]'s failed marker — instead of
-/// staying hidden forever with no way to retry or discard it.
-final activelyDeletingClientIdsProvider = Provider<Set<String>>((ref) {
-  final ops = ref.watch(pendingOperationsProvider).value ?? const [];
-  return ops
-      .where((op) => op.operation == 'delete' && op.status != 'failed')
-      .map((op) => op.clientId)
-      .toSet();
-});
-
 /// Derives each clientId's worst outstanding status from [pendingOperationsProvider]
 /// — a clientId can have more than one queued operation (e.g. an update
 /// queued behind a still-pending create); `failed` always wins so a problem

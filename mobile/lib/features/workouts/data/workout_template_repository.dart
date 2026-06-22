@@ -6,6 +6,8 @@ import '../../../core/local_db/database_provider.dart';
 import '../../../core/sync/client_id.dart';
 import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/outbox_writer.dart';
+import '../../../core/sync/pending_delete_filter.dart';
+import '../../../core/utils/combine_latest.dart';
 import '../domain/workout_template.dart';
 
 /// Local-first access to workout templates and their exercise links.
@@ -16,7 +18,10 @@ class WorkoutTemplateRepository {
   final OutboxWriter _outbox;
 
   /// Joins templates with their exercise links — Drift tracks both tables
-  /// for this query, so it re-emits on a change to either side.
+  /// for this query, so it re-emits on a change to either side. Combined
+  /// with `pending_operations` so a template with a delete in flight (see
+  /// [delete]) is filtered out without waiting on a second, separately
+  /// timed provider rebuild.
   Stream<List<WorkoutTemplate>> watchAll() {
     final query = _db.select(_db.workoutTemplates).join([
       leftOuterJoin(
@@ -26,11 +31,14 @@ class WorkoutTemplateRepository {
     ])
       ..orderBy([OrderingTerm.asc(_db.workoutTemplates.name)]);
 
-    return query.watch().map((rows) {
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(query.watch(), pendingOps$, (rows, ops) {
+      final blocked = blockedByActiveDelete(ops);
       final templates = <String, WorkoutTemplateRow>{};
       final exerciseClientIds = <String, List<String>>{};
       for (final row in rows) {
         final template = row.readTable(_db.workoutTemplates);
+        if (blocked.contains(template.clientId)) continue;
         templates[template.clientId] = template;
         final link = row.readTableOrNull(_db.workoutTemplateExercises);
         if (link != null) {

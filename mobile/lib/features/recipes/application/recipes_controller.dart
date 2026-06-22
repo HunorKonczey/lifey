@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
-import '../../../core/sync/sync_status_provider.dart';
 import '../data/recipe_repository.dart';
 import '../domain/recipe.dart';
 
@@ -11,16 +10,7 @@ class RecipeController extends StreamNotifier<List<Recipe>> {
   RecipeRepository get _repo => ref.read(recipeRepositoryProvider);
 
   @override
-  Stream<List<Recipe>> build() {
-    // A recipe with a delete in flight stays in storage (so a server
-    // rejection can bring it back with its ingredients intact and a failed
-    // marker), so it must be filtered out here rather than relying on the
-    // row being gone.
-    final activelyDeleting = ref.watch(activelyDeletingClientIdsProvider);
-    return _repo
-        .watchAll()
-        .map((recipes) => recipes.where((r) => !activelyDeleting.contains(r.clientId)).toList());
-  }
+  Stream<List<Recipe>> build() => _repo.watchAll();
 
   Future<void> createRecipe({
     required String name,

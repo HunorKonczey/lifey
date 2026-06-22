@@ -5,6 +5,8 @@ import '../../../core/local_db/app_database.dart';
 import '../../../core/local_db/database_provider.dart';
 import '../../../core/sync/client_id.dart';
 import '../../../core/sync/outbox_writer.dart';
+import '../../../core/sync/pending_delete_filter.dart';
+import '../../../core/utils/combine_latest.dart';
 import '../domain/food.dart';
 
 /// Local-first access to the shared food catalog.
@@ -15,9 +17,12 @@ class FoodRepository {
   final OutboxWriter _outbox;
 
   Stream<List<Food>> watchAll() {
-    return (_db.select(_db.foods)..orderBy([(t) => OrderingTerm.asc(t.name)]))
-        .watch()
-        .map((rows) => rows.map(_toDomain).toList());
+    final foods$ = (_db.select(_db.foods)..orderBy([(t) => OrderingTerm.asc(t.name)])).watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(foods$, pendingOps$, (rows, ops) {
+      final blocked = blockedByActiveDelete(ops);
+      return rows.where((r) => !blocked.contains(r.clientId)).map(_toDomain).toList();
+    });
   }
 
   Future<void> create({

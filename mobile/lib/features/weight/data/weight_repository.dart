@@ -6,6 +6,8 @@ import '../../../core/local_db/app_database.dart';
 import '../../../core/local_db/database_provider.dart';
 import '../../../core/sync/client_id.dart';
 import '../../../core/sync/outbox_writer.dart';
+import '../../../core/sync/pending_delete_filter.dart';
+import '../../../core/utils/combine_latest.dart';
 import '../domain/weight_entry.dart';
 
 /// Local-first access to weight entries. Reads stream from the on-device
@@ -20,13 +22,17 @@ class WeightRepository {
   static final _dateFormat = DateFormat('yyyy-MM-dd');
 
   Stream<List<WeightEntry>> watchAll() {
-    return (_db.select(_db.weightEntries)
+    final entries$ = (_db.select(_db.weightEntries)
           ..orderBy([
             (t) => OrderingTerm.desc(t.date),
             (t) => OrderingTerm.desc(t.recordedAt),
           ]))
-        .watch()
-        .map((rows) => rows.map(_toDomain).toList());
+        .watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(entries$, pendingOps$, (rows, ops) {
+      final blocked = blockedByActiveDelete(ops);
+      return rows.where((r) => !blocked.contains(r.clientId)).map(_toDomain).toList();
+    });
   }
 
   Future<void> create({required DateTime date, required double weight}) async {

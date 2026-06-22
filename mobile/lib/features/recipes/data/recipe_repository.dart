@@ -6,6 +6,8 @@ import '../../../core/local_db/database_provider.dart';
 import '../../../core/sync/client_id.dart';
 import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/outbox_writer.dart';
+import '../../../core/sync/pending_delete_filter.dart';
+import '../../../core/utils/combine_latest.dart';
 import '../domain/recipe.dart';
 
 /// One ingredient to include when creating a recipe (request side).
@@ -27,7 +29,12 @@ class RecipeRepository {
   final OutboxWriter _outbox;
 
   Stream<List<Recipe>> watchAll() {
-    return _db.select(_db.recipes).watch().asyncMap((recipeRows) async {
+    final recipes$ = _db.select(_db.recipes).watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(recipes$, pendingOps$, (rows, ops) => (rows, ops)).asyncMap((pair) async {
+      final (allRecipeRows, ops) = pair;
+      final blocked = blockedByActiveDelete(ops);
+      final recipeRows = allRecipeRows.where((r) => !blocked.contains(r.clientId)).toList();
       if (recipeRows.isEmpty) return const <Recipe>[];
 
       final foods = {for (final f in await _db.select(_db.foods).get()) f.clientId: f};

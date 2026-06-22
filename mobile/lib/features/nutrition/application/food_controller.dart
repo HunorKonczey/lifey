@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
-import '../../../core/sync/sync_status_provider.dart';
 import '../data/food_repository.dart';
 import '../domain/food.dart';
 
@@ -11,16 +10,7 @@ class FoodController extends StreamNotifier<List<Food>> {
   FoodRepository get _repo => ref.read(foodRepositoryProvider);
 
   @override
-  Stream<List<Food>> build() {
-    // A food with a delete in flight stays in storage (so a server
-    // rejection — e.g. still referenced by a meal or recipe — can bring it
-    // back with a failed marker), so it must be filtered out here rather
-    // than relying on the row being gone.
-    final activelyDeleting = ref.watch(activelyDeletingClientIdsProvider);
-    return _repo
-        .watchAll()
-        .map((foods) => foods.where((f) => !activelyDeleting.contains(f.clientId)).toList());
-  }
+  Stream<List<Food>> build() => _repo.watchAll();
 
   Future<void> addFood({
     required String name,

@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
-import '../../../core/sync/sync_status_provider.dart';
 import '../data/workout_template_repository.dart';
 import '../domain/workout_template.dart';
 
@@ -11,16 +10,7 @@ class WorkoutTemplateController extends StreamNotifier<List<WorkoutTemplate>> {
   WorkoutTemplateRepository get _repo => ref.read(workoutTemplateRepositoryProvider);
 
   @override
-  Stream<List<WorkoutTemplate>> build() {
-    // A template with a delete in flight stays in storage (so a server
-    // rejection can bring it back with its exercise links intact and a
-    // failed marker), so it must be filtered out here rather than relying
-    // on the row being gone.
-    final activelyDeleting = ref.watch(activelyDeletingClientIdsProvider);
-    return _repo
-        .watchAll()
-        .map((templates) => templates.where((t) => !activelyDeleting.contains(t.clientId)).toList());
-  }
+  Stream<List<WorkoutTemplate>> build() => _repo.watchAll();
 
   Future<void> createTemplate({
     required String name,
