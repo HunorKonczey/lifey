@@ -137,15 +137,21 @@ class WorkoutSessionRepository {
 
   Future<void> delete(String clientId) async {
     // Must enqueue before the local row is gone — enqueueDelete needs to
-    // read its serverId while the row still exists.
-    await _outbox.enqueueDelete(clientId: clientId, entityType: 'workout_session');
-    await _db.transaction(() async {
-      await (_db.delete(_db.workoutSessionExercises)
-            ..where((t) => t.sessionClientId.equals(clientId)))
-          .go();
-      await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId))).go();
-      await (_db.delete(_db.workoutSessions)..where((t) => t.clientId.equals(clientId))).go();
-    });
+    // read its serverId while the row still exists. If it queued a server
+    // delete, the session and its exercise links/sets stay (hidden by the
+    // controller's filter) until that delete is confirmed — see
+    // EntitySyncConfig.cleanupChildren's doc.
+    final queued = await _outbox.enqueueDelete(clientId: clientId, entityType: 'workout_session');
+    if (!queued) {
+      await _db.transaction(() async {
+        await (_db.delete(_db.workoutSessionExercises)
+              ..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
+        await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
+        await (_db.delete(_db.workoutSessions)..where((t) => t.clientId.equals(clientId))).go();
+      });
+    }
   }
 
   Future<void> _insertChildren(

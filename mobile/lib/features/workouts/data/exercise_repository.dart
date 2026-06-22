@@ -34,9 +34,13 @@ class ExerciseRepository {
 
   Future<void> delete(String clientId) async {
     // Must enqueue before the local row is gone — enqueueDelete needs to
-    // read its serverId while the row still exists.
-    await _outbox.enqueueDelete(clientId: clientId, entityType: 'exercise');
-    await (_db.delete(_db.exercises)..where((t) => t.clientId.equals(clientId))).go();
+    // read its serverId while the row still exists. If it queued a server
+    // delete, the row stays (hidden by the controller's filter) until that
+    // delete is confirmed — see EntitySyncConfig.cleanupChildren's doc.
+    final queued = await _outbox.enqueueDelete(clientId: clientId, entityType: 'exercise');
+    if (!queued) {
+      await (_db.delete(_db.exercises)..where((t) => t.clientId.equals(clientId))).go();
+    }
   }
 
   Exercise _toDomain(ExerciseRow row) {

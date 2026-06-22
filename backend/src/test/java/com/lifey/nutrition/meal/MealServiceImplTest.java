@@ -16,7 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,7 +63,7 @@ class MealServiceImplTest {
             return m;
         });
         MealRequest request = new MealRequest(
-                LocalDateTime.of(2026, 6, 18, 8, 0), MealType.BREAKFAST,
+                Instant.parse("2026-06-18T08:00:00Z"), MealType.BREAKFAST,
                 List.of(new MealEntryRequest(1L, 80.0)));
 
         MealResponse result = service.create(request);
@@ -81,7 +81,7 @@ class MealServiceImplTest {
     void create_throwsWhenFoodMissing() {
         when(foodRepository.findById(99L)).thenReturn(Optional.empty());
         MealRequest request = new MealRequest(
-                LocalDateTime.of(2026, 6, 18, 8, 0), MealType.SNACK,
+                Instant.parse("2026-06-18T08:00:00Z"), MealType.SNACK,
                 List.of(new MealEntryRequest(99L, 50.0)));
 
         assertThatThrownBy(() -> service.create(request))

@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,7 +68,7 @@ class StatisticsServiceImplTest {
         assertThat(result.workoutCount()).isEqualTo(1);
         assertThat(result.latestWeight()).isEqualTo(78.4);
         assertThat(result.totalWater()).isEqualTo(1.5);
-        assertThat(capturedFrom()).isEqualTo(LocalDate.now().atStartOfDay());
+        assertThat(capturedFrom()).isEqualTo(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     @Test
@@ -77,7 +77,8 @@ class StatisticsServiceImplTest {
 
         service.weekly();
 
-        assertThat(capturedFrom()).isEqualTo(LocalDate.now().minusDays(6).atStartOfDay());
+        assertThat(capturedFrom())
+                .isEqualTo(LocalDate.now().minusDays(6).atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     @Test
@@ -86,7 +87,8 @@ class StatisticsServiceImplTest {
 
         service.monthly();
 
-        assertThat(capturedFrom()).isEqualTo(LocalDate.now().minusDays(29).atStartOfDay());
+        assertThat(capturedFrom())
+                .isEqualTo(LocalDate.now().minusDays(29).atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     @Test
@@ -116,8 +118,8 @@ class StatisticsServiceImplTest {
                 .thenReturn(1.5);
     }
 
-    private LocalDateTime capturedFrom() {
-        ArgumentCaptor<LocalDateTime> captor = ArgumentCaptor.forClass(LocalDateTime.class);
+    private Instant capturedFrom() {
+        ArgumentCaptor<Instant> captor = ArgumentCaptor.forClass(Instant.class);
         verify(mealRepository).sumCaloriesSince(eq(USER_ID), captor.capture());
         return captor.getValue();
     }

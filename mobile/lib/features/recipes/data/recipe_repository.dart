@@ -101,13 +101,18 @@ class RecipeRepository {
 
   Future<void> delete(String clientId) async {
     // Must enqueue before the local row is gone — enqueueDelete needs to
-    // read its serverId while the row still exists.
-    await _outbox.enqueueDelete(clientId: clientId, entityType: 'recipe');
-    await _db.transaction(() async {
-      await (_db.delete(_db.recipeIngredients)..where((t) => t.recipeClientId.equals(clientId)))
-          .go();
-      await (_db.delete(_db.recipes)..where((t) => t.clientId.equals(clientId))).go();
-    });
+    // read its serverId while the row still exists. If it queued a server
+    // delete, the recipe and its ingredients stay (hidden by the
+    // controller's filter) until that delete is confirmed — see
+    // EntitySyncConfig.cleanupChildren's doc.
+    final queued = await _outbox.enqueueDelete(clientId: clientId, entityType: 'recipe');
+    if (!queued) {
+      await _db.transaction(() async {
+        await (_db.delete(_db.recipeIngredients)..where((t) => t.recipeClientId.equals(clientId)))
+            .go();
+        await (_db.delete(_db.recipes)..where((t) => t.clientId.equals(clientId))).go();
+      });
+    }
   }
 
   Future<void> _insertIngredients(

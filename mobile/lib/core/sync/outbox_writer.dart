@@ -60,33 +60,55 @@ class OutboxWriter {
   /// whole story — every queued operation for it is dropped instead of
   /// enqueueing a delete the backend has no row for.
   ///
-  /// Must be called *before* the caller removes its local row: the
-  /// serverId the backend DELETE needs only exists in that row, and once
-  /// it's gone there's no way to recover it — a later lookup at send-time
-  /// would find nothing and the delete would silently fail forever instead
-  /// of ever reaching the server.
-  Future<void> enqueueDelete({required String clientId, required String entityType}) async {
-    final createPending = await _hasPendingOperation(clientId, 'create');
-    await (_db.delete(_db.pendingOperations)..where((t) => t.clientId.equals(clientId))).go();
-    if (createPending) return;
+  /// Must be called *before* the caller considers removing its local row:
+  /// the serverId the backend DELETE needs only exists in that row, and
+  /// once it's gone there's no way to recover it.
+  ///
+  /// Returns whether a server-side delete was actually queued:
+  /// - `true` — the caller must *not* delete its local row now. It should
+  ///   stay in storage (hidden from list UIs by filtering on the pending
+  ///   `delete` op — see e.g. `MealController.build`) so that if the
+  ///   server rejects the delete (e.g. 409, still referenced elsewhere),
+  ///   the row can reappear with [SyncStatusIndicator]'s failed marker
+  ///   instead of vanishing with no way to retry or explain why. Only
+  ///   [SyncEngine._applySuccess] deletes the row, once the server confirms.
+  /// - `false` — nothing needs to reach the server (no create ever synced),
+  ///   so the caller should delete its local row immediately; nothing else
+  ///   ever will.
+  Future<bool> enqueueDelete({required String clientId, required String entityType}) async {
+    // Transacted: Drift defers a watched table's change notification until
+    // the transaction commits, so observers (e.g.
+    // activelyDeletingClientIdsProvider) only ever see the final state —
+    // clearing the old ops and inserting the new `delete` op as two
+    // separate writes would emit an intermediate snapshot with *no*
+    // pending op for this clientId in between, which briefly un-hides the
+    // row before the insert lands and hides it again.
+    return _db.transaction(() async {
+      final createPending = await _hasPendingOperation(clientId, 'create');
+      await (_db.delete(_db.pendingOperations)..where((t) => t.clientId.equals(clientId))).go();
+      if (createPending) return false;
 
-    final tableName = entitySyncConfigs[entityType]!.tableName;
-    final row = await _db
-        .customSelect(
-          'SELECT server_id FROM $tableName WHERE client_id = ?',
-          variables: [Variable.withString(clientId)],
-        )
-        .getSingleOrNull();
-    final serverId = row?.read<int?>('server_id');
-    if (serverId == null) return; // never synced — nothing to delete server-side
+      final tableName = entitySyncConfigs[entityType]!.tableName;
+      final row = await _db
+          .customSelect(
+            'SELECT server_id FROM $tableName WHERE client_id = ?',
+            variables: [Variable.withString(clientId)],
+          )
+          .getSingleOrNull();
+      final serverId = row?.read<int?>('server_id');
+      if (serverId == null) return false; // never synced — nothing to delete server-side
 
-    await _insert(
-      clientId: clientId,
-      entityType: entityType,
-      operation: 'delete',
-      payload: {'serverId': serverId},
-    );
-    _kick();
+      await _insert(
+        clientId: clientId,
+        entityType: entityType,
+        operation: 'delete',
+        payload: {'serverId': serverId},
+      );
+      return true;
+    }).then((queued) {
+      if (queued) _kick();
+      return queued;
+    });
   }
 
   /// Resets every failed operation for [clientId] back to `pending` (and

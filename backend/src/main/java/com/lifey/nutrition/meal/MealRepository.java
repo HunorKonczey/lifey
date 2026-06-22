@@ -4,7 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,26 +23,26 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
             from MealEntry e join e.food f
             where e.meal.user.id = :userId and e.meal.dateTime >= :from
             """)
-    double sumCaloriesSince(@Param("userId") Long userId, @Param("from") LocalDateTime from);
+    double sumCaloriesSince(@Param("userId") Long userId, @Param("from") Instant from);
 
     @Query("""
             select coalesce(sum(f.proteinPer100g * e.quantityInGrams / 100.0), 0)
             from MealEntry e join e.food f
             where e.meal.user.id = :userId and e.meal.dateTime >= :from
             """)
-    double sumProteinSince(@Param("userId") Long userId, @Param("from") LocalDateTime from);
+    double sumProteinSince(@Param("userId") Long userId, @Param("from") Instant from);
 
     @Query("""
             select coalesce(sum(coalesce(f.carbsPer100g, 0) * e.quantityInGrams / 100.0), 0)
             from MealEntry e join e.food f
             where e.meal.user.id = :userId and e.meal.dateTime >= :from
             """)
-    double sumCarbsSince(@Param("userId") Long userId, @Param("from") LocalDateTime from);
+    double sumCarbsSince(@Param("userId") Long userId, @Param("from") Instant from);
 
     @Query("""
             select coalesce(sum(coalesce(f.fatPer100g, 0) * e.quantityInGrams / 100.0), 0)
             from MealEntry e join e.food f
             where e.meal.user.id = :userId and e.meal.dateTime >= :from
             """)
-    double sumFatSince(@Param("userId") Long userId, @Param("from") LocalDateTime from);
+    double sumFatSince(@Param("userId") Long userId, @Param("from") Instant from);
 }

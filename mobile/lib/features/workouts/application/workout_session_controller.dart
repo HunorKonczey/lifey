@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
+import '../../../core/sync/sync_status_provider.dart';
 import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
 
@@ -10,7 +11,16 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
   WorkoutSessionRepository get _repo => ref.read(workoutSessionRepositoryProvider);
 
   @override
-  Stream<List<WorkoutSession>> build() => _repo.watchAll();
+  Stream<List<WorkoutSession>> build() {
+    // A session with a delete in flight stays in storage (so a server
+    // rejection can bring it back with its exercises/sets intact and a
+    // failed marker), so it must be filtered out here rather than relying
+    // on the row being gone.
+    final activelyDeleting = ref.watch(activelyDeletingClientIdsProvider);
+    return _repo
+        .watchAll()
+        .map((sessions) => sessions.where((s) => !activelyDeleting.contains(s.clientId)).toList());
+  }
 
   Future<void> logSession({
     required DateTime startedAt,

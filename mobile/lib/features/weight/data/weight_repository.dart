@@ -46,9 +46,13 @@ class WeightRepository {
 
   Future<void> delete(String clientId) async {
     // Must enqueue before the local row is gone — enqueueDelete needs to
-    // read its serverId while the row still exists.
-    await _outbox.enqueueDelete(clientId: clientId, entityType: 'weight_entry');
-    await (_db.delete(_db.weightEntries)..where((t) => t.clientId.equals(clientId))).go();
+    // read its serverId while the row still exists. If it queued a server
+    // delete, the row stays (hidden by the controller's filter) until that
+    // delete is confirmed — see EntitySyncConfig.cleanupChildren's doc.
+    final queued = await _outbox.enqueueDelete(clientId: clientId, entityType: 'weight_entry');
+    if (!queued) {
+      await (_db.delete(_db.weightEntries)..where((t) => t.clientId.equals(clientId))).go();
+    }
   }
 
   WeightEntry _toDomain(WeightEntryRow row) {

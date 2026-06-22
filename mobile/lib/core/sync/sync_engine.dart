@@ -177,6 +177,10 @@ class SyncEngine {
           );
         }
       case 'delete':
+        // The row (and its children) were kept around — hidden from list
+        // UIs, not deleted — while this was in flight, in case the server
+        // rejected it. Now that it's confirmed, actually remove them.
+        await config.cleanupChildren?.call(_db, op.clientId);
         await _db.customStatement(
           'DELETE FROM ${config.tableName} WHERE client_id = ?',
           [op.clientId],

@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/local_db/app_database.dart';
 import '../../../core/local_db/database_provider.dart';
@@ -25,9 +24,6 @@ class MealRepository {
 
   final AppDatabase _db;
   final OutboxWriter _outbox;
-
-  // Backend expects a LocalDateTime, i.e. an ISO string without a zone.
-  static final _dateTimeFormat = DateFormat("yyyy-MM-dd'T'HH:mm:ss");
 
   Stream<List<Meal>> watchAll() {
     return _db.select(_db.meals).watch().asyncMap((mealRows) async {
@@ -105,12 +101,17 @@ class MealRepository {
 
   Future<void> delete(String clientId) async {
     // Must enqueue before the local row is gone — enqueueDelete needs to
-    // read its serverId while the row still exists.
-    await _outbox.enqueueDelete(clientId: clientId, entityType: 'meal');
-    await _db.transaction(() async {
-      await (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
-      await (_db.delete(_db.meals)..where((t) => t.clientId.equals(clientId))).go();
-    });
+    // read its serverId while the row still exists. If it queued a server
+    // delete, the meal and its entries stay (hidden by the controller's
+    // filter) until that delete is confirmed — see
+    // EntitySyncConfig.cleanupChildren's doc.
+    final queued = await _outbox.enqueueDelete(clientId: clientId, entityType: 'meal');
+    if (!queued) {
+      await _db.transaction(() async {
+        await (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
+        await (_db.delete(_db.meals)..where((t) => t.clientId.equals(clientId))).go();
+      });
+    }
   }
 
   Future<void> _insertEntries(String mealClientId, List<MealEntryInput> entries) async {
@@ -132,7 +133,7 @@ class MealRepository {
     required List<MealEntryInput> entries,
   }) {
     return {
-      'dateTime': _dateTimeFormat.format(dateTime),
+      'dateTime': dateTime.toUtc().toIso8601String(),
       'mealType': mealType.apiValue,
       'entries': entries
           .map((e) => {'foodId': clientRef(e.foodClientId), 'quantityInGrams': e.grams})

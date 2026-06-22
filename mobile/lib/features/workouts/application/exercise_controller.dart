@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
+import '../../../core/sync/sync_status_provider.dart';
 import '../data/exercise_repository.dart';
 import '../domain/exercise.dart';
 
@@ -11,7 +12,16 @@ class ExerciseController extends StreamNotifier<List<Exercise>> {
   ExerciseRepository get _repo => ref.read(exerciseRepositoryProvider);
 
   @override
-  Stream<List<Exercise>> build() => _repo.watchAll();
+  Stream<List<Exercise>> build() {
+    // An exercise with a delete in flight stays in storage (so a server
+    // rejection — e.g. still used by a template or session — can bring it
+    // back with a failed marker), so it must be filtered out here rather
+    // than relying on the row being gone.
+    final activelyDeleting = ref.watch(activelyDeletingClientIdsProvider);
+    return _repo
+        .watchAll()
+        .map((exs) => exs.where((e) => !activelyDeleting.contains(e.clientId)).toList());
+  }
 
   Future<void> addExercise(String name) => _repo.create(name);
 

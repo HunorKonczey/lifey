@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
@@ -73,13 +72,12 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     private StatisticsResponse forPeriodSince(LocalDate fromDate) {
         Long userId = currentUserProvider.getUserId();
-        LocalDateTime fromDateTime = fromDate.atStartOfDay();
         Instant fromInstant = fromDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
 
-        double totalCalories = mealRepository.sumCaloriesSince(userId, fromDateTime);
-        double totalProtein = mealRepository.sumProteinSince(userId, fromDateTime);
-        double totalCarbs = mealRepository.sumCarbsSince(userId, fromDateTime);
-        double totalFat = mealRepository.sumFatSince(userId, fromDateTime);
+        double totalCalories = mealRepository.sumCaloriesSince(userId, fromInstant);
+        double totalProtein = mealRepository.sumProteinSince(userId, fromInstant);
+        double totalCarbs = mealRepository.sumCarbsSince(userId, fromInstant);
+        double totalFat = mealRepository.sumFatSince(userId, fromInstant);
         long workoutCount = workoutSessionRepository.countByUserIdAndStartedAtGreaterThanEqual(userId, fromInstant);
         Double latestWeight = weightEntryRepository.findFirstByUserIdOrderByDateDescRecordedAtDesc(userId)
                 .map(WeightEntry::getWeight)

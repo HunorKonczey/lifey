@@ -1,22 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/local_db/app_database.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/connectivity_sync_controller.dart';
-import 'core/sync/outbox_writer.dart';
-import 'core/sync/sync_status_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'features/settings/application/settings_controller.dart';
 import 'features/settings/domain/user_settings.dart';
 import 'l10n/app_localizations.dart';
 import 'shared/widgets/offline_banner.dart';
-
-/// Global so [LifeyApp] can pop a SnackBar for a background sync failure
-/// from outside any particular screen's [BuildContext] — see the delete
-/// listener in [LifeyApp.build].
-final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 /// Root application widget.
 class LifeyApp extends ConsumerWidget {
@@ -50,18 +42,12 @@ class LifeyApp extends ConsumerWidget {
       locale: _locale(languagePreference),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      scaffoldMessengerKey: scaffoldMessengerKey,
       routerConfig: router,
       // Wraps every routed screen with the global offline strip, so it
       // shows up app-wide without each screen needing to know about it.
       builder: (context, child) => Column(
         children: [
           const OfflineBanner(),
-          // Must live inside MaterialApp's subtree (not LifeyApp.build's own
-          // context, which sits above the MaterialApp it returns and so has
-          // no Localizations ancestor yet) so AppLocalizations.of(context)
-          // resolves instead of null-checking a null Localizations lookup.
-          const _DeleteFailureListener(),
           Expanded(child: child ?? const SizedBox.shrink()),
         ],
       ),
@@ -90,49 +76,5 @@ class LifeyApp extends ConsumerWidget {
       case LanguagePreference.system:
         return null;
     }
-  }
-}
-
-/// Invisible; only exists to run [ref.listen] from a [BuildContext] that's
-/// actually inside [MaterialApp]'s `Localizations` (unlike [LifeyApp.build]'s
-/// own context, which is the parent of the `MaterialApp` it returns).
-///
-/// A delete removes the local row immediately (for a responsive UI), so if
-/// the server later rejects it (e.g. 409 — still referenced by a meal,
-/// recipe, or workout), there's no list item left for the usual per-item
-/// SyncStatusIndicator to attach to. This is the only way that failure ever
-/// reaches the user: pop a SnackBar the moment a delete op flips to
-/// `failed`, with a Retry action wired to the same outbox retry used by the
-/// indicator's menu.
-class _DeleteFailureListener extends ConsumerWidget {
-  const _DeleteFailureListener();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen<List<PendingOperationRow>>(
-      pendingOperationsProvider.select((s) => s.value ?? const []),
-      (previous, next) {
-        final previouslyFailedIds = (previous ?? const [])
-            .where((op) => op.operation == 'delete' && op.status == 'failed')
-            .map((op) => op.id)
-            .toSet();
-        final newlyFailed = next.where((op) =>
-            op.operation == 'delete' &&
-            op.status == 'failed' &&
-            !previouslyFailedIds.contains(op.id));
-        for (final op in newlyFailed) {
-          final l10n = AppLocalizations.of(context)!;
-          scaffoldMessengerKey.currentState?.showSnackBar(SnackBar(
-            content: Text(l10n.deleteFailedOnServerMessage),
-            action: SnackBarAction(
-              label: l10n.retrySyncMenuItem,
-              onPressed: () => ref.read(outboxWriterProvider).retry(op.clientId),
-            ),
-            duration: const Duration(seconds: 4),
-          ));
-        }
-      },
-    );
-    return const SizedBox.shrink();
   }
 }

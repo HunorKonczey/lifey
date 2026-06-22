@@ -15,7 +15,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,7 +30,7 @@ public class Meal extends BaseEntity {
     private User user;
 
     @Column(name = "date_time", nullable = false)
-    private LocalDateTime dateTime;
+    private Instant dateTime;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "meal_type", nullable = false, length = 20)
