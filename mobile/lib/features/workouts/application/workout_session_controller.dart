@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
 import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
@@ -43,7 +44,18 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
 
   Future<void> deleteSession(String clientId) => _repo.delete(clientId);
 
-  Future<void> refresh() => ref.read(syncEngineProvider).sync();
+  /// Drains the outbox, then re-pulls from the server — matching what the
+  /// dashboard's pull-to-refresh does. Without the pull half, swiping to
+  /// refresh only pushes local edits and never reconciles a stale/corrupted
+  /// local row with the server's truth.
+  Future<void> refresh() async {
+    try {
+      await ref.read(syncEngineProvider).sync();
+      await ref.read(pullEngineProvider).pullAll();
+    } catch (_) {
+      // Best-effort: no connectivity or a backend hiccup leaves the cache as-is.
+    }
+  }
 }
 
 final workoutSessionControllerProvider =

@@ -25,19 +25,35 @@ class PullEngine {
   final AppDatabase _db;
   final Dio _dio;
 
+  bool _running = false;
+
+  /// Coalesces concurrent calls (same pattern as [SyncEngine.sync]): without
+  /// this, the startup auto-refresh and a manual pull-to-refresh fired
+  /// shortly after can run two [pullAll] passes at once. Each per-entity
+  /// pull does an un-transacted delete-then-reinsert of child rows (meal
+  /// entries, recipe ingredients, ...), so two interleaved passes can have
+  /// one pass's delete land after the other's insert — wiping a child
+  /// aggregate (e.g. a recipe's ingredients) even though the server data
+  /// was correct the whole time.
   Future<void> pullAll() async {
-    // Order matters: entities referenced by others (as a clientId lookup)
-    // are pulled first.
-    await _pullFoods();
-    await _pullExercises();
-    await _pullWaterSources();
-    await _pullWeightEntries();
-    await _pullWaterEntries();
-    await _pullSettings();
-    await _pullWorkoutTemplates();
-    await _pullWorkoutSessions();
-    await _pullRecipes();
-    await _pullMeals();
+    if (_running) return;
+    _running = true;
+    try {
+      // Order matters: entities referenced by others (as a clientId lookup)
+      // are pulled first.
+      await _pullFoods();
+      await _pullExercises();
+      await _pullWaterSources();
+      await _pullWeightEntries();
+      await _pullWaterEntries();
+      await _pullSettings();
+      await _pullWorkoutTemplates();
+      await _pullWorkoutSessions();
+      await _pullRecipes();
+      await _pullMeals();
+    } finally {
+      _running = false;
+    }
   }
 
   Future<void> _pullFoods() async {
@@ -207,31 +223,35 @@ class PullEngine {
 
       final clientId = existingClientId ?? newClientId();
       final values = WorkoutTemplatesCompanion(name: Value(json['name'] as String));
-      if (existingClientId != null) {
-        await (_db.update(_db.workoutTemplates)..where((t) => t.clientId.equals(clientId)))
-            .write(values);
-      } else {
-        await _db.into(_db.workoutTemplates).insert(
-              values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
-            );
-      }
-
       final exerciseClientIds = await _mapServerIds(
         'exercises',
         (json['exerciseIds'] as List<dynamic>? ?? const []).cast<int>(),
       );
-      await (_db.delete(_db.workoutTemplateExercises)
-            ..where((t) => t.templateClientId.equals(clientId)))
-          .go();
-      for (final exerciseClientId in exerciseClientIds) {
-        await _db.into(_db.workoutTemplateExercises).insert(
-              WorkoutTemplateExercisesCompanion.insert(
-                clientId: newClientId(),
-                templateClientId: clientId,
-                exerciseClientId: exerciseClientId,
-              ),
-            );
-      }
+      // Transacted so a crash partway through can't leave this template's
+      // row updated but its exercise links deleted-and-not-reinserted.
+      await _db.transaction(() async {
+        if (existingClientId != null) {
+          await (_db.update(_db.workoutTemplates)..where((t) => t.clientId.equals(clientId)))
+              .write(values);
+        } else {
+          await _db.into(_db.workoutTemplates).insert(
+                values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
+              );
+        }
+
+        await (_db.delete(_db.workoutTemplateExercises)
+              ..where((t) => t.templateClientId.equals(clientId)))
+            .go();
+        for (final exerciseClientId in exerciseClientIds) {
+          await _db.into(_db.workoutTemplateExercises).insert(
+                WorkoutTemplateExercisesCompanion.insert(
+                  clientId: newClientId(),
+                  templateClientId: clientId,
+                  exerciseClientId: exerciseClientId,
+                ),
+              );
+        }
+      });
     }
     await _deleteMissing(
       'workout_templates',
@@ -257,50 +277,55 @@ class PullEngine {
         startedAt: Value(DateTime.parse(json['startedAt'] as String)),
         finishedAt: Value(finishedRaw != null ? DateTime.parse(finishedRaw) : null),
       );
-      if (existingClientId != null) {
-        await (_db.update(_db.workoutSessions)..where((t) => t.clientId.equals(clientId)))
-            .write(values);
-      } else {
-        await _db.into(_db.workoutSessions).insert(
-              values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
-            );
-      }
-
       final plannedExerciseIds = await _mapServerIds(
         'exercises',
         ((json['exercises'] as List<dynamic>? ?? const []))
             .map((e) => (e as Map<String, dynamic>)['exerciseId'] as int)
             .toList(),
       );
-      await (_db.delete(_db.workoutSessionExercises)
-            ..where((t) => t.sessionClientId.equals(clientId)))
-          .go();
-      for (final exerciseClientId in plannedExerciseIds) {
-        await _db.into(_db.workoutSessionExercises).insert(
-              WorkoutSessionExercisesCompanion.insert(
-                clientId: newClientId(),
-                sessionClientId: clientId,
-                exerciseClientId: exerciseClientId,
-              ),
-            );
-      }
-
       final setsJson = (json['sets'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
-      await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId))).go();
-      for (final setJson in setsJson) {
-        final exerciseClientId =
-            await _localClientId('exercises', setJson['exerciseId'] as int);
-        if (exerciseClientId == null) continue; // dangling ref — exercise master row not pulled
-        await _db.into(_db.exerciseSets).insert(
-              ExerciseSetsCompanion.insert(
-                clientId: newClientId(),
-                sessionClientId: clientId,
-                exerciseClientId: exerciseClientId,
-                reps: (setJson['reps'] as num).toInt(),
-                weight: (setJson['weight'] as num).toDouble(),
-              ),
-            );
-      }
+      // Transacted so a crash partway through can't leave this session's
+      // row updated but its exercise links / sets deleted-and-not-reinserted.
+      await _db.transaction(() async {
+        if (existingClientId != null) {
+          await (_db.update(_db.workoutSessions)..where((t) => t.clientId.equals(clientId)))
+              .write(values);
+        } else {
+          await _db.into(_db.workoutSessions).insert(
+                values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
+              );
+        }
+
+        await (_db.delete(_db.workoutSessionExercises)
+              ..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
+        for (final exerciseClientId in plannedExerciseIds) {
+          await _db.into(_db.workoutSessionExercises).insert(
+                WorkoutSessionExercisesCompanion.insert(
+                  clientId: newClientId(),
+                  sessionClientId: clientId,
+                  exerciseClientId: exerciseClientId,
+                ),
+              );
+        }
+
+        await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
+        for (final setJson in setsJson) {
+          final exerciseClientId =
+              await _localClientId('exercises', setJson['exerciseId'] as int);
+          if (exerciseClientId == null) continue; // dangling ref — exercise master row not pulled
+          await _db.into(_db.exerciseSets).insert(
+                ExerciseSetsCompanion.insert(
+                  clientId: newClientId(),
+                  sessionClientId: clientId,
+                  exerciseClientId: exerciseClientId,
+                  reps: (setJson['reps'] as num).toInt(),
+                  weight: (setJson['weight'] as num).toDouble(),
+                ),
+              );
+        }
+      });
     }
     await _deleteMissing(
       'workout_sessions',
@@ -329,30 +354,36 @@ class PullEngine {
         name: Value(json['name'] as String),
         description: Value(json['description'] as String?),
       );
-      if (existingClientId != null) {
-        await (_db.update(_db.recipes)..where((t) => t.clientId.equals(clientId))).write(values);
-      } else {
-        await _db.into(_db.recipes).insert(
-              values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
-            );
-      }
-
       final ingredientsJson =
           (json['ingredients'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
-      await (_db.delete(_db.recipeIngredients)..where((t) => t.recipeClientId.equals(clientId)))
-          .go();
-      for (final ingredient in ingredientsJson) {
-        final foodClientId = await _localClientId('foods', ingredient['foodId'] as int);
-        if (foodClientId == null) continue; // dangling ref — food master row not pulled
-        await _db.into(_db.recipeIngredients).insert(
-              RecipeIngredientsCompanion.insert(
-                clientId: newClientId(),
-                recipeClientId: clientId,
-                foodClientId: foodClientId,
-                quantityInGrams: (ingredient['quantityInGrams'] as num).toDouble(),
-              ),
-            );
-      }
+      // Transacted so a crash partway through (e.g. a malformed later
+      // ingredient) can't leave this recipe's row updated but its
+      // ingredients deleted-and-not-reinserted.
+      await _db.transaction(() async {
+        if (existingClientId != null) {
+          await (_db.update(_db.recipes)..where((t) => t.clientId.equals(clientId)))
+              .write(values);
+        } else {
+          await _db.into(_db.recipes).insert(
+                values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
+              );
+        }
+
+        await (_db.delete(_db.recipeIngredients)..where((t) => t.recipeClientId.equals(clientId)))
+            .go();
+        for (final ingredient in ingredientsJson) {
+          final foodClientId = await _localClientId('foods', ingredient['foodId'] as int);
+          if (foodClientId == null) continue; // dangling ref — food master row not pulled
+          await _db.into(_db.recipeIngredients).insert(
+                RecipeIngredientsCompanion.insert(
+                  clientId: newClientId(),
+                  recipeClientId: clientId,
+                  foodClientId: foodClientId,
+                  quantityInGrams: (ingredient['quantityInGrams'] as num).toDouble(),
+                ),
+              );
+        }
+      });
     }
     await _deleteMissing(
       'recipes',
@@ -377,29 +408,34 @@ class PullEngine {
         mealDateTime: Value(DateTime.parse(json['dateTime'] as String)),
         mealType: Value(json['mealType'] as String),
       );
-      if (existingClientId != null) {
-        await (_db.update(_db.meals)..where((t) => t.clientId.equals(clientId))).write(values);
-      } else {
-        await _db.into(_db.meals).insert(
-              values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
-            );
-      }
-
       final entriesJson =
           (json['entries'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
-      await (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
-      for (final entry in entriesJson) {
-        final foodClientId = await _localClientId('foods', entry['foodId'] as int);
-        if (foodClientId == null) continue; // dangling ref — food master row not pulled
-        await _db.into(_db.mealEntries).insert(
-              MealEntriesCompanion.insert(
-                clientId: newClientId(),
-                mealClientId: clientId,
-                foodClientId: foodClientId,
-                quantityInGrams: (entry['quantityInGrams'] as num).toDouble(),
-              ),
-            );
-      }
+      // Transacted so a crash partway through (e.g. a malformed later
+      // entry) can't leave this meal's row updated but its entries
+      // deleted-and-not-reinserted.
+      await _db.transaction(() async {
+        if (existingClientId != null) {
+          await (_db.update(_db.meals)..where((t) => t.clientId.equals(clientId))).write(values);
+        } else {
+          await _db.into(_db.meals).insert(
+                values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
+              );
+        }
+
+        await (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
+        for (final entry in entriesJson) {
+          final foodClientId = await _localClientId('foods', entry['foodId'] as int);
+          if (foodClientId == null) continue; // dangling ref — food master row not pulled
+          await _db.into(_db.mealEntries).insert(
+                MealEntriesCompanion.insert(
+                  clientId: newClientId(),
+                  mealClientId: clientId,
+                  foodClientId: foodClientId,
+                  quantityInGrams: (entry['quantityInGrams'] as num).toDouble(),
+                ),
+              );
+        }
+      });
     }
     await _deleteMissing(
       'meals',
