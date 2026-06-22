@@ -5,12 +5,14 @@ class ExerciseSet {
     required this.exerciseName,
     required this.reps,
     required this.weight,
+    required this.performedAt,
   });
 
   final String exerciseClientId;
   final String exerciseName;
   final int reps;
   final double weight;
+  final DateTime performedAt;
 }
 
 /// An exercise planned for a session (a quick-add default) — e.g. copied in

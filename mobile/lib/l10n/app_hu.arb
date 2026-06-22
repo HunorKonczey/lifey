@@ -125,6 +125,7 @@
     "setsLabel": "Szettek",
     "noSetsAddedYetMessage": "Még nincs hozzáadott szett",
     "repsTimesWeightLabel": "{reps} ismétlés · {weight} kg",
+    "restTimeLabel": "Pihenő: {minutes}:{seconds}",
     "everyExerciseAlreadyInSessionMessage": "Minden gyakorlat már szerepel ebben az edzésben.",
     "deletedExerciseMessage": "{name} törölve",
     "couldNotDeleteExerciseMessage": "Nem sikerült törölni: {name}",

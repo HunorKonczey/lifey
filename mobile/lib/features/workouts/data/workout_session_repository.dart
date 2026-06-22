@@ -16,11 +16,13 @@ class ExerciseSetInput {
     required this.exerciseClientId,
     required this.reps,
     required this.weight,
+    required this.performedAt,
   });
 
   final String exerciseClientId;
   final int reps;
   final double weight;
+  final DateTime performedAt;
 }
 
 /// Local-first access to workout sessions and their planned-exercise/set
@@ -65,8 +67,14 @@ class WorkoutSessionRepository {
                 exerciseName: exerciseNames[set.exerciseClientId] ?? 'Unknown',
                 reps: set.reps,
                 weight: set.weight,
+                performedAt: set.performedAt,
               ),
             );
+      }
+      // Rest time is a delta between consecutive sets, so each session's
+      // sets must be in performedAt order before they reach the UI.
+      for (final sets in setsBySession.values) {
+        sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
       }
 
       final sessions = sessionRows
@@ -186,6 +194,7 @@ class WorkoutSessionRepository {
               exerciseClientId: set.exerciseClientId,
               reps: set.reps,
               weight: set.weight,
+              performedAt: set.performedAt,
             ),
           );
     }
@@ -206,6 +215,7 @@ class WorkoutSessionRepository {
                 'exerciseId': clientRef(s.exerciseClientId),
                 'reps': s.reps,
                 'weight': s.weight,
+                'performedAt': s.performedAt.toUtc().toIso8601String(),
               })
           .toList(),
     };

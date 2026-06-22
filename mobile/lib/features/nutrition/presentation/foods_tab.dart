@@ -9,9 +9,36 @@ import '../application/food_controller.dart';
 import '../domain/food.dart';
 import 'widgets/add_food_sheet.dart';
 
-/// "Foods" tab: list of foods with tap-to-edit and swipe-to-delete.
-class FoodsTab extends ConsumerWidget {
+/// "Foods" tab: list of foods with tap-to-edit, swipe-to-delete, and
+/// scroll-triggered pagination over the local cache (see
+/// docs/14-pagination-plan.md).
+class FoodsTab extends ConsumerStatefulWidget {
   const FoodsTab({super.key});
+
+  @override
+  ConsumerState<FoodsTab> createState() => _FoodsTabState();
+}
+
+class _FoodsTabState extends ConsumerState<FoodsTab> {
+  /// Distance from the bottom (in px) at which the next page is requested.
+  static const _loadMoreThreshold = 300.0;
+
+  /// Edge-triggered: true while the viewport is within [_loadMoreThreshold]
+  /// of the bottom. [loadMore] only fires on the transition into this zone
+  /// (false -> true), not on every scroll notification while lingering in
+  /// it. It resets on its own once new rows are appended (pushing the
+  /// bottom further away) or the user scrolls back up.
+  bool _nearBottom = false;
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    final metrics = notification.metrics;
+    final isNearBottom = metrics.maxScrollExtent - metrics.pixels <= _loadMoreThreshold;
+    if (isNearBottom && !_nearBottom) {
+      ref.read(foodControllerProvider.notifier).loadMore();
+    }
+    _nearBottom = isNearBottom;
+    return false;
+  }
 
   Future<void> _edit(BuildContext context, Food food) {
     return showModalBottomSheet<void>(
@@ -52,9 +79,13 @@ class FoodsTab extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(foodControllerProvider);
     final l10n = AppLocalizations.of(context)!;
+    // .notifier access doesn't itself trigger a rebuild; `hasMore` is read
+    // fresh on every rebuild, and the controller already mutates it before
+    // pushing the data that triggers this rebuild via `state` above.
+    final hasMore = ref.read(foodControllerProvider.notifier).hasMore;
 
     return RefreshIndicator(
       onRefresh: () => ref.read(foodControllerProvider.notifier).refresh(),
@@ -67,42 +98,58 @@ class FoodsTab extends ConsumerWidget {
               subtitle: l10n.tapPlusToAddOneMessage,
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: foods.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final food = foods[index];
-              return Dismissible(
-                key: ValueKey(food.clientId),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Icon(Icons.delete,
-                      color: Theme.of(context).colorScheme.onErrorContainer),
-                ),
-                confirmDismiss: (_) async {
-                  await _delete(context, ref, food);
-                  // The local cache stream removes the tile on its own once
-                  // the delete lands; don't let Dismissible do it too.
-                  return false;
-                },
-                child: ListTile(
-                  title: Text(food.name),
-                  subtitle: Text(_macroLine(context, food)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SyncStatusIndicator(clientId: food.clientId),
-                      const Icon(Icons.chevron_right),
-                    ],
+          final itemCount = foods.length + (hasMore ? 1 : 0);
+          return NotificationListener<ScrollNotification>(
+            onNotification: _handleScrollNotification,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: itemCount,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                if (index >= foods.length) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  );
+                }
+                final food = foods[index];
+                return Dismissible(
+                  key: ValueKey(food.clientId),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Icon(Icons.delete,
+                        color: Theme.of(context).colorScheme.onErrorContainer),
                   ),
-                  onTap: () => _edit(context, food),
-                ),
-              );
-            },
+                  confirmDismiss: (_) async {
+                    await _delete(context, ref, food);
+                    // The local cache stream removes the tile on its own once
+                    // the delete lands; don't let Dismissible do it too.
+                    return false;
+                  },
+                  child: ListTile(
+                    title: Text(food.name),
+                    subtitle: Text(_macroLine(context, food)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SyncStatusIndicator(clientId: food.clientId),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                    onTap: () => _edit(context, food),
+                  ),
+                );
+              },
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),

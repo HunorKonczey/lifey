@@ -10,6 +10,8 @@ import '../../../core/sync/pending_delete_filter.dart';
 import '../../../core/utils/combine_latest.dart';
 import '../domain/meal.dart';
 
+typedef _JoinedMealRow = TypedResult;
+
 /// One food + quantity to include when logging a meal (request side).
 class MealEntryInput {
   const MealEntryInput({required this.foodClientId, required this.grams});
@@ -50,42 +52,79 @@ class MealRepository {
     return combineLatest2(
       joinedMeals$,
       _db.select(_db.pendingOperations).watch(),
-      (rows, ops) => (rows, ops),
-    ).map((pair) {
-      final (joinedRows, ops) = pair;
-      final blocked = blockedByActiveDelete(ops);
+      _processJoined,
+    );
+  }
 
-      final mealRowsByClientId = <String, MealRow>{};
-      final entriesByMeal = <String, List<MealEntry>>{};
-      for (final row in joinedRows) {
-        final mealRow = row.readTable(_db.meals);
-        if (blocked.contains(mealRow.clientId)) continue;
-        mealRowsByClientId[mealRow.clientId] = mealRow;
+  /// Like [watchAll] but bounded to the most recent [limit] meals (by date).
+  /// The pending-delete filter can drop rows below the requested limit, so
+  /// callers that need to know whether more rows exist beyond [limit] should
+  /// request `limit + 1` and treat a returned list longer than the intended
+  /// page size as "more available".
+  ///
+  /// Limiting can't be applied directly to the meals+entries+foods join
+  /// (a row-level SQL LIMIT there would cut off mid-meal once a meal has
+  /// several entries, capping joined rows rather than distinct meals). So
+  /// this first picks the page's meal ids with a plain limited query, then
+  /// re-joins scoped to just those ids — switching to a fresh join whenever
+  /// the id set changes (e.g. a new meal enters the window).
+  Stream<List<Meal>> watchPaged({required int limit}) {
+    final pageIds$ = (_db.select(_db.meals)
+          ..orderBy([(t) => OrderingTerm.desc(t.mealDateTime)])
+          ..limit(limit))
+        .watch()
+        .map((rows) => rows.map((r) => r.clientId).toList());
 
-        final entryRow = row.readTableOrNull(_db.mealEntries);
-        if (entryRow == null) continue; // meal has no entries — left join produced no match
-
-        final food = row.readTableOrNull(_db.foods);
-        final grams = entryRow.quantityInGrams;
-        entriesByMeal.putIfAbsent(mealRow.clientId, () => []).add(
-              MealEntry(
-                foodClientId: entryRow.foodClientId,
-                foodName: food?.name ?? 'Unknown',
-                quantityInGrams: grams,
-                calories: (food?.caloriesPer100g ?? 0) * grams / 100,
-                protein: (food?.proteinPer100g ?? 0) * grams / 100,
-                carbs: (food?.carbsPer100g ?? 0) * grams / 100,
-                fat: (food?.fatPer100g ?? 0) * grams / 100,
-              ),
-            );
+    return switchMap(pageIds$, (ids) {
+      if (ids.isEmpty) {
+        return Stream.value(const <Meal>[]);
       }
+      final joinedMeals$ = (_db.select(_db.meals)..where((t) => t.clientId.isIn(ids))).join([
+        leftOuterJoin(_db.mealEntries, _db.mealEntries.mealClientId.equalsExp(_db.meals.clientId)),
+        leftOuterJoin(_db.foods, _db.foods.clientId.equalsExp(_db.mealEntries.foodClientId)),
+      ]).watch();
 
-      final meals = mealRowsByClientId.values
-          .map((row) => _toDomain(row, entriesByMeal[row.clientId] ?? const []))
-          .toList()
-        ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
-      return meals;
+      return combineLatest2(
+        joinedMeals$,
+        _db.select(_db.pendingOperations).watch(),
+        _processJoined,
+      );
     });
+  }
+
+  List<Meal> _processJoined(List<_JoinedMealRow> joinedRows, List<PendingOperationRow> ops) {
+    final blocked = blockedByActiveDelete(ops);
+
+    final mealRowsByClientId = <String, MealRow>{};
+    final entriesByMeal = <String, List<MealEntry>>{};
+    for (final row in joinedRows) {
+      final mealRow = row.readTable(_db.meals);
+      if (blocked.contains(mealRow.clientId)) continue;
+      mealRowsByClientId[mealRow.clientId] = mealRow;
+
+      final entryRow = row.readTableOrNull(_db.mealEntries);
+      if (entryRow == null) continue; // meal has no entries — left join produced no match
+
+      final food = row.readTableOrNull(_db.foods);
+      final grams = entryRow.quantityInGrams;
+      entriesByMeal.putIfAbsent(mealRow.clientId, () => []).add(
+            MealEntry(
+              foodClientId: entryRow.foodClientId,
+              foodName: food?.name ?? 'Unknown',
+              quantityInGrams: grams,
+              calories: (food?.caloriesPer100g ?? 0) * grams / 100,
+              protein: (food?.proteinPer100g ?? 0) * grams / 100,
+              carbs: (food?.carbsPer100g ?? 0) * grams / 100,
+              fat: (food?.fatPer100g ?? 0) * grams / 100,
+            ),
+          );
+    }
+
+    final meals = mealRowsByClientId.values
+        .map((row) => _toDomain(row, entriesByMeal[row.clientId] ?? const []))
+        .toList()
+      ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
+    return meals;
   }
 
   Future<void> create({

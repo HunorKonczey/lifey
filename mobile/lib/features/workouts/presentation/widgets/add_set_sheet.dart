@@ -9,11 +9,17 @@ import '../../domain/exercise.dart';
 typedef SetDraft = ({Exercise exercise, int reps, double weight});
 
 /// Bottom sheet to add a set (exercise + reps + weight). Pops with a [SetDraft].
-/// Pass [initialExercise] to pre-select it (e.g. when adding a template exercise).
+/// Pass [initialExercise] to pre-select it (e.g. when adding a template
+/// exercise) and/or [initialReps]/[initialWeight] to pre-fill the numeric
+/// fields (e.g. when double-tapping an existing set to log another one like
+/// it — only the timestamp is deliberately not pre-filled there, since it's
+/// stamped fresh on submit).
 class AddSetSheet extends ConsumerStatefulWidget {
-  const AddSetSheet({super.key, this.initialExercise});
+  const AddSetSheet({super.key, this.initialExercise, this.initialReps, this.initialWeight});
 
   final Exercise? initialExercise;
+  final int? initialReps;
+  final double? initialWeight;
 
   @override
   ConsumerState<AddSetSheet> createState() => _AddSetSheetState();
@@ -21,8 +27,8 @@ class AddSetSheet extends ConsumerStatefulWidget {
 
 class _AddSetSheetState extends ConsumerState<AddSetSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _reps = TextEditingController();
-  final _weight = TextEditingController();
+  late final _reps = TextEditingController(text: widget.initialReps?.toString() ?? '');
+  late final _weight = TextEditingController(text: widget.initialWeight?.toString() ?? '');
   Exercise? _exercise;
 
   @override

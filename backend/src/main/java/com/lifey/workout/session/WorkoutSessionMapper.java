@@ -25,7 +25,8 @@ final class WorkoutSessionMapper {
                         set.getExercise().getId(),
                         set.getExercise().getName(),
                         set.getReps(),
-                        set.getWeight()))
+                        set.getWeight(),
+                        set.getPerformedAt()))
                 .toList();
 
         return new WorkoutSessionResponse(

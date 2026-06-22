@@ -367,6 +367,9 @@
     "repsTimesWeightLabel": "{reps} reps · {weight} kg",
     "@repsTimesWeightLabel": {"description": "A set's reps and weight", "placeholders": {"reps": {"type": "String"}, "weight": {"type": "String"}}},
 
+    "restTimeLabel": "Rest: {minutes}:{seconds}",
+    "@restTimeLabel": {"description": "Rest time before a set, as minutes:seconds since the previous one", "placeholders": {"minutes": {"type": "String"}, "seconds": {"type": "String"}}},
+
     "everyExerciseAlreadyInSessionMessage": "Every exercise is already in this session.",
     "@everyExerciseAlreadyInSessionMessage": {"description": "Shown when every exercise is already planned for the session"},
 

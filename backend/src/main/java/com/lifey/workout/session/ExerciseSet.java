@@ -11,6 +11,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
+
 @Getter
 @Setter
 @Entity
@@ -30,4 +32,7 @@ public class ExerciseSet extends BaseEntity {
 
     @Column(nullable = false)
     private double weight;
+
+    @Column(name = "performed_at", nullable = false)
+    private Instant performedAt;
 }

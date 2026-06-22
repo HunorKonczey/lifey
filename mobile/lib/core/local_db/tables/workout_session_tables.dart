@@ -45,6 +45,11 @@ class ExerciseSets extends Table {
   IntColumn get reps => integer()();
   RealColumn get weight => real()();
 
+  /// The instant this set was logged — used to compute rest time between
+  /// consecutive sets. Backfilled from the owning session's `startedAt` for
+  /// rows that predate this column (see AppDatabase's schema v6 migration).
+  DateTimeColumn get performedAt => dateTime()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

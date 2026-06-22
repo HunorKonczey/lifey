@@ -63,8 +63,9 @@ class WorkoutSessionServiceImplTest {
             return s;
         });
         Instant started = Instant.parse("2026-06-18T05:00:00Z");
+        Instant performedAt = Instant.parse("2026-06-18T05:05:00Z");
         WorkoutSessionRequest request = new WorkoutSessionRequest(started, null,
-                List.of(1L, 4L), List.of(new ExerciseSetRequest(1L, 10, 60.0)));
+                List.of(1L, 4L), List.of(new ExerciseSetRequest(1L, 10, 60.0, performedAt)));
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -76,6 +77,7 @@ class WorkoutSessionServiceImplTest {
             assertThat(s.exerciseName()).isEqualTo("Bench Press");
             assertThat(s.reps()).isEqualTo(10);
             assertThat(s.weight()).isEqualTo(60.0);
+            assertThat(s.performedAt()).isEqualTo(performedAt);
         });
     }
 
@@ -112,7 +114,8 @@ class WorkoutSessionServiceImplTest {
         when(exerciseRepository.findById(99L)).thenReturn(Optional.empty());
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
-                List.of(), List.of(new ExerciseSetRequest(99L, 5, 100.0)));
+                List.of(), List.of(new ExerciseSetRequest(99L, 5, 100.0,
+                        Instant.parse("2026-06-18T05:05:00Z"))));
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -133,6 +136,7 @@ class WorkoutSessionServiceImplTest {
         oldSet.setExercise(exercise(2L, "Squat"));
         oldSet.setReps(5);
         oldSet.setWeight(100.0);
+        oldSet.setPerformedAt(Instant.parse("2026-06-18T05:00:00Z"));
         existing.getSets().add(oldSet);
 
         when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
@@ -140,7 +144,8 @@ class WorkoutSessionServiceImplTest {
         Instant finished = Instant.parse("2026-06-18T06:00:00Z");
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), finished,
-                List.of(1L), List.of(new ExerciseSetRequest(1L, 8, 70.0)));
+                List.of(1L), List.of(new ExerciseSetRequest(1L, 8, 70.0,
+                        Instant.parse("2026-06-18T05:30:00Z"))));
 
         WorkoutSessionResponse result = service.update(3L, request);
 
@@ -156,7 +161,8 @@ class WorkoutSessionServiceImplTest {
         when(sessionRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
-                List.of(), List.of(new ExerciseSetRequest(1L, 5, 50.0)));
+                List.of(), List.of(new ExerciseSetRequest(1L, 5, 50.0,
+                        Instant.parse("2026-06-18T05:05:00Z"))));
 
         assertThatThrownBy(() -> service.update(99L, request))
                 .isInstanceOf(ResourceNotFoundException.class);

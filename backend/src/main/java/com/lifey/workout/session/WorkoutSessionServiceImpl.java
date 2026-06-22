@@ -107,6 +107,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             set.setExercise(exercise);
             set.setReps(item.reps());
             set.setWeight(item.weight());
+            set.setPerformedAt(item.performedAt());
             session.getSets().add(set);
         }
     }

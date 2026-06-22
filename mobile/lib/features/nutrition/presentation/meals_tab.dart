@@ -11,7 +11,9 @@ import '../application/meal_controller.dart';
 import '../domain/meal.dart';
 import 'log_meal_screen.dart';
 
-/// "Meals" tab: tap to edit, swipe-to-delete, filter by date range.
+/// "Meals" tab: tap to edit, swipe-to-delete, filter by date range, and
+/// scroll-triggered pagination over the local cache (see
+/// docs/14-pagination-plan.md).
 class MealsTab extends ConsumerStatefulWidget {
   const MealsTab({super.key});
 
@@ -22,7 +24,27 @@ class MealsTab extends ConsumerStatefulWidget {
 class _MealsTabState extends ConsumerState<MealsTab> {
   static final _dateLabel = DateFormat('EEE, MMM d · HH:mm');
 
+  /// Distance from the bottom (in px) at which the next page is requested.
+  static const _loadMoreThreshold = 300.0;
+
   DateRangeFilter _filter = DateRangeFilter.all;
+
+  /// Edge-triggered: true while the viewport is within [_loadMoreThreshold]
+  /// of the bottom. [loadMore] only fires on the transition into this zone
+  /// (false -> true), not on every scroll notification while lingering in
+  /// it. It resets on its own once new rows are appended (pushing the
+  /// bottom further away) or the user scrolls back up.
+  bool _nearBottom = false;
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    final metrics = notification.metrics;
+    final isNearBottom = metrics.maxScrollExtent - metrics.pixels <= _loadMoreThreshold;
+    if (isNearBottom && !_nearBottom) {
+      ref.read(mealControllerProvider.notifier).loadMore();
+    }
+    _nearBottom = isNearBottom;
+    return false;
+  }
 
   Future<void> _edit(BuildContext context, Meal meal) {
     return Navigator.of(context).push(
@@ -47,6 +69,10 @@ class _MealsTabState extends ConsumerState<MealsTab> {
   Widget build(BuildContext context) {
     final state = ref.watch(mealControllerProvider);
     final l10n = AppLocalizations.of(context)!;
+    // .notifier access doesn't itself trigger a rebuild; `hasMore` is read
+    // fresh on every rebuild, and the controller already mutates it before
+    // pushing the data that triggers this rebuild via `state` above.
+    final hasMore = ref.read(mealControllerProvider.notifier).hasMore;
 
     return state.when(
       data: (meals) {
@@ -78,14 +104,31 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                         title: l10n.noMealsInRangeTitle,
                         subtitle: l10n.tryWiderDateFilterMessage,
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) => _MealCard(
-                          meal: filtered[index],
-                          dateLabel: _dateLabel,
-                          onDelete: () => _delete(context, ref, filtered[index]),
-                          onEdit: () => _edit(context, filtered[index]),
+                    : NotificationListener<ScrollNotification>(
+                        onNotification: _handleScrollNotification,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: filtered.length + (hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index >= filtered.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                ),
+                              );
+                            }
+                            return _MealCard(
+                              meal: filtered[index],
+                              dateLabel: _dateLabel,
+                              onDelete: () => _delete(context, ref, filtered[index]),
+                              onEdit: () => _edit(context, filtered[index]),
+                            );
+                          },
                         ),
                       ),
               ),

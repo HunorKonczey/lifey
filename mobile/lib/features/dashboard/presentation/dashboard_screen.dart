@@ -13,6 +13,8 @@ import '../../water/presentation/widgets/add_water_sheet.dart';
 import '../../water/presentation/widgets/water_card.dart';
 import '../../weight/application/weight_controller.dart';
 import '../../weight/domain/weight_entry.dart';
+import '../../workouts/application/workout_session_controller.dart';
+import '../../workouts/presentation/log_session_screen.dart';
 import '../application/dashboard_controller.dart';
 import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
@@ -24,6 +26,20 @@ Future<void> _openAddWaterSheet(BuildContext context) {
     isScrollControlled: true,
     showDragHandle: true,
     builder: (_) => const AddWaterSheet(),
+  );
+}
+
+/// Opens the matching session straight into edit mode, falling back to the
+/// "Workouts" tab if the session isn't in the local cache (e.g. mid-sync).
+Future<void> _openWorkout(BuildContext context, WidgetRef ref, String clientId) async {
+  final sessions = ref.read(workoutSessionControllerProvider).value ?? const [];
+  final session = sessions.where((s) => s.clientId == clientId).firstOrNull;
+  if (session == null) {
+    context.go('/workouts');
+    return;
+  }
+  await Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => LogSessionScreen(session: session)),
   );
 }
 
@@ -87,18 +103,29 @@ class DashboardScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () => _forceSync(ref),
-        child: _DashboardBody(data: data, settings: settings, weightTrend: weightTrend),
+        child: _DashboardBody(
+          data: data,
+          settings: settings,
+          weightTrend: weightTrend,
+          onWorkoutTap: (clientId) => _openWorkout(context, ref, clientId),
+        ),
       ),
     );
   }
 }
 
 class _DashboardBody extends StatelessWidget {
-  const _DashboardBody({required this.data, required this.settings, this.weightTrend});
+  const _DashboardBody({
+    required this.data,
+    required this.settings,
+    required this.onWorkoutTap,
+    this.weightTrend,
+  });
 
   final DashboardData data;
   final UserSettings settings;
   final WeightTrend? weightTrend;
+  final ValueChanged<String> onWorkoutTap;
 
   /// Actual-over-goal ratio, or null when no goal is set (no bar shown then).
   double? _ratio(double actual, int? goal) =>
@@ -203,7 +230,7 @@ class _DashboardBody extends StatelessWidget {
           _EmptyHint(l10n.noWorkoutsLoggedYetPeriodMessage)
         else
           ...data.recentWorkouts.map(
-            (w) => _WorkoutTile(workout: w, onTap: () => context.go('/workouts')),
+            (w) => _WorkoutTile(workout: w, onTap: () => onWorkoutTap(w.clientId)),
           ),
       ],
     );

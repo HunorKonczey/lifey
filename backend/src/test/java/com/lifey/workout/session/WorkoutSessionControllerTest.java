@@ -40,12 +40,14 @@ class WorkoutSessionControllerTest {
         when(workoutSessionService.create(any())).thenReturn(new WorkoutSessionResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"), null,
                 List.of(new ExerciseSummary(1L, "Bench Press")),
-                List.of(new ExerciseSetResponse(1L, "Bench Press", 10, 60.0))));
+                List.of(new ExerciseSetResponse(1L, "Bench Press", 10, 60.0,
+                        Instant.parse("2026-06-01T05:05:00Z")))));
 
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","
                                 + "\"exerciseIds\":[1],"
-                                + "\"sets\":[{\"exerciseId\":1,\"reps\":10,\"weight\":60}]}"))
+                                + "\"sets\":[{\"exerciseId\":1,\"reps\":10,\"weight\":60,"
+                                + "\"performedAt\":\"2026-06-01T05:05:00Z\"}]}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(2))
                 .andExpect(jsonPath("$.finishedAt").doesNotExist())
@@ -79,7 +81,8 @@ class WorkoutSessionControllerTest {
     void create_zeroRepsOrNegativeWeightReturns400() throws Exception {
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\",\"exerciseIds\":[],"
-                                + "\"sets\":[{\"exerciseId\":1,\"reps\":0,\"weight\":-5}]}"))
+                                + "\"sets\":[{\"exerciseId\":1,\"reps\":0,\"weight\":-5,"
+                                + "\"performedAt\":\"2026-06-01T05:05:00Z\"}]}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
 
@@ -92,13 +95,15 @@ class WorkoutSessionControllerTest {
                 Instant.parse("2026-06-01T05:00:00Z"),
                 Instant.parse("2026-06-01T06:00:00Z"),
                 List.of(new ExerciseSummary(1L, "Bench Press")),
-                List.of(new ExerciseSetResponse(1L, "Bench Press", 8, 70.0))));
+                List.of(new ExerciseSetResponse(1L, "Bench Press", 8, 70.0,
+                        Instant.parse("2026-06-01T05:35:00Z")))));
 
         mockMvc.perform(put("/api/v1/workout-sessions/2").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","
                                 + "\"finishedAt\":\"2026-06-01T06:00:00Z\","
                                 + "\"exerciseIds\":[1],"
-                                + "\"sets\":[{\"exerciseId\":1,\"reps\":8,\"weight\":70}]}"))
+                                + "\"sets\":[{\"exerciseId\":1,\"reps\":8,\"weight\":70,"
+                                + "\"performedAt\":\"2026-06-01T05:35:00Z\"}]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.finishedAt").value("2026-06-01T06:00:00Z"))
                 .andExpect(jsonPath("$.sets[0].reps").value(8));

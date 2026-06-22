@@ -322,6 +322,7 @@ class PullEngine {
                   exerciseClientId: exerciseClientId,
                   reps: (setJson['reps'] as num).toInt(),
                   weight: (setJson['weight'] as num).toDouble(),
+                  performedAt: DateTime.parse(setJson['performedAt'] as String),
                 ),
               );
         }

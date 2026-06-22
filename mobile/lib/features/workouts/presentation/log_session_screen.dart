@@ -45,7 +45,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   /// Names are resolved at render time from the exercise master list.
   final Set<String> _plannedExerciseIds = {};
 
-  final List<({Exercise exercise, int reps, double weight})> _sets = [];
+  final List<({Exercise exercise, int reps, double weight, DateTime performedAt})> _sets = [];
   bool _saving = false;
 
   bool get _isEditing => widget.session != null;
@@ -65,8 +65,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           exercise: Exercise(clientId: set.exerciseClientId, name: set.exerciseName),
           reps: set.reps,
           weight: set.weight,
+          performedAt: set.performedAt,
         ));
       }
+      // Rest time is a delta between consecutive sets, so this list must
+      // stay in performedAt order — also re-asserted after every mutation.
+      _sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
     } else if (widget.template != null) {
       _plannedExerciseIds.addAll(widget.template!.exerciseClientIds);
     }
@@ -99,9 +103,45 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     );
     if (draft != null) {
       setState(() {
-        _sets.add((exercise: draft.exercise, reps: draft.reps, weight: draft.weight));
+        _sets.add((
+          exercise: draft.exercise,
+          reps: draft.reps,
+          weight: draft.weight,
+          performedAt: DateTime.now(),
+        ));
         // Logging a set for an exercise implicitly plans it too, so it shows
         // up as a quick-add chip for the rest of the workout.
+        _plannedExerciseIds.add(draft.exercise.clientId);
+      });
+      await _autoSave();
+    }
+  }
+
+  /// Double-tapping a set card opens the add-set sheet pre-filled with that
+  /// set's exercise/reps/weight — the fast "log another one like this"
+  /// gesture. The timestamp is deliberately not pre-filled: it's stamped
+  /// fresh on submit, which is also what makes consecutive-set rest time
+  /// meaningful.
+  Future<void> _duplicateSet(int index) async {
+    final source = _sets[index];
+    final draft = await showModalBottomSheet<SetDraft>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AddSetSheet(
+        initialExercise: source.exercise,
+        initialReps: source.reps,
+        initialWeight: source.weight,
+      ),
+    );
+    if (draft != null) {
+      setState(() {
+        _sets.add((
+          exercise: draft.exercise,
+          reps: draft.reps,
+          weight: draft.weight,
+          performedAt: DateTime.now(),
+        ));
         _plannedExerciseIds.add(draft.exercise.clientId);
       });
       await _autoSave();
@@ -154,7 +194,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   Future<void> _persist() async {
     final sets = _sets
         .map((s) => ExerciseSetInput(
-            exerciseClientId: s.exercise.clientId, reps: s.reps, weight: s.weight))
+            exerciseClientId: s.exercise.clientId,
+            reps: s.reps,
+            weight: s.weight,
+            performedAt: s.performedAt))
         .toList();
     final notifier = ref.read(workoutSessionControllerProvider.notifier);
     final existingId = _sessionClientId;
@@ -239,7 +282,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () async {
-                    final picked = await _pickDateTime(_finishedAt ?? _startedAt);
+                    final picked = await _pickDateTime(_finishedAt ?? DateTime.now());
                     if (picked != null) {
                       setState(() => _finishedAt = picked);
                       if (_sessionClientId != null) await _autoSave();
@@ -316,20 +359,31 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             )
           else
             ..._sets.asMap().entries.map((entry) {
+              final index = entry.key;
               final s = entry.value;
-              return Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: ListTile(
-                  title: Text(s.exercise.name),
-                  subtitle: Text(
-                      l10n.repsTimesWeightLabel(s.reps.toString(), s.weight.toStringAsFixed(1))),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () async {
-                      setState(() => _sets.removeAt(entry.key));
-                      if (_sessionClientId != null) await _autoSave();
-                    },
+              final rest = index == 0 ? null : s.performedAt.difference(_sets[index - 1].performedAt);
+              return GestureDetector(
+                onDoubleTap: () => _duplicateSet(index),
+                child: Card(
+                  elevation: 0,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  child: ListTile(
+                    title: Text(s.exercise.name),
+                    subtitle: Text([
+                      l10n.repsTimesWeightLabel(s.reps.toString(), s.weight.toStringAsFixed(1)),
+                      if (rest != null)
+                        l10n.restTimeLabel(
+                          rest.inMinutes.toString(),
+                          (rest.inSeconds % 60).toString().padLeft(2, '0'),
+                        ),
+                    ].join(' · ')),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () async {
+                        setState(() => _sets.removeAt(index));
+                        if (_sessionClientId != null) await _autoSave();
+                      },
+                    ),
                   ),
                 ),
               );

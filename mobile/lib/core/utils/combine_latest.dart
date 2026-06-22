@@ -50,3 +50,34 @@ Stream<T> combineLatest2<A, B, T>(Stream<A> a, Stream<B> b, T Function(A a, B b)
   );
   return controller.stream;
 }
+
+/// Maps each [source] event to a new stream via [project], emitting only
+/// from the most recently projected stream — the previous one is cancelled
+/// as soon as a new [source] event arrives.
+///
+/// Used for paged joins where the page's id set ([source]) can itself change
+/// (e.g. a meal entering/leaving the window): the join query depends on the
+/// current id set, so the inner stream must be rebuilt and the stale one
+/// torn down whenever that set changes.
+Stream<T> switchMap<S, T>(Stream<S> source, Stream<T> Function(S value) project) {
+  late final StreamController<T> controller;
+  StreamSubscription<S>? sourceSub;
+  StreamSubscription<T>? innerSub;
+
+  controller = StreamController<T>(
+    onListen: () {
+      sourceSub = source.listen(
+        (value) {
+          innerSub?.cancel();
+          innerSub = project(value).listen(controller.add, onError: controller.addError);
+        },
+        onError: controller.addError,
+      );
+    },
+    onCancel: () async {
+      await innerSub?.cancel();
+      await sourceSub?.cancel();
+    },
+  );
+  return controller.stream;
+}

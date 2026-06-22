@@ -25,6 +25,23 @@ class FoodRepository {
     });
   }
 
+  /// Like [watchAll] but bounded to the first [limit] foods (by name). The
+  /// pending-delete filter can drop rows below the SQL LIMIT, so callers that
+  /// need to know whether more rows exist beyond [limit] should request
+  /// `limit + 1` and treat a returned list longer than the intended page size
+  /// as "more available".
+  Stream<List<Food>> watchPaged({required int limit}) {
+    final foods$ = (_db.select(_db.foods)
+          ..orderBy([(t) => OrderingTerm.asc(t.name)])
+          ..limit(limit))
+        .watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(foods$, pendingOps$, (rows, ops) {
+      final blocked = blockedByActiveDelete(ops);
+      return rows.where((r) => !blocked.contains(r.clientId)).map(_toDomain).toList();
+    });
+  }
+
   Future<void> create({
     required String name,
     required double calories,
