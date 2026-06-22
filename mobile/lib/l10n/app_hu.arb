@@ -196,6 +196,7 @@
     "discardChangeMenuItem": "Módosítás elvetése",
     "syncingTooltip": "Szinkronizálás…",
     "waitingToSyncTooltip": "Szinkronizálásra vár",
+    "deleteFailedOnServerMessage": "Nem sikerült törölni — még használatban van valahol. Visszakerül a listára.",
     "dashboardTabLabel": "Áttekintés",
     "dateFilterToday": "Mai",
     "dateFilterWeek": "Hét",

@@ -571,6 +571,9 @@
     "waitingToSyncTooltip": "Waiting to sync",
     "@waitingToSyncTooltip": {"description": "Tooltip shown while a record is queued to sync"},
 
+    "deleteFailedOnServerMessage": "Couldn't delete — it's still used elsewhere. It will reappear in the list.",
+    "@deleteFailedOnServerMessage": {"description": "Snackbar shown when a delete that already removed the local item is rejected by the server (e.g. still referenced by a meal, recipe, or workout)"},
+
     "dashboardTabLabel": "Dashboard",
     "@dashboardTabLabel": {"description": "Bottom navigation label for the dashboard tab"},
 
