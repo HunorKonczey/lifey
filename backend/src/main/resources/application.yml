@@ -44,6 +44,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+logging:
+  level:
+    org.zalando.logbook: TRACE
+
 lifey:
   jwt:
     # Dev-only default. MUST be overridden via JWT_SECRET in any shared/production
