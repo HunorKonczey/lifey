@@ -12,7 +12,8 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
   @override
   Stream<List<WorkoutSession>> build() => _repo.watchAll();
 
-  Future<void> logSession({
+  /// Returns the new session's clientId so the caller can keep editing it.
+  Future<String> logSession({
     required DateTime startedAt,
     DateTime? finishedAt,
     required List<String> exerciseClientIds,

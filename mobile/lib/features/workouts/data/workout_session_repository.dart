@@ -81,7 +81,9 @@ class WorkoutSessionRepository {
     });
   }
 
-  Future<void> create({
+  /// Returns the newly generated [WorkoutSession.clientId] so callers can keep
+  /// editing the same session (e.g. auto-saving each set without re-creating).
+  Future<String> create({
     required DateTime startedAt,
     DateTime? finishedAt,
     required List<String> exerciseClientIds,
@@ -108,6 +110,7 @@ class WorkoutSessionRepository {
         sets: sets,
       ),
     );
+    return clientId;
   }
 
   Future<void> update(

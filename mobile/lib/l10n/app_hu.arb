@@ -114,6 +114,7 @@
     "editWorkoutTitle": "Edzés szerkesztése",
     "logWorkoutTitle": "Edzés naplózása",
     "couldNotSaveSessionMessage": "Nem sikerült elmenteni az edzést. Próbáld újra.",
+    "sessionAutoSavedMessage": "Elmentve",
     "startedLabel": "Kezdés",
     "finishedOptionalLabel": "Befejezés (opcionális)",
     "notSetInProgressMessage": "Nincs beállítva (folyamatban)",

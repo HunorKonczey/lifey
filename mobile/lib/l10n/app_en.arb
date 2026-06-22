@@ -334,6 +334,9 @@
     "couldNotSaveSessionMessage": "Couldn't save the session. Please try again.",
     "@couldNotSaveSessionMessage": {"description": "Snackbar shown when saving a workout session fails"},
 
+    "sessionAutoSavedMessage": "Saved",
+    "@sessionAutoSavedMessage": {"description": "Brief snackbar confirming an in-progress workout session was auto-saved"},
+
     "startedLabel": "Started",
     "@startedLabel": {"description": "Section heading for the session start time picker"},
 

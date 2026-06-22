@@ -36,6 +36,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   late DateTime _startedAt;
   DateTime? _finishedAt;
 
+  /// The persisted session's clientId. Set when editing an existing session,
+  /// or once a brand-new session has been created via the first [_persist].
+  /// While null, no session row exists yet for a freshly started workout.
+  String? _sessionClientId;
+
   /// Exercises planned for this session — template-seeded and/or ad-hoc added.
   /// Names are resolved at render time from the exercise master list.
   final Set<String> _plannedExerciseIds = {};
@@ -52,6 +57,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _startedAt = session?.startedAt ?? DateTime.now();
     _finishedAt = session?.finishedAt;
     if (session != null) {
+      _sessionClientId = session.clientId;
       _plannedExerciseIds.addAll(session.exercises.map((e) => e.exerciseClientId));
       for (final set in session.sets) {
         // Only clientId + name are needed downstream; macros aren't sent on save.
@@ -98,6 +104,34 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         // up as a quick-add chip for the rest of the workout.
         _plannedExerciseIds.add(draft.exercise.clientId);
       });
+      await _autoSave();
+    }
+  }
+
+  /// Persists in the background right after an in-place edit (e.g. logging a
+  /// set), so nothing is lost if the user closes the app mid-workout. Reuses
+  /// the same _saving + snackbar pattern as the top Save button — guarding on
+  /// it avoids racing a manual save, and resetting it in `finally` means the
+  /// top button is only briefly disabled rather than stuck. Never navigates.
+  Future<void> _autoSave() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      await _persist();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.sessionAutoSavedMessage),
+          duration: const Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
+          width: 160,
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotSaveSessionMessage)));
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -110,6 +144,32 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     );
     if (exercise != null) {
       setState(() => _plannedExerciseIds.add(exercise.clientId));
+      if (_sessionClientId != null) await _autoSave();
+    }
+  }
+
+  /// Persists the current form state: creates the session on the first call
+  /// (caching its clientId in [_sessionClientId]) or updates the existing one
+  /// thereafter. No UI side effects — throws on failure for callers to handle.
+  Future<void> _persist() async {
+    final sets = _sets
+        .map((s) => ExerciseSetInput(
+            exerciseClientId: s.exercise.clientId, reps: s.reps, weight: s.weight))
+        .toList();
+    final notifier = ref.read(workoutSessionControllerProvider.notifier);
+    final existingId = _sessionClientId;
+    if (existingId == null) {
+      _sessionClientId = await notifier.logSession(
+          startedAt: _startedAt,
+          finishedAt: _finishedAt,
+          exerciseClientIds: _plannedExerciseIds.toList(),
+          sets: sets);
+    } else {
+      await notifier.updateSession(existingId,
+          startedAt: _startedAt,
+          finishedAt: _finishedAt,
+          exerciseClientIds: _plannedExerciseIds.toList(),
+          sets: sets);
     }
   }
 
@@ -119,25 +179,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final couldNotSaveSessionMessage = AppLocalizations.of(context)!.couldNotSaveSessionMessage;
-    final sets = _sets
-        .map((s) => ExerciseSetInput(
-            exerciseClientId: s.exercise.clientId, reps: s.reps, weight: s.weight))
-        .toList();
     try {
-      final notifier = ref.read(workoutSessionControllerProvider.notifier);
-      if (_isEditing) {
-        await notifier.updateSession(widget.session!.clientId,
-            startedAt: _startedAt,
-            finishedAt: _finishedAt,
-            exerciseClientIds: _plannedExerciseIds.toList(),
-            sets: sets);
-      } else {
-        await notifier.logSession(
-            startedAt: _startedAt,
-            finishedAt: _finishedAt,
-            exerciseClientIds: _plannedExerciseIds.toList(),
-            sets: sets);
-      }
+      await _persist();
       navigator.pop();
     } catch (_) {
       setState(() => _saving = false);
@@ -179,7 +222,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           OutlinedButton.icon(
             onPressed: () async {
               final picked = await _pickDateTime(_startedAt);
-              if (picked != null) setState(() => _startedAt = picked);
+              if (picked != null) {
+                setState(() => _startedAt = picked);
+                if (_sessionClientId != null) await _autoSave();
+              }
             },
             icon: const Icon(Icons.play_arrow),
             label: Text(_label.format(_startedAt)),
@@ -194,7 +240,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     final picked = await _pickDateTime(_finishedAt ?? _startedAt);
-                    if (picked != null) setState(() => _finishedAt = picked);
+                    if (picked != null) {
+                      setState(() => _finishedAt = picked);
+                      if (_sessionClientId != null) await _autoSave();
+                    }
                   },
                   icon: const Icon(Icons.flag),
                   label: Text(_finishedAt == null
@@ -206,7 +255,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 IconButton(
                   tooltip: l10n.clearTooltip,
                   icon: const Icon(Icons.close),
-                  onPressed: () => setState(() => _finishedAt = null),
+                  onPressed: () async {
+                    setState(() => _finishedAt = null);
+                    if (_sessionClientId != null) await _autoSave();
+                  },
                 ),
             ],
           ),
@@ -274,7 +326,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                       l10n.repsTimesWeightLabel(s.reps.toString(), s.weight.toStringAsFixed(1))),
                   trailing: IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: () => setState(() => _sets.removeAt(entry.key)),
+                    onPressed: () async {
+                      setState(() => _sets.removeAt(entry.key));
+                      if (_sessionClientId != null) await _autoSave();
+                    },
                   ),
                 ),
               );
