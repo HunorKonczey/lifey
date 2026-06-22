@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/network/error_message.dart';
+import '../../l10n/app_localizations.dart';
 import 'scroll_fill.dart';
 
 /// Polished error-state placeholder with a friendly message and optional retry.
@@ -14,13 +15,14 @@ class ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return ScrollFill(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.cloud_off, size: 48, color: theme.colorScheme.error),
           const SizedBox(height: 16),
-          Text('Something went wrong', style: theme.textTheme.titleMedium),
+          Text(l10n.somethingWentWrongTitle, style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(
             friendlyError(error),
@@ -30,7 +32,7 @@ class ErrorView extends StatelessWidget {
           ),
           if (onRetry != null) ...[
             const SizedBox(height: 16),
-            FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
+            FilledButton.tonal(onPressed: onRetry, child: Text(l10n.retryButton)),
           ],
         ],
       ),

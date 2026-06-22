@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
@@ -117,6 +118,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     setState(() => _saving = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final couldNotSaveSessionMessage = AppLocalizations.of(context)!.couldNotSaveSessionMessage;
     final sets = _sets
         .map((s) => ExerciseSetInput(
             exerciseClientId: s.exercise.clientId, reps: s.reps, weight: s.weight))
@@ -140,7 +142,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     } catch (_) {
       setState(() => _saving = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text("Couldn't save the session. Please try again.")),
+        SnackBar(content: Text(couldNotSaveSessionMessage)),
       );
     }
   }
@@ -148,6 +150,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final template = widget.template;
+    final l10n = AppLocalizations.of(context)!;
     final exercisesById = ref.watch(exerciseControllerProvider).maybeWhen(
           data: (list) => {for (final e in list) e.clientId: e},
           orElse: () => const <String, Exercise>{},
@@ -156,22 +159,22 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing
-            ? 'Edit workout'
-            : (template != null ? template.name : 'Log workout')),
+            ? l10n.editWorkoutTitle
+            : (template != null ? template.name : l10n.logWorkoutTitle)),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
                 ? const SizedBox(
                     height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Save'),
+                : Text(l10n.saveButton),
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Started', style: Theme.of(context).textTheme.labelLarge),
+          Text(l10n.startedLabel, style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () async {
@@ -182,7 +185,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             label: Text(_label.format(_startedAt)),
           ),
           const SizedBox(height: 16),
-          Text('Finished (optional)',
+          Text(l10n.finishedOptionalLabel,
               style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
           Row(
@@ -195,13 +198,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                   },
                   icon: const Icon(Icons.flag),
                   label: Text(_finishedAt == null
-                      ? 'Not set (in progress)'
+                      ? l10n.notSetInProgressMessage
                       : _label.format(_finishedAt!)),
                 ),
               ),
               if (_finishedAt != null)
                 IconButton(
-                  tooltip: 'Clear',
+                  tooltip: l10n.clearTooltip,
                   icon: const Icon(Icons.close),
                   onPressed: () => setState(() => _finishedAt = null),
                 ),
@@ -211,22 +214,22 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Exercises', style: Theme.of(context).textTheme.labelLarge),
+              Text(l10n.exercisesLabel, style: Theme.of(context).textTheme.labelLarge),
               TextButton.icon(
                 onPressed: _addPlannedExercise,
                 icon: const Icon(Icons.add),
-                label: const Text('Add exercise'),
+                label: Text(l10n.addExerciseTitle),
               ),
             ],
           ),
           const SizedBox(height: 4),
-          Text('Tap an exercise to log a set',
+          Text(l10n.tapExerciseToLogSetMessage,
               style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 8),
           if (_plannedExerciseIds.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('No exercises planned yet — tap "Add exercise" to add one'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(l10n.noExercisesPlannedMessage),
             )
           else
             Wrap(
@@ -246,18 +249,18 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Sets', style: Theme.of(context).textTheme.labelLarge),
+              Text(l10n.setsLabel, style: Theme.of(context).textTheme.labelLarge),
               TextButton.icon(
                 onPressed: _addSet,
                 icon: const Icon(Icons.add),
-                label: const Text('Add set'),
+                label: Text(l10n.addSetTitle),
               ),
             ],
           ),
           if (_sets.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Text('No sets added yet'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(l10n.noSetsAddedYetMessage),
             )
           else
             ..._sets.asMap().entries.map((entry) {
@@ -268,7 +271,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 child: ListTile(
                   title: Text(s.exercise.name),
                   subtitle: Text(
-                      '${s.reps} reps · ${s.weight.toStringAsFixed(1)} kg'),
+                      l10n.repsTimesWeightLabel(s.reps.toString(), s.weight.toStringAsFixed(1))),
                   trailing: IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => setState(() => _sets.removeAt(entry.key)),

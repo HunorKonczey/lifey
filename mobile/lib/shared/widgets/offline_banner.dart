@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/sync/connectivity_status_provider.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Thin, unobtrusive strip shown above every screen while the device has no
 /// connectivity at all. Collapses to nothing the moment connectivity
@@ -30,7 +31,7 @@ class OfflineBanner extends ConsumerWidget {
                       Icon(Icons.cloud_off, size: 16, color: theme.colorScheme.onErrorContainer),
                       const SizedBox(width: 8),
                       Text(
-                        "Offline — changes will sync once you're back online",
+                        AppLocalizations.of(context)!.offlineMessage,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: theme.colorScheme.onErrorContainer),
                       ),

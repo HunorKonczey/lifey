@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../application/exercise_controller.dart';
 import '../../domain/exercise.dart';
 
@@ -51,6 +52,7 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
   Widget build(BuildContext context) {
     final exercisesState = ref.watch(exerciseControllerProvider);
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + viewInsets),
@@ -61,13 +63,13 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
         ),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(24),
-          child: Text("Couldn't load exercises: $e"),
+          child: Text('${l10n.couldNotLoadExercisesPrefix} $e'),
         ),
         data: (exercises) {
           if (exercises.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.all(24),
-              child: Text('No exercises available.'),
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(l10n.noExercisesAvailableMessage),
             );
           }
           return Form(
@@ -76,21 +78,21 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Add set', style: Theme.of(context).textTheme.titleLarge),
+                Text(l10n.addSetTitle, style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<Exercise>(
                   initialValue: _exercise,
                   isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Exercise',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.exerciseLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   items: exercises
                       .map((e) =>
                           DropdownMenuItem(value: e, child: Text(e.name)))
                       .toList(),
                   onChanged: (e) => setState(() => _exercise = e),
-                  validator: (e) => e == null ? 'Pick an exercise' : null,
+                  validator: (e) => e == null ? l10n.pickAnExerciseError : null,
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -99,14 +101,14 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
                       child: TextFormField(
                         controller: _reps,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Reps',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: l10n.repsLabel,
+                          border: const OutlineInputBorder(),
                         ),
                         validator: (v) {
                           final parsed = int.tryParse((v ?? '').trim());
-                          if (parsed == null) return 'Enter a number';
-                          if (parsed <= 0) return 'Must be > 0';
+                          if (parsed == null) return l10n.enterANumberError;
+                          if (parsed <= 0) return l10n.mustBeGreaterThanZeroShortError;
                           return null;
                         },
                       ),
@@ -117,16 +119,16 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
                         controller: _weight,
                         keyboardType:
                             const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(
-                          labelText: 'Weight',
+                        decoration: InputDecoration(
+                          labelText: l10n.weightLabel,
                           suffixText: 'kg',
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                         ),
                         validator: (v) {
                           final parsed =
                               double.tryParse((v ?? '').replaceAll(',', '.'));
-                          if (parsed == null) return 'Enter a number';
-                          if (parsed < 0) return 'Must be 0 or more';
+                          if (parsed == null) return l10n.enterANumberError;
+                          if (parsed < 0) return l10n.mustBeZeroOrMoreError;
                           return null;
                         },
                       ),
@@ -134,7 +136,7 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: _submit, child: const Text('Add')),
+                FilledButton(onPressed: _submit, child: Text(l10n.addButton)),
               ],
             ),
           );

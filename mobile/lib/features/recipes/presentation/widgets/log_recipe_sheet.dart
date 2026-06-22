@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../../nutrition/application/meal_controller.dart';
 import '../../../nutrition/data/meal_repository.dart';
 import '../../../nutrition/domain/meal.dart';
@@ -57,6 +58,7 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
     setState(() => _submitting = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(mealControllerProvider.notifier).logMeal(
             dateTime: _dateTime,
@@ -68,12 +70,13 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
           );
       navigator.pop();
       messenger.showSnackBar(SnackBar(
-        content: Text('Logged "${widget.recipe.name}" as ${_mealType.label.toLowerCase()}'),
+        content: Text(l10n.loggedRecipeAsMessage(
+            widget.recipe.name, _mealType.label(l10n).toLowerCase())),
       ));
     } catch (_) {
       setState(() => _submitting = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text("Couldn't log the meal. Please try again.")),
+        SnackBar(content: Text(l10n.couldNotLogMealMessage)),
       );
     }
   }
@@ -82,6 +85,7 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final count = widget.recipe.ingredients.length;
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + viewInsets),
@@ -89,26 +93,26 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Log "${widget.recipe.name}"',
+          Text(l10n.logRecipeTitle(widget.recipe.name),
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 4),
-          Text('$count ${count == 1 ? 'ingredient' : 'ingredients'} → meal entries',
+          Text(l10n.ingredientsToMealEntriesLabel(count),
               style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 16),
-          Text('Meal type', style: Theme.of(context).textTheme.labelLarge),
+          Text(l10n.mealTypeLabel, style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             children: MealType.values.map((type) {
               return ChoiceChip(
-                label: Text(type.label),
+                label: Text(type.label(l10n)),
                 selected: _mealType == type,
                 onSelected: (_) => setState(() => _mealType = type),
               );
             }).toList(),
           ),
           const SizedBox(height: 16),
-          Text('When', style: Theme.of(context).textTheme.labelLarge),
+          Text(l10n.whenLabel, style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: _submitting ? null : _pickDateTime,
@@ -122,7 +126,7 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
                 ? const SizedBox(
                     height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.restaurant),
-            label: const Text('Log meal'),
+            label: Text(l10n.logMealButton),
           ),
         ],
       ),

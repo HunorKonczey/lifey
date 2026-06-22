@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -21,7 +22,8 @@ class FoodsTab extends ConsumerWidget {
     );
   }
 
-  String _macroLine(Food food) {
+  String _macroLine(BuildContext context, Food food) {
+    final l10n = AppLocalizations.of(context)!;
     final parts = <String>[
       '${food.caloriesPer100g.toStringAsFixed(0)} kcal',
       '${food.proteinPer100g.toStringAsFixed(0)} P',
@@ -32,35 +34,37 @@ class FoodsTab extends ConsumerWidget {
     if (food.fatPer100g != null) {
       parts.add('${food.fatPer100g!.toStringAsFixed(0)} F');
     }
-    return '${parts.join(' · ')}  (per 100 g)';
+    return '${parts.join(' · ')}  ${l10n.perHundredGramsSuffix}';
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref, Food food) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     try {
       // Deletes immediately offline-first; if the food still turns out to be
       // used in a meal/recipe, that 409 only surfaces later when this syncs
       // (no UI for failed-operation review yet, so it just stays queued).
       await ref.read(foodControllerProvider.notifier).deleteFood(food.clientId);
-      messenger.showSnackBar(SnackBar(content: Text('Deleted ${food.name}')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.deletedFoodMessage(food.name))));
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text("Couldn't delete ${food.name}")));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteFoodMessage(food.name))));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(foodControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return RefreshIndicator(
       onRefresh: () => ref.read(foodControllerProvider.notifier).refresh(),
       child: state.when(
         data: (foods) {
           if (foods.isEmpty) {
-            return const EmptyView(
+            return EmptyView(
               icon: Icons.restaurant_outlined,
-              title: 'No foods yet',
-              subtitle: 'Tap + to add one',
+              title: l10n.noFoodsYetTitle,
+              subtitle: l10n.tapPlusToAddOneMessage,
             );
           }
           return ListView.separated(
@@ -87,7 +91,7 @@ class FoodsTab extends ConsumerWidget {
                 },
                 child: ListTile(
                   title: Text(food.name),
-                  subtitle: Text(_macroLine(food)),
+                  subtitle: Text(_macroLine(context, food)),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [

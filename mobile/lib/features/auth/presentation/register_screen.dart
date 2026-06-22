@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/error_message.dart';
+import '../../../l10n/app_localizations.dart';
 import '../application/auth_controller.dart';
 
 /// Account creation. Registering also logs the user in immediately, matching
@@ -51,8 +52,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Create account')),
+      appBar: AppBar(title: Text(l10n.createAccountTitle)),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -67,14 +69,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     controller: _emailController,
                     autofocus: true,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.emailLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) {
                       final text = value?.trim() ?? '';
-                      if (text.isEmpty) return 'Required';
-                      if (!text.contains('@')) return 'Enter a valid email';
+                      if (text.isEmpty) return l10n.requiredFieldError;
+                      if (!text.contains('@')) return l10n.invalidEmailError;
                       return null;
                     },
                   ),
@@ -82,13 +84,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      helperText: 'At least 8 characters',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.passwordLabel,
+                      helperText: l10n.passwordHelperText,
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) {
-                      if (value == null || value.length < 8) return 'Must be at least 8 characters';
+                      if (value == null || value.length < 8) return l10n.passwordTooShortError;
                       return null;
                     },
                   ),
@@ -96,12 +98,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   TextFormField(
                     controller: _confirmController,
                     obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Confirm password',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.confirmPasswordLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) =>
-                        value != _passwordController.text ? 'Passwords do not match' : null,
+                        value != _passwordController.text ? l10n.passwordsDoNotMatchError : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
                   if (_submitError != null) ...[
@@ -120,12 +122,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Create account'),
+                        : Text(l10n.createAccountTitle),
                   ),
                   const SizedBox(height: 12),
                   TextButton(
                     onPressed: _submitting ? null : () => Navigator.of(context).maybePop(),
-                    child: const Text('Already have an account? Sign in'),
+                    child: Text(l10n.signInPromptButton),
                   ),
                 ],
               ),

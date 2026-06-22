@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -31,12 +32,13 @@ class RecipesTab extends ConsumerWidget {
   Future<void> _delete(
       BuildContext context, WidgetRef ref, Recipe recipe) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(recipeControllerProvider.notifier).deleteRecipe(recipe.clientId);
-      messenger.showSnackBar(SnackBar(content: Text('Deleted ${recipe.name}')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.deletedFoodMessage(recipe.name))));
     } catch (_) {
       messenger.showSnackBar(
-          SnackBar(content: Text("Couldn't delete ${recipe.name}")));
+          SnackBar(content: Text(l10n.couldNotDeleteFoodMessage(recipe.name))));
       await ref.read(recipeControllerProvider.notifier).refresh();
     }
   }
@@ -44,16 +46,17 @@ class RecipesTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(recipeControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return RefreshIndicator(
       onRefresh: () => ref.read(recipeControllerProvider.notifier).refresh(),
       child: state.when(
         data: (recipes) {
           if (recipes.isEmpty) {
-            return const EmptyView(
+            return EmptyView(
               icon: Icons.menu_book_outlined,
-              title: 'No recipes yet',
-              subtitle: 'Tap + to create one',
+              title: l10n.noRecipesYetTitle,
+              subtitle: l10n.tapPlusToCreateOneMessage,
             );
           }
           return ListView.builder(
@@ -93,6 +96,7 @@ class _RecipeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final ingredients = recipe.ingredients
         .map((i) => '${i.foodName} (${i.quantityInGrams.toStringAsFixed(0)} g)')
         .join(', ');
@@ -140,13 +144,13 @@ class _RecipeCard extends StatelessWidget {
                 ],
                 const SizedBox(height: 8),
                 Text(
-                  ingredients.isEmpty ? 'No ingredients' : ingredients,
+                  ingredients.isEmpty ? l10n.noIngredientsMessage : ingredients,
                   style: theme.textTheme.bodySmall,
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '≈ ${recipe.totalCalories.toStringAsFixed(0)} kcal · '
-                  '${recipe.totalProtein.toStringAsFixed(0)} g protein',
+                  l10n.totalCaloriesProteinLabel(recipe.totalCalories.toStringAsFixed(0),
+                      recipe.totalProtein.toStringAsFixed(0)),
                   style: theme.textTheme.labelLarge
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
@@ -156,7 +160,7 @@ class _RecipeCard extends StatelessWidget {
                   child: TextButton.icon(
                     onPressed: onLogAsMeal,
                     icon: const Icon(Icons.restaurant, size: 18),
-                    label: const Text('Log as meal'),
+                    label: Text(l10n.logAsMealButton),
                   ),
                 ),
               ],

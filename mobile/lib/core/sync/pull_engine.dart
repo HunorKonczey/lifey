@@ -186,6 +186,7 @@ class PullEngine {
             clientId: const Value(clientId),
             unitSystem: Value(json['unitSystem'] as String),
             theme: Value(json['theme'] as String),
+            language: Value(json['language'] as String),
             dailyCalorieGoal: Value(json['dailyCalorieGoal'] as int?),
             dailyProteinGoal: Value(json['dailyProteinGoal'] as int?),
             dailyCarbsGoal: Value(json['dailyCarbsGoal'] as int?),
@@ -436,11 +437,20 @@ class PullEngine {
     return row?.read<String>('client_id');
   }
 
+  /// True if [clientId] has a local edit that still needs to reach the
+  /// server: queued (`pending`/`syncing`), or failed for a reason that will
+  /// resolve itself (a network blip, retried automatically by [SyncEngine]).
+  /// A non-network `failed` row never retries on its own, so it must NOT
+  /// block the pull — otherwise the local row (which may hold a broken
+  /// optimistic write from the failed edit) would diverge from the server's
+  /// truth forever.
   Future<bool> _hasPendingOperation(String clientId) async {
     final row = await (_db.select(_db.pendingOperations)
           ..where((t) => t.clientId.equals(clientId)))
         .getSingleOrNull();
-    return row != null;
+    if (row == null) return false;
+    if (row.status == 'failed') return row.lastError?.startsWith('[network] ') ?? false;
+    return true;
   }
 
   /// Deletes local rows in [table] whose serverId no longer appears in this

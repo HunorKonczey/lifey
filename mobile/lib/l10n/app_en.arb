@@ -1,0 +1,666 @@
+{
+    "@@locale": "en",
+
+    "settingsTitle": "Settings",
+    "@settingsTitle": {"description": "Title of the settings screen"},
+
+    "unitsLabel": "Units",
+    "@unitsLabel": {"description": "Section heading for the unit system selector"},
+
+    "unitsMetric": "Metric (kg)",
+    "@unitsMetric": {"description": "Metric unit system option"},
+
+    "unitsImperial": "Imperial (lb)",
+    "@unitsImperial": {"description": "Imperial unit system option"},
+
+    "themeLabel": "Theme",
+    "@themeLabel": {"description": "Section heading for the theme selector"},
+
+    "themeLight": "Light",
+    "@themeLight": {"description": "Light theme option"},
+
+    "themeDark": "Dark",
+    "@themeDark": {"description": "Dark theme option"},
+
+    "languageLabel": "Language",
+    "@languageLabel": {"description": "Section heading for the language selector"},
+
+    "languageEnglish": "English",
+    "@languageEnglish": {"description": "English language option"},
+
+    "languageHungarian": "Magyar",
+    "@languageHungarian": {"description": "Hungarian language option"},
+
+    "optionSystem": "System",
+    "@optionSystem": {"description": "Follow the device's system setting (used for both theme and language)"},
+
+    "saveButton": "Save",
+    "@saveButton": {"description": "Label for the save button on the settings form"},
+
+    "settingsSavedMessage": "Settings saved",
+    "@settingsSavedMessage": {"description": "Snackbar shown after settings are saved successfully"},
+
+    "dailyGoalsLabel": "Daily goals",
+    "@dailyGoalsLabel": {"description": "Section heading for the daily calorie/macro goals"},
+
+    "leaveBlankForNoGoal": "Leave blank for no goal",
+    "@leaveBlankForNoGoal": {"description": "Helper text under the daily goals heading"},
+
+    "caloriesLabel": "Calories",
+    "@caloriesLabel": {"description": "Label for the calories goal field"},
+
+    "proteinLabel": "Protein",
+    "@proteinLabel": {"description": "Label for the protein goal field"},
+
+    "carbsLabel": "Carbs",
+    "@carbsLabel": {"description": "Label for the carbs goal field"},
+
+    "fatLabel": "Fat",
+    "@fatLabel": {"description": "Label for the fat goal field"},
+
+    "waterLabel": "Water",
+    "@waterLabel": {"description": "Label for the daily water goal field"},
+
+    "enterNonNegativeWholeNumber": "Enter a non-negative whole number",
+    "@enterNonNegativeWholeNumber": {"description": "Validation error for an integer goal field"},
+
+    "enterNonNegativeNumber": "Enter a non-negative number",
+    "@enterNonNegativeNumber": {"description": "Validation error for a decimal goal field"},
+
+    "waterSourcesLabel": "Water sources",
+    "@waterSourcesLabel": {"description": "Section heading for managing water sources"},
+
+    "waterSourcesDescription": "Reusable presets for one-tap logging, e.g. \"Water Bottle\" = 0.75L",
+    "@waterSourcesDescription": {"description": "Helper text under the water sources heading"},
+
+    "manageWaterSourcesButton": "Manage water sources",
+    "@manageWaterSourcesButton": {"description": "Button that opens the water sources management screen"},
+
+    "signInSubtitle": "Sign in to continue",
+    "@signInSubtitle": {"description": "Subtitle on the login screen"},
+
+    "emailLabel": "Email",
+    "@emailLabel": {"description": "Label for the email field"},
+
+    "passwordLabel": "Password",
+    "@passwordLabel": {"description": "Label for the password field"},
+
+    "requiredFieldError": "Required",
+    "@requiredFieldError": {"description": "Validation error for an empty required field"},
+
+    "invalidEmailError": "Enter a valid email",
+    "@invalidEmailError": {"description": "Validation error for a malformed email"},
+
+    "signInButton": "Sign in",
+    "@signInButton": {"description": "Button to submit the login form"},
+
+    "registerPromptButton": "Don't have an account? Register",
+    "@registerPromptButton": {"description": "Button on the login screen that navigates to registration"},
+
+    "createAccountTitle": "Create account",
+    "@createAccountTitle": {"description": "Title of the registration screen and its submit button"},
+
+    "passwordHelperText": "At least 8 characters",
+    "@passwordHelperText": {"description": "Helper text under the password field on registration"},
+
+    "passwordTooShortError": "Must be at least 8 characters",
+    "@passwordTooShortError": {"description": "Validation error when the password is too short"},
+
+    "confirmPasswordLabel": "Confirm password",
+    "@confirmPasswordLabel": {"description": "Label for the confirm-password field"},
+
+    "passwordsDoNotMatchError": "Passwords do not match",
+    "@passwordsDoNotMatchError": {"description": "Validation error when password and confirmation differ"},
+
+    "signInPromptButton": "Already have an account? Sign in",
+    "@signInPromptButton": {"description": "Button on the registration screen that navigates back to login"},
+
+    "addFoodToMealTitle": "Add food to meal",
+    "@addFoodToMealTitle": {"description": "Title of the add-meal-entry bottom sheet"},
+
+    "foodFieldLabel": "Food",
+    "@foodFieldLabel": {"description": "Label for the food autocomplete field"},
+
+    "pickAFoodError": "Pick a food",
+    "@pickAFoodError": {"description": "Validation error when no food was selected"},
+
+    "quantityLabel": "Quantity",
+    "@quantityLabel": {"description": "Label for the grams quantity field"},
+
+    "enterANumberError": "Enter a number",
+    "@enterANumberError": {"description": "Validation error when a numeric field isn't a number"},
+
+    "mustBeGreaterThanZeroError": "Must be greater than 0",
+    "@mustBeGreaterThanZeroError": {"description": "Validation error when a quantity must be positive"},
+
+    "addButton": "Add",
+    "@addButton": {"description": "Generic add/submit button"},
+
+    "couldNotLoadFoodsPrefix": "Couldn't load foods:",
+    "@couldNotLoadFoodsPrefix": {"description": "Prefix before the raw error when the foods list fails to load in the add-meal-entry sheet"},
+
+    "addFoodsFirstMessage": "Add some foods first (Foods tab).",
+    "@addFoodsFirstMessage": {"description": "Shown in the add-meal-entry sheet when there are no foods yet"},
+
+    "editMealTitle": "Edit meal",
+    "@editMealTitle": {"description": "Title when editing an existing meal"},
+
+    "logMealTitle": "Log meal",
+    "@logMealTitle": {"description": "Title when logging a new meal"},
+
+    "mealTypeLabel": "Meal type",
+    "@mealTypeLabel": {"description": "Section heading for the meal type chips"},
+
+    "whenLabel": "When",
+    "@whenLabel": {"description": "Section heading for the date/time picker"},
+
+    "foodsLabel": "Foods",
+    "@foodsLabel": {"description": "Section heading / tab label for foods"},
+
+    "addFoodButton": "Add food",
+    "@addFoodButton": {"description": "Button to add a food entry to a meal"},
+
+    "noFoodsAddedYetMessage": "No foods added yet",
+    "@noFoodsAddedYetMessage": {"description": "Shown when a meal has no food entries yet"},
+
+    "addAtLeastOneFoodMessage": "Add at least one food",
+    "@addAtLeastOneFoodMessage": {"description": "Validation message when saving a meal with no entries"},
+
+    "couldNotSaveMealMessage": "Couldn't save the meal. Please try again.",
+    "@couldNotSaveMealMessage": {"description": "Snackbar shown when saving a meal fails"},
+
+    "gramsValue": "{grams} g",
+    "@gramsValue": {"description": "A quantity in grams", "placeholders": {"grams": {"type": "String"}}},
+
+    "noFoodsYetTitle": "No foods yet",
+    "@noFoodsYetTitle": {"description": "Empty state title on the Foods tab"},
+
+    "tapPlusToAddOneMessage": "Tap + to add one",
+    "@tapPlusToAddOneMessage": {"description": "Empty state subtitle on the Foods tab"},
+
+    "deletedFoodMessage": "Deleted {name}",
+    "@deletedFoodMessage": {"description": "Snackbar shown after deleting a food", "placeholders": {"name": {"type": "String"}}},
+
+    "couldNotDeleteFoodMessage": "Couldn't delete {name}",
+    "@couldNotDeleteFoodMessage": {"description": "Snackbar shown when deleting a food fails", "placeholders": {"name": {"type": "String"}}},
+
+    "perHundredGramsSuffix": "(per 100 g)",
+    "@perHundredGramsSuffix": {"description": "Suffix clarifying that macro values are per 100 g"},
+
+    "noMealsLoggedYetTitle": "No meals logged yet",
+    "@noMealsLoggedYetTitle": {"description": "Empty state title on the Meals tab"},
+
+    "tapPlusToLogOneMessage": "Tap + to log one",
+    "@tapPlusToLogOneMessage": {"description": "Empty state subtitle on the Meals tab"},
+
+    "noMealsInRangeTitle": "No meals in this range",
+    "@noMealsInRangeTitle": {"description": "Empty state title when a date filter excludes all meals"},
+
+    "tryWiderDateFilterMessage": "Try a wider date filter",
+    "@tryWiderDateFilterMessage": {"description": "Empty state subtitle when a date filter excludes all meals"},
+
+    "mealDeletedMessage": "Meal deleted",
+    "@mealDeletedMessage": {"description": "Snackbar shown after deleting a meal"},
+
+    "couldNotDeleteMealMessage": "Couldn't delete the meal",
+    "@couldNotDeleteMealMessage": {"description": "Snackbar shown when deleting a meal fails"},
+
+    "totalProteinLabel": "{grams} g protein",
+    "@totalProteinLabel": {"description": "Total protein for a meal card", "placeholders": {"grams": {"type": "String"}}},
+
+    "nutritionTitle": "Nutrition",
+    "@nutritionTitle": {"description": "Title of the nutrition screen"},
+
+    "mealsTabLabel": "Meals",
+    "@mealsTabLabel": {"description": "Tab label for logged meals"},
+
+    "recipesTabLabel": "Recipes",
+    "@recipesTabLabel": {"description": "Tab label for recipes"},
+
+    "foodFabLabel": "Food",
+    "@foodFabLabel": {"description": "FAB label when on the Foods tab"},
+
+    "mealFabLabel": "Meal",
+    "@mealFabLabel": {"description": "FAB label when on the Meals tab"},
+
+    "recipeFabLabel": "Recipe",
+    "@recipeFabLabel": {"description": "FAB label when on the Recipes tab"},
+
+    "editFoodTitle": "Edit food",
+    "@editFoodTitle": {"description": "Title of the add/edit food sheet when editing"},
+
+    "addFoodTitle": "Add food",
+    "@addFoodTitle": {"description": "Title of the add/edit food sheet when creating"},
+
+    "valuesPerHundredGrams": "Values are per 100 g",
+    "@valuesPerHundredGrams": {"description": "Helper text under the add/edit food title"},
+
+    "scanBarcodeButton": "Scan barcode",
+    "@scanBarcodeButton": {"description": "Button to open the barcode scanner, and that scanner's screen title"},
+
+    "lookingUpStatus": "Looking up...",
+    "@lookingUpStatus": {"description": "Button label shown while a barcode lookup is in flight"},
+
+    "linkedToBarcodeMessage": "Linked to barcode {barcode}",
+    "@linkedToBarcodeMessage": {"description": "Shown under the scan button once a barcode is linked", "placeholders": {"barcode": {"type": "String"}}},
+
+    "nameLabel": "Name",
+    "@nameLabel": {"description": "Label for a name field"},
+
+    "carbsOptionalLabel": "Carbs (optional)",
+    "@carbsOptionalLabel": {"description": "Label for the optional carbs field"},
+
+    "fatOptionalLabel": "Fat (optional)",
+    "@fatOptionalLabel": {"description": "Label for the optional fat field"},
+
+    "mustBeZeroOrMoreError": "Must be 0 or more",
+    "@mustBeZeroOrMoreError": {"description": "Validation error for a non-negative numeric field"},
+
+    "noBarcodeMatchMessage": "No match for that barcode — it's saved, just fill in the details.",
+    "@noBarcodeMatchMessage": {"description": "Snackbar shown when a barcode lookup finds no match"},
+
+    "offlineCantLookupMessage": "You're offline — can't look up barcodes right now.",
+    "@offlineCantLookupMessage": {"description": "Snackbar shown when a barcode lookup fails due to no connectivity"},
+
+    "couldNotLookupBarcodeMessage": "Couldn't look up that barcode. Please try again.",
+    "@couldNotLookupBarcodeMessage": {"description": "Snackbar shown when a barcode lookup fails unexpectedly"},
+
+    "couldNotSaveFoodMessage": "Couldn't save the food. Please try again.",
+    "@couldNotSaveFoodMessage": {"description": "Error shown when saving a food fails"},
+
+    "saveChangesButton": "Save changes",
+    "@saveChangesButton": {"description": "Button to save edits to an existing item"},
+
+    "cameraPermissionDeniedMessage": "To scan a barcode, you need to allow camera access in your device settings.",
+    "@cameraPermissionDeniedMessage": {"description": "Shown in the barcode scanner when camera permission is denied"},
+
+    "cameraUnavailableMessage": "Camera unavailable. Try again later.",
+    "@cameraUnavailableMessage": {"description": "Shown in the barcode scanner when the camera can't be used"},
+
+    "addExerciseTitle": "Add exercise",
+    "@addExerciseTitle": {"description": "Title/button for adding a new exercise to the master list, or to a session"},
+
+    "couldNotSaveExerciseMessage": "Couldn't save the exercise. Please try again.",
+    "@couldNotSaveExerciseMessage": {"description": "Error shown when saving a new exercise fails"},
+
+    "couldNotLoadExercisesPrefix": "Couldn't load exercises:",
+    "@couldNotLoadExercisesPrefix": {"description": "Prefix before the raw error when the exercises list fails to load"},
+
+    "noExercisesAvailableMessage": "No exercises available.",
+    "@noExercisesAvailableMessage": {"description": "Shown when there are no exercises to pick from"},
+
+    "addSetTitle": "Add set",
+    "@addSetTitle": {"description": "Title/button for adding a set to a workout session"},
+
+    "exerciseLabel": "Exercise",
+    "@exerciseLabel": {"description": "Label for the exercise picker field"},
+
+    "pickAnExerciseError": "Pick an exercise",
+    "@pickAnExerciseError": {"description": "Validation error when no exercise was selected"},
+
+    "repsLabel": "Reps",
+    "@repsLabel": {"description": "Label for the reps field"},
+
+    "mustBeGreaterThanZeroShortError": "Must be > 0",
+    "@mustBeGreaterThanZeroShortError": {"description": "Short validation error when a value must be positive"},
+
+    "weightLabel": "Weight",
+    "@weightLabel": {"description": "Label for the weight field"},
+
+    "enterANameMessage": "Enter a name",
+    "@enterANameMessage": {"description": "Snackbar when saving a template without a name"},
+
+    "pickAtLeastOneExerciseMessage": "Pick at least one exercise",
+    "@pickAtLeastOneExerciseMessage": {"description": "Snackbar when saving a template with no exercises selected"},
+
+    "couldNotSaveTemplateMessage": "Couldn't save the template. Please try again.",
+    "@couldNotSaveTemplateMessage": {"description": "Snackbar shown when saving a template fails"},
+
+    "editTemplateTitle": "Edit template",
+    "@editTemplateTitle": {"description": "Title when editing an existing workout template"},
+
+    "newTemplateTitle": "New template",
+    "@newTemplateTitle": {"description": "Title when creating a new workout template"},
+
+    "templateNameLabel": "Template name",
+    "@templateNameLabel": {"description": "Label for the template name field"},
+
+    "editWorkoutTitle": "Edit workout",
+    "@editWorkoutTitle": {"description": "Title when editing an existing workout session"},
+
+    "logWorkoutTitle": "Log workout",
+    "@logWorkoutTitle": {"description": "Title when logging a new workout session"},
+
+    "couldNotSaveSessionMessage": "Couldn't save the session. Please try again.",
+    "@couldNotSaveSessionMessage": {"description": "Snackbar shown when saving a workout session fails"},
+
+    "startedLabel": "Started",
+    "@startedLabel": {"description": "Section heading for the session start time picker"},
+
+    "finishedOptionalLabel": "Finished (optional)",
+    "@finishedOptionalLabel": {"description": "Section heading for the session finish time picker"},
+
+    "notSetInProgressMessage": "Not set (in progress)",
+    "@notSetInProgressMessage": {"description": "Shown when a session's finish time hasn't been set yet"},
+
+    "clearTooltip": "Clear",
+    "@clearTooltip": {"description": "Tooltip for a button that clears a value"},
+
+    "exercisesLabel": "Exercises",
+    "@exercisesLabel": {"description": "Section heading / tab label for exercises"},
+
+    "tapExerciseToLogSetMessage": "Tap an exercise to log a set",
+    "@tapExerciseToLogSetMessage": {"description": "Helper text under the planned exercises list"},
+
+    "noExercisesPlannedMessage": "No exercises planned yet — tap \"Add exercise\" to add one",
+    "@noExercisesPlannedMessage": {"description": "Shown when a session has no planned exercises yet"},
+
+    "setsLabel": "Sets",
+    "@setsLabel": {"description": "Section heading for the logged sets list"},
+
+    "noSetsAddedYetMessage": "No sets added yet",
+    "@noSetsAddedYetMessage": {"description": "Shown when a session has no logged sets yet"},
+
+    "repsTimesWeightLabel": "{reps} reps · {weight} kg",
+    "@repsTimesWeightLabel": {"description": "A set's reps and weight", "placeholders": {"reps": {"type": "String"}, "weight": {"type": "String"}}},
+
+    "everyExerciseAlreadyInSessionMessage": "Every exercise is already in this session.",
+    "@everyExerciseAlreadyInSessionMessage": {"description": "Shown when every exercise is already planned for the session"},
+
+    "deletedExerciseMessage": "Deleted {name}",
+    "@deletedExerciseMessage": {"description": "Snackbar shown after deleting an exercise", "placeholders": {"name": {"type": "String"}}},
+
+    "couldNotDeleteExerciseMessage": "Couldn't delete {name}",
+    "@couldNotDeleteExerciseMessage": {"description": "Snackbar shown when deleting an exercise fails", "placeholders": {"name": {"type": "String"}}},
+
+    "noExercisesYetTitle": "No exercises yet",
+    "@noExercisesYetTitle": {"description": "Empty state title on the Exercises tab"},
+
+    "deleteTemplateQuestionTitle": "Delete template?",
+    "@deleteTemplateQuestionTitle": {"description": "Confirmation dialog title for deleting a template"},
+
+    "deleteTemplateConfirmMessage": "\"{name}\" will be removed.",
+    "@deleteTemplateConfirmMessage": {"description": "Confirmation dialog body for deleting a template", "placeholders": {"name": {"type": "String"}}},
+
+    "cancelButton": "Cancel",
+    "@cancelButton": {"description": "Generic cancel button"},
+
+    "deleteButton": "Delete",
+    "@deleteButton": {"description": "Generic delete button/menu item"},
+
+    "templateDeletedMessage": "Template deleted",
+    "@templateDeletedMessage": {"description": "Snackbar shown after deleting a template"},
+
+    "couldNotDeleteTemplateMessage": "Couldn't delete the template",
+    "@couldNotDeleteTemplateMessage": {"description": "Snackbar shown when deleting a template fails"},
+
+    "noTemplatesYetTitle": "No templates yet",
+    "@noTemplatesYetTitle": {"description": "Empty state title on the Templates tab"},
+
+    "tapPlusToCreateOneMessage": "Tap + to create one",
+    "@tapPlusToCreateOneMessage": {"description": "Empty state subtitle on the Templates tab"},
+
+    "exercisesCountLabel": "{count} exercises",
+    "@exercisesCountLabel": {"description": "Fallback subtitle showing a template's exercise count", "placeholders": {"count": {"type": "int"}}},
+
+    "startSessionMenuItem": "Start session",
+    "@startSessionMenuItem": {"description": "Menu item to start a session from a template"},
+
+    "editMenuItem": "Edit",
+    "@editMenuItem": {"description": "Generic edit menu item"},
+
+    "workoutDeletedMessage": "Workout deleted",
+    "@workoutDeletedMessage": {"description": "Snackbar shown after deleting a workout session"},
+
+    "couldNotDeleteWorkoutMessage": "Couldn't delete the workout",
+    "@couldNotDeleteWorkoutMessage": {"description": "Snackbar shown when deleting a workout session fails"},
+
+    "deleteWorkoutQuestionTitle": "Delete workout?",
+    "@deleteWorkoutQuestionTitle": {"description": "Confirmation dialog title for deleting a workout session"},
+
+    "deleteWorkoutConfirmMessage": "This workout and its logged sets will be removed.",
+    "@deleteWorkoutConfirmMessage": {"description": "Confirmation dialog body for deleting a workout session"},
+
+    "noWorkoutsLoggedYetTitle": "No workouts logged yet",
+    "@noWorkoutsLoggedYetTitle": {"description": "Empty state title on the Sessions tab"},
+
+    "noWorkoutsInRangeTitle": "No workouts in this range",
+    "@noWorkoutsInRangeTitle": {"description": "Empty state title when a date filter excludes all workouts"},
+
+    "inProgressLabel": "In progress",
+    "@inProgressLabel": {"description": "Chip label for a workout session that hasn't finished yet"},
+
+    "setsCountLabel": "{count} sets",
+    "@setsCountLabel": {"description": "Number of sets in a workout session", "placeholders": {"count": {"type": "int"}}},
+
+    "deleteWorkoutTooltip": "Delete workout",
+    "@deleteWorkoutTooltip": {"description": "Tooltip for the delete-workout icon button"},
+
+    "exerciseSetLine": "{name} — {reps} × {weight} kg",
+    "@exerciseSetLine": {"description": "One logged set's exercise name, reps and weight", "placeholders": {"name": {"type": "String"}, "reps": {"type": "String"}, "weight": {"type": "String"}}},
+
+    "workoutsTitle": "Workouts",
+    "@workoutsTitle": {"description": "Title of the workouts screen"},
+
+    "sessionsTabLabel": "Sessions",
+    "@sessionsTabLabel": {"description": "Tab label for logged workout sessions"},
+
+    "templatesTabLabel": "Templates",
+    "@templatesTabLabel": {"description": "Tab label for workout templates"},
+
+    "logFabLabel": "Log",
+    "@logFabLabel": {"description": "FAB label when on the Sessions tab"},
+
+    "templateFabLabel": "Template",
+    "@templateFabLabel": {"description": "FAB label when on the Templates tab"},
+
+    "exerciseFabLabel": "Exercise",
+    "@exerciseFabLabel": {"description": "FAB label when on the Exercises tab"},
+
+    "waterAmountLabel": "{current} / {goal} L",
+    "@waterAmountLabel": {"description": "Current water intake vs. daily goal", "placeholders": {"current": {"type": "String"}, "goal": {"type": "String"}}},
+
+    "waterAmountNoGoalLabel": "{current} L",
+    "@waterAmountNoGoalLabel": {"description": "Current water intake when no daily goal is set", "placeholders": {"current": {"type": "String"}}},
+
+    "logWaterTitle": "Log water",
+    "@logWaterTitle": {"description": "Title of the log-water sheet, and the tooltip on the dashboard's add-water button"},
+
+    "setDailyGoalMessage": "Set a daily goal in Settings",
+    "@setDailyGoalMessage": {"description": "Shown on the water card when no daily goal is set"},
+
+    "couldNotSaveWaterSourceMessage": "Couldn't save the water source. Please try again.",
+    "@couldNotSaveWaterSourceMessage": {"description": "Error shown when saving a water source fails"},
+
+    "editWaterSourceTitle": "Edit water source",
+    "@editWaterSourceTitle": {"description": "Title when editing an existing water source"},
+
+    "newWaterSourceTitle": "New water source",
+    "@newWaterSourceTitle": {"description": "Title when creating a new water source"},
+
+    "waterSourceNameHint": "e.g. Creatine Shake",
+    "@waterSourceNameHint": {"description": "Hint text for the water source name field"},
+
+    "volumeLabel": "Volume",
+    "@volumeLabel": {"description": "Label for the volume field"},
+
+    "savedSourcesLabel": "Saved sources",
+    "@savedSourcesLabel": {"description": "Section heading for saved water source quick-add chips"},
+
+    "customAmountLabel": "Custom amount",
+    "@customAmountLabel": {"description": "Section heading for the custom water amount input"},
+
+    "amountLabel": "Amount",
+    "@amountLabel": {"description": "Label for a free-form amount field"},
+
+    "enterValidAmountError": "Enter a valid amount in liters",
+    "@enterValidAmountError": {"description": "Validation error for the custom water amount field"},
+
+    "amountLitersLabel": "{amount}L",
+    "@amountLitersLabel": {"description": "A quick-add amount in liters", "placeholders": {"amount": {"type": "String"}}},
+
+    "sourceChipLabel": "{name} · {volume}L",
+    "@sourceChipLabel": {"description": "A saved water source's name and volume", "placeholders": {"name": {"type": "String"}, "volume": {"type": "String"}}},
+
+    "deleteWaterSourceQuestionTitle": "Delete water source?",
+    "@deleteWaterSourceQuestionTitle": {"description": "Confirmation dialog title for deleting a water source"},
+
+    "deleteWaterSourceConfirmMessage": "\"{name}\" will be removed. Past entries logged from it are kept.",
+    "@deleteWaterSourceConfirmMessage": {"description": "Confirmation dialog body for deleting a water source", "placeholders": {"name": {"type": "String"}}},
+
+    "couldNotDeleteWaterSourceMessage": "Couldn't delete the water source",
+    "@couldNotDeleteWaterSourceMessage": {"description": "Snackbar shown when deleting a water source fails"},
+
+    "noWaterSourcesYetTitle": "No water sources yet",
+    "@noWaterSourcesYetTitle": {"description": "Empty state title on the water sources screen"},
+
+    "tapPlusToAddOneWaterSourceMessage": "Tap + to add one, e.g. \"Water Bottle\" = 0.75L",
+    "@tapPlusToAddOneWaterSourceMessage": {"description": "Empty state subtitle on the water sources screen"},
+
+    "litersValue": "{liters} L",
+    "@litersValue": {"description": "A quantity in liters", "placeholders": {"liters": {"type": "String"}}},
+
+    "couldNotSaveEntryMessage": "Couldn't save the entry. Please try again.",
+    "@couldNotSaveEntryMessage": {"description": "Error shown when saving a weight entry fails"},
+
+    "addWeightTitle": "Add weight",
+    "@addWeightTitle": {"description": "Title of the add-weight-entry sheet"},
+
+    "weightTitle": "Weight",
+    "@weightTitle": {"description": "Title of the weight screen, and label for the weight field"},
+
+    "noWeightEntriesYetTitle": "No weight entries yet",
+    "@noWeightEntriesYetTitle": {"description": "Empty state title on the weight screen"},
+
+    "tapPlusToAddFirstOneMessage": "Tap + to add your first one",
+    "@tapPlusToAddFirstOneMessage": {"description": "Empty state subtitle on the weight screen"},
+
+    "entryDeletedMessage": "Entry deleted",
+    "@entryDeletedMessage": {"description": "Snackbar shown after deleting a weight entry"},
+
+    "couldNotDeleteEntryMessage": "Couldn't delete the entry",
+    "@couldNotDeleteEntryMessage": {"description": "Snackbar shown when deleting a weight entry fails"},
+
+    "weightKgValue": "{weight} kg",
+    "@weightKgValue": {"description": "A weight value in kilograms", "placeholders": {"weight": {"type": "String"}}},
+
+    "comingSoonMessage": "{title} — coming soon",
+    "@comingSoonMessage": {"description": "Shown on a placeholder screen for a feature that isn't built yet", "placeholders": {"title": {"type": "String"}}},
+
+    "somethingWentWrongTitle": "Something went wrong",
+    "@somethingWentWrongTitle": {"description": "Generic error view title"},
+
+    "retryButton": "Retry",
+    "@retryButton": {"description": "Generic retry button"},
+
+    "offlineMessage": "Offline — changes will sync once you're back online",
+    "@offlineMessage": {"description": "Shown in the offline banner"},
+
+    "couldNotSyncTooltip": "Couldn't sync",
+    "@couldNotSyncTooltip": {"description": "Fallback tooltip for a failed sync with no specific error"},
+
+    "retrySyncMenuItem": "Retry sync",
+    "@retrySyncMenuItem": {"description": "Menu item to retry a failed sync"},
+
+    "discardChangeMenuItem": "Discard change",
+    "@discardChangeMenuItem": {"description": "Menu item to discard a failed sync's local change"},
+
+    "syncingTooltip": "Syncing…",
+    "@syncingTooltip": {"description": "Tooltip shown while a record is actively syncing"},
+
+    "waitingToSyncTooltip": "Waiting to sync",
+    "@waitingToSyncTooltip": {"description": "Tooltip shown while a record is queued to sync"},
+
+    "dashboardTabLabel": "Dashboard",
+    "@dashboardTabLabel": {"description": "Bottom navigation label for the dashboard tab"},
+
+    "dateFilterToday": "Today",
+    "@dateFilterToday": {"description": "Date range filter option: today only"},
+
+    "dateFilterWeek": "Week",
+    "@dateFilterWeek": {"description": "Date range filter option: rolling 7-day window"},
+
+    "dateFilterAll": "All",
+    "@dateFilterAll": {"description": "Date range filter option: no filter"},
+
+    "mealTypeBreakfast": "Breakfast",
+    "@mealTypeBreakfast": {"description": "Meal type option"},
+
+    "mealTypeLunch": "Lunch",
+    "@mealTypeLunch": {"description": "Meal type option"},
+
+    "mealTypeDinner": "Dinner",
+    "@mealTypeDinner": {"description": "Meal type option"},
+
+    "mealTypeSnack": "Snack",
+    "@mealTypeSnack": {"description": "Meal type option"},
+
+    "addAtLeastOneIngredientMessage": "Add at least one ingredient",
+    "@addAtLeastOneIngredientMessage": {"description": "Validation message when saving a recipe with no ingredients"},
+
+    "couldNotSaveRecipeMessage": "Couldn't save the recipe. Please try again.",
+    "@couldNotSaveRecipeMessage": {"description": "Snackbar shown when saving a recipe fails"},
+
+    "editRecipeTitle": "Edit recipe",
+    "@editRecipeTitle": {"description": "Title when editing an existing recipe"},
+
+    "newRecipeTitle": "New recipe",
+    "@newRecipeTitle": {"description": "Title when creating a new recipe"},
+
+    "descriptionOptionalLabel": "Description (optional)",
+    "@descriptionOptionalLabel": {"description": "Label for the optional recipe description field"},
+
+    "ingredientsLabel": "Ingredients",
+    "@ingredientsLabel": {"description": "Section heading for a recipe's ingredients"},
+
+    "noIngredientsAddedYetMessage": "No ingredients added yet",
+    "@noIngredientsAddedYetMessage": {"description": "Shown when a recipe has no ingredients yet"},
+
+    "loggedRecipeAsMessage": "Logged \"{name}\" as {mealType}",
+    "@loggedRecipeAsMessage": {"description": "Snackbar confirming a recipe was logged as a meal", "placeholders": {"name": {"type": "String"}, "mealType": {"type": "String"}}},
+
+    "couldNotLogMealMessage": "Couldn't log the meal. Please try again.",
+    "@couldNotLogMealMessage": {"description": "Snackbar shown when logging a recipe as a meal fails"},
+
+    "logRecipeTitle": "Log \"{name}\"",
+    "@logRecipeTitle": {"description": "Title of the log-recipe-as-meal sheet", "placeholders": {"name": {"type": "String"}}},
+
+    "ingredientsToMealEntriesLabel": "{count, plural, =1{1 ingredient} other{{count} ingredients}} → meal entries",
+    "@ingredientsToMealEntriesLabel": {"description": "Shown in the log-recipe sheet, counting how many ingredients become meal entries", "placeholders": {"count": {"type": "int"}}},
+
+    "logMealButton": "Log meal",
+    "@logMealButton": {"description": "Button to confirm logging a recipe as a meal"},
+
+    "noRecipesYetTitle": "No recipes yet",
+    "@noRecipesYetTitle": {"description": "Empty state title on the Recipes tab"},
+
+    "noIngredientsMessage": "No ingredients",
+    "@noIngredientsMessage": {"description": "Shown on a recipe card when it has no ingredients"},
+
+    "totalCaloriesProteinLabel": "≈ {calories} kcal · {protein} g protein",
+    "@totalCaloriesProteinLabel": {"description": "A recipe's total calories and protein", "placeholders": {"calories": {"type": "String"}, "protein": {"type": "String"}}},
+
+    "logAsMealButton": "Log as meal",
+    "@logAsMealButton": {"description": "Button on a recipe card to log it as a meal"},
+
+    "logOutTooltip": "Log out",
+    "@logOutTooltip": {"description": "Tooltip for the logout button on the dashboard"},
+
+    "todaySectionTitle": "Today",
+    "@todaySectionTitle": {"description": "Dashboard section heading for today's nutrition stats"},
+
+    "todaysCaloriesLabel": "Today's calories",
+    "@todaysCaloriesLabel": {"description": "Stat card label for today's calorie total"},
+
+    "currentWeightSectionTitle": "Current weight",
+    "@currentWeightSectionTitle": {"description": "Dashboard section heading for the latest weight entry"},
+
+    "latestEntryLabel": "Latest entry",
+    "@latestEntryLabel": {"description": "Stat card label for the most recent weight entry"},
+
+    "recentWorkoutsSectionTitle": "Recent workouts",
+    "@recentWorkoutsSectionTitle": {"description": "Dashboard section heading for recent workouts"},
+
+    "noWorkoutsLoggedYetPeriodMessage": "No workouts logged yet.",
+    "@noWorkoutsLoggedYetPeriodMessage": {"description": "Shown on the dashboard when there are no recent workouts"}
+}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -31,12 +32,13 @@ class _MealsTabState extends ConsumerState<MealsTab> {
 
   Future<void> _delete(BuildContext context, WidgetRef ref, Meal meal) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(mealControllerProvider.notifier).deleteMeal(meal.clientId);
-      messenger.showSnackBar(const SnackBar(content: Text('Meal deleted')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.mealDeletedMessage)));
     } catch (_) {
       messenger.showSnackBar(
-          const SnackBar(content: Text("Couldn't delete the meal")));
+          SnackBar(content: Text(l10n.couldNotDeleteMealMessage)));
       await ref.read(mealControllerProvider.notifier).refresh();
     }
   }
@@ -44,16 +46,17 @@ class _MealsTabState extends ConsumerState<MealsTab> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mealControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return state.when(
       data: (meals) {
         if (meals.isEmpty) {
           return RefreshIndicator(
             onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
-            child: const EmptyView(
+            child: EmptyView(
               icon: Icons.lunch_dining_outlined,
-              title: 'No meals logged yet',
-              subtitle: 'Tap + to log one',
+              title: l10n.noMealsLoggedYetTitle,
+              subtitle: l10n.tapPlusToLogOneMessage,
             ),
           );
         }
@@ -70,10 +73,10 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                 onRefresh: () =>
                     ref.read(mealControllerProvider.notifier).refresh(),
                 child: filtered.isEmpty
-                    ? const EmptyView(
+                    ? EmptyView(
                         icon: Icons.lunch_dining_outlined,
-                        title: 'No meals in this range',
-                        subtitle: 'Try a wider date filter',
+                        title: l10n.noMealsInRangeTitle,
+                        subtitle: l10n.tryWiderDateFilterMessage,
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.all(12),
@@ -115,6 +118,7 @@ class _MealCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Dismissible(
       key: ValueKey(meal.clientId),
       direction: DismissDirection.endToStart,
@@ -144,7 +148,7 @@ class _MealCard extends StatelessWidget {
                 Row(
                   children: [
                     Chip(
-                      label: Text(meal.mealType.label),
+                      label: Text(meal.mealType.label(l10n)),
                       visualDensity: VisualDensity.compact,
                       backgroundColor: theme.colorScheme.primaryContainer,
                     ),
@@ -172,12 +176,12 @@ class _MealCard extends StatelessWidget {
                   (e) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Text(
-                        '${e.foodName} — ${e.quantityInGrams.toStringAsFixed(0)} g'),
+                        '${e.foodName} — ${l10n.gramsValue(e.quantityInGrams.toStringAsFixed(0))}'),
                   ),
                 ),
                 const Divider(height: 16),
                 Text(
-                  '${meal.totalProtein.toStringAsFixed(0)} g protein',
+                  l10n.totalProteinLabel(meal.totalProtein.toStringAsFixed(0)),
                   style: theme.textTheme.labelLarge
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),

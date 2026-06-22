@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -29,19 +30,20 @@ class TemplatesTab extends ConsumerWidget {
 
   Future<void> _delete(
       BuildContext context, WidgetRef ref, WorkoutTemplate template) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete template?'),
-        content: Text('"${template.name}" will be removed.'),
+        title: Text(l10n.deleteTemplateQuestionTitle),
+        content: Text(l10n.deleteTemplateConfirmMessage(template.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancelButton),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
+            child: Text(l10n.deleteButton),
           ),
         ],
       ),
@@ -53,16 +55,17 @@ class TemplatesTab extends ConsumerWidget {
       await ref
           .read(workoutTemplateControllerProvider.notifier)
           .deleteTemplate(template.clientId);
-      messenger.showSnackBar(const SnackBar(content: Text('Template deleted')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.templateDeletedMessage)));
     } catch (_) {
       messenger
-          .showSnackBar(const SnackBar(content: Text("Couldn't delete the template")));
+          .showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteTemplateMessage)));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(workoutTemplateControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
     // Resolve exercise ids to names when the list is available.
     final names = ref.watch(exerciseControllerProvider).maybeWhen(
           data: (exercises) => {for (final e in exercises) e.clientId: e.name},
@@ -75,10 +78,10 @@ class TemplatesTab extends ConsumerWidget {
       child: state.when(
         data: (templates) {
           if (templates.isEmpty) {
-            return const EmptyView(
+            return EmptyView(
               icon: Icons.list_alt_outlined,
-              title: 'No templates yet',
-              subtitle: 'Tap + to create one',
+              title: l10n.noTemplatesYetTitle,
+              subtitle: l10n.tapPlusToCreateOneMessage,
             );
           }
           return ListView.separated(
@@ -125,13 +128,14 @@ class _TemplateTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final resolved = template.exerciseClientIds
         .map((id) => names[id])
         .whereType<String>()
         .toList();
     final subtitle = resolved.isNotEmpty
         ? resolved.join(', ')
-        : '${template.exerciseClientIds.length} exercises';
+        : l10n.exercisesCountLabel(template.exerciseClientIds.length);
 
     return ListTile(
       leading: const CircleAvatar(child: Icon(Icons.list_alt)),
@@ -153,10 +157,10 @@ class _TemplateTile extends StatelessWidget {
                   onDelete();
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'start', child: Text('Start session')),
-              PopupMenuItem(value: 'edit', child: Text('Edit')),
-              PopupMenuItem(value: 'delete', child: Text('Delete')),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'start', child: Text(l10n.startSessionMenuItem)),
+              PopupMenuItem(value: 'edit', child: Text(l10n.editMenuItem)),
+              PopupMenuItem(value: 'delete', child: Text(l10n.deleteButton)),
             ],
           ),
         ],

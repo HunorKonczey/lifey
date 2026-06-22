@@ -49,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -58,6 +58,10 @@ class AppDatabase extends _$AppDatabase {
           // V2: barcode scanner support — foods can be tagged with a barcode.
           if (from < 2) {
             await m.addColumn(foods, foods.barcode);
+          }
+          // V3: UI language preference, synced like theme.
+          if (from < 3) {
+            await m.addColumn(userSettingsTable, userSettingsTable.language);
           }
         },
       );

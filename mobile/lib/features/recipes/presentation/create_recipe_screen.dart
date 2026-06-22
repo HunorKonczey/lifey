@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../nutrition/domain/food.dart';
 import '../../nutrition/presentation/widgets/add_meal_entry_sheet.dart';
 import '../application/recipes_controller.dart';
@@ -69,13 +70,14 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   Future<void> _save() async {
     if (_saving) return; // guard against a fast double-tap creating two recipes
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     if (_name.text.trim().isEmpty) {
-      messenger.showSnackBar(const SnackBar(content: Text('Enter a name')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.enterANameMessage)));
       return;
     }
     if (_ingredients.isEmpty) {
       messenger.showSnackBar(
-          const SnackBar(content: Text('Add at least one ingredient')));
+          SnackBar(content: Text(l10n.addAtLeastOneIngredientMessage)));
       return;
     }
     setState(() => _saving = true);
@@ -104,17 +106,17 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     } catch (_) {
       setState(() => _saving = false);
       messenger.showSnackBar(
-        const SnackBar(
-            content: Text("Couldn't save the recipe. Please try again.")),
+        SnackBar(content: Text(l10n.couldNotSaveRecipeMessage)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit recipe' : 'New recipe'),
+        title: Text(_isEditing ? l10n.editRecipeTitle : l10n.newRecipeTitle),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -123,7 +125,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Save'),
+                : Text(l10n.saveButton),
           ),
         ],
       ),
@@ -133,9 +135,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           TextField(
             controller: _name,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.nameLabel,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -144,9 +146,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             textCapitalization: TextCapitalization.sentences,
             minLines: 2,
             maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Description (optional)',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.descriptionOptionalLabel,
+              border: const OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
           ),
@@ -154,19 +156,19 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Ingredients',
+              Text(l10n.ingredientsLabel,
                   style: Theme.of(context).textTheme.labelLarge),
               TextButton.icon(
                 onPressed: _addIngredient,
                 icon: const Icon(Icons.add),
-                label: const Text('Add'),
+                label: Text(l10n.addButton),
               ),
             ],
           ),
           if (_ingredients.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Text('No ingredients added yet'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(l10n.noIngredientsAddedYetMessage),
             )
           else
             ..._ingredients.asMap().entries.map((entry) {
@@ -176,7 +178,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 child: ListTile(
                   title: Text(ing.food.name),
-                  subtitle: Text('${ing.grams.toStringAsFixed(0)} g'),
+                  subtitle: Text(l10n.gramsValue(ing.grams.toStringAsFixed(0))),
                   trailing: IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () =>

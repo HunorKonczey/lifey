@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import 'create_template_screen.dart';
 import 'exercises_tab.dart';
 import 'log_session_screen.dart';
@@ -54,31 +55,32 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
     );
   }
 
-  ({IconData icon, String label, VoidCallback onPressed}) get _fab {
+  ({IconData icon, String label, VoidCallback onPressed}) _fab(AppLocalizations l10n) {
     switch (_tabController.index) {
       case 0:
-        return (icon: Icons.add, label: 'Log', onPressed: _logSession);
+        return (icon: Icons.add, label: l10n.logFabLabel, onPressed: _logSession);
       case 1:
-        return (icon: Icons.add, label: 'Template', onPressed: _newTemplate);
+        return (icon: Icons.add, label: l10n.templateFabLabel, onPressed: _newTemplate);
       default:
-        return (icon: Icons.add, label: 'Exercise', onPressed: _addExercise);
+        return (icon: Icons.add, label: l10n.exerciseFabLabel, onPressed: _addExercise);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final fab = _fab;
+    final l10n = AppLocalizations.of(context)!;
+    final fab = _fab(l10n);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Workouts'),
+        title: Text(l10n.workoutsTitle),
         centerTitle: false,
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Sessions'),
-            Tab(text: 'Templates'),
-            Tab(text: 'Exercises'),
+          tabs: [
+            Tab(text: l10n.sessionsTabLabel),
+            Tab(text: l10n.templatesTabLabel),
+            Tab(text: l10n.exercisesLabel),
           ],
         ),
       ),

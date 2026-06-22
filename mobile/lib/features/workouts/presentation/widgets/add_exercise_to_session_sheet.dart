@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../application/exercise_controller.dart';
 import '../../domain/exercise.dart';
 
@@ -17,6 +18,7 @@ class AddExerciseToSessionSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final exercisesState = ref.watch(exerciseControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return SafeArea(
       child: Padding(
@@ -25,7 +27,7 @@ class AddExerciseToSessionSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Add exercise', style: Theme.of(context).textTheme.titleLarge),
+            Text(l10n.addExerciseTitle, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 320),
@@ -36,15 +38,15 @@ class AddExerciseToSessionSheet extends ConsumerWidget {
                 ),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text("Couldn't load exercises: $e"),
+                  child: Text('${l10n.couldNotLoadExercisesPrefix} $e'),
                 ),
                 data: (exercises) {
                   final available =
                       exercises.where((e) => !excludeIds.contains(e.clientId)).toList();
                   if (available.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('Every exercise is already in this session.'),
+                    return Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(l10n.everyExerciseAlreadyInSessionMessage),
                     );
                   }
                   return ListView.separated(

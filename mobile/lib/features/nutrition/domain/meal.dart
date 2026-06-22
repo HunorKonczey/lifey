@@ -1,14 +1,22 @@
+import '../../../l10n/app_localizations.dart';
+
 /// The four meal types supported by the backend.
 enum MealType {
-  breakfast('BREAKFAST', 'Breakfast'),
-  lunch('LUNCH', 'Lunch'),
-  dinner('DINNER', 'Dinner'),
-  snack('SNACK', 'Snack');
+  breakfast('BREAKFAST'),
+  lunch('LUNCH'),
+  dinner('DINNER'),
+  snack('SNACK');
 
-  const MealType(this.apiValue, this.label);
+  const MealType(this.apiValue);
 
   final String apiValue;
-  final String label;
+
+  String label(AppLocalizations l10n) => switch (this) {
+        MealType.breakfast => l10n.mealTypeBreakfast,
+        MealType.lunch => l10n.mealTypeLunch,
+        MealType.dinner => l10n.mealTypeDinner,
+        MealType.snack => l10n.mealTypeSnack,
+      };
 
   static MealType fromApi(String value) =>
       values.firstWhere((e) => e.apiValue == value, orElse: () => MealType.snack);

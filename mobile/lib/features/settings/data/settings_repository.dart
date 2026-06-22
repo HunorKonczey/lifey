@@ -33,6 +33,7 @@ class SettingsRepository {
     final values = UserSettingsTableCompanion(
       unitSystem: Value(settings.unitSystem.name.toUpperCase()),
       theme: Value(settings.theme.name.toUpperCase()),
+      language: Value(settings.language.name.toUpperCase()),
       dailyCalorieGoal: Value(settings.dailyCalorieGoal),
       dailyProteinGoal: Value(settings.dailyProteinGoal),
       dailyCarbsGoal: Value(settings.dailyCarbsGoal),
@@ -53,6 +54,7 @@ class SettingsRepository {
     return UserSettings(
       unitSystem: UnitSystem.values.byName(row.unitSystem.toLowerCase()),
       theme: ThemePreference.values.byName(row.theme.toLowerCase()),
+      language: LanguagePreference.values.byName(row.language.toLowerCase()),
       dailyCalorieGoal: row.dailyCalorieGoal,
       dailyProteinGoal: row.dailyProteinGoal,
       dailyCarbsGoal: row.dailyCarbsGoal,

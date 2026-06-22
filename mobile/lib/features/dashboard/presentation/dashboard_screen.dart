@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
@@ -65,20 +66,21 @@ class DashboardScreen extends ConsumerWidget {
     final data = ref.watch(dashboardControllerProvider);
     final settings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
     final weightTrend = _weightTrend(ref.watch(weightControllerProvider).value ?? const []);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: Text(l10n.dashboardTabLabel),
         centerTitle: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
+            tooltip: l10n.settingsTitle,
             onPressed: () => context.push('/settings'),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Log out',
+            tooltip: l10n.logOutTooltip,
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),
           ),
         ],
@@ -106,6 +108,7 @@ class _DashboardBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final stats = data.stats;
     final weight = stats.latestWeight;
+    final l10n = AppLocalizations.of(context)!;
 
     final calorieRatio = _ratio(stats.calories, settings.dailyCalorieGoal);
     final proteinRatio = _ratio(stats.protein, settings.dailyProteinGoal);
@@ -121,10 +124,10 @@ class _DashboardBody extends StatelessWidget {
           onAdd: () => _openAddWaterSheet(context),
         ),
         const SizedBox(height: 24),
-        const _SectionTitle('Today'),
+        _SectionTitle(l10n.todaySectionTitle),
         const SizedBox(height: 8),
         StatCard(
-          label: "Today's calories",
+          label: l10n.todaysCaloriesLabel,
           value: stats.calories.toStringAsFixed(0),
           unit: 'kcal',
           icon: Icons.local_fire_department,
@@ -139,7 +142,7 @@ class _DashboardBody extends StatelessWidget {
           children: [
             Expanded(
               child: StatCard(
-                label: 'Protein',
+                label: l10n.proteinLabel,
                 value: stats.protein.toStringAsFixed(0),
                 unit: 'g',
                 icon: Icons.egg_alt,
@@ -152,7 +155,7 @@ class _DashboardBody extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: StatCard(
-                label: 'Carbs',
+                label: l10n.carbsLabel,
                 value: stats.carbs.toStringAsFixed(0),
                 unit: 'g',
                 icon: Icons.bakery_dining,
@@ -164,7 +167,7 @@ class _DashboardBody extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: StatCard(
-                label: 'Fat',
+                label: l10n.fatLabel,
                 value: stats.fat.toStringAsFixed(0),
                 unit: 'g',
                 icon: Icons.water_drop,
@@ -176,10 +179,10 @@ class _DashboardBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        const _SectionTitle('Current weight'),
+        _SectionTitle(l10n.currentWeightSectionTitle),
         const SizedBox(height: 8),
         StatCard(
-          label: 'Latest entry',
+          label: l10n.latestEntryLabel,
           value: weight != null ? weight.toStringAsFixed(1) : '—',
           unit: weight != null ? 'kg' : null,
           icon: Icons.monitor_weight,
@@ -194,10 +197,10 @@ class _DashboardBody extends StatelessWidget {
                 ),
         ),
         const SizedBox(height: 24),
-        const _SectionTitle('Recent workouts'),
+        _SectionTitle(l10n.recentWorkoutsSectionTitle),
         const SizedBox(height: 8),
         if (data.recentWorkouts.isEmpty)
-          const _EmptyHint('No workouts logged yet.')
+          _EmptyHint(l10n.noWorkoutsLoggedYetPeriodMessage)
         else
           ...data.recentWorkouts.map(
             (w) => _WorkoutTile(workout: w, onTap: () => context.go('/workouts')),
@@ -216,6 +219,7 @@ class _WorkoutTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final dateLabel = DateFormat('MMM d, HH:mm').format(workout.startedAt.toLocal());
     final exercises = workout.exerciseNames.isEmpty
         ? '—'
@@ -239,11 +243,11 @@ class _WorkoutTile extends StatelessWidget {
         ),
         trailing: workout.inProgress
             ? Chip(
-                label: const Text('In progress'),
+                label: Text(l10n.inProgressLabel),
                 visualDensity: VisualDensity.compact,
                 backgroundColor: theme.colorScheme.tertiaryContainer,
               )
-            : Text('${workout.setCount} sets', style: theme.textTheme.labelLarge),
+            : Text(l10n.setsCountLabel(workout.setCount), style: theme.textTheme.labelLarge),
       ),
     );
   }

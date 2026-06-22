@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
 import '../domain/workout_template.dart';
@@ -43,13 +44,14 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
   Future<void> _save() async {
     if (_saving) return; // guard against a fast double-tap creating two templates
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     if (_name.text.trim().isEmpty) {
-      messenger.showSnackBar(const SnackBar(content: Text('Enter a name')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.enterANameMessage)));
       return;
     }
     if (_selected.isEmpty) {
       messenger.showSnackBar(
-          const SnackBar(content: Text('Pick at least one exercise')));
+          SnackBar(content: Text(l10n.pickAtLeastOneExerciseMessage)));
       return;
     }
     setState(() => _saving = true);
@@ -72,7 +74,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
     } catch (_) {
       setState(() => _saving = false);
       messenger.showSnackBar(
-        const SnackBar(content: Text("Couldn't save the template. Please try again.")),
+        SnackBar(content: Text(l10n.couldNotSaveTemplateMessage)),
       );
     }
   }
@@ -80,17 +82,18 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
   @override
   Widget build(BuildContext context) {
     final exercisesState = ref.watch(exerciseControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit template' : 'New template'),
+        title: Text(_isEditing ? l10n.editTemplateTitle : l10n.newTemplateTitle),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
                 ? const SizedBox(
                     height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Save'),
+                : Text(l10n.saveButton),
           ),
         ],
       ),
@@ -101,9 +104,9 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
             child: TextField(
               controller: _name,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Template name',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.templateNameLabel,
+                border: const OutlineInputBorder(),
               ),
             ),
           ),
@@ -111,10 +114,10 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
           Expanded(
             child: exercisesState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text("Couldn't load exercises: $e")),
+              error: (e, _) => Center(child: Text('${l10n.couldNotLoadExercisesPrefix} $e')),
               data: (exercises) {
                 if (exercises.isEmpty) {
-                  return const Center(child: Text('No exercises available.'));
+                  return Center(child: Text(l10n.noExercisesAvailableMessage));
                 }
                 return ListView(
                   children: exercises.map((ex) {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 /// Opens the camera and returns the first scanned barcode value via
 /// `Navigator.pop`. Pop with `null` if the user backs out without scanning.
 ///
@@ -32,8 +34,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Vonalkód beolvasása')),
+      appBar: AppBar(title: Text(l10n.scanBarcodeButton)),
       body: MobileScanner(
         controller: _controller,
         onDetect: _onDetect,
@@ -45,8 +48,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               padding: const EdgeInsets.all(24),
               child: Text(
                 isPermissionDenied
-                    ? 'A vonalkód beolvasásához engedélyezned kell a kamera használatát az eszköz beállításaiban.'
-                    : 'A kamera nem érhető el. Próbáld újra később.',
+                    ? l10n.cameraPermissionDeniedMessage
+                    : l10n.cameraUnavailableMessage,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),

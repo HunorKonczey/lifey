@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -32,30 +33,32 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
 
   Future<void> _delete(BuildContext context, WidgetRef ref, WorkoutSession session) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(workoutSessionControllerProvider.notifier).deleteSession(session.clientId);
-      messenger.showSnackBar(const SnackBar(content: Text('Workout deleted')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.workoutDeletedMessage)));
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(content: Text("Couldn't delete the workout")));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteWorkoutMessage)));
       await ref.read(workoutSessionControllerProvider.notifier).refresh();
     }
   }
 
   Future<void> _confirmDelete(
       BuildContext context, WidgetRef ref, WorkoutSession session) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete workout?'),
-        content: const Text('This workout and its logged sets will be removed.'),
+        title: Text(l10n.deleteWorkoutQuestionTitle),
+        content: Text(l10n.deleteWorkoutConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancelButton),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
+            child: Text(l10n.deleteButton),
           ),
         ],
       ),
@@ -68,6 +71,7 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(workoutSessionControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return state.when(
       data: (sessions) {
@@ -75,10 +79,10 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
           return RefreshIndicator(
             onRefresh: () =>
                 ref.read(workoutSessionControllerProvider.notifier).refresh(),
-            child: const EmptyView(
+            child: EmptyView(
               icon: Icons.fitness_center_outlined,
-              title: 'No workouts logged yet',
-              subtitle: 'Tap + to log one',
+              title: l10n.noWorkoutsLoggedYetTitle,
+              subtitle: l10n.tapPlusToLogOneMessage,
             ),
           );
         }
@@ -96,10 +100,10 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
                     .read(workoutSessionControllerProvider.notifier)
                     .refresh(),
                 child: filtered.isEmpty
-                    ? const EmptyView(
+                    ? EmptyView(
                         icon: Icons.fitness_center_outlined,
-                        title: 'No workouts in this range',
-                        subtitle: 'Try a wider date filter',
+                        title: l10n.noWorkoutsInRangeTitle,
+                        subtitle: l10n.tryWiderDateFilterMessage,
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.all(12),
@@ -145,6 +149,7 @@ class _SessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Dismissible(
       key: ValueKey(session.clientId),
       direction: DismissDirection.endToStart,
@@ -178,16 +183,16 @@ class _SessionCard extends StatelessWidget {
                     const Spacer(),
                     if (session.inProgress)
                       Chip(
-                        label: const Text('In progress'),
+                        label: Text(l10n.inProgressLabel),
                         visualDensity: VisualDensity.compact,
                         backgroundColor: theme.colorScheme.tertiaryContainer,
                       )
                     else
-                      Text('${session.sets.length} sets',
+                      Text(l10n.setsCountLabel(session.sets.length),
                           style: theme.textTheme.labelLarge),
                     SyncStatusIndicator(clientId: session.clientId),
                     IconButton(
-                      tooltip: 'Delete workout',
+                      tooltip: l10n.deleteWorkoutTooltip,
                       icon: const Icon(Icons.delete_outline),
                       onPressed: onDeleteTap,
                     ),
@@ -197,8 +202,8 @@ class _SessionCard extends StatelessWidget {
                 ...session.sets.map(
                   (s) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text(
-                        '${s.exerciseName} — ${s.reps} × ${s.weight.toStringAsFixed(1)} kg'),
+                    child: Text(l10n.exerciseSetLine(
+                        s.exerciseName, s.reps.toString(), s.weight.toStringAsFixed(1))),
                   ),
                 ),
               ],

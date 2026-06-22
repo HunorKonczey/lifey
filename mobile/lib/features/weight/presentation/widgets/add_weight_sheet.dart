@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../application/weight_controller.dart';
 
 /// Bottom sheet form for adding a weight entry. Pops on success.
@@ -53,7 +54,7 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
           .addEntry(date: _date, weight: weight);
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
-      setState(() => _submitError = "Couldn't save the entry. Please try again.");
+      setState(() => _submitError = AppLocalizations.of(context)!.couldNotSaveEntryMessage);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -62,6 +63,7 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + viewInsets),
@@ -71,7 +73,7 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Add weight', style: Theme.of(context).textTheme.titleLarge),
+            Text(l10n.addWeightTitle, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: _submitting ? null : _pickDate,
@@ -83,16 +85,16 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
               controller: _weightController,
               autofocus: true,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Weight',
+              decoration: InputDecoration(
+                labelText: l10n.weightTitle,
                 suffixText: 'kg',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               validator: (value) {
                 final text = value?.replaceAll(',', '.').trim() ?? '';
                 final parsed = double.tryParse(text);
-                if (parsed == null) return 'Enter a number';
-                if (parsed <= 0) return 'Must be greater than 0';
+                if (parsed == null) return l10n.enterANumberError;
+                if (parsed <= 0) return l10n.mustBeGreaterThanZeroError;
                 return null;
               },
               onFieldSubmitted: (_) => _submit(),
@@ -113,7 +115,7 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save'),
+                  : Text(l10n.saveButton),
             ),
           ],
         ),

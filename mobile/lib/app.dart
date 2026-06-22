@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'features/settings/application/settings_controller.dart';
 import 'features/settings/domain/user_settings.dart';
+import 'l10n/app_localizations.dart';
 import 'shared/widgets/offline_banner.dart';
 
 /// Root application widget.
@@ -29,14 +30,18 @@ class LifeyApp extends ConsumerWidget {
     ref.watch(connectivitySyncControllerProvider);
 
     final router = ref.watch(appRouterProvider);
-    final themePreference =
-        ref.watch(settingsControllerProvider).value?.theme ?? ThemePreference.system;
+    final settings = ref.watch(settingsControllerProvider).value;
+    final themePreference = settings?.theme ?? ThemePreference.system;
+    final languagePreference = settings?.language ?? LanguagePreference.system;
 
     return MaterialApp.router(
       title: 'Lifey',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: _themeMode(themePreference),
+      locale: _locale(languagePreference),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
       // Wraps every routed screen with the global offline strip, so it
       // shows up app-wide without each screen needing to know about it.
@@ -57,6 +62,19 @@ class LifeyApp extends ConsumerWidget {
         return ThemeMode.dark;
       case ThemePreference.system:
         return ThemeMode.system;
+    }
+  }
+
+  // null tells MaterialApp to pick the best match from supportedLocales,
+  // i.e. follow the device locale (falling back to en).
+  Locale? _locale(LanguagePreference preference) {
+    switch (preference) {
+      case LanguagePreference.english:
+        return const Locale('en');
+      case LanguagePreference.hungarian:
+        return const Locale('hu');
+      case LanguagePreference.system:
+        return null;
     }
   }
 }

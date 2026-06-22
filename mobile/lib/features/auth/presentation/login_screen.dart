@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/error_message.dart';
+import '../../../l10n/app_localizations.dart';
 import '../application/auth_controller.dart';
 
 /// Email/password sign-in. On success the router redirect takes over.
@@ -49,6 +50,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -62,20 +64,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   Text('Lifey', style: Theme.of(context).textTheme.headlineMedium),
                   const SizedBox(height: 4),
-                  Text('Sign in to continue', style: Theme.of(context).textTheme.bodyMedium),
+                  Text(l10n.signInSubtitle, style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _emailController,
                     autofocus: true,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.emailLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) {
                       final text = value?.trim() ?? '';
-                      if (text.isEmpty) return 'Required';
-                      if (!text.contains('@')) return 'Enter a valid email';
+                      if (text.isEmpty) return l10n.requiredFieldError;
+                      if (!text.contains('@')) return l10n.invalidEmailError;
                       return null;
                     },
                   ),
@@ -83,11 +85,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.passwordLabel,
+                      border: const OutlineInputBorder(),
                     ),
-                    validator: (value) => (value == null || value.isEmpty) ? 'Required' : null,
+                    validator: (value) =>
+                        (value == null || value.isEmpty) ? l10n.requiredFieldError : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
                   if (_submitError != null) ...[
@@ -106,12 +109,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Sign in'),
+                        : Text(l10n.signInButton),
                   ),
                   const SizedBox(height: 12),
                   TextButton(
                     onPressed: _submitting ? null : () => context.push('/register'),
-                    child: const Text("Don't have an account? Register"),
+                    child: Text(l10n.registerPromptButton),
                   ),
                 ],
               ),

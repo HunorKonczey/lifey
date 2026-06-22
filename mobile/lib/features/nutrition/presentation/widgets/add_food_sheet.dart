@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../application/barcode_lookup_controller.dart';
 import '../../application/food_controller.dart';
 import '../../domain/food.dart';
@@ -63,17 +64,19 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       double.tryParse(text.replaceAll(',', '.').trim());
 
   String? _validateRequiredNumber(String? value) {
+    final l10n = AppLocalizations.of(context)!;
     final parsed = _parse(value ?? '');
-    if (parsed == null) return 'Enter a number';
-    if (parsed < 0) return 'Must be 0 or more';
+    if (parsed == null) return l10n.enterANumberError;
+    if (parsed < 0) return l10n.mustBeZeroOrMoreError;
     return null;
   }
 
   String? _validateOptionalNumber(String? value) {
     if ((value ?? '').trim().isEmpty) return null;
+    final l10n = AppLocalizations.of(context)!;
     final parsed = _parse(value!);
-    if (parsed == null) return 'Enter a number';
-    if (parsed < 0) return 'Must be 0 or more';
+    if (parsed == null) return l10n.enterANumberError;
+    if (parsed < 0) return l10n.mustBeZeroOrMoreError;
     return null;
   }
 
@@ -87,6 +90,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     try {
       await ref.read(barcodeLookupControllerProvider.notifier).lookup(barcode);
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       switch (ref.read(barcodeLookupControllerProvider)) {
         case BarcodeLookupFound(result: final result):
           setState(() {
@@ -99,12 +103,12 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
           });
         case BarcodeLookupNotFound():
           setState(() => _barcode = barcode);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("No match for that barcode — it's saved, just fill in the details."),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l10n.noBarcodeMatchMessage),
           ));
         case BarcodeLookupOffline():
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("You're offline — can't look up barcodes right now."),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l10n.offlineCantLookupMessage),
           ));
         case BarcodeLookupIdle():
         case BarcodeLookupLoading():
@@ -112,8 +116,8 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Couldn't look up that barcode. Please try again."),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context)!.couldNotLookupBarcodeMessage),
         ));
       }
     } finally {
@@ -160,7 +164,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     } catch (_) {
       // A duplicate name only surfaces once this syncs (no synchronous 409
       // anymore — the write already landed locally before any network call).
-      setState(() => _error = "Couldn't save the food. Please try again.");
+      setState(() => _error = AppLocalizations.of(context)!.couldNotSaveFoodMessage);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -169,6 +173,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + viewInsets),
       child: Form(
@@ -177,10 +182,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(_isEditing ? 'Edit food' : 'Add food',
+            Text(_isEditing ? l10n.editFoodTitle : l10n.addFoodTitle,
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 4),
-            Text('Values are per 100 g',
+            Text(l10n.valuesPerHundredGrams,
                 style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 16),
             if (!_isEditing) ...[
@@ -193,11 +198,11 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.qr_code_scanner),
-                label: Text(_scanning ? 'Looking up...' : 'Scan barcode'),
+                label: Text(_scanning ? l10n.lookingUpStatus : l10n.scanBarcodeButton),
               ),
               if (_barcode != null) ...[
                 const SizedBox(height: 4),
-                Text('Linked to barcode $_barcode',
+                Text(l10n.linkedToBarcodeMessage(_barcode!),
                     style: Theme.of(context).textTheme.bodySmall),
               ],
               const SizedBox(height: 12),
@@ -206,12 +211,12 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
               controller: _name,
               autofocus: !_isEditing,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.nameLabel,
+                border: const OutlineInputBorder(),
               ),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  (v == null || v.trim().isEmpty) ? l10n.requiredFieldError : null,
             ),
             const SizedBox(height: 12),
             Row(
@@ -221,10 +226,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                     controller: _calories,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Calories',
+                    decoration: InputDecoration(
+                      labelText: l10n.caloriesLabel,
                       suffixText: 'kcal',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     validator: _validateRequiredNumber,
                   ),
@@ -235,10 +240,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                     controller: _protein,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Protein',
+                    decoration: InputDecoration(
+                      labelText: l10n.proteinLabel,
                       suffixText: 'g',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     validator: _validateRequiredNumber,
                   ),
@@ -253,10 +258,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                     controller: _carbs,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Carbs (optional)',
+                    decoration: InputDecoration(
+                      labelText: l10n.carbsOptionalLabel,
                       suffixText: 'g',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     validator: _validateOptionalNumber,
                   ),
@@ -267,10 +272,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                     controller: _fat,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Fat (optional)',
+                    decoration: InputDecoration(
+                      labelText: l10n.fatOptionalLabel,
                       suffixText: 'g',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     validator: _validateOptionalNumber,
                   ),
@@ -291,7 +296,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(_isEditing ? 'Save changes' : 'Save'),
+                  : Text(_isEditing ? l10n.saveChangesButton : l10n.saveButton),
             ),
           ],
         ),

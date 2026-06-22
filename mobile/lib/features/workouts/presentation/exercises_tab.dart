@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -13,11 +14,12 @@ class ExercisesTab extends ConsumerWidget {
 
   Future<void> _delete(BuildContext context, WidgetRef ref, Exercise exercise) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(exerciseControllerProvider.notifier).deleteExercise(exercise.clientId);
-      messenger.showSnackBar(SnackBar(content: Text('Deleted ${exercise.name}')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.deletedExerciseMessage(exercise.name))));
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text("Couldn't delete ${exercise.name}")));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteExerciseMessage(exercise.name))));
       await ref.read(exerciseControllerProvider.notifier).refresh();
     }
   }
@@ -25,16 +27,17 @@ class ExercisesTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(exerciseControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return RefreshIndicator(
       onRefresh: () => ref.read(exerciseControllerProvider.notifier).refresh(),
       child: state.when(
         data: (exercises) {
           if (exercises.isEmpty) {
-            return const EmptyView(
+            return EmptyView(
               icon: Icons.sports_gymnastics_outlined,
-              title: 'No exercises yet',
-              subtitle: 'Tap + to add one',
+              title: l10n.noExercisesYetTitle,
+              subtitle: l10n.tapPlusToAddOneMessage,
             );
           }
           return ListView.separated(

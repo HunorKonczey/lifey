@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -26,11 +27,12 @@ class WeightScreen extends ConsumerWidget {
 
   Future<void> _delete(BuildContext context, WidgetRef ref, WeightEntry entry) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(weightControllerProvider.notifier).deleteEntry(entry.clientId);
-      messenger.showSnackBar(const SnackBar(content: Text('Entry deleted')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.entryDeletedMessage)));
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(content: Text("Couldn't delete the entry")));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteEntryMessage)));
       await ref.read(weightControllerProvider.notifier).refresh();
     }
   }
@@ -38,9 +40,10 @@ class WeightScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(weightControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Weight'), centerTitle: false),
+      appBar: AppBar(title: Text(l10n.weightTitle), centerTitle: false),
       floatingActionButton: FloatingActionButton(
         // See nutrition_screen.dart: shell tabs stay mounted simultaneously
         // (IndexedStack), so each FAB needs a non-default hero tag.
@@ -52,10 +55,10 @@ class WeightScreen extends ConsumerWidget {
         onRefresh: () => ref.read(weightControllerProvider.notifier).refresh(),
         child: state.when(
           data: (entries) => entries.isEmpty
-              ? const EmptyView(
+              ? EmptyView(
                   icon: Icons.monitor_weight_outlined,
-                  title: 'No weight entries yet',
-                  subtitle: 'Tap + to add your first one',
+                  title: l10n.noWeightEntriesYetTitle,
+                  subtitle: l10n.tapPlusToAddFirstOneMessage,
                 )
               : _WeightList(
                   entries: entries,
@@ -87,6 +90,7 @@ class _WeightList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: entries.length,
@@ -106,7 +110,7 @@ class _WeightList extends StatelessWidget {
           child: ListTile(
             leading: const CircleAvatar(child: Icon(Icons.monitor_weight)),
             title: Text(
-              '${entry.weight.toStringAsFixed(1)} kg',
+              l10n.weightKgValue(entry.weight.toStringAsFixed(1)),
               style: theme.textTheme.titleMedium,
             ),
             subtitle: Text(dateLabel.format(entry.date)),

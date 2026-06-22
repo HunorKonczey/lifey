@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/error_message.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../water/presentation/water_sources_screen.dart';
 import '../application/settings_controller.dart';
@@ -16,7 +17,7 @@ class SettingsScreen extends ConsumerWidget {
     final state = ref.watch(settingsControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings'), centerTitle: false),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.settingsTitle), centerTitle: false),
       body: state.when(
         data: (settings) => _SettingsForm(initial: settings),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -42,6 +43,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   final _formKey = GlobalKey<FormState>();
   late UnitSystem _unitSystem;
   late ThemePreference _theme;
+  late LanguagePreference _language;
   late final TextEditingController _calorieController;
   late final TextEditingController _proteinController;
   late final TextEditingController _carbsController;
@@ -55,6 +57,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     super.initState();
     _unitSystem = widget.initial.unitSystem;
     _theme = widget.initial.theme;
+    _language = widget.initial.language;
     _calorieController = TextEditingController(text: widget.initial.dailyCalorieGoal?.toString() ?? '');
     _proteinController = TextEditingController(text: widget.initial.dailyProteinGoal?.toString() ?? '');
     _carbsController = TextEditingController(text: widget.initial.dailyCarbsGoal?.toString() ?? '');
@@ -82,7 +85,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return null;
     final parsed = int.tryParse(text);
-    if (parsed == null || parsed < 0) return 'Enter a non-negative whole number';
+    if (parsed == null || parsed < 0) return AppLocalizations.of(context)!.enterNonNegativeWholeNumber;
     return null;
   }
 
@@ -90,7 +93,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     final text = value?.replaceAll(',', '.').trim() ?? '';
     if (text.isEmpty) return null;
     final parsed = double.tryParse(text);
-    if (parsed == null || parsed < 0) return 'Enter a non-negative number';
+    if (parsed == null || parsed < 0) return AppLocalizations.of(context)!.enterNonNegativeNumber;
     return null;
   }
 
@@ -107,6 +110,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             UserSettings(
               unitSystem: _unitSystem,
               theme: _theme,
+              language: _language,
               dailyCalorieGoal: _parseGoal(_calorieController.text),
               dailyProteinGoal: _parseGoal(_proteinController.text),
               dailyCarbsGoal: _parseGoal(_carbsController.text),
@@ -116,7 +120,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           );
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Settings saved')));
+            .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.settingsSavedMessage)));
       }
     } catch (error) {
       setState(() => _submitError = friendlyError(error));
@@ -128,48 +132,61 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Form(
       key: _formKey,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Units', style: theme.textTheme.titleMedium),
+          Text(l10n.unitsLabel, style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           SegmentedButton<UnitSystem>(
-            segments: const [
-              ButtonSegment(value: UnitSystem.metric, label: Text('Metric (kg)')),
-              ButtonSegment(value: UnitSystem.imperial, label: Text('Imperial (lb)')),
+            segments: [
+              ButtonSegment(value: UnitSystem.metric, label: Text(l10n.unitsMetric)),
+              ButtonSegment(value: UnitSystem.imperial, label: Text(l10n.unitsImperial)),
             ],
             selected: {_unitSystem},
             onSelectionChanged: (selection) => setState(() => _unitSystem = selection.first),
           ),
           const SizedBox(height: 24),
-          Text('Theme', style: theme.textTheme.titleMedium),
+          Text(l10n.themeLabel, style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
           SegmentedButton<ThemePreference>(
-            segments: const [
-              ButtonSegment(value: ThemePreference.light, label: Text('Light')),
-              ButtonSegment(value: ThemePreference.dark, label: Text('Dark')),
-              ButtonSegment(value: ThemePreference.system, label: Text('System')),
+            segments: [
+              ButtonSegment(value: ThemePreference.light, label: Text(l10n.themeLight)),
+              ButtonSegment(value: ThemePreference.dark, label: Text(l10n.themeDark)),
+              ButtonSegment(value: ThemePreference.system, label: Text(l10n.optionSystem)),
             ],
             selected: {_theme},
             onSelectionChanged: (selection) => setState(() => _theme = selection.first),
           ),
           const SizedBox(height: 24),
-          Text('Daily goals', style: theme.textTheme.titleMedium),
+          Text(l10n.languageLabel, style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          SegmentedButton<LanguagePreference>(
+            segments: [
+              ButtonSegment(value: LanguagePreference.system, label: Text(l10n.optionSystem)),
+              ButtonSegment(value: LanguagePreference.english, label: Text(l10n.languageEnglish)),
+              ButtonSegment(value: LanguagePreference.hungarian, label: Text(l10n.languageHungarian)),
+            ],
+            selected: {_language},
+            onSelectionChanged: (selection) => setState(() => _language = selection.first),
+          ),
+          const SizedBox(height: 24),
+          Text(l10n.dailyGoalsLabel, style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
-            'Leave blank for no goal',
+            l10n.leaveBlankForNoGoal,
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _calorieController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Calories',
+            decoration: InputDecoration(
+              labelText: l10n.caloriesLabel,
               suffixText: 'kcal',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             validator: _goalValidator,
           ),
@@ -177,10 +194,10 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           TextFormField(
             controller: _proteinController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Protein',
+            decoration: InputDecoration(
+              labelText: l10n.proteinLabel,
               suffixText: 'g',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             validator: _goalValidator,
           ),
@@ -188,10 +205,10 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           TextFormField(
             controller: _carbsController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Carbs',
+            decoration: InputDecoration(
+              labelText: l10n.carbsLabel,
               suffixText: 'g',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             validator: _goalValidator,
           ),
@@ -199,10 +216,10 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           TextFormField(
             controller: _fatController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Fat',
+            decoration: InputDecoration(
+              labelText: l10n.fatLabel,
               suffixText: 'g',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             validator: _goalValidator,
           ),
@@ -210,18 +227,18 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           TextFormField(
             controller: _waterController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Water',
+            decoration: InputDecoration(
+              labelText: l10n.waterLabel,
               suffixText: 'L',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             validator: _waterGoalValidator,
           ),
           const SizedBox(height: 24),
-          Text('Water sources', style: theme.textTheme.titleMedium),
+          Text(l10n.waterSourcesLabel, style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
-            'Reusable presets for one-tap logging, e.g. "Water Bottle" = 0.75L',
+            l10n.waterSourcesDescription,
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
@@ -230,7 +247,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               MaterialPageRoute(builder: (_) => const WaterSourcesScreen()),
             ),
             icon: const Icon(Icons.water_drop_outlined),
-            label: const Text('Manage water sources'),
+            label: Text(l10n.manageWaterSourcesButton),
           ),
           if (_submitError != null) ...[
             const SizedBox(height: 12),
@@ -245,7 +262,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Save'),
+                : Text(l10n.saveButton),
           ),
         ],
       ),

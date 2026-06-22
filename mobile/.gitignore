@@ -4,5 +4,6 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 *.g.dart
+lib/l10n/app_localizations*.dart
 .idea/
 ios/Pods/

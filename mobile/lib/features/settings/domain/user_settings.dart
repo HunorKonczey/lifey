@@ -2,12 +2,15 @@ enum UnitSystem { metric, imperial }
 
 enum ThemePreference { light, dark, system }
 
+enum LanguagePreference { system, english, hungarian }
+
 /// Domain model for the per-user settings (`/settings`): units, daily
 /// calorie/macro goals, and theme preference.
 class UserSettings {
   const UserSettings({
     required this.unitSystem,
     required this.theme,
+    required this.language,
     this.dailyCalorieGoal,
     this.dailyProteinGoal,
     this.dailyCarbsGoal,
@@ -18,6 +21,7 @@ class UserSettings {
   const UserSettings.defaults()
       : unitSystem = UnitSystem.metric,
         theme = ThemePreference.system,
+        language = LanguagePreference.system,
         dailyCalorieGoal = null,
         dailyProteinGoal = null,
         dailyCarbsGoal = null,
@@ -26,6 +30,7 @@ class UserSettings {
 
   final UnitSystem unitSystem;
   final ThemePreference theme;
+  final LanguagePreference language;
   final int? dailyCalorieGoal;
   final int? dailyProteinGoal;
   final int? dailyCarbsGoal;
@@ -36,6 +41,7 @@ class UserSettings {
     return UserSettings(
       unitSystem: UnitSystem.values.byName((json['unitSystem'] as String).toLowerCase()),
       theme: ThemePreference.values.byName((json['theme'] as String).toLowerCase()),
+      language: LanguagePreference.values.byName((json['language'] as String).toLowerCase()),
       dailyCalorieGoal: json['dailyCalorieGoal'] as int?,
       dailyProteinGoal: json['dailyProteinGoal'] as int?,
       dailyCarbsGoal: json['dailyCarbsGoal'] as int?,
@@ -52,5 +58,6 @@ class UserSettings {
         'dailyFatGoal': dailyFatGoal,
         'dailyWaterGoalLiters': dailyWaterGoalLiters,
         'theme': theme.name.toUpperCase(),
+        'language': language.name.toUpperCase(),
       };
 }

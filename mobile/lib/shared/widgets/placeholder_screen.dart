@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Simple scaffold for tabs whose feature isn't built yet, so the bottom
 /// navigation feels complete.
 class PlaceholderScreen extends StatelessWidget {
@@ -23,7 +25,8 @@ class PlaceholderScreen extends StatelessWidget {
           children: [
             Icon(icon, size: 56, color: theme.colorScheme.primary),
             const SizedBox(height: 12),
-            Text('$title — coming soon', style: theme.textTheme.titleMedium),
+            Text(AppLocalizations.of(context)!.comingSoonMessage(title),
+                style: theme.textTheme.titleMedium),
           ],
         ),
       ),

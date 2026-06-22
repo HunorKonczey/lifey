@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../application/food_controller.dart';
 import '../../domain/food.dart';
 
@@ -34,7 +35,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   void _submit() {
     final formValid = _formKey.currentState!.validate();
     final foodPicked = _food != null;
-    setState(() => _foodError = foodPicked ? null : 'Pick a food');
+    setState(() => _foodError = foodPicked ? null : AppLocalizations.of(context)!.pickAFoodError);
     if (!formValid || !foodPicked) return;
     final grams = double.parse(_grams.text.replaceAll(',', '.'));
     Navigator.of(context).pop<MealEntryDraft>((food: _food!, grams: grams));
@@ -44,6 +45,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   Widget build(BuildContext context) {
     final foodsState = ref.watch(foodControllerProvider);
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + viewInsets),
@@ -54,13 +56,13 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
         ),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(24),
-          child: Text("Couldn't load foods: $e"),
+          child: Text('${l10n.couldNotLoadFoodsPrefix} $e'),
         ),
         data: (foods) {
           if (foods.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.all(24),
-              child: Text('Add some foods first (Foods tab).'),
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(l10n.addFoodsFirstMessage),
             );
           }
           return Form(
@@ -69,7 +71,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Add food to meal',
+                Text(l10n.addFoodToMealTitle,
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 16),
                 Autocomplete<Food>(
@@ -86,7 +88,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                       controller: controller,
                       focusNode: focusNode,
                       decoration: InputDecoration(
-                        labelText: 'Food',
+                        labelText: l10n.foodFieldLabel,
                         border: const OutlineInputBorder(),
                         errorText: _foodError,
                         suffixIcon: _food == null
@@ -114,21 +116,21 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                   controller: _grams,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Quantity',
+                  decoration: InputDecoration(
+                    labelText: l10n.quantityLabel,
                     suffixText: 'g',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (v) {
                     final parsed = double.tryParse((v ?? '').replaceAll(',', '.'));
-                    if (parsed == null) return 'Enter a number';
-                    if (parsed <= 0) return 'Must be greater than 0';
+                    if (parsed == null) return l10n.enterANumberError;
+                    if (parsed <= 0) return l10n.mustBeGreaterThanZeroError;
                     return null;
                   },
                   onFieldSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: _submit, child: const Text('Add')),
+                FilledButton(onPressed: _submit, child: Text(l10n.addButton)),
               ],
             ),
           );

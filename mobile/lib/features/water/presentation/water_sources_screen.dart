@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -22,14 +23,15 @@ class WaterSourcesScreen extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref, WaterSource source) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete water source?'),
-        content: Text('"${source.name}" will be removed. Past entries logged from it are kept.'),
+        title: Text(l10n.deleteWaterSourceQuestionTitle),
+        content: Text(l10n.deleteWaterSourceConfirmMessage(source.name)),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.cancelButton)),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.deleteButton)),
         ],
       ),
     );
@@ -39,16 +41,17 @@ class WaterSourcesScreen extends ConsumerWidget {
     try {
       await ref.read(waterSourceControllerProvider.notifier).deleteSource(source.clientId);
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(content: Text("Couldn't delete the water source")));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteWaterSourceMessage)));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(waterSourceControllerProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Water sources'), centerTitle: false),
+      appBar: AppBar(title: Text(l10n.waterSourcesLabel), centerTitle: false),
       floatingActionButton: FloatingActionButton(
         heroTag: null,
         onPressed: () => _openAddSheet(context),
@@ -58,10 +61,10 @@ class WaterSourcesScreen extends ConsumerWidget {
         onRefresh: () => ref.read(waterSourceControllerProvider.notifier).refresh(),
         child: state.when(
           data: (sources) => sources.isEmpty
-              ? const EmptyView(
+              ? EmptyView(
                   icon: Icons.water_drop_outlined,
-                  title: 'No water sources yet',
-                  subtitle: 'Tap + to add one, e.g. "Water Bottle" = 0.75L',
+                  title: l10n.noWaterSourcesYetTitle,
+                  subtitle: l10n.tapPlusToAddOneWaterSourceMessage,
                 )
               : ListView.separated(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -72,7 +75,7 @@ class WaterSourcesScreen extends ConsumerWidget {
                     return ListTile(
                       leading: const CircleAvatar(child: Icon(Icons.water_drop)),
                       title: Text(source.name),
-                      subtitle: Text('${source.volumeLiters.toStringAsFixed(2)} L'),
+                      subtitle: Text(l10n.litersValue(source.volumeLiters.toStringAsFixed(2))),
                       onTap: () => _openAddSheet(context, initial: source),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/error_message.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../application/water_source_controller.dart';
 import '../../data/water_entry_repository.dart';
 import '../../domain/water_source.dart';
@@ -64,7 +65,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
     final text = _amountController.text.replaceAll(',', '.').trim();
     final parsed = double.tryParse(text);
     if (parsed == null || parsed <= 0) {
-      setState(() => _error = 'Enter a valid amount in liters');
+      setState(() => _error = AppLocalizations.of(context)!.enterValidAmountError);
       return;
     }
     await _log(liters: parsed, loadingKey: _customKey);
@@ -73,6 +74,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final sourcesState = ref.watch(waterSourceControllerProvider);
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
 
@@ -82,7 +84,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Log water', style: theme.textTheme.titleLarge),
+          Text(l10n.logWaterTitle, style: theme.textTheme.titleLarge),
           const SizedBox(height: 16),
           sourcesState.when(
             loading: () => const Padding(
@@ -95,7 +97,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Saved sources', style: theme.textTheme.labelLarge),
+                  Text(l10n.savedSourcesLabel, style: theme.textTheme.labelLarge),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -118,7 +120,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
               );
             },
           ),
-          Text('Custom amount', style: theme.textTheme.labelLarge),
+          Text(l10n.customAmountLabel, style: theme.textTheme.labelLarge),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -130,7 +132,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
                       ? const SizedBox(
                           height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.add, size: 18),
-                  label: Text('${amount}L'),
+                  label: Text(l10n.amountLitersLabel(amount.toString())),
                   onPressed: () => _log(liters: amount, loadingKey: _amountKey(amount)),
                 ),
             ],
@@ -142,10 +144,10 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
                 child: TextField(
                   controller: _amountController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Amount',
+                  decoration: InputDecoration(
+                    labelText: l10n.amountLabel,
                     suffixText: 'L',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   onSubmitted: (_) => _logCustomAmount(),
                 ),
@@ -156,7 +158,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
                 child: _loading == _customKey
                     ? const SizedBox(
                         height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Add'),
+                    : Text(l10n.addButton),
               ),
             ],
           ),
@@ -179,11 +181,12 @@ class _SourceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ActionChip(
       avatar: loading
           ? const SizedBox(height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2))
           : const Icon(Icons.water_drop, size: 18),
-      label: Text('${source.name} · ${source.volumeLiters.toStringAsFixed(2)}L'),
+      label: Text(l10n.sourceChipLabel(source.name, source.volumeLiters.toStringAsFixed(2))),
       onPressed: onTap,
     );
   }

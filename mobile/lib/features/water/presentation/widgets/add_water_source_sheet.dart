@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../application/water_source_controller.dart';
 import '../../domain/water_source.dart';
 
@@ -57,7 +58,7 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
       }
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
-      setState(() => _error = "Couldn't save the water source. Please try again.");
+      setState(() => _error = AppLocalizations.of(context)!.couldNotSaveWaterSourceMessage);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -66,6 +67,7 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + viewInsets),
@@ -75,33 +77,33 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(_isEditing ? 'Edit water source' : 'New water source',
+            Text(_isEditing ? l10n.editWaterSourceTitle : l10n.newWaterSourceTitle,
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             TextFormField(
               controller: _name,
               autofocus: true,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                hintText: 'e.g. Creatine Shake',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.nameLabel,
+                hintText: l10n.waterSourceNameHint,
+                border: const OutlineInputBorder(),
               ),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) => (v == null || v.trim().isEmpty) ? l10n.requiredFieldError : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _volume,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Volume',
+              decoration: InputDecoration(
+                labelText: l10n.volumeLabel,
                 suffixText: 'L',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               validator: (v) {
                 final parsed = double.tryParse((v ?? '').replaceAll(',', '.'));
-                if (parsed == null) return 'Enter a number';
-                if (parsed <= 0) return 'Must be greater than 0';
+                if (parsed == null) return l10n.enterANumberError;
+                if (parsed <= 0) return l10n.mustBeGreaterThanZeroError;
                 return null;
               },
               onFieldSubmitted: (_) => _submit(),
@@ -116,7 +118,7 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
               child: _submitting
                   ? const SizedBox(
                       height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Save'),
+                  : Text(l10n.saveButton),
             ),
           ],
         ),

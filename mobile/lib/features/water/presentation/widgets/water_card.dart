@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/app_localizations.dart';
+
 /// Prominent horizontal dashboard card: current water intake vs. the daily
 /// goal, a progress bar, and a "+" action to log more.
 class WaterCard extends StatelessWidget {
@@ -19,6 +21,7 @@ class WaterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final hasGoal = goalLiters != null && goalLiters! > 0;
     final ratio = hasGoal ? currentLiters / goalLiters! : null;
     final percentLabel = ratio != null ? '${(ratio * 100).round()}%' : null;
@@ -43,7 +46,7 @@ class WaterCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Water',
+                        l10n.waterLabel,
                         style: theme.textTheme.labelMedium
                             ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       ),
@@ -54,8 +57,9 @@ class WaterCard extends StatelessWidget {
                         children: [
                           Text(
                             hasGoal
-                                ? '${currentLiters.toStringAsFixed(2)} / ${goalLiters!.toStringAsFixed(2)} L'
-                                : '${currentLiters.toStringAsFixed(2)} L',
+                                ? l10n.waterAmountLabel(currentLiters.toStringAsFixed(2),
+                                    goalLiters!.toStringAsFixed(2))
+                                : l10n.waterAmountNoGoalLabel(currentLiters.toStringAsFixed(2)),
                             style: theme.textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
@@ -76,7 +80,7 @@ class WaterCard extends StatelessWidget {
                 IconButton.filledTonal(
                   onPressed: onAdd,
                   icon: const Icon(Icons.add),
-                  tooltip: 'Log water',
+                  tooltip: l10n.logWaterTitle,
                 ),
               ],
             ),
@@ -94,7 +98,7 @@ class WaterCard extends StatelessWidget {
             ] else ...[
               const SizedBox(height: 6),
               Text(
-                'Set a daily goal in Settings',
+                l10n.setDailyGoalMessage,
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../recipes/presentation/create_recipe_screen.dart';
 import '../../recipes/presentation/recipes_tab.dart';
 import 'foods_tab.dart';
@@ -55,31 +56,32 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     );
   }
 
-  ({IconData icon, String label, VoidCallback onPressed}) get _fab {
+  ({IconData icon, String label, VoidCallback onPressed}) _fab(AppLocalizations l10n) {
     switch (_tabController.index) {
       case 0:
-        return (icon: Icons.add, label: 'Food', onPressed: _addFood);
+        return (icon: Icons.add, label: l10n.foodFabLabel, onPressed: _addFood);
       case 1:
-        return (icon: Icons.add, label: 'Meal', onPressed: _logMeal);
+        return (icon: Icons.add, label: l10n.mealFabLabel, onPressed: _logMeal);
       default:
-        return (icon: Icons.add, label: 'Recipe', onPressed: _newRecipe);
+        return (icon: Icons.add, label: l10n.recipeFabLabel, onPressed: _newRecipe);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final fab = _fab;
+    final l10n = AppLocalizations.of(context)!;
+    final fab = _fab(l10n);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nutrition'),
+        title: Text(l10n.nutritionTitle),
         centerTitle: false,
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Foods'),
-            Tab(text: 'Meals'),
-            Tab(text: 'Recipes'),
+          tabs: [
+            Tab(text: l10n.foodsLabel),
+            Tab(text: l10n.mealsTabLabel),
+            Tab(text: l10n.recipesTabLabel),
           ],
         ),
       ),

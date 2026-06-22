@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../application/meal_controller.dart';
 import '../data/meal_repository.dart';
 import '../domain/food.dart';
@@ -91,13 +92,14 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     if (_saving) return; // guard against a fast double-tap creating two meals
     if (_entries.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least one food')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.addAtLeastOneFoodMessage)),
       );
       return;
     }
     setState(() => _saving = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final couldNotSaveMealMessage = AppLocalizations.of(context)!.couldNotSaveMealMessage;
     final entries = _entries
         .map((e) => MealEntryInput(foodClientId: e.food.clientId, grams: e.grams))
         .toList();
@@ -114,17 +116,17 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     } catch (_) {
       setState(() => _saving = false);
       messenger.showSnackBar(
-        const SnackBar(
-            content: Text("Couldn't save the meal. Please try again.")),
+        SnackBar(content: Text(couldNotSaveMealMessage)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit meal' : 'Log meal'),
+        title: Text(_isEditing ? l10n.editMealTitle : l10n.logMealTitle),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -133,27 +135,27 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
                     height: 18,
                     width: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Save'),
+                : Text(l10n.saveButton),
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Meal type', style: Theme.of(context).textTheme.labelLarge),
+          Text(l10n.mealTypeLabel, style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             children: MealType.values.map((type) {
               return ChoiceChip(
-                label: Text(type.label),
+                label: Text(type.label(l10n)),
                 selected: _mealType == type,
                 onSelected: (_) => setState(() => _mealType = type),
               );
             }).toList(),
           ),
           const SizedBox(height: 20),
-          Text('When', style: Theme.of(context).textTheme.labelLarge),
+          Text(l10n.whenLabel, style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: _pickDateTime,
@@ -164,18 +166,18 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Foods', style: Theme.of(context).textTheme.labelLarge),
+              Text(l10n.foodsLabel, style: Theme.of(context).textTheme.labelLarge),
               TextButton.icon(
                 onPressed: _addEntry,
                 icon: const Icon(Icons.add),
-                label: const Text('Add food'),
+                label: Text(l10n.addFoodButton),
               ),
             ],
           ),
           if (_entries.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Text('No foods added yet'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(l10n.noFoodsAddedYetMessage),
             )
           else
             ..._entries.asMap().entries.map((e) {
@@ -185,7 +187,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 child: ListTile(
                   title: Text(draft.food.name),
-                  subtitle: Text('${draft.grams.toStringAsFixed(0)} g'),
+                  subtitle: Text(l10n.gramsValue(draft.grams.toStringAsFixed(0))),
                   trailing: IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => setState(() => _entries.removeAt(e.key)),

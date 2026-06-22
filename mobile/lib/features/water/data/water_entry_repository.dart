@@ -20,16 +20,25 @@ class WaterEntryRepository {
 
   /// Sum of every entry logged today (device-local day), live — updates the
   /// instant a local write lands, independent of sync timing.
+  ///
+  /// The "today" boundary is computed inside [_isToday] on every emission
+  /// rather than once up front: a SQL `WHERE` clause bakes the boundary in
+  /// at query-build time, so a stream built before midnight would keep
+  /// comparing against yesterday's window for as long as it stayed
+  /// subscribed — including entries logged just after midnight, which would
+  /// fall outside that stale window and silently vanish from the total.
   Stream<double> watchTodayTotalLiters() {
+    return _db.select(_db.waterEntries).watch().map(
+          (rows) => rows
+              .where((row) => _isToday(row.consumedAt))
+              .fold<double>(0, (sum, row) => sum + row.volumeLiters),
+        );
+  }
+
+  bool _isToday(DateTime dateTime) {
     final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day);
-    final startOfNextDay = startOfDay.add(const Duration(days: 1));
-    return (_db.select(_db.waterEntries)
-          ..where((t) =>
-              t.consumedAt.isBiggerOrEqualValue(startOfDay) &
-              t.consumedAt.isSmallerThanValue(startOfNextDay)))
-        .watch()
-        .map((rows) => rows.fold<double>(0, (sum, row) => sum + row.volumeLiters));
+    final local = dateTime.toLocal();
+    return local.year == now.year && local.month == now.month && local.day == now.day;
   }
 
   Future<void> create({

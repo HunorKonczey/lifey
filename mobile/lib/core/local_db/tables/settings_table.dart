@@ -15,6 +15,9 @@ class UserSettingsTable extends Table {
   IntColumn get dailyFatGoal => integer().nullable()();
   RealColumn get dailyWaterGoalLiters => real().nullable()();
   TextColumn get theme => text()(); // LIGHT / DARK / SYSTEM
+  // Added in schema v3, after rows already existed — needs a DEFAULT so
+  // `ALTER TABLE ADD COLUMN` is valid for existing (non-empty) tables.
+  TextColumn get language => text().withDefault(const Constant('SYSTEM'))(); // SYSTEM / ENGLISH / HUNGARIAN
 
   @override
   Set<Column> get primaryKey => {clientId};
