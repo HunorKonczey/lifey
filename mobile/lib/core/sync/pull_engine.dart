@@ -508,6 +508,11 @@ class PullEngine {
       if (await _hasPendingOperation(clientId)) continue;
       if (onDelete != null) await onDelete(clientId);
       await _db.customStatement('DELETE FROM $table WHERE client_id = ?', [clientId]);
+      // customStatement doesn't notify watchers of the table it deleted from,
+      // so without this the row lingers in every watch stream's last emitted
+      // value (resurfacing as a stale empty row) until an unrelated write
+      // re-queries it. See SyncEngine._applySuccess for the same fix.
+      _db.notifyUpdates({TableUpdate(table, kind: UpdateKind.delete)});
     }
   }
 }

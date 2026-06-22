@@ -175,6 +175,12 @@ class SyncEngine {
             'UPDATE ${config.tableName} SET server_id = ? WHERE client_id = ?',
             [(data['id'] as num).toInt(), op.clientId],
           );
+          // customStatement runs raw SQL and, unlike Drift's query builder,
+          // does NOT notify watchers of the tables it touched — so any
+          // `.watch()`/join stream over this table keeps serving a stale
+          // snapshot until some *other* (builder-based) write happens to
+          // notify it. Tell Drift explicitly.
+          _db.notifyUpdates({TableUpdate(config.tableName, kind: UpdateKind.update)});
         }
       case 'delete':
         // The row (and its children) were kept around — hidden from list
@@ -185,6 +191,12 @@ class SyncEngine {
           'DELETE FROM ${config.tableName} WHERE client_id = ?',
           [op.clientId],
         );
+        // Without this notify, the parent row is gone from the DB but every
+        // watch stream over it keeps the now-deleted row in its last emitted
+        // value — which, once this op is removed and the delete-block filter
+        // clears, resurfaces as a stale empty (0-child) row in list UIs
+        // until an unrelated write or an app restart forces a re-query.
+        _db.notifyUpdates({TableUpdate(config.tableName, kind: UpdateKind.delete)});
       case 'update':
         break; // the local row already holds the latest data
     }
