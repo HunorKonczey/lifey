@@ -22,9 +22,14 @@ class LogRecipeSheet extends ConsumerStatefulWidget {
 class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
   static final _label = DateFormat('EEE, MMM d · HH:mm');
 
+  static const _minPortionDivisor = 1;
+  static const _maxPortionDivisor = 20;
+
   late MealType _mealType = _defaultForNow();
   DateTime _dateTime = DateTime.now();
   bool _submitting = false;
+  bool _isPartialLog = false;
+  int _portionDivisor = 1;
 
   static MealType _defaultForNow() {
     final hour = DateTime.now().hour;
@@ -53,6 +58,24 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
     setState(() => _dateTime = picked.isAfter(now) ? now : picked);
   }
 
+  void _decrementPortionDivisor() {
+    if (_portionDivisor <= _minPortionDivisor) return;
+    setState(() => _portionDivisor--);
+  }
+
+  void _incrementPortionDivisor() {
+    if (_portionDivisor >= _maxPortionDivisor) return;
+    setState(() => _portionDivisor++);
+  }
+
+  double _effective(double total) =>
+      _isPartialLog ? total / _portionDivisor : total;
+
+  double _effectiveGrams(double grams) {
+    if (!_isPartialLog) return grams;
+    return (grams / _portionDivisor * 100).round() / 100;
+  }
+
   Future<void> _submit() async {
     if (_submitting) return; // guard against a fast double-tap creating two meals
     setState(() => _submitting = true);
@@ -65,7 +88,8 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
             mealType: _mealType,
             entries: widget.recipe.ingredients
                 .map((i) => MealEntryInput(
-                    foodClientId: i.foodClientId, grams: i.quantityInGrams))
+                    foodClientId: i.foodClientId,
+                    grams: _effectiveGrams(i.quantityInGrams)))
                 .toList(),
           );
       navigator.pop();
@@ -118,6 +142,49 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
             onPressed: _submitting ? null : _pickDateTime,
             icon: const Icon(Icons.schedule),
             label: Text(_label.format(_dateTime)),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.logAsPartMealButton),
+            value: _isPartialLog,
+            onChanged: _submitting
+                ? null
+                : (value) => setState(() => _isPartialLog = value),
+          ),
+          if (_isPartialLog) ...[
+            const SizedBox(height: 8),
+            Text(l10n.divideIntoPartsLabel,
+                style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                IconButton.outlined(
+                  onPressed: _submitting ? null : _decrementPortionDivisor,
+                  icon: const Icon(Icons.remove),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text('$_portionDivisor',
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                ),
+                IconButton.outlined(
+                  onPressed: _submitting ? null : _incrementPortionDivisor,
+                  icon: const Icon(Icons.add),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            l10n.recipeMacrosPreviewLabel(
+              _effective(widget.recipe.totalCalories).round().toString(),
+              _effective(widget.recipe.totalProtein).toStringAsFixed(1),
+              _effective(widget.recipe.totalCarbs).toStringAsFixed(1),
+              _effective(widget.recipe.totalFat).toStringAsFixed(1),
+            ),
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 20),
           FilledButton.icon(

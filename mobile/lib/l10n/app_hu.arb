@@ -221,6 +221,10 @@
     "noIngredientsMessage": "Nincs hozzávaló",
     "totalCaloriesProteinLabel": "≈ {calories} kcal · {protein} g fehérje",
     "logAsMealButton": "Naplózás mint étkezés",
+    "logAsPartMealButton": "Részmennyiségként naplózom",
+    "divideIntoPartsLabel": "Hányadrészét eszed meg?",
+    "perPortionCaloriesLabel": "1 adag: {calories} kcal",
+    "recipeMacrosPreviewLabel": "≈ {calories} kcal · {protein} g fehérje · {carbs} g szénhidrát · {fat} g zsír",
 
     "logOutTooltip": "Kijelentkezés",
     "todaySectionTitle": "Mai nap",

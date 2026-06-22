@@ -643,6 +643,18 @@
     "logAsMealButton": "Log as meal",
     "@logAsMealButton": {"description": "Button on a recipe card to log it as a meal"},
 
+    "logAsPartMealButton": "Log as part meal",
+    "@logAsPartMealButton": {"description": "Toggle in the log-recipe sheet to log only a fraction of the recipe instead of the whole thing"},
+
+    "divideIntoPartsLabel": "Divide into how many parts?",
+    "@divideIntoPartsLabel": {"description": "Label for the divisor input that splits a recipe into portions when logging part of it"},
+
+    "perPortionCaloriesLabel": "1 portion: {calories} kcal",
+    "@perPortionCaloriesLabel": {"description": "Preview of the calories in a single portion when logging a recipe as a part meal", "placeholders": {"calories": {"type": "String"}}},
+
+    "recipeMacrosPreviewLabel": "≈ {calories} kcal · {protein} g protein · {carbs} g carbs · {fat} g fat",
+    "@recipeMacrosPreviewLabel": {"description": "Preview of the effective calories/protein/carbs/fat being logged in the log-recipe sheet, scaled by the portion divisor when logging a part meal", "placeholders": {"calories": {"type": "String"}, "protein": {"type": "String"}, "carbs": {"type": "String"}, "fat": {"type": "String"}}},
+
     "logOutTooltip": "Log out",
     "@logOutTooltip": {"description": "Tooltip for the logout button on the dashboard"},
 

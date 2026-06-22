@@ -27,24 +27,49 @@ class MealRepository {
   final AppDatabase _db;
   final OutboxWriter _outbox;
 
+  // meals, mealEntries and foods are joined into a *single* SQL query so
+  // Drift re-runs them as one atomic read. Watching those three tables
+  // separately and combining the results in Dart (as this used to do) means
+  // each table's watch stream re-queries and emits independently — when
+  // delete() removes a meal's entries and then the meal row itself in the
+  // same transaction, the mealEntries$ update can arrive before meals$'s
+  // does, and the combined snapshot briefly (or, if meals$ is slow,
+  // indefinitely) shows the meal still present but with zero entries/macros.
+  // A join can't produce that inconsistent state: it's computed in one shot
+  // against a single consistent read of the database.
+  //
+  // pendingOperations is still combined separately — it's only used for the
+  // delete-block filter and never written in the same transaction as
+  // meals/mealEntries, so there's no equivalent race for it.
   Stream<List<Meal>> watchAll() {
-    final meals$ = _db.select(_db.meals).watch();
-    final pendingOps$ = _db.select(_db.pendingOperations).watch();
-    return combineLatest2(meals$, pendingOps$, (rows, ops) => (rows, ops)).asyncMap((pair) async {
-      final (allMealRows, ops) = pair;
+    final joinedMeals$ = _db.select(_db.meals).join([
+      leftOuterJoin(_db.mealEntries, _db.mealEntries.mealClientId.equalsExp(_db.meals.clientId)),
+      leftOuterJoin(_db.foods, _db.foods.clientId.equalsExp(_db.mealEntries.foodClientId)),
+    ]).watch();
+
+    return combineLatest2(
+      joinedMeals$,
+      _db.select(_db.pendingOperations).watch(),
+      (rows, ops) => (rows, ops),
+    ).map((pair) {
+      final (joinedRows, ops) = pair;
       final blocked = blockedByActiveDelete(ops);
-      final mealRows = allMealRows.where((r) => !blocked.contains(r.clientId)).toList();
-      if (mealRows.isEmpty) return const <Meal>[];
 
-      final foods = {for (final f in await _db.select(_db.foods).get()) f.clientId: f};
-
+      final mealRowsByClientId = <String, MealRow>{};
       final entriesByMeal = <String, List<MealEntry>>{};
-      for (final entry in await _db.select(_db.mealEntries).get()) {
-        final food = foods[entry.foodClientId];
-        final grams = entry.quantityInGrams;
-        entriesByMeal.putIfAbsent(entry.mealClientId, () => []).add(
+      for (final row in joinedRows) {
+        final mealRow = row.readTable(_db.meals);
+        if (blocked.contains(mealRow.clientId)) continue;
+        mealRowsByClientId[mealRow.clientId] = mealRow;
+
+        final entryRow = row.readTableOrNull(_db.mealEntries);
+        if (entryRow == null) continue; // meal has no entries — left join produced no match
+
+        final food = row.readTableOrNull(_db.foods);
+        final grams = entryRow.quantityInGrams;
+        entriesByMeal.putIfAbsent(mealRow.clientId, () => []).add(
               MealEntry(
-                foodClientId: entry.foodClientId,
+                foodClientId: entryRow.foodClientId,
                 foodName: food?.name ?? 'Unknown',
                 quantityInGrams: grams,
                 calories: (food?.caloriesPer100g ?? 0) * grams / 100,
@@ -55,7 +80,7 @@ class MealRepository {
             );
       }
 
-      final meals = mealRows
+      final meals = mealRowsByClientId.values
           .map((row) => _toDomain(row, entriesByMeal[row.clientId] ?? const []))
           .toList()
         ..sort((a, b) => b.dateTime.compareTo(a.dateTime));

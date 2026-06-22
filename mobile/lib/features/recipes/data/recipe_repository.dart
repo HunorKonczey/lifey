@@ -28,33 +28,56 @@ class RecipeRepository {
   final AppDatabase _db;
   final OutboxWriter _outbox;
 
+  // recipes, recipeIngredients and foods are joined into a *single* SQL
+  // query so Drift re-runs them as one atomic read, instead of watching the
+  // three tables separately and combining in Dart — that let delete()'s
+  // removal of a recipe's ingredients and then the recipe row itself (same
+  // transaction) be observed as two independent, unsynchronized stream
+  // emissions: if ingredients$ updated before recipes$ did, the combined
+  // snapshot could briefly show the recipe still present but with zero
+  // ingredients/macros. A join can't produce that inconsistent state — see
+  // meal_repository.dart's watchAll() for the full explanation.
   Stream<List<Recipe>> watchAll() {
-    final recipes$ = _db.select(_db.recipes).watch();
-    final pendingOps$ = _db.select(_db.pendingOperations).watch();
-    return combineLatest2(recipes$, pendingOps$, (rows, ops) => (rows, ops)).asyncMap((pair) async {
-      final (allRecipeRows, ops) = pair;
+    final joinedRecipes$ = _db.select(_db.recipes).join([
+      leftOuterJoin(
+          _db.recipeIngredients, _db.recipeIngredients.recipeClientId.equalsExp(_db.recipes.clientId)),
+      leftOuterJoin(_db.foods, _db.foods.clientId.equalsExp(_db.recipeIngredients.foodClientId)),
+    ]).watch();
+
+    return combineLatest2(
+      joinedRecipes$,
+      _db.select(_db.pendingOperations).watch(),
+      (rows, ops) => (rows, ops),
+    ).map((pair) {
+      final (joinedRows, ops) = pair;
       final blocked = blockedByActiveDelete(ops);
-      final recipeRows = allRecipeRows.where((r) => !blocked.contains(r.clientId)).toList();
-      if (recipeRows.isEmpty) return const <Recipe>[];
 
-      final foods = {for (final f in await _db.select(_db.foods).get()) f.clientId: f};
-
+      final recipeRowsByClientId = <String, RecipeRow>{};
       final ingredientsByRecipe = <String, List<RecipeIngredient>>{};
-      for (final ing in await _db.select(_db.recipeIngredients).get()) {
-        final food = foods[ing.foodClientId];
-        final grams = ing.quantityInGrams;
-        ingredientsByRecipe.putIfAbsent(ing.recipeClientId, () => []).add(
+      for (final row in joinedRows) {
+        final recipeRow = row.readTable(_db.recipes);
+        if (blocked.contains(recipeRow.clientId)) continue;
+        recipeRowsByClientId[recipeRow.clientId] = recipeRow;
+
+        final ingredientRow = row.readTableOrNull(_db.recipeIngredients);
+        if (ingredientRow == null) continue; // no ingredients — left join produced no match
+
+        final food = row.readTableOrNull(_db.foods);
+        final grams = ingredientRow.quantityInGrams;
+        ingredientsByRecipe.putIfAbsent(recipeRow.clientId, () => []).add(
               RecipeIngredient(
-                foodClientId: ing.foodClientId,
+                foodClientId: ingredientRow.foodClientId,
                 foodName: food?.name ?? 'Unknown',
                 quantityInGrams: grams,
                 calories: (food?.caloriesPer100g ?? 0) * grams / 100,
                 protein: (food?.proteinPer100g ?? 0) * grams / 100,
+                carbs: (food?.carbsPer100g ?? 0) * grams / 100,
+                fat: (food?.fatPer100g ?? 0) * grams / 100,
               ),
             );
       }
 
-      final recipes = recipeRows
+      final recipes = recipeRowsByClientId.values
           .map((row) => _toDomain(row, ingredientsByRecipe[row.clientId] ?? const []))
           .toList()
         ..sort((a, b) => a.name.compareTo(b.name));

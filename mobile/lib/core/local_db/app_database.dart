@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -5,6 +6,7 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../sync/client_ref.dart';
 import 'tables/exercise_table.dart';
 import 'tables/food_table.dart';
 import 'tables/meal_tables.dart';
@@ -49,7 +51,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -63,8 +65,61 @@ class AppDatabase extends _$AppDatabase {
           if (from < 3) {
             await m.addColumn(userSettingsTable, userSettingsTable.language);
           }
+          // V4: no schema change — meals used to queue their `dateTime` as a
+          // zone-less string the backend has since stopped accepting, so any
+          // meal create/update that failed to sync before this fix is stuck
+          // with that stale payload baked in (retrying it just resends the
+          // same unparseable string). Rebuild those payloads from the
+          // still-correct local row and let them retry.
+          if (from < 4) {
+            await _fixStaleMealOutboxPayloads();
+          }
         },
       );
+
+  Future<void> _fixStaleMealOutboxPayloads() async {
+    final staleOps = await (select(pendingOperations)
+          ..where((t) => t.entityType.equals('meal') & t.status.equals('failed')))
+        .get();
+
+    for (final op in staleOps) {
+      final payload = jsonDecode(op.payloadJson) as Map<String, dynamic>;
+      final dateTimeStr = payload['dateTime'] as String?;
+      // The fixed client always sends a UTC ('...Z') timestamp — anything
+      // without it is a pre-fix payload that needs rebuilding.
+      if (dateTimeStr == null || dateTimeStr.contains('Z')) continue;
+
+      final mealRow =
+          await (select(meals)..where((t) => t.clientId.equals(op.clientId))).getSingleOrNull();
+      if (mealRow == null) {
+        // No local row to rebuild from (e.g. deleted offline) — drop it.
+        await (delete(pendingOperations)..where((t) => t.id.equals(op.id))).go();
+        continue;
+      }
+
+      final entryRows = await (select(mealEntries)
+            ..where((t) => t.mealClientId.equals(op.clientId)))
+          .get();
+      final rebuiltPayload = {
+        'dateTime': mealRow.mealDateTime.toUtc().toIso8601String(),
+        'mealType': payload['mealType'],
+        'entries': entryRows
+            .map((e) => {
+                  'foodId': clientRef(e.foodClientId),
+                  'quantityInGrams': e.quantityInGrams,
+                })
+            .toList(),
+      };
+
+      await (update(pendingOperations)..where((t) => t.id.equals(op.id))).write(
+        PendingOperationsCompanion(
+          payloadJson: Value(jsonEncode(rebuiltPayload)),
+          status: const Value('pending'),
+          lastError: const Value(null),
+        ),
+      );
+    }
+  }
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {

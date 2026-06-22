@@ -8,6 +8,8 @@ class RecipeIngredient {
     required this.quantityInGrams,
     required this.calories,
     required this.protein,
+    required this.carbs,
+    required this.fat,
   });
 
   final String foodClientId;
@@ -15,6 +17,8 @@ class RecipeIngredient {
   final double quantityInGrams;
   final double calories;
   final double protein;
+  final double carbs;
+  final double fat;
 }
 
 /// A recipe with its ingredients (`/recipes`).
@@ -38,4 +42,8 @@ class Recipe {
 
   double get totalProtein =>
       ingredients.fold(0, (sum, i) => sum + i.protein);
+
+  double get totalCarbs => ingredients.fold(0, (sum, i) => sum + i.carbs);
+
+  double get totalFat => ingredients.fold(0, (sum, i) => sum + i.fat);
 }

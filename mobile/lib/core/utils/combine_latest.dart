@@ -50,3 +50,68 @@ Stream<T> combineLatest2<A, B, T>(Stream<A> a, Stream<B> b, T Function(A a, B b)
   );
   return controller.stream;
 }
+
+/// Same as [combineLatest2], but for four sources at once. Prefer this over
+/// nesting two [combineLatest2] calls (e.g. combining a pair-of-pairs) — each
+/// nested controller adds another async hop between a source emitting and
+/// the final value reaching listeners, which is enough lag for a UI that
+/// assumes an immediate update (e.g. a [Dismissible] expecting its item gone
+/// from the very next rebuild) to flash the stale value back into view.
+Stream<(A, B, C, D)> combineLatest4<A, B, C, D>(
+  Stream<A> a,
+  Stream<B> b,
+  Stream<C> c,
+  Stream<D> d,
+) {
+  late final StreamController<(A, B, C, D)> controller;
+  A? lastA;
+  B? lastB;
+  C? lastC;
+  D? lastD;
+  var hasA = false;
+  var hasB = false;
+  var hasC = false;
+  var hasD = false;
+  StreamSubscription<A>? subA;
+  StreamSubscription<B>? subB;
+  StreamSubscription<C>? subC;
+  StreamSubscription<D>? subD;
+
+  void emit() {
+    if (hasA && hasB && hasC && hasD) {
+      controller.add((lastA as A, lastB as B, lastC as C, lastD as D));
+    }
+  }
+
+  controller = StreamController<(A, B, C, D)>(
+    onListen: () {
+      subA = a.listen((value) {
+        lastA = value;
+        hasA = true;
+        emit();
+      }, onError: controller.addError);
+      subB = b.listen((value) {
+        lastB = value;
+        hasB = true;
+        emit();
+      }, onError: controller.addError);
+      subC = c.listen((value) {
+        lastC = value;
+        hasC = true;
+        emit();
+      }, onError: controller.addError);
+      subD = d.listen((value) {
+        lastD = value;
+        hasD = true;
+        emit();
+      }, onError: controller.addError);
+    },
+    onCancel: () async {
+      await subA?.cancel();
+      await subB?.cancel();
+      await subC?.cancel();
+      await subD?.cancel();
+    },
+  );
+  return controller.stream;
+}
