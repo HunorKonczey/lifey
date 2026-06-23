@@ -107,12 +107,36 @@ class HealthWorkoutObserverService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
     _initialized = true;
+    // If tapping the notification cold-launched the app (process had been
+    // terminated, not just backgrounded), onDidReceiveNotificationResponse
+    // above does NOT fire for the launching notification on iOS —
+    // getNotificationAppLaunchDetails() is the documented way to retrieve it.
+    await _consumeLaunchDetails();
+  }
+
+  Future<void> _consumeLaunchDetails() async {
+    final details = await _notifications.getNotificationAppLaunchDetails();
+    debugPrint('[HealthWorkoutObserver] launch details: '
+        'didNotificationLaunchApp=${details?.didNotificationLaunchApp}, '
+        'payload=${details?.notificationResponse?.payload}');
+    if (details?.didNotificationLaunchApp != true) return;
+    final payload = details?.notificationResponse?.payload;
+    if (payload == null) return;
+    _dispatchTapPayload(payload);
   }
 
   void _onNotificationTap(NotificationResponse response) {
+    debugPrint('[HealthWorkoutObserver] onDidReceiveNotificationResponse fired, '
+        'payload=${response.payload}');
     final payload = response.payload;
     if (payload == null) return;
+    _dispatchTapPayload(payload);
+  }
+
+  void _dispatchTapPayload(String payload) {
     final event = HealthWorkoutEvent.fromJson(jsonDecode(payload) as Map<String, dynamic>);
+    debugPrint('[HealthWorkoutObserver] dispatching tapped event ${event.uuid}, '
+        'handler set=${onWorkoutNotificationTapped != null}');
     onWorkoutNotificationTapped?.call(event);
   }
 
