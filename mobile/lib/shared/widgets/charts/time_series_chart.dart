@@ -10,16 +10,19 @@ class TimeSeriesPoint {
 
 /// Generic line chart: dates along the X axis, a numeric value along the Y
 /// axis, points connected by a single line. Feature-agnostic — callers
-/// (weight, and later other daily metrics) supply the points and label
-/// formatters, this widget only draws.
+/// (weight, statistics, and later other daily metrics) supply the points and
+/// label formatters, this widget only draws.
 ///
 /// Only the first, last, and a thinned-out subset of in-between dates are
-/// labelled, since a dense daily series would otherwise overlap.
-class TimeSeriesChart extends StatelessWidget {
+/// labelled, since a dense daily series would otherwise overlap. Tapping a
+/// point shows a tooltip with its exact value + date; tapping the same point
+/// again, or another one, closes or moves the tooltip respectively.
+class TimeSeriesChart extends StatefulWidget {
   const TimeSeriesChart({
     super.key,
     required this.points,
     required this.dateLabelBuilder,
+    this.valueLabelBuilder,
     this.deltaLabelBuilder,
     this.height = 220,
     this.showDeltaLabels = false,
@@ -28,6 +31,10 @@ class TimeSeriesChart extends StatelessWidget {
   final List<TimeSeriesPoint> points;
   final String Function(DateTime date) dateLabelBuilder;
 
+  /// Formats a single point's exact value for the tap-to-reveal tooltip
+  /// (e.g. "72.4 kg"). Defaults to one decimal place when omitted.
+  final String Function(double value)? valueLabelBuilder;
+
   /// Formats the change between two consecutive points (e.g. "+0.3"). Only
   /// used when [showDeltaLabels] is true.
   final String Function(double delta)? deltaLabelBuilder;
@@ -35,27 +42,212 @@ class TimeSeriesChart extends StatelessWidget {
   final bool showDeltaLabels;
 
   @override
+  State<TimeSeriesChart> createState() => _TimeSeriesChartState();
+}
+
+class _TimeSeriesChartState extends State<TimeSeriesChart> {
+  int? _selectedIndex;
+
+  @override
+  void didUpdateWidget(TimeSeriesChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The selected index is meaningless against a different series (e.g.
+    // after switching metric/range) — drop it rather than highlighting the
+    // wrong point or pointing at one that no longer exists.
+    if (oldWidget.points != widget.points) {
+      _selectedIndex = null;
+    }
+  }
+
+  void _handleTapDown(TapDownDetails details, Size size) {
+    final geometry = _ChartGeometry(widget.points, size);
+    final nearest = geometry.nearestIndex(details.localPosition);
+    setState(() => _selectedIndex = _selectedIndex == nearest ? null : nearest);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final valueLabelBuilder = widget.valueLabelBuilder ?? (v) => v.toStringAsFixed(1);
+    final selectedIndex = _selectedIndex;
+
     return SizedBox(
-      height: height,
+      height: widget.height,
       width: double.infinity,
-      child: CustomPaint(
-        painter: _TimeSeriesChartPainter(
-          points: points,
-          dateLabelBuilder: dateLabelBuilder,
-          deltaLabelBuilder: showDeltaLabels ? deltaLabelBuilder : null,
-          lineColor: theme.colorScheme.primary,
-          pointColor: theme.colorScheme.primary,
-          gridColor: theme.colorScheme.outlineVariant,
-          labelStyle: theme.textTheme.bodySmall!.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.biggest;
+          final geometry = _ChartGeometry(widget.points, size);
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown:
+                    widget.points.isEmpty ? null : (details) => _handleTapDown(details, size),
+                child: CustomPaint(
+                  size: size,
+                  painter: _TimeSeriesChartPainter(
+                    points: widget.points,
+                    dateLabelBuilder: widget.dateLabelBuilder,
+                    deltaLabelBuilder: widget.showDeltaLabels ? widget.deltaLabelBuilder : null,
+                    selectedIndex: selectedIndex,
+                    lineColor: theme.colorScheme.primary,
+                    pointColor: theme.colorScheme.primary,
+                    selectedPointColor: theme.colorScheme.secondary,
+                    gridColor: theme.colorScheme.outlineVariant,
+                    labelStyle: theme.textTheme.bodySmall!.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    positiveDeltaColor: theme.colorScheme.error,
+                    negativeDeltaColor: theme.colorScheme.tertiary,
+                  ),
+                ),
+              ),
+              if (selectedIndex != null && selectedIndex < widget.points.length)
+                _PointTooltip(
+                  geometry: geometry,
+                  index: selectedIndex,
+                  valueText: valueLabelBuilder(widget.points[selectedIndex].value),
+                  dateText: widget.dateLabelBuilder(widget.points[selectedIndex].date),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The tap-to-reveal tooltip, positioned above the selected point using the
+/// same [_ChartGeometry] the painter draws from — a real widget (rather than
+/// canvas-drawn text) so its content is inspectable in tests and by
+/// accessibility tooling.
+class _PointTooltip extends StatelessWidget {
+  const _PointTooltip({
+    required this.geometry,
+    required this.index,
+    required this.valueText,
+    required this.dateText,
+  });
+
+  final _ChartGeometry geometry;
+  final int index;
+  final String valueText;
+  final String dateText;
+
+  static const _width = 120.0;
+  static const _gap = 10.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final anchor = geometry.offsetFor(index);
+    final left = (anchor.dx - _width / 2).clamp(geometry.plotLeft, geometry.plotRight - _width);
+
+    return Positioned(
+      left: left,
+      bottom: geometry.size.height - anchor.dy + _gap,
+      width: _width,
+      child: IgnorePointer(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.inverseSurface,
+            borderRadius: BorderRadius.circular(8),
           ),
-          positiveDeltaColor: theme.colorScheme.error,
-          negativeDeltaColor: theme.colorScheme.tertiary,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                valueText,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onInverseSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                dateText,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onInverseSurface.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+/// Shared layout math for the chart's plot area: where the X axis sits,
+/// where each point lands. The painter, the tap handler, and the tooltip
+/// all build one of these for the same [Size], so a tap and its tooltip are
+/// always positioned against exactly the geometry that was drawn.
+class _ChartGeometry {
+  _ChartGeometry(this.points, this.size)
+      : plotTop = _topPadding,
+        plotBottom = size.height - _bottomPadding,
+        plotLeft = _sidePadding,
+        plotRight = size.width - _sidePadding {
+    if (points.isEmpty) {
+      minY = 0;
+      maxY = 0;
+      return;
+    }
+    final values = points.map((p) => p.value);
+    var lo = values.reduce((a, b) => a < b ? a : b);
+    var hi = values.reduce((a, b) => a > b ? a : b);
+    if (lo == hi) {
+      lo -= 1;
+      hi += 1;
+    } else {
+      final pad = (hi - lo) * 0.1;
+      lo -= pad;
+      hi += pad;
+    }
+    minY = lo;
+    maxY = hi;
+  }
+
+  static const _topPadding = 24.0;
+  static const _bottomPadding = 24.0;
+  static const _sidePadding = 8.0;
+
+  final List<TimeSeriesPoint> points;
+  final Size size;
+  final double plotTop;
+  final double plotBottom;
+  final double plotLeft;
+  final double plotRight;
+  late final double minY;
+  late final double maxY;
+
+  double xFor(int index) {
+    if (points.length == 1) return (plotLeft + plotRight) / 2;
+    return plotLeft + (plotRight - plotLeft) * index / (points.length - 1);
+  }
+
+  double yFor(double value) {
+    return plotBottom - (value - minY) / (maxY - minY) * (plotBottom - plotTop);
+  }
+
+  Offset offsetFor(int index) => Offset(xFor(index), yFor(points[index].value));
+
+  /// Index of the point whose plotted position is closest to [position].
+  int nearestIndex(Offset position) {
+    var bestIndex = 0;
+    var bestDistance = double.infinity;
+    for (var i = 0; i < points.length; i++) {
+      final distance = (offsetFor(i) - position).distanceSquared;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+    return bestIndex;
   }
 }
 
@@ -64,8 +256,10 @@ class _TimeSeriesChartPainter extends CustomPainter {
     required this.points,
     required this.dateLabelBuilder,
     required this.deltaLabelBuilder,
+    required this.selectedIndex,
     required this.lineColor,
     required this.pointColor,
+    required this.selectedPointColor,
     required this.gridColor,
     required this.labelStyle,
     required this.positiveDeltaColor,
@@ -75,60 +269,33 @@ class _TimeSeriesChartPainter extends CustomPainter {
   final List<TimeSeriesPoint> points;
   final String Function(DateTime date) dateLabelBuilder;
   final String Function(double delta)? deltaLabelBuilder;
+  final int? selectedIndex;
   final Color lineColor;
   final Color pointColor;
+  final Color selectedPointColor;
   final Color gridColor;
   final TextStyle labelStyle;
   final Color positiveDeltaColor;
   final Color negativeDeltaColor;
 
-  static const _topPadding = 24.0;
-  static const _bottomPadding = 24.0;
-  static const _sidePadding = 8.0;
   static const _maxDateLabels = 6;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (points.isEmpty) return;
 
-    final plotTop = _topPadding;
-    final plotBottom = size.height - _bottomPadding;
-    final plotLeft = _sidePadding;
-    final plotRight = size.width - _sidePadding;
-
-    final values = points.map((p) => p.value).toList();
-    var minY = values.reduce((a, b) => a < b ? a : b);
-    var maxY = values.reduce((a, b) => a > b ? a : b);
-    if (minY == maxY) {
-      minY -= 1;
-      maxY += 1;
-    } else {
-      final pad = (maxY - minY) * 0.1;
-      minY -= pad;
-      maxY += pad;
-    }
-
-    double xFor(int index) {
-      if (points.length == 1) return (plotLeft + plotRight) / 2;
-      return plotLeft + (plotRight - plotLeft) * index / (points.length - 1);
-    }
-
-    double yFor(double value) {
-      return plotBottom - (value - minY) / (maxY - minY) * (plotBottom - plotTop);
-    }
+    final geometry = _ChartGeometry(points, size);
 
     // Baseline grid line.
     canvas.drawLine(
-      Offset(plotLeft, plotBottom),
-      Offset(plotRight, plotBottom),
+      Offset(geometry.plotLeft, geometry.plotBottom),
+      Offset(geometry.plotRight, geometry.plotBottom),
       Paint()
         ..color = gridColor
         ..strokeWidth = 1,
     );
 
-    final offsets = [
-      for (var i = 0; i < points.length; i++) Offset(xFor(i), yFor(points[i].value)),
-    ];
+    final offsets = [for (var i = 0; i < points.length; i++) geometry.offsetFor(i)];
 
     if (offsets.length > 1) {
       final path = Path()..moveTo(offsets.first.dx, offsets.first.dy);
@@ -145,8 +312,13 @@ class _TimeSeriesChartPainter extends CustomPainter {
       );
     }
 
-    for (final offset in offsets) {
-      canvas.drawCircle(offset, 3.5, Paint()..color = pointColor);
+    for (var i = 0; i < offsets.length; i++) {
+      final isSelected = i == selectedIndex;
+      canvas.drawCircle(
+        offsets[i],
+        isSelected ? 5.5 : 3.5,
+        Paint()..color = isSelected ? selectedPointColor : pointColor,
+      );
     }
 
     if (deltaLabelBuilder != null) {
@@ -174,7 +346,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
       _drawText(
         canvas,
         dateLabelBuilder(points[i].date),
-        Offset(xFor(i), plotBottom + 6),
+        Offset(geometry.xFor(i), geometry.plotBottom + 6),
         labelStyle,
         align: i == 0
             ? _HAlign.start
@@ -216,6 +388,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
   bool shouldRepaint(_TimeSeriesChartPainter oldDelegate) {
     return oldDelegate.points != points ||
         oldDelegate.lineColor != lineColor ||
+        oldDelegate.selectedIndex != selectedIndex ||
         (oldDelegate.deltaLabelBuilder == null) != (deltaLabelBuilder == null);
   }
 }

@@ -574,6 +574,60 @@
     "noWeightDataForRangeTitle": "No entries in this range",
     "@noWeightDataForRangeTitle": {"description": "Empty state on the weight chart when entries exist but none fall in the selected range"},
 
+    "statMetricWorkoutMinutesLabel": "Workout minutes",
+    "@statMetricWorkoutMinutesLabel": {"description": "Statistics metric label: total workout duration per day"},
+
+    "statMetricWorkoutCountLabel": "Workouts",
+    "@statMetricWorkoutCountLabel": {"description": "Statistics metric label: number of workouts per day"},
+
+    "statMetricActiveCaloriesLabel": "Active calories",
+    "@statMetricActiveCaloriesLabel": {"description": "Statistics metric label: calories burned during workouts (Apple Health)"},
+
+    "statisticsTitle": "Statistics",
+    "@statisticsTitle": {"description": "Title of the statistics screen"},
+
+    "statRangeWeekLabel": "7 days",
+    "@statRangeWeekLabel": {"description": "Statistics chart range selector: last 7 days"},
+
+    "statRangeMonthLabel": "30 days",
+    "@statRangeMonthLabel": {"description": "Statistics chart range selector: last 30 days"},
+
+    "statRangeQuarterLabel": "90 days",
+    "@statRangeQuarterLabel": {"description": "Statistics chart range selector: last 90 days"},
+
+    "statRangeAllLabel": "All",
+    "@statRangeAllLabel": {"description": "Statistics chart range selector: all entries"},
+
+    "noStatsDataForRangeTitle": "No data in this range",
+    "@noStatsDataForRangeTitle": {"description": "Empty state on the statistics chart when the selected metric has no data in the selected range"},
+
+    "statSumLabel": "Total",
+    "@statSumLabel": {"description": "Statistics KPI card label: sum of the selected metric over the range"},
+
+    "statAverageLabel": "Average",
+    "@statAverageLabel": {"description": "Statistics KPI card label: average of the selected metric over the range"},
+
+    "statMinLabel": "Min",
+    "@statMinLabel": {"description": "Statistics KPI card label: minimum daily value over the range"},
+
+    "statMaxLabel": "Max",
+    "@statMaxLabel": {"description": "Statistics KPI card label: maximum daily value over the range"},
+
+    "statUnitKcal": "kcal",
+    "@statUnitKcal": {"description": "Unit suffix for calorie-based statistics metrics"},
+
+    "statUnitGrams": "g",
+    "@statUnitGrams": {"description": "Unit suffix for gram-based statistics metrics (protein/carbs/fat)"},
+
+    "statUnitMinutes": "min",
+    "@statUnitMinutes": {"description": "Unit suffix for the workout-minutes statistics metric"},
+
+    "statUnitKg": "kg",
+    "@statUnitKg": {"description": "Unit suffix for the weight statistics metric"},
+
+    "statUnitLiters": "L",
+    "@statUnitLiters": {"description": "Unit suffix for the water statistics metric"},
+
     "comingSoonMessage": "{title} — coming soon",
     "@comingSoonMessage": {"description": "Shown on a placeholder screen for a feature that isn't built yet", "placeholders": {"title": {"type": "String"}}},
 

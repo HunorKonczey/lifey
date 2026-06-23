@@ -125,6 +125,7 @@ class _WeightStats extends ConsumerWidget {
                 : TimeSeriesChart(
                     points: points,
                     dateLabelBuilder: _chartDateLabel.format,
+                    valueLabelBuilder: (value) => l10n.weightKgValue(value.toStringAsFixed(1)),
                     deltaLabelBuilder: (delta) => l10n.weightKgValue(_formatDelta(delta)),
                     showDeltaLabels: true,
                   ),

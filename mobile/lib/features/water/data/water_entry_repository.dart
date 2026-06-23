@@ -6,6 +6,9 @@ import '../../../core/local_db/database_provider.dart';
 import '../../../core/sync/client_id.dart';
 import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/outbox_writer.dart';
+import '../../../core/sync/pending_delete_filter.dart';
+import '../../../core/utils/combine_latest.dart';
+import '../domain/water_entry.dart';
 
 /// Local-first access to logging water intake. There's no list/edit UI for
 /// past entries, only the dashboard's daily total — read locally (see
@@ -41,6 +44,28 @@ class WaterEntryRepository {
     return local.year == now.year && local.month == now.month && local.day == now.day;
   }
 
+  /// Every logged entry, most recent first — used by the statistics screen
+  /// to aggregate daily totals across an arbitrary range (the dashboard's
+  /// [watchTodayTotalLiters] only covers today).
+  Stream<List<WaterEntry>> watchAll() {
+    final entries$ = (_db.select(_db.waterEntries)
+          ..orderBy([(t) => OrderingTerm.desc(t.consumedAt)]))
+        .watch();
+    final pendingOps$ = _db.select(_db.pendingOperations).watch();
+    return combineLatest2(entries$, pendingOps$, (rows, ops) {
+      final blocked = blockedByActiveDelete(ops);
+      return rows.where((r) => !blocked.contains(r.clientId)).map(_toDomain).toList();
+    });
+  }
+
+  WaterEntry _toDomain(WaterEntryRow row) => WaterEntry(
+        clientId: row.clientId,
+        id: row.serverId,
+        consumedAt: row.consumedAt,
+        volumeLiters: row.volumeLiters,
+        sourceClientId: row.sourceClientId,
+      );
+
   Future<void> create({
     required DateTime consumedAt,
     String? sourceClientId,
@@ -74,4 +99,8 @@ final waterEntryRepositoryProvider = Provider<WaterEntryRepository>((ref) {
 
 final todayWaterTotalProvider = StreamProvider<double>((ref) {
   return ref.watch(waterEntryRepositoryProvider).watchTodayTotalLiters();
+});
+
+final allWaterEntriesProvider = StreamProvider<List<WaterEntry>>((ref) {
+  return ref.watch(waterEntryRepositoryProvider).watchAll();
 });

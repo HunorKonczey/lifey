@@ -52,6 +52,11 @@ class MainShell extends StatelessWidget {
             selectedIcon: const Icon(Icons.monitor_weight),
             label: l10n.weightTitle,
           ),
+          NavigationDestination(
+            icon: const Icon(Icons.bar_chart_outlined),
+            selectedIcon: const Icon(Icons.bar_chart),
+            label: l10n.statisticsTitle,
+          ),
         ],
       ),
     );

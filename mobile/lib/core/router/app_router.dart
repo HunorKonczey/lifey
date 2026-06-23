@@ -8,6 +8,7 @@ import '../../features/auth/presentation/register_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/nutrition/presentation/nutrition_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/statistics/presentation/statistics_screen.dart';
 import '../../features/weight/presentation/weight_screen.dart';
 import '../../features/workouts/presentation/workouts_screen.dart';
 import '../../shared/widgets/main_shell.dart';
@@ -83,6 +84,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/weight',
                 builder: (context, state) => const WeightScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/statistics',
+                builder: (context, state) => const StatisticsScreen(),
               ),
             ],
           ),
