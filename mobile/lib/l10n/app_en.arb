@@ -713,5 +713,8 @@
     "@importedFromAppleHealthTooltip": {"description": "Tooltip/semantics label for the Apple Health badge on a paired workout session card"},
 
     "appleHealthStatsLine": "{calories} kcal · {heartRate} bpm avg (Apple Health)",
-    "@appleHealthStatsLine": {"description": "Line showing active calories and average heart rate imported from Apple Health on a session card", "placeholders": {"calories": {"type": "String"}, "heartRate": {"type": "String"}}}
+    "@appleHealthStatsLine": {"description": "Line showing active calories and average heart rate imported from Apple Health on a session card", "placeholders": {"calories": {"type": "String"}, "heartRate": {"type": "String"}}},
+
+    "todaysStepsLabel": "Today's steps",
+    "@todaysStepsLabel": {"description": "Dashboard stat card label for today's HealthKit step count"}
 }

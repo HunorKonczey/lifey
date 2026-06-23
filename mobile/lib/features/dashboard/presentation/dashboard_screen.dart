@@ -16,6 +16,7 @@ import '../../weight/domain/weight_entry.dart';
 import '../../workouts/application/workout_session_controller.dart';
 import '../../workouts/presentation/log_session_screen.dart';
 import '../application/dashboard_controller.dart';
+import '../application/today_steps_controller.dart';
 import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
 import 'widgets/stat_card.dart';
@@ -82,6 +83,7 @@ class DashboardScreen extends ConsumerWidget {
     final data = ref.watch(dashboardControllerProvider);
     final settings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
     final weightTrend = _weightTrend(ref.watch(weightControllerProvider).value ?? const []);
+    final todaySteps = ref.watch(todayStepsControllerProvider).value;
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -107,6 +109,7 @@ class DashboardScreen extends ConsumerWidget {
           data: data,
           settings: settings,
           weightTrend: weightTrend,
+          todaySteps: todaySteps,
           onWorkoutTap: (clientId) => _openWorkout(context, ref, clientId),
         ),
       ),
@@ -120,11 +123,13 @@ class _DashboardBody extends StatelessWidget {
     required this.settings,
     required this.onWorkoutTap,
     this.weightTrend,
+    this.todaySteps,
   });
 
   final DashboardData data;
   final UserSettings settings;
   final WeightTrend? weightTrend;
+  final int? todaySteps;
   final ValueChanged<String> onWorkoutTap;
 
   /// Actual-over-goal ratio, or null when no goal is set (no bar shown then).
@@ -205,6 +210,15 @@ class _DashboardBody extends StatelessWidget {
             ),
           ],
         ),
+        if (todaySteps != null) ...[
+          const SizedBox(height: 12),
+          StatCard(
+            label: l10n.todaysStepsLabel,
+            value: NumberFormat.decimalPattern().format(todaySteps),
+            icon: Icons.directions_walk,
+            color: Colors.purple,
+          ),
+        ],
         const SizedBox(height: 24),
         _SectionTitle(l10n.currentWeightSectionTitle),
         const SizedBox(height: 8),

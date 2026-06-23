@@ -247,5 +247,6 @@
     "noMatchingActiveWorkoutMessage": "Nem található illeszkedő aktív edzés",
 
     "importedFromAppleHealthTooltip": "Importálva az Apple Health-ből",
-    "appleHealthStatsLine": "{calories} kcal · {heartRate} bpm átlag (Apple Health)"
+    "appleHealthStatsLine": "{calories} kcal · {heartRate} bpm átlag (Apple Health)",
+    "todaysStepsLabel": "Mai lépésszám"
 }

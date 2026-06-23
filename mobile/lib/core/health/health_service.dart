@@ -57,8 +57,20 @@ class HealthService {
     return _health.requestAuthorization(types ?? healthDataTypes);
   }
 
-  // Typed read helpers (today's steps, latest body mass, workouts) are added
-  // by Phases 1–3 — Phase 0 is just the plumbing + permission request.
+  /// Sum of today's `HealthDataType.STEPS` samples (local day, midnight to
+  /// now). Returns null on Android, when HealthKit is unavailable, or when
+  /// there's simply no data (no permission, no samples) — callers must hide
+  /// the steps UI when null rather than showing a misleading zero.
+  Future<int?> todaySteps() async {
+    if (!isAvailable) return null;
+    await _ensureConfigured();
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    return _health.getTotalStepsInInterval(startOfDay, now);
+  }
+
+  // Typed read helpers (latest body mass, workouts) are added by Phase 3 —
+  // Phase 1's workout reads live in HealthWorkoutObserver (native side).
 }
 
 final healthServiceProvider = Provider<HealthService>((ref) => HealthService());
