@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -86,17 +85,9 @@ class HealthWorkoutObserverService {
   void Function(HealthWorkoutEvent event)? onWorkoutNotificationTapped;
 
   Future<void> _start() async {
-    if (!Platform.isIOS || _subscription != null) {
-      debugPrint('[HealthWorkoutObserver] _start skipped (isIOS=${Platform.isIOS}, '
-          'alreadySubscribed=${_subscription != null})');
-      return;
-    }
+    if (!Platform.isIOS || _subscription != null) return;
     await _ensureInitialized();
-    debugPrint('[HealthWorkoutObserver] subscribing to event channel');
-    _subscription = _eventChannel.receiveBroadcastStream().listen(
-      _handleEvent,
-      onError: (Object e, StackTrace st) => debugPrint('[HealthWorkoutObserver] stream error: $e'),
-    );
+    _subscription = _eventChannel.receiveBroadcastStream().listen(_handleEvent);
   }
 
   Future<void> _ensureInitialized() async {
@@ -116,28 +107,13 @@ class HealthWorkoutObserverService {
 
   Future<void> _consumeLaunchDetails() async {
     final details = await _notifications.getNotificationAppLaunchDetails();
-    debugPrint('[HealthWorkoutObserver] launch details: '
-        'didNotificationLaunchApp=${details?.didNotificationLaunchApp}, '
-        'payload=${details?.notificationResponse?.payload}');
     if (details?.didNotificationLaunchApp != true) return;
-    // TEMP diagnostic: distinct (lighter) haptic pattern from
-    // _onNotificationTap's, so a buzz here vs. there tells us which path
-    // actually fired — cold launch vs. warm resume tap. Remove once confirmed.
-    HapticFeedback.selectionClick();
     final payload = details?.notificationResponse?.payload;
     if (payload == null) return;
     _dispatchTapPayload(payload);
   }
 
   void _onNotificationTap(NotificationResponse response) {
-    // TEMP diagnostic: a haptic buzz the instant this callback fires, so we
-    // can tell whether the native tap delegate reached Dart at all, fully
-    // independent of whether any logging pipeline (Xcode console / Console.app)
-    // happens to be capturing output right now. Remove once the pairing flow
-    // is confirmed working end to end.
-    HapticFeedback.heavyImpact();
-    debugPrint('[HealthWorkoutObserver] onDidReceiveNotificationResponse fired, '
-        'payload=${response.payload}');
     final payload = response.payload;
     if (payload == null) return;
     _dispatchTapPayload(payload);
@@ -145,31 +121,16 @@ class HealthWorkoutObserverService {
 
   void _dispatchTapPayload(String payload) {
     final event = HealthWorkoutEvent.fromJson(jsonDecode(payload) as Map<String, dynamic>);
-    debugPrint('[HealthWorkoutObserver] dispatching tapped event ${event.uuid}, '
-        'handler set=${onWorkoutNotificationTapped != null}');
     onWorkoutNotificationTapped?.call(event);
   }
 
   Future<void> _handleEvent(dynamic raw) async {
-    debugPrint('[HealthWorkoutObserver] received event from channel: $raw');
     if (raw is! Map) return;
     final event = HealthWorkoutEvent.fromChannel(raw);
-    if (!(await _preferences.isEnabled())) {
-      debugPrint('[HealthWorkoutObserver] ${event.uuid}: Apple Health toggle is off, dropping');
-      return;
-    }
-    if (await _isSeen(event.uuid)) {
-      debugPrint('[HealthWorkoutObserver] ${event.uuid}: already seen (Dart-side), dropping');
-      return;
-    }
+    if (!(await _preferences.isEnabled())) return;
+    if (await _isSeen(event.uuid)) return;
     await _markSeen(event.uuid);
-    debugPrint('[HealthWorkoutObserver] ${event.uuid}: posting notification');
-    try {
-      await _postNotification(event);
-      debugPrint('[HealthWorkoutObserver] ${event.uuid}: notification call returned successfully');
-    } catch (e, st) {
-      debugPrint('[HealthWorkoutObserver] ${event.uuid}: notification call threw: $e\n$st');
-    }
+    await _postNotification(event);
   }
 
   Future<void> _postNotification(HealthWorkoutEvent event) async {

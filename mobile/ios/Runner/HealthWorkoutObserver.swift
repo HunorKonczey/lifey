@@ -13,13 +13,11 @@ import UIKit
 /// HealthKit or touches app data; Dart decides what to do with the event
 /// (see docs/16-apple-health-integration-plan.md, Phase 1).
 final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
-    private static let logTag = "[HealthWorkoutObserver]"
     private static let eventChannelName = "com.lifey.health/workout_events"
-    // Versioned (.v2): an earlier bug could mark a workout processed before
-    // it was actually delivered to Dart (fixed by the pendingPayloads buffer
-    // below), permanently stranding UUIDs from prior test runs under the old
-    // key. Bumping the key resets dedup state cleanly without touching any
-    // other persisted data (Drift DB, auth tokens, etc. use separate stores).
+    // Versioned: an earlier bug could mark a workout processed before it was
+    // actually delivered to Dart (fixed by the pendingPayloads buffer below),
+    // permanently stranding UUIDs under the unversioned key. Bump again if
+    // the dedup semantics ever change in a way that invalidates old entries.
     private static let processedWorkoutsKey = "com.lifey.health.processedWorkoutUUIDs.v2"
     private static let maxProcessedWorkoutsRemembered = 200
 
@@ -40,7 +38,6 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
         super.init()
         let channel = FlutterEventChannel(name: Self.eventChannelName, binaryMessenger: messenger)
         channel.setStreamHandler(self)
-        NSLog("%@ initialized, event channel registered", Self.logTag)
     }
 
     /// Registers the background observer. Safe to call repeatedly — only
@@ -48,26 +45,17 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
     /// simulator) or permission was never granted (the query then simply
     /// never fires).
     func startObserving() {
-        guard observerQuery == nil else {
-            NSLog("%@ startObserving: already observing, skipping", Self.logTag)
-            return
-        }
-        guard HKHealthStore.isHealthDataAvailable() else {
-            NSLog("%@ startObserving: HealthKit not available on this device", Self.logTag)
-            return
-        }
+        guard observerQuery == nil, HKHealthStore.isHealthDataAvailable() else { return }
 
         let query = HKObserverQuery(sampleType: workoutType, predicate: nil) { [weak self] _, completionHandler, error in
             guard let self = self else {
                 completionHandler()
                 return
             }
-            if let error = error {
-                NSLog("%@ observer query fired with error: %@", Self.logTag, error.localizedDescription)
+            guard error == nil else {
                 completionHandler()
                 return
             }
-            NSLog("%@ observer query fired — checking for new strength workouts", Self.logTag)
             // Don't call completionHandler() until the whole async chain below
             // (fetch -> stats -> send to Dart) actually finishes. Calling it
             // early tells iOS "I'm done, you can suspend me now" — and it may
@@ -84,15 +72,7 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
         }
         observerQuery = query
         healthStore.execute(query)
-        NSLog("%@ HKObserverQuery executed", Self.logTag)
-
-        healthStore.enableBackgroundDelivery(for: workoutType, frequency: .immediate) { success, error in
-            if let error = error {
-                NSLog("%@ enableBackgroundDelivery failed: %@", Self.logTag, error.localizedDescription)
-            } else {
-                NSLog("%@ enableBackgroundDelivery succeeded=%@", Self.logTag, success ? "true" : "false")
-            }
-        }
+        healthStore.enableBackgroundDelivery(for: workoutType, frequency: .immediate) { _, _ in }
     }
 
     /// Requests a short extension of background execution time (Apple grants
@@ -103,16 +83,14 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
     private func runWithExtendedBackgroundTime(_ work: @escaping (_ done: @escaping () -> Void) -> Void) {
         var taskId = UIBackgroundTaskIdentifier.invalid
         var didFinish = false
-        let finish = { [weak self] in
+        let finish = {
             guard !didFinish else { return }
             didFinish = true
             if taskId != .invalid {
                 UIApplication.shared.endBackgroundTask(taskId)
-                NSLog("%@ background task ended", Self.logTag)
             }
         }
         taskId = UIApplication.shared.beginBackgroundTask(withName: "HealthWorkoutObserver.fire") {
-            NSLog("%@ background task EXPIRED before work finished", Self.logTag)
             finish()
         }
         work { finish() }
@@ -121,7 +99,6 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
     // MARK: FlutterStreamHandler
 
     func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        NSLog("%@ onListen — Dart attached, flushing %d pending payload(s)", Self.logTag, pendingPayloads.count)
         eventSink = events
         for payload in pendingPayloads {
             events(payload)
@@ -132,7 +109,6 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
     }
 
     func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        NSLog("%@ onCancel — Dart detached", Self.logTag)
         eventSink = nil
         return nil
     }
@@ -146,19 +122,11 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
 
         let query = HKSampleQuery(sampleType: workoutType, predicate: predicate, limit: 20, sortDescriptors: [sort]) { [weak self] _, samples, error in
-            guard let self = self else {
+            guard let self = self, error == nil, let workouts = samples as? [HKWorkout] else {
                 completion()
                 return
             }
-            if let error = error {
-                NSLog("%@ sample query failed: %@", Self.logTag, error.localizedDescription)
-                completion()
-                return
-            }
-            let workouts = samples as? [HKWorkout] ?? []
-            NSLog("%@ sample query returned %d strength workout(s)", Self.logTag, workouts.count)
             let unseen = workouts.filter { !self.isProcessed($0.uuid) }
-            NSLog("%@ %d of those are unseen (new)", Self.logTag, unseen.count)
             guard !unseen.isEmpty else {
                 completion()
                 return
@@ -176,8 +144,6 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
     }
 
     private func processWorkout(_ workout: HKWorkout, completion: @escaping () -> Void) {
-        NSLog("%@ processing workout %@ (start=%@ end=%@)", Self.logTag, workout.uuid.uuidString,
-              "\(workout.startDate)", "\(workout.endDate)")
         let group = DispatchGroup()
         var activeCalories: Double?
         var averageHeartRate: Double?
@@ -215,10 +181,7 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
             return
         }
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
-        let query = HKStatisticsQuery(quantityType: quantityType, quantitySamplePredicate: predicate, options: option) { _, statistics, error in
-            if let error = error {
-                NSLog("%@ statistics query for %@ failed: %@", Self.logTag, identifier.rawValue, error.localizedDescription)
-            }
+        let query = HKStatisticsQuery(quantityType: quantityType, quantitySamplePredicate: predicate, options: option) { _, statistics, _ in
             let value = option.contains(.cumulativeSum)
                 ? statistics?.sumQuantity()?.doubleValue(for: unit)
                 : statistics?.averageQuantity()?.doubleValue(for: unit)
@@ -237,12 +200,8 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
             "averageHeartRate": averageHeartRate,
         ]
         if let eventSink = eventSink {
-            NSLog("%@ sending payload for %@ to Dart (calories=%@ avgHR=%@)", Self.logTag,
-                  workout.uuid.uuidString, "\(activeCalories ?? -1)", "\(averageHeartRate ?? -1)")
             eventSink(payload)
         } else {
-            NSLog("%@ no active listener — buffering payload for %@ until Dart attaches", Self.logTag,
-                  workout.uuid.uuidString)
             pendingPayloads.append(payload)
         }
     }

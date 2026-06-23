@@ -21,36 +21,20 @@ class HealthWorkoutPairingService {
 
   static const _matchWindow = Duration(minutes: 15);
 
-  static const _logTag = '[HealthWorkoutPairing]';
-
   Future<void> handle(HealthWorkoutEvent event) async {
-    debugPrint('$_logTag handle(${event.uuid}) called');
     final context = rootNavigatorKey.currentContext;
-    if (context == null) {
-      debugPrint('$_logTag rootNavigatorKey.currentContext is null, aborting');
-      return;
-    }
+    if (context == null) return;
 
-    final sessionsState = _ref.read(workoutSessionControllerProvider);
-    final sessions = sessionsState.value ?? const <WorkoutSession>[];
-    debugPrint('$_logTag sessionsState=${sessionsState.runtimeType} '
-        '(isLoading=${sessionsState.isLoading}, hasValue=${sessionsState.hasValue}), '
-        'sessions count=${sessions.length}');
+    final sessions =
+        _ref.read(workoutSessionControllerProvider).value ?? const <WorkoutSession>[];
 
     // Already paired (e.g. the user re-tapped a notification still sitting in
     // Notification Center after pairing it once) — never pair the same
     // HKWorkout twice.
-    if (sessions.any((s) => s.healthWorkoutId == event.uuid)) {
-      debugPrint('$_logTag ${event.uuid} already paired to a session, aborting');
-      return;
-    }
+    if (sessions.any((s) => s.healthWorkoutId == event.uuid)) return;
 
     final candidate = _findCandidate(sessions, event);
-    debugPrint('$_logTag candidate=${candidate?.clientId ?? "none"}');
-    if (!context.mounted) {
-      debugPrint('$_logTag context no longer mounted, aborting');
-      return;
-    }
+    if (!context.mounted) return;
     final l10n = AppLocalizations.of(context)!;
 
     if (candidate == null) {
@@ -74,7 +58,6 @@ class HealthWorkoutPairingService {
         ],
       ),
     );
-    debugPrint('$_logTag dialog result: confirmed=$confirmed');
     if (confirmed != true) return;
 
     await _ref.read(workoutSessionRepositoryProvider).update(
@@ -94,7 +77,6 @@ class HealthWorkoutPairingService {
           averageHeartRate: event.averageHeartRate,
           healthWorkoutId: event.uuid,
         );
-    debugPrint('$_logTag paired and updated session ${candidate.clientId}');
   }
 
   /// Closest-start in-progress session within ±15 minutes of the Apple
