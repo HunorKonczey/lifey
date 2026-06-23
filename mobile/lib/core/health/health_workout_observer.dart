@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -85,9 +86,17 @@ class HealthWorkoutObserverService {
   void Function(HealthWorkoutEvent event)? onWorkoutNotificationTapped;
 
   Future<void> _start() async {
-    if (!Platform.isIOS || _subscription != null) return;
+    if (!Platform.isIOS || _subscription != null) {
+      debugPrint('[HealthWorkoutObserver] _start skipped (isIOS=${Platform.isIOS}, '
+          'alreadySubscribed=${_subscription != null})');
+      return;
+    }
     await _ensureInitialized();
-    _subscription = _eventChannel.receiveBroadcastStream().listen(_handleEvent);
+    debugPrint('[HealthWorkoutObserver] subscribing to event channel');
+    _subscription = _eventChannel.receiveBroadcastStream().listen(
+      _handleEvent,
+      onError: (Object e, StackTrace st) => debugPrint('[HealthWorkoutObserver] stream error: $e'),
+    );
   }
 
   Future<void> _ensureInitialized() async {
@@ -108,11 +117,19 @@ class HealthWorkoutObserverService {
   }
 
   Future<void> _handleEvent(dynamic raw) async {
+    debugPrint('[HealthWorkoutObserver] received event from channel: $raw');
     if (raw is! Map) return;
     final event = HealthWorkoutEvent.fromChannel(raw);
-    if (!(await _preferences.isEnabled())) return;
-    if (await _isSeen(event.uuid)) return;
+    if (!(await _preferences.isEnabled())) {
+      debugPrint('[HealthWorkoutObserver] ${event.uuid}: Apple Health toggle is off, dropping');
+      return;
+    }
+    if (await _isSeen(event.uuid)) {
+      debugPrint('[HealthWorkoutObserver] ${event.uuid}: already seen (Dart-side), dropping');
+      return;
+    }
     await _markSeen(event.uuid);
+    debugPrint('[HealthWorkoutObserver] ${event.uuid}: posting notification');
     await _postNotification(event);
   }
 

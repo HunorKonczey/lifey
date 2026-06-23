@@ -20,8 +20,10 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
 
     guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "HealthWorkoutObserverPlugin") else {
+      NSLog("[HealthWorkoutObserver] registrar(forPlugin:) returned nil — observer NOT registered")
       return
     }
+    NSLog("[HealthWorkoutObserver] registrar obtained, creating observer")
     healthWorkoutObserver = HealthWorkoutObserver(messenger: registrar.messenger())
   }
 }
