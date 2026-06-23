@@ -8,6 +8,10 @@ import '../../domain/exercise.dart';
 /// Result of adding a set: an exercise with reps and weight.
 typedef SetDraft = ({Exercise exercise, int reps, double weight});
 
+/// Cap on how many matching exercises are shown at once, so the suggestion
+/// list stays short even as the exercise list grows.
+const _maxSuggestions = 20;
+
 /// Bottom sheet to add a set (exercise + reps + weight). Pops with a [SetDraft].
 /// Pass [initialExercise] to pre-select it (e.g. when adding a template
 /// exercise) and/or [initialReps]/[initialWeight] to pre-fill the numeric
@@ -30,6 +34,7 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
   late final _reps = TextEditingController(text: widget.initialReps?.toString() ?? '');
   late final _weight = TextEditingController(text: widget.initialWeight?.toString() ?? '');
   Exercise? _exercise;
+  String? _exerciseError;
 
   @override
   void initState() {
@@ -45,8 +50,11 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
   }
 
   void _submit() {
-    if (_exercise == null) return;
-    if (!_formKey.currentState!.validate()) return;
+    final formValid = _formKey.currentState!.validate();
+    final exercisePicked = _exercise != null;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _exerciseError = exercisePicked ? null : l10n.pickAnExerciseError);
+    if (!formValid || !exercisePicked) return;
     Navigator.of(context).pop<SetDraft>((
       exercise: _exercise!,
       reps: int.parse(_reps.text.trim()),
@@ -86,19 +94,43 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
               children: [
                 Text(l10n.addSetTitle, style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<Exercise>(
-                  initialValue: _exercise,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: l10n.exerciseLabel,
-                    border: const OutlineInputBorder(),
-                  ),
-                  items: exercises
-                      .map((e) =>
-                          DropdownMenuItem(value: e, child: Text(e.name)))
-                      .toList(),
-                  onChanged: (e) => setState(() => _exercise = e),
-                  validator: (e) => e == null ? l10n.pickAnExerciseError : null,
+                Autocomplete<Exercise>(
+                  initialValue: TextEditingValue(text: _exercise?.name ?? ''),
+                  displayStringForOption: (e) => e.name,
+                  optionsBuilder: (textEditingValue) {
+                    final query = textEditingValue.text.trim().toLowerCase();
+                    final matches = query.isEmpty
+                        ? exercises
+                        : exercises.where((e) => e.name.toLowerCase().contains(query));
+                    return matches.take(_maxSuggestions);
+                  },
+                  fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                    return TextFormField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        labelText: l10n.exerciseLabel,
+                        border: const OutlineInputBorder(),
+                        errorText: _exerciseError,
+                        suffixIcon: _exercise == null
+                            ? const Icon(Icons.search)
+                            : IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  controller.clear();
+                                  setState(() => _exercise = null);
+                                },
+                              ),
+                      ),
+                      onChanged: (_) {
+                        if (_exercise != null) setState(() => _exercise = null);
+                      },
+                    );
+                  },
+                  onSelected: (exercise) => setState(() {
+                    _exercise = exercise;
+                    _exerciseError = null;
+                  }),
                 ),
                 const SizedBox(height: 12),
                 Row(

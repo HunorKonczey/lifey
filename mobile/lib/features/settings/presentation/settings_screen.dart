@@ -1,6 +1,9 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/health/health_controller.dart';
 import '../../../core/network/error_message.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -249,6 +252,13 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             icon: const Icon(Icons.water_drop_outlined),
             label: Text(l10n.manageWaterSourcesButton),
           ),
+          // Apple Health is iOS-only; the whole section is hidden elsewhere.
+          if (Platform.isIOS) ...[
+            const SizedBox(height: 24),
+            Text(l10n.appleHealthLabel, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            const _AppleHealthToggle(),
+          ],
           if (_submitError != null) ...[
             const SizedBox(height: 12),
             Text(_submitError!, style: TextStyle(color: theme.colorScheme.error)),
@@ -266,6 +276,33 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// iOS-only "Connect Apple Health" switch. Unlike the rest of this screen it
+/// isn't part of the form/save flow — flipping it persists immediately and (on
+/// enable) triggers the HealthKit permission request, via
+/// [appleHealthControllerProvider].
+class _AppleHealthToggle extends ConsumerWidget {
+  const _AppleHealthToggle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final state = ref.watch(appleHealthControllerProvider);
+    final enabled = state.value ?? false;
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(l10n.connectAppleHealthLabel),
+      subtitle: Text(l10n.connectAppleHealthDescription),
+      value: enabled,
+      // Disabled while the initial value is still loading, to avoid flipping
+      // from a not-yet-known state.
+      onChanged: state.isLoading
+          ? null
+          : (value) =>
+              ref.read(appleHealthControllerProvider.notifier).setEnabled(value),
     );
   }
 }

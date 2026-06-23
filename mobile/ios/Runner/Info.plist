@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>A kamera használata szükséges az élelmiszerek vonalkódjának beolvasásához.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>A Lifey az Apple Health-ből olvassa be az edzéseket, a lépésszámot és a testsúlyt, hogy automatikusan kiegészítse a naplódat.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

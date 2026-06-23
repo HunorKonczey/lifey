@@ -28,6 +28,12 @@ dependencies:
   # out without the user needing to pull-to-refresh.
   connectivity_plus: ^7.1.1
   mobile_scanner: ^7.2.0
+  # Apple Health / HealthKit integration (iOS only — see lib/core/health/ and
+  # docs/16-apple-health-integration-plan.md). All reads go through HealthService,
+  # which no-ops on non-iOS. Pinned to 13.x; its device_info_plus transitive dep
+  # downgrades win32/flutter_secure_storage_windows, which only affects the
+  # (unused) Windows desktop target.
+  health: 13.0.0
 
 dev_dependencies:
   flutter_test:

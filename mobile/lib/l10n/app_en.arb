@@ -76,6 +76,15 @@
     "manageWaterSourcesButton": "Manage water sources",
     "@manageWaterSourcesButton": {"description": "Button that opens the water sources management screen"},
 
+    "appleHealthLabel": "Apple Health",
+    "@appleHealthLabel": {"description": "Section heading for the Apple Health integration (iOS only)"},
+
+    "connectAppleHealthLabel": "Connect Apple Health",
+    "@connectAppleHealthLabel": {"description": "Toggle that connects the app to Apple Health"},
+
+    "connectAppleHealthDescription": "Let Lifey read workouts, steps and weight from Apple Health.",
+    "@connectAppleHealthDescription": {"description": "Explains what enabling the Apple Health toggle does"},
+
     "signInSubtitle": "Sign in to continue",
     "@signInSubtitle": {"description": "Subtitle on the login screen"},
 
