@@ -6,12 +6,18 @@ plugins {
 
 android {
     namespace = "com.lifey.lifey"
+    // flutter.compileSdkVersion=36 is set in gradle.properties (the `health`
+    // plugin's androidx.health.connect dependency requires compiling
+    // against API 35+); reading it here keeps both app and plugin modules
+    // consistent with the same Flutter-recognized override mechanism.
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Required by flutter_local_notifications on Android.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -19,7 +25,10 @@ android {
         applicationId = "com.lifey.lifey"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // The `health` plugin (lib/core/health/, Phase 0 of
+        // docs/16-apple-health-integration-plan.md) requires 26+ on Android;
+        // Flutter's default (24) no longer builds once it's a dependency.
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -42,4 +51,8 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
