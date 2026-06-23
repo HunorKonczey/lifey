@@ -605,8 +605,19 @@ intact.
 - Card body: when `activeCalories` or `averageHeartRate` is non-null, a small
   `appleHealthStatsLine` ("{calories} kcal · {heartRate} bpm avg (Apple Health)") row appears
   between the header and the logged-sets list.
-- Localized strings added to both arb files; Phase 1 is now fully implemented end-to-end (backend
-  columns → mobile sync → native detection → notification → confirm-pair → badge).
+- Localized strings added to both arb files; code-complete end-to-end (backend columns → mobile
+  sync → native detection → notification → confirm-pair → badge).
+
+### Known issue — pairing not yet confirmed working on-device
+On-device testing (2026-06-23) confirmed detection + notification delivery work correctly once
+the `com.apple.developer.healthkit.background-delivery` entitlement fix landed (§1.3 above). But
+tapping the notification doesn't yet trigger the pairing dialog — `onDidReceiveNotificationResponse`
+never fires, and the app just foregrounds to whatever screen was last open. Root cause not yet
+found (ruled out so far: notification permission is granted; the app was backgrounded, not
+killed). Debug instrumentation (NSLog/debugPrint throughout the chain, plus a haptic-feedback probe
+independent of any logging pipeline) lives on a separate branch — **`bug/workout-apple-health-import`**
+— rather than on `main`, to keep `main` clean while this is being chased down. Resume from there;
+don't re-derive the same NSLog/debugPrint scaffolding from scratch.
 
 ---
 
@@ -650,6 +661,21 @@ Add today's HealthKit step count to the dashboard as a read-through display
    Android/denied states hide it cleanly.
 Match existing StatCard styling and provider conventions.
 ```
+
+### Status: ✅ implemented
+- `HealthService.todaySteps()`: sums `HealthDataType.STEPS` from local midnight to now via the
+  `health` plugin's `getTotalStepsInInterval`; returns `int?`, null on non-iOS or no data.
+- `lib/features/dashboard/application/today_steps_controller.dart`
+  (`TodayStepsController extends AsyncNotifier<int?>` + `todayStepsControllerProvider`): mixes in
+  `WidgetsBindingObserver` directly (same plain-class pattern as `ConnectivitySyncController`) to
+  start/stop a 60s `Timer.periodic` on resume/pause — no background polling. Kept as its own
+  provider, not folded into `dashboardControllerProvider`, so its refresh doesn't recompute the
+  rest of the dashboard.
+- `dashboard_screen.dart`: a steps `StatCard` (walking icon, purple) inserted after the
+  protein/carbs/fat row, shown only when `todaySteps != null` — hidden cleanly on Android or when
+  HealthKit has no data. New `todaysStepsLabel` string in both arb files.
+- Verified Android still builds (`flutter build apk --debug`) — `todaySteps()` short-circuits via
+  `isAvailable` before ever touching `getTotalStepsInInterval`.
 
 ---
 

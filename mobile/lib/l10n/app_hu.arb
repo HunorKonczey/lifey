@@ -250,5 +250,6 @@
     "appleHealthStatsLine": "{calories} kcal · {heartRate} bpm átlag (Apple Health)",
 
     "importFromAppleHealthButton": "Importálás az Apple Health-ből",
-    "noRecentAppleWorkoutMessage": "Nincs friss Apple Health edzés"
+    "noRecentAppleWorkoutMessage": "Nincs friss Apple Health edzés",
+    "todaysStepsLabel": "Mai lépésszám"
 }
