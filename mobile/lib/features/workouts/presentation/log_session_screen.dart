@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/health/apple_workout.dart';
+import '../../../core/health/health_controller.dart';
+import '../../../core/health/health_workout_import_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_session_controller.dart';
@@ -216,6 +219,67 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
+  /// Manual "Import from Apple Health": reads the just-finished Apple strength
+  /// workout, confirms with the user, then closes + enriches THIS session with
+  /// its calories / avg HR. Only offered while this is an in-progress session
+  /// (see the visibility gate in [build]). iOS-only via the toggle/provider.
+  Future<void> _importFromAppleHealth() async {
+    if (_saving) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final importService = ref.read(healthWorkoutImportServiceProvider);
+
+    setState(() => _saving = true);
+    try {
+      final AppleWorkout? workout = await importService.findImportable();
+      if (!mounted) return;
+      if (workout == null) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.noRecentAppleWorkoutMessage)));
+        return;
+      }
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.pairAppleWorkoutTitle),
+          content: Text(l10n.pairAppleWorkoutMessage(
+            TimeOfDay.fromDateTime(workout.startDate.toLocal()).format(ctx),
+            workout.activeCalories?.round().toString() ?? '–',
+            workout.averageHeartRate?.round().toString() ?? '–',
+          )),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.cancelButton)),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.pairButton)),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+
+      final sets = _sets
+          .map((s) => ExerciseSetInput(
+              exerciseClientId: s.exercise.clientId,
+              reps: s.reps,
+              weight: s.weight,
+              performedAt: s.performedAt))
+          .toList();
+      await importService.importInto(
+        sessionClientId: _sessionClientId!,
+        startedAt: _startedAt,
+        exerciseClientIds: _plannedExerciseIds.toList(),
+        sets: sets,
+        workout: workout,
+      );
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotSaveSessionMessage)));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _save() async {
     if (_saving) return; // guard against a fast double-tap creating two sessions
     setState(() => _saving = true);
@@ -241,6 +305,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           data: (list) => {for (final e in list) e.clientId: e},
           orElse: () => const <String, Exercise>{},
         );
+    // Apple Health import is offered only on an in-progress, already-persisted
+    // session and only when the "Connect Apple Health" toggle is on (the
+    // provider is false on Android, so this is implicitly iOS-only).
+    final appleHealthEnabled = ref.watch(appleHealthControllerProvider).value ?? false;
+    final canImportFromHealth =
+        _isEditing && _finishedAt == null && _sessionClientId != null && appleHealthEnabled;
 
     return Scaffold(
       appBar: AppBar(
@@ -305,6 +375,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 ),
             ],
           ),
+          if (canImportFromHealth) ...[
+            const SizedBox(height: 16),
+            FilledButton.tonalIcon(
+              onPressed: _saving ? null : _importFromAppleHealth,
+              icon: const Icon(Icons.favorite),
+              label: Text(l10n.importFromAppleHealthButton),
+            ),
+          ],
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

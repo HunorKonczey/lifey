@@ -2,6 +2,17 @@
 
 Status: proposed
 Author: planning doc (implement in phases, in order)
+
+> **Revision 2026-06-23 — Phase 1 re-designed.** The original Phase 1 was built
+> around background detection: an `HKObserverQuery` woke the app when a strength
+> workout synced, fired a local notification, and pairing happened on the
+> notification tap. That whole machinery is being **dropped**. The new Phase 1 is
+> a **manual, foreground import**: an "Import from Apple Health" button on the
+> active (in-progress) workout reads the just-finished Apple workout on demand,
+> shows a confirmation dialog, and on accept closes + enriches the current
+> session. No notifications, no background delivery, no native Swift observer.
+> See **"## Phase 1 (REVISED 2026-06-23)"** below — the old Phase 1 section that
+> follows it is kept for history but is **superseded**.
 Platform: **iOS only** — Apple Health/HealthKit has no Android equivalent. Android
 would need a separate Health Connect track (out of scope here). Everything below
 must be feature-gated to iOS (`Platform.isIOS`) so the app keeps building/running
@@ -35,12 +46,19 @@ say "detected/completed", not "started". If real-time start detection is a hard
 requirement, the only path is a companion **watchOS app** that runs its own
 `HKWorkoutSession` — a much larger project, noted but not planned here.
 
+**Revised-Phase-1 consequence:** the same constraint (HealthKit only hands us the
+**finished** workout) is exactly why the revised manual import works — by the time
+the user finishes their Apple Fitness workout and taps "Import from Apple Health"
+in Lifey, the completed `HKWorkout` has already synced and is readable with a
+plain **foreground** query. We no longer need the observer/background-delivery
+machinery at all; we just read on demand when the user asks.
+
 ## 2. Complexity at a glance
 
 | Phase | What | BE work | Mobile work | Difficulty |
 |------|------|---------|-------------|-----------|
 | 0 | HealthKit foundation (entitlement, permissions) | none | setup + Dart permission flow | Low–Med |
-| 1 | Strength-workout completion → notify → pair with active session (calories + avg HR), Apple badge | small (3 columns) | **native Swift** (observer/background) + notification + pairing | **High** |
+| 1 | ~~Strength-workout completion → notify → pair~~ → **REVISED**: manual "Import from Apple Health" button on the active workout → confirm → close + enrich (calories + avg HR), Apple badge | done (3 columns) | Dart **foreground** read + import button + dialog (no native Swift, no notifications) | Low–Med |
 | 2 | Step count on dashboard, ~1 min refresh while active | none | Dart foreground read + timer | Low–Med |
 | 3 | Weight sync from Health, 30-min dedup | none | Dart read + dedup, reuse weight path | Med |
 
@@ -132,7 +150,218 @@ was added.
 
 ---
 
-## Phase 1 — Strength-workout completion → notification → pair with active session
+## Phase 1 (REVISED 2026-06-23) — manual "Import from Apple Health" on the active workout
+
+### Why the change
+The original Phase 1 (below, now superseded) auto-detected a finished Apple
+workout in the background and nudged the user with a notification. In practice the
+background/notification path is the fragile, high-maintenance part (needs a native
+Swift `HKObserverQuery`, the `com.apple.developer.healthkit.background-delivery`
+entitlement, `flutter_local_notifications`, cold-launch payload plumbing, a
+root-navigator hook to show a dialog from outside the widget tree) and the user
+decided a **notification isn't wanted**. The new flow is simpler and entirely
+user-initiated.
+
+### Goal
+On the **active (in-progress) workout** — the `LogSessionScreen` opened for a
+session whose `finishedAt == null` — show an **"Import from Apple Health"** button.
+When tapped (iOS only, and only while the "Connect Apple Health" toggle is on):
+
+1. Do a **foreground** HealthKit read for a Traditional/Functional Strength
+   `HKWorkout` that **finished within the last 15 minutes** and isn't already
+   imported.
+2. If one is found, pop a **confirmation dialog** summarizing it ("Import this
+   Apple workout? Started X, Y kcal, Z bpm avg") — Cancel vs Import.
+3. **Only on accept**, close + enrich **the session currently being edited**: set
+   `finishedAt = hkWorkout.endDate`, `activeCalories`, `averageHeartRate`, and
+   `healthWorkoutId = hkWorkout.uuid`, keeping its existing planned exercises and
+   logged sets. This both closes the workout and stamps it as imported.
+4. If none is found, show a brief "no recent Apple workout found" message and do
+   nothing else.
+
+Imported sessions keep showing the **Apple-logo badge** (Prompt 1.5, already done
+— unchanged by this revision).
+
+### Key simplification vs the old design
+Because the button lives **inside** the active session's editor, we already know
+*which* session to pair — it's the one on screen. So the old "scan all in-progress
+sessions, match on start time, pick the closest" logic is gone; we import directly
+into the current session. The only HealthKit-side question is "is there a recently
+finished strength workout to pull?".
+
+### Matching / selection rules (be explicit)
+- Trigger: the user taps the import button. Never automatic.
+- Source candidates: `HKWorkout`s of type traditional/functional strength training
+  whose **`endDate` is within the last 15 minutes** of "now".
+- If several qualify, pick the **most recently finished** one.
+- Dedup: skip any workout whose `uuid` already appears as a `healthWorkoutId` on an
+  existing session (so the same Apple workout can't be imported twice). No separate
+  locally-persisted "seen" set is needed anymore — the sessions list is the source
+  of truth, and there's no background loop re-delivering UUIDs.
+- Target session: the in-progress session open in `LogSessionScreen`. (Button is
+  hidden/disabled when the session is already finished or hasn't been persisted /
+  isn't in progress.)
+
+### Imported fields → existing columns (unchanged)
+The three nullable fields from Prompt 1.1 / 1.2 are reused as-is:
+- `activeCalories` (double) — active energy burned, kcal.
+- `averageHeartRate` (double) — bpm over the workout interval.
+- `healthWorkoutId` (string) — the `HKWorkout` UUID; non-null ⇒ imported, drives
+  the badge + dedup. `bool get fromAppleHealth => healthWorkoutId != null`.
+
+### What stays (already implemented, untouched by this revision)
+- **Prompt 1.1** — backend `active_calories`, `average_heart_rate`,
+  `health_workout_id` columns + DTOs + mapper + service + Flyway V15. ✅
+- **Prompt 1.2** — mobile Drift columns + domain `WorkoutSession` fields +
+  `fromAppleHealth` getter + repository payload + pull_engine. ✅
+- **Prompt 1.5** — Apple-logo badge + optional stats line in the session card. ✅
+
+### What gets removed (the old background machinery)
+This is real deletion, not just leaving it dormant — see **Prompt 1.6**:
+- `ios/Runner/HealthWorkoutObserver.swift` + its `AppDelegate.swift` wiring + its
+  `project.pbxproj` `Sources` entry.
+- The `com.apple.developer.healthkit.background-delivery` entitlement (the base
+  HealthKit read entitlement stays — Phases 2/3 and the new foreground read need
+  it).
+- `lib/core/health/health_workout_observer.dart` (the `HealthWorkoutObserverService`,
+  the event channel, the secure-storage "seen UUIDs" set, the notification posting).
+- `flutter_local_notifications` from `pubspec.yaml` (no other feature uses it).
+- The `app.dart` line that starts `healthWorkoutObserverServiceProvider`.
+- The notification-tap → `rootNavigatorKey` → pairing wiring. (Whether
+  `rootNavigatorKey` itself is removed from `app_router.dart` depends on whether
+  anything else uses it — Prompt 1.6 checks and removes if now unused.)
+
+The `HealthWorkoutEvent` model is still a convenient shape for "a finished Apple
+workout" — Prompt 1.3 can keep an equivalent value type (renamed, e.g.
+`AppleWorkout`, sourced from the foreground read) rather than the channel/JSON one.
+
+### New mobile work (all Dart, foreground, iOS-gated)
+- **`HealthService` read helper** (Prompt 1.3): `recentStrengthWorkouts(within)`
+  / `latestStrengthWorkout(within)` using the `health` package
+  (`getHealthDataFromTypes` for `WORKOUT`, filtered to traditional/functional
+  strength activity types), reading `totalEnergyBurned` (kcal) off the
+  `WorkoutHealthValue`, and computing **average heart rate** with a second read of
+  `HealthDataType.HEART_RATE` over `[startDate, endDate]`. iOS-only; returns empty
+  on Android / no permission.
+- **Import flow** (Prompt 1.4): rework `health_workout_pairing_service.dart` into a
+  small "import into the current session" service (or fold it into a controller
+  method) that takes the target session + the chosen `AppleWorkout`, does the dedup
+  check, and writes through the existing `WorkoutSessionRepository.update`
+  (offline-first; syncs normally). The button + confirm dialog live in
+  `LogSessionScreen`.
+
+### Prompt 1.3 (REVISED) — foreground read of recent strength workouts (calories + avg HR)
+```
+Read mobile/lib/core/health/health_service.dart and
+lib/core/health/health_workout_observer.dart (for the HealthWorkoutEvent shape —
+we're keeping an equivalent value type but sourcing it from a foreground read).
+
+Add an iOS-only FOREGROUND read of recently finished strength workouts to
+HealthService — no native code, no background delivery, no notifications:
+- A value type for a finished Apple workout (uuid, startDate, endDate,
+  activeCalories double?, averageHeartRate double?). Reuse/rename the existing
+  HealthWorkoutEvent fields; you can call it AppleWorkout.
+- HealthService.recentStrengthWorkouts({Duration within = const Duration(minutes: 15)}):
+  query HealthDataType.WORKOUT for [now - within - slack, now], keep only
+  WorkoutHealthValue workoutActivityType traditional/functional strength training
+  whose endDate is within `within` of now, sorted most-recent-finished first.
+  Read activeCalories from the workout's totalEnergyBurned (kcal). For each kept
+  workout, compute averageHeartRate via a second read of HealthDataType.HEART_RATE
+  over [startDate, endDate] (mean of the samples; null if none). Return [] on
+  Android / no permission / unavailable. Tolerate empty HealthKit results (READ
+  grants are never reported by HealthKit).
+Guard everything with Platform.isIOS (isAvailable). Don't touch UI or the DB here.
+```
+
+### Prompt 1.4 (REVISED) — "Import from Apple Health" button + confirm + close & enrich
+```
+Read mobile/lib/features/workouts/presentation/log_session_screen.dart,
+lib/features/workouts/data/workout_session_repository.dart,
+application/workout_session_controller.dart, lib/core/health/health_service.dart
+(recentStrengthWorkouts from prompt 1.3), health_preferences.dart, and the existing
+lib/core/health/health_workout_pairing_service.dart (to repurpose, since the old
+notification-tap pairing is being removed in prompt 1.6).
+
+Add a manual Apple Health import to the ACTIVE workout:
+- In LogSessionScreen, when on iOS, the "Connect Apple Health" toggle is on, and
+  the session is in progress (editing an existing session with finishedAt == null
+  — i.e. _isEditing && _finishedAt == null && _sessionClientId != null), show an
+  "Import from Apple Health" button (e.g. near the Finished field).
+- On tap: call HealthService.recentStrengthWorkouts(within: 15 min); drop any whose
+  uuid already appears as healthWorkoutId on an existing session (read the sessions
+  list from workoutSessionControllerProvider). Pick the most recently finished
+  remaining one.
+- If none: show a brief "no recent Apple workout found" SnackBar.
+- If one: show a confirmation AlertDialog summarizing it (start time, rounded
+  calories, rounded avg HR) — Cancel vs Import.
+- ONLY on accept: update THIS session via WorkoutSessionRepository.update, setting
+  finishedAt = workout.endDate, activeCalories, averageHeartRate, and
+  healthWorkoutId = workout.uuid, keeping the session's existing planned exercises
+  and logged sets unchanged. Then pop / reflect the closed state like a normal save.
+Repurpose health_workout_pairing_service.dart into this "import into the current
+session" path (or fold it into the controller) — it no longer matches across
+sessions or reads a notification payload. Reuse the existing localized strings
+where possible (pairAppleWorkoutTitle/Message, pairButton,
+noMatchingActiveWorkoutMessage) and add an importFromAppleHealthButton label +
+"no recent workout" message to app_en.arb/app_hu.arb; regenerate l10n. iOS-only.
+```
+
+### Prompt 1.6 (NEW) — remove the old observer / notification / background machinery
+```
+Remove the now-unused background-detection + notification machinery from the old
+Phase 1 (replaced by the manual foreground import in prompts 1.3/1.4):
+- Delete lib/core/health/health_workout_observer.dart and remove the line in
+  lib/app.dart that watches healthWorkoutObserverServiceProvider.
+- Remove flutter_local_notifications from mobile/pubspec.yaml and run flutter pub get.
+- Delete ios/Runner/HealthWorkoutObserver.swift; remove its references from
+  ios/Runner/AppDelegate.swift (the throwaway plugin registrar + the strong
+  reference) and from ios/Runner.xcodeproj/project.pbxproj (the Runner group entry
+  and the Sources build phase entry).
+- Remove the com.apple.developer.healthkit.background-delivery key from
+  ios/Runner/Runner.entitlements (KEEP the base HealthKit entitlement — Phases 2/3
+  and the new foreground read still need it).
+- In lib/core/router/app_router.dart, if rootNavigatorKey was added ONLY for the
+  notification-tap dialog and nothing else uses it now, remove it; otherwise leave
+  it.
+- Make sure the app still builds on Android and iOS with no dangling references.
+  Document the manual Mac steps (flutter clean + pub get; in Xcode confirm
+  HealthWorkoutObserver.swift is gone and Background Delivery is unchecked).
+```
+
+### Status (REVISED): ✅ implemented 2026-06-23
+- **1.3** — `lib/core/health/apple_workout.dart` (`AppleWorkout` value type) +
+  `HealthService.recentStrengthWorkouts({within})` and a private `_averageHeartRate`
+  helper, both foreground `getHealthDataFromTypes` reads (WORKOUT filtered to
+  traditional/functional strength + a HEART_RATE read averaged over each workout's
+  interval). iOS-gated; returns `[]` otherwise.
+- **1.4** — `health_workout_pairing_service.dart` renamed to
+  `health_workout_import_service.dart` (`HealthWorkoutImportService`): `findImportable()`
+  (read-only: most-recently-finished, not-yet-imported strength workout in the last
+  15 min) + `importInto(...)` (the single close+enrich write). `LogSessionScreen`
+  shows an "Import from Apple Health" `FilledButton.tonalIcon` when editing an
+  in-progress, persisted session with the toggle on (`appleHealthControllerProvider`,
+  false on Android ⇒ implicitly iOS-only); on tap it finds → confirms via dialog →
+  imports into the current session and pops. New strings `importFromAppleHealthButton`
+  + `noRecentAppleWorkoutMessage` (en/hu), reusing `pairAppleWorkoutTitle/Message`
+  + `pairButton` + `cancelButton`.
+- **1.6** — deleted `lib/core/health/health_workout_observer.dart`,
+  `ios/Runner/HealthWorkoutObserver.swift` (+ its `project.pbxproj` build-file/group/
+  sources entries), reverted `AppDelegate.swift` to the plain
+  `GeneratedPluginRegistrant.register(with: self)` form, dropped
+  `flutter_local_notifications` from `pubspec.yaml`, removed the
+  `com.apple.developer.healthkit.background-delivery` entitlement (base HealthKit
+  entitlement kept), and removed the observer/pairing wiring from `app.dart`.
+  `rootNavigatorKey` stays — it's still GoRouter's `navigatorKey`. `flutter analyze`
+  clean.
+
+**Manual Mac steps:** `cd mobile && flutter clean && flutter pub get && flutter build
+ios --no-codesign` (CocoaPods drops `flutter_local_notifications`); open
+`Runner.xcworkspace` once and confirm `HealthWorkoutObserver.swift` is gone and, under
+Signing & Capabilities → HealthKit, "Background Delivery" is unchecked.
+
+---
+
+## Phase 1 — (SUPERSEDED 2026-06-23, see "Phase 1 (REVISED)" above) Strength-workout completion → notification → pair with active session
 
 ### Goal
 When a Traditional/Functional Strength workout finishes in Apple Fitness and syncs
@@ -500,9 +729,11 @@ backend changes.
 ## 3. Order of work
 
 1. **Phase 0** — foundation + permissions (everything else depends on it).
-2. **Phase 1** — backend columns (1.1) → mobile data/sync (1.2) → native observer
-   + notification (1.3) → pairing service (1.4) → Apple badge (1.5). The native
-   step (1.3) is the riskiest; spike it early to de-risk.
+2. **Phase 1 (REVISED 2026-06-23)** — backend columns (1.1 ✅) → mobile data/sync
+   (1.2 ✅) → **foreground read helper (1.3 revised)** → **import button + confirm +
+   close/enrich on the active workout (1.4 revised)** → Apple badge (1.5 ✅) →
+   **remove old observer/notification machinery (1.6 new)**. 1.1/1.2/1.5 are
+   already done and unchanged; the remaining work is the Dart-only 1.3, 1.4, 1.6.
 3. **Phase 2** — steps on dashboard (Dart-only, quick win).
 4. **Phase 3** — weight import with dedup (Dart-only, reuses weight path).
 
@@ -511,12 +742,17 @@ native work stalls, 2 and 3 can still ship.
 
 ## 4. Decisions (confirmed)
 
-- **Phase 1 pairing trigger**: ✅ **manual** — pairing happens only on notification
-  tap, via a confirmation dialog the user must accept. Detection never closes or
-  modifies a session on its own.
-- **Phase 1 no-match case**: ✅ **do nothing** — no standalone imported session
-  (we don't want to start writing weights/data we didn't pair).
-- **Phase 1 match window**: ✅ **±15 minutes**.
+- **Phase 1 trigger (REVISED 2026-06-23)**: ✅ **manual button on the active
+  workout**. No notification, no background detection. The user taps "Import from
+  Apple Health" inside the in-progress session; a confirmation dialog must be
+  accepted before anything is closed or modified.
+- **Phase 1 no-match case**: ✅ **do nothing** (brief "no recent Apple workout"
+  message). No standalone imported session.
+- **Phase 1 window (REVISED)**: ✅ **workout finished within the last 15 minutes**
+  (the old ±15-min start-time match across sessions is gone — the target session
+  is the one the button lives in).
+- **Phase 1 old machinery**: ✅ **removed** — native observer, background-delivery
+  entitlement, and local notifications are deleted (Prompt 1.6).
 - **Phase 2 steps**: display-only (recommended) — confirm we are NOT syncing steps
   to the backend. *(still open)*
 ```

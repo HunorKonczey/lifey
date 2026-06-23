@@ -19,8 +19,8 @@ class _AuthRefreshListenable extends ChangeNotifier {
   }
 }
 
-/// Lets code outside the widget tree (e.g. a notification-tap handler) reach
-/// a [BuildContext] for dialogs/navigation, via `rootNavigatorKey.currentContext`.
+/// The router's top-level navigator key — also lets code outside the widget
+/// tree reach a [BuildContext] via `rootNavigatorKey.currentContext` if needed.
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Provides the application's GoRouter configuration: public `/login` and
