@@ -21,12 +21,14 @@ class HealthWorkoutImportService {
 
   final Ref _ref;
 
-  /// Look back this far for a just-finished Apple strength workout.
-  static const _window = Duration(minutes: 15);
+  /// Look back this far for a just-finished Apple strength workout — wide
+  /// enough to cover "I finished in Apple Fitness a while ago and only now
+  /// opened Lifey to import it", not just an immediate same-minute tap.
+  static const _window = Duration(days: 1);
 
-  /// The most recently finished strength workout from the last 15 minutes that
-  /// isn't already imported into a session, or null if there's nothing to
-  /// import. Read-only.
+  /// The most recently finished strength workout from the last day that isn't
+  /// already imported into a session, or null if there's nothing to import.
+  /// Read-only.
   Future<AppleWorkout?> findImportable() async {
     final workouts =
         await _ref.read(healthServiceProvider).recentStrengthWorkouts(within: _window);

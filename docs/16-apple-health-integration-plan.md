@@ -162,13 +162,17 @@ root-navigator hook to show a dialog from outside the widget tree) and the user
 decided a **notification isn't wanted**. The new flow is simpler and entirely
 user-initiated.
 
+> **Note 2026-06-23:** the import window was widened from the originally-planned
+> 15 minutes to **1 day** — the user may finish their Apple Fitness workout and
+> only open Lifey to import it some time later, not necessarily within minutes.
+
 ### Goal
 On the **active (in-progress) workout** — the `LogSessionScreen` opened for a
 session whose `finishedAt == null` — show an **"Import from Apple Health"** button.
 When tapped (iOS only, and only while the "Connect Apple Health" toggle is on):
 
 1. Do a **foreground** HealthKit read for a Traditional/Functional Strength
-   `HKWorkout` that **finished within the last 15 minutes** and isn't already
+   `HKWorkout` that **finished within the last day** and isn't already
    imported.
 2. If one is found, pop a **confirmation dialog** summarizing it ("Import this
    Apple workout? Started X, Y kcal, Z bpm avg") — Cancel vs Import.
@@ -192,7 +196,7 @@ finished strength workout to pull?".
 ### Matching / selection rules (be explicit)
 - Trigger: the user taps the import button. Never automatic.
 - Source candidates: `HKWorkout`s of type traditional/functional strength training
-  whose **`endDate` is within the last 15 minutes** of "now".
+  whose **`endDate` is within the last day** of "now".
 - If several qualify, pick the **most recently finished** one.
 - Dedup: skip any workout whose `uuid` already appears as a `healthWorkoutId` on an
   existing session (so the same Apple workout can't be imported twice). No separate
@@ -337,12 +341,15 @@ Phase 1 (replaced by the manual foreground import in prompts 1.3/1.4):
 - **1.4** — `health_workout_pairing_service.dart` renamed to
   `health_workout_import_service.dart` (`HealthWorkoutImportService`): `findImportable()`
   (read-only: most-recently-finished, not-yet-imported strength workout in the last
-  15 min) + `importInto(...)` (the single close+enrich write). `LogSessionScreen`
+  **day** — widened from the originally-planned 15 minutes, see the note above) +
+  `importInto(...)` (the single close+enrich write). `LogSessionScreen`
   shows an "Import from Apple Health" `FilledButton.tonalIcon` when editing an
   in-progress, persisted session with the toggle on (`appleHealthControllerProvider`,
-  false on Android ⇒ implicitly iOS-only); on tap it finds → confirms via dialog →
-  imports into the current session and pops. New strings `importFromAppleHealthButton`
-  + `noRecentAppleWorkoutMessage` (en/hu), reusing `pairAppleWorkoutTitle/Message`
+  false on Android ⇒ implicitly iOS-only); on tap it finds → confirms via dialog
+  (showing the workout's full date + time, not just time-of-day, since it may now
+  be from an earlier day) → imports into the current session and pops. New strings
+  `importFromAppleHealthButton` + `noRecentAppleWorkoutMessage` (en/hu), reusing
+  `pairAppleWorkoutTitle/Message`
   + `pairButton` + `cancelButton`.
 - **1.6** — deleted `lib/core/health/health_workout_observer.dart`,
   `ios/Runner/HealthWorkoutObserver.swift` (+ its `project.pbxproj` build-file/group/
@@ -763,9 +770,11 @@ native work stalls, 2 and 3 can still ship.
   accepted before anything is closed or modified.
 - **Phase 1 no-match case**: ✅ **do nothing** (brief "no recent Apple workout"
   message). No standalone imported session.
-- **Phase 1 window (REVISED)**: ✅ **workout finished within the last 15 minutes**
-  (the old ±15-min start-time match across sessions is gone — the target session
-  is the one the button lives in).
+- **Phase 1 window (REVISED, widened 2026-06-23)**: ✅ **workout finished within
+  the last day** (originally 15 minutes — widened so importing isn't limited to
+  the moment right after finishing in Apple Fitness; the old ±15-min start-time
+  match across sessions is gone regardless — the target session is the one the
+  button lives in).
 - **Phase 1 old machinery**: ✅ **removed** — native observer, background-delivery
   entitlement, and local notifications are deleted (Prompt 1.6).
 - **Phase 2 steps**: ✅ **display-only** — never synced to the backend

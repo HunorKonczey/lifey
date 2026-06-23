@@ -242,7 +242,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         builder: (ctx) => AlertDialog(
           title: Text(l10n.pairAppleWorkoutTitle),
           content: Text(l10n.pairAppleWorkoutMessage(
-            TimeOfDay.fromDateTime(workout.startDate.toLocal()).format(ctx),
+            // Full date + time, not just time-of-day: the import window is a
+            // day wide now, so "Started 14:30" alone would be ambiguous about
+            // which day.
+            _label.format(workout.startDate.toLocal()),
             workout.activeCalories?.round().toString() ?? '–',
             workout.averageHeartRate?.round().toString() ?? '–',
           )),

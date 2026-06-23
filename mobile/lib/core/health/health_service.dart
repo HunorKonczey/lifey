@@ -88,7 +88,7 @@ class HealthService {
   /// denied (HealthKit never reveals READ-grant state, so empty is expected and
   /// must be tolerated).
   Future<List<AppleWorkout>> recentStrengthWorkouts({
-    Duration within = const Duration(minutes: 15),
+    Duration within = const Duration(days: 1),
   }) async {
     if (!isAvailable) return const [];
     await _ensureConfigured();

@@ -719,7 +719,7 @@
     "@importFromAppleHealthButton": {"description": "Button on the active workout that imports a just-finished Apple Health strength workout"},
 
     "noRecentAppleWorkoutMessage": "No recent Apple Health workout found",
-    "@noRecentAppleWorkoutMessage": {"description": "Shown when the import button finds no strength workout finished in the last 15 minutes"},
+    "@noRecentAppleWorkoutMessage": {"description": "Shown when the import button finds no strength workout finished in the last day"},
 
     "todaysStepsLabel": "Today's steps",
     "@todaysStepsLabel": {"description": "Dashboard stat card label for today's HealthKit step count"}
