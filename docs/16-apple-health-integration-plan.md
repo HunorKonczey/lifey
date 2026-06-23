@@ -81,12 +81,28 @@ on iOS only, without breaking Android.
   with the HealthKit entitlement, `CODE_SIGN_ENTITLEMENTS` wired into all three
   Runner build configs in project.pbxproj.
 
-**Manual Xcode steps still required (can't be done from a non-Mac dev box):**
-1. Open `ios/Runner.xcworkspace` in Xcode → Runner target → Signing &
-   Capabilities → **+ Capability → HealthKit** (this registers the App ID for
+**Manual Xcode/macOS steps still required (can't be done from a non-Mac dev box):**
+1. This project currently has **no `ios/Podfile`** — every plugin added so far
+   ships a Swift Package Manager `Package.swift`
+   (`ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift`
+   is the proof: empty `dependencies: []`). `health` 13.0.0 is the **first**
+   CocoaPods-only plugin (its `ios/` only has a `.podspec`, no `Package.swift`).
+   On the Mac, run:
+   ```
+   cd mobile
+   flutter clean
+   flutter pub get
+   flutter build ios --no-codesign
+   ```
+   `flutter build ios` detects the CocoaPods-only plugin and **auto-generates
+   `ios/Podfile`**, then runs `pod install` as part of the build. Building once
+   from Xcode (`Runner.xcworkspace`, Cmd+B) does the same via its Flutter build
+   phase. Do **not** run `pod install` manually before this — there's nothing for
+   it to install against yet.
+2. Open `ios/Runner.xcworkspace` in Xcode → Runner target → Signing &
+   Capabilities → **+ Capability → HealthKit** (registers the App ID for
    HealthKit on the developer portal / provisioning profile; the entitlements
-   file and build setting are already in place).
-2. Run `pod install` in `ios/` so the `health` plugin's pod is integrated.
+   file and build setting are already in place from Prompt 0.1).
 3. Verify on a real device (HealthKit isn't fully functional in the Simulator).
 
 ### Prompt 0.1 — foundation + permissions
