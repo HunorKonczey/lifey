@@ -3,18 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
-import '../../../shared/widgets/sync_status_indicator.dart';
+import '../application/weight_chart_data.dart';
 import '../application/weight_controller.dart';
+import '../application/weight_range.dart';
 import '../domain/weight_entry.dart';
 import 'widgets/add_weight_sheet.dart';
 
-/// Weight: list of entries with add (FAB) and swipe-to-delete.
+/// Weight: latest reading, a range selector, and a chart of daily weights.
+/// Adding stays in the FAB sheet; there's no entry list here anymore — see
+/// docs/.. (none yet) for the planned per-day detail view.
 class WeightScreen extends ConsumerWidget {
   const WeightScreen({super.key});
-
-  static final _dateLabel = DateFormat('EEE, MMM d, yyyy');
 
   Future<void> _openAddSheet(BuildContext context) {
     return showModalBottomSheet<void>(
@@ -23,18 +25,6 @@ class WeightScreen extends ConsumerWidget {
       showDragHandle: true,
       builder: (_) => const AddWeightSheet(),
     );
-  }
-
-  Future<void> _delete(BuildContext context, WidgetRef ref, WeightEntry entry) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      await ref.read(weightControllerProvider.notifier).deleteEntry(entry.clientId);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.entryDeletedMessage)));
-    } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteEntryMessage)));
-      await ref.read(weightControllerProvider.notifier).refresh();
-    }
   }
 
   @override
@@ -60,11 +50,7 @@ class WeightScreen extends ConsumerWidget {
                   title: l10n.noWeightEntriesYetTitle,
                   subtitle: l10n.tapPlusToAddFirstOneMessage,
                 )
-              : _WeightList(
-                  entries: entries,
-                  onDelete: (entry) => _delete(context, ref, entry),
-                  dateLabel: _dateLabel,
-                ),
+              : _WeightStats(latest: entries.first),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => ErrorView(
             error: error,
@@ -76,48 +62,80 @@ class WeightScreen extends ConsumerWidget {
   }
 }
 
-class _WeightList extends StatelessWidget {
-  const _WeightList({
-    required this.entries,
-    required this.onDelete,
-    required this.dateLabel,
-  });
+class _WeightStats extends ConsumerWidget {
+  const _WeightStats({required this.latest});
 
-  final List<WeightEntry> entries;
-  final void Function(WeightEntry entry) onDelete;
-  final DateFormat dateLabel;
+  final WeightEntry latest;
+
+  static final _chartDateLabel = DateFormat('MMM d');
+
+  String _formatDelta(double delta) {
+    final sign = delta > 0 ? '+' : '';
+    return '$sign${delta.toStringAsFixed(1)}';
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: entries.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final entry = entries[index];
-        return Dismissible(
-          key: ValueKey(entry.clientId),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            color: theme.colorScheme.errorContainer,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Icon(Icons.delete, color: theme.colorScheme.onErrorContainer),
-          ),
-          onDismissed: (_) => onDelete(entry),
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.monitor_weight)),
-            title: Text(
-              l10n.weightKgValue(entry.weight.toStringAsFixed(1)),
-              style: theme.textTheme.titleMedium,
+    final range = ref.watch(weightRangeControllerProvider);
+    final chartData = ref.watch(weightChartDataProvider);
+
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            l10n.latestEntryLabel,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
-            subtitle: Text(dateLabel.format(entry.date)),
-            trailing: SyncStatusIndicator(clientId: entry.clientId),
           ),
-        );
-      },
+          const SizedBox(height: 4),
+          Text(
+            l10n.weightKgValue(latest.weight.toStringAsFixed(1)),
+            style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 24),
+          SegmentedButton<WeightRange>(
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(value: WeightRange.week, label: Text(l10n.weightRangeWeekLabel)),
+              ButtonSegment(value: WeightRange.month, label: Text(l10n.weightRangeMonthLabel)),
+              ButtonSegment(value: WeightRange.quarter, label: Text(l10n.weightRangeQuarterLabel)),
+              ButtonSegment(value: WeightRange.all, label: Text(l10n.weightRangeAllLabel)),
+            ],
+            selected: {range},
+            onSelectionChanged: (selection) =>
+                ref.read(weightRangeControllerProvider.notifier).select(selection.first),
+          ),
+          const SizedBox(height: 24),
+          chartData.when(
+            data: (points) => points.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: Text(
+                      l10n.noWeightDataForRangeTitle,
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  )
+                : TimeSeriesChart(
+                    points: points,
+                    dateLabelBuilder: _chartDateLabel.format,
+                    deltaLabelBuilder: (delta) => l10n.weightKgValue(_formatDelta(delta)),
+                    showDeltaLabels: true,
+                  ),
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => ErrorView(error: error),
+          ),
+        ],
+      ),
     );
   }
 }

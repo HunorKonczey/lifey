@@ -559,6 +559,21 @@
     "weightKgValue": "{weight} kg",
     "@weightKgValue": {"description": "A weight value in kilograms", "placeholders": {"weight": {"type": "String"}}},
 
+    "weightRangeWeekLabel": "7 days",
+    "@weightRangeWeekLabel": {"description": "Weight chart range selector: last 7 days"},
+
+    "weightRangeMonthLabel": "30 days",
+    "@weightRangeMonthLabel": {"description": "Weight chart range selector: last 30 days"},
+
+    "weightRangeQuarterLabel": "90 days",
+    "@weightRangeQuarterLabel": {"description": "Weight chart range selector: last 90 days"},
+
+    "weightRangeAllLabel": "All",
+    "@weightRangeAllLabel": {"description": "Weight chart range selector: all entries"},
+
+    "noWeightDataForRangeTitle": "No entries in this range",
+    "@noWeightDataForRangeTitle": {"description": "Empty state on the weight chart when entries exist but none fall in the selected range"},
+
     "comingSoonMessage": "{title} — coming soon",
     "@comingSoonMessage": {"description": "Shown on a placeholder screen for a feature that isn't built yet", "placeholders": {"title": {"type": "String"}}},
 

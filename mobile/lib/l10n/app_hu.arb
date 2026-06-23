@@ -191,6 +191,11 @@
     "entryDeletedMessage": "Bejegyzés törölve",
     "couldNotDeleteEntryMessage": "Nem sikerült törölni a bejegyzést",
     "weightKgValue": "{weight} kg",
+    "weightRangeWeekLabel": "7 nap",
+    "weightRangeMonthLabel": "30 nap",
+    "weightRangeQuarterLabel": "90 nap",
+    "weightRangeAllLabel": "Összes",
+    "noWeightDataForRangeTitle": "Nincs bejegyzés ebben az időszakban",
 
     "comingSoonMessage": "{title} — hamarosan",
     "somethingWentWrongTitle": "Valami hiba történt",
