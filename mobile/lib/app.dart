@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/health/health_workout_observer.dart';
+import 'core/health/health_workout_pairing_service.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/connectivity_sync_controller.dart';
 import 'core/theme/app_theme.dart';
@@ -28,6 +30,11 @@ class LifeyApp extends ConsumerWidget {
 
     // Keeps itself alive for the app's lifetime; the return value is unused.
     ref.watch(connectivitySyncControllerProvider);
+    // Same — starts listening for HealthKit workout-completion events (iOS only).
+    // Pairing (closing + enriching a session) only runs once the user taps that
+    // notification, never on detection alone.
+    ref.watch(healthWorkoutObserverServiceProvider).onWorkoutNotificationTapped =
+        ref.watch(healthWorkoutPairingServiceProvider).handle;
 
     final router = ref.watch(appRouterProvider);
     final settings = ref.watch(settingsControllerProvider).value;

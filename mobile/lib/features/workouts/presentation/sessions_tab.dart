@@ -180,6 +180,18 @@ class _SessionCard extends StatelessWidget {
                   children: [
                     Text(dateLabel.format(session.startedAt.toLocal()),
                         style: theme.textTheme.titleSmall),
+                    if (session.fromAppleHealth) ...[
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: l10n.importedFromAppleHealthTooltip,
+                        child: Icon(
+                          Icons.apple,
+                          size: 16,
+                          color: theme.colorScheme.onSurfaceVariant,
+                          semanticLabel: l10n.importedFromAppleHealthTooltip,
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                     if (session.inProgress)
                       Chip(
@@ -198,6 +210,17 @@ class _SessionCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (session.activeCalories != null || session.averageHeartRate != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.appleHealthStatsLine(
+                      session.activeCalories?.round().toString() ?? '–',
+                      session.averageHeartRate?.round().toString() ?? '–',
+                    ),
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 ...session.sets.map(
                   (s) => Padding(

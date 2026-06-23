@@ -695,5 +695,23 @@
     "@recentWorkoutsSectionTitle": {"description": "Dashboard section heading for recent workouts"},
 
     "noWorkoutsLoggedYetPeriodMessage": "No workouts logged yet.",
-    "@noWorkoutsLoggedYetPeriodMessage": {"description": "Shown on the dashboard when there are no recent workouts"}
+    "@noWorkoutsLoggedYetPeriodMessage": {"description": "Shown on the dashboard when there are no recent workouts"},
+
+    "pairAppleWorkoutTitle": "Pair with Apple Health workout?",
+    "@pairAppleWorkoutTitle": {"description": "Confirmation dialog title shown when tapping the Apple Health workout-detected notification"},
+
+    "pairAppleWorkoutMessage": "Started {startTime} · {calories} kcal · {heartRate} bpm avg. Pair this with your active session?",
+    "@pairAppleWorkoutMessage": {"description": "Confirmation dialog body summarizing the matched Apple Health workout", "placeholders": {"startTime": {"type": "String"}, "calories": {"type": "String"}, "heartRate": {"type": "String"}}},
+
+    "pairButton": "Pair",
+    "@pairButton": {"description": "Confirm button for pairing an Apple Health workout with an active session"},
+
+    "noMatchingActiveWorkoutMessage": "No matching active workout found",
+    "@noMatchingActiveWorkoutMessage": {"description": "Shown when an Apple Health workout notification is tapped but no in-progress session matches"},
+
+    "importedFromAppleHealthTooltip": "Imported from Apple Health",
+    "@importedFromAppleHealthTooltip": {"description": "Tooltip/semantics label for the Apple Health badge on a paired workout session card"},
+
+    "appleHealthStatsLine": "{calories} kcal · {heartRate} bpm avg (Apple Health)",
+    "@appleHealthStatsLine": {"description": "Line showing active calories and average heart rate imported from Apple Health on a session card", "placeholders": {"calories": {"type": "String"}, "heartRate": {"type": "String"}}}
 }

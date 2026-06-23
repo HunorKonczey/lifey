@@ -19,6 +19,10 @@ class _AuthRefreshListenable extends ChangeNotifier {
   }
 }
 
+/// Lets code outside the widget tree (e.g. a notification-tap handler) reach
+/// a [BuildContext] for dialogs/navigation, via `rootNavigatorKey.currentContext`.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 /// Provides the application's GoRouter configuration: public `/login` and
 /// `/register` routes, plus a bottom-navigation shell (one branch per
 /// top-level tab) that's gated behind being signed in.
@@ -27,6 +31,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(authRefresh.dispose);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/dashboard',
     refreshListenable: authRefresh,
     redirect: (context, state) {

@@ -8,6 +8,9 @@ public record WorkoutSessionResponse(
         Instant startedAt,
         Instant finishedAt,
         List<ExerciseSummary> exercises,
-        List<ExerciseSetResponse> sets
+        List<ExerciseSetResponse> sets,
+        Double activeCalories,
+        Double averageHeartRate,
+        String healthWorkoutId
 ) {
 }

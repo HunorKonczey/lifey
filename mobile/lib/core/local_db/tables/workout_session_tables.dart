@@ -12,6 +12,15 @@ class WorkoutSessions extends Table {
   DateTimeColumn get startedAt => dateTime()();
   DateTimeColumn get finishedAt => dateTime().nullable()();
 
+  /// Active energy burned (kcal), imported from Apple Health.
+  RealColumn get activeCalories => real().nullable()();
+
+  /// Average heart rate (bpm) over the workout, imported from Apple Health.
+  RealColumn get averageHeartRate => real().nullable()();
+
+  /// HKWorkout UUID this session was paired with, if imported from Apple Health.
+  TextColumn get healthWorkoutId => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

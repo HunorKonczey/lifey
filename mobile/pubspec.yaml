@@ -34,6 +34,9 @@ dependencies:
   # downgrades win32/flutter_secure_storage_windows, which only affects the
   # (unused) Windows desktop target.
   health: 13.0.0
+  # Posts the "Apple Fitness workout finished" notification (Phase 1 pairing
+  # entry point) once HealthKit hands us a completed strength workout.
+  flutter_local_notifications: ^19.4.2
 
 dev_dependencies:
   flutter_test:

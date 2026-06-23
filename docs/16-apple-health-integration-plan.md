@@ -258,6 +258,51 @@ point (handled in prompt 1.4), passing the payload along. Guard everything with
 Platform.isIOS. Document the required Xcode background-mode / capability steps.
 ```
 
+### Status: ✅ implemented
+- `ios/Runner/HealthWorkoutObserver.swift`: `HKObserverQuery` on `HKObjectType.workoutType()`
+  with `enableBackgroundDelivery(for:frequency:.immediate)`; on fire, re-queries the 20 most
+  recent traditional/functional strength `HKWorkout`s, skips any UUID already recorded in
+  `UserDefaults` (HealthKit re-delivers the whole set on every fire, not just the new one), and
+  for each new one fans out two `HKStatisticsQuery`s (active energy `.cumulativeSum`, heart rate
+  `.discreteAverage`) before pushing `{uuid, startDate, endDate, activeCalories,
+  averageHeartRate}` through a `FlutterEventChannel` (`com.lifey.health/workout_events`).
+- `AppDelegate.swift`: registers a throwaway plugin registrar (`HealthWorkoutObserverPlugin`) in
+  `didInitializeImplicitFlutterEngine` purely to obtain a `FlutterBinaryMessenger`, then keeps a
+  strong reference to `HealthWorkoutObserver` for the app's lifetime.
+- `ios/Runner.xcodeproj/project.pbxproj`: `HealthWorkoutObserver.swift` wired into the `Runner`
+  group and `Sources` build phase (this project has no Xcode "file system synchronized group",
+  so new files need an explicit pbxproj entry — same as Phase 0's entitlements wiring).
+- `lib/core/health/health_workout_observer.dart` (`HealthWorkoutObserverService` +
+  `healthWorkoutObserverServiceProvider`): listens to the event channel (iOS-only — no-ops via
+  `Platform.isIOS` otherwise), dedups by UUID against a `flutter_secure_storage`-persisted list
+  (capped at 200, independent of the native-side dedup — defense in depth), and — only if the
+  "Connect Apple Health" toggle is on — posts a local notification via
+  `flutter_local_notifications`, JSON-encoding the event into the notification `payload`.
+  Exposes `onWorkoutNotificationTapped`, a callback hook prompt 1.4's pairing flow attaches to
+  (set via `FlutterLocalNotificationsPlugin.initialize`'s `onDidReceiveNotificationResponse`).
+  Never writes to the local DB or backend — detection is read-only, as required.
+- Started once for the app's lifetime from `app.dart`, alongside
+  `connectivitySyncControllerProvider` (`ref.watch(healthWorkoutObserverServiceProvider)`).
+- `flutter_local_notifications: ^19.4.2` added to `pubspec.yaml` (resolved to 19.5.0).
+
+**Manual Xcode/macOS steps still required (can't be done from a non-Mac dev box):**
+1. `flutter_local_notifications` is a new plugin dependency — on the Mac, re-run
+   `cd mobile && flutter clean && flutter pub get && flutter build ios --no-codesign` (or build
+   once from Xcode) so CocoaPods picks it up in the already-generated `Podfile` (see Phase 0).
+2. Open `ios/Runner.xcworkspace` in Xcode and confirm `HealthWorkoutObserver.swift` shows up
+   under the `Runner` group (it's wired into `project.pbxproj` already, but Xcode should be
+   opened once to confirm the project file parses cleanly after a hand-edit).
+3. No new capability or `UIBackgroundModes` entry is needed beyond Phase 0's HealthKit
+   capability — `enableBackgroundDelivery` uses HealthKit's own background-wake mechanism, not
+   the generic background-fetch/remote-notification modes. Re-verify the HealthKit capability is
+   still checked under Signing & Capabilities (Phase 0, step 2) after the pbxproj hand-edit.
+4. Verify on a **real device** — both `enableBackgroundDelivery` and local-notification delivery
+   are unreliable/unsupported in the Simulator. To test: log a Traditional or Functional Strength
+   workout in Apple Fitness (or Health app, "Add Data" → Workouts) on the device, background the
+   Lifey app, and confirm a "Strength workout detected" notification appears once HealthKit syncs
+   the sample (this can take anywhere from seconds to a few minutes — it's Apple's sync, not
+   ours).
+
 ### Prompt 1.4 — pairing on notification tap (confirm, then close + enrich)
 ```
 Read mobile/lib/features/workouts/domain/workout_session.dart,
@@ -281,6 +326,30 @@ detection itself must never modify data:
 Add localized strings for the dialog/messages (app_en.arb/app_hu.arb). iOS-only.
 ```
 
+### Status: ✅ implemented
+- `rootNavigatorKey` added to `app_router.dart` (passed as GoRouter's `navigatorKey:`), giving
+  code outside the widget tree — the notification-tap handler — a `BuildContext` to show dialogs
+  with. The existing screens still navigate via plain `Navigator.push`/`MaterialPageRoute`, so
+  this is the minimal hook needed rather than a new routed page.
+- `lib/core/health/health_workout_pairing_service.dart` (`HealthWorkoutPairingService` +
+  `healthWorkoutPairingServiceProvider`): wired to
+  `HealthWorkoutObserverService.onWorkoutNotificationTapped` from `app.dart`, so it only runs on
+  an explicit notification tap. On `handle(event)`:
+  1. Reads the current session list from `workoutSessionControllerProvider` (no extra DB query).
+  2. Skips entirely if any session already carries this `healthWorkoutId` (re-tapping a
+     still-visible notification can't pair the same HKWorkout twice).
+  3. Picks the closest in-progress (`finishedAt == null`) session within ±15 minutes of the
+     workout's start; shows `noMatchingActiveWorkoutMessage` via SnackBar and stops if none.
+  4. Shows a confirmation `AlertDialog` (`pairAppleWorkoutTitle`/`pairAppleWorkoutMessage`,
+     formatted start time + rounded calories/avg HR) — Cancel vs Pair.
+  5. Only on Pair: calls `WorkoutSessionRepository.update` with the session's existing
+     `exerciseClientIds`/`sets` unchanged, plus `finishedAt = event.endDate`, `activeCalories`,
+     `averageHeartRate`, `healthWorkoutId = event.uuid` — closing and enriching it in one write.
+- Localized strings added to both `app_en.arb` and `app_hu.arb`
+  (`pairAppleWorkoutTitle/Message`, `pairButton`, `noMatchingActiveWorkoutMessage`); regenerated
+  via the Flutter tool snapshot (`flutter gen-l10n`, see the `dart`/`flutter` SDK-lock workaround
+  note above).
+
 ### Prompt 1.5 — Apple-logo badge in the sessions list
 ```
 Read mobile/lib/features/workouts/presentation/sessions_tab.dart (the _SessionCard
@@ -294,6 +363,17 @@ Optionally surface activeCalories / averageHeartRate in the card body when prese
 Keep the existing layout, in-progress chip, sync indicator, and delete affordances
 intact.
 ```
+
+### Status: ✅ implemented
+- `sessions_tab.dart`'s `_SessionCard` header `Row`: a small `Icons.apple` (16px,
+  `onSurfaceVariant`) next to the date, shown only `if (session.fromAppleHealth)`, with a
+  `Tooltip` + `semanticLabel` using the new `importedFromAppleHealthTooltip` string. Existing
+  in-progress chip, sets-count text, sync indicator, and delete button are untouched.
+- Card body: when `activeCalories` or `averageHeartRate` is non-null, a small
+  `appleHealthStatsLine` ("{calories} kcal · {heartRate} bpm avg (Apple Health)") row appears
+  between the header and the logged-sets list.
+- Localized strings added to both arb files; Phase 1 is now fully implemented end-to-end (backend
+  columns → mobile sync → native detection → notification → confirm-pair → badge).
 
 ---
 

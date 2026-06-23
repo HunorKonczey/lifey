@@ -51,7 +51,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -85,6 +85,13 @@ class AppDatabase extends _$AppDatabase {
           // the literal immediately overwritten per row by the backfill.
           if (from < 6) {
             await _addExerciseSetPerformedAtColumn();
+          }
+          // V7: Apple Health import fields on workout sessions (all nullable,
+          // no backfill — pre-existing sessions simply weren't imported).
+          if (from < 7) {
+            await m.addColumn(workoutSessions, workoutSessions.activeCalories);
+            await m.addColumn(workoutSessions, workoutSessions.averageHeartRate);
+            await m.addColumn(workoutSessions, workoutSessions.healthWorkoutId);
           }
         },
       );

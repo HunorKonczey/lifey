@@ -45,4 +45,16 @@ public class WorkoutSession extends BaseEntity {
      */
     @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WorkoutSessionExercise> plannedExercises = new ArrayList<>();
+
+    /** Active energy burned (kcal) over the workout, as reported by Apple Health. */
+    @Column(name = "active_calories")
+    private Double activeCalories;
+
+    /** Average heart rate (bpm) over the workout interval, as reported by Apple Health. */
+    @Column(name = "average_heart_rate")
+    private Double averageHeartRate;
+
+    /** HKWorkout UUID. Non-null means this session was paired with an Apple Health workout. */
+    @Column(name = "health_workout_id")
+    private String healthWorkoutId;
 }

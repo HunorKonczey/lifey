@@ -46,6 +46,9 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         session.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         session.setStartedAt(request.startedAt());
         session.setFinishedAt(request.finishedAt());
+        session.setActiveCalories(request.activeCalories());
+        session.setAverageHeartRate(request.averageHeartRate());
+        session.setHealthWorkoutId(request.healthWorkoutId());
         replacePlannedExercises(session, request.exerciseIds());
         replaceSets(session, request.sets());
         return WorkoutSessionMapper.toResponse(sessionRepository.save(session));
@@ -56,6 +59,9 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         WorkoutSession session = getOrThrow(id);
         session.setStartedAt(request.startedAt());
         session.setFinishedAt(request.finishedAt());
+        session.setActiveCalories(request.activeCalories());
+        session.setAverageHeartRate(request.averageHeartRate());
+        session.setHealthWorkoutId(request.healthWorkoutId());
         replacePlannedExercises(session, request.exerciseIds());
         replaceSets(session, request.sets());
         return WorkoutSessionMapper.toResponse(session);

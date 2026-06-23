@@ -34,7 +34,10 @@ final class WorkoutSessionMapper {
                 session.getStartedAt(),
                 session.getFinishedAt(),
                 exercises,
-                sets
+                sets,
+                session.getActiveCalories(),
+                session.getAverageHeartRate(),
+                session.getHealthWorkoutId()
         );
     }
 }

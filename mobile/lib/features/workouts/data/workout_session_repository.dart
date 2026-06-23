@@ -96,6 +96,9 @@ class WorkoutSessionRepository {
     DateTime? finishedAt,
     required List<String> exerciseClientIds,
     required List<ExerciseSetInput> sets,
+    double? activeCalories,
+    double? averageHeartRate,
+    String? healthWorkoutId,
   }) async {
     final clientId = newClientId();
     await _db.transaction(() async {
@@ -104,6 +107,9 @@ class WorkoutSessionRepository {
               clientId: clientId,
               startedAt: startedAt,
               finishedAt: Value(finishedAt),
+              activeCalories: Value(activeCalories),
+              averageHeartRate: Value(averageHeartRate),
+              healthWorkoutId: Value(healthWorkoutId),
             ),
           );
       await _insertChildren(clientId, exerciseClientIds, sets);
@@ -116,6 +122,9 @@ class WorkoutSessionRepository {
         finishedAt: finishedAt,
         exerciseClientIds: exerciseClientIds,
         sets: sets,
+        activeCalories: activeCalories,
+        averageHeartRate: averageHeartRate,
+        healthWorkoutId: healthWorkoutId,
       ),
     );
     return clientId;
@@ -127,12 +136,18 @@ class WorkoutSessionRepository {
     DateTime? finishedAt,
     required List<String> exerciseClientIds,
     required List<ExerciseSetInput> sets,
+    double? activeCalories,
+    double? averageHeartRate,
+    String? healthWorkoutId,
   }) async {
     await _db.transaction(() async {
       await (_db.update(_db.workoutSessions)..where((t) => t.clientId.equals(clientId))).write(
         WorkoutSessionsCompanion(
           startedAt: Value(startedAt),
           finishedAt: Value(finishedAt),
+          activeCalories: Value(activeCalories),
+          averageHeartRate: Value(averageHeartRate),
+          healthWorkoutId: Value(healthWorkoutId),
         ),
       );
       await (_db.delete(_db.workoutSessionExercises)
@@ -149,6 +164,9 @@ class WorkoutSessionRepository {
         finishedAt: finishedAt,
         exerciseClientIds: exerciseClientIds,
         sets: sets,
+        activeCalories: activeCalories,
+        averageHeartRate: averageHeartRate,
+        healthWorkoutId: healthWorkoutId,
       ),
     );
   }
@@ -205,6 +223,9 @@ class WorkoutSessionRepository {
     DateTime? finishedAt,
     required List<String> exerciseClientIds,
     required List<ExerciseSetInput> sets,
+    double? activeCalories,
+    double? averageHeartRate,
+    String? healthWorkoutId,
   }) {
     return {
       'startedAt': startedAt.toUtc().toIso8601String(),
@@ -218,6 +239,9 @@ class WorkoutSessionRepository {
                 'performedAt': s.performedAt.toUtc().toIso8601String(),
               })
           .toList(),
+      if (activeCalories != null) 'activeCalories': activeCalories,
+      if (averageHeartRate != null) 'averageHeartRate': averageHeartRate,
+      if (healthWorkoutId != null) 'healthWorkoutId': healthWorkoutId,
     };
   }
 
@@ -233,6 +257,9 @@ class WorkoutSessionRepository {
       finishedAt: row.finishedAt,
       exercises: exercises,
       sets: sets,
+      activeCalories: row.activeCalories,
+      averageHeartRate: row.averageHeartRate,
+      healthWorkoutId: row.healthWorkoutId,
     );
   }
 }

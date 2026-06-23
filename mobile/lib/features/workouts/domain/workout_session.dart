@@ -34,6 +34,9 @@ class WorkoutSession {
     required this.sets,
     this.id,
     this.finishedAt,
+    this.activeCalories,
+    this.averageHeartRate,
+    this.healthWorkoutId,
   });
 
   final String clientId;
@@ -43,5 +46,16 @@ class WorkoutSession {
   final List<SessionExercise> exercises;
   final List<ExerciseSet> sets;
 
+  /// Active energy burned (kcal), imported from Apple Health.
+  final double? activeCalories;
+
+  /// Average heart rate (bpm) over the workout, imported from Apple Health.
+  final double? averageHeartRate;
+
+  /// HKWorkout UUID this session was paired with, if imported from Apple Health.
+  final String? healthWorkoutId;
+
   bool get inProgress => finishedAt == null;
+
+  bool get fromAppleHealth => healthWorkoutId != null;
 }

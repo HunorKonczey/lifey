@@ -239,5 +239,13 @@
     "currentWeightSectionTitle": "Jelenlegi súly",
     "latestEntryLabel": "Legutóbbi bejegyzés",
     "recentWorkoutsSectionTitle": "Legutóbbi edzések",
-    "noWorkoutsLoggedYetPeriodMessage": "Még nincs naplózott edzés."
+    "noWorkoutsLoggedYetPeriodMessage": "Még nincs naplózott edzés.",
+
+    "pairAppleWorkoutTitle": "Összepárosítod az Apple Health edzéssel?",
+    "pairAppleWorkoutMessage": "Kezdés: {startTime} · {calories} kcal · {heartRate} bpm átlagpulzus. Összepárosítod az aktív edzéseddel?",
+    "pairButton": "Párosítás",
+    "noMatchingActiveWorkoutMessage": "Nem található illeszkedő aktív edzés",
+
+    "importedFromAppleHealthTooltip": "Importálva az Apple Health-ből",
+    "appleHealthStatsLine": "{calories} kcal · {heartRate} bpm átlag (Apple Health)"
 }
