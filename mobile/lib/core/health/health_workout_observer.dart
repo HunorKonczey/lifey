@@ -130,7 +130,12 @@ class HealthWorkoutObserverService {
     }
     await _markSeen(event.uuid);
     debugPrint('[HealthWorkoutObserver] ${event.uuid}: posting notification');
-    await _postNotification(event);
+    try {
+      await _postNotification(event);
+      debugPrint('[HealthWorkoutObserver] ${event.uuid}: notification call returned successfully');
+    } catch (e, st) {
+      debugPrint('[HealthWorkoutObserver] ${event.uuid}: notification call threw: $e\n$st');
+    }
   }
 
   Future<void> _postNotification(HealthWorkoutEvent event) async {

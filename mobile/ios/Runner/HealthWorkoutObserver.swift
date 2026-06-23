@@ -1,6 +1,6 @@
 import Flutter
 import HealthKit
-import Foundation
+import UIKit
 
 /// Bridges Apple HealthKit strength-workout completion events to Dart.
 ///
@@ -15,7 +15,12 @@ import Foundation
 final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
     private static let logTag = "[HealthWorkoutObserver]"
     private static let eventChannelName = "com.lifey.health/workout_events"
-    private static let processedWorkoutsKey = "com.lifey.health.processedWorkoutUUIDs"
+    // Versioned (.v2): an earlier bug could mark a workout processed before
+    // it was actually delivered to Dart (fixed by the pendingPayloads buffer
+    // below), permanently stranding UUIDs from prior test runs under the old
+    // key. Bumping the key resets dedup state cleanly without touching any
+    // other persisted data (Drift DB, auth tokens, etc. use separate stores).
+    private static let processedWorkoutsKey = "com.lifey.health.processedWorkoutUUIDs.v2"
     private static let maxProcessedWorkoutsRemembered = 200
 
     private let healthStore = HKHealthStore()
@@ -53,13 +58,29 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
         }
 
         let query = HKObserverQuery(sampleType: workoutType, predicate: nil) { [weak self] _, completionHandler, error in
-            defer { completionHandler() }
+            guard let self = self else {
+                completionHandler()
+                return
+            }
             if let error = error {
                 NSLog("%@ observer query fired with error: %@", Self.logTag, error.localizedDescription)
+                completionHandler()
                 return
             }
             NSLog("%@ observer query fired — checking for new strength workouts", Self.logTag)
-            self?.fetchAndForwardNewStrengthWorkouts()
+            // Don't call completionHandler() until the whole async chain below
+            // (fetch -> stats -> send to Dart) actually finishes. Calling it
+            // early tells iOS "I'm done, you can suspend me now" — and it may
+            // do exactly that mid-chain, before the payload ever reaches Dart
+            // or the notification gets shown. beginBackgroundTask buys extra
+            // wall-clock time for the full round trip, including the Dart-side
+            // notification display.
+            self.runWithExtendedBackgroundTime { done in
+                self.fetchAndForwardNewStrengthWorkouts {
+                    completionHandler()
+                    done()
+                }
+            }
         }
         observerQuery = query
         healthStore.execute(query)
@@ -72,6 +93,29 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
                 NSLog("%@ enableBackgroundDelivery succeeded=%@", Self.logTag, success ? "true" : "false")
             }
         }
+    }
+
+    /// Requests a short extension of background execution time (Apple grants
+    /// a budget on the order of seconds-to-tens-of-seconds; exact amount is
+    /// not documented/guaranteed) so the async work in [work] — including the
+    /// round trip into Dart to show the local notification — has a real
+    /// chance to finish before the process is suspended again.
+    private func runWithExtendedBackgroundTime(_ work: @escaping (_ done: @escaping () -> Void) -> Void) {
+        var taskId = UIBackgroundTaskIdentifier.invalid
+        var didFinish = false
+        let finish = { [weak self] in
+            guard !didFinish else { return }
+            didFinish = true
+            if taskId != .invalid {
+                UIApplication.shared.endBackgroundTask(taskId)
+                NSLog("%@ background task ended", Self.logTag)
+            }
+        }
+        taskId = UIApplication.shared.beginBackgroundTask(withName: "HealthWorkoutObserver.fire") {
+            NSLog("%@ background task EXPIRED before work finished", Self.logTag)
+            finish()
+        }
+        work { finish() }
     }
 
     // MARK: FlutterStreamHandler
@@ -95,31 +139,43 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
 
     // MARK: - Fetching newly-finished strength workouts
 
-    private func fetchAndForwardNewStrengthWorkouts() {
+    private func fetchAndForwardNewStrengthWorkouts(completion: @escaping () -> Void) {
         let traditional = HKQuery.predicateForWorkouts(with: .traditionalStrengthTraining)
         let functional = HKQuery.predicateForWorkouts(with: .functionalStrengthTraining)
         let predicate = NSCompoundPredicate(orPredicateWithSubpredicates: [traditional, functional])
         let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
 
         let query = HKSampleQuery(sampleType: workoutType, predicate: predicate, limit: 20, sortDescriptors: [sort]) { [weak self] _, samples, error in
-            guard let self = self else { return }
+            guard let self = self else {
+                completion()
+                return
+            }
             if let error = error {
                 NSLog("%@ sample query failed: %@", Self.logTag, error.localizedDescription)
+                completion()
                 return
             }
             let workouts = samples as? [HKWorkout] ?? []
             NSLog("%@ sample query returned %d strength workout(s)", Self.logTag, workouts.count)
             let unseen = workouts.filter { !self.isProcessed($0.uuid) }
             NSLog("%@ %d of those are unseen (new)", Self.logTag, unseen.count)
+            guard !unseen.isEmpty else {
+                completion()
+                return
+            }
+
+            let group = DispatchGroup()
             for workout in unseen {
                 self.markProcessed(workout.uuid)
-                self.processWorkout(workout)
+                group.enter()
+                self.processWorkout(workout) { group.leave() }
             }
+            group.notify(queue: .main, execute: completion)
         }
         healthStore.execute(query)
     }
 
-    private func processWorkout(_ workout: HKWorkout) {
+    private func processWorkout(_ workout: HKWorkout, completion: @escaping () -> Void) {
         NSLog("%@ processing workout %@ (start=%@ end=%@)", Self.logTag, workout.uuid.uuidString,
               "\(workout.startDate)", "\(workout.endDate)")
         let group = DispatchGroup()
@@ -146,6 +202,7 @@ final class HealthWorkoutObserver: NSObject, FlutterStreamHandler {
 
         group.notify(queue: .main) {
             self.send(workout: workout, activeCalories: activeCalories, averageHeartRate: averageHeartRate)
+            completion()
         }
     }
 
