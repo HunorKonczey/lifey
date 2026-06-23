@@ -15,6 +15,7 @@ class HealthPreferences {
   final FlutterSecureStorage _storage;
 
   static const _enabledKey = 'health.appleHealthEnabled';
+  static const _lastWeightImportKey = 'health.lastHealthWeightImportedAt';
 
   Future<bool> isEnabled() async {
     return (await _storage.read(key: _enabledKey)) == 'true';
@@ -22,6 +23,17 @@ class HealthPreferences {
 
   Future<void> setEnabled(bool enabled) {
     return _storage.write(key: _enabledKey, value: enabled ? 'true' : 'false');
+  }
+
+  /// When the Phase 3 weight importer last created an entry from a HealthKit
+  /// sample — guards against re-importing the same sample on every app resume.
+  Future<DateTime?> lastHealthWeightImportedAt() async {
+    final raw = await _storage.read(key: _lastWeightImportKey);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  Future<void> setLastHealthWeightImportedAt(DateTime timestamp) {
+    return _storage.write(key: _lastWeightImportKey, value: timestamp.toIso8601String());
   }
 }
 

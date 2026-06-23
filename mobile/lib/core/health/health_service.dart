@@ -136,6 +136,28 @@ class HealthService {
     if (values.isEmpty) return null;
     return values.reduce((a, b) => a + b) / values.length;
   }
+
+  /// The most recent `HealthDataType.WEIGHT` (body mass, kg) sample, or null
+  /// on Android / no permission / no samples. Only the latest sample matters
+  /// for Phase 3's import — older Health weights are never of interest.
+  Future<({double kg, DateTime timestamp})?> latestBodyMass() async {
+    if (!isAvailable) return null;
+    await _ensureConfigured();
+    final now = DateTime.now();
+    // A year back is generous — comfortably covers "haven't weighed in for a
+    // while" without scanning someone's entire HealthKit history.
+    final points = await _health.getHealthDataFromTypes(
+      types: const [HealthDataType.WEIGHT],
+      startTime: now.subtract(const Duration(days: 365)),
+      endTime: now,
+    );
+    if (points.isEmpty) return null;
+    points.sort((a, b) => b.dateTo.compareTo(a.dateTo));
+    final latest = points.first;
+    final value = latest.value;
+    if (value is! NumericHealthValue) return null;
+    return (kg: value.numericValue.toDouble(), timestamp: latest.dateTo);
+  }
 }
 
 final healthServiceProvider = Provider<HealthService>((ref) => HealthService());

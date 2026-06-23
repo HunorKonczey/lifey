@@ -62,7 +62,13 @@ class WeightRepository {
   }
 
   WeightEntry _toDomain(WeightEntryRow row) {
-    return WeightEntry(clientId: row.clientId, id: row.serverId, date: row.date, weight: row.weight);
+    return WeightEntry(
+      clientId: row.clientId,
+      id: row.serverId,
+      date: row.date,
+      weight: row.weight,
+      recordedAt: row.recordedAt,
+    );
   }
 }
 

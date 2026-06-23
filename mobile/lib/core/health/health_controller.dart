@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'health_preferences.dart';
 import 'health_service.dart';
+import 'weight_health_importer.dart';
 
 /// Exposes (and mutates) the "Connect Apple Health" opt-in toggle.
 ///
@@ -29,6 +32,10 @@ class AppleHealthController extends AsyncNotifier<bool> {
       // Best-effort: HealthKit won't tell us whether READ was actually
       // granted, so we don't flip the toggle back on a `false` return.
       await _service.requestPermissions();
+      // Phase 3: try the weight import right away rather than waiting for the
+      // next app resume, since granting permission is the other documented
+      // trigger.
+      unawaited(ref.read(weightHealthImporterProvider).import());
     }
   }
 }

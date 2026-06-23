@@ -4,6 +4,7 @@ class WeightEntry {
     required this.clientId,
     required this.date,
     required this.weight,
+    required this.recordedAt,
     this.id,
   });
 
@@ -15,4 +16,10 @@ class WeightEntry {
   final int? id;
   final DateTime date;
   final double weight;
+
+  /// Local-only timestamp of when this entry was first recorded on this
+  /// device (not synced — `date` is the day the weight applies to, this is
+  /// when it was logged). Used by the Apple Health importer to dedup against
+  /// a measurement the user just logged manually.
+  final DateTime recordedAt;
 }

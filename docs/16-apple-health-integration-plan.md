@@ -60,7 +60,7 @@ machinery at all; we just read on demand when the user asks.
 | 0 | HealthKit foundation (entitlement, permissions) | none | setup + Dart permission flow | Low–Med |
 | 1 | ~~Strength-workout completion → notify → pair~~ → **REVISED**: manual "Import from Apple Health" button on the active workout → confirm → close + enrich (calories + avg HR), Apple badge | done (3 columns) | Dart **foreground** read + import button + dialog (no native Swift, no notifications) | Low–Med |
 | 2 | Step count on dashboard, ~1 min refresh while active | none | Dart foreground read + timer | Low–Med |
-| 3 | Weight sync from Health, 30-min dedup | none | Dart read + dedup, reuse weight path | Med |
+| 3 | Weight sync from Health, 1-day dedup | none | Dart read + dedup, reuse weight path | Med |
 
 The bulk is mobile. The only genuinely hard part is Phase 1's background/native
 plumbing; Phases 2 and 3 are Dart-only foreground reads via the `health` package.
@@ -679,50 +679,64 @@ Match existing StatCard styling and provider conventions.
 
 ---
 
-## Phase 3 — Weight sync from Health (30-min dedup)
+## Phase 3 — Weight sync from Health (1-day dedup)
 
 ### Goal
 Pull the latest body-weight from Apple Health into the app's weight log, but only
-when it's clearly a new measurement — at least 30 minutes apart from the app's
-most recent weight entry — to avoid duplicating the same logging event. Old Health
+when it's clearly a new measurement — at least a day apart from the app's most
+recent weight entry — to avoid duplicating the same logging event. Old Health
 weights are not of interest; only the most recent sample matters.
 
+> **Note 2026-06-23:** the dedup window was widened from the originally-planned
+> 30 minutes to **1 day** before implementation — body weight is logged at most a
+> few times a day, so a day-wide window is the more natural "is this a new
+> weigh-in" boundary than a half-hour one.
+
 ### Design (mobile only — reuses the existing weight path; no backend change)
-- `HealthService.latestBodyMass()` reads the most recent `HKQuantityType.bodyMass`
+- `HealthService.latestBodyMass()` reads the most recent `HealthDataType.WEIGHT`
   sample (value in kg + its timestamp); iOS-only, null otherwise.
 - Dedup rule: compare the Health sample's timestamp to the app's latest weight
   entry's timestamp. Import (create a weight entry via the existing
   `WeightRepository.create`, which then syncs normally) only if they differ by
-  **≥ 30 minutes**. This prevents re-importing a weight the user just logged in
-  the app, and avoids re-adding the same Health sample on repeated checks.
-  - Note the existing weight model stores `date` at day granularity plus a local
-    `recordedAt`; for a robust 30-min comparison, persist a
-    `lastHealthWeightImportedAt` (in settings/prefs) and also compare against the
-    latest entry's `recordedAt`. Spell out the exact comparison in the prompt.
-- Trigger: on app resume and/or right after permission is granted, behind the
+  **≥ 1 day**. This prevents re-importing a weight the user just logged in the
+  app, and avoids re-adding the same Health sample on repeated checks.
+  - The existing weight model stores `date` at day granularity plus a local
+    `recordedAt`; for a robust comparison, a `lastHealthWeightImportedAt` is
+    persisted (in `HealthPreferences`) and also compared against the latest
+    entry's `recordedAt`.
+- Trigger: on app resume and right after permission is granted, behind the
   "Connect Apple Health" toggle. No background polling.
 
-### Prompt 3.1 — weight import with dedup
-```
-Read mobile/lib/core/health/health_service.dart, lib/features/weight/data/
-weight_repository.dart, domain/weight_entry.dart, application/weight_controller.dart,
-and where app-resume is already handled (e.g. the connectivity/lifecycle sync
-controller in lib/core/sync/).
-
-Add iOS-only weight import from Apple Health:
-1. HealthService.latestBodyMass(): most recent HKQuantityType.bodyMass sample as
-   (double kg, DateTime timestamp)?; null on Android / no permission.
-2. A WeightHealthImporter that, when the "Connect Apple Health" toggle is on,
-   reads the latest body mass and creates a weight entry via WeightRepository.create
-   ONLY if the sample's timestamp differs from the app's most recent weight
-   entry (and from a persisted lastHealthWeightImportedAt) by >= 30 minutes —
-   otherwise skip, to avoid duplicating the same measurement. Persist
-   lastHealthWeightImportedAt after a successful import. Ignore older samples;
-   only the latest matters.
-3. Trigger it on app resume / right after permission grant. No background polling.
-Reuse the existing offline-first weight create path (it syncs on its own); no
-backend changes.
-```
+### Status: ✅ implemented 2026-06-23
+- `WeightEntry` (domain) gained a `recordedAt` field (the local-only logging
+  timestamp already stored in the Drift table but not previously exposed),
+  populated by `WeightRepository._toDomain`.
+- `HealthService.latestBodyMass()`: foreground `getHealthDataFromTypes` read over
+  `HealthDataType.WEIGHT` for the last 365 days, returns the most recent sample as
+  `({double kg, DateTime timestamp})?`.
+- `HealthPreferences` gained `lastHealthWeightImportedAt()` /
+  `setLastHealthWeightImportedAt()`, stored alongside the existing toggle.
+- `lib/core/health/weight_health_importer.dart`:
+  - `WeightHealthImporter.import()` — reads the toggle, the latest sample, and the
+    most-recently-logged entry (by `recordedAt`, computed across the full list
+    rather than relying on `watchAll`'s date-first ordering); skips if the sample
+    is within **1 day** of either the persisted `lastHealthWeightImportedAt` or
+    the latest entry's `recordedAt`; otherwise calls
+    `weightControllerProvider.notifier.addEntry` and persists the new
+    `lastHealthWeightImportedAt`. Wrapped in try/catch — best-effort, like the
+    connectivity sync controller.
+  - `WeightHealthImportLifecycle` — a `WidgetsBindingObserver` that calls
+    `import()` once at construction (covers cold start, since the very first
+    "resumed" transition happens before an observer can be registered) and again
+    on every `AppLifecycleState.resumed`. Instantiated for the app's lifetime via
+    `weightHealthImportLifecycleProvider`, watched from `app.dart` next to
+    `connectivitySyncControllerProvider`.
+  - The "right after permission grant" trigger lives in
+    `AppleHealthController.setEnabled` instead (a one-shot event, not a lifecycle
+    transition): right after `requestPermissions()` succeeds it fires
+    `weightHealthImporterProvider.import()`.
+- No new UI/strings — this phase is a silent background import with no dialog.
+- `flutter analyze lib` clean; `flutter test` passes.
 
 ---
 
@@ -734,8 +748,9 @@ backend changes.
    close/enrich on the active workout (1.4 revised)** → Apple badge (1.5 ✅) →
    **remove old observer/notification machinery (1.6 new)**. 1.1/1.2/1.5 are
    already done and unchanged; the remaining work is the Dart-only 1.3, 1.4, 1.6.
-3. **Phase 2** — steps on dashboard (Dart-only, quick win).
-4. **Phase 3** — weight import with dedup (Dart-only, reuses weight path).
+3. **Phase 2** — steps on dashboard (Dart-only, quick win). ✅ implemented.
+4. **Phase 3** — weight import with dedup (Dart-only, reuses weight path). ✅
+   implemented (dedup window is 1 day, not the originally-planned 30 minutes).
 
 Phases 2 and 3 are independent of Phase 1 once Phase 0 is in place — if Phase 1's
 native work stalls, 2 and 3 can still ship.
@@ -753,6 +768,7 @@ native work stalls, 2 and 3 can still ship.
   is the one the button lives in).
 - **Phase 1 old machinery**: ✅ **removed** — native observer, background-delivery
   entitlement, and local notifications are deleted (Prompt 1.6).
-- **Phase 2 steps**: display-only (recommended) — confirm we are NOT syncing steps
-  to the backend. *(still open)*
-```
+- **Phase 2 steps**: ✅ **display-only** — never synced to the backend
+  (`HealthService.todaySteps()` is a pure foreground read, nothing persists it).
+- **Phase 3 dedup window**: ✅ **1 day** (revised from the originally-planned 30
+  minutes — see Phase 3's note above).

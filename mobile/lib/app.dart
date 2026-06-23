@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/health/weight_health_importer.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/connectivity_sync_controller.dart';
 import 'core/theme/app_theme.dart';
@@ -28,6 +29,8 @@ class LifeyApp extends ConsumerWidget {
 
     // Keeps itself alive for the app's lifetime; the return value is unused.
     ref.watch(connectivitySyncControllerProvider);
+    // Same — fires the Phase 3 Apple Health weight import on app resume.
+    ref.watch(weightHealthImportLifecycleProvider);
 
     final router = ref.watch(appRouterProvider);
     final settings = ref.watch(settingsControllerProvider).value;
