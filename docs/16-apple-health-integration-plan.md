@@ -292,10 +292,14 @@ Platform.isIOS. Document the required Xcode background-mode / capability steps.
 2. Open `ios/Runner.xcworkspace` in Xcode and confirm `HealthWorkoutObserver.swift` shows up
    under the `Runner` group (it's wired into `project.pbxproj` already, but Xcode should be
    opened once to confirm the project file parses cleanly after a hand-edit).
-3. No new capability or `UIBackgroundModes` entry is needed beyond Phase 0's HealthKit
-   capability — `enableBackgroundDelivery` uses HealthKit's own background-wake mechanism, not
-   the generic background-fetch/remote-notification modes. Re-verify the HealthKit capability is
-   still checked under Signing & Capabilities (Phase 0, step 2) after the pbxproj hand-edit.
+3. **Correction (found via on-device testing):** `enableBackgroundDelivery` needs a *separate*
+   entitlement from the base HealthKit one — `com.apple.developer.healthkit.background-delivery`.
+   Without it, `enableBackgroundDelivery` fails outright (logged: `"Missing
+   com.apple.developer.healthkit.background-delivery entitlement."`), and detection only ever
+   appears to work because `HKObserverQuery` fires immediately on `execute()` while the app is
+   open — true background wake never happens. Added to `Runner.entitlements` directly; in Xcode,
+   Signing & Capabilities → HealthKit should show a "Background Delivery" sub-checkbox once this
+   is present (it mirrors the entitlements file rather than driving it, since we hand-edit here).
 4. Verify on a **real device** — both `enableBackgroundDelivery` and local-notification delivery
    are unreliable/unsupported in the Simulator. To test: log a Traditional or Functional Strength
    workout in Apple Fitness (or Health app, "Add Data" → Workouts) on the device, background the
