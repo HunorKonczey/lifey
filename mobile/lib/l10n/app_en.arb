@@ -713,5 +713,11 @@
     "@importedFromAppleHealthTooltip": {"description": "Tooltip/semantics label for the Apple Health badge on a paired workout session card"},
 
     "appleHealthStatsLine": "{calories} kcal · {heartRate} bpm avg (Apple Health)",
-    "@appleHealthStatsLine": {"description": "Line showing active calories and average heart rate imported from Apple Health on a session card", "placeholders": {"calories": {"type": "String"}, "heartRate": {"type": "String"}}}
+    "@appleHealthStatsLine": {"description": "Line showing active calories and average heart rate imported from Apple Health on a session card", "placeholders": {"calories": {"type": "String"}, "heartRate": {"type": "String"}}},
+
+    "importFromAppleHealthButton": "Import from Apple Health",
+    "@importFromAppleHealthButton": {"description": "Button on the active workout that imports a just-finished Apple Health strength workout"},
+
+    "noRecentAppleWorkoutMessage": "No recent Apple Health workout found",
+    "@noRecentAppleWorkoutMessage": {"description": "Shown when the import button finds no strength workout finished in the last 15 minutes"}
 }

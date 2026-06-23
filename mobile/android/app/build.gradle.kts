@@ -16,7 +16,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        // Required by flutter_local_notifications on Android.
+        // Core library desugaring — kept enabled as a safe default for plugins
+        // that rely on newer java.time/etc. APIs on older Android API levels.
         isCoreLibraryDesugaringEnabled = true
     }
 

@@ -3,6 +3,8 @@ import 'dart:io' show Platform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:health/health.dart';
 
+import 'apple_workout.dart';
+
 /// The HealthKit data types the integration reads. Listed centrally so the
 /// permission request (Phase 0) and the per-phase read helpers stay in sync.
 ///
@@ -59,6 +61,72 @@ class HealthService {
 
   // Typed read helpers (today's steps, latest body mass, workouts) are added
   // by Phases 1–3 — Phase 0 is just the plumbing + permission request.
+
+  /// The HealthKit workout activity types we treat as "strength training" —
+  /// the only ones the Phase 1 import offers to pair with.
+  static const _strengthActivityTypes = {
+    HealthWorkoutActivityType.TRADITIONAL_STRENGTH_TRAINING,
+    HealthWorkoutActivityType.FUNCTIONAL_STRENGTH_TRAINING,
+  };
+
+  /// Foreground read of strength workouts that **finished within [within]** of
+  /// now, most-recently-finished first. This is the Phase 1 import source: the
+  /// user taps "Import from Apple Health" right after finishing their Apple
+  /// Fitness workout, so the completed HKWorkout has already synced and a plain
+  /// foreground query finds it — no observer/background delivery needed.
+  ///
+  /// Returns `[]` on non-iOS, or when HealthKit has nothing/permission was
+  /// denied (HealthKit never reveals READ-grant state, so empty is expected and
+  /// must be tolerated).
+  Future<List<AppleWorkout>> recentStrengthWorkouts({
+    Duration within = const Duration(minutes: 15),
+  }) async {
+    if (!isAvailable) return const [];
+    await _ensureConfigured();
+    final now = DateTime.now();
+    // Open the query window well before the cutoff so a long workout that
+    // *started* earlier but *ended* within `within` is still returned — we
+    // filter on end time below.
+    final queryStart = now.subtract(within + const Duration(hours: 12));
+    final points = await _health.getHealthDataFromTypes(
+      types: const [HealthDataType.WORKOUT],
+      startTime: queryStart,
+      endTime: now,
+    );
+
+    final cutoff = now.subtract(within);
+    final workouts = <AppleWorkout>[];
+    for (final point in points) {
+      final value = point.value;
+      if (value is! WorkoutHealthValue) continue;
+      if (!_strengthActivityTypes.contains(value.workoutActivityType)) continue;
+      if (point.dateTo.isBefore(cutoff)) continue; // ended too long ago
+      workouts.add(AppleWorkout(
+        uuid: point.uuid,
+        startDate: point.dateFrom,
+        endDate: point.dateTo,
+        activeCalories: value.totalEnergyBurned?.toDouble(),
+        averageHeartRate: await _averageHeartRate(point.dateFrom, point.dateTo),
+      ));
+    }
+    workouts.sort((a, b) => b.endDate.compareTo(a.endDate));
+    return workouts;
+  }
+
+  /// Mean of the heart-rate samples in `[from, to]`, or null if there are none.
+  Future<double?> _averageHeartRate(DateTime from, DateTime to) async {
+    final points = await _health.getHealthDataFromTypes(
+      types: const [HealthDataType.HEART_RATE],
+      startTime: from,
+      endTime: to,
+    );
+    final values = <double>[
+      for (final point in points)
+        if (point.value case final NumericHealthValue v) v.numericValue.toDouble(),
+    ];
+    if (values.isEmpty) return null;
+    return values.reduce((a, b) => a + b) / values.length;
+  }
 }
 
 final healthServiceProvider = Provider<HealthService>((ref) => HealthService());
