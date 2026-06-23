@@ -60,7 +60,7 @@ machinery at all; we just read on demand when the user asks.
 | 0 | HealthKit foundation (entitlement, permissions) | none | setup + Dart permission flow | Low–Med |
 | 1 | ~~Strength-workout completion → notify → pair~~ → **REVISED**: manual "Import from Apple Health" button on the active workout → confirm → close + enrich (calories + avg HR), Apple badge | done (3 columns) | Dart **foreground** read + import button + dialog (no native Swift, no notifications) | Low–Med |
 | 2 | Step count on dashboard, ~1 min refresh while active | none | Dart foreground read + timer | Low–Med |
-| 3 | Weight sync from Health, 1-day dedup | none | Dart read + dedup, reuse weight path | Med |
+| 3 | Weight sync from Health, 30-day dedup | none | Dart read + dedup, reuse weight path | Med |
 
 The bulk is mobile. The only genuinely hard part is Phase 1's background/native
 plumbing; Phases 2 and 3 are Dart-only foreground reads via the `health` package.
@@ -686,18 +686,21 @@ Match existing StatCard styling and provider conventions.
 
 ---
 
-## Phase 3 — Weight sync from Health (1-day dedup)
+## Phase 3 — Weight sync from Health (30-day dedup)
 
 ### Goal
 Pull the latest body-weight from Apple Health into the app's weight log, but only
-when it's clearly a new measurement — at least a day apart from the app's most
+when it's clearly a new measurement — at least 30 days apart from the app's most
 recent weight entry — to avoid duplicating the same logging event. Old Health
 weights are not of interest; only the most recent sample matters.
 
-> **Note 2026-06-23:** the dedup window was widened from the originally-planned
-> 30 minutes to **1 day** before implementation — body weight is logged at most a
-> few times a day, so a day-wide window is the more natural "is this a new
-> weigh-in" boundary than a half-hour one.
+> **Note 2026-06-23:** the dedup window was widened twice before settling: from
+> the originally-planned 30 minutes to **1 day** at implementation time, then to
+> **30 days** once the 1-day version was confirmed working — the explicit
+> timestamp comparison (against both the last import and the latest logged
+> entry) already rules out a duplicate regardless of window width, so widening
+> further is safe; it just settles the import cadence into "roughly monthly"
+> rather than reacting to every new HealthKit sample.
 
 ### Design (mobile only — reuses the existing weight path; no backend change)
 - `HealthService.latestBodyMass()` reads the most recent `HealthDataType.WEIGHT`
@@ -705,7 +708,7 @@ weights are not of interest; only the most recent sample matters.
 - Dedup rule: compare the Health sample's timestamp to the app's latest weight
   entry's timestamp. Import (create a weight entry via the existing
   `WeightRepository.create`, which then syncs normally) only if they differ by
-  **≥ 1 day**. This prevents re-importing a weight the user just logged in the
+  **≥ 30 days**. This prevents re-importing a weight the user just logged in the
   app, and avoids re-adding the same Health sample on repeated checks.
   - The existing weight model stores `date` at day granularity plus a local
     `recordedAt`; for a robust comparison, a `lastHealthWeightImportedAt` is
@@ -727,7 +730,7 @@ weights are not of interest; only the most recent sample matters.
   - `WeightHealthImporter.import()` — reads the toggle, the latest sample, and the
     most-recently-logged entry (by `recordedAt`, computed across the full list
     rather than relying on `watchAll`'s date-first ordering); skips if the sample
-    is within **1 day** of either the persisted `lastHealthWeightImportedAt` or
+    is within **30 days** of either the persisted `lastHealthWeightImportedAt` or
     the latest entry's `recordedAt`; otherwise calls
     `weightControllerProvider.notifier.addEntry` and persists the new
     `lastHealthWeightImportedAt`. Wrapped in try/catch — best-effort, like the
@@ -757,7 +760,7 @@ weights are not of interest; only the most recent sample matters.
    already done and unchanged; the remaining work is the Dart-only 1.3, 1.4, 1.6.
 3. **Phase 2** — steps on dashboard (Dart-only, quick win). ✅ implemented.
 4. **Phase 3** — weight import with dedup (Dart-only, reuses weight path). ✅
-   implemented (dedup window is 1 day, not the originally-planned 30 minutes).
+   implemented (dedup window is 30 days, not the originally-planned 30 minutes).
 
 Phases 2 and 3 are independent of Phase 1 once Phase 0 is in place — if Phase 1's
 native work stalls, 2 and 3 can still ship.
@@ -779,5 +782,6 @@ native work stalls, 2 and 3 can still ship.
   entitlement, and local notifications are deleted (Prompt 1.6).
 - **Phase 2 steps**: ✅ **display-only** — never synced to the backend
   (`HealthService.todaySteps()` is a pure foreground read, nothing persists it).
-- **Phase 3 dedup window**: ✅ **1 day** (revised from the originally-planned 30
-  minutes — see Phase 3's note above).
+- **Phase 3 dedup window**: ✅ **30 days** (originally planned as 30 minutes,
+  widened to 1 day at implementation, then to 30 days once confirmed working —
+  see Phase 3's note above).

@@ -22,12 +22,12 @@ class WeightHealthImporter {
 
   final Ref _ref;
 
-  /// A full day, not 30 minutes — body weight is logged at most a few times a
-  /// day, so a day-wide window comfortably tells "this is the same morning
-  /// weigh-in" apart from "this is tomorrow's new measurement" without being
-  /// so tight that clock drift or a slightly-delayed HealthKit sync causes a
-  /// duplicate.
-  static const _dedupWindow = Duration(days: 1);
+  /// 30 days, not 1 — the explicit timestamp comparison against both the last
+  /// import and the latest logged entry already rules out re-importing the
+  /// same measurement, so widening this further doesn't risk a duplicate; it
+  /// just means importing settles into "roughly monthly" cadence rather than
+  /// reacting to every new HealthKit sample.
+  static const _dedupWindow = Duration(days: 30);
 
   Future<void> import() async {
     try {
