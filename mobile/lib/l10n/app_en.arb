@@ -301,6 +301,9 @@
     "addSetTitle": "Add set",
     "@addSetTitle": {"description": "Title/button for adding a set to a workout session"},
 
+    "editSetTitle": "Edit set",
+    "@editSetTitle": {"description": "Title for editing an existing logged set"},
+
     "exerciseLabel": "Exercise",
     "@exerciseLabel": {"description": "Label for the exercise picker field"},
 

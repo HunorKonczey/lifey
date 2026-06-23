@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/health/apple_workout.dart';
@@ -151,6 +152,37 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
+  /// Single-tapping a set card opens the same sheet pre-filled with that
+  /// set's exercise/reps/weight, but edits it in place rather than adding a
+  /// new one — the timestamp (and therefore rest-time math) is left
+  /// untouched.
+  Future<void> _editSet(int index) async {
+    final source = _sets[index];
+    final draft = await showModalBottomSheet<SetDraft>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AddSetSheet(
+        initialExercise: source.exercise,
+        initialReps: source.reps,
+        initialWeight: source.weight,
+        isEditing: true,
+      ),
+    );
+    if (draft != null) {
+      setState(() {
+        _sets[index] = (
+          exercise: draft.exercise,
+          reps: draft.reps,
+          weight: draft.weight,
+          performedAt: source.performedAt,
+        );
+        _plannedExerciseIds.add(draft.exercise.clientId);
+      });
+      await _autoSave();
+    }
+  }
+
   /// Persists in the background right after an in-place edit (e.g. logging a
   /// set), so nothing is lost if the user closes the app mid-workout. Reuses
   /// the same _saving + snackbar pattern as the top Save button — guarding on
@@ -273,7 +305,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         sets: sets,
         workout: workout,
       );
-      if (mounted) Navigator.of(context).pop();
+      // Importing always finishes the session, so land back on the dashboard
+      // — and pop this screen off whichever branch's Navigator stack it was
+      // pushed onto, otherwise switching back to that tab finds it waiting.
+      if (mounted) {
+        context.go('/dashboard');
+        Navigator.of(context).pop();
+      }
     } catch (_) {
       if (mounted) {
         messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotSaveSessionMessage)));
@@ -288,10 +326,21 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     setState(() => _saving = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final isFinishing = _finishedAt != null;
     final couldNotSaveSessionMessage = AppLocalizations.of(context)!.couldNotSaveSessionMessage;
     try {
       await _persist();
-      navigator.pop();
+      // A finished session is done for good, so land back on the dashboard
+      // rather than the list/detail screen this was pushed from — but it
+      // still has to be popped off that branch's own Navigator stack too,
+      // otherwise switching back to that tab later finds this screen still
+      // sitting there waiting instead of the list.
+      if (isFinishing) {
+        if (mounted) context.go('/dashboard');
+        navigator.pop();
+      } else {
+        navigator.pop();
+      }
     } catch (_) {
       setState(() => _saving = false);
       messenger.showSnackBar(
@@ -358,7 +407,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                     final picked = await _pickDateTime(_finishedAt ?? DateTime.now());
                     if (picked != null) {
                       setState(() => _finishedAt = picked);
-                      if (_sessionClientId != null) await _autoSave();
+                      // Setting a finish time finishes the workout outright —
+                      // no separate Save tap needed, so persist and navigate
+                      // away exactly like the Save button would.
+                      await _save();
                     }
                   },
                   icon: const Icon(Icons.flag),
@@ -444,6 +496,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               final s = entry.value;
               final rest = index == 0 ? null : s.performedAt.difference(_sets[index - 1].performedAt);
               return GestureDetector(
+                onTap: () => _editSet(index),
                 onDoubleTap: () => _duplicateSet(index),
                 child: Card(
                   elevation: 0,

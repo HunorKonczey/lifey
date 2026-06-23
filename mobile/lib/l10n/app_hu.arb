@@ -103,6 +103,7 @@
     "couldNotLoadExercisesPrefix": "Nem sikerült betölteni a gyakorlatokat:",
     "noExercisesAvailableMessage": "Nincs elérhető gyakorlat.",
     "addSetTitle": "Szett hozzáadása",
+    "editSetTitle": "Szett szerkesztése",
     "exerciseLabel": "Gyakorlat",
     "pickAnExerciseError": "Válassz egy gyakorlatot",
     "repsLabel": "Ismétlés",

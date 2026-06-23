@@ -14,9 +14,10 @@ Scope: workout session sets (`exercise_sets`) — backend + mobile
    exercise / reps / weight) with a fresh `performedAt = now`. This is the fast
    "I just did another set of the same thing" gesture, and it's what makes rest
    time meaningful between consecutive sets.
-   > Interpretation note: "hozzon létre egy tök újat" is read here as *duplicate
-   > the tapped set with a new timestamp*. If you actually want it to open an
-   > empty add-set sheet instead, only Prompt 3's `onDoubleTap` body changes.
+   > Interpretation note: the original request ("create a brand-new one") is
+   > read here as *duplicate the tapped set with a new timestamp*. If you
+   > actually want it to open an empty add-set sheet instead, only Prompt 3's
+   > `onDoubleTap` body changes.
 3. **Rest time in the set list.** Each set (except the first in its order) shows
    the gap to the previous set as **minutes + seconds** (e.g. `1:30` / "1 min
    30 s") — i.e. the rest taken before it.

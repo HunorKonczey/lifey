@@ -19,11 +19,21 @@ const _maxSuggestions = 20;
 /// it — only the timestamp is deliberately not pre-filled there, since it's
 /// stamped fresh on submit).
 class AddSetSheet extends ConsumerStatefulWidget {
-  const AddSetSheet({super.key, this.initialExercise, this.initialReps, this.initialWeight});
+  const AddSetSheet({
+    super.key,
+    this.initialExercise,
+    this.initialReps,
+    this.initialWeight,
+    this.isEditing = false,
+  });
 
   final Exercise? initialExercise;
   final int? initialReps;
   final double? initialWeight;
+
+  /// True when editing an existing set in place (single-tap), as opposed to
+  /// adding a new one — swaps the title/button copy to "Edit set"/"Save".
+  final bool isEditing;
 
   @override
   ConsumerState<AddSetSheet> createState() => _AddSetSheetState();
@@ -92,7 +102,10 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(l10n.addSetTitle, style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  widget.isEditing ? l10n.editSetTitle : l10n.addSetTitle,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 16),
                 Autocomplete<Exercise>(
                   initialValue: TextEditingValue(text: _exercise?.name ?? ''),
@@ -174,7 +187,10 @@ class _AddSetSheetState extends ConsumerState<AddSetSheet> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: _submit, child: Text(l10n.addButton)),
+                FilledButton(
+                  onPressed: _submit,
+                  child: Text(widget.isEditing ? l10n.saveButton : l10n.addButton),
+                ),
               ],
             ),
           );
