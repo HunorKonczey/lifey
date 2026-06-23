@@ -120,12 +120,22 @@ class HealthWorkoutObserverService {
         'didNotificationLaunchApp=${details?.didNotificationLaunchApp}, '
         'payload=${details?.notificationResponse?.payload}');
     if (details?.didNotificationLaunchApp != true) return;
+    // TEMP diagnostic: distinct (lighter) haptic pattern from
+    // _onNotificationTap's, so a buzz here vs. there tells us which path
+    // actually fired — cold launch vs. warm resume tap. Remove once confirmed.
+    HapticFeedback.selectionClick();
     final payload = details?.notificationResponse?.payload;
     if (payload == null) return;
     _dispatchTapPayload(payload);
   }
 
   void _onNotificationTap(NotificationResponse response) {
+    // TEMP diagnostic: a haptic buzz the instant this callback fires, so we
+    // can tell whether the native tap delegate reached Dart at all, fully
+    // independent of whether any logging pipeline (Xcode console / Console.app)
+    // happens to be capturing output right now. Remove once the pairing flow
+    // is confirmed working end to end.
+    HapticFeedback.heavyImpact();
     debugPrint('[HealthWorkoutObserver] onDidReceiveNotificationResponse fired, '
         'payload=${response.payload}');
     final payload = response.payload;
