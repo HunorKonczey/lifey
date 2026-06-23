@@ -72,8 +72,20 @@ class SyncEngine {
     return _hasUnresolvedRefs(jsonDecode(op.payloadJson));
   }
 
+  /// Whether [clientId]'s **create** is still outstanding. Filtering on
+  /// `operation == 'create'` (not just `clientId`) matters: an update queued
+  /// against an entity whose create hasn't synced yet (see
+  /// [OutboxWriter.enqueueUpdate]) inserts a *second* `pending_operations` row
+  /// for the same `clientId` — so a clientId-only query can match both rows
+  /// at once and `getSingleOrNull()` throws "Too many elements". This bit the
+  /// food-edit flow directly: edit a food while its create is still
+  /// failing/pending (e.g. weak connectivity) and every sync pass crashed
+  /// here — silently, since `_kick()` never awaits `sync()` — which left the
+  /// create's POST retrying forever while the edit's PUT never got a chance
+  /// to even be attempted.
   Future<bool> _hasPendingOperation(String clientId) async {
-    final row = await (_db.select(_db.pendingOperations)..where((t) => t.clientId.equals(clientId)))
+    final row = await (_db.select(_db.pendingOperations)
+          ..where((t) => t.clientId.equals(clientId) & t.operation.equals('create')))
         .getSingleOrNull();
     return row != null;
   }
