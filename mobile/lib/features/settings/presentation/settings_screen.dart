@@ -2,372 +2,534 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/health/health_controller.dart';
 import '../../../core/network/error_message.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../water/presentation/water_sources_screen.dart';
 import '../application/settings_controller.dart';
 import '../domain/user_settings.dart';
 
-/// Settings: unit system, theme, language, and optional daily goals.
-class SettingsScreen extends ConsumerWidget {
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(settingsControllerProvider);
-    final l10n = AppLocalizations.of(context)!;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.settingsTitle),
-        centerTitle: false,
-        scrolledUnderElevation: 0,
-      ),
-      body: state.when(
-        data: (settings) => _SettingsForm(initial: settings),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => ErrorView(
-          error: error,
-          onRetry: () => ref.invalidate(settingsControllerProvider),
-        ),
-      ),
-    );
-  }
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-// ---------------------------------------------------------------------------
-// Form
-// ---------------------------------------------------------------------------
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  // Pushed route — provide its own collapse controller outside the MainShell.
+  final _collapseController = NavCollapseController();
 
-class _SettingsForm extends ConsumerStatefulWidget {
-  const _SettingsForm({required this.initial});
-
-  final UserSettings initial;
-
-  @override
-  ConsumerState<_SettingsForm> createState() => _SettingsFormState();
-}
-
-class _SettingsFormState extends ConsumerState<_SettingsForm> {
-  final _formKey = GlobalKey<FormState>();
+  // Form state (initialized on first data load)
+  bool _initialized = false;
   late UnitSystem _unitSystem;
   late ThemePreference _theme;
   late LanguagePreference _language;
-  late final TextEditingController _calorieController;
-  late final TextEditingController _proteinController;
-  late final TextEditingController _carbsController;
-  late final TextEditingController _fatController;
-  late final TextEditingController _waterController;
-  bool _submitting = false;
-  String? _submitError;
-
-  @override
-  void initState() {
-    super.initState();
-    _unitSystem = widget.initial.unitSystem;
-    _theme = widget.initial.theme;
-    _language = widget.initial.language;
-    _calorieController =
-        TextEditingController(text: widget.initial.dailyCalorieGoal?.toString() ?? '');
-    _proteinController =
-        TextEditingController(text: widget.initial.dailyProteinGoal?.toString() ?? '');
-    _carbsController =
-        TextEditingController(text: widget.initial.dailyCarbsGoal?.toString() ?? '');
-    _fatController =
-        TextEditingController(text: widget.initial.dailyFatGoal?.toString() ?? '');
-    _waterController =
-        TextEditingController(text: widget.initial.dailyWaterGoalLiters?.toString() ?? '');
-  }
+  int? _calorieGoal;
+  int? _proteinGoal;
+  int? _carbsGoal;
+  int? _fatGoal;
+  double? _waterGoal;
 
   @override
   void dispose() {
-    _calorieController.dispose();
-    _proteinController.dispose();
-    _carbsController.dispose();
-    _fatController.dispose();
-    _waterController.dispose();
+    _collapseController.dispose();
     super.dispose();
   }
 
-  int? _parseGoal(String text) =>
-      text.trim().isEmpty ? null : int.parse(text.trim());
-
-  double? _parseWaterGoal(String text) =>
-      text.trim().isEmpty ? null : double.parse(text.replaceAll(',', '.').trim());
-
-  String? _goalValidator(String? value) {
-    final text = value?.trim() ?? '';
-    if (text.isEmpty) return null;
-    final parsed = int.tryParse(text);
-    if (parsed == null || parsed < 0) {
-      return AppLocalizations.of(context)!.enterNonNegativeWholeNumber;
-    }
-    return null;
+  void _initFromSettings(UserSettings s) {
+    _unitSystem = s.unitSystem;
+    _theme = s.theme;
+    _language = s.language;
+    _calorieGoal = s.dailyCalorieGoal;
+    _proteinGoal = s.dailyProteinGoal;
+    _carbsGoal = s.dailyCarbsGoal;
+    _fatGoal = s.dailyFatGoal;
+    _waterGoal = s.dailyWaterGoalLiters;
+    _initialized = true;
   }
 
-  String? _waterGoalValidator(String? value) {
-    final text = value?.replaceAll(',', '.').trim() ?? '';
-    if (text.isEmpty) return null;
-    final parsed = double.tryParse(text);
-    if (parsed == null || parsed < 0) {
-      return AppLocalizations.of(context)!.enterNonNegativeNumber;
-    }
-    return null;
+  void _autoSave() {
+    ref
+        .read(settingsControllerProvider.notifier)
+        .save(
+          UserSettings(
+            unitSystem: _unitSystem,
+            theme: _theme,
+            language: _language,
+            dailyCalorieGoal: _calorieGoal,
+            dailyProteinGoal: _proteinGoal,
+            dailyCarbsGoal: _carbsGoal,
+            dailyFatGoal: _fatGoal,
+            dailyWaterGoalLiters: _waterGoal,
+          ),
+        )
+        .catchError((e) {
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+          }
+        });
   }
 
-  Future<void> _submit() async {
-    if (_submitting) return;
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _submitting = true;
-      _submitError = null;
-    });
-    try {
-      await ref.read(settingsControllerProvider.notifier).save(
-            UserSettings(
-              unitSystem: _unitSystem,
-              theme: _theme,
-              language: _language,
-              dailyCalorieGoal: _parseGoal(_calorieController.text),
-              dailyProteinGoal: _parseGoal(_proteinController.text),
-              dailyCarbsGoal: _parseGoal(_carbsController.text),
-              dailyFatGoal: _parseGoal(_fatController.text),
-              dailyWaterGoalLiters: _parseWaterGoal(_waterController.text),
-            ),
-          );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.settingsSavedMessage)),
+  // Opens a bottom-sheet picker for Language.
+  void _pickLanguage(AppLocalizations l10n) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetCtx) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final opt in LanguagePreference.values)
+              ListTile(
+                title: Text(_languageName(opt, l10n)),
+                trailing:
+                    _language == opt
+                        ? Icon(
+                          Icons.check,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
+                        : null,
+                onTap: () {
+                  setState(() => _language = opt);
+                  _autoSave();
+                  Navigator.of(sheetCtx).pop();
+                },
+              ),
+            SizedBox(height: MediaQuery.paddingOf(context).bottom + 8),
+          ],
         );
-      }
-    } catch (error) {
-      setState(() => _submitError = friendlyError(error));
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
+      },
+    );
+  }
+
+  // Opens a bottom-sheet text editor for a numeric goal field.
+  void _openGoalSheet({
+    required String label,
+    required String suffix,
+    required String initialText,
+    required bool decimal,
+    required void Function(String text) onSave,
+  }) {
+    final ctrl = TextEditingController(text: initialText);
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder:
+          (sheetCtx) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(sheetCtx).bottom,
+            ),
+            child: _GoalEditSheet(
+              label: label,
+              suffix: suffix,
+              controller: ctrl,
+              decimal: decimal,
+              onSave: (text) {
+                onSave(text);
+                _autoSave();
+                Navigator.of(sheetCtx).pop();
+              },
+            ),
+          ),
+    ).then((_) => ctrl.dispose());
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final state = ref.watch(settingsControllerProvider);
     final l10n = AppLocalizations.of(context)!;
+
+    // Initialize form state once on first successful load.
+    if (!_initialized) {
+      state.whenData(_initFromSettings);
+    }
+
+    final statusTop = MediaQuery.paddingOf(context).top;
+    final barTop = statusTop + 8.0;
+    final contentTop = barTop + 58.0 + 12.0;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
-    return Form(
-      key: _formKey,
-      child: ListView(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad + 24),
-        children: [
-          // ── Units ────────────────────────────────────────────────────────
-          _SectionHeader(l10n.unitsLabel),
-          _SettingsCard(
-            child: SegmentedButton<UnitSystem>(
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment(value: UnitSystem.metric, label: Text(l10n.unitsMetric)),
-                ButtonSegment(value: UnitSystem.imperial, label: Text(l10n.unitsImperial)),
-              ],
-              selected: {_unitSystem},
-              onSelectionChanged: (s) => setState(() => _unitSystem = s.first),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // ── Appearance ──────────────────────────────────────────────────
-          _SectionHeader(l10n.themeLabel),
-          _SettingsCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SegmentedButton<ThemePreference>(
-                  showSelectedIcon: false,
-                  segments: [
-                    ButtonSegment(value: ThemePreference.light, label: Text(l10n.themeLight)),
-                    ButtonSegment(value: ThemePreference.dark, label: Text(l10n.themeDark)),
-                    ButtonSegment(value: ThemePreference.system, label: Text(l10n.optionSystem)),
-                  ],
-                  selected: {_theme},
-                  onSelectionChanged: (s) => setState(() => _theme = s.first),
-                ),
-                const SizedBox(height: 12),
-                const _SettingsDivider(),
-                const SizedBox(height: 12),
-                Text(l10n.languageLabel,
-                    style: theme.textTheme.labelMedium
-                        ?.copyWith(color: scheme.onSurfaceVariant)),
-                const SizedBox(height: 8),
-                SegmentedButton<LanguagePreference>(
-                  showSelectedIcon: false,
-                  segments: [
-                    ButtonSegment(
-                        value: LanguagePreference.system,
-                        label: Text(l10n.optionSystem)),
-                    ButtonSegment(
-                        value: LanguagePreference.english,
-                        label: Text(l10n.languageEnglish)),
-                    ButtonSegment(
-                        value: LanguagePreference.hungarian,
-                        label: Text(l10n.languageHungarian)),
-                  ],
-                  selected: {_language},
-                  onSelectionChanged: (s) => setState(() => _language = s.first),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // ── Daily goals ──────────────────────────────────────────────────
-          _SectionHeader(l10n.dailyGoalsLabel),
-          _SettingsCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.leaveBlankForNoGoal,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 12),
-                _GoalField(
-                  controller: _calorieController,
-                  label: l10n.caloriesLabel,
-                  suffix: 'kcal',
-                  validator: _goalValidator,
-                ),
-                _GoalField(
-                  controller: _proteinController,
-                  label: l10n.proteinLabel,
-                  suffix: 'g',
-                  validator: _goalValidator,
-                ),
-                _GoalField(
-                  controller: _carbsController,
-                  label: l10n.carbsLabel,
-                  suffix: 'g',
-                  validator: _goalValidator,
-                ),
-                _GoalField(
-                  controller: _fatController,
-                  label: l10n.fatLabel,
-                  suffix: 'g',
-                  validator: _goalValidator,
-                ),
-                _GoalField(
-                  controller: _waterController,
-                  label: l10n.waterLabel,
-                  suffix: 'L',
-                  decimal: true,
-                  validator: _waterGoalValidator,
-                  last: true,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // ── Water sources ────────────────────────────────────────────────
-          _SectionHeader(l10n.waterSourcesLabel),
-          _SettingsCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.waterSourcesDescription,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                const _SettingsDivider(),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: scheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(Icons.water_drop,
-                        size: 18, color: scheme.onPrimaryContainer),
-                  ),
-                  title: Text(l10n.manageWaterSourcesButton),
-                  trailing: Icon(Icons.chevron_right,
-                      size: 18, color: scheme.onSurfaceVariant),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const WaterSourcesScreen()),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Apple Health (iOS only) ───────────────────────────────────────
-          if (Platform.isIOS) ...[
-            const SizedBox(height: 20),
-            _SectionHeader(l10n.appleHealthLabel),
-            const _SettingsCard(child: _AppleHealthToggle()),
-          ],
-
-          // ── Error / Save ─────────────────────────────────────────────────
-          if (_submitError != null) ...[
-            const SizedBox(height: 16),
-            Text(
-              _submitError!,
-              style: TextStyle(color: scheme.error),
-              textAlign: TextAlign.center,
-            ),
-          ],
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: _submitting ? null : _submit,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+    return NavCollapseScope(
+      controller: _collapseController,
+      child: Scaffold(
+        body: state.when(
+          data:
+              (_) =>
+                  _initialized
+                      ? _buildContent(
+                        context,
+                        l10n,
+                        barTop,
+                        contentTop,
+                        bottomPad,
+                      )
+                      : const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error:
+              (error, _) => ErrorView(
+                error: error,
+                onRetry: () => ref.invalidate(settingsControllerProvider),
               ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    AppLocalizations l10n,
+    double barTop,
+    double contentTop,
+    double bottomPad,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final mc = context.metricColors;
+
+    return ScrollCollapseListener(
+      child: Stack(
+        children: [
+          // ── Scrollable body ─────────────────────────────────────────────
+          Positioned.fill(
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad + 32),
+              children: [
+                // ── Preferences ────────────────────────────────────────────
+                _GroupLabel(l10n.preferencesLabel),
+                const SizedBox(height: 8),
+                _SettingsCard(
+                  children: [
+                    // Units
+                    _SettingRow(
+                      icon: Icons.straighten,
+                      iconColor: scheme.primary,
+                      label: l10n.unitsLabel,
+                      trailing: _InlinePillSegment<UnitSystem>(
+                        options: [
+                          (UnitSystem.metric, l10n.unitsMetricShort),
+                          (UnitSystem.imperial, l10n.unitsImperialShort),
+                        ],
+                        selected: _unitSystem,
+                        onChanged: (v) {
+                          setState(() => _unitSystem = v);
+                          _autoSave();
+                        },
+                      ),
+                    ),
+                    const _RowDivider(),
+                    // Theme
+                    _SettingRow(
+                      icon: Icons.dark_mode_outlined,
+                      iconColor: scheme.primary,
+                      label: l10n.themeLabel,
+                      trailing: _InlinePillSegment<ThemePreference>(
+                        options: [
+                          (ThemePreference.light, l10n.themeLight),
+                          (ThemePreference.dark, l10n.themeDark),
+                          (ThemePreference.system, l10n.optionSystem),
+                        ],
+                        selected: _theme,
+                        onChanged: (v) {
+                          setState(() => _theme = v);
+                          _autoSave();
+                        },
+                      ),
+                    ),
+                    const _RowDivider(),
+                    // Language
+                    _SettingRow(
+                      icon: Icons.translate,
+                      iconColor: scheme.primary,
+                      label: l10n.languageLabel,
+                      onTap: () => _pickLanguage(l10n),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _languageName(_language, l10n),
+                            style: TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Icon(
+                            Icons.expand_more,
+                            size: 20,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Daily goals ─────────────────────────────────────────────
+                _GroupLabel(l10n.dailyGoalsLabel),
+                const SizedBox(height: 8),
+                _SettingsCard(
+                  innerPadding: const EdgeInsets.all(14),
+                  children: [
+                    // Row 1: Calories + Protein
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _GoalCell(
+                            icon: Icons.local_fire_department,
+                            iconColor: mc.calories,
+                            label: l10n.caloriesLabel,
+                            value: _formatInt(_calorieGoal),
+                            onTap:
+                                () => _openGoalSheet(
+                                  label: l10n.caloriesLabel,
+                                  suffix: 'kcal',
+                                  initialText:
+                                      _calorieGoal?.toString() ?? '',
+                                  decimal: false,
+                                  onSave:
+                                      (text) => setState(
+                                        () =>
+                                            _calorieGoal =
+                                                text.trim().isEmpty
+                                                    ? null
+                                                    : int.parse(text.trim()),
+                                      ),
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _GoalCell(
+                            icon: Icons.egg_alt,
+                            iconColor: mc.protein,
+                            label: l10n.proteinLabel,
+                            value: _formatIntUnit(_proteinGoal, 'g'),
+                            onTap:
+                                () => _openGoalSheet(
+                                  label: l10n.proteinLabel,
+                                  suffix: 'g',
+                                  initialText:
+                                      _proteinGoal?.toString() ?? '',
+                                  decimal: false,
+                                  onSave:
+                                      (text) => setState(
+                                        () =>
+                                            _proteinGoal =
+                                                text.trim().isEmpty
+                                                    ? null
+                                                    : int.parse(text.trim()),
+                                      ),
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Row 2: Carbs + Fat
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _GoalCell(
+                            icon: Icons.bakery_dining,
+                            iconColor: mc.carbs,
+                            label: l10n.carbsLabel,
+                            value: _formatIntUnit(_carbsGoal, 'g'),
+                            onTap:
+                                () => _openGoalSheet(
+                                  label: l10n.carbsLabel,
+                                  suffix: 'g',
+                                  initialText: _carbsGoal?.toString() ?? '',
+                                  decimal: false,
+                                  onSave:
+                                      (text) => setState(
+                                        () =>
+                                            _carbsGoal =
+                                                text.trim().isEmpty
+                                                    ? null
+                                                    : int.parse(text.trim()),
+                                      ),
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _GoalCell(
+                            icon: Icons.water_drop,
+                            iconColor: mc.fat,
+                            label: l10n.fatLabel,
+                            value: _formatIntUnit(_fatGoal, 'g'),
+                            onTap:
+                                () => _openGoalSheet(
+                                  label: l10n.fatLabel,
+                                  suffix: 'g',
+                                  initialText: _fatGoal?.toString() ?? '',
+                                  decimal: false,
+                                  onSave:
+                                      (text) => setState(
+                                        () =>
+                                            _fatGoal =
+                                                text.trim().isEmpty
+                                                    ? null
+                                                    : int.parse(text.trim()),
+                                      ),
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Row 3: Water + placeholder (steps goal — TODO #19)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _GoalCell(
+                            icon: Icons.water_drop_outlined,
+                            iconColor: mc.water,
+                            label: l10n.waterLabel,
+                            value: _formatWater(_waterGoal),
+                            onTap:
+                                () => _openGoalSheet(
+                                  label: l10n.waterLabel,
+                                  suffix: 'L',
+                                  initialText: _waterGoal?.toString() ?? '',
+                                  decimal: true,
+                                  onSave:
+                                      (text) => setState(
+                                        () =>
+                                            _waterGoal =
+                                                text.trim().isEmpty
+                                                    ? null
+                                                    : double.parse(
+                                                      text
+                                                          .replaceAll(',', '.')
+                                                          .trim(),
+                                                    ),
+                                      ),
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        // TODO(new-feature #19): daily step goal cell
+                        const Expanded(child: SizedBox()),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Integrations ─────────────────────────────────────────────
+                _GroupLabel(l10n.integrationsLabel),
+                const SizedBox(height: 8),
+                _SettingsCard(
+                  children: [
+                    // Water sources
+                    _SettingRow(
+                      icon: Icons.water_drop,
+                      iconColor: mc.water,
+                      label: l10n.manageWaterSourcesButton,
+                      onTap:
+                          () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const WaterSourcesScreen(),
+                            ),
+                          ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        size: 22,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    // Apple Health (iOS only)
+                    if (Platform.isIOS) ...[
+                      const _RowDivider(),
+                      const _AppleHealthRow(),
+                    ],
+                  ],
+                ),
+              ],
             ),
-            child: _submitting
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(l10n.saveButton),
+          ),
+
+          // ── Floating top bar ─────────────────────────────────────────────
+          Positioned(
+            top: barTop,
+            left: 12,
+            right: 12,
+            child: AdaptiveAppBar(
+              title: l10n.settingsTitle,
+              onBack: () => Navigator.of(context).pop(),
+            ),
           ),
         ],
       ),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
+  String _languageName(LanguagePreference pref, AppLocalizations l10n) {
+    return switch (pref) {
+      LanguagePreference.system => l10n.optionSystem,
+      LanguagePreference.english => l10n.languageEnglish,
+      LanguagePreference.hungarian => l10n.languageHungarian,
+    };
+  }
+
+  String _formatInt(int? value) {
+    if (value == null) return '—';
+    return NumberFormat.decimalPattern().format(value);
+  }
+
+  String _formatIntUnit(int? value, String unit) {
+    if (value == null) return '—';
+    return '${NumberFormat.decimalPattern().format(value)} $unit';
+  }
+
+  String _formatWater(double? value) {
+    if (value == null) return '—';
+    final s = value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1);
+    return '$s L';
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Shared helpers
+// _GroupLabel
 // ---------------------------------------------------------------------------
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
+class _GroupLabel extends StatelessWidget {
+  const _GroupLabel(this.label);
   final String label;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      padding: const EdgeInsets.only(left: 4, bottom: 0),
       child: Text(
         label.toUpperCase(),
         style: TextStyle(
           fontFamily: 'PlusJakartaSans',
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: scheme.onSurfaceVariant,
-          letterSpacing: 1.2,
+          color: scheme.outlineVariant,
+          letterSpacing: 1.0,
           height: 1.0,
         ),
       ),
@@ -375,100 +537,421 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _SettingsCard
+// ---------------------------------------------------------------------------
+
 class _SettingsCard extends StatelessWidget {
-  const _SettingsCard({required this.child});
-  final Widget child;
+  const _SettingsCard({
+    required this.children,
+    this.innerPadding,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: child,
-    );
-  }
-}
-
-class _SettingsDivider extends StatelessWidget {
-  const _SettingsDivider();
+  final List<Widget> children;
+  // When non-null, overrides the default row-based padding with a flat padding.
+  final EdgeInsets? innerPadding;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Divider(height: 1, color: scheme.outlineVariant.withValues(alpha: 0.5));
-  }
-}
-
-class _GoalField extends StatelessWidget {
-  const _GoalField({
-    required this.controller,
-    required this.label,
-    required this.suffix,
-    required this.validator,
-    this.decimal = false,
-    this.last = false,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final String suffix;
-  final FormFieldValidator<String> validator;
-  final bool decimal;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TextFormField(
-          controller: controller,
-          keyboardType: decimal
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : TextInputType.number,
-          decoration: InputDecoration(
-            labelText: label,
-            suffixText: suffix,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            errorBorder: InputBorder.none,
-            focusedErrorBorder: InputBorder.none,
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-          ),
-          validator: validator,
+    // Material ensures InkWell ripples render against the card color,
+    // not the Scaffold background — which would look jarring on dark surfaces.
+    return Material(
+      color: scheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: innerPadding ?? const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
         ),
-        if (!last) const _SettingsDivider(),
-      ],
+      ),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Apple Health toggle (iOS only)
+// _RowDivider
 // ---------------------------------------------------------------------------
 
-class _AppleHealthToggle extends ConsumerWidget {
-  const _AppleHealthToggle();
+class _RowDivider extends StatelessWidget {
+  const _RowDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Divider(
+      height: 1,
+      indent: 14,
+      endIndent: 14,
+      color: scheme.surfaceContainerHighest,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _SettingRow
+// ---------------------------------------------------------------------------
+
+class _SettingRow extends StatelessWidget {
+  const _SettingRow({
+    required this.icon,
+    required this.label,
+    required this.trailing,
+    this.iconColor,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Widget trailing;
+  final Color? iconColor;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final effectiveIconColor = iconColor ?? scheme.primary;
+
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 22, color: effectiveIconColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          trailing,
+        ],
+      ),
+    );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.card - 4),
+        child: row,
+      );
+    }
+    return row;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _InlinePillSegment<T>
+// ---------------------------------------------------------------------------
+
+class _InlinePillSegment<T> extends StatelessWidget {
+  const _InlinePillSegment({
+    required this.options,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<(T, String)> options;
+  final T selected;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: AppRadius.pill,
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (value, label) in options)
+            GestureDetector(
+              onTap: () => onChanged(value),
+              child: AnimatedContainer(
+                duration: AppDuration.fast,
+                curve: AppCurve.standard,
+                decoration: BoxDecoration(
+                  color:
+                      value == selected
+                          ? scheme.primary
+                          : Colors.transparent,
+                  borderRadius: AppRadius.pill,
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 5,
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 11.5,
+                    fontWeight:
+                        value == selected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                    color:
+                        value == selected
+                            ? scheme.onPrimary
+                            : scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _GoalCell
+// ---------------------------------------------------------------------------
+
+class _GoalCell extends StatelessWidget {
+  const _GoalCell({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: iconColor),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _GoalEditSheet
+// ---------------------------------------------------------------------------
+
+class _GoalEditSheet extends StatefulWidget {
+  const _GoalEditSheet({
+    required this.label,
+    required this.suffix,
+    required this.controller,
+    required this.decimal,
+    required this.onSave,
+  });
+
+  final String label;
+  final String suffix;
+  final TextEditingController controller;
+  final bool decimal;
+  final void Function(String text) onSave;
+
+  @override
+  State<_GoalEditSheet> createState() => _GoalEditSheetState();
+}
+
+class _GoalEditSheetState extends State<_GoalEditSheet> {
+  final _formKey = GlobalKey<FormState>();
+
+  String? _validate(String? value) {
+    final text = (value ?? '').replaceAll(',', '.').trim();
+    if (text.isEmpty) return null; // allowed — clears the goal
+    final parsed =
+        widget.decimal ? double.tryParse(text) : int.tryParse(text);
+    if (parsed == null || parsed < 0) {
+      return widget.decimal
+          ? AppLocalizations.of(context)!.enterNonNegativeNumber
+          : AppLocalizations.of(context)!.enterNonNegativeWholeNumber;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              widget.label,
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: widget.controller,
+              autofocus: true,
+              keyboardType:
+                  widget.decimal
+                      ? const TextInputType.numberWithOptions(decimal: true)
+                      : TextInputType.number,
+              decoration: InputDecoration(
+                suffixText: widget.suffix,
+                hintText: l10n.leaveBlankForNoGoal,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: BorderSide(color: scheme.primary, width: 2),
+                ),
+              ),
+              validator: _validate,
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  widget.onSave(
+                    widget.controller.text
+                        .replaceAll(',', '.')
+                        .trim(),
+                  );
+                }
+              },
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                ),
+              ),
+              child: Text(l10n.saveButton),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _AppleHealthRow
+// ---------------------------------------------------------------------------
+
+class _AppleHealthRow extends StatelessWidget {
+  const _AppleHealthRow();
+
+  static const Color _heartColor = Color(0xFFC46A6A);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          const Icon(Icons.favorite, size: 22, color: _heartColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              l10n.appleHealthLabel,
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+          const _AppleHealthSwitch(),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _AppleHealthSwitch (iOS only)
+// ---------------------------------------------------------------------------
+
+class _AppleHealthSwitch extends ConsumerWidget {
+  const _AppleHealthSwitch();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
     final state = ref.watch(appleHealthControllerProvider);
     final enabled = state.value ?? false;
-    return SwitchListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(l10n.connectAppleHealthLabel),
-      subtitle: Text(l10n.connectAppleHealthDescription),
+    return Switch(
       value: enabled,
-      onChanged: state.isLoading
-          ? null
-          : (value) =>
-              ref.read(appleHealthControllerProvider.notifier).setEnabled(value),
+      onChanged:
+          state.isLoading
+              ? null
+              : (v) =>
+                  ref
+                      .read(appleHealthControllerProvider.notifier)
+                      .setEnabled(v),
+      activeThumbColor: Theme.of(context).colorScheme.primary,
+      activeTrackColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
     );
   }
 }

@@ -21,6 +21,10 @@ class AppTheme {
         fontFamily: _fontFamily,
         textTheme: _textTheme,
         extensions: const [AppMetricColors.dark],
+        // Subtle, on-brand ripple — default is onSurface (~white) at 12%,
+        // which looks harshly bright on near-black surfaces.
+        splashColor: const Color(0xFF9DAE6B).withValues(alpha: 0.10),
+        highlightColor: const Color(0xFF9DAE6B).withValues(alpha: 0.06),
       );
 
   static const _DarkColors _dark = _DarkColors();
@@ -78,6 +82,8 @@ class AppTheme {
         fontFamily: _fontFamily,
         textTheme: _textTheme,
         extensions: const [AppMetricColors.light],
+        splashColor: const Color(0xFF586E38).withValues(alpha: 0.10),
+        highlightColor: const Color(0xFF586E38).withValues(alpha: 0.06),
       );
 
   static const _LightColors _light = _LightColors();

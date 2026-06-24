@@ -2,9 +2,13 @@
     "@@locale": "hu",
 
     "settingsTitle": "Beállítások",
+    "preferencesLabel": "Preferenciák",
+    "integrationsLabel": "Integrációk",
     "unitsLabel": "Mértékegységek",
     "unitsMetric": "Metrikus (kg)",
+    "unitsMetricShort": "Metrikus",
     "unitsImperial": "Angolszász (lb)",
+    "unitsImperialShort": "Angolszász",
     "themeLabel": "Téma",
     "themeLight": "Világos",
     "themeDark": "Sötét",

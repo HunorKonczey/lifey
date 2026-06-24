@@ -4,14 +4,26 @@
     "settingsTitle": "Settings",
     "@settingsTitle": {"description": "Title of the settings screen"},
 
+    "preferencesLabel": "Preferences",
+    "@preferencesLabel": {"description": "Settings group heading for units, theme and language"},
+
+    "integrationsLabel": "Integrations",
+    "@integrationsLabel": {"description": "Settings group heading for water sources and Apple Health"},
+
     "unitsLabel": "Units",
     "@unitsLabel": {"description": "Section heading for the unit system selector"},
 
     "unitsMetric": "Metric (kg)",
-    "@unitsMetric": {"description": "Metric unit system option"},
+    "@unitsMetric": {"description": "Metric unit system option (long form with unit)"},
+
+    "unitsMetricShort": "Metric",
+    "@unitsMetricShort": {"description": "Metric unit system option (short, for inline pill)"},
 
     "unitsImperial": "Imperial (lb)",
-    "@unitsImperial": {"description": "Imperial unit system option"},
+    "@unitsImperial": {"description": "Imperial unit system option (long form with unit)"},
+
+    "unitsImperialShort": "Imperial",
+    "@unitsImperialShort": {"description": "Imperial unit system option (short, for inline pill)"},
 
     "themeLabel": "Theme",
     "@themeLabel": {"description": "Section heading for the theme selector"},

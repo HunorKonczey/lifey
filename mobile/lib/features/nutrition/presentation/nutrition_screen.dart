@@ -5,6 +5,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../shared/widgets/pill_tab_bar.dart';
+import '../../../shared/widgets/shell_fab.dart';
 import '../../recipes/presentation/create_recipe_screen.dart';
 import '../../recipes/presentation/recipes_tab.dart';
 import 'foods_tab.dart';
@@ -27,15 +28,32 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   @override
   void initState() {
     super.initState();
-    // Rebuild on tab change so the FAB reflects the active tab.
     _tabController = TabController(length: 3, vsync: this)
-      ..addListener(() => setState(() {}));
+      ..addListener(_onSubTabChanged);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _onSubTabChanged() {
+    setState(() {});
+    _pushFab();
+  }
+
+  void _pushFab() {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final fab = _fab(l10n);
+    ref.read(shellFabProvider.notifier).set((
+      tabIndex: 1,
+      icon: fab.icon,
+      label: fab.label,
+      onPressed: fab.onPressed,
+      extended: true,
+    ));
   }
 
   void _addFood() {
@@ -74,17 +92,14 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final fab = _fab(l10n);
-
     final statusTop = MediaQuery.paddingOf(context).top;
     final barClear = statusTop + 8.0 + 58.0;
 
-    final fabBottom = MediaQuery.of(context).viewPadding.bottom + 100;
+    ref.listen(activeShellTabProvider, (_, next) {
+      if (next == 1) _pushFab();
+    });
 
     return Scaffold(
-      // ScrollCollapseListener at the Stack level catches scroll notifications
-      // that bubble up from whichever tab's ListView is active.
       body: ScrollCollapseListener(
         child: Stack(
           children: [
@@ -119,23 +134,6 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
               left: 12,
               right: 12,
               child: AdaptiveAppBar(title: l10n.nutritionTitle),
-            ),
-
-            // ── FAB — above floating nav bar (84 dp fixed) + 16 dp gap ───
-            Positioned(
-              right: 16,
-              bottom: fabBottom,
-              child: FloatingActionButton.extended(
-                heroTag: null,
-                onPressed: fab.onPressed,
-                icon: Icon(fab.icon),
-                label: Text(fab.label),
-                backgroundColor: scheme.primary,
-                foregroundColor: scheme.onPrimary,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(18)),
-                ),
-              ),
             ),
           ],
         ),

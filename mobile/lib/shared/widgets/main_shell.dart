@@ -1,28 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
 import 'adaptive_bottom_nav.dart';
 import 'nav_collapse_controller.dart';
+import 'shell_fab.dart';
 
-/// App shell hosting the floating bottom navigation.
-///
-/// Owns the [NavCollapseController] and wraps the whole subtree in
-/// [NavCollapseScope] so every screen and the nav bar can read and drive the
-/// collapse state without direct coupling.
-///
-/// [extendBody: true] lets the nav bar float over the body. Each screen adds
-/// its own top/bottom clearance via the floating [AdaptiveAppBar] + padding.
-class MainShell extends StatefulWidget {
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> {
   final _collapseController = NavCollapseController();
 
   @override
@@ -32,12 +26,10 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _onTap(int index) {
-    // Switching tabs always snaps the bars back to expanded — the new tab
-    // starts at the top of its scroll position.
     _collapseController.expand();
+    ref.read(activeShellTabProvider.notifier).set(index);
     widget.navigationShell.goBranch(
       index,
-      // Tapping the active tab again returns it to its initial route.
       initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
@@ -45,14 +37,53 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+    // Nav bar = 84 dp fixed + safeBottom; sit 16 dp above it.
+    final fabBottom = 84.0 + safeBottom + 16.0;
 
     return NavCollapseScope(
       controller: _collapseController,
       child: Scaffold(
-        // extendBody lets the body paint behind the floating bottom nav so
-        // scroll content slides under it naturally.
         extendBody: true,
-        body: widget.navigationShell,
+        body: Stack(
+          children: [
+            widget.navigationShell,
+            Consumer(
+              builder: (context, ref, _) {
+                final config = ref.watch(shellFabProvider);
+                final activeTab = ref.watch(activeShellTabProvider);
+                if (config == null || config.tabIndex != activeTab) {
+                  return const SizedBox.shrink();
+                }
+                final scheme = Theme.of(context).colorScheme;
+                return Positioned(
+                  right: 16,
+                  bottom: fabBottom,
+                  child: config.extended
+                      ? FloatingActionButton.extended(
+                          heroTag: null,
+                          onPressed: config.onPressed,
+                          icon: Icon(config.icon),
+                          label: Text(config.label),
+                          backgroundColor: scheme.primary,
+                          foregroundColor: scheme.onPrimary,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(18)),
+                          ),
+                        )
+                      : FloatingActionButton(
+                          heroTag: null,
+                          onPressed: config.onPressed,
+                          backgroundColor: scheme.primary,
+                          foregroundColor: scheme.onPrimary,
+                          child: Icon(config.icon),
+                        ),
+                );
+              },
+            ),
+          ],
+        ),
         bottomNavigationBar: AdaptiveBottomNav(
           selectedIndex: widget.navigationShell.currentIndex,
           onDestinationSelected: _onTap,

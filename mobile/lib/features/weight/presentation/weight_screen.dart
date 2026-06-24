@@ -9,6 +9,7 @@ import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
+import '../../../shared/widgets/shell_fab.dart';
 import '../application/weight_chart_data.dart';
 import '../application/weight_controller.dart';
 import '../application/weight_range.dart';
@@ -16,11 +17,16 @@ import '../domain/weight_entry.dart';
 import 'widgets/add_weight_sheet.dart';
 
 /// Weight: latest reading hero card, range selector, and chart.
-class WeightScreen extends ConsumerWidget {
+class WeightScreen extends ConsumerStatefulWidget {
   const WeightScreen({super.key});
 
-  Future<void> _openAddSheet(BuildContext context) {
-    return showModalBottomSheet<void>(
+  @override
+  ConsumerState<WeightScreen> createState() => _WeightScreenState();
+}
+
+class _WeightScreenState extends ConsumerState<WeightScreen> {
+  void _openAddSheet() {
+    showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -29,17 +35,29 @@ class WeightScreen extends ConsumerWidget {
     );
   }
 
+  void _pushFab() {
+    if (!mounted) return;
+    ref.read(shellFabProvider.notifier).set((
+      tabIndex: 3,
+      icon: Icons.add,
+      label: '',
+      onPressed: _openAddSheet,
+      extended: false,
+    ));
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(weightControllerProvider);
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
 
     final statusTop = MediaQuery.paddingOf(context).top;
     final barTop = statusTop + 8.0;
     final contentTop = barTop + 58.0 + 12.0;
 
-    final fabBottom = MediaQuery.of(context).viewPadding.bottom + 100;
+    ref.listen(activeShellTabProvider, (_, next) {
+      if (next == 3) _pushFab();
+    });
 
     return Scaffold(
       body: ScrollCollapseListener(
@@ -76,18 +94,6 @@ class WeightScreen extends ConsumerWidget {
               left: 12,
               right: 12,
               child: AdaptiveAppBar(title: l10n.weightTitle),
-            ),
-            // ── FAB — above floating nav bar (84 dp fixed) + 16 dp gap ───
-            Positioned(
-              right: 16,
-              bottom: fabBottom,
-              child: FloatingActionButton(
-                heroTag: null,
-                onPressed: () => _openAddSheet(context),
-                backgroundColor: scheme.primary,
-                foregroundColor: scheme.onPrimary,
-                child: const Icon(Icons.add),
-              ),
             ),
           ],
         ),
