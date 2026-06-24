@@ -27,9 +27,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  // Pushed route — provide its own collapse controller outside the MainShell.
-  final _collapseController = NavCollapseController();
-
   // Form state (initialized on first data load)
   bool _initialized = false;
   late UnitSystem _unitSystem;
@@ -40,12 +37,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int? _carbsGoal;
   int? _fatGoal;
   double? _waterGoal;
-
-  @override
-  void dispose() {
-    _collapseController.dispose();
-    super.dispose();
-  }
 
   void _initFromSettings(UserSettings s) {
     _unitSystem = s.unitSystem;
@@ -123,29 +114,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required bool decimal,
     required void Function(String text) onSave,
   }) {
-    final ctrl = TextEditingController(text: initialText);
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder:
-          (sheetCtx) => Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.viewInsetsOf(sheetCtx).bottom,
-            ),
-            child: _GoalEditSheet(
-              label: label,
-              suffix: suffix,
-              controller: ctrl,
-              decimal: decimal,
-              onSave: (text) {
-                onSave(text);
-                _autoSave();
-                Navigator.of(sheetCtx).pop();
-              },
-            ),
-          ),
-    ).then((_) => ctrl.dispose());
+      builder: (_) => _GoalEditSheet(
+        label: label,
+        suffix: suffix,
+        initialText: initialText,
+        decimal: decimal,
+        onSave: (text) {
+          onSave(text);
+          _autoSave();
+        },
+      ),
+    );
   }
 
   @override
@@ -163,28 +146,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final contentTop = barTop + 58.0 + 12.0;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
-    return NavCollapseScope(
-      controller: _collapseController,
-      child: Scaffold(
-        body: state.when(
-          data:
-              (_) =>
-                  _initialized
-                      ? _buildContent(
-                        context,
-                        l10n,
-                        barTop,
-                        contentTop,
-                        bottomPad,
-                      )
-                      : const Center(child: CircularProgressIndicator()),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error:
-              (error, _) => ErrorView(
-                error: error,
-                onRetry: () => ref.invalidate(settingsControllerProvider),
-              ),
-        ),
+    return Scaffold(
+      body: state.when(
+        data:
+            (_) =>
+                _initialized
+                    ? _buildContent(
+                      context,
+                      l10n,
+                      barTop,
+                      contentTop,
+                      bottomPad,
+                    )
+                    : const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error:
+            (error, _) => ErrorView(
+              error: error,
+              onRetry: () => ref.invalidate(settingsControllerProvider),
+            ),
       ),
     );
   }
@@ -793,14 +773,14 @@ class _GoalEditSheet extends StatefulWidget {
   const _GoalEditSheet({
     required this.label,
     required this.suffix,
-    required this.controller,
+    required this.initialText,
     required this.decimal,
     required this.onSave,
   });
 
   final String label;
   final String suffix;
-  final TextEditingController controller;
+  final String initialText;
   final bool decimal;
   final void Function(String text) onSave;
 
@@ -810,27 +790,35 @@ class _GoalEditSheet extends StatefulWidget {
 
 class _GoalEditSheetState extends State<_GoalEditSheet> {
   final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _controller;
 
-  String? _validate(String? value) {
-    final text = (value ?? '').replaceAll(',', '.').trim();
-    if (text.isEmpty) return null; // allowed — clears the goal
-    final parsed =
-        widget.decimal ? double.tryParse(text) : int.tryParse(text);
-    if (parsed == null || parsed < 0) {
-      return widget.decimal
-          ? AppLocalizations.of(context)!.enterNonNegativeNumber
-          : AppLocalizations.of(context)!.enterNonNegativeWholeNumber;
-    }
-    return null;
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    // Read viewInsets inside the sheet's own build context so the dependency
+    // is properly registered and cleaned up when this widget is disposed.
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    // Capture validation strings at build time — avoids context lookups
+    // inside the validator closure (which could run after disposal).
+    final intError = l10n.enterNonNegativeWholeNumber;
+    final decimalError = l10n.enterNonNegativeNumber;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      padding: EdgeInsets.fromLTRB(24, 8, 24, 24 + bottomInset),
       child: Form(
         key: _formKey,
         child: Column(
@@ -848,7 +836,7 @@ class _GoalEditSheetState extends State<_GoalEditSheet> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              controller: widget.controller,
+              controller: _controller,
               autofocus: true,
               keyboardType:
                   widget.decimal
@@ -865,17 +853,27 @@ class _GoalEditSheetState extends State<_GoalEditSheet> {
                   borderSide: BorderSide(color: scheme.primary, width: 2),
                 ),
               ),
-              validator: _validate,
+              validator: (value) {
+                final text = (value ?? '').replaceAll(',', '.').trim();
+                if (text.isEmpty) return null;
+                final parsed =
+                    widget.decimal
+                        ? double.tryParse(text)
+                        : int.tryParse(text);
+                if (parsed == null || parsed < 0) {
+                  return widget.decimal ? decimalError : intError;
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: () {
                 if (_formKey.currentState!.validate()) {
                   widget.onSave(
-                    widget.controller.text
-                        .replaceAll(',', '.')
-                        .trim(),
+                    _controller.text.replaceAll(',', '.').trim(),
                   );
+                  Navigator.of(context).pop();
                 }
               },
               style: FilledButton.styleFrom(

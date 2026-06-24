@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
@@ -14,6 +15,9 @@ import 'templates_tab.dart';
 import 'widgets/add_exercise_sheet.dart';
 
 /// Workouts: "Sessions" (logged workouts), "Templates", and "Exercises" tabs.
+///
+/// The AdaptiveAppBar + PillTabBar form a single floating header unit that
+/// collapses together on scroll, matching the dashboard's header behaviour.
 class WorkoutsScreen extends ConsumerStatefulWidget {
   const WorkoutsScreen({super.key});
 
@@ -71,7 +75,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
   void _addExercise() {
     showModalBottomSheet<void>(
       context: context,
-    useRootNavigator: true,
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => const AddExerciseSheet(),
@@ -93,7 +97,6 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final statusTop = MediaQuery.paddingOf(context).top;
-    final barClear = statusTop + 8.0 + 58.0;
 
     ref.listen(activeShellTabProvider, (_, next) {
       if (next == 2) _pushFab();
@@ -103,18 +106,10 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
       body: ScrollCollapseListener(
         child: Stack(
           children: [
-            // ── Pinned layout: space → TabBar → content ───────────────────
+            // ── Content — top spacer tracks the combined floating header ──
             Column(
               children: [
-                SizedBox(height: barClear),
-                PillTabBar(
-                  controller: _tabController,
-                  tabs: [
-                    Tab(text: l10n.sessionsTabLabel),
-                    Tab(text: l10n.templatesTabLabel),
-                    Tab(text: l10n.exercisesLabel),
-                  ],
-                ),
+                _HeaderSpacer(statusTop: statusTop),
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
@@ -128,16 +123,56 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
               ],
             ),
 
-            // ── Floating top bar ──────────────────────────────────────────
+            // ── Floating combined header (AppBar + PillTabBar as one unit) ─
             Positioned(
               top: statusTop + 8.0,
-              left: 12,
-              right: 12,
-              child: AdaptiveAppBar(title: l10n.workoutsTitle),
+              left: 0,
+              right: 0,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: AdaptiveAppBar(title: l10n.workoutsTitle),
+                  ),
+                  PillTabBar(
+                    controller: _tabController,
+                    tabs: [
+                      Tab(text: l10n.sessionsTabLabel),
+                      Tab(text: l10n.templatesTabLabel),
+                      Tab(text: l10n.exercisesLabel),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// Spacer that matches the combined height of the floating header.
+// Rebuilds on collapse state changes so content stays flush beneath the header.
+//
+// Heights: AdaptiveAppBar 58→44 (expanded→collapsed) + PillTabBar 54 (fixed:
+// 38px content + 8px top + 8px bottom padding) + 8px top offset from status bar.
+class _HeaderSpacer extends StatelessWidget {
+  const _HeaderSpacer({required this.statusTop});
+
+  final double statusTop;
+
+  static const double _pillBarH = 54.0;
+  static const double _topOffset = 8.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final collapsed = NavCollapseScope.collapsedOf(context);
+    return AnimatedContainer(
+      duration: AppDuration.collapse,
+      curve: AppCurve.collapse,
+      height: statusTop + _topOffset + (collapsed ? 44.0 : 58.0) + _pillBarH,
     );
   }
 }

@@ -90,8 +90,16 @@ class NavCollapseScope extends InheritedNotifier<NavCollapseController> {
     return scope!.notifier!;
   }
 
+  /// Returns null when called outside a [NavCollapseScope] (e.g. pushed routes).
+  static NavCollapseController? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<NavCollapseScope>()
+        ?.notifier;
+  }
+
   /// Just the collapsed bool — rebuilds the caller when it changes.
-  static bool collapsedOf(BuildContext context) => of(context).collapsed;
+  /// Returns false (always expanded) when there is no [NavCollapseScope] ancestor.
+  static bool collapsedOf(BuildContext context) => maybeOf(context)?.collapsed ?? false;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +121,9 @@ class ScrollCollapseListener extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = NavCollapseScope.of(context);
+    final controller = NavCollapseScope.maybeOf(context);
+    // No-op when used outside a NavCollapseScope (e.g. pushed routes).
+    if (controller == null) return child;
     return NotificationListener<ScrollNotification>(
       onNotification: controller.handleScrollNotification,
       child: child,
