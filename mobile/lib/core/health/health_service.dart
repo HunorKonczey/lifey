@@ -185,6 +185,42 @@ class HealthService {
     if (value is! NumericHealthValue) return null;
     return (kg: value.numericValue.toDouble(), timestamp: latest.dateTo);
   }
+
+  /// Body-mass (kg) samples over the last [lastDays] calendar days, collapsed to
+  /// one representative per local calendar day: the latest sample of that day.
+  /// Keyed by local midnight. Backs the weight screen's manual 30-day import.
+  ///
+  /// Unlike [stepsByDay], this issues a single HealthKit query for the whole
+  /// window and buckets client-side — weight samples are sparse, so one range
+  /// read is cheaper than [lastDays] separate queries. Returns `{}` on Android /
+  /// no permission / no samples.
+  Future<Map<DateTime, ({double kg, DateTime timestamp})>> bodyMassByDay({
+    required int lastDays,
+  }) async {
+    if (!isAvailable) return const {};
+    await _ensureConfigured();
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: lastDays - 1));
+    final points = await _health.getHealthDataFromTypes(
+      types: const [HealthDataType.WEIGHT],
+      startTime: start,
+      endTime: now,
+    );
+
+    final byDay = <DateTime, ({double kg, DateTime timestamp})>{};
+    for (final point in points) {
+      final value = point.value;
+      if (value is! NumericHealthValue) continue;
+      final ts = point.dateTo;
+      final day = DateTime(ts.year, ts.month, ts.day);
+      final existing = byDay[day];
+      // Keep the latest sample within each calendar day.
+      if (existing == null || ts.isAfter(existing.timestamp)) {
+        byDay[day] = (kg: value.numericValue.toDouble(), timestamp: ts);
+      }
+    }
+    return byDay;
+  }
 }
 
 final healthServiceProvider = Provider<HealthService>((ref) => HealthService());

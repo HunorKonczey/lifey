@@ -9,11 +9,15 @@ class EmptyView extends StatelessWidget {
     required this.icon,
     required this.title,
     this.subtitle,
+    this.action,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
+
+  /// Optional call-to-action rendered below the subtitle (e.g. an import button).
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +38,10 @@ class EmptyView extends StatelessWidget {
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
+          ],
+          if (action != null) ...[
+            const SizedBox(height: 20),
+            action!,
           ],
         ],
       ),

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/health/health_service.dart';
+import '../../../core/health/weight_health_backfill_service.dart';
+import '../../../core/health/health_controller.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
@@ -74,6 +77,7 @@ class _WeightScreenState extends ConsumerState<WeightScreen> {
                           icon: Icons.monitor_weight_outlined,
                           title: l10n.noWeightEntriesYetTitle,
                           subtitle: l10n.tapPlusToAddFirstOneMessage,
+                          action: const _ImportFromHealthButton(),
                         )
                       : _WeightBody(
                           entries: entries,
@@ -211,8 +215,72 @@ class _WeightBody extends ConsumerWidget {
               error: (error, _) => ErrorView(error: error),
             ),
           ),
+
+          // ── Apple Health import ───────────────────────────────────────
+          const SizedBox(height: 16),
+          const _ImportFromHealthButton(),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Apple Health import button
+// ---------------------------------------------------------------------------
+
+/// Manual "Import from Apple Health" action: backfills the last 30 days of
+/// body-mass samples (one entry per day, skipping days already logged). Only
+/// rendered on iOS once the user has connected Apple Health; otherwise it
+/// collapses to nothing.
+class _ImportFromHealthButton extends ConsumerStatefulWidget {
+  const _ImportFromHealthButton();
+
+  @override
+  ConsumerState<_ImportFromHealthButton> createState() => _ImportFromHealthButtonState();
+}
+
+class _ImportFromHealthButtonState extends ConsumerState<_ImportFromHealthButton> {
+  bool _importing = false;
+
+  Future<void> _import() async {
+    if (_importing) return;
+    setState(() => _importing = true);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final count = await ref.read(weightHealthBackfillServiceProvider).backfill();
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+          count > 0 ? l10n.weightImportedFromHealth(count) : l10n.noNewWeightFromHealth,
+        ),
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.noNewWeightFromHealth)));
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final available = ref.watch(healthServiceProvider).isAvailable;
+    final connected = ref.watch(appleHealthControllerProvider).value ?? false;
+    if (!available || !connected) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context)!;
+    return OutlinedButton.icon(
+      onPressed: _importing ? null : _import,
+      icon: _importing
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.apple, size: 20),
+      label: Text(l10n.importFromAppleHealthButton),
     );
   }
 }

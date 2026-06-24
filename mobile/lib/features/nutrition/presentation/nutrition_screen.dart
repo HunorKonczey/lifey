@@ -143,6 +143,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
       if (next == null) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
+        _pushFab();
         _consumePendingTab();
       });
     });

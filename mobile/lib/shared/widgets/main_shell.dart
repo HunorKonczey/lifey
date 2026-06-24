@@ -51,8 +51,8 @@ class _MainShellState extends ConsumerState<MainShell> {
             Consumer(
               builder: (context, ref, _) {
                 final config = ref.watch(shellFabProvider);
-                final activeTab = ref.watch(activeShellTabProvider);
-                if (config == null || config.tabIndex != activeTab) {
+                final currentTab = widget.navigationShell.currentIndex;
+                if (config == null || config.tabIndex != currentTab) {
                   return const SizedBox.shrink();
                 }
                 final scheme = Theme.of(context).colorScheme;

@@ -850,6 +850,12 @@
     "noRecentAppleWorkoutMessage": "No recent Apple Health workout found",
     "@noRecentAppleWorkoutMessage": {"description": "Shown when the import button finds no strength workout finished in the last day"},
 
+    "weightImportedFromHealth": "{count, plural, one{{count} entry imported} other{{count} entries imported}}",
+    "@weightImportedFromHealth": {"description": "Snackbar after the weight screen's Apple Health import, reporting how many days were backfilled", "placeholders": {"count": {"type": "int"}}},
+
+    "noNewWeightFromHealth": "No new weight to import",
+    "@noNewWeightFromHealth": {"description": "Snackbar when the weight screen's Apple Health import finds nothing new to add"},
+
     "workoutDurationMin": "{count} min",
     "@workoutDurationMin": {"description": "Workout duration in minutes on the recent workout tile", "placeholders": {"count": {"type": "int"}}},
 
