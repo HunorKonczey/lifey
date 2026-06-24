@@ -287,11 +287,9 @@ class _DashboardBody extends StatelessWidget {
           children: [
             if (todaySteps != null) ...[
               Expanded(
-                child: StatCard(
-                  label: l10n.todaysStepsLabel,
-                  value: NumberFormat.decimalPattern().format(todaySteps),
-                  icon: Icons.directions_walk,
-                  color: mc.steps,
+                child: _StepsCard(
+                  steps: todaySteps!,
+                  goal: settings.dailyStepGoal,
                 ),
               ),
               const SizedBox(width: 10),
@@ -624,6 +622,38 @@ class _DayGreeting extends StatelessWidget {
         letterSpacing: -0.5,
         color: theme.colorScheme.onSurface,
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Steps card — shows today's steps with optional goal progress
+// ---------------------------------------------------------------------------
+
+class _StepsCard extends StatelessWidget {
+  const _StepsCard({required this.steps, this.goal});
+
+  final int steps;
+  final int? goal;
+
+  @override
+  Widget build(BuildContext context) {
+    final mc = context.metricColors;
+    final l10n = AppLocalizations.of(context)!;
+    final fmt = NumberFormat.decimalPattern();
+    final ratio = (goal == null || goal! <= 0) ? null : steps / goal!;
+    final goalReached = ratio != null && ratio >= 1.0;
+    final subtitle = goal == null ? null : '/ ${fmt.format(goal)}';
+
+    return StatCard(
+      label: l10n.todaysStepsLabel,
+      value: fmt.format(steps),
+      icon: Icons.directions_walk,
+      color: mc.steps,
+      ratio: ratio,
+      goalReached: goalReached,
+      goalTone: GoalTone.positive,
+      subtitle: subtitle,
     );
   }
 }

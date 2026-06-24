@@ -26,7 +26,7 @@ class RecipesTab extends ConsumerWidget {
   }
 
   Future<void> _edit(BuildContext context, Recipe recipe) {
-    return Navigator.of(context).push(
+    return Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => CreateRecipeScreen(recipe: recipe)),
     );
   }

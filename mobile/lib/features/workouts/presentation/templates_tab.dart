@@ -17,13 +17,13 @@ class TemplatesTab extends ConsumerWidget {
   const TemplatesTab({super.key});
 
   void _start(BuildContext context, WorkoutTemplate template) {
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => LogSessionScreen(template: template)),
     );
   }
 
   void _edit(BuildContext context, WorkoutTemplate template) {
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => CreateTemplateScreen(template: template)),
     );
   }

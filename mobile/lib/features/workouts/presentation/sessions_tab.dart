@@ -26,7 +26,7 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
   DateRangeFilter _filter = DateRangeFilter.today;
 
   Future<void> _edit(BuildContext context, WorkoutSession session) {
-    return Navigator.of(context).push(
+    return Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => LogSessionScreen(session: session)),
     );
   }

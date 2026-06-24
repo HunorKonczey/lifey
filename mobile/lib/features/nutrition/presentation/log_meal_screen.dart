@@ -79,13 +79,30 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   Future<void> _addEntry() async {
     final draft = await showModalBottomSheet<MealEntryDraft>(
       context: context,
-    useRootNavigator: true,
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => const AddMealEntrySheet(),
     );
     if (draft != null) {
       setState(() => _entries.add((food: draft.food, grams: draft.grams)));
+    }
+  }
+
+  Future<void> _editEntry(int index) async {
+    final current = _entries[index];
+    final draft = await showModalBottomSheet<MealEntryDraft>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AddMealEntrySheet(
+        initialFood: current.food,
+        initialGrams: current.grams,
+      ),
+    );
+    if (draft != null) {
+      setState(() => _entries[index] = (food: draft.food, grams: draft.grams));
     }
   }
 
@@ -187,9 +204,11 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
               return Card(
                 elevation: 0,
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                clipBehavior: Clip.antiAlias,
                 child: ListTile(
                   title: Text(draft.food.name),
                   subtitle: Text(l10n.gramsValue(draft.grams.toStringAsFixed(0))),
+                  onTap: () => _editEntry(e.key),
                   trailing: IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => setState(() => _entries.removeAt(e.key)),

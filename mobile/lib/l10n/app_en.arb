@@ -139,6 +139,9 @@
     "addFoodToMealTitle": "Add food to meal",
     "@addFoodToMealTitle": {"description": "Title of the add-meal-entry bottom sheet"},
 
+    "editFoodEntryTitle": "Edit food",
+    "@editFoodEntryTitle": {"description": "Title of the meal-entry edit bottom sheet"},
+
     "foodFieldLabel": "Food",
     "@foodFieldLabel": {"description": "Label for the food autocomplete field"},
 
@@ -857,5 +860,17 @@
     "@workoutKcal": {"description": "Active calories on the recent workout tile (shown only when Apple Health data exists)", "placeholders": {"count": {"type": "int"}}},
 
     "todaysStepsLabel": "Today's steps",
-    "@todaysStepsLabel": {"description": "Dashboard stat card label for today's HealthKit step count"}
+    "@todaysStepsLabel": {"description": "Dashboard stat card label for today's HealthKit step count"},
+
+    "stepsLabel": "Steps",
+    "@stepsLabel": {"description": "Generic label for the step count metric — settings daily goal cell and statistics metric picker"},
+
+    "statUnitSteps": "steps",
+    "@statUnitSteps": {"description": "Unit suffix for the steps statistics metric (e.g. '8,200 steps')"},
+
+    "stepGoalNotificationTitle": "Daily step goal reached!",
+    "@stepGoalNotificationTitle": {"description": "Title of the local notification fired when the user hits their daily step goal"},
+
+    "stepGoalNotificationBody": "You hit {steps} steps today. Great work!",
+    "@stepGoalNotificationBody": {"description": "Body of the local notification fired when the user hits their daily step goal", "placeholders": {"steps": {"type": "int", "format": "decimalPattern"}}}
 }

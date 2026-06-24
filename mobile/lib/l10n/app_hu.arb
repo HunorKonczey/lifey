@@ -48,6 +48,7 @@
     "signInPromptButton": "Már van fiókod? Jelentkezz be",
 
     "addFoodToMealTitle": "Étel hozzáadása az étkezéshez",
+    "editFoodEntryTitle": "Étel szerkesztése",
     "foodFieldLabel": "Étel",
     "pickAFoodError": "Válassz egy ételt",
     "quantityLabel": "Mennyiség",
@@ -297,5 +298,11 @@
     "workoutDurationMin": "{count} perc",
     "workoutExerciseCount": "{count} gyakorlat",
     "workoutKcal": "{count} kcal",
-    "todaysStepsLabel": "Mai lépésszám"
+    "todaysStepsLabel": "Mai lépésszám",
+
+    "stepsLabel": "Lépés",
+    "statUnitSteps": "lépés",
+
+    "stepGoalNotificationTitle": "Napi lépéscél elérve!",
+    "stepGoalNotificationBody": "Ma {steps} lépést tettél meg. Szép munka!"
 }

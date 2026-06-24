@@ -71,6 +71,33 @@ class HealthService {
     return _health.getTotalStepsInInterval(startOfDay, now);
   }
 
+  /// Sum of `HealthDataType.STEPS` for the calendar day containing [day]
+  /// (local midnight to the following midnight). Returns null on Android,
+  /// when HealthKit is unavailable, or when there's no data.
+  Future<int?> stepsForDay(DateTime day) async {
+    if (!isAvailable) return null;
+    await _ensureConfigured();
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+    return _health.getTotalStepsInInterval(start, end);
+  }
+
+  /// Step totals for each of the last [lastDays] calendar days, keyed by
+  /// local midnight. Days with null/0 from HealthKit are omitted.
+  Future<Map<DateTime, int>> stepsByDay({required int lastDays}) async {
+    if (!isAvailable) return const {};
+    final result = <DateTime, int>{};
+    final today = DateTime.now();
+    for (var i = 0; i < lastDays; i++) {
+      final day = today.subtract(Duration(days: i));
+      final steps = await stepsForDay(day);
+      if (steps != null && steps > 0) {
+        result[DateTime(day.year, day.month, day.day)] = steps;
+      }
+    }
+    return result;
+  }
+
   /// The HealthKit workout activity types we treat as "strength training" —
   /// the only ones the Phase 1 import offers to pair with.
   static const _strengthActivityTypes = {

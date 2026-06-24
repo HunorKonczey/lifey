@@ -48,7 +48,10 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this)
       ..addListener(_onSubTabChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _pushFab());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pushFab();
+      _consumePendingTab();
+    });
   }
 
   @override
@@ -60,6 +63,15 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   void _onSubTabChanged() {
     setState(() {});
     _pushFab();
+  }
+
+  void _consumePendingTab() {
+    if (!mounted) return;
+    final pending = ref.read(nutritionPendingTabProvider);
+    if (pending != null) {
+      _tabController.animateTo(pending);
+      ref.read(nutritionPendingTabProvider.notifier).set(null);
+    }
   }
 
   void _pushFab() {
@@ -123,11 +135,15 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _pushFab();
-        final pending = ref.read(nutritionPendingTabProvider);
-        if (pending != null) {
-          _tabController.animateTo(pending);
-          ref.read(nutritionPendingTabProvider.notifier).set(null);
-        }
+        _consumePendingTab();
+      });
+    });
+
+    ref.listen(nutritionPendingTabProvider, (_, next) {
+      if (next == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _consumePendingTab();
       });
     });
 

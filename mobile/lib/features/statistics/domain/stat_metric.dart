@@ -26,7 +26,8 @@ enum StatMetric {
   workoutCount,
   activeCalories,
   water,
-  weight;
+  weight,
+  steps;
 
   String label(AppLocalizations l10n) => switch (this) {
         StatMetric.calories => l10n.caloriesLabel,
@@ -38,6 +39,7 @@ enum StatMetric {
         StatMetric.activeCalories => l10n.statMetricActiveCaloriesLabel,
         StatMetric.water => l10n.waterLabel,
         StatMetric.weight => l10n.weightTitle,
+        StatMetric.steps => l10n.stepsLabel,
       };
 
   /// Unit shown next to the value (e.g. "kcal", "g"). Empty for the
@@ -52,6 +54,7 @@ enum StatMetric {
         StatMetric.activeCalories => l10n.statUnitKcal,
         StatMetric.water => l10n.statUnitLiters,
         StatMetric.weight => l10n.statUnitKg,
+        StatMetric.steps => l10n.statUnitSteps,
       };
 
   /// How daily values for this metric should be combined into one point.
@@ -65,5 +68,6 @@ enum StatMetric {
         StatMetric.activeCalories => StatAggregationType.sum,
         StatMetric.water => StatAggregationType.sum,
         StatMetric.weight => StatAggregationType.lastOfDay,
+        StatMetric.steps => StatAggregationType.sum,
       };
 }

@@ -58,13 +58,30 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   Future<void> _addIngredient() async {
     final draft = await showModalBottomSheet<MealEntryDraft>(
       context: context,
-    useRootNavigator: true,
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => const AddMealEntrySheet(),
     );
     if (draft != null) {
       setState(() => _ingredients.add((food: draft.food, grams: draft.grams)));
+    }
+  }
+
+  Future<void> _editIngredient(int index) async {
+    final current = _ingredients[index];
+    final draft = await showModalBottomSheet<MealEntryDraft>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AddMealEntrySheet(
+        initialFood: current.food,
+        initialGrams: current.grams,
+      ),
+    );
+    if (draft != null) {
+      setState(() => _ingredients[index] = (food: draft.food, grams: draft.grams));
     }
   }
 
@@ -178,9 +195,11 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               return Card(
                 elevation: 0,
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                clipBehavior: Clip.antiAlias,
                 child: ListTile(
                   title: Text(ing.food.name),
                   subtitle: Text(l10n.gramsValue(ing.grams.toStringAsFixed(0))),
+                  onTap: () => _editIngredient(entry.key),
                   trailing: IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () =>

@@ -26,6 +26,7 @@ class TimeSeriesChart extends StatefulWidget {
     this.deltaLabelBuilder,
     this.height = 220,
     this.showDeltaLabels = false,
+    this.goalValue,
   });
 
   final List<TimeSeriesPoint> points;
@@ -40,6 +41,10 @@ class TimeSeriesChart extends StatefulWidget {
   final String Function(double delta)? deltaLabelBuilder;
   final double height;
   final bool showDeltaLabels;
+
+  /// When non-null, a dashed horizontal reference line is drawn at this Y
+  /// value — used to show daily goals (e.g. step target).
+  final double? goalValue;
 
   @override
   State<TimeSeriesChart> createState() => _TimeSeriesChartState();
@@ -77,7 +82,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = constraints.biggest;
-          final geometry = _ChartGeometry(widget.points, size);
+          final geometry = _ChartGeometry(widget.points, size, goalValue: widget.goalValue);
           return Stack(
             clipBehavior: Clip.none,
             children: [
@@ -92,9 +97,11 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                     dateLabelBuilder: widget.dateLabelBuilder,
                     deltaLabelBuilder: widget.showDeltaLabels ? widget.deltaLabelBuilder : null,
                     selectedIndex: selectedIndex,
+                    goalValue: widget.goalValue,
                     lineColor: theme.colorScheme.primary,
                     pointColor: theme.colorScheme.primary,
                     selectedPointColor: theme.colorScheme.secondary,
+                    goalLineColor: theme.colorScheme.tertiary,
                     gridColor: theme.colorScheme.outlineVariant,
                     labelStyle: theme.textTheme.bodySmall!.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -187,19 +194,22 @@ class _PointTooltip extends StatelessWidget {
 /// all build one of these for the same [Size], so a tap and its tooltip are
 /// always positioned against exactly the geometry that was drawn.
 class _ChartGeometry {
-  _ChartGeometry(this.points, this.size)
+  _ChartGeometry(this.points, this.size, {this.goalValue})
       : plotTop = _topPadding,
         plotBottom = size.height - _bottomPadding,
         plotLeft = _sidePadding,
         plotRight = size.width - _sidePadding {
     if (points.isEmpty) {
-      minY = 0;
-      maxY = 0;
+      minY = goalValue ?? 0;
+      maxY = goalValue != null ? goalValue! + 1 : 0;
       return;
     }
-    final values = points.map((p) => p.value);
-    var lo = values.reduce((a, b) => a < b ? a : b);
-    var hi = values.reduce((a, b) => a > b ? a : b);
+    final dataValues = [
+      ...points.map((p) => p.value),
+      if (goalValue != null) goalValue!,
+    ];
+    var lo = dataValues.reduce((a, b) => a < b ? a : b);
+    var hi = dataValues.reduce((a, b) => a > b ? a : b);
     if (lo == hi) {
       lo -= 1;
       hi += 1;
@@ -211,6 +221,8 @@ class _ChartGeometry {
     minY = lo;
     maxY = hi;
   }
+
+  final double? goalValue;
 
   static const _topPadding = 24.0;
   static const _bottomPadding = 24.0;
@@ -257,9 +269,11 @@ class _TimeSeriesChartPainter extends CustomPainter {
     required this.dateLabelBuilder,
     required this.deltaLabelBuilder,
     required this.selectedIndex,
+    required this.goalValue,
     required this.lineColor,
     required this.pointColor,
     required this.selectedPointColor,
+    required this.goalLineColor,
     required this.gridColor,
     required this.labelStyle,
     required this.positiveDeltaColor,
@@ -270,9 +284,11 @@ class _TimeSeriesChartPainter extends CustomPainter {
   final String Function(DateTime date) dateLabelBuilder;
   final String Function(double delta)? deltaLabelBuilder;
   final int? selectedIndex;
+  final double? goalValue;
   final Color lineColor;
   final Color pointColor;
   final Color selectedPointColor;
+  final Color goalLineColor;
   final Color gridColor;
   final TextStyle labelStyle;
   final Color positiveDeltaColor;
@@ -284,7 +300,24 @@ class _TimeSeriesChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (points.isEmpty) return;
 
-    final geometry = _ChartGeometry(points, size);
+    final geometry = _ChartGeometry(points, size, goalValue: goalValue);
+
+    // Dashed goal line drawn behind the data line so data reads on top.
+    if (goalValue != null) {
+      final goalY = geometry.yFor(goalValue!);
+      final dashPaint = Paint()
+        ..color = goalLineColor.withValues(alpha: 0.7)
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke;
+      const dashLen = 6.0;
+      const gapLen = 4.0;
+      var x = geometry.plotLeft;
+      while (x < geometry.plotRight) {
+        final end = (x + dashLen).clamp(0.0, geometry.plotRight);
+        canvas.drawLine(Offset(x, goalY), Offset(end, goalY), dashPaint);
+        x += dashLen + gapLen;
+      }
+    }
 
     // Baseline grid line.
     canvas.drawLine(
@@ -389,6 +422,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
     return oldDelegate.points != points ||
         oldDelegate.lineColor != lineColor ||
         oldDelegate.selectedIndex != selectedIndex ||
+        oldDelegate.goalValue != goalValue ||
         (oldDelegate.deltaLabelBuilder == null) != (deltaLabelBuilder == null);
   }
 }

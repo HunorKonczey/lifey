@@ -16,6 +16,7 @@ class UserSettings {
     this.dailyCarbsGoal,
     this.dailyFatGoal,
     this.dailyWaterGoalLiters,
+    this.dailyStepGoal,
   });
 
   const UserSettings.defaults()
@@ -26,7 +27,8 @@ class UserSettings {
         dailyProteinGoal = null,
         dailyCarbsGoal = null,
         dailyFatGoal = null,
-        dailyWaterGoalLiters = null;
+        dailyWaterGoalLiters = null,
+        dailyStepGoal = null;
 
   final UnitSystem unitSystem;
   final ThemePreference theme;
@@ -36,6 +38,7 @@ class UserSettings {
   final int? dailyCarbsGoal;
   final int? dailyFatGoal;
   final double? dailyWaterGoalLiters;
+  final int? dailyStepGoal;
 
   factory UserSettings.fromJson(Map<String, dynamic> json) {
     return UserSettings(
@@ -47,6 +50,7 @@ class UserSettings {
       dailyCarbsGoal: json['dailyCarbsGoal'] as int?,
       dailyFatGoal: json['dailyFatGoal'] as int?,
       dailyWaterGoalLiters: (json['dailyWaterGoalLiters'] as num?)?.toDouble(),
+      dailyStepGoal: json['dailyStepGoal'] as int?,
     );
   }
 
@@ -57,6 +61,7 @@ class UserSettings {
         'dailyCarbsGoal': dailyCarbsGoal,
         'dailyFatGoal': dailyFatGoal,
         'dailyWaterGoalLiters': dailyWaterGoalLiters,
+        'dailyStepGoal': dailyStepGoal,
         'theme': theme.name.toUpperCase(),
         'language': language.name.toUpperCase(),
       };

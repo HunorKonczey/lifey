@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'health_preferences.dart';
 import 'health_service.dart';
+import 'step_history_importer.dart';
 import 'weight_health_importer.dart';
 
 /// Exposes (and mutates) the "Connect Apple Health" opt-in toggle.
@@ -36,6 +37,8 @@ class AppleHealthController extends AsyncNotifier<bool> {
       // next app resume, since granting permission is the other documented
       // trigger.
       unawaited(ref.read(weightHealthImporterProvider).import());
+      // Phase 2: backfill recent step counts immediately after permission grant.
+      unawaited(ref.read(stepHistoryImporterProvider).import());
     }
   }
 }

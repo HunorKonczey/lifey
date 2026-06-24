@@ -43,7 +43,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
   }
 
   Future<void> _edit(BuildContext context, Meal meal) {
-    return Navigator.of(context).push(
+    return Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => LogMealScreen(meal: meal)),
     );
   }

@@ -18,6 +18,8 @@ class UserSettingsTable extends Table {
   // Added in schema v3, after rows already existed — needs a DEFAULT so
   // `ALTER TABLE ADD COLUMN` is valid for existing (non-empty) tables.
   TextColumn get language => text().withDefault(const Constant('SYSTEM'))(); // SYSTEM / ENGLISH / HUNGARIAN
+  // Added in schema v9.
+  IntColumn get dailyStepGoal => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {clientId};

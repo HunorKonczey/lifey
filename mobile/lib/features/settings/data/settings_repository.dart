@@ -39,6 +39,7 @@ class SettingsRepository {
       dailyCarbsGoal: Value(settings.dailyCarbsGoal),
       dailyFatGoal: Value(settings.dailyFatGoal),
       dailyWaterGoalLiters: Value(settings.dailyWaterGoalLiters),
+      dailyStepGoal: Value(settings.dailyStepGoal),
     );
 
     if (existing == null) {
@@ -60,6 +61,7 @@ class SettingsRepository {
       dailyCarbsGoal: row.dailyCarbsGoal,
       dailyFatGoal: row.dailyFatGoal,
       dailyWaterGoalLiters: row.dailyWaterGoalLiters,
+      dailyStepGoal: row.dailyStepGoal,
     );
   }
 }

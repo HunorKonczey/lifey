@@ -11,6 +11,8 @@ import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../dashboard/presentation/widgets/stat_card.dart';
+import '../../settings/application/settings_controller.dart';
+import '../../settings/domain/user_settings.dart';
 import '../application/stat_chart_data.dart';
 import '../application/stat_metric_controller.dart';
 import '../application/stat_summary_data.dart';
@@ -71,6 +73,10 @@ class _StatisticsBody extends ConsumerWidget {
     final range = ref.watch(statsRangeControllerProvider);
     final chartData = ref.watch(statChartDataProvider);
     final summary = ref.watch(statSummaryProvider);
+    final settings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
+    final goalValue = metric == StatMetric.steps && settings.dailyStepGoal != null
+        ? settings.dailyStepGoal!.toDouble()
+        : null;
 
     // Metrics with no data at all (e.g. activeCalories with no Apple Health
     // workouts ever paired) are hidden from the picker — selecting one would
@@ -151,6 +157,7 @@ class _StatisticsBody extends ConsumerWidget {
                       metric: metric,
                       points: points,
                       summary: summary.value ?? StatSummary.empty,
+                      goalValue: goalValue,
                     ),
                   ),
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -167,11 +174,13 @@ class _StatisticsChart extends StatelessWidget {
     required this.metric,
     required this.points,
     required this.summary,
+    this.goalValue,
   });
 
   final StatMetric metric;
   final List<TimeSeriesPoint> points;
   final StatSummary summary;
+  final double? goalValue;
 
   static final _chartDateLabel = DateFormat('MMM d');
 
@@ -188,11 +197,15 @@ class _StatisticsChart extends StatelessWidget {
       StatMetric.activeCalories => mc.calories,
       StatMetric.workoutMinutes => scheme.primary,
       StatMetric.workoutCount => scheme.primary,
+      StatMetric.steps => mc.steps,
     };
   }
 
+  bool get _isIntegerMetric =>
+      metric == StatMetric.workoutCount || metric == StatMetric.steps;
+
   String _formatValue(double value, AppLocalizations l10n) {
-    final formatted = metric == StatMetric.workoutCount
+    final formatted = _isIntegerMetric
         ? value.round().toString()
         : value.toStringAsFixed(1);
     final unit = metric.unitLabel(l10n);
@@ -279,6 +292,7 @@ class _StatisticsChart extends StatelessWidget {
             valueLabelBuilder: (value) => _formatValue(value, l10n),
             deltaLabelBuilder: (delta) => _formatDelta(delta, l10n),
             showDeltaLabels: true,
+            goalValue: goalValue,
           ),
         ),
       ],

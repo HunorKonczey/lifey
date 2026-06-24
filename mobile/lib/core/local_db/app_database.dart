@@ -13,6 +13,7 @@ import 'tables/meal_tables.dart';
 import 'tables/pending_operations_table.dart';
 import 'tables/recipe_tables.dart';
 import 'tables/settings_table.dart';
+import 'tables/step_count_table.dart';
 import 'tables/water_tables.dart';
 import 'tables/weight_table.dart';
 import 'tables/workout_session_tables.dart';
@@ -46,12 +47,13 @@ part 'app_database.g.dart';
   WaterEntries,
   UserSettingsTable,
   PendingOperations,
+  DailyStepCounts,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -92,6 +94,15 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(workoutSessions, workoutSessions.activeCalories);
             await m.addColumn(workoutSessions, workoutSessions.averageHeartRate);
             await m.addColumn(workoutSessions, workoutSessions.healthWorkoutId);
+          }
+          // V8: offline-first daily step counts (one row per day, upserted as
+          // the running total accumulates throughout the day).
+          if (from < 8) {
+            await m.createTable(dailyStepCounts);
+          }
+          // V9: daily step goal added to user settings.
+          if (from < 9) {
+            await m.addColumn(userSettingsTable, userSettingsTable.dailyStepGoal);
           }
         },
       );

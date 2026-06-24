@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/health/step_goal_notifier.dart';
+import 'core/health/step_history_importer.dart';
 import 'core/health/weight_health_importer.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/connectivity_sync_controller.dart';
@@ -31,6 +33,10 @@ class LifeyApp extends ConsumerWidget {
     ref.watch(connectivitySyncControllerProvider);
     // Same — fires the Phase 3 Apple Health weight import on app resume.
     ref.watch(weightHealthImportLifecycleProvider);
+    // Phase 2 — fires the step history backfill on app resume.
+    ref.watch(stepImportLifecycleProvider);
+    // Phase 2 — fires the step-goal notification on app resume (iOS only).
+    ref.watch(stepGoalNotifierProvider);
 
     final router = ref.watch(appRouterProvider);
     final settings = ref.watch(settingsControllerProvider).value;

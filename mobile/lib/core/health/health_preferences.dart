@@ -16,6 +16,7 @@ class HealthPreferences {
 
   static const _enabledKey = 'health.appleHealthEnabled';
   static const _lastWeightImportKey = 'health.lastHealthWeightImportedAt';
+  static const _lastStepGoalNotifiedKey = 'health.lastStepGoalNotifiedDate';
 
   Future<bool> isEnabled() async {
     return (await _storage.read(key: _enabledKey)) == 'true';
@@ -34,6 +35,17 @@ class HealthPreferences {
 
   Future<void> setLastHealthWeightImportedAt(DateTime timestamp) {
     return _storage.write(key: _lastWeightImportKey, value: timestamp.toIso8601String());
+  }
+
+  /// The calendar date on which the "daily step goal reached" notification last
+  /// fired — prevents firing it more than once per day.
+  Future<DateTime?> lastStepGoalNotifiedDate() async {
+    final raw = await _storage.read(key: _lastStepGoalNotifiedKey);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  Future<void> setLastStepGoalNotifiedDate(DateTime date) {
+    return _storage.write(key: _lastStepGoalNotifiedKey, value: date.toIso8601String());
   }
 }
 

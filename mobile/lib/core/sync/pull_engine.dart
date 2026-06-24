@@ -46,6 +46,7 @@ class PullEngine {
       await _pullWaterSources();
       await _pullWeightEntries();
       await _pullWaterEntries();
+      await _pullDailySteps();
       await _pullSettings();
       await _pullWorkoutTemplates();
       await _pullWorkoutSessions();
@@ -161,6 +162,36 @@ class PullEngine {
     await _deleteMissing('weight_entries', seen);
   }
 
+  Future<void> _pullDailySteps() async {
+    final items = await _getList('/steps');
+    final seen = <int>{};
+    for (final json in items) {
+      final serverId = json['id'] as int;
+      seen.add(serverId);
+      final existingClientId = await _localClientId('daily_step_counts', serverId);
+      if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
+
+      final date = DateTime.parse(json['date'] as String);
+      final steps = (json['steps'] as num).toInt();
+      if (existingClientId != null) {
+        await (_db.update(_db.dailyStepCounts)
+              ..where((t) => t.clientId.equals(existingClientId)))
+            .write(DailyStepCountsCompanion(
+          date: Value(date),
+          steps: Value(steps),
+        ));
+      } else {
+        await _db.into(_db.dailyStepCounts).insert(DailyStepCountsCompanion.insert(
+              clientId: newClientId(),
+              serverId: Value(serverId),
+              date: date,
+              steps: steps,
+            ));
+      }
+    }
+    await _deleteMissing('daily_step_counts', seen);
+  }
+
   Future<void> _pullWaterEntries() async {
     final items = await _getList('/water-entries');
     final seen = <int>{};
@@ -208,6 +239,7 @@ class PullEngine {
             dailyCarbsGoal: Value(json['dailyCarbsGoal'] as int?),
             dailyFatGoal: Value(json['dailyFatGoal'] as int?),
             dailyWaterGoalLiters: Value((json['dailyWaterGoalLiters'] as num?)?.toDouble()),
+            dailyStepGoal: Value(json['dailyStepGoal'] as int?),
           ),
         );
   }

@@ -4,6 +4,8 @@ import '../../../shared/widgets/charts/stats_range.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../nutrition/application/meal_controller.dart';
 import '../../nutrition/domain/meal.dart';
+import '../../steps/data/step_count_repository.dart';
+import '../../steps/domain/daily_step_count.dart';
 import '../../water/data/water_entry_repository.dart';
 import '../../water/domain/water_entry.dart';
 import '../../weight/application/weight_controller.dart';
@@ -40,6 +42,8 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
       return ref.watch(allWaterEntriesProvider).whenData((all) => _waterPoints(all, range));
     case StatMetric.weight:
       return ref.watch(weightControllerProvider).whenData((all) => _weightPoints(all, range));
+    case StatMetric.steps:
+      return ref.watch(allStepCountsProvider).whenData((all) => _stepsPoints(all, range));
   }
 });
 
@@ -67,6 +71,7 @@ final availableStatMetricsProvider = Provider<Set<StatMetric>>((ref) {
     if (sessions.any((s) => s.activeCalories != null)) StatMetric.activeCalories,
     if (water.isNotEmpty) StatMetric.water,
     if (weights.isNotEmpty) StatMetric.weight,
+    if (ref.watch(allStepCountsProvider).value?.isNotEmpty ?? false) StatMetric.steps,
   };
 });
 
@@ -132,6 +137,15 @@ List<TimeSeriesPoint> _waterPoints(List<WaterEntry> entries, StatsRange range) {
     sumsByDay.update(day, (sum) => sum + entry.volumeLiters, ifAbsent: () => entry.volumeLiters);
   }
   return _pointsFromSums(sumsByDay);
+}
+
+List<TimeSeriesPoint> _stepsPoints(List<DailyStepCount> counts, StatsRange range) {
+  final cutoff = range.cutoff();
+  final days = counts
+      .where((c) => cutoff == null || !c.date.isBefore(cutoff))
+      .toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
+  return [for (final c in days) TimeSeriesPoint(date: c.date, value: c.steps.toDouble())];
 }
 
 /// One point per calendar day — the most recently recorded entry that day —

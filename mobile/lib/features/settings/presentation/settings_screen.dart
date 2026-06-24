@@ -37,6 +37,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int? _carbsGoal;
   int? _fatGoal;
   double? _waterGoal;
+  int? _stepGoal;
 
   void _initFromSettings(UserSettings s) {
     _unitSystem = s.unitSystem;
@@ -47,6 +48,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _carbsGoal = s.dailyCarbsGoal;
     _fatGoal = s.dailyFatGoal;
     _waterGoal = s.dailyWaterGoalLiters;
+    _stepGoal = s.dailyStepGoal;
     _initialized = true;
   }
 
@@ -63,6 +65,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             dailyCarbsGoal: _carbsGoal,
             dailyFatGoal: _fatGoal,
             dailyWaterGoalLiters: _waterGoal,
+            dailyStepGoal: _stepGoal,
           ),
         )
         .catchError((e) {
@@ -404,8 +407,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        // TODO(new-feature #19): daily step goal cell
-                        const Expanded(child: SizedBox()),
+                        Expanded(
+                          child: _GoalCell(
+                            icon: Icons.directions_walk,
+                            iconColor: mc.steps,
+                            label: l10n.stepsLabel,
+                            value: _formatInt(_stepGoal),
+                            onTap:
+                                () => _openGoalSheet(
+                                  label: l10n.stepsLabel,
+                                  suffix: l10n.statUnitSteps,
+                                  initialText: _stepGoal?.toString() ?? '',
+                                  decimal: false,
+                                  onSave:
+                                      (text) => setState(
+                                        () =>
+                                            _stepGoal =
+                                                text.trim().isEmpty
+                                                    ? null
+                                                    : int.parse(text.trim()),
+                                      ),
+                                ),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -508,8 +532,8 @@ class _GroupLabel extends StatelessWidget {
           fontFamily: 'PlusJakartaSans',
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: scheme.outlineVariant,
-          letterSpacing: 1.0,
+          color: scheme.onSurfaceVariant,
+          letterSpacing: 1.2,
           height: 1.0,
         ),
       ),
