@@ -278,6 +278,10 @@
     "todaysCaloriesLabel": "Mai kalóriák",
     "currentWeightSectionTitle": "Jelenlegi súly",
     "latestEntryLabel": "Legutóbbi bejegyzés",
+    "weightCurrentLabel": "Jelenlegi",
+    "weightHistoryLabel": "Előzmények",
+    "weightHistoryTodayLabel": "Ma",
+    "weightHistoryYesterdayLabel": "Tegnap",
     "recentWorkoutsSectionTitle": "Legutóbbi edzések",
     "noWorkoutsLoggedYetPeriodMessage": "Még nincs naplózott edzés.",
 

@@ -808,6 +808,18 @@
     "latestEntryLabel": "Latest entry",
     "@latestEntryLabel": {"description": "Stat card label for the most recent weight entry"},
 
+    "weightCurrentLabel": "Current",
+    "@weightCurrentLabel": {"description": "Small label above the current weight reading in the weight chart card header"},
+
+    "weightHistoryLabel": "History",
+    "@weightHistoryLabel": {"description": "Section heading above the list of past weight entries on the weight screen"},
+
+    "weightHistoryTodayLabel": "Today",
+    "@weightHistoryTodayLabel": {"description": "Relative date shown on a weight history row recorded today"},
+
+    "weightHistoryYesterdayLabel": "Yesterday",
+    "@weightHistoryYesterdayLabel": {"description": "Relative date shown on a weight history row recorded yesterday"},
+
     "thisWeekCaloriesLabel": "This week · calories",
     "@thisWeekCaloriesLabel": {"description": "Header label on the dashboard weekly calorie sparkline card"},
 
