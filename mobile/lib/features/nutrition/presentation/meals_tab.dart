@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
@@ -29,11 +30,6 @@ class _MealsTabState extends ConsumerState<MealsTab> {
 
   DateRangeFilter _filter = DateRangeFilter.all;
 
-  /// Edge-triggered: true while the viewport is within [_loadMoreThreshold]
-  /// of the bottom. [loadMore] only fires on the transition into this zone
-  /// (false -> true), not on every scroll notification while lingering in
-  /// it. It resets on its own once new rows are appended (pushing the
-  /// bottom further away) or the user scrolls back up.
   bool _nearBottom = false;
 
   bool _handleScrollNotification(ScrollNotification notification) {
@@ -69,10 +65,8 @@ class _MealsTabState extends ConsumerState<MealsTab> {
   Widget build(BuildContext context) {
     final state = ref.watch(mealControllerProvider);
     final l10n = AppLocalizations.of(context)!;
-    // .notifier access doesn't itself trigger a rebuild; `hasMore` is read
-    // fresh on every rebuild, and the controller already mutates it before
-    // pushing the data that triggers this rebuild via `state` above.
     final hasMore = ref.read(mealControllerProvider.notifier).hasMore;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return state.when(
       data: (meals) {
@@ -86,8 +80,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
             ),
           );
         }
-        final filtered =
-            meals.where((m) => _filter.matches(m.dateTime)).toList();
+        final filtered = meals.where((m) => _filter.matches(m.dateTime)).toList();
         return Column(
           children: [
             DateRangeFilterBar(
@@ -96,8 +89,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
             ),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: () =>
-                    ref.read(mealControllerProvider.notifier).refresh(),
+                onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
                 child: filtered.isEmpty
                     ? EmptyView(
                         icon: Icons.lunch_dining_outlined,
@@ -107,7 +99,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                     : NotificationListener<ScrollNotification>(
                         onNotification: _handleScrollNotification,
                         child: ListView.builder(
-                          padding: const EdgeInsets.all(12),
+                          padding: EdgeInsets.fromLTRB(12, 4, 12, bottomPad + 88),
                           itemCount: filtered.length + (hasMore ? 1 : 0),
                           itemBuilder: (context, index) {
                             if (index >= filtered.length) {
@@ -122,11 +114,12 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                                 ),
                               );
                             }
+                            final meal = filtered[index];
                             return _MealCard(
-                              meal: filtered[index],
+                              meal: meal,
                               dateLabel: _dateLabel,
-                              onDelete: () => _delete(context, ref, filtered[index]),
-                              onEdit: () => _edit(context, filtered[index]),
+                              onDelete: () => _delete(context, ref, meal),
+                              onEdit: () => _edit(context, meal),
                             );
                           },
                         ),
@@ -145,6 +138,10 @@ class _MealsTabState extends ConsumerState<MealsTab> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Meal card
+// ---------------------------------------------------------------------------
+
 class _MealCard extends StatelessWidget {
   const _MealCard({
     required this.meal,
@@ -158,76 +155,116 @@ class _MealCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onEdit;
 
+  static IconData _mealIcon(MealType type) => switch (type) {
+        MealType.breakfast => Icons.free_breakfast,
+        MealType.lunch => Icons.lunch_dining,
+        MealType.dinner => Icons.dinner_dining,
+        MealType.snack => Icons.cookie,
+      };
+
+  String _macroLine(AppLocalizations l10n) {
+    final parts = <String>[
+      '${meal.totalCalories.toStringAsFixed(0)} kcal',
+      '${meal.totalProtein.toStringAsFixed(0)} P',
+    ];
+    if (meal.totalCarbs > 0) parts.add('${meal.totalCarbs.toStringAsFixed(0)} C');
+    if (meal.totalFat > 0) parts.add('${meal.totalFat.toStringAsFixed(0)} F');
+    return parts.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
+
     return Dismissible(
       key: ValueKey(meal.clientId),
       direction: DismissDirection.endToStart,
       background: Container(
         decoration: BoxDecoration(
-          color: theme.colorScheme.errorContainer,
-          borderRadius: BorderRadius.circular(12),
+          color: scheme.errorContainer,
+          borderRadius: BorderRadius.circular(AppRadius.card),
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Icon(Icons.delete, color: theme.colorScheme.onErrorContainer),
+        margin: const EdgeInsets.only(bottom: 10),
+        child: Icon(Icons.delete, color: scheme.onErrorContainer),
       ),
       onDismissed: (_) => onDelete(),
       child: Card(
         elevation: 0,
-        color: theme.colorScheme.surfaceContainerHighest,
-        margin: const EdgeInsets.only(bottom: 12),
+        color: scheme.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        margin: const EdgeInsets.only(bottom: 10),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onEdit,
+          borderRadius: BorderRadius.circular(AppRadius.card),
           child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Chip(
-                      label: Text(meal.mealType.label(l10n)),
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: theme.colorScheme.primaryContainer,
+                // Meal-type icon badge
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      _mealIcon(meal.mealType),
+                      size: 22,
+                      color: scheme.onPrimaryContainer,
                     ),
-                    const SizedBox(width: 8),
-                    Chip(
-                      avatar: const Icon(Icons.local_fire_department,
-                          size: 16, color: Colors.deepOrange),
-                      label: Text('${meal.totalCalories.toStringAsFixed(0)} kcal'),
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: theme.colorScheme.surfaceContainerHigh,
-                    ),
-                    Expanded(
-                      child: Text(
-                        dateLabel.format(meal.dateTime.toLocal()),
-                        textAlign: TextAlign.end,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ),
-                    SyncStatusIndicator(clientId: meal.clientId),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ...meal.entries.map(
-                  (e) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text(
-                        '${e.foodName} — ${l10n.gramsValue(e.quantityInGrams.toStringAsFixed(0))}'),
                   ),
                 ),
-                const Divider(height: 16),
-                Text(
-                  l10n.totalProteinLabel(meal.totalProtein.toStringAsFixed(0)),
-                  style: theme.textTheme.labelLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                const SizedBox(width: 12),
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(meal.mealType.label(l10n), style: theme.textTheme.bodyLarge),
+                          const Spacer(),
+                          Text(
+                            dateLabel.format(meal.dateTime.toLocal()),
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          SyncStatusIndicator(clientId: meal.clientId),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _macroLine(l10n),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (meal.entries.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          meal.entries.map((e) => e.foodName).join(', '),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
               ],
             ),
           ),

@@ -86,6 +86,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: Text(_isEditing ? l10n.editTemplateTitle : l10n.newTemplateTitle),
         actions: [
           TextButton(

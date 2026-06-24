@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../shared/widgets/nav_collapse_controller.dart';
+import '../../../shared/widgets/pill_tab_bar.dart';
 import '../../recipes/presentation/create_recipe_screen.dart';
 import '../../recipes/presentation/recipes_tab.dart';
 import 'foods_tab.dart';
@@ -38,6 +41,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   void _addFood() {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => const AddFoodSheet(),
@@ -70,37 +74,71 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final fab = _fab(l10n);
 
+    final statusTop = MediaQuery.paddingOf(context).top;
+    final barClear = statusTop + 8.0 + 58.0;
+
+    final fabBottom = MediaQuery.of(context).viewPadding.bottom + 100;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.nutritionTitle),
-        centerTitle: false,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(text: l10n.foodsLabel),
-            Tab(text: l10n.mealsTabLabel),
-            Tab(text: l10n.recipesTabLabel),
+      // ScrollCollapseListener at the Stack level catches scroll notifications
+      // that bubble up from whichever tab's ListView is active.
+      body: ScrollCollapseListener(
+        child: Stack(
+          children: [
+            // ── Pinned layout: space → pill TabBar → content ──────────────
+            Column(
+              children: [
+                SizedBox(height: barClear),
+                PillTabBar(
+                  controller: _tabController,
+                  tabs: [
+                    Tab(text: l10n.foodsLabel),
+                    Tab(text: l10n.mealsTabLabel),
+                    Tab(text: l10n.recipesTabLabel),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: const [
+                      FoodsTab(),
+                      MealsTab(),
+                      RecipesTab(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // ── Floating top bar ──────────────────────────────────────────
+            Positioned(
+              top: statusTop + 8.0,
+              left: 12,
+              right: 12,
+              child: AdaptiveAppBar(title: l10n.nutritionTitle),
+            ),
+
+            // ── FAB — above floating nav bar (84 dp fixed) + 16 dp gap ───
+            Positioned(
+              right: 16,
+              bottom: fabBottom,
+              child: FloatingActionButton.extended(
+                heroTag: null,
+                onPressed: fab.onPressed,
+                icon: Icon(fab.icon),
+                label: Text(fab.label),
+                backgroundColor: scheme.primary,
+                foregroundColor: scheme.onPrimary,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(18)),
+                ),
+              ),
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          FoodsTab(),
-          MealsTab(),
-          RecipesTab(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        // Without an explicit tag, every shell tab's FAB shares Flutter's
-        // default hero tag — since StatefulShellRoute.indexedStack keeps all
-        // branches mounted at once, that throws a duplicate-hero assertion.
-        heroTag: null,
-        onPressed: fab.onPressed,
-        icon: Icon(fab.icon),
-        label: Text(fab.label),
       ),
     );
   }

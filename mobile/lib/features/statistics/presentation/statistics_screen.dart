@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/charts/stats_range.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../dashboard/presentation/widgets/stat_card.dart';
 import '../application/stat_chart_data.dart';
 import '../application/stat_metric_controller.dart';
@@ -25,15 +28,34 @@ class StatisticsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
 
+    final statusTop = MediaQuery.paddingOf(context).top;
+    final barTop = statusTop + 8.0;
+    final contentTop = barTop + 58.0 + 12.0;
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.statisticsTitle), centerTitle: false),
-      body: const _StatisticsBody(),
+      body: ScrollCollapseListener(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: _StatisticsBody(topPadding: contentTop),
+            ),
+            Positioned(
+              top: barTop,
+              left: 12,
+              right: 12,
+              child: AdaptiveAppBar(title: l10n.statisticsTitle),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
 class _StatisticsBody extends ConsumerWidget {
-  const _StatisticsBody();
+  const _StatisticsBody({required this.topPadding});
+
+  final double topPadding;
 
   String _rangeLabel(AppLocalizations l10n, StatsRange range) => switch (range) {
         StatsRange.week => l10n.statRangeWeekLabel,
@@ -71,7 +93,9 @@ class _StatisticsBody extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+          // topPadding clears the floating AdaptiveAppBar; the existing 24px
+          // below becomes the gap between bar and the metric picker.
+          padding: EdgeInsets.fromLTRB(16, topPadding, 16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -117,7 +141,12 @@ class _StatisticsBody extends ConsumerWidget {
                     title: l10n.noStatsDataForRangeTitle,
                   )
                 : SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      24,
+                      16,
+                      MediaQuery.paddingOf(context).bottom + 24,
+                    ),
                     child: _StatisticsChart(
                       metric: metric,
                       points: points,
@@ -146,6 +175,22 @@ class _StatisticsChart extends StatelessWidget {
 
   static final _chartDateLabel = DateFormat('MMM d');
 
+  Color _metricColor(BuildContext context, StatMetric m) {
+    final mc = context.metricColors;
+    final scheme = Theme.of(context).colorScheme;
+    return switch (m) {
+      StatMetric.calories => mc.calories,
+      StatMetric.protein => mc.protein,
+      StatMetric.carbs => mc.carbs,
+      StatMetric.fat => mc.fat,
+      StatMetric.water => mc.water,
+      StatMetric.weight => mc.weight,
+      StatMetric.activeCalories => mc.calories,
+      StatMetric.workoutMinutes => scheme.primary,
+      StatMetric.workoutCount => scheme.primary,
+    };
+  }
+
   String _formatValue(double value, AppLocalizations l10n) {
     final formatted = metric == StatMetric.workoutCount
         ? value.round().toString()
@@ -162,7 +207,9 @@ class _StatisticsChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final trendPercent = summary.trendPercent;
+    final accent = _metricColor(context, metric);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -174,7 +221,7 @@ class _StatisticsChart extends StatelessWidget {
                 label: l10n.statSumLabel,
                 value: _formatValue(summary.sum, l10n),
                 icon: Icons.functions,
-                color: Colors.indigo,
+                color: accent,
               ),
             ),
             const SizedBox(width: 12),
@@ -183,13 +230,15 @@ class _StatisticsChart extends StatelessWidget {
                 label: l10n.statAverageLabel,
                 value: _formatValue(summary.average, l10n),
                 icon: Icons.show_chart,
-                color: Colors.teal,
+                color: accent,
                 trailing: trendPercent == null
                     ? null
                     : Icon(
-                        trendPercent >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
+                        trendPercent >= 0
+                            ? Icons.arrow_upward
+                            : Icons.arrow_downward,
                         size: 16,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        color: scheme.onSurfaceVariant,
                       ),
               ),
             ),
@@ -202,8 +251,8 @@ class _StatisticsChart extends StatelessWidget {
               child: StatCard(
                 label: l10n.statMinLabel,
                 value: _formatValue(summary.min, l10n),
-                icon: Icons.arrow_downward,
-                color: Colors.blueGrey,
+                icon: Icons.south,
+                color: accent,
               ),
             ),
             const SizedBox(width: 12),
@@ -211,19 +260,26 @@ class _StatisticsChart extends StatelessWidget {
               child: StatCard(
                 label: l10n.statMaxLabel,
                 value: _formatValue(summary.max, l10n),
-                icon: Icons.arrow_upward,
-                color: Colors.deepOrange,
+                icon: Icons.north,
+                color: accent,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        TimeSeriesChart(
-          points: points,
-          dateLabelBuilder: _chartDateLabel.format,
-          valueLabelBuilder: (value) => _formatValue(value, l10n),
-          deltaLabelBuilder: (delta) => _formatDelta(delta, l10n),
-          showDeltaLabels: true,
+        const SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: TimeSeriesChart(
+            points: points,
+            dateLabelBuilder: _chartDateLabel.format,
+            valueLabelBuilder: (value) => _formatValue(value, l10n),
+            deltaLabelBuilder: (delta) => _formatDelta(delta, l10n),
+            showDeltaLabels: true,
+          ),
         ),
       ],
     );

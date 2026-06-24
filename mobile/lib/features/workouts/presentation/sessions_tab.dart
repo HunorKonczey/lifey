@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
@@ -11,8 +12,7 @@ import '../application/workout_session_controller.dart';
 import '../domain/workout_session.dart';
 import 'log_session_screen.dart';
 
-/// "Sessions" tab: tap to edit (e.g. finish an in-progress workout), delete via
-/// the trailing icon or by swiping, filter by date range.
+/// "Sessions" tab: tap to edit/continue; swipe-to-delete with confirm; date filter.
 class SessionsTab extends ConsumerStatefulWidget {
   const SessionsTab({super.key});
 
@@ -72,6 +72,7 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
   Widget build(BuildContext context) {
     final state = ref.watch(workoutSessionControllerProvider);
     final l10n = AppLocalizations.of(context)!;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return state.when(
       data: (sessions) {
@@ -96,9 +97,8 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
             ),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: () => ref
-                    .read(workoutSessionControllerProvider.notifier)
-                    .refresh(),
+                onRefresh: () =>
+                    ref.read(workoutSessionControllerProvider.notifier).refresh(),
                 child: filtered.isEmpty
                     ? EmptyView(
                         icon: Icons.fitness_center_outlined,
@@ -106,14 +106,15 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
                         subtitle: l10n.tryWiderDateFilterMessage,
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.fromLTRB(12, 4, 12, bottomPad + 88),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) => _SessionCard(
                           session: filtered[index],
                           dateLabel: _dateLabel,
                           onEdit: () => _edit(context, filtered[index]),
                           onDelete: () => _delete(context, ref, filtered[index]),
-                          onDeleteTap: () => _confirmDelete(context, ref, filtered[index]),
+                          onDeleteTap: () =>
+                              _confirmDelete(context, ref, filtered[index]),
                         ),
                       ),
               ),
@@ -130,6 +131,10 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Session card
+// ---------------------------------------------------------------------------
 
 class _SessionCard extends StatelessWidget {
   const _SessionCard({
@@ -149,89 +154,180 @@ class _SessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
+
+    // Comma-separated unique exercise names from this session's sets.
+    final exerciseNames = session.sets
+        .map((s) => s.exerciseName)
+        .toSet()
+        .take(4)
+        .join(', ');
+
     return Dismissible(
       key: ValueKey(session.clientId),
       direction: DismissDirection.endToStart,
       background: Container(
         decoration: BoxDecoration(
-          color: theme.colorScheme.errorContainer,
-          borderRadius: BorderRadius.circular(12),
+          color: scheme.errorContainer,
+          borderRadius: BorderRadius.circular(AppRadius.card),
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Icon(Icons.delete, color: theme.colorScheme.onErrorContainer),
+        margin: const EdgeInsets.only(bottom: 10),
+        child: Icon(Icons.delete, color: scheme.onErrorContainer),
       ),
       onDismissed: (_) => onDelete(),
       child: Card(
         elevation: 0,
-        color: theme.colorScheme.surfaceContainerHighest,
-        margin: const EdgeInsets.only(bottom: 12),
+        color: scheme.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        margin: const EdgeInsets.only(bottom: 10),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onEdit,
+          borderRadius: BorderRadius.circular(AppRadius.card),
           child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Text(dateLabel.format(session.startedAt.toLocal()),
-                        style: theme.textTheme.titleSmall),
-                    if (session.fromAppleHealth) ...[
-                      const SizedBox(width: 6),
-                      Tooltip(
-                        message: l10n.importedFromAppleHealthTooltip,
-                        child: Icon(
-                          Icons.apple,
-                          size: 16,
-                          color: theme.colorScheme.onSurfaceVariant,
-                          semanticLabel: l10n.importedFromAppleHealthTooltip,
-                        ),
-                      ),
-                    ],
-                    const Spacer(),
-                    if (session.inProgress)
-                      Chip(
-                        label: Text(l10n.inProgressLabel),
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor: theme.colorScheme.tertiaryContainer,
-                      )
-                    else
-                      Text(l10n.setsCountLabel(session.sets.length),
-                          style: theme.textTheme.labelLarge),
-                    SyncStatusIndicator(clientId: session.clientId),
-                    IconButton(
-                      tooltip: l10n.deleteWorkoutTooltip,
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: onDeleteTap,
-                    ),
-                  ],
-                ),
-                if (session.activeCalories != null || session.averageHeartRate != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    l10n.appleHealthStatsLine(
-                      session.activeCalories?.round().toString() ?? '–',
-                      session.averageHeartRate?.round().toString() ?? '–',
-                    ),
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                // Icon badge
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-                const SizedBox(height: 8),
-                ...session.sets.map(
-                  (s) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text(l10n.exerciseSetLine(
-                        s.exerciseName, s.reps.toString(), s.weight.toStringAsFixed(1))),
+                  child: Center(
+                    child: Icon(
+                      Icons.fitness_center,
+                      size: 22,
+                      color: scheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Date + Apple Health badge + status chip
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              dateLabel.format(session.startedAt.toLocal()),
+                              style: theme.textTheme.bodyLarge,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (session.fromAppleHealth)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Tooltip(
+                                message: l10n.importedFromAppleHealthTooltip,
+                                child: Icon(
+                                  Icons.apple,
+                                  size: 15,
+                                  color: scheme.onSurfaceVariant,
+                                  semanticLabel:
+                                      l10n.importedFromAppleHealthTooltip,
+                                ),
+                              ),
+                            ),
+                          SyncStatusIndicator(clientId: session.clientId),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      // Sets count / in-progress pill
+                      if (session.inProgress)
+                        _StatusPill(label: l10n.inProgressLabel, scheme: scheme)
+                      else
+                        Text(
+                          l10n.setsCountLabel(session.sets.length),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      // Apple Health stats
+                      if (session.activeCalories != null ||
+                          session.averageHeartRate != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          l10n.appleHealthStatsLine(
+                            session.activeCalories?.round().toString() ?? '–',
+                            session.averageHeartRate?.round().toString() ?? '–',
+                          ),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                      // Exercise names
+                      if (exerciseNames.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          exerciseNames,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurfaceVariant
+                                .withValues(alpha: 0.7),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // Delete tap target
+                GestureDetector(
+                  onTap: onDeleteTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Icon(
+                      Icons.more_vert,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label, required this.scheme});
+  final String label;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: scheme.onTertiaryContainer,
+          height: 1.0,
         ),
       ),
     );

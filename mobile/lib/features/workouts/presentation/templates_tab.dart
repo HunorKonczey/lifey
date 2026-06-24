@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -11,8 +12,7 @@ import '../domain/workout_template.dart';
 import 'create_template_screen.dart';
 import 'log_session_screen.dart';
 
-/// "Templates" tab: tap a template to start a session from it; the overflow
-/// menu edits or deletes it.
+/// "Templates" tab: tap "Start" to begin a session; overflow menu for edit/delete.
 class TemplatesTab extends ConsumerWidget {
   const TemplatesTab({super.key});
 
@@ -66,7 +66,7 @@ class TemplatesTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(workoutTemplateControllerProvider);
     final l10n = AppLocalizations.of(context)!;
-    // Resolve exercise ids to names when the list is available.
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
     final names = ref.watch(exerciseControllerProvider).maybeWhen(
           data: (exercises) => {for (final e in exercises) e.clientId: e.name},
           orElse: () => const <String, String>{},
@@ -84,13 +84,12 @@ class TemplatesTab extends ConsumerWidget {
               subtitle: l10n.tapPlusToCreateOneMessage,
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+          return ListView.builder(
+            padding: EdgeInsets.fromLTRB(12, 4, 12, bottomPad + 88),
             itemCount: templates.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final template = templates[index];
-              return _TemplateTile(
+              return _TemplateCard(
                 template: template,
                 names: names,
                 onStart: () => _start(context, template),
@@ -111,8 +110,12 @@ class TemplatesTab extends ConsumerWidget {
   }
 }
 
-class _TemplateTile extends StatelessWidget {
-  const _TemplateTile({
+// ---------------------------------------------------------------------------
+// Template card
+// ---------------------------------------------------------------------------
+
+class _TemplateCard extends StatelessWidget {
+  const _TemplateCard({
     required this.template,
     required this.names,
     required this.onStart,
@@ -128,7 +131,10 @@ class _TemplateTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
+
     final resolved = template.exerciseClientIds
         .map((id) => names[id])
         .whereType<String>()
@@ -137,33 +143,121 @@ class _TemplateTile extends StatelessWidget {
         ? resolved.join(', ')
         : l10n.exercisesCountLabel(template.exerciseClientIds.length);
 
-    return ListTile(
-      leading: const CircleAvatar(child: Icon(Icons.list_alt)),
-      title: Text(template.name),
-      subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-      onTap: onStart,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SyncStatusIndicator(clientId: template.clientId),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              switch (value) {
-                case 'start':
-                  onStart();
-                case 'edit':
-                  onEdit();
-                case 'delete':
-                  onDelete();
-              }
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(value: 'start', child: Text(l10n.startSessionMenuItem)),
-              PopupMenuItem(value: 'edit', child: Text(l10n.editMenuItem)),
-              PopupMenuItem(value: 'delete', child: Text(l10n.deleteButton)),
+    return Card(
+      elevation: 0,
+      color: scheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      margin: const EdgeInsets.only(bottom: 10),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onStart,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              // Icon badge
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.list_alt,
+                    size: 22,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            template.name,
+                            style: theme.textTheme.bodyLarge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        SyncStatusIndicator(clientId: template.clientId),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Start pill button
+              GestureDetector(
+                onTap: onStart,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.play_arrow, size: 14, color: scheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        l10n.startSessionMenuItem,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.primary,
+                          height: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Overflow menu for edit/delete
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  switch (value) {
+                    case 'edit':
+                      onEdit();
+                    case 'delete':
+                      onDelete();
+                  }
+                },
+                icon: Icon(Icons.more_vert,
+                    size: 18, color: scheme.onSurfaceVariant),
+                padding: EdgeInsets.zero,
+                itemBuilder: (_) => [
+                  PopupMenuItem(value: 'edit', child: Text(l10n.editMenuItem)),
+                  PopupMenuItem(
+                      value: 'delete', child: Text(l10n.deleteButton)),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -101,6 +101,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   Future<void> _addSet({Exercise? initial}) async {
     final draft = await showModalBottomSheet<SetDraft>(
       context: context,
+    useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => AddSetSheet(initialExercise: initial),
@@ -130,6 +131,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final source = _sets[index];
     final draft = await showModalBottomSheet<SetDraft>(
       context: context,
+    useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => AddSetSheet(
@@ -160,6 +162,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final source = _sets[index];
     final draft = await showModalBottomSheet<SetDraft>(
       context: context,
+    useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => AddSetSheet(
@@ -213,6 +216,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   Future<void> _addPlannedExercise() async {
     final exercise = await showModalBottomSheet<Exercise>(
       context: context,
+    useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => AddExerciseToSessionSheet(excludeIds: _plannedExerciseIds),
@@ -366,6 +370,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: Text(_isEditing
             ? l10n.editWorkoutTitle
             : (template != null ? template.name : l10n.logWorkoutTitle)),

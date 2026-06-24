@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/error_message.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/auth_controller.dart';
 
@@ -52,89 +53,214 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.createAccountTitle)),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _emailController,
-                    autofocus: true,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: l10n.emailLabel,
-                      border: const OutlineInputBorder(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Back button
+            IconButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(Icons.arrow_back),
+              padding: const EdgeInsets.all(16),
+            ),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // ── Header ──────────────────────────────────────
+                          Text(
+                            l10n.createAccountTitle,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Lifey',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: scheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+
+                          // ── Fields card ──────────────────────────────────
+                          _AuthCard(
+                            children: [
+                              _AuthField(
+                                controller: _emailController,
+                                label: l10n.emailLabel,
+                                keyboardType: TextInputType.emailAddress,
+                                autofocus: true,
+                                validator: (value) {
+                                  final text = value?.trim() ?? '';
+                                  if (text.isEmpty) return l10n.requiredFieldError;
+                                  if (!text.contains('@')) return l10n.invalidEmailError;
+                                  return null;
+                                },
+                              ),
+                              _AuthField(
+                                controller: _passwordController,
+                                label: l10n.passwordLabel,
+                                obscureText: true,
+                                helperText: l10n.passwordHelperText,
+                                validator: (value) {
+                                  if (value == null || value.length < 8) {
+                                    return l10n.passwordTooShortError;
+                                  }
+                                  return null;
+                                },
+                              ),
+                              _AuthField(
+                                controller: _confirmController,
+                                label: l10n.confirmPasswordLabel,
+                                obscureText: true,
+                                last: true,
+                                onFieldSubmitted: (_) => _submit(),
+                                validator: (value) => value != _passwordController.text
+                                    ? l10n.passwordsDoNotMatchError
+                                    : null,
+                              ),
+                            ],
+                          ),
+
+                          // ── Error ────────────────────────────────────────
+                          if (_submitError != null) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              _submitError!,
+                              style: TextStyle(color: scheme.error),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                          const SizedBox(height: 20),
+
+                          // ── Submit ───────────────────────────────────────
+                          FilledButton(
+                            onPressed: _submitting ? null : _submit,
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(52),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: _submitting
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : Text(l10n.createAccountTitle),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: _submitting
+                                ? null
+                                : () => Navigator.of(context).maybePop(),
+                            child: Text(l10n.signInPromptButton),
+                          ),
+                        ],
+                      ),
                     ),
-                    validator: (value) {
-                      final text = value?.trim() ?? '';
-                      if (text.isEmpty) return l10n.requiredFieldError;
-                      if (!text.contains('@')) return l10n.invalidEmailError;
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.passwordLabel,
-                      helperText: l10n.passwordHelperText,
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.length < 8) return l10n.passwordTooShortError;
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _confirmController,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.confirmPasswordLabel,
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: (value) =>
-                        value != _passwordController.text ? l10n.passwordsDoNotMatchError : null,
-                    onFieldSubmitted: (_) => _submit(),
-                  ),
-                  if (_submitError != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _submitError!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  FilledButton(
-                    onPressed: _submitting ? null : _submit,
-                    child: _submitting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l10n.createAccountTitle),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: _submitting ? null : () => Navigator.of(context).maybePop(),
-                    child: Text(l10n.signInPromptButton),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared auth widgets (duplicated from login_screen — both files are thin)
+// ---------------------------------------------------------------------------
+
+class _AuthCard extends StatelessWidget {
+  const _AuthCard({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(children: children),
+    );
+  }
+}
+
+class _AuthField extends StatelessWidget {
+  const _AuthField({
+    required this.controller,
+    required this.label,
+    required this.validator,
+    this.keyboardType,
+    this.obscureText = false,
+    this.autofocus = false,
+    this.last = false,
+    this.helperText,
+    this.onFieldSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final FormFieldValidator<String> validator;
+  final TextInputType? keyboardType;
+  final bool obscureText;
+  final bool autofocus;
+  final bool last;
+  final String? helperText;
+  final ValueChanged<String>? onFieldSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        TextFormField(
+          controller: controller,
+          autofocus: autofocus,
+          keyboardType: keyboardType,
+          obscureText: obscureText,
+          onFieldSubmitted: onFieldSubmitted,
+          decoration: InputDecoration(
+            labelText: label,
+            helperText: helperText,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            focusedErrorBorder: InputBorder.none,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          validator: validator,
+        ),
+        if (!last)
+          Divider(
+            height: 1,
+            color: scheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+      ],
     );
   }
 }

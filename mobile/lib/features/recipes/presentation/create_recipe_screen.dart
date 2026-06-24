@@ -58,6 +58,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   Future<void> _addIngredient() async {
     final draft = await showModalBottomSheet<MealEntryDraft>(
       context: context,
+    useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => const AddMealEntrySheet(),
@@ -116,6 +117,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: Text(_isEditing ? l10n.editRecipeTitle : l10n.newRecipeTitle),
         actions: [
           TextButton(

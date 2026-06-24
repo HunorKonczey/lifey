@@ -46,3 +46,19 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+
+  # Plus Jakarta Sans — bundled for offline-first; no runtime google_fonts fetch.
+  # Weights: 400 (Regular) / 500 (Medium) / 600 (SemiBold) / 700 (Bold) / 800 (ExtraBold)
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800

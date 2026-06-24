@@ -11,6 +11,7 @@ public record SettingsResponse(
         Integer dailyCarbsGoal,
         Integer dailyFatGoal,
         Double dailyWaterGoalLiters,
+        Integer dailyStepGoal,
         ThemePreference theme,
         LanguagePreference language
 ) {

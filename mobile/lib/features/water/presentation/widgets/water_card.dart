@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /// Prominent horizontal dashboard card: current water intake vs. the daily
@@ -16,39 +17,52 @@ class WaterCard extends StatelessWidget {
   final double? goalLiters;
   final VoidCallback onAdd;
 
-  static const _accent = Colors.lightBlue;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final accent = context.metricColors.water; // #6FA8C4 dark / #4E8AA8 light
     final hasGoal = goalLiters != null && goalLiters! > 0;
     final ratio = hasGoal ? currentLiters / goalLiters! : null;
     final percentLabel = ratio != null ? '${(ratio * 100).round()}%' : null;
 
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest,
+      color: theme.colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: _accent.withValues(alpha: 0.15),
-                  child: const Icon(Icons.water_drop, color: _accent),
+                // ── Icon badge ─────────────────────────────────────────
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Icon(Icons.water_drop, size: 22, color: accent),
+                  ),
                 ),
                 const SizedBox(width: 12),
+
+                // ── Label + value ──────────────────────────────────────
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         l10n.waterLabel,
-                        style: theme.textTheme.labelMedium
-                            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Row(
@@ -57,18 +71,26 @@ class WaterCard extends StatelessWidget {
                         children: [
                           Text(
                             hasGoal
-                                ? l10n.waterAmountLabel(currentLiters.toStringAsFixed(2),
-                                    goalLiters!.toStringAsFixed(2))
-                                : l10n.waterAmountNoGoalLabel(currentLiters.toStringAsFixed(2)),
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                                ? l10n.waterAmountLabel(
+                                    currentLiters.toStringAsFixed(2),
+                                    goalLiters!.toStringAsFixed(2),
+                                  )
+                                : l10n.waterAmountNoGoalLabel(
+                                    currentLiters.toStringAsFixed(2),
+                                  ),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
                           ),
                           if (percentLabel != null) ...[
                             const SizedBox(width: 8),
                             Text(
                               percentLabel,
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(color: _accent, fontWeight: FontWeight.w600),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: accent,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ],
                         ],
@@ -77,30 +99,45 @@ class WaterCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  onPressed: onAdd,
-                  icon: const Icon(Icons.add),
-                  tooltip: l10n.logWaterTitle,
+
+                // ── Add button — rounded square matching icon badge ────
+                GestureDetector(
+                  onTap: onAdd,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Icon(Icons.add, size: 22, color: accent),
+                    ),
+                  ),
                 ),
               ],
             ),
+
+            // ── Progress bar / no-goal hint ────────────────────────────
             if (ratio != null) ...[
               const SizedBox(height: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(99),
                 child: LinearProgressIndicator(
                   value: ratio.clamp(0.0, 1.0),
-                  minHeight: 8,
-                  backgroundColor: _accent.withValues(alpha: 0.15),
-                  valueColor: const AlwaysStoppedAnimation<Color>(_accent),
+                  minHeight: 7,
+                  backgroundColor: accent.withValues(alpha: 0.12),
+                  valueColor: AlwaysStoppedAnimation<Color>(accent),
                 ),
               ),
             ] else ...[
               const SizedBox(height: 6),
               Text(
                 l10n.setDailyGoalMessage,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ],

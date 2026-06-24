@@ -46,6 +46,9 @@ public class UserSettings extends BaseEntity {
     @Column(name = "daily_water_goal_liters")
     private Double dailyWaterGoalLiters;
 
+    @Column(name = "daily_step_goal")
+    private Integer dailyStepGoal;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "theme", nullable = false, length = 20)
     private ThemePreference theme = ThemePreference.SYSTEM;

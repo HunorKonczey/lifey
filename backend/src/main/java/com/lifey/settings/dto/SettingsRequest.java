@@ -4,6 +4,7 @@ import com.lifey.settings.LanguagePreference;
 import com.lifey.settings.ThemePreference;
 import com.lifey.settings.UnitSystem;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
 public record SettingsRequest(
@@ -25,6 +26,9 @@ public record SettingsRequest(
 
         @PositiveOrZero
         Double dailyWaterGoalLiters,
+
+        @Positive
+        Integer dailyStepGoal,
 
         @NotNull
         ThemePreference theme,

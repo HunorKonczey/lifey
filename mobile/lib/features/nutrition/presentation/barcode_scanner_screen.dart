@@ -36,7 +36,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.scanBarcodeButton)),
+      appBar: AppBar(title: Text(l10n.scanBarcodeButton), scrolledUnderElevation: 0),
       body: MobileScanner(
         controller: _controller,
         onDetect: _onDetect,

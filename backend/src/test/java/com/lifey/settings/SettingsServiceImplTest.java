@@ -60,11 +60,42 @@ class SettingsServiceImplTest {
         when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null,
+        SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
                 ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN);
 
         SettingsResponse result = service.update(request);
 
         assertThat(result.language()).isEqualTo(LanguagePreference.HUNGARIAN);
+    }
+
+    @Test
+    void update_withDailyStepGoalPersistsAndReturnsIt() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, 10000,
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM);
+
+        SettingsResponse result = service.update(request);
+
+        assertThat(result.dailyStepGoal()).isEqualTo(10000);
+    }
+
+    @Test
+    void update_withNullDailyStepGoalPersistsAndReturnsNull() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        existing.setDailyStepGoal(10000);
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM);
+
+        SettingsResponse result = service.update(request);
+
+        assertThat(result.dailyStepGoal()).isNull();
     }
 }

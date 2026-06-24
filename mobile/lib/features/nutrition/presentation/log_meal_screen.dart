@@ -79,6 +79,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   Future<void> _addEntry() async {
     final draft = await showModalBottomSheet<MealEntryDraft>(
       context: context,
+    useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => const AddMealEntrySheet(),
@@ -126,6 +127,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: Text(_isEditing ? l10n.editMealTitle : l10n.logMealTitle),
         actions: [
           TextButton(
