@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  .mi{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  .fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+</style>
+</helmet>
+<div style="min-width:100%;min-height:100vh;width:max-content;box-sizing:border-box;padding:48px;background:#e7e5df;font-family:'Plus Jakarta Sans',sans-serif;">
+
+  <div style="max-width:1100px;margin-bottom:38px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+      <div style="width:46px;height:46px;border-radius:14px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:28px;">fitness_center</span></div>
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#1c1d18;letter-spacing:-0.5px;">Lifey — Workout tabs</div>
+        <div style="font-size:14px;font-weight:500;color:#6a6a60;">Templates · Exercises — redesign a meglévő dark workout rendszerre</div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:500;color:#76766c;line-height:1.6;max-width:880px;">Ugyanaz a sub-tab sor (zöld kijelölés), lebegő top bar és nav pill, mint a Nutrition-nél. Az aktív edzés-nézet már megvan — ezek a <span style="font-family:monospace;background:#d9d7cf;padding:1px 5px;border-radius:4px;">Templates</span> és <span style="font-family:monospace;background:#d9d7cf;padding:1px 5px;border-radius:4px;">Exercises</span> fülek + szerkesztő/részlet route-ok.</div>
+  </div>
+
+  <div style="display:flex;gap:44px;align-items:flex-start;">
+
+    <!-- ============ 01 · TEMPLATES · list ============ -->
+    <div style="flex:none;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">01 · Templates — list</div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:54px;background:rgba(34,36,27,.92);backdrop-filter:blur(12px);border-radius:20px;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 18px;z-index:40;box-shadow:0 8px 22px rgba(0,0,0,.30);">
+            <span style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Workouts</span>
+            <div style="display:flex;gap:5px;">
+              <div style="width:38px;height:38px;border-radius:12px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:20px;">search</span></div>
+              <div style="width:38px;height:38px;border-radius:12px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:20px;">history</span></div>
+            </div>
+          </div>
+
+          <!-- sub tabs -->
+          <div style="position:absolute;top:128px;left:14px;right:14px;display:flex;background:#1C1E16;border-radius:999px;padding:4px;z-index:30;">
+            <div style="flex:1;text-align:center;color:#A8A899;font-size:13px;font-weight:600;padding:8px 0;">History</div>
+            <div style="flex:1;text-align:center;background:#9DAE6B;color:#161611;font-size:13px;font-weight:700;padding:8px 0;border-radius:999px;">Templates</div>
+            <div style="flex:1;text-align:center;color:#A8A899;font-size:13px;font-weight:600;padding:8px 0;">Exercises</div>
+          </div>
+
+          <div style="position:absolute;top:188px;left:0;right:0;bottom:0;padding:6px 16px 96px;display:flex;flex-direction:column;gap:11px;">
+            <!-- template card -->
+            <div style="background:#1C1E16;border-radius:20px;padding:16px;">
+              <div style="display:flex;align-items:center;gap:13px;margin-bottom:12px;">
+                <div style="width:46px;height:46px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:24px;">fitness_center</span></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:800;color:#F1F0E4;">Push day</div><div style="font-size:11.5px;font-weight:600;color:#A8A899;margin-top:2px;">6 exercises · ~52 min</div></div>
+                <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <span style="background:rgba(224,145,90,.15);color:#E0915A;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;">Chest</span>
+                <span style="background:rgba(216,179,90,.15);color:#D8B35A;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;">Shoulders</span>
+                <span style="background:rgba(142,142,196,.15);color:#8E8EC4;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;">Triceps</span>
+              </div>
+            </div>
+            <div style="background:#1C1E16;border-radius:20px;padding:16px;">
+              <div style="display:flex;align-items:center;gap:13px;margin-bottom:12px;">
+                <div style="width:46px;height:46px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:24px;">fitness_center</span></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:800;color:#F1F0E4;">Pull day</div><div style="font-size:11.5px;font-weight:600;color:#A8A899;margin-top:2px;">5 exercises · ~48 min</div></div>
+                <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <span style="background:rgba(111,168,196,.15);color:#6FA8C4;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;">Back</span>
+                <span style="background:rgba(157,174,107,.15);color:#9DAE6B;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;">Biceps</span>
+              </div>
+            </div>
+            <div style="background:#1C1E16;border-radius:20px;padding:16px;">
+              <div style="display:flex;align-items:center;gap:13px;margin-bottom:12px;">
+                <div style="width:46px;height:46px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:24px;">directions_run</span></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:800;color:#F1F0E4;">Leg day</div><div style="font-size:11.5px;font-weight:600;color:#A8A899;margin-top:2px;">7 exercises · ~64 min</div></div>
+                <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <span style="background:rgba(224,145,90,.15);color:#E0915A;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;">Quads</span>
+                <span style="background:rgba(176,138,200,.15);color:#B08AC8;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;">Hamstrings</span>
+                <span style="background:rgba(216,179,90,.15);color:#D8B35A;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;">Glutes</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="position:absolute;bottom:92px;right:18px;background:#9DAE6B;color:#161611;height:50px;border-radius:18px;display:flex;align-items:center;gap:8px;padding:0 20px;z-index:46;box-shadow:0 10px 24px rgba(0,0,0,.4);"><span class="mi" style="font-size:23px;">add</span><span style="font-size:14px;font-weight:800;">Template</span></div>
+
+          <div style="position:absolute;bottom:26px;left:50%;transform:translateX(-50%);background:#2A2C20;border-radius:999px;padding:12px 18px;display:flex;gap:22px;z-index:45;box-shadow:0 10px 28px rgba(0,0,0,.5);">
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">dashboard</span>
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">restaurant</span>
+            <span class="mi fill" style="font-size:25px;color:#9DAE6B;">fitness_center</span>
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">monitor_weight</span>
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">bar_chart</span>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 02 · EDIT TEMPLATE ============ -->
+    <div style="flex:none;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">02 · Edit template <span style="font-weight:500;color:#8a8a7e;">— pushed route</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:58px;background:rgba(34,36,27,.92);backdrop-filter:blur(12px);border-radius:24px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 12px;z-index:40;box-shadow:0 8px 22px rgba(0,0,0,.30);">
+            <div style="display:flex;align-items:center;gap:10px;"><div style="width:40px;height:40px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">arrow_back</span></div><span style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Edit template</span></div>
+            <span style="font-size:14px;font-weight:800;color:#9DAE6B;">Save</span>
+          </div>
+
+          <div style="position:absolute;top:138px;left:0;right:0;bottom:0;padding:6px 18px 24px;display:flex;flex-direction:column;gap:10px;overflow:hidden;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;padding:2px 2px;">Name</div>
+            <div style="background:#1C1E16;border:1.5px solid #9DAE6B;border-radius:16px;height:52px;display:flex;align-items:center;padding:0 16px;"><span style="font-size:15px;font-weight:700;color:#F1F0E4;">Push day</span><span style="width:2px;height:22px;background:#9DAE6B;margin-left:2px;"></span></div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 2px 2px;">
+              <span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;">Exercises</span>
+              <span style="display:flex;align-items:center;gap:5px;color:#9DAE6B;font-size:12.5px;font-weight:700;"><span class="mi" style="font-size:18px;">add</span>Add</span>
+            </div>
+            <div style="background:#22241B;border-radius:16px;padding:13px 14px;display:flex;align-items:center;gap:11px;">
+              <span class="mi" style="font-size:22px;color:#777264;">drag_indicator</span>
+              <div style="width:38px;height:38px;border-radius:12px;background:#161611;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span></div>
+              <div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Bench press</div><div style="font-size:11.5px;font-weight:500;color:#A8A899;margin-top:1px;">3 sets · Barbell</div></div>
+              <div style="width:32px;height:32px;border-radius:11px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">close</span></div>
+            </div>
+            <div style="background:#22241B;border-radius:16px;padding:13px 14px;display:flex;align-items:center;gap:11px;">
+              <span class="mi" style="font-size:22px;color:#777264;">drag_indicator</span>
+              <div style="width:38px;height:38px;border-radius:12px;background:#161611;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span></div>
+              <div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Overhead press</div><div style="font-size:11.5px;font-weight:500;color:#A8A899;margin-top:1px;">3 sets · Barbell</div></div>
+              <div style="width:32px;height:32px;border-radius:11px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">close</span></div>
+            </div>
+            <div style="background:#22241B;border-radius:16px;padding:13px 14px;display:flex;align-items:center;gap:11px;">
+              <span class="mi" style="font-size:22px;color:#777264;">drag_indicator</span>
+              <div style="width:38px;height:38px;border-radius:12px;background:#161611;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">sports_gymnastics</span></div>
+              <div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Cable fly</div><div style="font-size:11.5px;font-weight:500;color:#A8A899;margin-top:1px;">4 sets · Cable</div></div>
+              <div style="width:32px;height:32px;border-radius:11px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">close</span></div>
+            </div>
+            <div style="background:#22241B;border-radius:16px;padding:13px 14px;display:flex;align-items:center;gap:11px;">
+              <span class="mi" style="font-size:22px;color:#777264;">drag_indicator</span>
+              <div style="width:38px;height:38px;border-radius:12px;background:#161611;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span></div>
+              <div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Triceps pushdown</div><div style="font-size:11.5px;font-weight:500;color:#A8A899;margin-top:1px;">3 sets · Cable</div></div>
+              <div style="width:32px;height:32px;border-radius:11px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">close</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:7px;border:1.5px dashed #3C3E32;border-radius:16px;padding:14px;color:#A8A899;"><span class="mi" style="font-size:21px;">add</span><span style="font-size:13.5px;font-weight:700;">Add exercise</span></div>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 03 · EXERCISES · library ============ -->
+    <div style="flex:none;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">03 · Exercises — library</div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:54px;background:rgba(34,36,27,.92);backdrop-filter:blur(12px);border-radius:20px;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 18px;z-index:40;box-shadow:0 8px 22px rgba(0,0,0,.30);">
+            <span style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Workouts</span>
+            <div style="display:flex;gap:5px;">
+              <div style="width:38px;height:38px;border-radius:12px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:20px;">search</span></div>
+              <div style="width:38px;height:38px;border-radius:12px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:20px;">history</span></div>
+            </div>
+          </div>
+
+          <div style="position:absolute;top:128px;left:14px;right:14px;display:flex;background:#1C1E16;border-radius:999px;padding:4px;z-index:30;">
+            <div style="flex:1;text-align:center;color:#A8A899;font-size:13px;font-weight:600;padding:8px 0;">History</div>
+            <div style="flex:1;text-align:center;color:#A8A899;font-size:13px;font-weight:600;padding:8px 0;">Templates</div>
+            <div style="flex:1;text-align:center;background:#9DAE6B;color:#161611;font-size:13px;font-weight:700;padding:8px 0;border-radius:999px;">Exercises</div>
+          </div>
+
+          <!-- search -->
+          <div style="position:absolute;top:182px;left:16px;right:16px;background:#1C1E16;border-radius:16px;height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;z-index:30;"><span class="mi" style="font-size:21px;color:#777264;">search</span><span style="font-size:14px;font-weight:500;color:#777264;">Search exercises…</span></div>
+
+          <!-- category chips -->
+          <div style="position:absolute;top:238px;left:0;right:0;display:flex;gap:7px;padding:0 16px;z-index:30;overflow:hidden;">
+            <span style="background:#9DAE6B;color:#161611;font-size:12px;font-weight:700;padding:7px 14px;border-radius:999px;white-space:nowrap;">All</span>
+            <span style="background:#1C1E16;color:#A8A899;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;white-space:nowrap;">Chest</span>
+            <span style="background:#1C1E16;color:#A8A899;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;white-space:nowrap;">Back</span>
+            <span style="background:#1C1E16;color:#A8A899;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;white-space:nowrap;">Legs</span>
+            <span style="background:#1C1E16;color:#A8A899;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;white-space:nowrap;">Arms</span>
+          </div>
+
+          <div style="position:absolute;top:288px;left:0;right:0;bottom:0;padding:6px 16px 96px;display:flex;flex-direction:column;gap:9px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;padding:4px 4px 0;">Chest</div>
+            <div style="background:#1C1E16;border-radius:16px;padding:13px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:42px;height:42px;border-radius:13px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:22px;">fitness_center</span></div>
+              <div style="flex:1;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Bench press</div><div style="font-size:11.5px;font-weight:500;color:#A8A899;margin-top:1px;">Barbell · Chest</div></div>
+              <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+            </div>
+            <div style="background:#1C1E16;border-radius:16px;padding:13px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:42px;height:42px;border-radius:13px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:22px;">fitness_center</span></div>
+              <div style="flex:1;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Incline DB press</div><div style="font-size:11.5px;font-weight:500;color:#A8A899;margin-top:1px;">Dumbbell · Chest</div></div>
+              <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+            </div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;padding:6px 4px 0;">Back</div>
+            <div style="background:#1C1E16;border-radius:16px;padding:13px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:42px;height:42px;border-radius:13px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#6FA8C4;"><span class="mi fill" style="font-size:22px;">fitness_center</span></div>
+              <div style="flex:1;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Deadlift</div><div style="font-size:11.5px;font-weight:500;color:#A8A899;margin-top:1px;">Barbell · Back</div></div>
+              <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+            </div>
+            <div style="background:#1C1E16;border-radius:16px;padding:13px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:42px;height:42px;border-radius:13px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#6FA8C4;"><span class="mi fill" style="font-size:22px;">sports_gymnastics</span></div>
+              <div style="flex:1;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Pull-up</div><div style="font-size:11.5px;font-weight:500;color:#A8A899;margin-top:1px;">Bodyweight · Back</div></div>
+              <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+            </div>
+          </div>
+
+          <div style="position:absolute;bottom:92px;right:18px;background:#9DAE6B;color:#161611;height:50px;border-radius:18px;display:flex;align-items:center;gap:8px;padding:0 20px;z-index:46;box-shadow:0 10px 24px rgba(0,0,0,.4);"><span class="mi" style="font-size:23px;">add</span><span style="font-size:14px;font-weight:800;">Exercise</span></div>
+
+          <div style="position:absolute;bottom:26px;left:50%;transform:translateX(-50%);background:#2A2C20;border-radius:999px;padding:12px 18px;display:flex;gap:22px;z-index:45;box-shadow:0 10px 28px rgba(0,0,0,.5);">
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">dashboard</span>
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">restaurant</span>
+            <span class="mi fill" style="font-size:25px;color:#9DAE6B;">fitness_center</span>
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">monitor_weight</span>
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">bar_chart</span>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 04 · EXERCISE DETAIL ============ -->
+    <div style="flex:none;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">04 · Exercise detail <span style="font-weight:500;color:#8a8a7e;">— pushed route</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:58px;background:rgba(34,36,27,.92);backdrop-filter:blur(12px);border-radius:24px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 12px;z-index:40;box-shadow:0 8px 22px rgba(0,0,0,.30);">
+            <div style="display:flex;align-items:center;gap:10px;"><div style="width:40px;height:40px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">arrow_back</span></div><span style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Bench press</span></div>
+            <div style="width:40px;height:40px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:21px;">edit</span></div>
+          </div>
+
+          <div style="position:absolute;top:138px;left:0;right:0;bottom:0;padding:6px 16px 24px;display:flex;flex-direction:column;gap:12px;overflow:hidden;">
+            <!-- chips -->
+            <div style="display:flex;gap:7px;">
+              <span style="display:flex;align-items:center;gap:6px;background:rgba(224,145,90,.15);color:#E0915A;font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px;"><span class="mi fill" style="font-size:16px;">accessibility_new</span>Chest</span>
+              <span style="display:flex;align-items:center;gap:6px;background:#1C1E16;color:#A8A899;font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px;"><span class="mi" style="font-size:16px;">fitness_center</span>Barbell</span>
+            </div>
+
+            <!-- PR + last -->
+            <div style="display:flex;gap:11px;">
+              <div style="flex:1;background:#22241B;border-radius:18px;padding:15px;"><div style="display:flex;align-items:center;gap:7px;color:#A8A899;margin-bottom:9px;"><span class="mi fill" style="font-size:18px;color:#D8B35A;">trophy</span><span style="font-size:11.5px;font-weight:600;">Personal record</span></div><div style="font-size:24px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">85 <span style="font-size:13px;color:#A8A899;">kg × 5</span></div><div style="font-size:10.5px;font-weight:600;color:#777264;margin-top:2px;">Jun 10</div></div>
+              <div style="flex:1;background:#22241B;border-radius:18px;padding:15px;"><div style="display:flex;align-items:center;gap:7px;color:#A8A899;margin-bottom:9px;"><span class="mi fill" style="font-size:18px;color:#9DAE6B;">history</span><span style="font-size:11.5px;font-weight:600;">Estimated 1RM</span></div><div style="font-size:24px;font-weight:800;color:#9DAE6B;font-variant-numeric:tabular-nums;">98 <span style="font-size:13px;color:#A8A899;">kg</span></div><div style="font-size:10.5px;font-weight:600;color:#777264;margin-top:2px;">+3 kg this month</div></div>
+            </div>
+
+            <!-- 1RM trend chart -->
+            <div style="background:#22241B;border-radius:20px;padding:16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-size:13px;font-weight:700;color:#A8A899;">Estimated 1RM · 8 weeks</span><span style="font-size:11px;font-weight:700;color:#161611;background:#9DAE6B;padding:4px 10px;border-radius:999px;">+8%</span></div>
+              <svg viewBox="0 0 320 130" style="width:100%;height:auto;display:block;">
+                <line x1="0" y1="34" x2="320" y2="34" stroke="#2f3127" stroke-width="1"/>
+                <line x1="0" y1="80" x2="320" y2="80" stroke="#2f3127" stroke-width="1"/>
+                <polygon points="6,96 50,88 94,90 138,72 182,66 226,52 270,46 314,32 314,130 6,130" fill="#9DAE6B" fill-opacity="0.12"/>
+                <polyline points="6,96 50,88 94,90 138,72 182,66 226,52 270,46 314,32" fill="none" stroke="#9DAE6B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="314" cy="32" r="5" fill="#9DAE6B"/>
+              </svg>
+            </div>
+
+            <!-- recent sets -->
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;padding:2px 4px;">Recent sets</div>
+            <div style="background:#1C1E16;border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Today</span><span style="font-size:13.5px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">60×10 · 62.5×8 · 62.5×7</span></div>
+            <div style="background:#1C1E16;border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Mon</span><span style="font-size:13.5px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">60×10 · 60×9 · 60×8</span></div>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
