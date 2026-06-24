@@ -200,7 +200,7 @@ class _RecipeCard extends StatelessWidget {
                   onTap: onLogAsMeal,
                   behavior: HitTestBehavior.opaque,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
                     decoration: BoxDecoration(
                       color: scheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
@@ -208,13 +208,13 @@ class _RecipeCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.restaurant, size: 14, color: scheme.primary),
+                        Icon(Icons.restaurant, size: 16, color: scheme.primary),
                         const SizedBox(width: 4),
                         Text(
                           l10n.logAsMealButton,
                           style: TextStyle(
                             fontFamily: 'PlusJakartaSans',
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: scheme.primary,
                             height: 1.0,

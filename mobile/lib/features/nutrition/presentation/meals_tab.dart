@@ -155,11 +155,25 @@ class _MealCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onEdit;
 
-  static IconData _mealIcon(MealType type) => switch (type) {
-        MealType.breakfast => Icons.free_breakfast,
-        MealType.lunch => Icons.lunch_dining,
-        MealType.dinner => Icons.dinner_dining,
-        MealType.snack => Icons.cookie,
+  static ({IconData icon, Color Function(AppMetricColors mc, ColorScheme cs) color}) _mealStyle(
+      MealType type) =>
+      switch (type) {
+        MealType.breakfast => (
+            icon: Icons.bakery_dining,
+            color: (mc, cs) => mc.carbs,
+          ),
+        MealType.lunch => (
+            icon: Icons.lunch_dining,
+            color: (mc, cs) => mc.calories,
+          ),
+        MealType.dinner => (
+            icon: Icons.set_meal,
+            color: (mc, cs) => mc.protein,
+          ),
+        MealType.snack => (
+            icon: Icons.cookie,
+            color: (mc, cs) => cs.tertiary,
+          ),
       };
 
   String _macroLine(AppLocalizations l10n) {
@@ -176,7 +190,10 @@ class _MealCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final mc = context.metricColors;
     final l10n = AppLocalizations.of(context)!;
+    final style = _mealStyle(meal.mealType);
+    final iconColor = style.color(mc, scheme);
 
     return Dismissible(
       key: ValueKey(meal.clientId),
@@ -217,9 +234,9 @@ class _MealCard extends StatelessWidget {
                   ),
                   child: Center(
                     child: Icon(
-                      _mealIcon(meal.mealType),
+                      style.icon,
                       size: 22,
-                      color: scheme.onPrimaryContainer,
+                      color: iconColor,
                     ),
                   ),
                 ),

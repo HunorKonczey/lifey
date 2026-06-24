@@ -184,6 +184,9 @@
     "addFoodButton": "Add food",
     "@addFoodButton": {"description": "Button to add a food entry to a meal"},
 
+    "mealTotalLabel": "Meal total",
+    "@mealTotalLabel": {"description": "Label for the meal macro total summary card"},
+
     "noFoodsAddedYetMessage": "No foods added yet",
     "@noFoodsAddedYetMessage": {"description": "Shown when a meal has no food entries yet"},
 
@@ -240,6 +243,15 @@
 
     "recipesTabLabel": "Recipes",
     "@recipesTabLabel": {"description": "Tab label for recipes"},
+
+    "macrosTabLabel": "Macros",
+    "@macrosTabLabel": {"description": "Tab label for the daily macros summary tab in the Nutrition screen"},
+
+    "noMacroDataTitle": "No macros logged yet",
+    "@noMacroDataTitle": {"description": "Empty state title on the Macros tab when no meals have been logged at all"},
+
+    "noMacroDataInRangeTitle": "No macros in this range",
+    "@noMacroDataInRangeTitle": {"description": "Empty state title on the Macros tab when a date filter excludes all days"},
 
     "foodFabLabel": "Food",
     "@foodFabLabel": {"description": "FAB label when on the Foods tab"},

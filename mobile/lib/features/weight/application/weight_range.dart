@@ -28,7 +28,7 @@ enum WeightRange {
 /// In-memory only — resets to [WeightRange.month] on app restart.
 class WeightRangeController extends Notifier<WeightRange> {
   @override
-  WeightRange build() => WeightRange.month;
+  WeightRange build() => WeightRange.week;
 
   void select(WeightRange range) => state = range;
 }

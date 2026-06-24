@@ -294,7 +294,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
   final Color positiveDeltaColor;
   final Color negativeDeltaColor;
 
-  static const _maxDateLabels = 6;
+  static const _maxDateLabels = 3;
 
   @override
   void paint(Canvas canvas, Size size) {

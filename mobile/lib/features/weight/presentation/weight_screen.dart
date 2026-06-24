@@ -129,11 +129,6 @@ class _WeightBody extends ConsumerWidget {
 
   static final _chartDateLabel = DateFormat('MMM d');
 
-  String _formatDelta(double delta) {
-    final sign = delta > 0 ? '+' : '';
-    return '$sign${delta.toStringAsFixed(1)}';
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -226,9 +221,6 @@ class _WeightBody extends ConsumerWidget {
                           dateLabelBuilder: _chartDateLabel.format,
                           valueLabelBuilder: (value) =>
                               l10n.weightKgValue(value.toStringAsFixed(1)),
-                          deltaLabelBuilder: (delta) =>
-                              l10n.weightKgValue(_formatDelta(delta)),
-                          showDeltaLabels: true,
                         ),
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(vertical: 32),
@@ -253,16 +245,27 @@ class _WeightBody extends ConsumerWidget {
               ),
             ),
           ),
-          for (var i = 0; i < entries.length; i++) ...[
-            _HistoryRow(
-              entry: entries[i],
-              // Delta vs the next (older) entry — negative means weight loss.
-              delta: i + 1 < entries.length
-                  ? entries[i].weight - entries[i + 1].weight
-                  : null,
-            ),
-            if (i < entries.length - 1) const SizedBox(height: 8),
-          ],
+          Builder(builder: (context) {
+            final cutoff = range.cutoff();
+            final filtered = cutoff == null
+                ? entries
+                : entries
+                    .where((e) => !e.date.toLocal().isBefore(cutoff))
+                    .toList();
+            return Column(
+              children: [
+                for (var i = 0; i < filtered.length; i++) ...[
+                  _HistoryRow(
+                    entry: filtered[i],
+                    delta: i + 1 < filtered.length
+                        ? filtered[i].weight - filtered[i + 1].weight
+                        : null,
+                  ),
+                  if (i < filtered.length - 1) const SizedBox(height: 8),
+                ],
+              ],
+            );
+          }),
 
           // ── Apple Health import ────────────────────────────────────────
           const SizedBox(height: 16),

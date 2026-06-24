@@ -11,6 +11,7 @@ import '../../recipes/presentation/create_recipe_screen.dart';
 import '../../recipes/presentation/recipes_tab.dart';
 import 'foods_tab.dart';
 import 'log_meal_screen.dart';
+import 'macros_tab.dart';
 import 'meals_tab.dart';
 import 'widgets/add_food_sheet.dart';
 
@@ -22,7 +23,7 @@ class _NutritionPendingTabNotifier extends Notifier<int?> {
 }
 
 /// Set this before navigating to `/nutrition` to open a specific sub-tab
-/// (0 = Foods, 1 = Meals, 2 = Recipes). Cleared by [NutritionScreen] after use.
+/// (0 = Foods, 1 = Meals, 2 = Recipes, 3 = Macros). Cleared by [NutritionScreen] after use.
 final nutritionPendingTabProvider =
     NotifierProvider<_NutritionPendingTabNotifier, int?>(
       _NutritionPendingTabNotifier.new,
@@ -46,7 +47,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this)
+    _tabController = TabController(length: 4, vsync: this)
       ..addListener(_onSubTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _pushFab();
@@ -78,6 +79,11 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     final fab = _fab(l10n);
+    if (fab == null) {
+      // Macros tab is read-only — clear the FAB so the Recipes "+" doesn't linger.
+      ref.read(shellFabProvider.notifier).set(null);
+      return;
+    }
     ref.read(shellFabProvider.notifier).set((
       tabIndex: 1,
       icon: fab.icon,
@@ -114,14 +120,16 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     _addFood();
   }
 
-  ({IconData icon, String label, VoidCallback onPressed}) _fab(AppLocalizations l10n) {
+  ({IconData icon, String label, VoidCallback onPressed})? _fab(AppLocalizations l10n) {
     switch (_tabController.index) {
       case 0:
         return (icon: Icons.add, label: l10n.foodFabLabel, onPressed: _addFood);
       case 1:
         return (icon: Icons.add, label: l10n.mealFabLabel, onPressed: _logMeal);
-      default:
+      case 2:
         return (icon: Icons.add, label: l10n.recipeFabLabel, onPressed: _newRecipe);
+      default: // 3 = Macros — read-only, no FAB
+        return null;
     }
   }
 
@@ -163,6 +171,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                       FoodsTab(),
                       MealsTab(),
                       RecipesTab(),
+                      MacrosTab(),
                     ],
                   ),
                 ),
@@ -199,6 +208,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                       Tab(text: l10n.foodsLabel),
                       Tab(text: l10n.mealsTabLabel),
                       Tab(text: l10n.recipesTabLabel),
+                      Tab(text: l10n.macrosTabLabel),
                     ],
                   ),
                 ],
@@ -216,6 +226,8 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
 //
 // Heights: AdaptiveAppBar 58→44 (expanded→collapsed) + PillTabBar 54 (fixed:
 // 38px content + 8px top + 8px bottom padding) + 8px top offset from status bar.
+// PillTabBar hosts 4 tabs (Foods / Meals / Recipes / Macros) — all short labels
+// that fit without scrolling at the standard 13px label size.
 class _HeaderSpacer extends StatelessWidget {
   const _HeaderSpacer({required this.statusTop});
 
