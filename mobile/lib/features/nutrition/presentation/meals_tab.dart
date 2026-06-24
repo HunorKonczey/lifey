@@ -28,7 +28,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
   /// Distance from the bottom (in px) at which the next page is requested.
   static const _loadMoreThreshold = 300.0;
 
-  DateRangeFilter _filter = DateRangeFilter.all;
+  DateRangeFilter _filter = DateRangeFilter.today;
 
   bool _nearBottom = false;
 

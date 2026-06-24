@@ -673,6 +673,36 @@
     "dashboardTabLabel": "Dashboard",
     "@dashboardTabLabel": {"description": "Bottom navigation label for the dashboard tab"},
 
+    "dashboardTodayTitle": "Today",
+    "@dashboardTodayTitle": {"description": "Title shown in the dashboard floating app bar"},
+
+    "greetingMorning": "Good morning",
+    "@greetingMorning": {"description": "Greeting shown on the dashboard in the morning (05:00–11:59)"},
+
+    "greetingAfternoon": "Good afternoon",
+    "@greetingAfternoon": {"description": "Greeting shown on the dashboard in the afternoon (12:00–17:59)"},
+
+    "greetingEvening": "Good evening",
+    "@greetingEvening": {"description": "Greeting shown on the dashboard in the evening (18:00–04:59)"},
+
+    "kcalLeftBadge": "{count} left",
+    "@kcalLeftBadge": {
+        "description": "Badge on the calorie card showing remaining kcal to reach goal",
+        "placeholders": { "count": { "type": "int" } }
+    },
+
+    "kcalOverBadge": "+{count} over",
+    "@kcalOverBadge": {
+        "description": "Badge on the calorie card showing how many kcal over goal",
+        "placeholders": { "count": { "type": "int" } }
+    },
+
+    "proteinMoreBadge": "{count}g more",
+    "@proteinMoreBadge": {
+        "description": "Badge on the protein card showing remaining grams to reach goal",
+        "placeholders": { "count": { "type": "int" } }
+    },
+
     "dateFilterToday": "Today",
     "@dateFilterToday": {"description": "Date range filter option: today only"},
 
@@ -775,6 +805,18 @@
     "latestEntryLabel": "Latest entry",
     "@latestEntryLabel": {"description": "Stat card label for the most recent weight entry"},
 
+    "thisWeekCaloriesLabel": "This week · calories",
+    "@thisWeekCaloriesLabel": {"description": "Header label on the dashboard weekly calorie sparkline card"},
+
+    "avgCaloriesBadge": "avg {count}",
+    "@avgCaloriesBadge": {"description": "Average daily calorie badge on the sparkline card", "placeholders": {"count": {"type": "int"}}},
+
+    "todaysMealsSectionTitle": "Today's meals",
+    "@todaysMealsSectionTitle": {"description": "Dashboard section heading for today's meal type breakdown"},
+
+    "noMealsLoggedYetPeriodMessage": "No meals logged yet.",
+    "@noMealsLoggedYetPeriodMessage": {"description": "Shown on the dashboard when no meals have been logged today"},
+
     "recentWorkoutsSectionTitle": "Recent workouts",
     "@recentWorkoutsSectionTitle": {"description": "Dashboard section heading for recent workouts"},
 
@@ -804,6 +846,15 @@
 
     "noRecentAppleWorkoutMessage": "No recent Apple Health workout found",
     "@noRecentAppleWorkoutMessage": {"description": "Shown when the import button finds no strength workout finished in the last day"},
+
+    "workoutDurationMin": "{count} min",
+    "@workoutDurationMin": {"description": "Workout duration in minutes on the recent workout tile", "placeholders": {"count": {"type": "int"}}},
+
+    "workoutExerciseCount": "{count} exercises",
+    "@workoutExerciseCount": {"description": "Number of distinct exercises on the recent workout tile", "placeholders": {"count": {"type": "int"}}},
+
+    "workoutKcal": "{count} kcal",
+    "@workoutKcal": {"description": "Active calories on the recent workout tile (shown only when Apple Health data exists)", "placeholders": {"count": {"type": "int"}}},
 
     "todaysStepsLabel": "Today's steps",
     "@todaysStepsLabel": {"description": "Dashboard stat card label for today's HealthKit step count"}

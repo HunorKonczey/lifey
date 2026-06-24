@@ -7,6 +7,7 @@ class RecentWorkout {
     required this.setCount,
     required this.exerciseNames,
     this.finishedAt,
+    this.activeCalories,
   });
 
   final String clientId;
@@ -14,6 +15,9 @@ class RecentWorkout {
   final DateTime? finishedAt;
   final int setCount;
   final List<String> exerciseNames;
+
+  /// Active energy burned (kcal), imported from Apple Health. Null when not paired.
+  final double? activeCalories;
 
   bool get inProgress => finishedAt == null;
 }

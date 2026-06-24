@@ -23,7 +23,7 @@ class SessionsTab extends ConsumerStatefulWidget {
 class _SessionsTabState extends ConsumerState<SessionsTab> {
   static final _dateLabel = DateFormat('EEE, MMM d · HH:mm');
 
-  DateRangeFilter _filter = DateRangeFilter.all;
+  DateRangeFilter _filter = DateRangeFilter.today;
 
   Future<void> _edit(BuildContext context, WorkoutSession session) {
     return Navigator.of(context).push(

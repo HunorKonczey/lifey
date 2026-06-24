@@ -231,6 +231,16 @@
     "syncingTooltip": "Szinkronizálás…",
     "waitingToSyncTooltip": "Szinkronizálásra vár",
     "dashboardTabLabel": "Áttekintés",
+
+    "dashboardTodayTitle": "Ma",
+    "greetingMorning": "Jó reggelt",
+    "greetingAfternoon": "Jó napot",
+    "greetingEvening": "Jó estét",
+
+    "kcalLeftBadge": "{count} maradt",
+    "kcalOverBadge": "+{count} túl",
+    "proteinMoreBadge": "még {count}g",
+
     "dateFilterToday": "Mai",
     "dateFilterWeek": "Hét",
     "dateFilterAll": "Mind",
@@ -279,6 +289,13 @@
     "appleHealthStatsLine": "{calories} kcal · {heartRate} bpm átlag (Apple Health)",
 
     "importFromAppleHealthButton": "Importálás az Apple Health-ből",
+    "thisWeekCaloriesLabel": "Ez a hét · kalória",
+    "avgCaloriesBadge": "átl. {count}",
+    "todaysMealsSectionTitle": "Mai étkezések",
+    "noMealsLoggedYetPeriodMessage": "Még nem rögzítettél étkezést.",
     "noRecentAppleWorkoutMessage": "Nincs friss Apple Health edzés",
+    "workoutDurationMin": "{count} perc",
+    "workoutExerciseCount": "{count} gyakorlat",
+    "workoutKcal": "{count} kcal",
     "todaysStepsLabel": "Mai lépésszám"
 }

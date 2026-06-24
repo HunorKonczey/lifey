@@ -34,6 +34,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this)
       ..addListener(_onSubTabChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pushFab());
   }
 
   @override
@@ -61,13 +62,13 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
   }
 
   void _logSession() {
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const LogSessionScreen()),
     );
   }
 
   void _newTemplate() {
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const CreateTemplateScreen()),
     );
   }
@@ -99,7 +100,11 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
     final statusTop = MediaQuery.paddingOf(context).top;
 
     ref.listen(activeShellTabProvider, (_, next) {
-      if (next == 2) _pushFab();
+      if (next != 2) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _pushFab();
+      });
     });
 
     return Scaffold(

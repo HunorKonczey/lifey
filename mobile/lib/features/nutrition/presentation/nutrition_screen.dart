@@ -9,11 +9,24 @@ import '../../../shared/widgets/pill_tab_bar.dart';
 import '../../../shared/widgets/shell_fab.dart';
 import '../../recipes/presentation/create_recipe_screen.dart';
 import '../../recipes/presentation/recipes_tab.dart';
-import 'barcode_scanner_screen.dart';
 import 'foods_tab.dart';
 import 'log_meal_screen.dart';
 import 'meals_tab.dart';
 import 'widgets/add_food_sheet.dart';
+
+class _NutritionPendingTabNotifier extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  void set(int? tab) => state = tab;
+}
+
+/// Set this before navigating to `/nutrition` to open a specific sub-tab
+/// (0 = Foods, 1 = Meals, 2 = Recipes). Cleared by [NutritionScreen] after use.
+final nutritionPendingTabProvider =
+    NotifierProvider<_NutritionPendingTabNotifier, int?>(
+      _NutritionPendingTabNotifier.new,
+    );
 
 /// Nutrition: "Foods" (catalogue), "Meals" (logged meals) and "Recipes" tabs.
 ///
@@ -35,6 +48,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this)
       ..addListener(_onSubTabChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pushFab());
   }
 
   @override
@@ -72,21 +86,20 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   }
 
   void _logMeal() {
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const LogMealScreen()),
     );
   }
 
   void _newRecipe() {
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const CreateRecipeScreen()),
     );
   }
 
   void _openBarcodeScanner() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
-    );
+    _tabController.animateTo(0);
+    _addFood();
   }
 
   ({IconData icon, String label, VoidCallback onPressed}) _fab(AppLocalizations l10n) {
@@ -106,7 +119,16 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     final statusTop = MediaQuery.paddingOf(context).top;
 
     ref.listen(activeShellTabProvider, (_, next) {
-      if (next == 1) _pushFab();
+      if (next != 1) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _pushFab();
+        final pending = ref.read(nutritionPendingTabProvider);
+        if (pending != null) {
+          _tabController.animateTo(pending);
+          ref.read(nutritionPendingTabProvider.notifier).set(null);
+        }
+      });
     });
 
     return Scaffold(

@@ -39,18 +39,7 @@ class WaterCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                // ── Icon badge ─────────────────────────────────────────
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Icon(Icons.water_drop, size: 22, color: accent),
-                  ),
-                ),
+                Icon(Icons.water_drop, size: 26, color: accent),
                 const SizedBox(width: 12),
 
                 // ── Label + value ──────────────────────────────────────
@@ -100,19 +89,19 @@ class WaterCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
 
-                // ── Add button — rounded square matching icon badge ────
+                // ── Add button — solid accent square ──────────────────
                 GestureDetector(
                   onTap: onAdd,
                   behavior: HitTestBehavior.opaque,
                   child: Container(
-                    width: 40,
-                    height: 40,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(12),
+                      color: accent,
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Center(
-                      child: Icon(Icons.add, size: 22, color: accent),
+                      child: Icon(Icons.add, size: 24, color: Colors.white.withValues(alpha: 0.92)),
                     ),
                   ),
                 ),
