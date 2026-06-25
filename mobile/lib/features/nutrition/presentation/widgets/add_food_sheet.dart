@@ -8,11 +8,16 @@ import '../../domain/food.dart';
 import '../barcode_scanner_screen.dart';
 
 /// Bottom sheet form to create a food, or edit one when [food] is provided.
+///
+/// Pass [initialBarcode] to skip the in-sheet scan step and immediately
+/// trigger a backend barcode lookup on open (used when the caller already
+/// ran the camera before showing the sheet).
 /// Pops on success.
 class AddFoodSheet extends ConsumerStatefulWidget {
-  const AddFoodSheet({super.key, this.food});
+  const AddFoodSheet({super.key, this.food, this.initialBarcode});
 
   final Food? food;
+  final String? initialBarcode;
 
   @override
   ConsumerState<AddFoodSheet> createState() => _AddFoodSheetState();
@@ -45,6 +50,12 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     _carbs = TextEditingController(text: num(food?.carbsPer100g));
     _fat = TextEditingController(text: num(food?.fatPer100g));
     _barcode = food?.barcode;
+
+    if (widget.initialBarcode != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _lookupBarcode(widget.initialBarcode!);
+      });
+    }
   }
 
   static String _trim(double v) =>
@@ -85,7 +96,10 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
     );
     if (barcode == null || !mounted) return;
+    await _lookupBarcode(barcode);
+  }
 
+  Future<void> _lookupBarcode(String barcode) async {
     setState(() => _scanning = true);
     try {
       await ref.read(barcodeLookupControllerProvider.notifier).lookup(barcode);
@@ -112,7 +126,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
           ));
         case BarcodeLookupIdle():
         case BarcodeLookupLoading():
-          break; // unreachable: lookup() above always resolves to a terminal state
+          break;
       }
     } catch (_) {
       if (mounted) {

@@ -8,7 +8,7 @@ import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/outbox_writer.dart';
 import '../../../core/sync/pending_delete_filter.dart';
 import '../../../core/utils/combine_latest.dart';
-import '../domain/workout_template.dart';
+import '../domain/workout_template.dart' show WorkoutTemplate, TemplateExercise;
 
 /// Local-first access to workout templates and their exercise links.
 class WorkoutTemplateRepository {
@@ -35,17 +35,19 @@ class WorkoutTemplateRepository {
     return combineLatest2(query.watch(), pendingOps$, (rows, ops) {
       final blocked = blockedByActiveDelete(ops);
       final templates = <String, WorkoutTemplateRow>{};
-      final exerciseClientIds = <String, List<String>>{};
+      final exerciseLinks = <String, List<WorkoutTemplateExerciseRow>>{};
       for (final row in rows) {
         final template = row.readTable(_db.workoutTemplates);
         if (blocked.contains(template.clientId)) continue;
         templates[template.clientId] = template;
         final link = row.readTableOrNull(_db.workoutTemplateExercises);
         if (link != null) {
-          exerciseClientIds.putIfAbsent(template.clientId, () => []).add(link.exerciseClientId);
+          exerciseLinks.putIfAbsent(template.clientId, () => []).add(link);
         }
       }
-      return templates.values.map((t) => _toDomain(t, exerciseClientIds[t.clientId] ?? const [])).toList();
+      return templates.values
+          .map((t) => _toDomain(t, exerciseLinks[t.clientId] ?? const []))
+          .toList();
     });
   }
 
@@ -117,16 +119,23 @@ class WorkoutTemplateRepository {
   Map<String, dynamic> _payload({required String name, required List<String> exerciseClientIds}) {
     return {
       'name': name,
-      'exerciseIds': exerciseClientIds.map(clientRef).toList(),
+      'exercises': exerciseClientIds
+          .map((id) => {'exerciseId': clientRef(id), 'targetSets': null})
+          .toList(),
     };
   }
 
-  WorkoutTemplate _toDomain(WorkoutTemplateRow row, List<String> exerciseClientIds) {
+  WorkoutTemplate _toDomain(WorkoutTemplateRow row, List<WorkoutTemplateExerciseRow> links) {
     return WorkoutTemplate(
       clientId: row.clientId,
       id: row.serverId,
       name: row.name,
-      exerciseClientIds: exerciseClientIds,
+      exercises: links
+          .map((l) => TemplateExercise(
+                exerciseClientId: l.exerciseClientId,
+                targetSets: l.targetSets,
+              ))
+          .toList(),
     );
   }
 }

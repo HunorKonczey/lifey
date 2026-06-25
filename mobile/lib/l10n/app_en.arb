@@ -902,5 +902,104 @@
     "@stepGoalNotificationTitle": {"description": "Title of the local notification fired when the user hits their daily step goal"},
 
     "stepGoalNotificationBody": "You hit {steps} steps today. Great work!",
-    "@stepGoalNotificationBody": {"description": "Body of the local notification fired when the user hits their daily step goal", "placeholders": {"steps": {"type": "int", "format": "decimalPattern"}}}
+    "@stepGoalNotificationBody": {"description": "Body of the local notification fired when the user hits their daily step goal", "placeholders": {"steps": {"type": "int", "format": "decimalPattern"}}},
+
+    "editExerciseTitle": "Edit exercise",
+    "@editExerciseTitle": {"description": "Title of the add/edit exercise sheet when editing an existing exercise"},
+
+    "categoryLabel": "Category",
+    "@categoryLabel": {"description": "Section label for the muscle-group category chip selector"},
+
+    "equipmentLabel": "Equipment",
+    "@equipmentLabel": {"description": "Section label for the equipment chip selector"},
+
+    "allFilterLabel": "All",
+    "@allFilterLabel": {"description": "Filter chip label meaning no filter / show everything"},
+
+    "muscleGroupChest": "Chest",
+    "@muscleGroupChest": {"description": "Muscle group: chest"},
+
+    "muscleGroupBack": "Back",
+    "@muscleGroupBack": {"description": "Muscle group: back"},
+
+    "muscleGroupShoulders": "Shoulders",
+    "@muscleGroupShoulders": {"description": "Muscle group: shoulders"},
+
+    "muscleGroupBiceps": "Biceps",
+    "@muscleGroupBiceps": {"description": "Muscle group: biceps"},
+
+    "muscleGroupTriceps": "Triceps",
+    "@muscleGroupTriceps": {"description": "Muscle group: triceps"},
+
+    "muscleGroupForearms": "Forearms",
+    "@muscleGroupForearms": {"description": "Muscle group: forearms"},
+
+    "muscleGroupQuads": "Quads",
+    "@muscleGroupQuads": {"description": "Muscle group: quadriceps"},
+
+    "muscleGroupHamstrings": "Hamstrings",
+    "@muscleGroupHamstrings": {"description": "Muscle group: hamstrings"},
+
+    "muscleGroupGlutes": "Glutes",
+    "@muscleGroupGlutes": {"description": "Muscle group: glutes"},
+
+    "muscleGroupCalves": "Calves",
+    "@muscleGroupCalves": {"description": "Muscle group: calves"},
+
+    "muscleGroupAbs": "Abs",
+    "@muscleGroupAbs": {"description": "Muscle group: abdominals"},
+
+    "muscleGroupCardio": "Cardio",
+    "@muscleGroupCardio": {"description": "Muscle group: cardio"},
+
+    "muscleGroupFullBody": "Full body",
+    "@muscleGroupFullBody": {"description": "Muscle group: full body"},
+
+    "muscleGroupOther": "Other",
+    "@muscleGroupOther": {"description": "Muscle group: other / unspecified"},
+
+    "equipmentBarbell": "Barbell",
+    "@equipmentBarbell": {"description": "Equipment type: barbell"},
+
+    "equipmentDumbbell": "Dumbbell",
+    "@equipmentDumbbell": {"description": "Equipment type: dumbbell"},
+
+    "equipmentMachine": "Machine",
+    "@equipmentMachine": {"description": "Equipment type: machine"},
+
+    "equipmentCable": "Cable",
+    "@equipmentCable": {"description": "Equipment type: cable"},
+
+    "equipmentBodyweight": "Bodyweight",
+    "@equipmentBodyweight": {"description": "Equipment type: bodyweight (no equipment)"},
+
+    "equipmentSmithMachine": "Smith machine",
+    "@equipmentSmithMachine": {"description": "Equipment type: Smith machine"},
+
+    "equipmentOther": "Other",
+    "@equipmentOther": {"description": "Equipment type: other / unspecified"},
+
+    "personalRecordLabel": "Personal record",
+    "@personalRecordLabel": {"description": "Card heading for the exercise's all-time best set (PR)"},
+
+    "estimatedOneRepMaxLabel": "Est. 1RM",
+    "@estimatedOneRepMaxLabel": {"description": "Card heading for the estimated one-rep-max (Epley formula)"},
+
+    "recentSetsLabel": "Recent sets",
+    "@recentSetsLabel": {"description": "Section heading for the most recent logged sets on the exercise detail screen"},
+
+    "trendLast8WeeksLabel": "8-week trend",
+    "@trendLast8WeeksLabel": {"description": "Section heading for the 8-week 1RM trend chart on the exercise detail screen"},
+
+    "noSetsForExerciseMessage": "No sets logged yet",
+    "@noSetsForExerciseMessage": {"description": "Empty state message on the exercise detail screen when no sets have been logged"},
+
+    "prSetValueLabel": "{weight} kg × {reps}",
+    "@prSetValueLabel": {
+        "description": "PR stat card value: weight in kg then rep count (e.g. '100 kg × 5')",
+        "placeholders": {
+            "weight": {"type": "String"},
+            "reps": {"type": "String"}
+        }
+    }
 }

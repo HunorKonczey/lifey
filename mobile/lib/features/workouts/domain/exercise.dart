@@ -1,10 +1,22 @@
 /// Domain model for an exercise from the master list (`/exercises`).
 class Exercise {
-  const Exercise({required this.clientId, required this.name, this.id});
+  const Exercise({
+    required this.clientId,
+    required this.name,
+    this.id,
+    this.category,
+    this.equipment,
+  });
 
   final String clientId;
   final int? id;
   final String name;
+
+  /// Muscle group enum code from the backend (e.g. "CHEST"), null if not set.
+  final String? category;
+
+  /// Equipment enum code from the backend (e.g. "BARBELL"), null if not set.
+  final String? equipment;
 
   /// Value equality by [clientId]: `DropdownButtonFormField<Exercise>`
   /// (add_set_sheet.dart) matches its `initialValue` against `items` by

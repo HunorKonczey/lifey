@@ -35,21 +35,44 @@ class ExerciseControllerTest {
     @Test
     void list_returnsOk() throws Exception {
         when(exerciseService.findAll())
-                .thenReturn(List.of(new ExerciseResponse(1L, "Bench Press")));
+                .thenReturn(List.of(new ExerciseResponse(1L, "Bench Press", "CHEST", "BARBELL")));
 
         mockMvc.perform(get("/api/v1/exercises"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("Bench Press"));
+                .andExpect(jsonPath("$[0].name").value("Bench Press"))
+                .andExpect(jsonPath("$[0].category").value("CHEST"))
+                .andExpect(jsonPath("$[0].equipment").value("BARBELL"));
+    }
+
+    @Test
+    void list_nullCategoryAndEquipmentReturnsOk() throws Exception {
+        when(exerciseService.findAll())
+                .thenReturn(List.of(new ExerciseResponse(2L, "Plank", null, null)));
+
+        mockMvc.perform(get("/api/v1/exercises"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].category").doesNotExist())
+                .andExpect(jsonPath("$[0].equipment").doesNotExist());
     }
 
     @Test
     void create_returnsCreated() throws Exception {
-        when(exerciseService.create(any())).thenReturn(new ExerciseResponse(9L, "Lateral Raise"));
+        when(exerciseService.create(any())).thenReturn(new ExerciseResponse(9L, "Lateral Raise", "SHOULDERS", null));
 
         mockMvc.perform(post("/api/v1/exercises").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Lateral Raise\"}"))
+                        .content("{\"name\":\"Lateral Raise\",\"category\":\"SHOULDERS\"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(9));
+                .andExpect(jsonPath("$.id").value(9))
+                .andExpect(jsonPath("$.category").value("SHOULDERS"));
+    }
+
+    @Test
+    void create_invalidCategoryReturns400() throws Exception {
+        mockMvc.perform(post("/api/v1/exercises").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"X\",\"category\":\"INVALID_CATEGORY\"}"))
+                .andExpect(status().isBadRequest());
+
+        verify(exerciseService, never()).create(any());
     }
 
     @Test

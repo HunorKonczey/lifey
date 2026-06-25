@@ -8,6 +8,8 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
+import '../domain/exercise.dart';
+import '../domain/exercise_enums.dart';
 import '../domain/workout_template.dart';
 import 'create_template_screen.dart';
 import 'log_session_screen.dart';
@@ -67,9 +69,11 @@ class TemplatesTab extends ConsumerWidget {
     final state = ref.watch(workoutTemplateControllerProvider);
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
-    final names = ref.watch(exerciseControllerProvider).maybeWhen(
-          data: (exercises) => {for (final e in exercises) e.clientId: e.name},
-          orElse: () => const <String, String>{},
+
+    // Full Exercise objects keyed by clientId — needed for categories + names.
+    final exercisesMap = ref.watch(exerciseControllerProvider).maybeWhen(
+          data: (exercises) => {for (final e in exercises) e.clientId: e},
+          orElse: () => const <String, Exercise>{},
         );
 
     return RefreshIndicator(
@@ -91,7 +95,8 @@ class TemplatesTab extends ConsumerWidget {
               final template = templates[index];
               return _TemplateCard(
                 template: template,
-                names: names,
+                exercisesMap: exercisesMap,
+                l10n: l10n,
                 onStart: () => _start(context, template),
                 onEdit: () => _edit(context, template),
                 onDelete: () => _delete(context, ref, template),
@@ -117,31 +122,68 @@ class TemplatesTab extends ConsumerWidget {
 class _TemplateCard extends StatelessWidget {
   const _TemplateCard({
     required this.template,
-    required this.names,
+    required this.exercisesMap,
+    required this.l10n,
     required this.onStart,
     required this.onEdit,
     required this.onDelete,
   });
 
   final WorkoutTemplate template;
-  final Map<String, String> names;
+  final Map<String, Exercise> exercisesMap;
+  final AppLocalizations l10n;
   final VoidCallback onStart;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+
+  /// Distinct muscle-group codes present in this template, ordered by
+  /// [kMuscleGroups] display order. Exercises without a category are ignored.
+  List<String> _categories() {
+    final seen = <String>{};
+    final ordered = <String>[];
+    for (final code in kMuscleGroups) {
+      if (template.exercises.any((te) {
+        final ex = exercisesMap[te.exerciseClientId];
+        return ex?.category == code;
+      })) {
+        if (seen.add(code)) ordered.add(code);
+      }
+    }
+    return ordered;
+  }
+
+  IconData _templateIcon(List<String> categories) {
+    if (categories.contains('CARDIO')) return Icons.directions_run;
+    final hasBodyweight = template.exercises.any(
+      (te) => exercisesMap[te.exerciseClientId]?.equipment == 'BODYWEIGHT',
+    );
+    if (hasBodyweight) return Icons.sports_gymnastics;
+    return Icons.list_alt;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context)!;
 
-    final resolved = template.exerciseClientIds
-        .map((id) => names[id])
-        .whereType<String>()
-        .toList();
-    final subtitle = resolved.isNotEmpty
-        ? resolved.join(', ')
-        : l10n.exercisesCountLabel(template.exerciseClientIds.length);
+    final categories = _categories();
+    final primaryCategory = categories.isNotEmpty ? categories.first : null;
+    final Color badgeBg;
+    final Color badgeIconColor;
+    if (primaryCategory != null) {
+      final mc = muscleGroupColor(primaryCategory, context);
+      badgeBg = mc.withValues(alpha: 0.15);
+      badgeIconColor = mc;
+    } else {
+      badgeBg = scheme.primaryContainer;
+      badgeIconColor = scheme.onPrimaryContainer;
+    }
+
+    // Resolved exercise rows: (name, targetSets)
+    final rows = template.exercises.map((te) {
+      final ex = exercisesMap[te.exerciseClientId];
+      return (name: ex?.name ?? '…', targetSets: te.targetSets);
+    }).toList();
 
     return Card(
       elevation: 0,
@@ -155,31 +197,34 @@ class _TemplateCard extends StatelessWidget {
         onTap: onStart,
         borderRadius: BorderRadius.circular(AppRadius.card),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Icon badge
               Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
+                  color: badgeBg,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
                   child: Icon(
-                    Icons.list_alt,
+                    _templateIcon(categories),
                     size: 22,
-                    color: scheme.onPrimaryContainer,
+                    color: badgeIconColor,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              // Content
+
+              // Main content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Name + sync indicator
                     Row(
                       children: [
                         Expanded(
@@ -193,70 +238,203 @@ class _TemplateCard extends StatelessWidget {
                         SyncStatusIndicator(clientId: template.clientId),
                       ],
                     ),
-                    const SizedBox(height: 3),
+
+                    // Exercise count
+                    const SizedBox(height: 2),
                     Text(
-                      subtitle,
-                      style: theme.textTheme.labelMedium?.copyWith(
+                      l10n.exercisesCountLabel(template.exercises.length),
+                      style: theme.textTheme.labelSmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
+
+                    // Category chips
+                    if (categories.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: categories
+                            .map((c) => _CategoryChip(
+                                  label: muscleGroupLabel(l10n, c),
+                                  color: muscleGroupColor(c, context),
+                                ))
+                            .toList(),
+                      ),
+                    ],
+
+                    // Exercise list with optional targetSets badge
+                    const SizedBox(height: 10),
+                    ...rows.map((r) => _ExerciseRow(
+                          name: r.name,
+                          targetSets: r.targetSets,
+                        )),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              // Start pill button
-              GestureDetector(
-                onTap: onStart,
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: scheme.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.play_arrow, size: 14, color: scheme.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        l10n.startSessionMenuItem,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.primary,
-                          height: 1.0,
-                        ),
-                      ),
+
+              // Action column: Start pill + overflow menu
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _StartButton(label: l10n.startSessionMenuItem, onTap: onStart),
+                  const SizedBox(height: 4),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'edit':
+                          onEdit();
+                        case 'delete':
+                          onDelete();
+                      }
+                    },
+                    icon: Icon(Icons.more_vert,
+                        size: 18, color: scheme.onSurfaceVariant),
+                    padding: EdgeInsets.zero,
+                    itemBuilder: (_) => [
+                      PopupMenuItem(value: 'edit', child: Text(l10n.editMenuItem)),
+                      PopupMenuItem(
+                          value: 'delete', child: Text(l10n.deleteButton)),
                     ],
                   ),
-                ),
-              ),
-              // Overflow menu for edit/delete
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  switch (value) {
-                    case 'edit':
-                      onEdit();
-                    case 'delete':
-                      onDelete();
-                  }
-                },
-                icon: Icon(Icons.more_vert,
-                    size: 18, color: scheme.onSurfaceVariant),
-                padding: EdgeInsets.zero,
-                itemBuilder: (_) => [
-                  PopupMenuItem(value: 'edit', child: Text(l10n.editMenuItem)),
-                  PopupMenuItem(
-                      value: 'delete', child: Text(l10n.deleteButton)),
                 ],
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Category chip
+// ---------------------------------------------------------------------------
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: AppRadius.pill,
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          height: 1.0,
+        ).copyWith(color: color),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Exercise row
+// ---------------------------------------------------------------------------
+
+class _ExerciseRow extends StatelessWidget {
+  const _ExerciseRow({required this.name, required this.targetSets});
+
+  final String name;
+  final int? targetSets;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          if (targetSets != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Text(
+                '$targetSets×',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: scheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ] else ...[
+            // Bullet dot to align with set-badge rows
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Text(
+                '·',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ),
+          ],
+          Expanded(
+            child: Text(
+              name,
+              style: theme.textTheme.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Start button
+// ---------------------------------------------------------------------------
+
+class _StartButton extends StatelessWidget {
+  const _StartButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: scheme.primary.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.play_arrow, size: 14, color: scheme.primary),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: scheme.primary,
+                height: 1.0,
+              ),
+            ),
+          ],
         ),
       ),
     );

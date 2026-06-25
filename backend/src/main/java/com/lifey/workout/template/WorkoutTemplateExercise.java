@@ -2,6 +2,7 @@ package com.lifey.workout.template;
 
 import com.lifey.common.domain.BaseEntity;
 import com.lifey.workout.exercise.Exercise;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -23,4 +24,7 @@ public class WorkoutTemplateExercise extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "exercise_id", nullable = false)
     private Exercise exercise;
+
+    @Column(name = "target_sets")
+    private Integer targetSets;
 }

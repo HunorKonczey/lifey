@@ -26,15 +26,40 @@ class ExerciseRepository {
     });
   }
 
-  Future<void> create(String name) async {
+  Future<void> create(String name, {String? category, String? equipment}) async {
     final clientId = newClientId();
     await _db.into(_db.exercises).insert(
-          ExercisesCompanion.insert(clientId: clientId, name: name),
+          ExercisesCompanion.insert(
+            clientId: clientId,
+            name: name,
+            category: Value(category),
+            equipment: Value(equipment),
+          ),
         );
     await _outbox.enqueueCreate(
       clientId: clientId,
       entityType: 'exercise',
-      payload: {'name': name},
+      payload: {'name': name, 'category': category, 'equipment': equipment},
+    );
+  }
+
+  Future<void> update(
+    String clientId, {
+    required String name,
+    String? category,
+    String? equipment,
+  }) async {
+    await (_db.update(_db.exercises)..where((t) => t.clientId.equals(clientId))).write(
+          ExercisesCompanion(
+            name: Value(name),
+            category: Value(category),
+            equipment: Value(equipment),
+          ),
+        );
+    await _outbox.enqueueUpdate(
+      clientId: clientId,
+      entityType: 'exercise',
+      payload: {'name': name, 'category': category, 'equipment': equipment},
     );
   }
 
@@ -50,7 +75,13 @@ class ExerciseRepository {
   }
 
   Exercise _toDomain(ExerciseRow row) {
-    return Exercise(clientId: row.clientId, id: row.serverId, name: row.name);
+    return Exercise(
+      clientId: row.clientId,
+      id: row.serverId,
+      name: row.name,
+      category: row.category,
+      equipment: row.equipment,
+    );
   }
 }
 

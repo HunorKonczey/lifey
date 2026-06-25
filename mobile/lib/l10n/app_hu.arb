@@ -314,5 +314,41 @@
     "statUnitSteps": "lépés",
 
     "stepGoalNotificationTitle": "Napi lépéscél elérve!",
-    "stepGoalNotificationBody": "Ma {steps} lépést tettél meg. Szép munka!"
+    "stepGoalNotificationBody": "Ma {steps} lépést tettél meg. Szép munka!",
+
+    "editExerciseTitle": "Gyakorlat szerkesztése",
+    "categoryLabel": "Kategória",
+    "equipmentLabel": "Eszköz",
+    "allFilterLabel": "Mind",
+
+    "muscleGroupChest": "Mell",
+    "muscleGroupBack": "Hát",
+    "muscleGroupShoulders": "Váll",
+    "muscleGroupBiceps": "Bicepsz",
+    "muscleGroupTriceps": "Tricepsz",
+    "muscleGroupForearms": "Alkar",
+    "muscleGroupQuads": "Négyfejű",
+    "muscleGroupHamstrings": "Combhajlító",
+    "muscleGroupGlutes": "Fenék",
+    "muscleGroupCalves": "Vádli",
+    "muscleGroupAbs": "Has",
+    "muscleGroupCardio": "Kardió",
+    "muscleGroupFullBody": "Egész test",
+    "muscleGroupOther": "Egyéb",
+
+    "equipmentBarbell": "Rúd",
+    "equipmentDumbbell": "Kézisúlyzó",
+    "equipmentMachine": "Gép",
+    "equipmentCable": "Kábel",
+    "equipmentBodyweight": "Testsúly",
+    "equipmentSmithMachine": "Smith-gép",
+    "equipmentOther": "Egyéb",
+
+    "personalRecordLabel": "Személyes rekord",
+    "estimatedOneRepMaxLabel": "Becsült 1RM",
+    "recentSetsLabel": "Legutóbbi szettek",
+    "trendLast8WeeksLabel": "8 hetes trend",
+    "noSetsForExerciseMessage": "Még nincs naplózott szett",
+
+    "prSetValueLabel": "{weight} kg × {reps}"
 }

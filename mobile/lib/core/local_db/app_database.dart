@@ -53,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -103,6 +103,17 @@ class AppDatabase extends _$AppDatabase {
           // V9: daily step goal added to user settings.
           if (from < 9) {
             await m.addColumn(userSettingsTable, userSettingsTable.dailyStepGoal);
+          }
+          // V10: exercise category (muscle group) and equipment — both nullable,
+          // existing exercises stay uncategorized until edited.
+          if (from < 10) {
+            await m.addColumn(exercises, exercises.category);
+            await m.addColumn(exercises, exercises.equipment);
+          }
+          // V11: target set count per exercise in a workout template — nullable,
+          // pre-existing template links carry no set target until updated.
+          if (from < 11) {
+            await m.addColumn(workoutTemplateExercises, workoutTemplateExercises.targetSets);
           }
         },
       );

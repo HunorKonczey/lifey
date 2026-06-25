@@ -1,6 +1,7 @@
 package com.lifey.workout.template;
 
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.workout.template.dto.TemplateExerciseEntry;
 import com.lifey.workout.template.dto.WorkoutTemplateResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,19 +36,31 @@ class WorkoutTemplateControllerTest {
     @Test
     void create_returnsCreated() throws Exception {
         when(workoutTemplateService.create(any()))
-                .thenReturn(new WorkoutTemplateResponse(9L, "Push day", List.of(1L, 4L)));
+                .thenReturn(new WorkoutTemplateResponse(9L, "Push day",
+                        List.of(new TemplateExerciseEntry(1L, 3), new TemplateExerciseEntry(4L, null))));
 
         mockMvc.perform(post("/api/v1/workout-templates").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Push day\",\"exerciseIds\":[1,4]}"))
+                        .content("{\"name\":\"Push day\",\"exercises\":[{\"exerciseId\":1,\"targetSets\":3},{\"exerciseId\":4}]}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(9))
-                .andExpect(jsonPath("$.exerciseIds[1]").value(4));
+                .andExpect(jsonPath("$.exercises[0].exerciseId").value(1))
+                .andExpect(jsonPath("$.exercises[0].targetSets").value(3))
+                .andExpect(jsonPath("$.exercises[1].exerciseId").value(4));
     }
 
     @Test
-    void create_emptyExerciseIdsReturns400() throws Exception {
+    void create_emptyExercisesReturns400() throws Exception {
         mockMvc.perform(post("/api/v1/workout-templates").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"\",\"exerciseIds\":[]}"))
+                        .content("{\"name\":\"\",\"exercises\":[]}"))
+                .andExpect(status().isBadRequest());
+
+        verify(workoutTemplateService, never()).create(any());
+    }
+
+    @Test
+    void create_nullExerciseIdReturns400() throws Exception {
+        mockMvc.perform(post("/api/v1/workout-templates").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Bad\",\"exercises\":[{\"exerciseId\":null}]}"))
                 .andExpect(status().isBadRequest());
 
         verify(workoutTemplateService, never()).create(any());
@@ -59,20 +72,21 @@ class WorkoutTemplateControllerTest {
                 .thenThrow(new ResourceNotFoundException("Exercise not found: 99"));
 
         mockMvc.perform(post("/api/v1/workout-templates").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Bad\",\"exerciseIds\":[99]}"))
+                        .content("{\"name\":\"Bad\",\"exercises\":[{\"exerciseId\":99}]}"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void update_returnsOk() throws Exception {
         when(workoutTemplateService.update(eq(9L), any()))
-                .thenReturn(new WorkoutTemplateResponse(9L, "Shoulders", List.of(4L)));
+                .thenReturn(new WorkoutTemplateResponse(9L, "Shoulders",
+                        List.of(new TemplateExerciseEntry(4L, null))));
 
         mockMvc.perform(put("/api/v1/workout-templates/9").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Shoulders\",\"exerciseIds\":[4]}"))
+                        .content("{\"name\":\"Shoulders\",\"exercises\":[{\"exerciseId\":4}]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Shoulders"))
-                .andExpect(jsonPath("$.exerciseIds[0]").value(4));
+                .andExpect(jsonPath("$.exercises[0].exerciseId").value(4));
     }
 
     @Test

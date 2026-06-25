@@ -5,6 +5,7 @@ import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseRepository;
+import com.lifey.workout.template.dto.TemplateExerciseEntry;
 import com.lifey.workout.template.dto.WorkoutTemplateRequest;
 import com.lifey.workout.template.dto.WorkoutTemplateResponse;
 import org.springframework.stereotype.Service;
@@ -50,7 +51,7 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
         WorkoutTemplate template = new WorkoutTemplate();
         template.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         template.setName(request.name());
-        replaceExercises(template, request.exerciseIds());
+        replaceExercises(template, request.exercises());
         return WorkoutTemplateMapper.toResponse(templateRepository.save(template));
     }
 
@@ -58,7 +59,7 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
     public WorkoutTemplateResponse update(Long id, WorkoutTemplateRequest request) {
         WorkoutTemplate template = getOrThrow(id);
         template.setName(request.name());
-        replaceExercises(template, request.exerciseIds());
+        replaceExercises(template, request.exercises());
         return WorkoutTemplateMapper.toResponse(template);
     }
 
@@ -80,15 +81,16 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
      * Rebuilds the template's exercise list from the request, resolving each
      * {@code exerciseId}. Relies on {@code orphanRemoval} to delete dropped links.
      */
-    private void replaceExercises(WorkoutTemplate template, List<Long> exerciseIds) {
+    private void replaceExercises(WorkoutTemplate template, List<TemplateExerciseEntry> entries) {
         template.getExercises().clear();
-        for (Long exerciseId : exerciseIds) {
-            Exercise exercise = exerciseRepository.findById(exerciseId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + exerciseId));
+        for (TemplateExerciseEntry entry : entries) {
+            Exercise exercise = exerciseRepository.findById(entry.exerciseId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + entry.exerciseId()));
 
             WorkoutTemplateExercise link = new WorkoutTemplateExercise();
             link.setWorkoutTemplate(template);
             link.setExercise(exercise);
+            link.setTargetSets(entry.targetSets());
             template.getExercises().add(link);
         }
     }

@@ -1,5 +1,6 @@
 package com.lifey.workout.template.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 
@@ -11,6 +12,6 @@ public record WorkoutTemplateRequest(
         String name,
 
         @NotEmpty
-        List<Long> exerciseIds
+        List<@Valid TemplateExerciseEntry> exercises
 ) {
 }

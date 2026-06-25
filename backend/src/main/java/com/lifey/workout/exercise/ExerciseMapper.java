@@ -19,9 +19,16 @@ final class ExerciseMapper {
 
     static void apply(Exercise exercise, ExerciseRequest request) {
         exercise.setName(request.name());
+        exercise.setCategory(request.category());
+        exercise.setEquipment(request.equipment());
     }
 
     static ExerciseResponse toResponse(Exercise exercise) {
-        return new ExerciseResponse(exercise.getId(), exercise.getName());
+        return new ExerciseResponse(
+                exercise.getId(),
+                exercise.getName(),
+                exercise.getCategory() != null ? exercise.getCategory().name() : null,
+                exercise.getEquipment() != null ? exercise.getEquipment().name() : null
+        );
     }
 }

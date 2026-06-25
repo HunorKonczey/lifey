@@ -6,6 +6,7 @@ import com.lifey.user.User;
 import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseRepository;
+import com.lifey.workout.template.dto.TemplateExerciseEntry;
 import com.lifey.workout.template.dto.WorkoutTemplateRequest;
 import com.lifey.workout.template.dto.WorkoutTemplateResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,19 +60,25 @@ class WorkoutTemplateServiceImplTest {
             t.setId(9L);
             return t;
         });
-        WorkoutTemplateRequest request = new WorkoutTemplateRequest("Push day", List.of(1L, 4L));
+        WorkoutTemplateRequest request = new WorkoutTemplateRequest("Push day",
+                List.of(new TemplateExerciseEntry(1L, 3), new TemplateExerciseEntry(4L, null)));
 
         WorkoutTemplateResponse result = service.create(request);
 
         assertThat(result.id()).isEqualTo(9L);
         assertThat(result.name()).isEqualTo("Push day");
-        assertThat(result.exerciseIds()).containsExactly(1L, 4L);
+        assertThat(result.exercises()).hasSize(2);
+        assertThat(result.exercises().get(0).exerciseId()).isEqualTo(1L);
+        assertThat(result.exercises().get(0).targetSets()).isEqualTo(3);
+        assertThat(result.exercises().get(1).exerciseId()).isEqualTo(4L);
+        assertThat(result.exercises().get(1).targetSets()).isNull();
     }
 
     @Test
     void create_throwsWhenExerciseMissing() {
         when(exerciseRepository.findById(99L)).thenReturn(Optional.empty());
-        WorkoutTemplateRequest request = new WorkoutTemplateRequest("Bad", List.of(99L));
+        WorkoutTemplateRequest request = new WorkoutTemplateRequest("Bad",
+                List.of(new TemplateExerciseEntry(99L, null)));
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -89,19 +96,23 @@ class WorkoutTemplateServiceImplTest {
         when(templateRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(existing));
         when(exerciseRepository.findById(4L)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
 
-        WorkoutTemplateResponse result =
-                service.update(9L, new WorkoutTemplateRequest("Shoulders", List.of(4L)));
+        WorkoutTemplateResponse result = service.update(9L, new WorkoutTemplateRequest("Shoulders",
+                List.of(new TemplateExerciseEntry(4L, 4))));
 
         assertThat(result.id()).isEqualTo(9L);
         assertThat(result.name()).isEqualTo("Shoulders");
-        assertThat(result.exerciseIds()).containsExactly(4L);
+        assertThat(result.exercises()).singleElement().satisfies(e -> {
+            assertThat(e.exerciseId()).isEqualTo(4L);
+            assertThat(e.targetSets()).isEqualTo(4);
+        });
     }
 
     @Test
     void update_throwsWhenTemplateMissing() {
         when(templateRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.update(99L, new WorkoutTemplateRequest("X", List.of(1L))))
+        assertThatThrownBy(() -> service.update(99L, new WorkoutTemplateRequest("X",
+                List.of(new TemplateExerciseEntry(1L, null)))))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Workout template not found: 99");
     }

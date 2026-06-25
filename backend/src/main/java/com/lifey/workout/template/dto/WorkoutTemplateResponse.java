@@ -5,6 +5,6 @@ import java.util.List;
 public record WorkoutTemplateResponse(
         Long id,
         String name,
-        List<Long> exerciseIds
+        List<TemplateExerciseEntry> exercises
 ) {
 }

@@ -37,6 +37,23 @@ class ExerciseServiceImplTest {
         assertThat(result).singleElement().satisfies(r -> {
             assertThat(r.id()).isEqualTo(1L);
             assertThat(r.name()).isEqualTo("Squat");
+            assertThat(r.category()).isNull();
+            assertThat(r.equipment()).isNull();
+        });
+    }
+
+    @Test
+    void findAll_mapsCategoryAndEquipment() {
+        Exercise e = exercise(2L, "Bench Press");
+        e.setCategory(MuscleGroup.CHEST);
+        e.setEquipment(Equipment.BARBELL);
+        when(repository.findAllByOrderByNameAsc()).thenReturn(List.of(e));
+
+        List<ExerciseResponse> result = service.findAll();
+
+        assertThat(result).singleElement().satisfies(r -> {
+            assertThat(r.category()).isEqualTo("CHEST");
+            assertThat(r.equipment()).isEqualTo("BARBELL");
         });
     }
 
@@ -56,10 +73,26 @@ class ExerciseServiceImplTest {
             return e;
         });
 
-        ExerciseResponse result = service.create(new ExerciseRequest("Lunge"));
+        ExerciseResponse result = service.create(new ExerciseRequest("Lunge", MuscleGroup.QUADS, Equipment.BODYWEIGHT));
 
         assertThat(result.id()).isEqualTo(5L);
         assertThat(result.name()).isEqualTo("Lunge");
+        assertThat(result.category()).isEqualTo("QUADS");
+        assertThat(result.equipment()).isEqualTo("BODYWEIGHT");
+    }
+
+    @Test
+    void create_nullCategoryAndEquipmentSavesOk() {
+        when(repository.save(any(Exercise.class))).thenAnswer(inv -> {
+            Exercise e = inv.getArgument(0);
+            e.setId(6L);
+            return e;
+        });
+
+        ExerciseResponse result = service.create(new ExerciseRequest("Plank", null, null));
+
+        assertThat(result.category()).isNull();
+        assertThat(result.equipment()).isNull();
     }
 
     @Test
@@ -67,10 +100,12 @@ class ExerciseServiceImplTest {
         Exercise existing = exercise(3L, "Old");
         when(repository.findById(3L)).thenReturn(Optional.of(existing));
 
-        ExerciseResponse result = service.update(3L, new ExerciseRequest("New"));
+        ExerciseResponse result = service.update(3L, new ExerciseRequest("New", MuscleGroup.BACK, Equipment.BARBELL));
 
         assertThat(result.name()).isEqualTo("New");
         assertThat(existing.getName()).isEqualTo("New");
+        assertThat(existing.getCategory()).isEqualTo(MuscleGroup.BACK);
+        assertThat(existing.getEquipment()).isEqualTo(Equipment.BARBELL);
     }
 
     @Test

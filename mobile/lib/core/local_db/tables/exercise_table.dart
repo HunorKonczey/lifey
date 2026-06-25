@@ -10,6 +10,12 @@ class Exercises extends Table {
   IntColumn get serverId => integer().nullable()();
   TextColumn get name => text()();
 
+  /// Muscle group enum code (e.g. "CHEST"), null if not set.
+  TextColumn get category => text().nullable()();
+
+  /// Equipment enum code (e.g. "BARBELL"), null if not set.
+  TextColumn get equipment => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

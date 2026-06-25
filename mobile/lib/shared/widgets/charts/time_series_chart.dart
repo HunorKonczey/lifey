@@ -27,6 +27,7 @@ class TimeSeriesChart extends StatefulWidget {
     this.height = 220,
     this.showDeltaLabels = false,
     this.goalValue,
+    this.areaColor,
   });
 
   final List<TimeSeriesPoint> points;
@@ -45,6 +46,9 @@ class TimeSeriesChart extends StatefulWidget {
   /// When non-null, a dashed horizontal reference line is drawn at this Y
   /// value — used to show daily goals (e.g. step target).
   final double? goalValue;
+
+  /// When non-null, the area under the line is filled with this color.
+  final Color? areaColor;
 
   @override
   State<TimeSeriesChart> createState() => _TimeSeriesChartState();
@@ -108,6 +112,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                     ),
                     positiveDeltaColor: theme.colorScheme.error,
                     negativeDeltaColor: theme.colorScheme.tertiary,
+                    areaColor: widget.areaColor,
                   ),
                 ),
               ),
@@ -278,6 +283,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
     required this.labelStyle,
     required this.positiveDeltaColor,
     required this.negativeDeltaColor,
+    this.areaColor,
   });
 
   final List<TimeSeriesPoint> points;
@@ -293,6 +299,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
   final TextStyle labelStyle;
   final Color positiveDeltaColor;
   final Color negativeDeltaColor;
+  final Color? areaColor;
 
   static const _maxDateLabels = 3;
 
@@ -331,6 +338,20 @@ class _TimeSeriesChartPainter extends CustomPainter {
     final offsets = [for (var i = 0; i < points.length; i++) geometry.offsetFor(i)];
 
     if (offsets.length > 1) {
+      // Area fill drawn first so the line renders on top.
+      if (areaColor != null) {
+        final areaPath = Path()
+          ..moveTo(offsets.first.dx, geometry.plotBottom)
+          ..lineTo(offsets.first.dx, offsets.first.dy);
+        for (final o in offsets.skip(1)) {
+          areaPath.lineTo(o.dx, o.dy);
+        }
+        areaPath
+          ..lineTo(offsets.last.dx, geometry.plotBottom)
+          ..close();
+        canvas.drawPath(areaPath, Paint()..color = areaColor!..style = PaintingStyle.fill);
+      }
+
       final path = Path()..moveTo(offsets.first.dx, offsets.first.dy);
       for (final offset in offsets.skip(1)) {
         path.lineTo(offset.dx, offset.dy);
@@ -423,6 +444,7 @@ class _TimeSeriesChartPainter extends CustomPainter {
         oldDelegate.lineColor != lineColor ||
         oldDelegate.selectedIndex != selectedIndex ||
         oldDelegate.goalValue != goalValue ||
+        oldDelegate.areaColor != areaColor ||
         (oldDelegate.deltaLabelBuilder == null) != (deltaLabelBuilder == null);
   }
 }

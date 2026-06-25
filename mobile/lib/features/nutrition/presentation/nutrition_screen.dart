@@ -9,6 +9,7 @@ import '../../../shared/widgets/pill_tab_bar.dart';
 import '../../../shared/widgets/shell_fab.dart';
 import '../../recipes/presentation/create_recipe_screen.dart';
 import '../../recipes/presentation/recipes_tab.dart';
+import 'barcode_scanner_screen.dart';
 import 'foods_tab.dart';
 import 'log_meal_screen.dart';
 import 'macros_tab.dart';
@@ -115,9 +116,19 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     );
   }
 
-  void _openBarcodeScanner() {
+  Future<void> _openBarcodeScanner() async {
+    final barcode = await Navigator.of(context, rootNavigator: true).push<String>(
+      MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+    );
+    if (barcode == null || !mounted) return;
     _tabController.animateTo(0);
-    _addFood();
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AddFoodSheet(initialBarcode: barcode),
+    );
   }
 
   ({IconData icon, String label, VoidCallback onPressed})? _fab(AppLocalizations l10n) {

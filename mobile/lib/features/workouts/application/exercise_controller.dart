@@ -13,7 +13,16 @@ class ExerciseController extends StreamNotifier<List<Exercise>> {
   @override
   Stream<List<Exercise>> build() => _repo.watchAll();
 
-  Future<void> addExercise(String name) => _repo.create(name);
+  Future<void> addExercise(String name, {String? category, String? equipment}) =>
+      _repo.create(name, category: category, equipment: equipment);
+
+  Future<void> updateExercise(
+    String clientId, {
+    required String name,
+    String? category,
+    String? equipment,
+  }) =>
+      _repo.update(clientId, name: name, category: category, equipment: equipment);
 
   Future<void> deleteExercise(String clientId) => _repo.delete(clientId);
 

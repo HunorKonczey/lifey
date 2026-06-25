@@ -1,5 +1,6 @@
 package com.lifey.workout.template;
 
+import com.lifey.workout.template.dto.TemplateExerciseEntry;
 import com.lifey.workout.template.dto.WorkoutTemplateResponse;
 
 import java.util.List;
@@ -14,14 +15,14 @@ final class WorkoutTemplateMapper {
     }
 
     static WorkoutTemplateResponse toResponse(WorkoutTemplate template) {
-        List<Long> exerciseIds = template.getExercises().stream()
-                .map(link -> link.getExercise().getId())
+        List<TemplateExerciseEntry> exercises = template.getExercises().stream()
+                .map(link -> new TemplateExerciseEntry(link.getExercise().getId(), link.getTargetSets()))
                 .toList();
 
         return new WorkoutTemplateResponse(
                 template.getId(),
                 template.getName(),
-                exerciseIds
+                exercises
         );
     }
 }

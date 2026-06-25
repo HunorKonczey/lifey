@@ -95,7 +95,11 @@ class PullEngine {
       final existingClientId = await _localClientId('exercises', serverId);
       if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
 
-      final values = ExercisesCompanion(name: Value(json['name'] as String));
+      final values = ExercisesCompanion(
+        name: Value(json['name'] as String),
+        category: Value(json['category'] as String?),
+        equipment: Value(json['equipment'] as String?),
+      );
       if (existingClientId != null) {
         await (_db.update(_db.exercises)..where((t) => t.clientId.equals(existingClientId)))
             .write(values);
@@ -255,10 +259,9 @@ class PullEngine {
 
       final clientId = existingClientId ?? newClientId();
       final values = WorkoutTemplatesCompanion(name: Value(json['name'] as String));
-      final exerciseClientIds = await _mapServerIds(
-        'exercises',
-        (json['exerciseIds'] as List<dynamic>? ?? const []).cast<int>(),
-      );
+      // BE now returns structured exercises: [{exerciseId, targetSets}, ...]
+      final entriesJson =
+          (json['exercises'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
       // Transacted so a crash partway through can't leave this template's
       // row updated but its exercise links deleted-and-not-reinserted.
       await _db.transaction(() async {
@@ -274,12 +277,17 @@ class PullEngine {
         await (_db.delete(_db.workoutTemplateExercises)
               ..where((t) => t.templateClientId.equals(clientId)))
             .go();
-        for (final exerciseClientId in exerciseClientIds) {
+        for (final entry in entriesJson) {
+          final exerciseServerId = entry['exerciseId'] as int;
+          final exerciseClientId = await _localClientId('exercises', exerciseServerId);
+          if (exerciseClientId == null) continue; // dangling ref — exercise not pulled yet
+          final targetSets = entry['targetSets'] as int?;
           await _db.into(_db.workoutTemplateExercises).insert(
                 WorkoutTemplateExercisesCompanion.insert(
                   clientId: newClientId(),
                   templateClientId: clientId,
                   exerciseClientId: exerciseClientId,
+                  targetSets: Value(targetSets),
                 ),
               );
         }

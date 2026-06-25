@@ -25,6 +25,9 @@ class WorkoutTemplateExercises extends Table {
   TextColumn get templateClientId => text().references(WorkoutTemplates, #clientId)();
   TextColumn get exerciseClientId => text().references(Exercises, #clientId)();
 
+  /// Target number of sets for this exercise in the template, null if not set.
+  IntColumn get targetSets => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }
