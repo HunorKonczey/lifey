@@ -18,15 +18,20 @@ final _kcalFmt = NumberFormat('#,##0');
 /// Each row is one calendar day, showing calorie total prominently and
 /// protein/carbs/fat as compact coloured icon+value chips below.
 class MacrosTab extends ConsumerStatefulWidget {
-  const MacrosTab({super.key});
+  const MacrosTab({
+    super.key,
+    this.topPadding = 0,
+    this.filter = DateRangeFilter.week,
+  });
+
+  final double topPadding;
+  final DateRangeFilter filter;
 
   @override
   ConsumerState<MacrosTab> createState() => _MacrosTabState();
 }
 
 class _MacrosTabState extends ConsumerState<MacrosTab> {
-  DateRangeFilter _filter = DateRangeFilter.week;
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(dailyMacrosProvider);
@@ -35,50 +40,39 @@ class _MacrosTabState extends ConsumerState<MacrosTab> {
 
     return state.when(
       data: (days) {
-        if (days.isEmpty) {
+        final filtered =
+            days.where((d) => widget.filter.matches(d.day)).toList();
+
+        if (days.isEmpty || filtered.isEmpty) {
           return RefreshIndicator(
+            displacement: widget.topPadding,
             onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
             child: EmptyView(
               icon: Icons.pie_chart_outline,
-              title: l10n.noMacroDataTitle,
+              title: days.isEmpty
+                  ? l10n.noMacroDataTitle
+                  : l10n.noMacroDataInRangeTitle,
+              subtitle: days.isEmpty ? null : l10n.tryWiderDateFilterMessage,
             ),
           );
         }
 
-        final filtered = days.where((d) => _filter.matches(d.day)).toList();
-
-        return Column(
-          children: [
-            DateRangeFilterBar(
-              value: _filter,
-              onChanged: (f) => setState(() => _filter = f),
-            ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () =>
-                    ref.read(mealControllerProvider.notifier).refresh(),
-                child: filtered.isEmpty
-                    ? EmptyView(
-                        icon: Icons.pie_chart_outline,
-                        title: l10n.noMacroDataInRangeTitle,
-                        subtitle: l10n.tryWiderDateFilterMessage,
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.fromLTRB(12, 4, 12, bottomPad + 88),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final day = filtered[index];
-                          final now = DateTime.now();
-                          final today = DateTime(now.year, now.month, now.day);
-                          if (day.day == today) {
-                            return _FeaturedDayCard(day: day);
-                          }
-                          return _DailyMacroCard(day: day);
-                        },
-                      ),
-              ),
-            ),
-          ],
+        return RefreshIndicator(
+          displacement: widget.topPadding,
+          onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
+          child: ListView.builder(
+            padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
+            itemCount: filtered.length,
+            itemBuilder: (context, index) {
+              final day = filtered[index];
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+              if (day.day == today) {
+                return _FeaturedDayCard(day: day);
+              }
+              return _DailyMacroCard(day: day);
+            },
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

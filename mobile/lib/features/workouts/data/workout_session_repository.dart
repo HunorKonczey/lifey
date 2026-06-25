@@ -10,6 +10,14 @@ import '../../../core/sync/pending_delete_filter.dart';
 import '../../../core/utils/combine_latest.dart';
 import '../domain/workout_session.dart';
 
+/// One planned exercise when logging a session — clientId + optional target sets.
+class PlannedExerciseInput {
+  const PlannedExerciseInput({required this.exerciseClientId, this.targetSets});
+
+  final String exerciseClientId;
+  final int? targetSets;
+}
+
 /// One set to record when logging a session (request side).
 class ExerciseSetInput {
   const ExerciseSetInput({
@@ -55,6 +63,7 @@ class WorkoutSessionRepository {
               SessionExercise(
                 exerciseClientId: link.exerciseClientId,
                 exerciseName: exerciseNames[link.exerciseClientId] ?? 'Unknown',
+                targetSets: link.targetSets,
               ),
             );
       }
@@ -94,7 +103,7 @@ class WorkoutSessionRepository {
   Future<String> create({
     required DateTime startedAt,
     DateTime? finishedAt,
-    required List<String> exerciseClientIds,
+    required List<PlannedExerciseInput> exercises,
     required List<ExerciseSetInput> sets,
     double? activeCalories,
     double? averageHeartRate,
@@ -112,7 +121,7 @@ class WorkoutSessionRepository {
               healthWorkoutId: Value(healthWorkoutId),
             ),
           );
-      await _insertChildren(clientId, exerciseClientIds, sets);
+      await _insertChildren(clientId, exercises, sets);
     });
     await _outbox.enqueueCreate(
       clientId: clientId,
@@ -120,7 +129,7 @@ class WorkoutSessionRepository {
       payload: _payload(
         startedAt: startedAt,
         finishedAt: finishedAt,
-        exerciseClientIds: exerciseClientIds,
+        exercises: exercises,
         sets: sets,
         activeCalories: activeCalories,
         averageHeartRate: averageHeartRate,
@@ -134,7 +143,7 @@ class WorkoutSessionRepository {
     String clientId, {
     required DateTime startedAt,
     DateTime? finishedAt,
-    required List<String> exerciseClientIds,
+    required List<PlannedExerciseInput> exercises,
     required List<ExerciseSetInput> sets,
     double? activeCalories,
     double? averageHeartRate,
@@ -154,7 +163,7 @@ class WorkoutSessionRepository {
             ..where((t) => t.sessionClientId.equals(clientId)))
           .go();
       await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId))).go();
-      await _insertChildren(clientId, exerciseClientIds, sets);
+      await _insertChildren(clientId, exercises, sets);
     });
     await _outbox.enqueueUpdate(
       clientId: clientId,
@@ -162,7 +171,7 @@ class WorkoutSessionRepository {
       payload: _payload(
         startedAt: startedAt,
         finishedAt: finishedAt,
-        exerciseClientIds: exerciseClientIds,
+        exercises: exercises,
         sets: sets,
         activeCalories: activeCalories,
         averageHeartRate: averageHeartRate,
@@ -192,15 +201,16 @@ class WorkoutSessionRepository {
 
   Future<void> _insertChildren(
     String sessionClientId,
-    List<String> exerciseClientIds,
+    List<PlannedExerciseInput> exercises,
     List<ExerciseSetInput> sets,
   ) async {
-    for (final exerciseClientId in exerciseClientIds) {
+    for (final exercise in exercises) {
       await _db.into(_db.workoutSessionExercises).insert(
             WorkoutSessionExercisesCompanion.insert(
               clientId: newClientId(),
               sessionClientId: sessionClientId,
-              exerciseClientId: exerciseClientId,
+              exerciseClientId: exercise.exerciseClientId,
+              targetSets: Value(exercise.targetSets),
             ),
           );
     }
@@ -221,7 +231,7 @@ class WorkoutSessionRepository {
   Map<String, dynamic> _payload({
     required DateTime startedAt,
     DateTime? finishedAt,
-    required List<String> exerciseClientIds,
+    required List<PlannedExerciseInput> exercises,
     required List<ExerciseSetInput> sets,
     double? activeCalories,
     double? averageHeartRate,
@@ -230,7 +240,7 @@ class WorkoutSessionRepository {
     return {
       'startedAt': startedAt.toUtc().toIso8601String(),
       if (finishedAt != null) 'finishedAt': finishedAt.toUtc().toIso8601String(),
-      'exerciseIds': exerciseClientIds.map(clientRef).toList(),
+      'exerciseIds': exercises.map((e) => clientRef(e.exerciseClientId)).toList(),
       'sets': sets
           .map((s) => {
                 'exerciseId': clientRef(s.exerciseClientId),

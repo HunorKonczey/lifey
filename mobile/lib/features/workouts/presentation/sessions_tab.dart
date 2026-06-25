@@ -13,8 +13,16 @@ import '../domain/workout_session.dart';
 import 'log_session_screen.dart';
 
 /// "Sessions" tab: tap to edit/continue; swipe-to-delete with confirm; date filter.
+/// The active [filter] is owned by the parent screen and shown in the AppBar.
 class SessionsTab extends ConsumerStatefulWidget {
-  const SessionsTab({super.key});
+  const SessionsTab({
+    super.key,
+    this.topPadding = 0,
+    this.filter = DateRangeFilter.today,
+  });
+
+  final double topPadding;
+  final DateRangeFilter filter;
 
   @override
   ConsumerState<SessionsTab> createState() => _SessionsTabState();
@@ -22,8 +30,6 @@ class SessionsTab extends ConsumerStatefulWidget {
 
 class _SessionsTabState extends ConsumerState<SessionsTab> {
   static final _dateLabel = DateFormat('EEE, MMM d · HH:mm');
-
-  DateRangeFilter _filter = DateRangeFilter.today;
 
   Future<void> _edit(BuildContext context, WorkoutSession session) {
     return Navigator.of(context, rootNavigator: true).push(
@@ -76,50 +82,42 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
 
     return state.when(
       data: (sessions) {
-        if (sessions.isEmpty) {
+        final filtered =
+            sessions.where((s) => widget.filter.matches(s.startedAt)).toList();
+
+        if (sessions.isEmpty || filtered.isEmpty) {
           return RefreshIndicator(
+            displacement: widget.topPadding,
             onRefresh: () =>
                 ref.read(workoutSessionControllerProvider.notifier).refresh(),
             child: EmptyView(
               icon: Icons.fitness_center_outlined,
-              title: l10n.noWorkoutsLoggedYetTitle,
-              subtitle: l10n.tapPlusToLogOneMessage,
+              title: sessions.isEmpty
+                  ? l10n.noWorkoutsLoggedYetTitle
+                  : l10n.noWorkoutsInRangeTitle,
+              subtitle: sessions.isEmpty
+                  ? l10n.tapPlusToLogOneMessage
+                  : l10n.tryWiderDateFilterMessage,
             ),
           );
         }
-        final filtered =
-            sessions.where((s) => _filter.matches(s.startedAt)).toList();
-        return Column(
-          children: [
-            DateRangeFilterBar(
-              value: _filter,
-              onChanged: (f) => setState(() => _filter = f),
+
+        return RefreshIndicator(
+          displacement: widget.topPadding,
+          onRefresh: () =>
+              ref.read(workoutSessionControllerProvider.notifier).refresh(),
+          child: ListView.builder(
+            padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
+            itemCount: filtered.length,
+            itemBuilder: (context, index) => _SessionCard(
+              session: filtered[index],
+              dateLabel: _dateLabel,
+              onEdit: () => _edit(context, filtered[index]),
+              onDelete: () => _delete(context, ref, filtered[index]),
+              onDeleteTap: () =>
+                  _confirmDelete(context, ref, filtered[index]),
             ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () =>
-                    ref.read(workoutSessionControllerProvider.notifier).refresh(),
-                child: filtered.isEmpty
-                    ? EmptyView(
-                        icon: Icons.fitness_center_outlined,
-                        title: l10n.noWorkoutsInRangeTitle,
-                        subtitle: l10n.tryWiderDateFilterMessage,
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.fromLTRB(12, 4, 12, bottomPad + 88),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) => _SessionCard(
-                          session: filtered[index],
-                          dateLabel: _dateLabel,
-                          onEdit: () => _edit(context, filtered[index]),
-                          onDelete: () => _delete(context, ref, filtered[index]),
-                          onDeleteTap: () =>
-                              _confirmDelete(context, ref, filtered[index]),
-                        ),
-                      ),
-              ),
-            ),
-          ],
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

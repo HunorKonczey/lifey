@@ -22,15 +22,23 @@ import 'widgets/add_exercise_sheet.dart';
 /// exercises without a category appear last under an "Other" bucket.
 /// Any other chip: flat list filtered to that category only.
 class ExercisesTab extends ConsumerStatefulWidget {
-  const ExercisesTab({super.key});
+  const ExercisesTab({
+    super.key,
+    this.topPadding = 0,
+    this.categoryFilter,
+  });
+
+  final double topPadding;
+
+  /// null = show all (grouped view); non-null = flat list for that category.
+  /// Owned by the parent screen and shown in the AppBar.
+  final String? categoryFilter;
 
   @override
   ConsumerState<ExercisesTab> createState() => _ExercisesTabState();
 }
 
 class _ExercisesTabState extends ConsumerState<ExercisesTab> {
-  /// null = "All" (grouped view); non-null = single-category filter
-  String? _categoryFilter;
 
   Future<void> _delete(Exercise exercise) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -71,6 +79,7 @@ class _ExercisesTabState extends ConsumerState<ExercisesTab> {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return RefreshIndicator(
+      displacement: widget.topPadding,
       onRefresh: () => ref.read(exerciseControllerProvider.notifier).refresh(),
       child: state.when(
         data: (exercises) {
@@ -82,33 +91,20 @@ class _ExercisesTabState extends ConsumerState<ExercisesTab> {
             );
           }
 
-          // Categories that actually appear in the list (display order)
           final presentCategories = kMuscleGroups
               .where((c) => exercises.any((e) => e.category == c))
               .toList();
 
-          final bottomPadding = EdgeInsets.fromLTRB(12, 4, 12, bottomPad + 88);
+          final bottomPadding = EdgeInsets.fromLTRB(12, 0, 12, bottomPad + 88);
 
           return CustomScrollView(
             slivers: [
-              // ── Filter chips ─────────────────────────────────────────────
-              if (presentCategories.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: _CategoryFilterBar(
-                    categories: presentCategories,
-                    selected: _categoryFilter,
-                    labelBuilder: (c) => muscleGroupLabel(l10n, c),
-                    allLabel: l10n.allFilterLabel,
-                    onSelected: (c) => setState(() => _categoryFilter = c),
-                  ),
-                ),
-
-              // ── Content ──────────────────────────────────────────────────
-              if (_categoryFilter != null)
-                // Single-category flat list
+              SliverToBoxAdapter(child: SizedBox(height: widget.topPadding)),
+              if (widget.categoryFilter != null)
                 _FlatList(
-                  exercises:
-                      exercises.where((e) => e.category == _categoryFilter).toList(),
+                  exercises: exercises
+                      .where((e) => e.category == widget.categoryFilter)
+                      .toList(),
                   padding: bottomPadding,
                   l10n: l10n,
                   onDelete: _delete,
@@ -116,7 +112,6 @@ class _ExercisesTabState extends ConsumerState<ExercisesTab> {
                   onTap: _openDetail,
                 )
               else
-                // Grouped by category
                 _GroupedList(
                   exercises: exercises,
                   presentCategories: presentCategories,
@@ -293,78 +288,6 @@ class _SectionHeader extends StatelessWidget {
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,
         ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Category filter bar
-// ---------------------------------------------------------------------------
-
-class _CategoryFilterBar extends StatelessWidget {
-  const _CategoryFilterBar({
-    required this.categories,
-    required this.selected,
-    required this.labelBuilder,
-    required this.allLabel,
-    required this.onSelected,
-  });
-
-  final List<String> categories;
-  final String? selected;
-  final String Function(String code) labelBuilder;
-  final String allLabel;
-  final void Function(String? code) onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    Widget chip({
-      required String label,
-      required bool isSelected,
-      required VoidCallback onTap,
-    }) {
-      return Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: FilterChip(
-          label: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isSelected ? scheme.onPrimary : scheme.onSurfaceVariant,
-            ),
-          ),
-          selected: isSelected,
-          showCheckmark: false,
-          backgroundColor: scheme.surfaceContainerLow,
-          selectedColor: scheme.primary,
-          shape: const StadiumBorder(),
-          side: BorderSide.none,
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          onSelected: (_) => onTap(),
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: Row(
-        children: [
-          chip(
-            label: allLabel,
-            isSelected: selected == null,
-            onTap: () => onSelected(null),
-          ),
-          ...categories.map((c) => chip(
-                label: labelBuilder(c),
-                isSelected: selected == c,
-                onTap: () => onSelected(selected == c ? null : c),
-              )),
-        ],
       ),
     );
   }

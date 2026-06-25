@@ -17,7 +17,10 @@ class FoodRepository {
   final OutboxWriter _outbox;
 
   Stream<List<Food>> watchAll() {
-    final foods$ = (_db.select(_db.foods)..orderBy([(t) => OrderingTerm.asc(t.name)])).watch();
+    final foods$ = (_db.select(_db.foods)
+          ..where((t) => t.hidden.equals(false))
+          ..orderBy([(t) => OrderingTerm.asc(t.name)]))
+        .watch();
     final pendingOps$ = _db.select(_db.pendingOperations).watch();
     return combineLatest2(foods$, pendingOps$, (rows, ops) {
       final blocked = blockedByActiveDelete(ops);
@@ -32,6 +35,7 @@ class FoodRepository {
   /// as "more available".
   Stream<List<Food>> watchPaged({required int limit}) {
     final foods$ = (_db.select(_db.foods)
+          ..where((t) => t.hidden.equals(false))
           ..orderBy([(t) => OrderingTerm.asc(t.name)])
           ..limit(limit))
         .watch();
@@ -42,13 +46,15 @@ class FoodRepository {
     });
   }
 
-  Future<void> create({
+  /// Creates a food and returns its clientId.
+  Future<String> create({
     required String name,
     required double calories,
     required double protein,
     double? carbs,
     double? fat,
     String? barcode,
+    bool hidden = false,
   }) async {
     final clientId = newClientId();
     await _db.into(_db.foods).insert(FoodsCompanion.insert(
@@ -59,6 +65,7 @@ class FoodRepository {
           carbsPer100g: Value(carbs),
           fatPer100g: Value(fat),
           barcode: Value(barcode),
+          hidden: Value(hidden),
         ));
     await _outbox.enqueueCreate(
       clientId: clientId,
@@ -70,8 +77,10 @@ class FoodRepository {
         'carbsPer100g': carbs,
         'fatPer100g': fat,
         'barcode': barcode,
+        'hidden': hidden,
       },
     );
+    return clientId;
   }
 
   Future<void> update(
@@ -128,6 +137,7 @@ class FoodRepository {
       carbsPer100g: row.carbsPer100g,
       fatPer100g: row.fatPer100g,
       barcode: row.barcode,
+      hidden: row.hidden,
     );
   }
 }

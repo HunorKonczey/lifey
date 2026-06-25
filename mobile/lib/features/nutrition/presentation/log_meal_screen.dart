@@ -11,6 +11,7 @@ import '../application/meal_controller.dart';
 import '../data/meal_repository.dart';
 import '../domain/food.dart';
 import '../domain/meal.dart';
+import 'widgets/add_macros_sheet.dart';
 import 'widgets/add_meal_entry_sheet.dart';
 
 /// Full-screen form for logging a meal, or editing one when [meal] is provided.
@@ -42,7 +43,6 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   double get _totalFat =>
       _entries.fold(0, (s, e) => s + (e.food.fatPer100g ?? 0) * e.grams / 100);
 
-  // Only show the total card if at least one entry has real macro data.
   bool get _hasMacroData => _entries.any((e) => e.food.caloriesPer100g > 0);
 
   static MealType _mealTypeForHour(int hour) {
@@ -60,14 +60,17 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     _dateTime = meal?.dateTime ?? DateTime.now();
     if (meal != null) {
       for (final entry in meal.entries) {
+        final q = entry.quantityInGrams;
         _entries.add((
           food: Food(
             clientId: entry.foodClientId,
             name: entry.foodName,
-            caloriesPer100g: 0,
-            proteinPer100g: 0,
+            caloriesPer100g: q > 0 ? entry.calories / q * 100 : 0,
+            proteinPer100g: q > 0 ? entry.protein / q * 100 : 0,
+            carbsPer100g: q > 0 ? entry.carbs / q * 100 : 0,
+            fatPer100g: q > 0 ? entry.fat / q * 100 : 0,
           ),
-          grams: entry.quantityInGrams,
+          grams: q,
         ));
       }
     }
@@ -102,6 +105,19 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => const AddMealEntrySheet(),
+    );
+    if (draft != null) {
+      setState(() => _entries.add((food: draft.food, grams: draft.grams)));
+    }
+  }
+
+  Future<void> _addMacros() async {
+    final draft = await showModalBottomSheet<MealEntryDraft>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const AddMacrosSheet(),
     );
     if (draft != null) {
       setState(() => _entries.add((food: draft.food, grams: draft.grams)));
@@ -204,24 +220,22 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _SectionLabel(label: l10n.foodsLabel),
-                  GestureDetector(
-                    onTap: _addEntry,
-                    behavior: HitTestBehavior.opaque,
-                    child: Row(
-                      children: [
-                        Icon(Icons.add, size: 18, color: scheme.primary),
-                        const SizedBox(width: 4),
-                        Text(
-                          l10n.addFoodButton,
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
+                  Row(
+                    children: [
+                      _SectionActionButton(
+                        label: l10n.addMacrosButton,
+                        icon: Icons.speed,
+                        color: scheme.tertiary,
+                        onTap: _addMacros,
+                      ),
+                      const SizedBox(width: 12),
+                      _SectionActionButton(
+                        label: l10n.addFoodButton,
+                        icon: Icons.add,
+                        color: scheme.primary,
+                        onTap: _addEntry,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -880,6 +894,47 @@ class _SectionLabel extends StatelessWidget {
         fontWeight: FontWeight.w700,
         letterSpacing: 1.0,
         color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Section action button (small icon + label, used in header rows)
+// ---------------------------------------------------------------------------
+
+class _SectionActionButton extends StatelessWidget {
+  const _SectionActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }

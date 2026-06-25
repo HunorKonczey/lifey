@@ -38,6 +38,9 @@ class WorkoutSessionExercises extends Table {
   TextColumn get sessionClientId => text().references(WorkoutSessions, #clientId)();
   TextColumn get exerciseClientId => text().references(Exercises, #clientId)();
 
+  /// Target number of sets for this exercise in this session, null if not set.
+  IntColumn get targetSets => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

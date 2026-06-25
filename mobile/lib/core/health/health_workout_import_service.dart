@@ -51,7 +51,7 @@ class HealthWorkoutImportService {
   Future<void> importInto({
     required String sessionClientId,
     required DateTime startedAt,
-    required List<String> exerciseClientIds,
+    required List<PlannedExerciseInput> exercises,
     required List<ExerciseSetInput> sets,
     required AppleWorkout workout,
   }) {
@@ -59,7 +59,7 @@ class HealthWorkoutImportService {
           sessionClientId,
           startedAt: startedAt,
           finishedAt: workout.endDate,
-          exerciseClientIds: exerciseClientIds,
+          exercises: exercises,
           sets: sets,
           activeCalories: workout.activeCalories,
           averageHeartRate: workout.averageHeartRate,

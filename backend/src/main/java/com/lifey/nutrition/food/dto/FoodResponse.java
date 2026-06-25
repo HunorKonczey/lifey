@@ -7,6 +7,7 @@ public record FoodResponse(
         Double proteinPer100g,
         Double carbsPer100g,
         Double fatPer100g,
-        String barcode
+        String barcode,
+        boolean hidden
 ) {
 }

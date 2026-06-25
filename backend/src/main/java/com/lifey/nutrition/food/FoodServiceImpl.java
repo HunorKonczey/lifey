@@ -35,7 +35,9 @@ public class FoodServiceImpl implements FoodService {
 
     @Override
     public FoodResponse create(FoodRequest request) {
-        requireUniqueName(request.name().trim(), null);
+        if (!request.hidden()) {
+            requireUniqueName(request.name().trim(), null);
+        }
         Food saved = repository.save(FoodMapper.toEntity(request));
         return FoodMapper.toResponse(saved);
     }

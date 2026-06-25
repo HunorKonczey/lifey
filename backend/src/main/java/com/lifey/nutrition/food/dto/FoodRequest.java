@@ -23,6 +23,8 @@ public record FoodRequest(
         @PositiveOrZero
         Double fatPer100g,
 
-        String barcode
+        String barcode,
+
+        boolean hidden
 ) {
 }

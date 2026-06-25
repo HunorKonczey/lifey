@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../shared/widgets/pill_tab_bar.dart';
 import '../../../shared/widgets/shell_fab.dart';
@@ -44,6 +44,8 @@ class NutritionScreen extends ConsumerStatefulWidget {
 class _NutritionScreenState extends ConsumerState<NutritionScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  DateRangeFilter _mealsFilter = DateRangeFilter.today;
+  DateRangeFilter _macrosFilter = DateRangeFilter.week;
 
   @override
   void initState() {
@@ -167,31 +169,30 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
       });
     });
 
+    final barTop = statusTop + 8.0;
+    // AppBar expanded height + PillTabBar height (38 content + 8*2 padding)
+    final contentTop = barTop + 58.0 + 54.0;
+
     return Scaffold(
       body: ScrollCollapseListener(
         child: Stack(
           children: [
-            // ── Content — top spacer tracks the combined floating header ──
-            Column(
-              children: [
-                _HeaderSpacer(statusTop: statusTop),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: const [
-                      FoodsTab(),
-                      MealsTab(),
-                      RecipesTab(),
-                      MacrosTab(),
-                    ],
-                  ),
-                ),
-              ],
+            // ── Content fills the screen; each tab handles its own top padding ─
+            Positioned.fill(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  FoodsTab(topPadding: contentTop),
+                  MealsTab(topPadding: contentTop, filter: _mealsFilter),
+                  RecipesTab(topPadding: contentTop),
+                  MacrosTab(topPadding: contentTop, filter: _macrosFilter),
+                ],
+              ),
             ),
 
             // ── Floating combined header (AppBar + PillTabBar as one unit) ─
             Positioned(
-              top: statusTop + 8.0,
+              top: barTop,
               left: 0,
               right: 0,
               child: Column(
@@ -211,6 +212,19 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                           onPressed: _openBarcodeScanner,
                         ),
                       ],
+                      trailing: switch (_tabController.index) {
+                        1 => DateRangeFilterButton(
+                            value: _mealsFilter,
+                            onChanged: (f) =>
+                                setState(() => _mealsFilter = f),
+                          ),
+                        3 => DateRangeFilterButton(
+                            value: _macrosFilter,
+                            onChanged: (f) =>
+                                setState(() => _macrosFilter = f),
+                          ),
+                        _ => null,
+                      },
                     ),
                   ),
                   PillTabBar(
@@ -228,33 +242,6 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
           ],
         ),
       ),
-    );
-  }
-}
-
-// Spacer that matches the combined height of the floating header.
-// Rebuilds on collapse state changes so content stays flush beneath the header.
-//
-// Heights: AdaptiveAppBar 58→44 (expanded→collapsed) + PillTabBar 54 (fixed:
-// 38px content + 8px top + 8px bottom padding) + 8px top offset from status bar.
-// PillTabBar hosts 4 tabs (Foods / Meals / Recipes / Macros) — all short labels
-// that fit without scrolling at the standard 13px label size.
-class _HeaderSpacer extends StatelessWidget {
-  const _HeaderSpacer({required this.statusTop});
-
-  final double statusTop;
-
-  // PillTabBar internal: 38 content + 8 vertical padding * 2 = 54
-  static const double _pillBarH = 54.0;
-  static const double _topOffset = 8.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final collapsed = NavCollapseScope.collapsedOf(context);
-    return AnimatedContainer(
-      duration: AppDuration.collapse,
-      curve: AppCurve.collapse,
-      height: statusTop + _topOffset + (collapsed ? 44.0 : 58.0) + _pillBarH,
     );
   }
 }

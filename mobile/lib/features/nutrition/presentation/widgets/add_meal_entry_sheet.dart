@@ -38,7 +38,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
   void initState() {
     super.initState();
     _food = widget.initialFood;
-    final initial = widget.initialGrams?.toStringAsFixed(0) ?? '100';
+    final initial = widget.initialGrams?.toStringAsFixed(0) ?? '';
     _grams = TextEditingController(text: initial);
   }
 

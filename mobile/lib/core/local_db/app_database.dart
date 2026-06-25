@@ -53,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -120,6 +120,16 @@ class AppDatabase extends _$AppDatabase {
           // after the next save or server pull.
           if (from < 12) {
             await m.addColumn(workoutTemplateExercises, workoutTemplateExercises.sortOrder);
+          }
+          // V13: target set count per exercise in a workout session — nullable,
+          // pre-existing session exercises carry no set target.
+          if (from < 13) {
+            await m.addColumn(workoutSessionExercises, workoutSessionExercises.targetSets);
+          }
+          // V14: hidden flag on foods — quick-entry macros are stored as foods
+          // with hidden=true so they don't appear in the catalog or autocomplete.
+          if (from < 14) {
+            await m.addColumn(foods, foods.hidden);
           }
         },
       );

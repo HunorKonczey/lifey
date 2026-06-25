@@ -13,7 +13,9 @@ import 'widgets/log_recipe_sheet.dart';
 
 /// "Recipes" tab: tap to edit, quick "log as meal", and swipe-to-delete.
 class RecipesTab extends ConsumerWidget {
-  const RecipesTab({super.key});
+  const RecipesTab({super.key, this.topPadding = 0});
+
+  final double topPadding;
 
   Future<void> _logAsMeal(BuildContext context, Recipe recipe) {
     return showModalBottomSheet<void>(
@@ -58,6 +60,7 @@ class RecipesTab extends ConsumerWidget {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return RefreshIndicator(
+      displacement: topPadding,
       onRefresh: () => ref.read(recipeControllerProvider.notifier).refresh(),
       child: state.when(
         data: (recipes) {
@@ -69,7 +72,7 @@ class RecipesTab extends ConsumerWidget {
             );
           }
           return ListView.builder(
-            padding: EdgeInsets.fromLTRB(12, 4, 12, bottomPad + 88),
+            padding: EdgeInsets.fromLTRB(12, topPadding, 12, bottomPad + 88),
             itemCount: recipes.length,
             itemBuilder: (context, index) => _RecipeCard(
               recipe: recipes[index],

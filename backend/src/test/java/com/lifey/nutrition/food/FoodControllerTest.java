@@ -39,7 +39,7 @@ class FoodControllerTest {
     @Test
     void list_returnsOkWithJson() throws Exception {
         when(foodService.findAll())
-                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null)));
+                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false)));
 
         mockMvc.perform(get("/api/v1/foods"))
                 .andExpect(status().isOk())
@@ -50,10 +50,10 @@ class FoodControllerTest {
     @Test
     void create_returnsCreated() throws Exception {
         when(foodService.create(any()))
-                .thenReturn(new FoodResponse(7L, "Rice", 130.0, 2.7, null, null, null));
+                .thenReturn(new FoodResponse(7L, "Rice", 130.0, 2.7, null, null, null, false));
 
         mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Rice\",\"caloriesPer100g\":130,\"proteinPer100g\":2.7}"))
+                        .content("{\"name\":\"Rice\",\"caloriesPer100g\":130,\"proteinPer100g\":2.7,\"hidden\":false}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(7))
                 .andExpect(jsonPath("$.name").value("Rice"));
@@ -76,7 +76,7 @@ class FoodControllerTest {
                 .thenThrow(new DuplicateResourceException("A food named 'Rice' already exists"));
 
         mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Rice\",\"caloriesPer100g\":130,\"proteinPer100g\":2.7}"))
+                        .content("{\"name\":\"Rice\",\"caloriesPer100g\":130,\"proteinPer100g\":2.7,\"hidden\":false}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409));
     }

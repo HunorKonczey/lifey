@@ -16,7 +16,14 @@ import 'log_meal_screen.dart';
 /// scroll-triggered pagination over the local cache (see
 /// docs/14-pagination-plan.md).
 class MealsTab extends ConsumerStatefulWidget {
-  const MealsTab({super.key});
+  const MealsTab({
+    super.key,
+    this.topPadding = 0,
+    this.filter = DateRangeFilter.today,
+  });
+
+  final double topPadding;
+  final DateRangeFilter filter;
 
   @override
   ConsumerState<MealsTab> createState() => _MealsTabState();
@@ -27,8 +34,6 @@ class _MealsTabState extends ConsumerState<MealsTab> {
 
   /// Distance from the bottom (in px) at which the next page is requested.
   static const _loadMoreThreshold = 300.0;
-
-  DateRangeFilter _filter = DateRangeFilter.today;
 
   bool _nearBottom = false;
 
@@ -70,63 +75,56 @@ class _MealsTabState extends ConsumerState<MealsTab> {
 
     return state.when(
       data: (meals) {
-        if (meals.isEmpty) {
+        final filtered =
+            meals.where((m) => widget.filter.matches(m.dateTime)).toList();
+
+        if (meals.isEmpty || filtered.isEmpty) {
           return RefreshIndicator(
+            displacement: widget.topPadding,
             onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
             child: EmptyView(
               icon: Icons.lunch_dining_outlined,
-              title: l10n.noMealsLoggedYetTitle,
-              subtitle: l10n.tapPlusToLogOneMessage,
+              title: meals.isEmpty
+                  ? l10n.noMealsLoggedYetTitle
+                  : l10n.noMealsInRangeTitle,
+              subtitle: meals.isEmpty
+                  ? l10n.tapPlusToLogOneMessage
+                  : l10n.tryWiderDateFilterMessage,
             ),
           );
         }
-        final filtered = meals.where((m) => _filter.matches(m.dateTime)).toList();
-        return Column(
-          children: [
-            DateRangeFilterBar(
-              value: _filter,
-              onChanged: (f) => setState(() => _filter = f),
-            ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
-                child: filtered.isEmpty
-                    ? EmptyView(
-                        icon: Icons.lunch_dining_outlined,
-                        title: l10n.noMealsInRangeTitle,
-                        subtitle: l10n.tryWiderDateFilterMessage,
-                      )
-                    : NotificationListener<ScrollNotification>(
-                        onNotification: _handleScrollNotification,
-                        child: ListView.builder(
-                          padding: EdgeInsets.fromLTRB(12, 4, 12, bottomPad + 88),
-                          itemCount: filtered.length + (hasMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index >= filtered.length) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  ),
-                                ),
-                              );
-                            }
-                            final meal = filtered[index];
-                            return _MealCard(
-                              meal: meal,
-                              dateLabel: _dateLabel,
-                              onDelete: () => _delete(context, ref, meal),
-                              onEdit: () => _edit(context, meal),
-                            );
-                          },
-                        ),
+
+        return RefreshIndicator(
+          displacement: widget.topPadding,
+          onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleScrollNotification,
+            child: ListView.builder(
+              padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
+              itemCount: filtered.length + (hasMore ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index >= filtered.length) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-              ),
+                    ),
+                  );
+                }
+                final meal = filtered[index];
+                return _MealCard(
+                  meal: meal,
+                  dateLabel: _dateLabel,
+                  onDelete: () => _delete(context, ref, meal),
+                  onEdit: () => _edit(context, meal),
+                );
+              },
             ),
-          ],
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

@@ -14,6 +14,7 @@ class Foods extends Table {
   RealColumn get carbsPer100g => real().nullable()();
   RealColumn get fatPer100g => real().nullable()();
   TextColumn get barcode => text().nullable()();
+  BoolColumn get hidden => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {clientId};

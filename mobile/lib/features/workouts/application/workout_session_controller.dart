@@ -16,13 +16,13 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
   Future<String> logSession({
     required DateTime startedAt,
     DateTime? finishedAt,
-    required List<String> exerciseClientIds,
+    required List<PlannedExerciseInput> exercises,
     required List<ExerciseSetInput> sets,
   }) {
     return _repo.create(
       startedAt: startedAt,
       finishedAt: finishedAt,
-      exerciseClientIds: exerciseClientIds,
+      exercises: exercises,
       sets: sets,
     );
   }
@@ -31,14 +31,14 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
     String clientId, {
     required DateTime startedAt,
     DateTime? finishedAt,
-    required List<String> exerciseClientIds,
+    required List<PlannedExerciseInput> exercises,
     required List<ExerciseSetInput> sets,
   }) {
     return _repo.update(
       clientId,
       startedAt: startedAt,
       finishedAt: finishedAt,
-      exerciseClientIds: exerciseClientIds,
+      exercises: exercises,
       sets: sets,
     );
   }

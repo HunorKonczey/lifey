@@ -15,7 +15,9 @@ import 'log_session_screen.dart';
 
 /// "Templates" tab: tap "Start" to begin a session; overflow menu for edit/delete.
 class TemplatesTab extends ConsumerWidget {
-  const TemplatesTab({super.key});
+  const TemplatesTab({super.key, this.topPadding = 0});
+
+  final double topPadding;
 
   void _start(BuildContext context, WorkoutTemplate template) {
     Navigator.of(context, rootNavigator: true).push(
@@ -76,6 +78,7 @@ class TemplatesTab extends ConsumerWidget {
         );
 
     return RefreshIndicator(
+      displacement: topPadding,
       onRefresh: () =>
           ref.read(workoutTemplateControllerProvider.notifier).refresh(),
       child: state.when(
@@ -88,7 +91,7 @@ class TemplatesTab extends ConsumerWidget {
             );
           }
           return ListView.builder(
-            padding: EdgeInsets.fromLTRB(12, 4, 12, bottomPad + 88),
+            padding: EdgeInsets.fromLTRB(12, topPadding, 12, bottomPad + 88),
             itemCount: templates.length,
             itemBuilder: (context, index) {
               final template = templates[index];

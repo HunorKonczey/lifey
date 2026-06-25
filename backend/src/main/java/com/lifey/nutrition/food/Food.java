@@ -30,4 +30,7 @@ public class Food extends BaseEntity {
 
     @Column(name = "barcode")
     private String barcode;
+
+    @Column(nullable = false)
+    private boolean hidden;
 }

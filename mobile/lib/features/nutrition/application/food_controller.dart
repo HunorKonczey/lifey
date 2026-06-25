@@ -65,16 +65,33 @@ class FoodController extends StreamNotifier<List<Food>> {
     _resubscribe();
   }
 
-  Future<void> addFood({
+  Future<Food> addFood({
     required String name,
     required double calories,
     required double protein,
     double? carbs,
     double? fat,
     String? barcode,
-  }) {
-    return _repo.create(
-        name: name, calories: calories, protein: protein, carbs: carbs, fat: fat, barcode: barcode);
+    bool hidden = false,
+  }) async {
+    final clientId = await _repo.create(
+        name: name,
+        calories: calories,
+        protein: protein,
+        carbs: carbs,
+        fat: fat,
+        barcode: barcode,
+        hidden: hidden);
+    return Food(
+      clientId: clientId,
+      name: name,
+      caloriesPer100g: calories,
+      proteinPer100g: protein,
+      carbsPer100g: carbs,
+      fatPer100g: fat,
+      barcode: barcode,
+      hidden: hidden,
+    );
   }
 
   Future<void> updateFood(

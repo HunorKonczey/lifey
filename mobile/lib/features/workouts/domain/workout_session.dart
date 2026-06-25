@@ -19,10 +19,15 @@ class ExerciseSet {
 /// from a template at creation time — independent of how many [ExerciseSet]s
 /// have actually been logged for it.
 class SessionExercise {
-  const SessionExercise({required this.exerciseClientId, required this.exerciseName});
+  const SessionExercise({
+    required this.exerciseClientId,
+    required this.exerciseName,
+    this.targetSets,
+  });
 
   final String exerciseClientId;
   final String exerciseName;
+  final int? targetSets;
 }
 
 /// A logged workout session (`/workout-sessions`).

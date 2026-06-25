@@ -9,6 +9,7 @@ class Food {
     this.carbsPer100g,
     this.fatPer100g,
     this.barcode,
+    this.hidden = false,
   });
 
   final String clientId;
@@ -19,4 +20,5 @@ class Food {
   final double? carbsPer100g;
   final double? fatPer100g;
   final String? barcode;
+  final bool hidden;
 }

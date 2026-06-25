@@ -45,9 +45,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   /// While null, no session row exists yet for a freshly started workout.
   String? _sessionClientId;
 
-  /// Exercises planned for this session — template-seeded and/or ad-hoc added.
-  /// Names are resolved at render time from the exercise master list.
-  final Set<String> _plannedExerciseIds = {};
+  /// Exercises planned for this session — template-seeded and/or ad-hoc added,
+  /// each carrying an optional target set count. Names are resolved at render
+  /// time from the exercise master list.
+  final List<PlannedExerciseInput> _planned = [];
 
   final List<({Exercise exercise, int reps, double weight, DateTime performedAt})> _sets = [];
   bool _saving = false;
@@ -62,7 +63,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _finishedAt = session?.finishedAt;
     if (session != null) {
       _sessionClientId = session.clientId;
-      _plannedExerciseIds.addAll(session.exercises.map((e) => e.exerciseClientId));
+      _planned.addAll(session.exercises.map((e) => PlannedExerciseInput(
+            exerciseClientId: e.exerciseClientId,
+            targetSets: e.targetSets,
+          )));
       for (final set in session.sets) {
         // Only clientId + name are needed downstream; macros aren't sent on save.
         _sets.add((
@@ -76,7 +80,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       // stay in performedAt order — also re-asserted after every mutation.
       _sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
     } else if (widget.template != null) {
-      _plannedExerciseIds.addAll(widget.template!.exerciseClientIds);
+      _planned.addAll(widget.template!.exercises.map((te) => PlannedExerciseInput(
+            exerciseClientId: te.exerciseClientId,
+            targetSets: te.targetSets,
+          )));
     }
   }
 
@@ -116,7 +123,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         ));
         // Logging a set for an exercise implicitly plans it too, so it shows
         // up as a quick-add chip for the rest of the workout.
-        _plannedExerciseIds.add(draft.exercise.clientId);
+        if (!_planned.any((p) => p.exerciseClientId == draft.exercise.clientId)) {
+          _planned.add(PlannedExerciseInput(exerciseClientId: draft.exercise.clientId));
+        }
       });
       await _autoSave();
     }
@@ -148,7 +157,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           weight: draft.weight,
           performedAt: DateTime.now(),
         ));
-        _plannedExerciseIds.add(draft.exercise.clientId);
+        if (!_planned.any((p) => p.exerciseClientId == draft.exercise.clientId)) {
+          _planned.add(PlannedExerciseInput(exerciseClientId: draft.exercise.clientId));
+        }
       });
       await _autoSave();
     }
@@ -180,7 +191,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           weight: draft.weight,
           performedAt: source.performedAt,
         );
-        _plannedExerciseIds.add(draft.exercise.clientId);
+        if (!_planned.any((p) => p.exerciseClientId == draft.exercise.clientId)) {
+          _planned.add(PlannedExerciseInput(exerciseClientId: draft.exercise.clientId));
+        }
       });
       await _autoSave();
     }
@@ -214,15 +227,20 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   }
 
   Future<void> _addPlannedExercise() async {
-    final exercise = await showModalBottomSheet<Exercise>(
+    final draft = await showModalBottomSheet<PlannedExerciseDraft>(
       context: context,
-    useRootNavigator: true,
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => AddExerciseToSessionSheet(excludeIds: _plannedExerciseIds),
+      builder: (_) => AddExerciseToSessionSheet(
+        excludeIds: {for (final p in _planned) p.exerciseClientId},
+      ),
     );
-    if (exercise != null) {
-      setState(() => _plannedExerciseIds.add(exercise.clientId));
+    if (draft != null) {
+      setState(() => _planned.add(PlannedExerciseInput(
+            exerciseClientId: draft.exercise.clientId,
+            targetSets: draft.targetSets,
+          )));
       if (_sessionClientId != null) await _autoSave();
     }
   }
@@ -244,13 +262,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _sessionClientId = await notifier.logSession(
           startedAt: _startedAt,
           finishedAt: _finishedAt,
-          exerciseClientIds: _plannedExerciseIds.toList(),
+          exercises: _planned,
           sets: sets);
     } else {
       await notifier.updateSession(existingId,
           startedAt: _startedAt,
           finishedAt: _finishedAt,
-          exerciseClientIds: _plannedExerciseIds.toList(),
+          exercises: _planned,
           sets: sets);
     }
   }
@@ -305,7 +323,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       await importService.importInto(
         sessionClientId: _sessionClientId!,
         startedAt: _startedAt,
-        exerciseClientIds: _plannedExerciseIds.toList(),
+        exercises: _planned,
         sets: sets,
         workout: workout,
       );
@@ -459,7 +477,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           Text(l10n.tapExerciseToLogSetMessage,
               style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 8),
-          if (_plannedExerciseIds.isEmpty)
+          if (_planned.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(l10n.noExercisesPlannedMessage),
@@ -469,12 +487,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               spacing: 8,
               runSpacing: 4,
               children: [
-                for (final id in _plannedExerciseIds)
-                  if (exercisesById[id] != null)
+                for (final p in _planned)
+                  if (exercisesById[p.exerciseClientId] != null)
                     ActionChip(
                       avatar: const Icon(Icons.add, size: 18),
-                      label: Text(exercisesById[id]!.name),
-                      onPressed: () => _addSet(initial: exercisesById[id]),
+                      label: Text(
+                        p.targetSets != null
+                            ? '${exercisesById[p.exerciseClientId]!.name} · ${l10n.setsCountLabel(p.targetSets!)}'
+                            : exercisesById[p.exerciseClientId]!.name,
+                      ),
+                      onPressed: () => _addSet(initial: exercisesById[p.exerciseClientId]),
                     ),
               ],
             ),

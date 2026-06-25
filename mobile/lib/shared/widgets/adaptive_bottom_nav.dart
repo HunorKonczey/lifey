@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_tokens.dart';
@@ -136,9 +138,10 @@ class _ExpandedBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
+        color: scheme.surfaceContainerHigh.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(AppRadius.nav),
         boxShadow: [
           BoxShadow(
@@ -148,19 +151,22 @@ class _ExpandedBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            for (int i = 0; i < destinations.length; i++)
-              _NavItem(
-                destination: destinations[i],
-                selected: i == selectedIndex,
-                onTap: () => onTap(i),
-                scheme: scheme,
-              ),
-          ],
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              for (int i = 0; i < destinations.length; i++)
+                _NavItem(
+                  destination: destinations[i],
+                  selected: i == selectedIndex,
+                  onTap: () => onTap(i),
+                  scheme: scheme,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -186,9 +192,10 @@ class _CollapsedPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
+        color: scheme.surfaceContainerHigh.withValues(alpha: 0.88),
         borderRadius: AppRadius.pill,
         boxShadow: [
           BoxShadow(
@@ -198,28 +205,31 @@ class _CollapsedPill extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (int i = 0; i < destinations.length; i++) ...[
-              if (i > 0) const SizedBox(width: 22),
-              GestureDetector(
-                onTap: () => onTap(i),
-                behavior: HitTestBehavior.opaque,
-                child: Icon(
-                  i == selectedIndex
-                      ? destinations[i].selectedIcon
-                      : destinations[i].icon,
-                  size: 25,
-                  color: i == selectedIndex
-                      ? scheme.primary
-                      : scheme.onSurfaceVariant,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (int i = 0; i < destinations.length; i++) ...[
+                if (i > 0) const SizedBox(width: 22),
+                GestureDetector(
+                  onTap: () => onTap(i),
+                  behavior: HitTestBehavior.opaque,
+                  child: Icon(
+                    i == selectedIndex
+                        ? destinations[i].selectedIcon
+                        : destinations[i].icon,
+                    size: 25,
+                    color: i == selectedIndex
+                        ? scheme.primary
+                        : scheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

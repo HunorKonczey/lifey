@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../shared/widgets/pill_tab_bar.dart';
 import '../../../shared/widgets/shell_fab.dart';
+import '../application/exercise_controller.dart';
+import '../domain/exercise_enums.dart';
 import 'create_template_screen.dart';
 import 'exercises_tab.dart';
 import 'log_session_screen.dart';
@@ -28,6 +30,8 @@ class WorkoutsScreen extends ConsumerStatefulWidget {
 class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  DateRangeFilter _sessionFilter = DateRangeFilter.week;
+  String? _exerciseCategoryFilter;
 
   @override
   void initState() {
@@ -94,10 +98,72 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
     }
   }
 
+  // Empty-string sentinel represents "All" for the exercises category filter
+  // (PopupMenuButton<String> doesn't fire onSelected for null values).
+  static const _kCategoryAll = '';
+
+  Widget? _buildTrailingFilter(BuildContext context, AppLocalizations l10n) {
+    switch (_tabController.index) {
+      case 0:
+        return DateRangeFilterButton(
+          value: _sessionFilter,
+          onChanged: (f) => setState(() => _sessionFilter = f),
+        );
+      case 2:
+        final exercises =
+            ref.watch(exerciseControllerProvider).value ?? const [];
+        final categories = kMuscleGroups
+            .where((c) => exercises.any((e) => e.category == c))
+            .toList();
+        final scheme = Theme.of(context).colorScheme;
+        final label = _exerciseCategoryFilter == null
+            ? l10n.allFilterLabel
+            : muscleGroupLabel(l10n, _exerciseCategoryFilter!);
+        return LabeledFilterButton(
+          label: label,
+          onSelected: (v) => setState(
+              () => _exerciseCategoryFilter = v == _kCategoryAll ? null : v),
+          items: [
+            PopupMenuItem<String>(
+              value: _kCategoryAll,
+              child: Row(children: [
+                SizedBox(
+                  width: 20,
+                  child: _exerciseCategoryFilter == null
+                      ? Icon(Icons.check, size: 16, color: scheme.primary)
+                      : null,
+                ),
+                const SizedBox(width: 4),
+                Text(l10n.allFilterLabel),
+              ]),
+            ),
+            ...categories.map((c) => PopupMenuItem<String>(
+                  value: c,
+                  child: Row(children: [
+                    SizedBox(
+                      width: 20,
+                      child: _exerciseCategoryFilter == c
+                          ? Icon(Icons.check, size: 16, color: scheme.primary)
+                          : null,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(muscleGroupLabel(l10n, c)),
+                  ]),
+                )),
+          ],
+        );
+      default:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final statusTop = MediaQuery.paddingOf(context).top;
+    final barTop = statusTop + 8.0;
+    // AppBar expanded height + PillTabBar height (38 content + 8*2 padding)
+    final contentTop = barTop + 58.0 + 54.0;
 
     ref.listen(activeShellTabProvider, (_, next) {
       if (next != 2) return;
@@ -111,26 +177,24 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
       body: ScrollCollapseListener(
         child: Stack(
           children: [
-            // ── Content — top spacer tracks the combined floating header ──
-            Column(
-              children: [
-                _HeaderSpacer(statusTop: statusTop),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: const [
-                      SessionsTab(),
-                      TemplatesTab(),
-                      ExercisesTab(),
-                    ],
+            // ── Content fills the screen; each tab handles its own top padding ─
+            Positioned.fill(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  SessionsTab(topPadding: contentTop, filter: _sessionFilter),
+                  TemplatesTab(topPadding: contentTop),
+                  ExercisesTab(
+                    topPadding: contentTop,
+                    categoryFilter: _exerciseCategoryFilter,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
 
             // ── Floating combined header (AppBar + PillTabBar as one unit) ─
             Positioned(
-              top: statusTop + 8.0,
+              top: barTop,
               left: 0,
               right: 0,
               child: Column(
@@ -138,7 +202,10 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: AdaptiveAppBar(title: l10n.workoutsTitle),
+                    child: AdaptiveAppBar(
+                      title: l10n.workoutsTitle,
+                      trailing: _buildTrailingFilter(context, l10n),
+                    ),
                   ),
                   PillTabBar(
                     controller: _tabController,
@@ -154,30 +221,6 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
           ],
         ),
       ),
-    );
-  }
-}
-
-// Spacer that matches the combined height of the floating header.
-// Rebuilds on collapse state changes so content stays flush beneath the header.
-//
-// Heights: AdaptiveAppBar 58→44 (expanded→collapsed) + PillTabBar 54 (fixed:
-// 38px content + 8px top + 8px bottom padding) + 8px top offset from status bar.
-class _HeaderSpacer extends StatelessWidget {
-  const _HeaderSpacer({required this.statusTop});
-
-  final double statusTop;
-
-  static const double _pillBarH = 54.0;
-  static const double _topOffset = 8.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final collapsed = NavCollapseScope.collapsedOf(context);
-    return AnimatedContainer(
-      duration: AppDuration.collapse,
-      curve: AppCurve.collapse,
-      height: statusTop + _topOffset + (collapsed ? 44.0 : 58.0) + _pillBarH,
     );
   }
 }

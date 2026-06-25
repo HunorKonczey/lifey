@@ -184,6 +184,15 @@
     "addFoodButton": "Add food",
     "@addFoodButton": {"description": "Button to add a food entry to a meal"},
 
+    "addMacrosButton": "Add macros",
+    "@addMacrosButton": {"description": "Button to add a quick macro entry (without selecting a food from the catalog)"},
+
+    "addMacrosTitle": "Quick macro entry",
+    "@addMacrosTitle": {"description": "Title of the add-macros bottom sheet"},
+
+    "macrosQuantityHelperText": "Optional — leave blank to log the macros as-is",
+    "@macrosQuantityHelperText": {"description": "Helper text under the quantity field in the add-macros sheet explaining that grams is optional"},
+
     "mealTotalLabel": "Meal total",
     "@mealTotalLabel": {"description": "Label for the meal macro total summary card"},
 
