@@ -112,6 +112,7 @@ class FoodRepository {
         'carbsPer100g': carbs,
         'fatPer100g': fat,
         'barcode': barcode,
+        'hidden': false,
       },
     );
   }

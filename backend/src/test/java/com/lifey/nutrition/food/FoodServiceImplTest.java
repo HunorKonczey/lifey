@@ -31,7 +31,7 @@ class FoodServiceImplTest {
 
     @Test
     void findAll_mapsFoods() {
-        when(repository.findAll()).thenReturn(List.of(food(1L, "Chicken", 165, 31)));
+        when(repository.findAllByHiddenFalseOrderByName()).thenReturn(List.of(food(1L, "Chicken", 165, 31)));
 
         List<FoodResponse> result = service.findAll();
 
@@ -41,6 +41,13 @@ class FoodServiceImplTest {
             assertThat(r.caloriesPer100g()).isEqualTo(165.0);
             assertThat(r.proteinPer100g()).isEqualTo(31.0);
         });
+    }
+
+    @Test
+    void findAll_excludesHiddenFoods() {
+        when(repository.findAllByHiddenFalseOrderByName()).thenReturn(List.of());
+
+        assertThat(service.findAll()).isEmpty();
     }
 
     @Test
@@ -131,12 +138,65 @@ class FoodServiceImplTest {
     }
 
     @Test
+    void delete_softDeletesFood() {
+        Food food = food(5L, "Banana", 89, 1.1);
+        when(repository.findById(5L)).thenReturn(Optional.of(food));
+
+        service.delete(5L);
+
+        assertThat(food.isHidden()).isTrue();
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
     void delete_throwsWhenMissing() {
-        when(repository.existsById(99L)).thenReturn(false);
+        when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
-        verify(repository, never()).deleteById(any());
+    }
+
+    @Test
+    void create_hiddenFoodSkipsNameCheck() {
+        FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, true);
+        when(repository.save(any(Food.class))).thenAnswer(inv -> {
+            Food f = inv.getArgument(0);
+            f.setId(8L);
+            return f;
+        });
+
+        FoodResponse result = service.create(request);
+
+        assertThat(result.id()).isEqualTo(8L);
+        verify(repository, never()).findByNameIgnoreCase(any());
+    }
+
+    @Test
+    void create_hiddenExistingFoodDoesNotBlock() {
+        FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, false);
+        Food hiddenRice = food(1L, "Rice", 130, 2.7);
+        hiddenRice.setHidden(true);
+        when(repository.findByNameIgnoreCase("Rice")).thenReturn(Optional.of(hiddenRice));
+        when(repository.save(any(Food.class))).thenAnswer(inv -> {
+            Food f = inv.getArgument(0);
+            f.setId(9L);
+            return f;
+        });
+
+        FoodResponse result = service.create(request);
+
+        assertThat(result.id()).isEqualTo(9L);
+    }
+
+    @Test
+    void update_hiddenFoodSkipsNameCheck() {
+        Food existing = food(3L, "Old", 100, 10);
+        when(repository.findById(3L)).thenReturn(Optional.of(existing));
+        FoodRequest request = new FoodRequest("Rice", 200.0, 25.0, null, null, null, true);
+
+        service.update(3L, request);
+
+        verify(repository, never()).findByNameIgnoreCase(any());
     }
 
     private static Food food(Long id, String name, double cal, double protein) {

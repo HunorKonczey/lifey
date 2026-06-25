@@ -22,7 +22,7 @@ public class FoodServiceImpl implements FoodService {
     @Override
     @Transactional(readOnly = true)
     public List<FoodResponse> findAll() {
-        return repository.findAll().stream()
+        return repository.findAllByHiddenFalseOrderByName().stream()
                 .map(FoodMapper::toResponse)
                 .toList();
     }
@@ -45,7 +45,9 @@ public class FoodServiceImpl implements FoodService {
     @Override
     public FoodResponse update(Long id, FoodRequest request) {
         Food food = getOrThrow(id);
-        requireUniqueName(request.name().trim(), id);
+        if (!request.hidden()) {
+            requireUniqueName(request.name().trim(), id);
+        }
         FoodMapper.apply(food, request);
         return FoodMapper.toResponse(food);
     }
@@ -53,21 +55,29 @@ public class FoodServiceImpl implements FoodService {
     /**
      * Foods are matched by name (case-insensitive) when logging meals and recipes,
      * so two entries with the same name would be indistinguishable in those pickers.
+     * Hidden foods (recipe/meal ingredient shadows) are excluded: they are never
+     * shown in pickers, so a hidden "Egg" must not block a visible food named "Egg".
      */
     private void requireUniqueName(String name, Long ignoreId) {
         repository.findByNameIgnoreCase(name)
+                .filter(existing -> !existing.isHidden())
                 .filter(existing -> !existing.getId().equals(ignoreId))
                 .ifPresent(_ -> {
                     throw new DuplicateResourceException("A food named '" + name + "' already exists");
                 });
     }
 
+    /**
+     * Soft-deletes the food by setting {@code hidden = true} instead of removing
+     * the row. Hard deletion would violate the FK on {@code meal_entries.food_id}
+     * whenever the food has ever been logged — which is the normal case for any
+     * food the user has actually used. Setting hidden removes the food from all
+     * catalogue pickers while keeping historical meal/recipe data intact.
+     */
     @Override
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Food not found: " + id);
-        }
-        repository.deleteById(id);
+        Food food = getOrThrow(id);
+        food.setHidden(true);
     }
 
     private Food getOrThrow(Long id) {

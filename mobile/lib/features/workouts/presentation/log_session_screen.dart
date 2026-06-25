@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,25 +8,24 @@ import 'package:intl/intl.dart';
 
 import '../../../core/health/apple_workout.dart';
 import '../../../core/health/health_controller.dart';
+import '../../../core/health/health_service.dart';
 import '../../../core/health/health_workout_import_service.dart';
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
-import '../domain/exercise.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
-import 'widgets/add_set_sheet.dart';
+import 'widgets/exercise_session_card.dart';
 
 /// Full-screen form for logging a session, or editing one when [session] is given.
 ///
-/// When [template] is given (starting a fresh session from it), the template's
-/// exercises are added to the session immediately as quick-add chips — no set
-/// needs to be logged for an exercise for it to be "in" the session. When
-/// [session] is given (resuming/editing), the session's own persisted planned
-/// exercises (`session.exercises`) are used instead, so this works the same
-/// whether or not the session originally came from a template.
+/// Exercises are represented as [ExerciseBlock]s — one card per exercise —
+/// each carrying a list of [SetRow]s. Only rows with [SetRow.doneAt] set are
+/// persisted as [ExerciseSetInput]s. Rows without doneAt are UI-only plan rows
+/// (generated from targetSets or added ad-hoc) that do not survive a session close.
 class LogSessionScreen extends ConsumerStatefulWidget {
   const LogSessionScreen({super.key, this.session, this.template});
 
@@ -35,6 +37,7 @@ class LogSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
+  // Used only for formatting the Apple workout date in the pairing dialog.
   static final _label = DateFormat('EEE, MMM d · HH:mm');
 
   late DateTime _startedAt;
@@ -42,18 +45,38 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   /// The persisted session's clientId. Set when editing an existing session,
   /// or once a brand-new session has been created via the first [_persist].
-  /// While null, no session row exists yet for a freshly started workout.
   String? _sessionClientId;
 
-  /// Exercises planned for this session — template-seeded and/or ad-hoc added,
-  /// each carrying an optional target set count. Names are resolved at render
-  /// time from the exercise master list.
-  final List<PlannedExerciseInput> _planned = [];
+  /// One block per planned exercise. Each block's rows are either done
+  /// (doneAt set → will be persisted) or plan (doneAt null → UI only).
+  final List<ExerciseBlock> _blocks = [];
 
-  final List<({Exercise exercise, int reps, double weight, DateTime performedAt})> _sets = [];
   bool _saving = false;
+  Timer? _ticker;
+  DateTime _now = DateTime.now();
+
+  // ── Near-live heart rate (Apple Health, running sessions only) ──
+  // HealthKit doesn't stream live samples to an iPhone app, so we poll the
+  // latest synced sample. We only reveal the readout once the value has
+  // actually moved a few times — that's our proxy for "there's a workout (or
+  // something) driving the heart rate", and it avoids surfacing a single stale
+  // resting sample.
+  static const _kHrPollInterval = Duration(seconds: 5);
+  static const _kHrFreshWindow = Duration(minutes: 5);
+  static const _kHrRevealAfterChanges = 3;
+
+  Timer? _hrTicker;
+  int? _currentHeartRate; // latest bpm; only shown once [_showHeartRate]
+  int? _lastSeenHeartRate; // for change detection
+  DateTime? _lastHrSampleAt; // dedupe repeated reads of the same sample
+  int _hrChangeCount = 0;
+  bool _showHeartRate = false;
 
   bool get _isEditing => widget.session != null;
+
+  // ---------------------------------------------------------------------------
+  // Init / dispose
+  // ---------------------------------------------------------------------------
 
   @override
   void initState() {
@@ -61,149 +84,249 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final session = widget.session;
     _startedAt = session?.startedAt ?? DateTime.now();
     _finishedAt = session?.finishedAt;
+
     if (session != null) {
       _sessionClientId = session.clientId;
-      _planned.addAll(session.exercises.map((e) => PlannedExerciseInput(
-            exerciseClientId: e.exerciseClientId,
-            targetSets: e.targetSets,
-          )));
-      for (final set in session.sets) {
-        // Only clientId + name are needed downstream; macros aren't sent on save.
-        _sets.add((
-          exercise: Exercise(clientId: set.exerciseClientId, name: set.exerciseName),
-          reps: set.reps,
-          weight: set.weight,
-          performedAt: set.performedAt,
+      // Group persisted sets by exercise, sorted by performedAt.
+      final setsByEx = <String, List<ExerciseSet>>{};
+      for (final s in session.sets) {
+        setsByEx.putIfAbsent(s.exerciseClientId, () => []).add(s);
+      }
+      for (final sets in setsByEx.values) {
+        sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
+      }
+      // Build one block per SessionExercise, preserving plan order.
+      for (final se in session.exercises) {
+        final doneSets = setsByEx[se.exerciseClientId] ?? [];
+        final rows = <SetRow>[
+          for (final s in doneSets)
+            SetRow(weight: s.weight, reps: s.reps, doneAt: s.performedAt),
+        ];
+        final remaining = (se.targetSets ?? 0) - doneSets.length;
+        if (remaining > 0) {
+          rows.addAll(List.generate(remaining, (_) => SetRow()));
+        } else if (doneSets.isEmpty) {
+          rows.add(SetRow());
+        }
+        _blocks.add(ExerciseBlock(
+          exerciseClientId: se.exerciseClientId,
+          exerciseName: se.exerciseName,
+          targetSets: se.targetSets,
+          rows: rows,
         ));
       }
-      // Rest time is a delta between consecutive sets, so this list must
-      // stay in performedAt order — also re-asserted after every mutation.
-      _sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
     } else if (widget.template != null) {
-      _planned.addAll(widget.template!.exercises.map((te) => PlannedExerciseInput(
-            exerciseClientId: te.exerciseClientId,
-            targetSets: te.targetSets,
-          )));
-    }
-  }
-
-  Future<DateTime?> _pickDateTime(DateTime initial) async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(2000),
-      lastDate: now,
-    );
-    if (date == null || !mounted) return null;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
-    );
-    final picked = DateTime(date.year, date.month, date.day,
-        time?.hour ?? initial.hour, time?.minute ?? initial.minute);
-    return picked.isAfter(now) ? now : picked;
-  }
-
-  Future<void> _addSet({Exercise? initial}) async {
-    final draft = await showModalBottomSheet<SetDraft>(
-      context: context,
-    useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => AddSetSheet(initialExercise: initial),
-    );
-    if (draft != null) {
-      setState(() {
-        _sets.add((
-          exercise: draft.exercise,
-          reps: draft.reps,
-          weight: draft.weight,
-          performedAt: DateTime.now(),
+      for (final te in widget.template!.exercises) {
+        // Name resolved at render time from the catalog (TemplateExercise has no name).
+        _blocks.add(ExerciseBlock(
+          exerciseClientId: te.exerciseClientId,
+          exerciseName: '',
+          targetSets: te.targetSets,
+          rows: _generateRows(te.targetSets),
         ));
-        // Logging a set for an exercise implicitly plans it too, so it shows
-        // up as a quick-add chip for the rest of the workout.
-        if (!_planned.any((p) => p.exerciseClientId == draft.exercise.clientId)) {
-          _planned.add(PlannedExerciseInput(exerciseClientId: draft.exercise.clientId));
-        }
+      }
+    }
+
+    if (_finishedAt == null) {
+      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() => _now = DateTime.now());
       });
-      await _autoSave();
+      _hrTicker = Timer.periodic(_kHrPollInterval, (_) => _pollHeartRate());
+      _pollHeartRate(); // don't wait a full interval for the first read
     }
   }
 
-  /// Double-tapping a set card opens the add-set sheet pre-filled with that
-  /// set's exercise/reps/weight — the fast "log another one like this"
-  /// gesture. The timestamp is deliberately not pre-filled: it's stamped
-  /// fresh on submit, which is also what makes consecutive-set rest time
-  /// meaningful.
-  Future<void> _duplicateSet(int index) async {
-    final source = _sets[index];
-    final draft = await showModalBottomSheet<SetDraft>(
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    _hrTicker?.cancel();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Near-live heart rate
+  // ---------------------------------------------------------------------------
+
+  /// Polls Apple Health for the latest heart-rate sample and, once the value
+  /// has changed [_kHrRevealAfterChanges] times, reveals it in the top bar.
+  /// No-ops on Android, when the session is finished, or when the user hasn't
+  /// enabled the Apple Health connection.
+  Future<void> _pollHeartRate() async {
+    if (!mounted || _finishedAt != null) return;
+    final enabled = ref.read(appleHealthControllerProvider).value ?? false;
+    if (!enabled) return;
+
+    final sample =
+        await ref.read(healthServiceProvider).latestHeartRate(within: _kHrFreshWindow);
+    if (!mounted || sample == null) return;
+
+    // Skip if HealthKit handed us the same sample again (no new data synced).
+    if (_lastHrSampleAt != null && !sample.timestamp.isAfter(_lastHrSampleAt!)) {
+      return;
+    }
+    _lastHrSampleAt = sample.timestamp;
+
+    final bpm = sample.bpm.round();
+    if (_lastSeenHeartRate != null && bpm != _lastSeenHeartRate) {
+      _hrChangeCount++;
+    }
+    _lastSeenHeartRate = bpm;
+
+    setState(() {
+      _currentHeartRate = bpm;
+      if (_hrChangeCount >= _kHrRevealAfterChanges) _showHeartRate = true;
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
+  List<SetRow> _generateRows(int? targetSets) {
+    final count = (targetSets != null && targetSets > 0) ? targetSets : 1;
+    return List.generate(count, (_) => SetRow());
+  }
+
+  DateTime? _lastDoneAt() {
+    DateTime? last;
+    for (final block in _blocks) {
+      for (final row in block.rows) {
+        if (row.doneAt != null && (last == null || row.doneAt!.isAfter(last))) {
+          last = row.doneAt;
+        }
+      }
+    }
+    return last;
+  }
+
+  String _formatElapsed() {
+    final duration = (_finishedAt ?? _now).difference(_startedAt);
+    final h = duration.inHours;
+    final m = duration.inMinutes % 60;
+    final s = duration.inSeconds % 60;
+    if (h > 0) {
+      return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  List<PlannedExerciseInput> _buildPlanned() => _blocks
+      .map((b) => PlannedExerciseInput(
+            exerciseClientId: b.exerciseClientId,
+            targetSets: b.targetSets,
+          ))
+      .toList();
+
+  List<ExerciseSetInput> _buildSets() => [
+        for (final block in _blocks)
+          for (final row in block.rows)
+            if (row.isDone)
+              ExerciseSetInput(
+                exerciseClientId: block.exerciseClientId,
+                reps: row.reps ?? 0,
+                weight: row.weight ?? 0,
+                performedAt: row.doneAt!,
+              ),
+      ];
+
+  void _navigateToDashboard() {
+    context.go('/dashboard');
+    Navigator.of(context).pop();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Block / row mutations
+  // ---------------------------------------------------------------------------
+
+  void _handleRowMarkDone(int bi, int ri) {
+    setState(() => _blocks[bi].rows[ri].doneAt = DateTime.now());
+    _autoSave();
+  }
+
+  void _handleRowReopen(int bi, int ri) {
+    setState(() => _blocks[bi].rows[ri].doneAt = null);
+    _autoSave();
+  }
+
+  void _handleRowEdit(int bi, int ri, double? weight, int? reps) {
+    setState(() {
+      _blocks[bi].rows[ri].weight = weight;
+      _blocks[bi].rows[ri].reps = reps;
+    });
+    _autoSave();
+  }
+
+  void _handleRowDelete(int bi, int ri) {
+    setState(() => _blocks[bi].rows.removeAt(ri));
+    if (_sessionClientId != null) _autoSave();
+  }
+
+  void _handleRowDuplicate(int bi, int ri) {
+    final row = _blocks[bi].rows[ri];
+    final nextIdx = ri + 1;
+    setState(() {
+      if (nextIdx < _blocks[bi].rows.length &&
+          _blocks[bi].rows[nextIdx].weight == null &&
+          _blocks[bi].rows[nextIdx].reps == null) {
+        _blocks[bi].rows[nextIdx].weight = row.weight;
+        _blocks[bi].rows[nextIdx].reps = row.reps;
+      } else {
+        _blocks[bi].rows.insert(nextIdx, SetRow(weight: row.weight, reps: row.reps));
+      }
+    });
+    _autoSave();
+  }
+
+  void _handleAddSet(int bi) {
+    setState(() => _blocks[bi].rows.add(SetRow()));
+  }
+
+  Future<void> _handleRemoveExercise(int bi) async {
+    final hasDone = _blocks[bi].rows.any((r) => r.isDone);
+    if (hasDone) {
+      final l10n = AppLocalizations.of(context)!;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.removeExerciseTitle),
+          content: Text(l10n.removeExerciseConfirmMessage),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.cancelButton)),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.removeButton)),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+    setState(() => _blocks.removeAt(bi));
+    if (_sessionClientId != null) await _autoSave();
+  }
+
+  Future<void> _handleAddExercise() async {
+    final excluded = {for (final b in _blocks) b.exerciseClientId};
+    final draft = await showModalBottomSheet<PlannedExerciseDraft>(
       context: context,
-    useRootNavigator: true,
+      useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => AddSetSheet(
-        initialExercise: source.exercise,
-        initialReps: source.reps,
-        initialWeight: source.weight,
-      ),
+      builder: (_) => AddExerciseToSessionSheet(excludeIds: excluded),
     );
-    if (draft != null) {
-      setState(() {
-        _sets.add((
-          exercise: draft.exercise,
-          reps: draft.reps,
-          weight: draft.weight,
-          performedAt: DateTime.now(),
-        ));
-        if (!_planned.any((p) => p.exerciseClientId == draft.exercise.clientId)) {
-          _planned.add(PlannedExerciseInput(exerciseClientId: draft.exercise.clientId));
-        }
-      });
-      await _autoSave();
-    }
+    if (draft == null || !mounted) return;
+    setState(() => _blocks.add(ExerciseBlock(
+          exerciseClientId: draft.exercise.clientId,
+          exerciseName: draft.exercise.name,
+          targetSets: draft.targetSets,
+          rows: _generateRows(draft.targetSets),
+        )));
+    if (_sessionClientId != null) await _autoSave();
   }
 
-  /// Single-tapping a set card opens the same sheet pre-filled with that
-  /// set's exercise/reps/weight, but edits it in place rather than adding a
-  /// new one — the timestamp (and therefore rest-time math) is left
-  /// untouched.
-  Future<void> _editSet(int index) async {
-    final source = _sets[index];
-    final draft = await showModalBottomSheet<SetDraft>(
-      context: context,
-    useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => AddSetSheet(
-        initialExercise: source.exercise,
-        initialReps: source.reps,
-        initialWeight: source.weight,
-        isEditing: true,
-      ),
-    );
-    if (draft != null) {
-      setState(() {
-        _sets[index] = (
-          exercise: draft.exercise,
-          reps: draft.reps,
-          weight: draft.weight,
-          performedAt: source.performedAt,
-        );
-        if (!_planned.any((p) => p.exerciseClientId == draft.exercise.clientId)) {
-          _planned.add(PlannedExerciseInput(exerciseClientId: draft.exercise.clientId));
-        }
-      });
-      await _autoSave();
-    }
-  }
+  // ---------------------------------------------------------------------------
+  // Persistence
+  // ---------------------------------------------------------------------------
 
-  /// Persists in the background right after an in-place edit (e.g. logging a
-  /// set), so nothing is lost if the user closes the app mid-workout. Reuses
-  /// the same _saving + snackbar pattern as the top Save button — guarding on
-  /// it avoids racing a manual save, and resetting it in `finally` means the
-  /// top button is only briefly disabled rather than stuck. Never navigates.
   Future<void> _autoSave() async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -211,14 +334,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final l10n = AppLocalizations.of(context)!;
     try {
       await _persist();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.sessionAutoSavedMessage),
-          duration: const Duration(seconds: 1),
-          behavior: SnackBarBehavior.floating,
-          width: 160,
-        ),
-      );
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.sessionAutoSavedMessage),
+        duration: const Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        width: 160,
+      ));
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotSaveSessionMessage)));
     } finally {
@@ -226,113 +347,122 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
-  Future<void> _addPlannedExercise() async {
-    final draft = await showModalBottomSheet<PlannedExerciseDraft>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => AddExerciseToSessionSheet(
-        excludeIds: {for (final p in _planned) p.exerciseClientId},
-      ),
-    );
-    if (draft != null) {
-      setState(() => _planned.add(PlannedExerciseInput(
-            exerciseClientId: draft.exercise.clientId,
-            targetSets: draft.targetSets,
-          )));
-      if (_sessionClientId != null) await _autoSave();
-    }
-  }
-
-  /// Persists the current form state: creates the session on the first call
-  /// (caching its clientId in [_sessionClientId]) or updates the existing one
-  /// thereafter. No UI side effects — throws on failure for callers to handle.
   Future<void> _persist() async {
-    final sets = _sets
-        .map((s) => ExerciseSetInput(
-            exerciseClientId: s.exercise.clientId,
-            reps: s.reps,
-            weight: s.weight,
-            performedAt: s.performedAt))
-        .toList();
     final notifier = ref.read(workoutSessionControllerProvider.notifier);
     final existingId = _sessionClientId;
     if (existingId == null) {
       _sessionClientId = await notifier.logSession(
-          startedAt: _startedAt,
-          finishedAt: _finishedAt,
-          exercises: _planned,
-          sets: sets);
+        startedAt: _startedAt,
+        finishedAt: _finishedAt,
+        exercises: _buildPlanned(),
+        sets: _buildSets(),
+      );
     } else {
-      await notifier.updateSession(existingId,
-          startedAt: _startedAt,
-          finishedAt: _finishedAt,
-          exercises: _planned,
-          sets: sets);
+      await notifier.updateSession(
+        existingId,
+        startedAt: _startedAt,
+        finishedAt: _finishedAt,
+        exercises: _buildPlanned(),
+        sets: _buildSets(),
+      );
     }
   }
 
-  /// Manual "Import from Apple Health": reads the just-finished Apple strength
-  /// workout, confirms with the user, then closes + enriches THIS session with
-  /// its calories / avg HR. Only offered while this is an in-progress session
-  /// (see the visibility gate in [build]). iOS-only via the toggle/provider.
-  Future<void> _importFromAppleHealth() async {
+  /// Stamps finishedAt = now, stops the ticker, and persists.
+  /// Does NOT navigate — the caller decides where to go.
+  Future<void> _persistFinished() async {
+    _finishedAt = DateTime.now();
+    _ticker?.cancel();
+    _ticker = null;
+    _hrTicker?.cancel();
+    _hrTicker = null;
+    await _persist();
+  }
+
+  /// Finish button handler — implements the full 5.6 Apple Health flow.
+  Future<void> _finishWorkout() async {
     if (_saving) return;
+    setState(() => _saving = true);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     final importService = ref.read(healthWorkoutImportServiceProvider);
 
-    setState(() => _saving = true);
     try {
-      final AppleWorkout? workout = await importService.findImportable();
-      if (!mounted) return;
-      if (workout == null) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.noRecentAppleWorkoutMessage)));
+      final appleEnabled = ref.read(appleHealthControllerProvider).value ?? false;
+
+      if (!appleEnabled) {
+        await _persistFinished();
+        if (!mounted) return;
+        _navigateToDashboard();
         return;
       }
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.pairAppleWorkoutTitle),
-          content: Text(l10n.pairAppleWorkoutMessage(
-            // Full date + time, not just time-of-day: the import window is a
-            // day wide now, so "Started 14:30" alone would be ambiguous about
-            // which day.
-            _label.format(workout.startDate.toLocal()),
-            workout.activeCalories?.round().toString() ?? '–',
-            workout.averageHeartRate?.round().toString() ?? '–',
-          )),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.cancelButton)),
-            TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.pairButton)),
-          ],
-        ),
-      );
-      if (confirmed != true || !mounted) return;
 
-      final sets = _sets
-          .map((s) => ExerciseSetInput(
-              exerciseClientId: s.exercise.clientId,
-              reps: s.reps,
-              weight: s.weight,
-              performedAt: s.performedAt))
-          .toList();
-      await importService.importInto(
-        sessionClientId: _sessionClientId!,
-        startedAt: _startedAt,
-        exercises: _planned,
-        sets: sets,
-        workout: workout,
-      );
-      // Importing always finishes the session, so land back on the dashboard
-      // — and pop this screen off whichever branch's Navigator stack it was
-      // pushed onto, otherwise switching back to that tab finds it waiting.
-      if (mounted) {
-        context.go('/dashboard');
-        Navigator.of(context).pop();
+      // Apple Health is enabled — search for an importable workout.
+      final AppleWorkout? workout = await importService.findImportable();
+      if (!mounted) return;
+
+      if (workout != null) {
+        // Pairing dialog.
+        final pair = await showDialog<bool?>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.pairAppleWorkoutTitle),
+            content: Text(l10n.pairAppleWorkoutMessage(
+              _label.format(workout.startDate.toLocal()),
+              workout.activeCalories?.round().toString() ?? '–',
+              workout.averageHeartRate?.round().toString() ?? '–',
+            )),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(l10n.finishWithoutPairingButton),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(l10n.pairAndFinishButton),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || pair == null) return; // barrier dismiss = stay
+        await _persistFinished();
+        if (!mounted) return;
+        if (pair) {
+          await importService.importInto(
+            sessionClientId: _sessionClientId!,
+            startedAt: _startedAt,
+            exercises: _buildPlanned(),
+            sets: _buildSets(),
+            workout: workout,
+          );
+          if (!mounted) return;
+        }
+        _navigateToDashboard();
+      } else {
+        // No Apple workout found — dialog instead of snackbar.
+        final finish = await showDialog<bool?>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.noAppleWorkoutTitle),
+            content: Text(l10n.noAppleWorkoutMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(l10n.cancelButton),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(l10n.finishAnywayButton),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || finish != true) return; // Cancel = stay
+        await _persistFinished();
+        if (!mounted) return;
+        _navigateToDashboard();
       }
     } catch (_) {
       if (mounted) {
@@ -343,212 +473,472 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
-  Future<void> _save() async {
-    if (_saving) return; // guard against a fast double-tap creating two sessions
-    setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final isFinishing = _finishedAt != null;
-    final couldNotSaveSessionMessage = AppLocalizations.of(context)!.couldNotSaveSessionMessage;
-    try {
-      await _persist();
-      // A finished session is done for good, so land back on the dashboard
-      // rather than the list/detail screen this was pushed from — but it
-      // still has to be popped off that branch's own Navigator stack too,
-      // otherwise switching back to that tab later finds this screen still
-      // sitting there waiting instead of the list.
-      if (isFinishing) {
-        if (mounted) context.go('/dashboard');
-        navigator.pop();
-      } else {
-        navigator.pop();
-      }
-    } catch (_) {
-      setState(() => _saving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(couldNotSaveSessionMessage)),
-      );
-    }
+  // ---------------------------------------------------------------------------
+  // Top bar
+  // ---------------------------------------------------------------------------
+
+  Widget _buildTopBar(
+      BuildContext context, ColorScheme scheme, AppLocalizations l10n, String title) {
+    return Container(
+      height: 58,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.30),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            color: scheme.surfaceContainer.withValues(alpha: 0.92),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Center(
+                      child: Icon(Icons.arrow_back, size: 22, color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurface,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.timer, size: 18, color: scheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatElapsed(),
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: scheme.onSurface,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Near-live heart rate, shown only once it's clearly changing.
+                if (_showHeartRate && _currentHeartRate != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.favorite, size: 18, color: context.metricColors.heart),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$_currentHeartRate',
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: scheme.onSurface,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     final template = widget.template;
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    // Resolve exercise names for template-seeded blocks (TemplateExercise has no name).
     final exercisesById = ref.watch(exerciseControllerProvider).maybeWhen(
           data: (list) => {for (final e in list) e.clientId: e},
-          orElse: () => const <String, Exercise>{},
+          orElse: () => const {},
         );
-    // Apple Health import is offered only on an in-progress, already-persisted
-    // session and only when the "Connect Apple Health" toggle is on (the
-    // provider is false on Android, so this is implicitly iOS-only).
-    final appleHealthEnabled = ref.watch(appleHealthControllerProvider).value ?? false;
-    final canImportFromHealth =
-        _isEditing && _finishedAt == null && _sessionClientId != null && appleHealthEnabled;
+    for (final block in _blocks) {
+      if (block.exerciseName.isEmpty) {
+        block.exerciseName = exercisesById[block.exerciseClientId]?.name ?? '';
+      }
+    }
+
+    final lastDoneAt = _lastDoneAt();
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+    final statusTop = MediaQuery.paddingOf(context).top;
+    final barTop = statusTop + 8.0;
+    final contentTop = barTop + 58.0 + 8.0;
+
+    // Finish button is only shown for running (not-yet-finished) sessions.
+    final showFinishButton = _finishedAt == null;
+    // ListView needs extra bottom room so content isn't hidden behind the sticky button.
+    final listBottomPad = showFinishButton ? (safeBottom + 24 + 54 + 16) : (safeBottom + 16);
+
+    final title = _isEditing
+        ? l10n.editWorkoutTitle
+        : (template != null ? template.name : l10n.logWorkoutTitle);
 
     return Scaffold(
-      appBar: AppBar(
-        scrolledUnderElevation: 0,
-        title: Text(_isEditing
-            ? l10n.editWorkoutTitle
-            : (template != null ? template.name : l10n.logWorkoutTitle)),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : Text(l10n.saveButton),
+      body: Stack(
+        children: [
+          // ── Scrollable content ──
+          ListView(
+            padding: EdgeInsets.fromLTRB(16, contentTop, 16, listBottomPad),
+            children: [
+              // Health stat cards (Apple-imported finished sessions only).
+              if (widget.session?.finishedAt != null && widget.session!.fromAppleHealth) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HealthStatCard(
+                        icon: Icons.local_fire_department,
+                        iconColor: context.metricColors.calories,
+                        value: widget.session!.activeCalories?.round().toString() ?? '–',
+                        label: l10n.activeKcalLabel,
+                      ),
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: _HealthStatCard(
+                        icon: Icons.favorite,
+                        iconColor: context.metricColors.heart,
+                        value: widget.session!.averageHeartRate?.round().toString() ?? '–',
+                        label: l10n.avgBpmLabel,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 13),
+              ],
+
+              // Rest banner (running sessions, after first completed set).
+              if (_finishedAt == null && lastDoneAt != null) ...[
+                _RestBanner(lastSetAt: lastDoneAt, now: _now),
+                const SizedBox(height: 13),
+              ],
+
+              // Exercise cards.
+              for (int bi = 0; bi < _blocks.length; bi++) ...[
+                ExerciseSessionCard(
+                  key: ValueKey(_blocks[bi].exerciseClientId),
+                  block: _blocks[bi],
+                  onRowMarkDone: (ri) => _handleRowMarkDone(bi, ri),
+                  onRowReopen: (ri) => _handleRowReopen(bi, ri),
+                  onRowEdit: (ri, w, r) => _handleRowEdit(bi, ri, w, r),
+                  onRowDelete: (ri) => _handleRowDelete(bi, ri),
+                  onRowDuplicate: (ri) => _handleRowDuplicate(bi, ri),
+                  onAddSet: () => _handleAddSet(bi),
+                  onRemoveExercise: () => _handleRemoveExercise(bi),
+                ),
+                const SizedBox(height: 13),
+              ],
+
+              // Dashed "Add exercise" button.
+              _AddExerciseButton(onTap: _handleAddExercise, scheme: scheme),
+            ],
+          ),
+
+          // ── Floating top bar ──
+          Positioned(
+            top: barTop,
+            left: 12,
+            right: 12,
+            child: _buildTopBar(context, scheme, l10n, title),
+          ),
+
+          // ── Sticky "Finish workout" button ──
+          if (showFinishButton)
+            Positioned(
+              bottom: safeBottom + 24,
+              left: 16,
+              right: 16,
+              child: SizedBox(
+                height: 54,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _finishWorkout,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
+                    disabledBackgroundColor: scheme.primary.withValues(alpha: 0.6),
+                    disabledForegroundColor: scheme.onPrimary.withValues(alpha: 0.7),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    textStyle: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  icon: _saving
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: scheme.onPrimary.withValues(alpha: 0.7),
+                          ),
+                        )
+                      : const Icon(Icons.check, size: 20),
+                  label: Text(l10n.finishWorkoutButton),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dashed "Add exercise" button
+// ---------------------------------------------------------------------------
+
+class _AddExerciseButton extends StatelessWidget {
+  const _AddExerciseButton({required this.onTap, required this.scheme});
+
+  final VoidCallback onTap;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: CustomPaint(
+        painter: _DashedBorderPainter(
+          color: scheme.outline,
+          radius: AppRadius.input,
+          strokeWidth: 1.5,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.input),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add, size: 21, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 7),
+              Text(
+                AppLocalizations.of(context)!.addExerciseTitle,
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({
+    required this.color,
+    required this.radius,
+    required this.strokeWidth,
+  });
+
+  final Color color;
+  final double radius;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final inset = strokeWidth / 2;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(inset, inset, size.width - strokeWidth, size.height - strokeWidth),
+      Radius.circular(radius),
+    );
+    const dashLen = 7.0;
+    const gapLen = 5.0;
+
+    for (final metric in (Path()..addRRect(rrect)).computeMetrics()) {
+      var distance = 0.0;
+      var drawing = true;
+      while (distance < metric.length) {
+        final next =
+            (distance + (drawing ? dashLen : gapLen)).clamp(0.0, metric.length);
+        if (drawing) canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance = next;
+        drawing = !drawing;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter old) =>
+      old.color != color || old.strokeWidth != strokeWidth || old.radius != radius;
+}
+
+// ---------------------------------------------------------------------------
+// Rest banner
+// ---------------------------------------------------------------------------
+
+class _RestBanner extends StatelessWidget {
+  const _RestBanner({required this.lastSetAt, required this.now});
+
+  final DateTime lastSetAt;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final elapsed = now.difference(lastSetAt);
+    final m = elapsed.inMinutes;
+    final s = (elapsed.inSeconds % 60).toString().padLeft(2, '0');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppRadius.input),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.40)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.hourglass_top, size: 22, color: scheme.primary),
+          const SizedBox(width: 10),
+          Text(
+            AppLocalizations.of(context)!.restLabel,
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            '$m:$s',
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: scheme.primary,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Health stat card (active kcal / avg bpm)
+// ---------------------------------------------------------------------------
+
+class _HealthStatCard extends StatelessWidget {
+  const _HealthStatCard({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadius.input),
+      ),
+      child: Row(
         children: [
-          Text(l10n.startedLabel, style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () async {
-              final picked = await _pickDateTime(_startedAt);
-              if (picked != null) {
-                setState(() => _startedAt = picked);
-                if (_sessionClientId != null) await _autoSave();
-              }
-            },
-            icon: const Icon(Icons.play_arrow),
-            label: Text(_label.format(_startedAt)),
-          ),
-          const SizedBox(height: 16),
-          Text(l10n.finishedOptionalLabel,
-              style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: 8),
-          Row(
+          Icon(icon, size: 21, color: iconColor),
+          const SizedBox(width: 9),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await _pickDateTime(_finishedAt ?? DateTime.now());
-                    if (picked != null) {
-                      setState(() => _finishedAt = picked);
-                      // Setting a finish time finishes the workout outright —
-                      // no separate Save tap needed, so persist and navigate
-                      // away exactly like the Save button would.
-                      await _save();
-                    }
-                  },
-                  icon: const Icon(Icons.flag),
-                  label: Text(_finishedAt == null
-                      ? l10n.notSetInProgressMessage
-                      : _label.format(_finishedAt!)),
+              Text(
+                value,
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: scheme.onSurface,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-              if (_finishedAt != null)
-                IconButton(
-                  tooltip: l10n.clearTooltip,
-                  icon: const Icon(Icons.close),
-                  onPressed: () async {
-                    setState(() => _finishedAt = null);
-                    if (_sessionClientId != null) await _autoSave();
-                  },
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
                 ),
-            ],
-          ),
-          if (canImportFromHealth) ...[
-            const SizedBox(height: 16),
-            FilledButton.tonalIcon(
-              onPressed: _saving ? null : _importFromAppleHealth,
-              icon: const Icon(Icons.favorite),
-              label: Text(l10n.importFromAppleHealthButton),
-            ),
-          ],
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(l10n.exercisesLabel, style: Theme.of(context).textTheme.labelLarge),
-              TextButton.icon(
-                onPressed: _addPlannedExercise,
-                icon: const Icon(Icons.add),
-                label: Text(l10n.addExerciseTitle),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(l10n.tapExerciseToLogSetMessage,
-              style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 8),
-          if (_planned.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(l10n.noExercisesPlannedMessage),
-            )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                for (final p in _planned)
-                  if (exercisesById[p.exerciseClientId] != null)
-                    ActionChip(
-                      avatar: const Icon(Icons.add, size: 18),
-                      label: Text(
-                        p.targetSets != null
-                            ? '${exercisesById[p.exerciseClientId]!.name} · ${l10n.setsCountLabel(p.targetSets!)}'
-                            : exercisesById[p.exerciseClientId]!.name,
-                      ),
-                      onPressed: () => _addSet(initial: exercisesById[p.exerciseClientId]),
-                    ),
-              ],
-            ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(l10n.setsLabel, style: Theme.of(context).textTheme.labelLarge),
-              TextButton.icon(
-                onPressed: _addSet,
-                icon: const Icon(Icons.add),
-                label: Text(l10n.addSetTitle),
-              ),
-            ],
-          ),
-          if (_sets.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(l10n.noSetsAddedYetMessage),
-            )
-          else
-            ..._sets.asMap().entries.map((entry) {
-              final index = entry.key;
-              final s = entry.value;
-              final rest = index == 0 ? null : s.performedAt.difference(_sets[index - 1].performedAt);
-              return GestureDetector(
-                onTap: () => _editSet(index),
-                onDoubleTap: () => _duplicateSet(index),
-                child: Card(
-                  elevation: 0,
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: ListTile(
-                    title: Text(s.exercise.name),
-                    subtitle: Text([
-                      l10n.repsTimesWeightLabel(s.reps.toString(), s.weight.toStringAsFixed(1)),
-                      if (rest != null)
-                        l10n.restTimeLabel(
-                          rest.inMinutes.toString(),
-                          (rest.inSeconds % 60).toString().padLeft(2, '0'),
-                        ),
-                    ].join(' · ')),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () async {
-                        setState(() => _sets.removeAt(index));
-                        if (_sessionClientId != null) await _autoSave();
-                      },
-                    ),
-                  ),
-                ),
-              );
-            }),
         ],
       ),
     );

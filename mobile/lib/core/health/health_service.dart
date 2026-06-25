@@ -149,6 +149,36 @@ class HealthService {
     return workouts;
   }
 
+  /// The single most recent `HealthDataType.HEART_RATE` sample (bpm) whose
+  /// timestamp falls within [within] of now, or null on Android / no
+  /// permission / no recent sample.
+  ///
+  /// This backs the live "current heart rate" readout shown while a session is
+  /// running. HealthKit doesn't push live samples to a third-party iPhone app:
+  /// the Apple Watch syncs heart-rate samples into the store in batches with a
+  /// short delay, so callers poll this on an interval to get a "near-live"
+  /// value rather than a true real-time stream. [within] bounds how stale a
+  /// sample we're willing to surface — beyond it we'd rather show nothing than
+  /// a heart rate from before the workout started.
+  Future<({double bpm, DateTime timestamp})?> latestHeartRate({
+    Duration within = const Duration(minutes: 5),
+  }) async {
+    if (!isAvailable) return null;
+    await _ensureConfigured();
+    final now = DateTime.now();
+    final points = await _health.getHealthDataFromTypes(
+      types: const [HealthDataType.HEART_RATE],
+      startTime: now.subtract(within),
+      endTime: now,
+    );
+    if (points.isEmpty) return null;
+    points.sort((a, b) => b.dateTo.compareTo(a.dateTo));
+    final latest = points.first;
+    final value = latest.value;
+    if (value is! NumericHealthValue) return null;
+    return (bpm: value.numericValue.toDouble(), timestamp: latest.dateTo);
+  }
+
   /// Mean of the heart-rate samples in `[from, to]`, or null if there are none.
   Future<double?> _averageHeartRate(DateTime from, DateTime to) async {
     final points = await _health.getHealthDataFromTypes(

@@ -353,5 +353,22 @@
     "trendLast8WeeksLabel": "8 hetes trend",
     "noSetsForExerciseMessage": "Még nincs naplózott szett",
 
-    "prSetValueLabel": "{weight} kg × {reps}"
+    "prSetValueLabel": "{weight} kg × {reps}",
+
+    "restLabel": "Pihenő",
+    "finishWorkoutButton": "Edzés befejezése",
+    "noAppleWorkoutTitle": "Nincs Apple edzés",
+    "noAppleWorkoutMessage": "Nem találtunk közelmúltbeli Apple Health edzést az edzésed közelében.",
+    "finishAnywayButton": "Befejezés mindenképp",
+    "finishWithoutPairingButton": "Befejezés párosítás nélkül",
+    "pairAndFinishButton": "Párosítás és befejezés",
+    "removeExerciseMenuItem": "Gyakorlat eltávolítása",
+    "removeExerciseTitle": "Eltávolítod a gyakorlatot?",
+    "removeExerciseConfirmMessage": "Ez törli az ehhez a gyakorlathoz naplózott szetteket is.",
+    "removeButton": "Eltávolítás",
+    "activeKcalLabel": "aktív kcal",
+    "avgBpmLabel": "átl. bpm",
+    "setColumnLabel": "SZETT",
+    "kgColumnLabel": "KG",
+    "repsColumnLabel": "ISM."
 }

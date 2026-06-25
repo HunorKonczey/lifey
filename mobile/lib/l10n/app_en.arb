@@ -1010,5 +1010,53 @@
             "weight": {"type": "String"},
             "reps": {"type": "String"}
         }
-    }
+    },
+
+    "restLabel": "Rest",
+    "@restLabel": {"description": "Label for the rest-timer banner shown between sets on the active workout screen"},
+
+    "finishWorkoutButton": "Finish workout",
+    "@finishWorkoutButton": {"description": "Label for the sticky button that finishes the active workout session"},
+
+    "noAppleWorkoutTitle": "No Apple workout",
+    "@noAppleWorkoutTitle": {"description": "Dialog title shown when no matching Apple Health workout is found at session finish"},
+
+    "noAppleWorkoutMessage": "No recent Apple Health workout was found near this session.",
+    "@noAppleWorkoutMessage": {"description": "Dialog body when no matching Apple Health workout is found at session finish"},
+
+    "finishAnywayButton": "Finish anyway",
+    "@finishAnywayButton": {"description": "Dialog action: finish the session without pairing an Apple Health workout"},
+
+    "finishWithoutPairingButton": "Finish without",
+    "@finishWithoutPairingButton": {"description": "Dialog action: finish the session without pairing the found Apple Health workout"},
+
+    "pairAndFinishButton": "Pair & finish",
+    "@pairAndFinishButton": {"description": "Dialog action: pair the found Apple Health workout and finish the session"},
+
+    "removeExerciseMenuItem": "Remove exercise",
+    "@removeExerciseMenuItem": {"description": "Overflow menu item on an exercise card to remove the exercise from the session"},
+
+    "removeExerciseTitle": "Remove exercise?",
+    "@removeExerciseTitle": {"description": "Confirmation dialog title when removing an exercise that has logged sets"},
+
+    "removeExerciseConfirmMessage": "This will also delete the logged sets for this exercise.",
+    "@removeExerciseConfirmMessage": {"description": "Confirmation dialog body when removing an exercise that has logged sets"},
+
+    "removeButton": "Remove",
+    "@removeButton": {"description": "Generic remove action button"},
+
+    "activeKcalLabel": "active kcal",
+    "@activeKcalLabel": {"description": "Label under the active-calorie stat card on an Apple Health–imported session"},
+
+    "avgBpmLabel": "avg bpm",
+    "@avgBpmLabel": {"description": "Label under the average heart rate stat card on an Apple Health–imported session"},
+
+    "setColumnLabel": "SET",
+    "@setColumnLabel": {"description": "Column header for the set-number column in the exercise card set table"},
+
+    "kgColumnLabel": "KG",
+    "@kgColumnLabel": {"description": "Column header for the weight column in the exercise card set table"},
+
+    "repsColumnLabel": "REPS",
+    "@repsColumnLabel": {"description": "Column header for the repetitions column in the exercise card set table"}
 }
