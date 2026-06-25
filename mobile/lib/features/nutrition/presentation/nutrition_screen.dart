@@ -24,7 +24,7 @@ class _NutritionPendingTabNotifier extends Notifier<int?> {
 }
 
 /// Set this before navigating to `/nutrition` to open a specific sub-tab
-/// (0 = Foods, 1 = Meals, 2 = Recipes, 3 = Macros). Cleared by [NutritionScreen] after use.
+/// (0 = Meals, 1 = Recipes, 2 = Foods, 3 = Macros). Cleared by [NutritionScreen] after use.
 final nutritionPendingTabProvider =
     NotifierProvider<_NutritionPendingTabNotifier, int?>(
       _NutritionPendingTabNotifier.new,
@@ -136,11 +136,11 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   ({IconData icon, String label, VoidCallback onPressed})? _fab(AppLocalizations l10n) {
     switch (_tabController.index) {
       case 0:
-        return (icon: Icons.add, label: l10n.foodFabLabel, onPressed: _addFood);
-      case 1:
         return (icon: Icons.add, label: l10n.mealFabLabel, onPressed: _logMeal);
-      case 2:
+      case 1:
         return (icon: Icons.add, label: l10n.recipeFabLabel, onPressed: _newRecipe);
+      case 2:
+        return (icon: Icons.add, label: l10n.foodFabLabel, onPressed: _addFood);
       default: // 3 = Macros — read-only, no FAB
         return null;
     }
@@ -182,9 +182,9 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  FoodsTab(topPadding: contentTop),
                   MealsTab(topPadding: contentTop, filter: _mealsFilter),
                   RecipesTab(topPadding: contentTop),
+                  FoodsTab(topPadding: contentTop),
                   MacrosTab(topPadding: contentTop, filter: _macrosFilter),
                 ],
               ),
@@ -213,7 +213,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                         ),
                       ],
                       trailing: switch (_tabController.index) {
-                        1 => DateRangeFilterButton(
+                        0 => DateRangeFilterButton(
                             value: _mealsFilter,
                             onChanged: (f) =>
                                 setState(() => _mealsFilter = f),
@@ -230,9 +230,9 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                   PillTabBar(
                     controller: _tabController,
                     tabs: [
-                      Tab(text: l10n.foodsLabel),
                       Tab(text: l10n.mealsTabLabel),
                       Tab(text: l10n.recipesTabLabel),
+                      Tab(text: l10n.foodsLabel),
                       Tab(text: l10n.macrosTabLabel),
                     ],
                   ),

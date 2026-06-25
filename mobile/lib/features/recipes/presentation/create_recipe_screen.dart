@@ -28,6 +28,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   late final TextEditingController _description;
   final List<({Food food, double grams})> _ingredients = [];
   bool _saving = false;
+  late bool _favorite;
 
   bool get _isEditing => widget.recipe != null;
 
@@ -48,6 +49,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     final recipe = widget.recipe;
     _name = TextEditingController(text: recipe?.name ?? '');
     _description = TextEditingController(text: recipe?.description ?? '');
+    _favorite = recipe?.favorite ?? false;
     if (recipe != null) {
       for (final ing in recipe.ingredients) {
         final q = ing.quantityInGrams;
@@ -142,12 +144,14 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
           widget.recipe!.clientId,
           name: _name.text.trim(),
           description: description.isEmpty ? null : description,
+          favorite: _favorite,
           ingredients: ingredients,
         );
       } else {
         await notifier.createRecipe(
           name: _name.text.trim(),
           description: description.isEmpty ? null : description,
+          favorite: _favorite,
           ingredients: ingredients,
         );
       }
@@ -235,6 +239,46 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                     vertical: 14,
                   ),
                   alignLabelWithHint: true,
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Favorite toggle ─────────────────────────────────────────
+              GestureDetector(
+                onTap: () => setState(() => _favorite = !_favorite),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _favorite ? Icons.star : Icons.star_border,
+                        size: 20,
+                        color: _favorite ? scheme.primary : scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _favorite ? l10n.removeFavorite : l10n.markFavorite,
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        value: _favorite,
+                        onChanged: (v) => setState(() => _favorite = v),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 

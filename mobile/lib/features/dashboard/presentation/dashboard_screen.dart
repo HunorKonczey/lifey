@@ -120,7 +120,7 @@ class DashboardScreen extends ConsumerWidget {
                   todaySteps: todaySteps,
                   onWorkoutTap: (clientId) => _openWorkout(context, ref, clientId),
                   onMealsTap: () {
-                    ref.read(nutritionPendingTabProvider.notifier).set(1);
+                    ref.read(nutritionPendingTabProvider.notifier).set(0);
                     context.go('/nutrition');
                   },
                 ),
