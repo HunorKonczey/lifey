@@ -29,7 +29,10 @@ class WorkoutTemplateRepository {
         _db.workoutTemplateExercises.templateClientId.equalsExp(_db.workoutTemplates.clientId),
       ),
     ])
-      ..orderBy([OrderingTerm.asc(_db.workoutTemplates.name)]);
+      ..orderBy([
+        OrderingTerm.asc(_db.workoutTemplates.name),
+        OrderingTerm.asc(_db.workoutTemplateExercises.sortOrder),
+      ]);
 
     final pendingOps$ = _db.select(_db.pendingOperations).watch();
     return combineLatest2(query.watch(), pendingOps$, (rows, ops) {
@@ -51,25 +54,25 @@ class WorkoutTemplateRepository {
     });
   }
 
-  Future<void> create({required String name, required List<String> exerciseClientIds}) async {
+  Future<void> create({required String name, required List<TemplateExercise> exercises}) async {
     final clientId = newClientId();
     await _db.transaction(() async {
       await _db.into(_db.workoutTemplates).insert(
             WorkoutTemplatesCompanion.insert(clientId: clientId, name: name),
           );
-      await _insertLinks(clientId, exerciseClientIds);
+      await _insertLinks(clientId, exercises);
     });
     await _outbox.enqueueCreate(
       clientId: clientId,
       entityType: 'workout_template',
-      payload: _payload(name: name, exerciseClientIds: exerciseClientIds),
+      payload: _payload(name: name, exercises: exercises),
     );
   }
 
   Future<void> update(
     String clientId, {
     required String name,
-    required List<String> exerciseClientIds,
+    required List<TemplateExercise> exercises,
   }) async {
     await _db.transaction(() async {
       await (_db.update(_db.workoutTemplates)..where((t) => t.clientId.equals(clientId)))
@@ -77,12 +80,12 @@ class WorkoutTemplateRepository {
       await (_db.delete(_db.workoutTemplateExercises)
             ..where((t) => t.templateClientId.equals(clientId)))
           .go();
-      await _insertLinks(clientId, exerciseClientIds);
+      await _insertLinks(clientId, exercises);
     });
     await _outbox.enqueueUpdate(
       clientId: clientId,
       entityType: 'workout_template',
-      payload: _payload(name: name, exerciseClientIds: exerciseClientIds),
+      payload: _payload(name: name, exercises: exercises),
     );
   }
 
@@ -104,23 +107,25 @@ class WorkoutTemplateRepository {
     }
   }
 
-  Future<void> _insertLinks(String templateClientId, List<String> exerciseClientIds) async {
-    for (final exerciseClientId in exerciseClientIds) {
+  Future<void> _insertLinks(String templateClientId, List<TemplateExercise> exercises) async {
+    for (var i = 0; i < exercises.length; i++) {
       await _db.into(_db.workoutTemplateExercises).insert(
             WorkoutTemplateExercisesCompanion.insert(
               clientId: newClientId(),
               templateClientId: templateClientId,
-              exerciseClientId: exerciseClientId,
+              exerciseClientId: exercises[i].exerciseClientId,
+              targetSets: Value(exercises[i].targetSets),
+              sortOrder: Value(i),
             ),
           );
     }
   }
 
-  Map<String, dynamic> _payload({required String name, required List<String> exerciseClientIds}) {
+  Map<String, dynamic> _payload({required String name, required List<TemplateExercise> exercises}) {
     return {
       'name': name,
-      'exercises': exerciseClientIds
-          .map((id) => {'exerciseId': clientRef(id), 'targetSets': null})
+      'exercises': exercises
+          .map((e) => {'exerciseId': clientRef(e.exerciseClientId), 'targetSets': e.targetSets})
           .toList(),
     };
   }

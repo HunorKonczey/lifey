@@ -46,6 +46,7 @@ class AdaptiveAppBar extends StatelessWidget {
     this.subtitle,
     this.onBack,
     this.actions = const [],
+    this.trailing,
   });
 
   /// Main title — shown in both states, animates size.
@@ -59,6 +60,9 @@ class AdaptiveAppBar extends StatelessWidget {
 
   /// Right-side icon actions. Same icons in both states, size animates.
   final List<AdaptiveAppBarAction> actions;
+
+  /// Optional widget placed after the icon actions (e.g. a "Save" text button).
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -129,6 +133,10 @@ class AdaptiveAppBar extends StatelessWidget {
                   collapsed: collapsed,
                   scheme: scheme,
                 ),
+              ],
+              if (trailing != null) ...[
+                const SizedBox(width: 4),
+                trailing!,
               ],
             ],
           ),

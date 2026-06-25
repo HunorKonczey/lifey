@@ -1,26 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
+import '../domain/exercise.dart';
+import '../domain/exercise_enums.dart';
 import '../domain/workout_template.dart';
 
-/// Full-screen form for creating a workout template, or editing one when
-/// [template] is given: a name + chosen exercises.
+// ---------------------------------------------------------------------------
+// Entry model (mutable; lives only in screen state)
+// ---------------------------------------------------------------------------
+
+class _ExerciseEntry {
+  _ExerciseEntry({required this.clientId, this.targetSets});
+  final String clientId;
+  int? targetSets;
+}
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+
 class CreateTemplateScreen extends ConsumerStatefulWidget {
   const CreateTemplateScreen({super.key, this.template});
 
   final WorkoutTemplate? template;
 
   @override
-  ConsumerState<CreateTemplateScreen> createState() =>
-      _CreateTemplateScreenState();
+  ConsumerState<CreateTemplateScreen> createState() => _CreateTemplateScreenState();
 }
 
 class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
   final _name = TextEditingController();
-  final Set<String> _selected = {};
+  late final List<_ExerciseEntry> _exercises;
   bool _saving = false;
 
   bool get _isEditing => widget.template != null;
@@ -31,7 +47,11 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
     final template = widget.template;
     if (template != null) {
       _name.text = template.name;
-      _selected.addAll(template.exerciseClientIds);
+      _exercises = template.exercises
+          .map((te) => _ExerciseEntry(clientId: te.exerciseClientId, targetSets: te.targetSets))
+          .toList();
+    } else {
+      _exercises = [];
     }
   }
 
@@ -41,104 +61,517 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
     super.dispose();
   }
 
+  // ── Actions ───────────────────────────────────────────────────────────────
+
   Future<void> _save() async {
-    if (_saving) return; // guard against a fast double-tap creating two templates
+    if (_saving) return;
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     if (_name.text.trim().isEmpty) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.enterANameMessage)));
       return;
     }
-    if (_selected.isEmpty) {
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.pickAtLeastOneExerciseMessage)));
+    if (_exercises.isEmpty) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.pickAtLeastOneExerciseMessage)));
       return;
     }
     setState(() => _saving = true);
     final navigator = Navigator.of(context);
     try {
       final notifier = ref.read(workoutTemplateControllerProvider.notifier);
+      final templateExercises = _exercises
+          .map((e) => TemplateExercise(exerciseClientId: e.clientId, targetSets: e.targetSets))
+          .toList();
       if (_isEditing) {
         await notifier.updateTemplate(
           clientId: widget.template!.clientId,
           name: _name.text.trim(),
-          exerciseClientIds: _selected.toList(),
+          exercises: templateExercises,
         );
       } else {
         await notifier.createTemplate(
           name: _name.text.trim(),
-          exerciseClientIds: _selected.toList(),
+          exercises: templateExercises,
         );
       }
       navigator.pop();
     } catch (_) {
       setState(() => _saving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.couldNotSaveTemplateMessage)),
+      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotSaveTemplateMessage)));
+    }
+  }
+
+  Future<void> _editSets(int index) async {
+    final current = _exercises[index].targetSets;
+    final controller = TextEditingController(text: current?.toString() ?? '');
+    final l10n = AppLocalizations.of(context)!;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Target sets'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(hintText: '3'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancelButton),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    final text = controller.text.trim();
+    controller.dispose();
+    if (ok != true || !mounted) return;
+    setState(() {
+      _exercises[index] = _ExerciseEntry(
+        clientId: _exercises[index].clientId,
+        targetSets: text.isEmpty ? null : int.tryParse(text),
       );
+    });
+  }
+
+  void _removeExercise(int index) => setState(() => _exercises.removeAt(index));
+
+  void _openExercisePicker(List<Exercise> allExercises) {
+    final existing = _exercises.map((e) => e.clientId).toSet();
+    final available = allExercises.where((e) => !existing.contains(e.clientId)).toList();
+
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.everyExerciseAlreadyInSessionMessage)),
+      );
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => _ExercisePickerSheet(
+        exercises: available,
+        onPick: (exercise) {
+          Navigator.pop(ctx);
+          setState(() => _exercises.add(_ExerciseEntry(clientId: exercise.clientId)));
+        },
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final statusTop = MediaQuery.paddingOf(context).top;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final contentTop = statusTop + 8.0 + 58.0 + 12.0;
+
+    final allExercises = ref.watch(exerciseControllerProvider).maybeWhen(
+          data: (exercises) => exercises,
+          orElse: () => const <Exercise>[],
+        );
+    final exercisesMap = {for (final e in allExercises) e.clientId: e};
+
+    return Scaffold(
+      backgroundColor: scheme.surface,
+      body: Stack(
+        children: [
+          // ── Content ──────────────────────────────────────────────────
+          ReorderableListView(
+            padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad + 24),
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) newIndex--;
+                final item = _exercises.removeAt(oldIndex);
+                _exercises.insert(newIndex, item);
+              });
+            },
+            header: _buildHeader(context, l10n, scheme, allExercises),
+            footer: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: _buildDashedButton(context, l10n, scheme, allExercises),
+            ),
+            children: [
+              for (var i = 0; i < _exercises.length; i++)
+                _buildExerciseRow(context, i, exercisesMap, l10n, scheme),
+            ],
+          ),
+
+          // ── Floating app bar ──────────────────────────────────────────
+          Positioned(
+            top: statusTop + 8,
+            left: 12,
+            right: 12,
+            child: AdaptiveAppBar(
+              title: _isEditing ? l10n.editTemplateTitle : l10n.newTemplateTitle,
+              onBack: () => Navigator.of(context).pop(),
+              trailing: GestureDetector(
+                onTap: _saving ? null : _save,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  child: _saving
+                      ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: scheme.primary,
+                          ),
+                        )
+                      : Text(
+                          l10n.saveButton,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: scheme.primary,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    AppLocalizations l10n,
+    ColorScheme scheme,
+    List<Exercise> allExercises,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // NAME label
+        Text(
+          l10n.templateNameLabel.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.0,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Name input
+        TextField(
+          controller: _name,
+          textCapitalization: TextCapitalization.sentences,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: scheme.onSurface,
+          ),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            filled: true,
+            fillColor: scheme.surfaceContainerLow,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: scheme.outlineVariant, width: 1.5),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: scheme.primary, width: 1.5),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        // EXERCISES header row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              l10n.exercisesLabel.toUpperCase(),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.0,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _openExercisePicker(allExercises),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.add, size: 18, color: scheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Add',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildExerciseRow(
+    BuildContext context,
+    int index,
+    Map<String, Exercise> exercisesMap,
+    AppLocalizations l10n,
+    ColorScheme scheme,
+  ) {
+    final entry = _exercises[index];
+    final ex = exercisesMap[entry.clientId];
+
+    // Subtitle: "3 sets · Barbell"
+    final parts = <String>[];
+    if (entry.targetSets != null) parts.add(l10n.setsCountLabel(entry.targetSets!));
+    if (ex?.equipment != null) parts.add(equipmentLabel(l10n, ex!.equipment!));
+    final subtitle = parts.join(' · ');
+
+    // Badge icon (same logic as exercises tab)
+    final IconData badgeIcon;
+    if (ex?.category == 'CARDIO') {
+      badgeIcon = Icons.directions_run;
+    } else if (ex?.equipment == 'BODYWEIGHT') {
+      badgeIcon = Icons.sports_gymnastics;
+    } else {
+      badgeIcon = Icons.fitness_center;
+    }
+
+    return Padding(
+      key: ValueKey(entry.clientId),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            // Drag handle
+            ReorderableDragStartListener(
+              index: index,
+              child: Icon(Icons.drag_indicator, size: 22, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(width: 11),
+            // Icon badge
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(child: Icon(badgeIcon, size: 20, color: scheme.primary)),
+            ),
+            const SizedBox(width: 11),
+            // Name + subtitle — tap to edit sets
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _editSets(index),
+                behavior: HitTestBehavior.opaque,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ex?.name ?? entry.clientId,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Remove button
+            GestureDetector(
+              onTap: () => _removeExercise(index),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Center(
+                  child: Icon(Icons.close, size: 19, color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDashedButton(
+    BuildContext context,
+    AppLocalizations l10n,
+    ColorScheme scheme,
+    List<Exercise> allExercises,
+  ) {
+    return GestureDetector(
+      onTap: () => _openExercisePicker(allExercises),
+      child: CustomPaint(
+        painter: _DashedBorderPainter(color: scheme.outlineVariant),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add, size: 21, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 7),
+              Text(
+                l10n.addExerciseTitle,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dashed border painter
+// ---------------------------------------------------------------------------
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+
+    final rrect = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(16));
+    final path = Path()..addRRect(rrect);
+
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final end = (distance + 6.0).clamp(0.0, metric.length);
+        canvas.drawPath(metric.extractPath(distance, end), paint);
+        distance += 10.0;
+      }
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final exercisesState = ref.watch(exerciseControllerProvider);
-    final l10n = AppLocalizations.of(context)!;
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) => oldDelegate.color != color;
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        scrolledUnderElevation: 0,
-        title: Text(_isEditing ? l10n.editTemplateTitle : l10n.newTemplateTitle),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : Text(l10n.saveButton),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _name,
-              textCapitalization: TextCapitalization.sentences,
+// ---------------------------------------------------------------------------
+// Exercise picker bottom sheet
+// ---------------------------------------------------------------------------
+
+class _ExercisePickerSheet extends StatefulWidget {
+  const _ExercisePickerSheet({required this.exercises, required this.onPick});
+
+  final List<Exercise> exercises;
+  final void Function(Exercise) onPick;
+
+  @override
+  State<_ExercisePickerSheet> createState() => _ExercisePickerSheetState();
+}
+
+class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
+  String _query = '';
+
+  List<Exercise> get _filtered => _query.isEmpty
+      ? widget.exercises
+      : widget.exercises
+          .where((e) => e.name.toLowerCase().contains(_query.toLowerCase()))
+          .toList();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.75,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPad + 16),
+        child: Column(
+          children: [
+            TextField(
               decoration: InputDecoration(
-                labelText: l10n.templateNameLabel,
-                border: const OutlineInputBorder(),
+                hintText: 'Search exercises…',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: scheme.surfaceContainerHigh,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              onChanged: (q) => setState(() => _query = q),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _filtered.length,
+                itemBuilder: (context, i) {
+                  final ex = _filtered[i];
+                  return ListTile(
+                    onTap: () => widget.onPick(ex),
+                    title: Text(ex.name),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  );
+                },
               ),
             ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: exercisesState.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('${l10n.couldNotLoadExercisesPrefix} $e')),
-              data: (exercises) {
-                if (exercises.isEmpty) {
-                  return Center(child: Text(l10n.noExercisesAvailableMessage));
-                }
-                return ListView(
-                  children: exercises.map((ex) {
-                    return CheckboxListTile(
-                      title: Text(ex.name),
-                      value: _selected.contains(ex.clientId),
-                      onChanged: (checked) => setState(() {
-                        if (checked ?? false) {
-                          _selected.add(ex.clientId);
-                        } else {
-                          _selected.remove(ex.clientId);
-                        }
-                      }),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

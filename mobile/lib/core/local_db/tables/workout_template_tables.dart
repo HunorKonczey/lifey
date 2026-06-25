@@ -28,6 +28,10 @@ class WorkoutTemplateExercises extends Table {
   /// Target number of sets for this exercise in the template, null if not set.
   IntColumn get targetSets => integer().nullable()();
 
+  /// Display order within the template (0-based). Matches the server-side
+  /// sort_order column so the pull engine can round-trip it faithfully.
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

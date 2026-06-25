@@ -218,56 +218,103 @@ class _DetailBody extends StatelessWidget {
                     icon: Icons.emoji_events,
                     iconColor: mc.carbs,
                     label: l10n.personalRecordLabel,
-                    value: l10n.prSetValueLabel(
-                      weightFormat.format(prSet.weight),
-                      prSet.reps.toString(),
+                    valueWidget: RichText(
+                      text: TextSpan(children: [
+                        TextSpan(
+                          text: weightFormat.format(prSet.weight),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: scheme.onSurface,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' kg × ${prSet.reps}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: scheme.onSurfaceVariant,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                      ]),
                     ),
-                    valueColor: mc.carbs,
                     subtitle: shortDateFmt.format(prSet.performedAt),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 11),
                 Expanded(
                   child: _StatCard(
                     icon: Icons.history,
                     iconColor: scheme.primary,
                     label: l10n.estimatedOneRepMaxLabel,
-                    value: l10n.weightKgValue(weightFormat.format(bestOneRM)),
-                    valueColor: scheme.primary,
+                    valueWidget: RichText(
+                      text: TextSpan(children: [
+                        TextSpan(
+                          text: weightFormat.format(bestOneRM),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: scheme.primary,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' kg',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: scheme.onSurfaceVariant,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                      ]),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
           ],
 
-          // 8-week trend chart
+          // 8-week trend chart — title + pill + chart all inside one card
           if (trendPoints.isNotEmpty) ...[
-            Row(
-              children: [
-                Text(l10n.trendLast8WeeksLabel, style: theme.textTheme.titleSmall),
-                if (trendPct != null) ...[
-                  const SizedBox(width: 8),
-                  _TrendPill(pct: trendPct, positive: !trendPct.startsWith('-')),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
                 color: scheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(AppRadius.card),
               ),
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-              child: TimeSeriesChart(
-                points: trendPoints,
-                height: 180,
-                areaColor: scheme.primary.withValues(alpha: 0.12),
-                dateLabelBuilder: (d) => shortDateFmt.format(d),
-                valueLabelBuilder: (v) => l10n.weightKgValue(weightFormat.format(v)),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.trendLast8WeeksLabel,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      if (trendPct != null)
+                        _TrendPill(pct: trendPct, positive: !trendPct.startsWith('-')),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TimeSeriesChart(
+                    points: trendPoints,
+                    height: 130,
+                    areaColor: scheme.primary.withValues(alpha: 0.12),
+                    dateLabelBuilder: (d) => shortDateFmt.format(d),
+                    valueLabelBuilder: (v) => l10n.weightKgValue(weightFormat.format(v)),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
           ],
 
           // Recent sets grouped by day — one compact row per day
@@ -328,7 +375,7 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
         borderRadius: AppRadius.pill,
@@ -336,11 +383,11 @@ class _CategoryChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.accessibility_new, size: 12, color: color),
-          const SizedBox(width: 4),
+          Icon(Icons.accessibility_new, size: 16, color: color),
+          const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, height: 1.0)
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, height: 1.0)
                 .copyWith(color: color),
           ),
         ],
@@ -360,7 +407,7 @@ class _EquipmentChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final color = scheme.onSurfaceVariant;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: AppRadius.pill,
@@ -368,13 +415,13 @@ class _EquipmentChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.fitness_center, size: 12, color: color),
-          const SizedBox(width: 4),
+          Icon(Icons.fitness_center, size: 16, color: color),
+          const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
               height: 1.0,
               color: color,
             ),
@@ -390,16 +437,14 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.label,
-    required this.value,
-    required this.valueColor,
+    required this.valueWidget,
     this.subtitle,
   });
 
   final IconData icon;
   final Color iconColor;
   final String label;
-  final String value;
-  final Color valueColor;
+  final Widget valueWidget;
   final String? subtitle;
 
   @override
@@ -407,7 +452,7 @@ class _StatCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(AppRadius.card),
@@ -417,32 +462,32 @@ class _StatCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 13, color: iconColor),
-              const SizedBox(width: 5),
+              Icon(icon, size: 18, color: iconColor),
+              const SizedBox(width: 7),
               Expanded(
                 child: Text(
                   label,
-                  style: theme.textTheme.labelSmall?.copyWith(color: iconColor),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: valueColor,
-            ),
-          ),
+          const SizedBox(height: 9),
+          valueWidget,
           if (subtitle != null) ...[
             const SizedBox(height: 2),
             Text(
               subtitle!,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+              ).copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
         ],
@@ -460,19 +505,17 @@ class _TrendPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = positive ? scheme.primary : scheme.error;
+    final bg = positive ? scheme.primary : scheme.error;
+    final fg = positive ? scheme.onPrimary : scheme.onError;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: AppRadius.pill,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: AppRadius.pill),
       child: Text(
         pct,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: color,
+          color: fg,
           height: 1.0,
         ),
       ),
@@ -515,16 +558,16 @@ class _DaySetRow extends StatelessWidget {
               width: 68,
               child: Text(
                 dayLabel,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)
+                    .copyWith(color: scheme.onSurface),
               ),
             ),
             Expanded(
               child: Text(
                 summary,
                 textAlign: TextAlign.end,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: scheme.onSurfaceVariant),
+                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)
+                    .copyWith(color: scheme.onSurfaceVariant),
               ),
             ),
           ],

@@ -53,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -114,6 +114,12 @@ class AppDatabase extends _$AppDatabase {
           // pre-existing template links carry no set target until updated.
           if (from < 11) {
             await m.addColumn(workoutTemplateExercises, workoutTemplateExercises.targetSets);
+          }
+          // V12: display order for exercises within a template. Pre-existing
+          // links get sort_order = 0 (the column default); order is restored
+          // after the next save or server pull.
+          if (from < 12) {
+            await m.addColumn(workoutTemplateExercises, workoutTemplateExercises.sortOrder);
           }
         },
       );

@@ -5,7 +5,6 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
-import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
 import '../domain/exercise.dart';
@@ -179,12 +178,6 @@ class _TemplateCard extends StatelessWidget {
       badgeIconColor = scheme.onPrimaryContainer;
     }
 
-    // Resolved exercise rows: (name, targetSets)
-    final rows = template.exercises.map((te) {
-      final ex = exercisesMap[te.exerciseClientId];
-      return (name: ex?.name ?? '…', targetSets: te.targetSets);
-    }).toList();
-
     return Card(
       elevation: 0,
       color: scheme.surfaceContainerHigh,
@@ -195,90 +188,54 @@ class _TemplateCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onStart,
-        borderRadius: BorderRadius.circular(AppRadius.card),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
-          child: Row(
+          padding: const EdgeInsets.all(16),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon badge
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Icon(
-                    _templateIcon(categories),
-                    size: 22,
-                    color: badgeIconColor,
+              // Header row
+              Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        _templateIcon(categories),
+                        size: 24,
+                        color: badgeIconColor,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Main content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Name + sync indicator
-                    Row(
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            template.name,
-                            style: theme.textTheme.bodyLarge,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        Text(
+                          template.name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ).copyWith(color: scheme.onSurface),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        SyncStatusIndicator(clientId: template.clientId),
+                        const SizedBox(height: 2),
+                        Text(
+                          l10n.exercisesCountLabel(template.exercises.length),
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ).copyWith(color: scheme.onSurfaceVariant),
+                        ),
                       ],
                     ),
-
-                    // Exercise count
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.exercisesCountLabel(template.exercises.length),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-
-                    // Category chips
-                    if (categories.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: categories
-                            .map((c) => _CategoryChip(
-                                  label: muscleGroupLabel(l10n, c),
-                                  color: muscleGroupColor(c, context),
-                                ))
-                            .toList(),
-                      ),
-                    ],
-
-                    // Exercise list with optional targetSets badge
-                    const SizedBox(height: 10),
-                    ...rows.map((r) => _ExerciseRow(
-                          name: r.name,
-                          targetSets: r.targetSets,
-                        )),
-                  ],
-                ),
-              ),
-
-              // Action column: Start pill + overflow menu
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _StartButton(label: l10n.startSessionMenuItem, onTap: onStart),
-                  const SizedBox(height: 4),
+                  ),
                   PopupMenuButton<String>(
                     onSelected: (value) {
                       switch (value) {
@@ -289,7 +246,7 @@ class _TemplateCard extends StatelessWidget {
                       }
                     },
                     icon: Icon(Icons.more_vert,
-                        size: 18, color: scheme.onSurfaceVariant),
+                        size: 20, color: scheme.onSurfaceVariant),
                     padding: EdgeInsets.zero,
                     itemBuilder: (_) => [
                       PopupMenuItem(value: 'edit', child: Text(l10n.editMenuItem)),
@@ -299,6 +256,21 @@ class _TemplateCard extends StatelessWidget {
                   ),
                 ],
               ),
+
+              // Category chips
+              if (categories.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: categories
+                      .map((c) => _CategoryChip(
+                            label: muscleGroupLabel(l10n, c),
+                            color: muscleGroupColor(c, context),
+                          ))
+                      .toList(),
+                ),
+              ],
             ],
           ),
         ),
@@ -337,106 +309,3 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Exercise row
-// ---------------------------------------------------------------------------
-
-class _ExerciseRow extends StatelessWidget {
-  const _ExerciseRow({required this.name, required this.targetSets});
-
-  final String name;
-  final int? targetSets;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          if (targetSets != null) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-              ),
-              child: Text(
-                '$targetSets×',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: scheme.onPrimaryContainer,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-          ] else ...[
-            // Bullet dot to align with set-badge rows
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: Text(
-                '·',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ),
-          ],
-          Expanded(
-            child: Text(
-              name,
-              style: theme.textTheme.bodySmall,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Start button
-// ---------------------------------------------------------------------------
-
-class _StartButton extends StatelessWidget {
-  const _StartButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(
-          color: scheme.primary.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.play_arrow, size: 14, color: scheme.primary),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: scheme.primary,
-                height: 1.0,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

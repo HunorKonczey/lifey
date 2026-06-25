@@ -27,4 +27,7 @@ public class WorkoutTemplateExercise extends BaseEntity {
 
     @Column(name = "target_sets")
     private Integer targetSets;
+
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder;
 }

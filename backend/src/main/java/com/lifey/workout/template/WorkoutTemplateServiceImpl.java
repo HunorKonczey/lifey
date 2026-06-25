@@ -83,7 +83,8 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
      */
     private void replaceExercises(WorkoutTemplate template, List<TemplateExerciseEntry> entries) {
         template.getExercises().clear();
-        for (TemplateExerciseEntry entry : entries) {
+        for (int i = 0; i < entries.size(); i++) {
+            TemplateExerciseEntry entry = entries.get(i);
             Exercise exercise = exerciseRepository.findById(entry.exerciseId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + entry.exerciseId()));
 
@@ -91,6 +92,7 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
             link.setWorkoutTemplate(template);
             link.setExercise(exercise);
             link.setTargetSets(entry.targetSets());
+            link.setSortOrder(i);
             template.getExercises().add(link);
         }
     }

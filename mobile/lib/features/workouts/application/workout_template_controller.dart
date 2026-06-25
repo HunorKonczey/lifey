@@ -14,17 +14,17 @@ class WorkoutTemplateController extends StreamNotifier<List<WorkoutTemplate>> {
 
   Future<void> createTemplate({
     required String name,
-    required List<String> exerciseClientIds,
+    required List<TemplateExercise> exercises,
   }) {
-    return _repo.create(name: name, exerciseClientIds: exerciseClientIds);
+    return _repo.create(name: name, exercises: exercises);
   }
 
   Future<void> updateTemplate({
     required String clientId,
     required String name,
-    required List<String> exerciseClientIds,
+    required List<TemplateExercise> exercises,
   }) {
-    return _repo.update(clientId, name: name, exerciseClientIds: exerciseClientIds);
+    return _repo.update(clientId, name: name, exercises: exercises);
   }
 
   Future<void> deleteTemplate(String clientId) => _repo.delete(clientId);
