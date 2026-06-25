@@ -100,17 +100,12 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
   }
 
   void _handleTrailingTap(int index) {
-    if (_editingIndex == index) {
-      // In edit mode → close = delete
-      setState(() => _editingIndex = null);
-      widget.onRowDelete(index);
-    } else if (widget.block.rows[index].isDone) {
-      // Checkmark → reopen to plan + enter edit mode (shows close icon)
-      setState(() => _editingIndex = index);
+    if (widget.block.rows[index].isDone) {
+      // Checkmark → reopen (clear doneAt)
       widget.onRowReopen(index);
     } else {
-      // Circle → mark done immediately, no editor
-      widget.onRowMarkDone(index);
+      // Close icon → delete the plan row
+      widget.onRowDelete(index);
     }
   }
 
@@ -139,7 +134,6 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
             _SetRowTile(
               index: i,
               row: widget.block.rows[i],
-              isEditing: _editingIndex == i,
               onTap: () => _openEditor(i),
               onDoubleTap: () => widget.onRowDuplicate(i),
               onTrailingTap: () => _handleTrailingTap(i),
@@ -250,7 +244,6 @@ class _SetRowTile extends StatelessWidget {
   const _SetRowTile({
     required this.index,
     required this.row,
-    required this.isEditing,
     required this.onTap,
     required this.onDoubleTap,
     required this.onTrailingTap,
@@ -259,10 +252,6 @@ class _SetRowTile extends StatelessWidget {
 
   final int index;
   final SetRow row;
-
-  /// True when this row is selected for editing (trailing shows close icon).
-  final bool isEditing;
-
   final VoidCallback onTap;
   final VoidCallback onDoubleTap;
   final VoidCallback onTrailingTap;
@@ -282,18 +271,9 @@ class _SetRowTile extends StatelessWidget {
     final weightText = row.weight != null ? _formatWeight(row.weight!) : '—';
     final repsText = row.reps != null ? row.reps.toString() : '—';
 
-    final IconData trailingIcon;
-    final Color trailingColor;
-    if (isEditing) {
-      trailingIcon = Icons.close;
-      trailingColor = dimmed;
-    } else if (isDone) {
-      trailingIcon = Icons.check_circle;
-      trailingColor = scheme.primary;
-    } else {
-      trailingIcon = Icons.radio_button_unchecked;
-      trailingColor = dimmed;
-    }
+    // Done row: check_circle (reopen on tap). Plan row: close (delete on tap).
+    final trailingIcon = isDone ? Icons.check_circle : Icons.close;
+    final trailingColor = isDone ? scheme.primary : dimmed;
 
     return GestureDetector(
       onTap: onTap,

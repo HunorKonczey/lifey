@@ -252,6 +252,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     setState(() {
       _blocks[bi].rows[ri].weight = weight;
       _blocks[bi].rows[ri].reps = reps;
+      _blocks[bi].rows[ri].doneAt ??= DateTime.now();
     });
     _autoSave();
   }
@@ -334,12 +335,6 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final l10n = AppLocalizations.of(context)!;
     try {
       await _persist();
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.sessionAutoSavedMessage),
-        duration: const Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-        width: 160,
-      ));
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotSaveSessionMessage)));
     } finally {
