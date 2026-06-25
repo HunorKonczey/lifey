@@ -102,39 +102,23 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
   }
 
   Future<void> _editSets(int index) async {
-    final current = _exercises[index].targetSets;
-    final controller = TextEditingController(text: current?.toString() ?? '');
     final l10n = AppLocalizations.of(context)!;
-    final ok = await showDialog<bool>(
+    // The controller is owned by _TargetSetsDialog and disposed by its State.dispose(),
+    // which Flutter calls only after the exit animation finishes — avoiding the
+    // "controller used after dispose" crash that happens when dispose() is called
+    // manually right after showDialog returns (while the animation is still running).
+    final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Target sets'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(hintText: '3'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancelButton),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('OK'),
-          ),
-        ],
+      builder: (_) => _TargetSetsDialog(
+        initialValue: _exercises[index].targetSets?.toString() ?? '',
+        cancelLabel: l10n.cancelButton,
       ),
     );
-    final text = controller.text.trim();
-    controller.dispose();
-    if (ok != true || !mounted) return;
+    if (!mounted || result == null) return;
     setState(() {
       _exercises[index] = _ExerciseEntry(
         clientId: _exercises[index].clientId,
-        targetSets: text.isEmpty ? null : int.tryParse(text),
+        targetSets: result.isEmpty ? null : int.tryParse(result),
       );
     });
   }
@@ -504,6 +488,61 @@ class _DashedBorderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashedBorderPainter oldDelegate) => oldDelegate.color != color;
+}
+
+// ---------------------------------------------------------------------------
+// Target sets dialog — owns the TextEditingController so Flutter disposes it
+// after the exit animation, not mid-animation.
+// ---------------------------------------------------------------------------
+
+class _TargetSetsDialog extends StatefulWidget {
+  const _TargetSetsDialog({required this.initialValue, required this.cancelLabel});
+
+  final String initialValue;
+  final String cancelLabel;
+
+  @override
+  State<_TargetSetsDialog> createState() => _TargetSetsDialogState();
+}
+
+class _TargetSetsDialogState extends State<_TargetSetsDialog> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Target sets'),
+      content: TextField(
+        controller: _ctrl,
+        keyboardType: TextInputType.number,
+        autofocus: true,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: const InputDecoration(hintText: '3'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(widget.cancelLabel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _ctrl.text.trim()),
+          child: const Text('OK'),
+        ),
+      ],
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
