@@ -69,8 +69,9 @@ class MealController extends StreamNotifier<List<Meal>> {
     required DateTime dateTime,
     required MealType mealType,
     required List<MealEntryInput> entries,
+    String? name,
   }) {
-    return _repo.create(dateTime: dateTime, mealType: mealType, entries: entries);
+    return _repo.create(dateTime: dateTime, mealType: mealType, entries: entries, name: name);
   }
 
   Future<void> updateMeal(
@@ -78,8 +79,9 @@ class MealController extends StreamNotifier<List<Meal>> {
     required DateTime dateTime,
     required MealType mealType,
     required List<MealEntryInput> entries,
+    String? name,
   }) {
-    return _repo.update(clientId, dateTime: dateTime, mealType: mealType, entries: entries);
+    return _repo.update(clientId, dateTime: dateTime, mealType: mealType, entries: entries, name: name);
   }
 
   Future<void> deleteMeal(String clientId) => _repo.delete(clientId);

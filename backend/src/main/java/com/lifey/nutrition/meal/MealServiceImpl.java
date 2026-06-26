@@ -44,6 +44,7 @@ public class MealServiceImpl implements MealService {
         meal.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         meal.setDateTime(request.dateTime());
         meal.setMealType(request.mealType());
+        meal.setName(request.name());
         replaceEntries(meal, request.entries());
         return MealMapper.toResponse(mealRepository.save(meal));
     }
@@ -53,6 +54,7 @@ public class MealServiceImpl implements MealService {
         Meal meal = getOrThrow(id);
         meal.setDateTime(request.dateTime());
         meal.setMealType(request.mealType());
+        meal.setName(request.name());
         replaceEntries(meal, request.entries());
         return MealMapper.toResponse(meal);
     }

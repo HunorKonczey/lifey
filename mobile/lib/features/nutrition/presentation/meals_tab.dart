@@ -260,7 +260,10 @@ class _MealCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Text(meal.mealType.label(l10n), style: theme.textTheme.bodyLarge),
+                          Text(
+                            meal.name ?? meal.mealType.label(l10n),
+                            style: theme.textTheme.bodyLarge,
+                          ),
                           const Spacer(),
                           Text(
                             dateLabel.format(meal.dateTime.toLocal()),
@@ -271,6 +274,15 @@ class _MealCard extends StatelessWidget {
                           SyncStatusIndicator(clientId: meal.clientId),
                         ],
                       ),
+                      if (meal.name != null) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          meal.mealType.label(l10n),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 3),
                       Text(
                         _macroLine(l10n),

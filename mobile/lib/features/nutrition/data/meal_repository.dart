@@ -131,6 +131,7 @@ class MealRepository {
     required DateTime dateTime,
     required MealType mealType,
     required List<MealEntryInput> entries,
+    String? name,
   }) async {
     final clientId = newClientId();
     await _db.transaction(() async {
@@ -139,6 +140,7 @@ class MealRepository {
               clientId: clientId,
               mealDateTime: dateTime,
               mealType: mealType.apiValue,
+              name: Value(name),
             ),
           );
       await _insertEntries(clientId, entries);
@@ -146,7 +148,7 @@ class MealRepository {
     await _outbox.enqueueCreate(
       clientId: clientId,
       entityType: 'meal',
-      payload: _payload(dateTime: dateTime, mealType: mealType, entries: entries),
+      payload: _payload(dateTime: dateTime, mealType: mealType, entries: entries, name: name),
     );
     return clientId;
   }
@@ -156,10 +158,15 @@ class MealRepository {
     required DateTime dateTime,
     required MealType mealType,
     required List<MealEntryInput> entries,
+    String? name,
   }) async {
     await _db.transaction(() async {
       await (_db.update(_db.meals)..where((t) => t.clientId.equals(clientId))).write(
-        MealsCompanion(mealDateTime: Value(dateTime), mealType: Value(mealType.apiValue)),
+        MealsCompanion(
+          mealDateTime: Value(dateTime),
+          mealType: Value(mealType.apiValue),
+          name: Value(name),
+        ),
       );
       await (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
       await _insertEntries(clientId, entries);
@@ -167,7 +174,7 @@ class MealRepository {
     await _outbox.enqueueUpdate(
       clientId: clientId,
       entityType: 'meal',
-      payload: _payload(dateTime: dateTime, mealType: mealType, entries: entries),
+      payload: _payload(dateTime: dateTime, mealType: mealType, entries: entries, name: name),
     );
   }
 
@@ -203,10 +210,12 @@ class MealRepository {
     required DateTime dateTime,
     required MealType mealType,
     required List<MealEntryInput> entries,
+    String? name,
   }) {
     return {
       'dateTime': dateTime.toUtc().toIso8601String(),
       'mealType': mealType.apiValue,
+      if (name != null) 'name': name,
       'entries': entries
           .map((e) => {'foodId': clientRef(e.foodClientId), 'quantityInGrams': e.grams})
           .toList(),
@@ -219,6 +228,7 @@ class MealRepository {
       id: row.serverId,
       dateTime: row.mealDateTime,
       mealType: MealType.fromApi(row.mealType),
+      name: row.name,
       entries: entries,
     );
   }

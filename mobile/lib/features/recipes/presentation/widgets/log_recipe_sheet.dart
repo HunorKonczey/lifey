@@ -29,8 +29,18 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
   late MealType _mealType = _defaultForNow();
   DateTime _dateTime = DateTime.now();
   bool _submitting = false;
-  bool _isPartialLog = false;
-  int _portionDivisor = 1;
+  late bool _isPartialLog;
+  late int _portionDivisor;
+
+  @override
+  void initState() {
+    super.initState();
+    // Prefill the divider with the recipe's saved serving count, so the sheet
+    // opens already split into the portions the recipe was created to yield.
+    final servings = widget.recipe.servings.clamp(_minPortionDivisor, _maxPortionDivisor);
+    _portionDivisor = servings;
+    _isPartialLog = servings > 1;
+  }
 
   static MealType _defaultForNow() {
     final hour = DateTime.now().hour;
@@ -86,6 +96,7 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
       await ref.read(mealControllerProvider.notifier).logMeal(
             dateTime: _dateTime,
             mealType: _mealType,
+            name: widget.recipe.name,
             entries: widget.recipe.ingredients
                 .map((i) => MealEntryInput(
                     foodClientId: i.foodClientId,

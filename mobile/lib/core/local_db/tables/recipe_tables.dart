@@ -12,6 +12,7 @@ class Recipes extends Table {
   TextColumn get name => text()();
   TextColumn get description => text().nullable()();
   BoolColumn get favorite => boolean().withDefault(const Constant(false))();
+  IntColumn get servings => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {clientId};

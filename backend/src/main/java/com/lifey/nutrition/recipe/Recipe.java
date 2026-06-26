@@ -34,6 +34,9 @@ public class Recipe extends BaseEntity {
 
     private boolean favorite;
 
+    @Column(nullable = false)
+    private int servings = 1;
+
     @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RecipeIngredient> ingredients = new ArrayList<>();
 }

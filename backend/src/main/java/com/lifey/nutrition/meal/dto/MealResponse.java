@@ -9,6 +9,7 @@ public record MealResponse(
         Long id,
         Instant dateTime,
         MealType mealType,
+        String name,
         List<MealEntryResponse> entries
 ) {
 }

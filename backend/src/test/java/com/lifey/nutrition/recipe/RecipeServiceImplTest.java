@@ -59,7 +59,7 @@ class RecipeServiceImplTest {
             r.setId(7L);
             return r;
         });
-        RecipeRequest request = new RecipeRequest("Chicken & rice", "prep", true,
+        RecipeRequest request = new RecipeRequest("Chicken & rice", "prep", true, 2,
                 List.of(new RecipeIngredientRequest(1L, 200.0)));
 
         RecipeResponse result = service.create(request);
@@ -67,6 +67,7 @@ class RecipeServiceImplTest {
         assertThat(result.id()).isEqualTo(7L);
         assertThat(result.name()).isEqualTo("Chicken & rice");
         assertThat(result.favorite()).isTrue();
+        assertThat(result.servings()).isEqualTo(2);
         assertThat(result.ingredients()).singleElement().satisfies(i -> {
             assertThat(i.foodId()).isEqualTo(1L);
             assertThat(i.foodName()).isEqualTo("Chicken");
@@ -77,7 +78,7 @@ class RecipeServiceImplTest {
     @Test
     void create_throwsWhenFoodMissing() {
         when(foodRepository.findById(99L)).thenReturn(Optional.empty());
-        RecipeRequest request = new RecipeRequest("Bad", null, false,
+        RecipeRequest request = new RecipeRequest("Bad", null, false, null,
                 List.of(new RecipeIngredientRequest(99L, 100.0)));
 
         assertThatThrownBy(() -> service.create(request))
@@ -98,13 +99,14 @@ class RecipeServiceImplTest {
 
         when(recipeRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
         when(foodRepository.findById(1L)).thenReturn(Optional.of(food(1L, "Chicken")));
-        RecipeRequest request = new RecipeRequest("New", "desc", true,
+        RecipeRequest request = new RecipeRequest("New", "desc", true, null,
                 List.of(new RecipeIngredientRequest(1L, 300.0)));
 
         RecipeResponse result = service.update(3L, request);
 
         assertThat(result.name()).isEqualTo("New");
         assertThat(result.favorite()).isTrue();
+        assertThat(result.servings()).isEqualTo(1); // null servings defaults to 1
         assertThat(existing.isFavorite()).isTrue();
         assertThat(result.ingredients()).singleElement().satisfies(i -> {
             assertThat(i.foodId()).isEqualTo(1L);

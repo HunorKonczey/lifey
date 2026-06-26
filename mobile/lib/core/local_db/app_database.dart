@@ -53,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -130,6 +130,15 @@ class AppDatabase extends _$AppDatabase {
           // with hidden=true so they don't appear in the catalog or autocomplete.
           if (from < 14) {
             await m.addColumn(foods, foods.hidden);
+          }
+          // V15: a recipe stores how many servings it yields; pre-existing
+          // recipes default to 1 (the column default).
+          if (from < 15) {
+            await m.addColumn(recipes, recipes.servings);
+          }
+          // V16: meals can carry an optional name (set when logging from a recipe).
+          if (from < 16) {
+            await m.addColumn(meals, meals.name);
           }
         },
       );

@@ -51,6 +51,7 @@ public class RecipeServiceImpl implements RecipeService {
         recipe.setName(request.name());
         recipe.setDescription(request.description());
         recipe.setFavorite(request.favorite());
+        recipe.setServings(servingsOrDefault(request));
         replaceIngredients(recipe, request.ingredients());
         return RecipeMapper.toResponse(recipeRepository.save(recipe));
     }
@@ -61,6 +62,7 @@ public class RecipeServiceImpl implements RecipeService {
         recipe.setName(request.name());
         recipe.setDescription(request.description());
         recipe.setFavorite(request.favorite());
+        recipe.setServings(servingsOrDefault(request));
         replaceIngredients(recipe, request.ingredients());
         return RecipeMapper.toResponse(recipe);
     }
@@ -72,6 +74,10 @@ public class RecipeServiceImpl implements RecipeService {
             throw new ResourceNotFoundException("Recipe not found: " + id);
         }
         recipeRepository.deleteByIdAndUserId(id, userId);
+    }
+
+    private static int servingsOrDefault(RecipeRequest request) {
+        return request.servings() != null ? request.servings() : 1;
     }
 
     private Recipe getOrThrow(Long id) {

@@ -16,10 +16,15 @@ class RecipeController extends StreamNotifier<List<Recipe>> {
     required String name,
     String? description,
     bool favorite = false,
+    int servings = 1,
     required List<RecipeIngredientInput> ingredients,
   }) {
     return _repo.create(
-        name: name, description: description, favorite: favorite, ingredients: ingredients);
+        name: name,
+        description: description,
+        favorite: favorite,
+        servings: servings,
+        ingredients: ingredients);
   }
 
   Future<void> updateRecipe(
@@ -27,10 +32,15 @@ class RecipeController extends StreamNotifier<List<Recipe>> {
     required String name,
     String? description,
     bool favorite = false,
+    int servings = 1,
     required List<RecipeIngredientInput> ingredients,
   }) {
     return _repo.update(clientId,
-        name: name, description: description, favorite: favorite, ingredients: ingredients);
+        name: name,
+        description: description,
+        favorite: favorite,
+        servings: servings,
+        ingredients: ingredients);
   }
 
   Future<void> deleteRecipe(String clientId) => _repo.delete(clientId);

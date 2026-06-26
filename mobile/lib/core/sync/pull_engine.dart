@@ -399,6 +399,7 @@ class PullEngine {
         name: Value(json['name'] as String),
         description: Value(json['description'] as String?),
         favorite: Value(json['favorite'] as bool? ?? false),
+        servings: Value(json['servings'] as int? ?? 1),
       );
       final ingredientsJson =
           (json['ingredients'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
@@ -453,6 +454,7 @@ class PullEngine {
       final values = MealsCompanion(
         mealDateTime: Value(DateTime.parse(json['dateTime'] as String)),
         mealType: Value(json['mealType'] as String),
+        name: Value(json['name'] as String?),
       );
       final entriesJson =
           (json['entries'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();

@@ -33,6 +33,7 @@ final class MealMapper {
                 meal.getId(),
                 meal.getDateTime(),
                 meal.getMealType(),
+                meal.getName(),
                 entries
         );
     }

@@ -34,6 +34,10 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   String? _recipeClientId;
   Timer? _debounce;
   late bool _favorite;
+  late int _servings;
+
+  static const _minServings = 1;
+  static const _maxServings = 20;
 
   bool get _isEditing => widget.recipe != null;
 
@@ -55,6 +59,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     _name = TextEditingController(text: recipe?.name ?? '');
     _description = TextEditingController(text: recipe?.description ?? '');
     _favorite = recipe?.favorite ?? false;
+    _servings = recipe?.servings ?? 1;
     if (recipe != null) {
       for (final ing in recipe.ingredients) {
         final q = ing.quantityInGrams;
@@ -140,6 +145,18 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     _autoSave();
   }
 
+  void _decrementServings() {
+    if (_servings <= _minServings) return;
+    setState(() => _servings--);
+    if (_isEditing || _recipeClientId != null) _autoSave();
+  }
+
+  void _incrementServings() {
+    if (_servings >= _maxServings) return;
+    setState(() => _servings++);
+    if (_isEditing || _recipeClientId != null) _autoSave();
+  }
+
   Future<void> _autoSave() async {
     if (_ingredients.isEmpty) return;
     final name = _name.text.trim();
@@ -181,6 +198,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
         name: name,
         description: description.isEmpty ? null : description,
         favorite: _favorite,
+        servings: _servings,
         ingredients: ingredients,
       );
     } else {
@@ -188,6 +206,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
         name: name,
         description: description.isEmpty ? null : description,
         favorite: _favorite,
+        servings: _servings,
         ingredients: ingredients,
       );
     }
@@ -269,6 +288,17 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                   ),
                   alignLabelWithHint: true,
                 ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Servings ────────────────────────────────────────────────
+              _SectionLabel(label: l10n.servingsLabel),
+              const SizedBox(height: 8),
+              _ServingsStepper(
+                value: _servings,
+                onDecrement: _servings > _minServings ? _decrementServings : null,
+                onIncrement: _servings < _maxServings ? _incrementServings : null,
               ),
 
               const SizedBox(height: 20),
@@ -809,6 +839,87 @@ class _MacroPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Servings stepper (− value +)
+// ---------------------------------------------------------------------------
+
+class _ServingsStepper extends StatelessWidget {
+  const _ServingsStepper({
+    required this.value,
+    required this.onDecrement,
+    required this.onIncrement,
+  });
+
+  final int value;
+  final VoidCallback? onDecrement;
+  final VoidCallback? onIncrement;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          _StepperButton(icon: Icons.remove, onTap: onDecrement),
+          Expanded(
+            child: Center(
+              child: Text(
+                '$value',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: scheme.onSurface,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ),
+          _StepperButton(icon: Icons.add, onTap: onIncrement),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  const _StepperButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final enabled = onTap != null;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Center(
+          child: Icon(
+            icon,
+            size: 21,
+            color: enabled ? scheme.onSurface : scheme.onSurfaceVariant.withValues(alpha: 0.4),
+          ),
+        ),
       ),
     );
   }

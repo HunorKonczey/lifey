@@ -92,6 +92,7 @@ class RecipeRepository {
     required String name,
     String? description,
     bool favorite = false,
+    int servings = 1,
     required List<RecipeIngredientInput> ingredients,
   }) async {
     final clientId = newClientId();
@@ -102,6 +103,7 @@ class RecipeRepository {
               name: name,
               description: Value(description),
               favorite: Value(favorite),
+              servings: Value(servings),
             ),
           );
       await _insertIngredients(clientId, ingredients);
@@ -110,7 +112,11 @@ class RecipeRepository {
       clientId: clientId,
       entityType: 'recipe',
       payload: _payload(
-          name: name, description: description, favorite: favorite, ingredients: ingredients),
+          name: name,
+          description: description,
+          favorite: favorite,
+          servings: servings,
+          ingredients: ingredients),
     );
     return clientId;
   }
@@ -120,12 +126,16 @@ class RecipeRepository {
     required String name,
     String? description,
     bool favorite = false,
+    int servings = 1,
     required List<RecipeIngredientInput> ingredients,
   }) async {
     await _db.transaction(() async {
       await (_db.update(_db.recipes)..where((t) => t.clientId.equals(clientId))).write(
         RecipesCompanion(
-            name: Value(name), description: Value(description), favorite: Value(favorite)),
+            name: Value(name),
+            description: Value(description),
+            favorite: Value(favorite),
+            servings: Value(servings)),
       );
       await (_db.delete(_db.recipeIngredients)..where((t) => t.recipeClientId.equals(clientId)))
           .go();
@@ -135,7 +145,11 @@ class RecipeRepository {
       clientId: clientId,
       entityType: 'recipe',
       payload: _payload(
-          name: name, description: description, favorite: favorite, ingredients: ingredients),
+          name: name,
+          description: description,
+          favorite: favorite,
+          servings: servings,
+          ingredients: ingredients),
     );
   }
 
@@ -161,6 +175,7 @@ class RecipeRepository {
         name: recipeRow.name,
         description: recipeRow.description,
         favorite: value,
+        servings: recipeRow.servings,
         ingredients: ingredientRows
             .map((r) => RecipeIngredientInput(foodClientId: r.foodClientId, grams: r.quantityInGrams))
             .toList(),
@@ -204,12 +219,14 @@ class RecipeRepository {
     required String name,
     String? description,
     required bool favorite,
+    required int servings,
     required List<RecipeIngredientInput> ingredients,
   }) {
     return {
       'name': name,
       'description': description,
       'favorite': favorite,
+      'servings': servings,
       'ingredients': ingredients
           .map((i) => {'foodId': clientRef(i.foodClientId), 'quantityInGrams': i.grams})
           .toList(),
@@ -223,6 +240,7 @@ class RecipeRepository {
       name: row.name,
       description: row.description,
       favorite: row.favorite,
+      servings: row.servings,
       ingredients: ingredients,
     );
   }

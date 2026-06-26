@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -42,6 +43,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             email: _emailController.text.trim(),
             password: _passwordController.text,
           );
+      TextInput.finishAutofillContext();
     } catch (error) {
       setState(() => _submitError = friendlyError(error));
     } finally {
@@ -64,7 +66,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 400),
               child: Form(
                 key: _formKey,
-                child: Column(
+                child: AutofillGroup(
+                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -112,6 +115,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           controller: _emailController,
                           label: l10n.emailLabel,
                           keyboardType: TextInputType.emailAddress,
+                          autofillHints: const [AutofillHints.email],
                           autofocus: true,
                           validator: (value) {
                             final text = value?.trim() ?? '';
@@ -124,6 +128,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           controller: _passwordController,
                           label: l10n.passwordLabel,
                           obscureText: true,
+                          autofillHints: const [AutofillHints.password],
                           last: true,
                           onFieldSubmitted: (_) => _submit(),
                           validator: (value) => (value == null || value.isEmpty)
@@ -167,6 +172,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: Text(l10n.registerPromptButton),
                     ),
                   ],
+                 ),
                 ),
               ),
             ),
@@ -204,6 +210,7 @@ class _AuthField extends StatelessWidget {
     required this.label,
     required this.validator,
     this.keyboardType,
+    this.autofillHints,
     this.obscureText = false,
     this.autofocus = false,
     this.last = false,
@@ -214,6 +221,7 @@ class _AuthField extends StatelessWidget {
   final String label;
   final FormFieldValidator<String> validator;
   final TextInputType? keyboardType;
+  final Iterable<String>? autofillHints;
   final bool obscureText;
   final bool autofocus;
   final bool last;
@@ -229,6 +237,7 @@ class _AuthField extends StatelessWidget {
           controller: controller,
           autofocus: autofocus,
           keyboardType: keyboardType,
+          autofillHints: autofillHints,
           obscureText: obscureText,
           onFieldSubmitted: onFieldSubmitted,
           decoration: InputDecoration(

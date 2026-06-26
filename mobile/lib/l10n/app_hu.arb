@@ -271,6 +271,7 @@
     "editRecipeTitle": "Recept szerkesztése",
     "newRecipeTitle": "Új recept",
     "descriptionOptionalLabel": "Leírás (opcionális)",
+    "servingsLabel": "Adag",
     "ingredientsLabel": "Hozzávalók",
     "noIngredientsAddedYetMessage": "Még nincs hozzáadott hozzávaló",
     "loggedRecipeAsMessage": "\"{name}\" naplózva mint {mealType}",

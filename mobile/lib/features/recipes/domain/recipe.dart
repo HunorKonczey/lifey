@@ -30,6 +30,7 @@ class Recipe {
     this.id,
     this.description,
     this.favorite = false,
+    this.servings = 1,
   });
 
   final String clientId;
@@ -37,6 +38,7 @@ class Recipe {
   final String name;
   final String? description;
   final bool favorite;
+  final int servings;
   final List<RecipeIngredient> ingredients;
 
   double get totalCalories =>

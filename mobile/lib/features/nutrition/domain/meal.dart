@@ -53,12 +53,14 @@ class Meal {
     required this.mealType,
     required this.entries,
     this.id,
+    this.name,
   });
 
   final String clientId;
   final int? id;
   final DateTime dateTime;
   final MealType mealType;
+  final String? name;
   final List<MealEntry> entries;
 
   double get totalCalories => entries.fold(0, (sum, e) => sum + e.calories);

@@ -790,6 +790,9 @@
     "descriptionOptionalLabel": "Description (optional)",
     "@descriptionOptionalLabel": {"description": "Label for the optional recipe description field"},
 
+    "servingsLabel": "Servings",
+    "@servingsLabel": {"description": "Label for the recipe servings (portions) stepper"},
+
     "ingredientsLabel": "Ingredients",
     "@ingredientsLabel": {"description": "Section heading for a recipe's ingredients"},
 

@@ -36,6 +36,9 @@ public class Meal extends BaseEntity {
     @Column(name = "meal_type", nullable = false, length = 20)
     private MealType mealType;
 
+    @Column(name = "name", length = 255)
+    private String name;
+
     @OneToMany(mappedBy = "meal", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MealEntry> entries = new ArrayList<>();
 }

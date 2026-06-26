@@ -7,6 +7,7 @@ public record RecipeResponse(
         String name,
         String description,
         boolean favorite,
+        int servings,
         List<RecipeIngredientResponse> ingredients
 ) {
 }

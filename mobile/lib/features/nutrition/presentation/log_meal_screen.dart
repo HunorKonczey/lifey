@@ -186,7 +186,10 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     final id = _isEditing ? widget.meal!.clientId : _mealClientId;
     if (id != null) {
       await notifier.updateMeal(id,
-          dateTime: _dateTime, mealType: _mealType, entries: entries);
+          dateTime: _dateTime,
+          mealType: _mealType,
+          entries: entries,
+          name: widget.meal?.name);
     } else {
       _mealClientId = await notifier.logMeal(
           dateTime: _dateTime, mealType: _mealType, entries: entries);

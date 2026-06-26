@@ -13,6 +13,7 @@ class Meals extends Table {
   // dateTime() column builder method.
   DateTimeColumn get mealDateTime => dateTime()();
   TextColumn get mealType => text()(); // BREAKFAST / LUNCH / DINNER / SNACK
+  TextColumn get name => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {clientId};
