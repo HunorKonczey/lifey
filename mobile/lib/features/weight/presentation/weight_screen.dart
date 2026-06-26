@@ -134,6 +134,7 @@ class _WeightBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final mc = context.metricColors;
     final l10n = AppLocalizations.of(context)!;
     final range = ref.watch(weightRangeControllerProvider);
     final chartData = ref.watch(weightChartDataProvider);
@@ -222,6 +223,8 @@ class _WeightBody extends ConsumerWidget {
                           dateLabelBuilder: _chartDateLabel.format,
                           valueLabelBuilder: (value) =>
                               l10n.weightKgValue(value.toStringAsFixed(1)),
+                          accentColor: mc.weight,
+                          areaColor: mc.weight.withValues(alpha: 0.12),
                         ),
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(vertical: 32),

@@ -345,11 +345,6 @@ class _StatisticsChart extends StatelessWidget {
     return unit.isEmpty ? formatted : '$formatted $unit';
   }
 
-  String _formatDelta(double delta, AppLocalizations l10n) {
-    final sign = delta > 0 ? '+' : '';
-    return '$sign${_formatValue(delta, l10n)}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -423,8 +418,8 @@ class _StatisticsChart extends StatelessWidget {
             points: points,
             dateLabelBuilder: _chartDateLabel.format,
             valueLabelBuilder: (value) => _formatValue(value, l10n),
-            deltaLabelBuilder: (delta) => _formatDelta(delta, l10n),
-            showDeltaLabels: true,
+            accentColor: accent,
+            areaColor: accent.withValues(alpha: 0.12),
             goalValue: goalValue,
           ),
         ),

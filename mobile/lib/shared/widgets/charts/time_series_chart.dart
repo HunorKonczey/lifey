@@ -28,6 +28,7 @@ class TimeSeriesChart extends StatefulWidget {
     this.showDeltaLabels = false,
     this.goalValue,
     this.areaColor,
+    this.accentColor,
   });
 
   final List<TimeSeriesPoint> points;
@@ -49,6 +50,10 @@ class TimeSeriesChart extends StatefulWidget {
 
   /// When non-null, the area under the line is filled with this color.
   final Color? areaColor;
+
+  /// Color for the line and data points. Defaults to the theme's primary when
+  /// omitted — callers pass a metric/category color to tint the chart.
+  final Color? accentColor;
 
   @override
   State<TimeSeriesChart> createState() => _TimeSeriesChartState();
@@ -79,6 +84,7 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
     final theme = Theme.of(context);
     final valueLabelBuilder = widget.valueLabelBuilder ?? (v) => v.toStringAsFixed(1);
     final selectedIndex = _selectedIndex;
+    final accent = widget.accentColor ?? theme.colorScheme.primary;
 
     return SizedBox(
       height: widget.height,
@@ -102,8 +108,8 @@ class _TimeSeriesChartState extends State<TimeSeriesChart> {
                     deltaLabelBuilder: widget.showDeltaLabels ? widget.deltaLabelBuilder : null,
                     selectedIndex: selectedIndex,
                     goalValue: widget.goalValue,
-                    lineColor: theme.colorScheme.primary,
-                    pointColor: theme.colorScheme.primary,
+                    lineColor: accent,
+                    pointColor: accent,
                     selectedPointColor: theme.colorScheme.secondary,
                     goalLineColor: theme.colorScheme.tertiary,
                     gridColor: theme.colorScheme.outlineVariant,
