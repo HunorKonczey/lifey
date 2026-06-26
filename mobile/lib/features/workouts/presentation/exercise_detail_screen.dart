@@ -136,9 +136,8 @@ class _DetailBody extends StatelessWidget {
     for (final s in recentSets) {
       final weekKey = _isoWeekKey(s.performedAt);
       final orm = _epley(s.weight, s.reps);
-      weeklyBest[weekKey] = (weeklyBest[weekKey] ?? 0).clamp(0, orm) < orm
-          ? orm
-          : weeklyBest[weekKey]!;
+      final current = weeklyBest[weekKey] ?? 0;
+      weeklyBest[weekKey] = orm > current ? orm : current;
     }
     final trendPoints = weeklyBest.entries
         .map((e) => TimeSeriesPoint(date: _weekKeyDate(e.key), value: e.value))
