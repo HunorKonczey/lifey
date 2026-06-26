@@ -32,7 +32,7 @@ class MealControllerTest {
     @Test
     void create_returnsCreated() throws Exception {
         when(mealService.create(any())).thenReturn(new MealResponse(4L,
-                Instant.parse("2026-06-01T08:00:00Z"), MealType.BREAKFAST,
+                Instant.parse("2026-06-01T08:00:00Z"), MealType.BREAKFAST, null,
                 List.of(new MealEntryResponse(1L, "Oats", 80.0, 311.2, 13.6))));
 
         mockMvc.perform(post("/api/v1/meals").contentType(MediaType.APPLICATION_JSON)

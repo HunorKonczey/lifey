@@ -63,7 +63,7 @@ class MealServiceImplTest {
             return m;
         });
         MealRequest request = new MealRequest(
-                Instant.parse("2026-06-18T08:00:00Z"), MealType.BREAKFAST,
+                Instant.parse("2026-06-18T08:00:00Z"), MealType.BREAKFAST, null,
                 List.of(new MealEntryRequest(1L, 80.0)));
 
         MealResponse result = service.create(request);
@@ -81,7 +81,7 @@ class MealServiceImplTest {
     void create_throwsWhenFoodMissing() {
         when(foodRepository.findById(99L)).thenReturn(Optional.empty());
         MealRequest request = new MealRequest(
-                Instant.parse("2026-06-18T08:00:00Z"), MealType.SNACK,
+                Instant.parse("2026-06-18T08:00:00Z"), MealType.SNACK, null,
                 List.of(new MealEntryRequest(99L, 50.0)));
 
         assertThatThrownBy(() -> service.create(request))
