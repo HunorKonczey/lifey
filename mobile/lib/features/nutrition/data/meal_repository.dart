@@ -127,7 +127,7 @@ class MealRepository {
     return meals;
   }
 
-  Future<void> create({
+  Future<String> create({
     required DateTime dateTime,
     required MealType mealType,
     required List<MealEntryInput> entries,
@@ -148,6 +148,7 @@ class MealRepository {
       entityType: 'meal',
       payload: _payload(dateTime: dateTime, mealType: mealType, entries: entries),
     );
+    return clientId;
   }
 
   Future<void> update(

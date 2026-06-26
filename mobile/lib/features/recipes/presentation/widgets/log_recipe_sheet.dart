@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 import '../../../nutrition/application/meal_controller.dart';
 import '../../../nutrition/data/meal_repository.dart';
 import '../../../nutrition/domain/meal.dart';
@@ -79,7 +80,6 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
   Future<void> _submit() async {
     if (_submitting) return; // guard against a fast double-tap creating two meals
     setState(() => _submitting = true);
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context)!;
     try {
@@ -93,15 +93,18 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
                 .toList(),
           );
       navigator.pop();
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.loggedRecipeAsMessage(
-            widget.recipe.name, _mealType.label(l10n).toLowerCase())),
-      ));
+      if (mounted) {
+        AppSnackbar.showSuccess(
+          context,
+          title: l10n.loggedRecipeAsMessage(
+              widget.recipe.name, _mealType.label(l10n).toLowerCase()),
+        );
+      }
     } catch (_) {
       setState(() => _submitting = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.couldNotLogMealMessage)),
-      );
+      if (mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotLogMealMessage);
+      }
     }
   }
 

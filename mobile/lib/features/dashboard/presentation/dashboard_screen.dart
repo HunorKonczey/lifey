@@ -17,6 +17,7 @@ import '../../water/presentation/widgets/water_card.dart';
 import '../../weight/application/weight_controller.dart';
 import '../../weight/domain/weight_entry.dart';
 import '../../workouts/application/workout_session_controller.dart';
+import '../../workouts/domain/exercise_enums.dart';
 import '../../workouts/presentation/log_session_screen.dart';
 import '../../nutrition/domain/meal.dart';
 import '../../nutrition/presentation/nutrition_screen.dart';
@@ -372,6 +373,17 @@ class _WorkoutTile extends StatelessWidget {
     final exercises = workout.exerciseNames.isEmpty ? '—' : workout.exerciseNames.join(', ');
     final statsLine = _statsLine(l10n);
 
+    final Color badgeBg;
+    final Color badgeIconColor;
+    if (workout.categoryCode != null) {
+      final mc = muscleGroupColor(workout.categoryCode!, context);
+      badgeBg = mc.withValues(alpha: 0.15);
+      badgeIconColor = mc;
+    } else {
+      badgeBg = theme.colorScheme.primaryContainer;
+      badgeIconColor = theme.colorScheme.onPrimaryContainer;
+    }
+
     return Card(
       elevation: 0,
       color: theme.colorScheme.surfaceContainerHigh,
@@ -391,14 +403,14 @@ class _WorkoutTile extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
+                  color: badgeBg,
                   borderRadius: BorderRadius.circular(13),
                 ),
                 child: Center(
                   child: Icon(
                     Icons.fitness_center,
                     size: 22,
-                    color: theme.colorScheme.onPrimaryContainer,
+                    color: badgeIconColor,
                   ),
                 ),
               ),

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -41,15 +43,16 @@ class ExercisesTab extends ConsumerStatefulWidget {
 class _ExercisesTabState extends ConsumerState<ExercisesTab> {
 
   Future<void> _delete(Exercise exercise) async {
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(exerciseControllerProvider.notifier).deleteExercise(exercise.clientId);
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.deletedExerciseMessage(exercise.name))));
+      if (mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.deletedExerciseMessage(exercise.name));
+      }
     } catch (_) {
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.couldNotDeleteExerciseMessage(exercise.name))));
+      if (mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotDeleteExerciseMessage(exercise.name));
+      }
       await ref.read(exerciseControllerProvider.notifier).refresh();
     }
   }
@@ -366,7 +369,12 @@ class _ExerciseCard extends StatelessWidget {
         child: Icon(Icons.delete, color: scheme.onErrorContainer),
       ),
       confirmDismiss: (_) async {
-        onDelete();
+        final confirmed = await showConfirmDeleteDialog(
+          context,
+          title: l10n.deleteExerciseQuestionTitle,
+          message: l10n.deleteExerciseConfirmMessage(exercise.name),
+        );
+        if (confirmed) onDelete();
         return false;
       },
       child: Card(

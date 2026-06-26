@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -54,14 +56,16 @@ class _MealsTabState extends ConsumerState<MealsTab> {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref, Meal meal) async {
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(mealControllerProvider.notifier).deleteMeal(meal.clientId);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.mealDeletedMessage)));
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.mealDeletedMessage);
+      }
     } catch (_) {
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.couldNotDeleteMealMessage)));
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotDeleteMealMessage);
+      }
       await ref.read(mealControllerProvider.notifier).refresh();
     }
   }
@@ -206,7 +210,17 @@ class _MealCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         child: Icon(Icons.delete, color: scheme.onErrorContainer),
       ),
-      onDismissed: (_) => onDelete(),
+      // Confirm first; the local cache stream removes the tile once the
+      // delete lands, so we never let Dismissible drop it itself.
+      confirmDismiss: (_) async {
+        final confirmed = await showConfirmDeleteDialog(
+          context,
+          title: l10n.deleteMealQuestionTitle,
+          message: l10n.deleteMealConfirmMessage,
+        );
+        if (confirmed) onDelete();
+        return false;
+      },
       child: Card(
         elevation: 0,
         color: scheme.surfaceContainerHigh,

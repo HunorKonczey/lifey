@@ -5,7 +5,9 @@ import '../../nutrition/application/meal_controller.dart';
 import '../../nutrition/domain/meal.dart';
 import '../../water/data/water_entry_repository.dart';
 import '../../weight/application/weight_controller.dart';
+import '../../workouts/application/exercise_controller.dart';
 import '../../workouts/application/workout_session_controller.dart';
+import '../../workouts/domain/exercise_enums.dart';
 import '../domain/daily_stats.dart';
 import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
@@ -51,6 +53,10 @@ bool _isToday(DateTime dateTime) {
 final dashboardControllerProvider = Provider<DashboardData>((ref) {
   final meals = ref.watch(mealControllerProvider).value ?? const [];
   final sessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+  final exercises = ref.watch(exerciseControllerProvider).value ?? const [];
+  final categoryByExercise = {
+    for (final e in exercises) e.clientId: e.category,
+  };
   final weights = ref.watch(weightControllerProvider).value ?? const [];
   final water = ref.watch(todayWaterTotalProvider).value ?? 0;
 
@@ -78,6 +84,10 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
   // Already sorted newest-first by WorkoutSessionRepository.watchAll().
   final recentWorkouts = sessions.take(_recentWorkoutLimit).map((session) {
     final exerciseNames = <String>{for (final set in session.sets) set.exerciseName};
+    final exerciseIds = <String>{
+      for (final ex in session.exercises) ex.exerciseClientId,
+      for (final set in session.sets) set.exerciseClientId,
+    };
     return RecentWorkout(
       clientId: session.clientId,
       startedAt: session.startedAt,
@@ -85,6 +95,9 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
       setCount: session.sets.length,
       exerciseNames: exerciseNames.toList(),
       activeCalories: session.activeCalories,
+      categoryCode: dominantMuscleGroup(
+        exerciseIds.map((id) => categoryByExercise[id]),
+      ),
     );
   }).toList();
 

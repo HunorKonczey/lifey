@@ -8,6 +8,7 @@ import '../../../core/health/weight_health_backfill_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -472,22 +473,18 @@ class _ImportFromHealthButtonState
     if (_importing) return;
     setState(() => _importing = true);
     final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final count =
           await ref.read(weightHealthBackfillServiceProvider).backfill();
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(
-        content: Text(
-          count > 0
-              ? l10n.weightImportedFromHealth(count)
-              : l10n.noNewWeightFromHealth,
-        ),
-      ));
+      if (count > 0) {
+        AppSnackbar.showSuccess(context, title: l10n.weightImportedFromHealth(count));
+      } else {
+        AppSnackbar.showInfo(context, title: l10n.noNewWeightFromHealth);
+      }
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.noNewWeightFromHealth)));
+      AppSnackbar.showError(context, title: l10n.noNewWeightFromHealth);
     } finally {
       if (mounted) setState(() => _importing = false);
     }

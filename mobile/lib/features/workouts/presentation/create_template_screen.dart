@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
 import '../domain/exercise.dart';
@@ -38,6 +41,9 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
   final _name = TextEditingController();
   late final List<_ExerciseEntry> _exercises;
   bool _saving = false;
+  bool _pendingSave = false;
+  String? _templateClientId;
+  Timer? _debounce;
 
   bool get _isEditing => widget.template != null;
 
@@ -53,51 +59,68 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
     } else {
       _exercises = [];
     }
+    _name.addListener(_onNameChanged);
+  }
+
+  void _onNameChanged() {
+    if (!_isEditing && _templateClientId == null) return;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), _autoSave);
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _name.dispose();
     super.dispose();
   }
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  Future<void> _save() async {
-    if (_saving) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    if (_name.text.trim().isEmpty) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.enterANameMessage)));
+  Future<void> _autoSave() async {
+    final name = _name.text.trim();
+    if (name.isEmpty || _exercises.isEmpty) return;
+    if (_saving) {
+      _pendingSave = true;
       return;
     }
-    if (_exercises.isEmpty) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.pickAtLeastOneExerciseMessage)));
-      return;
-    }
+    _pendingSave = false;
     setState(() => _saving = true);
-    final navigator = Navigator.of(context);
     try {
-      final notifier = ref.read(workoutTemplateControllerProvider.notifier);
-      final templateExercises = _exercises
-          .map((e) => TemplateExercise(exerciseClientId: e.clientId, targetSets: e.targetSets))
-          .toList();
-      if (_isEditing) {
-        await notifier.updateTemplate(
-          clientId: widget.template!.clientId,
-          name: _name.text.trim(),
-          exercises: templateExercises,
-        );
-      } else {
-        await notifier.createTemplate(
-          name: _name.text.trim(),
-          exercises: templateExercises,
+      await _persist();
+    } catch (_) {
+      if (mounted) {
+        AppSnackbar.showError(
+          context,
+          title: AppLocalizations.of(context)!.couldNotSaveTemplateMessage,
         );
       }
-      navigator.pop();
-    } catch (_) {
-      setState(() => _saving = false);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotSaveTemplateMessage)));
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+        if (_pendingSave) Future.microtask(_autoSave);
+      }
+    }
+  }
+
+  Future<void> _persist() async {
+    final notifier = ref.read(workoutTemplateControllerProvider.notifier);
+    final name = _name.text.trim();
+    final templateExercises = _exercises
+        .map((e) => TemplateExercise(exerciseClientId: e.clientId, targetSets: e.targetSets))
+        .toList();
+    final id = _isEditing ? widget.template!.clientId : _templateClientId;
+    if (id != null) {
+      await notifier.updateTemplate(
+        clientId: id,
+        name: name,
+        exercises: templateExercises,
+      );
+    } else {
+      _templateClientId = await notifier.createTemplate(
+        name: name,
+        exercises: templateExercises,
+      );
     }
   }
 
@@ -121,17 +144,22 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
         targetSets: result.isEmpty ? null : int.tryParse(result),
       );
     });
+    _autoSave();
   }
 
-  void _removeExercise(int index) => setState(() => _exercises.removeAt(index));
+  void _removeExercise(int index) {
+    setState(() => _exercises.removeAt(index));
+    _autoSave();
+  }
 
   void _openExercisePicker(List<Exercise> allExercises) {
     final existing = _exercises.map((e) => e.clientId).toSet();
     final available = allExercises.where((e) => !existing.contains(e.clientId)).toList();
 
     if (available.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.everyExerciseAlreadyInSessionMessage)),
+      AppSnackbar.showInfo(
+        context,
+        title: AppLocalizations.of(context)!.everyExerciseAlreadyInSessionMessage,
       );
       return;
     }
@@ -146,6 +174,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
         onPick: (exercise) {
           Navigator.pop(ctx);
           setState(() => _exercises.add(_ExerciseEntry(clientId: exercise.clientId)));
+          _autoSave();
         },
       ),
     );
@@ -180,6 +209,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
                 final item = _exercises.removeAt(oldIndex);
                 _exercises.insert(newIndex, item);
               });
+              _autoSave();
             },
             header: _buildHeader(context, l10n, scheme, allExercises),
             footer: Padding(
@@ -200,29 +230,16 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
             child: AdaptiveAppBar(
               title: _isEditing ? l10n.editTemplateTitle : l10n.newTemplateTitle,
               onBack: () => Navigator.of(context).pop(),
-              trailing: GestureDetector(
-                onTap: _saving ? null : _save,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: _saving
-                      ? SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: scheme.primary,
-                          ),
-                        )
-                      : Text(
-                          l10n.saveButton,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: scheme.primary,
-                          ),
-                        ),
-                ),
-              ),
+              trailing: _saving
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: scheme.primary,
+                      ),
+                    )
+                  : null,
             ),
           ),
         ],

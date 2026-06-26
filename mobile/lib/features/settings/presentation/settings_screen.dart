@@ -9,6 +9,7 @@ import '../../../core/network/error_message.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../water/presentation/water_sources_screen.dart';
@@ -70,9 +71,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         )
         .catchError((e) {
           if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+            AppSnackbar.showError(context, title: friendlyError(e));
           }
         });
   }

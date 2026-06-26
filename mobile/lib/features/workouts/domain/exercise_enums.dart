@@ -70,6 +70,28 @@ Color muscleGroupColor(String code, BuildContext context) {
   };
 }
 
+/// Returns the muscle-group code that occurs most often among [categories],
+/// ignoring nulls. Ties break by [kMuscleGroups] display order. Returns null
+/// when no category is present — callers fall back to a neutral colour.
+String? dominantMuscleGroup(Iterable<String?> categories) {
+  final counts = <String, int>{};
+  for (final code in categories) {
+    if (code == null) continue;
+    counts[code] = (counts[code] ?? 0) + 1;
+  }
+  if (counts.isEmpty) return null;
+  String? best;
+  var bestCount = 0;
+  for (final code in kMuscleGroups) {
+    final n = counts[code] ?? 0;
+    if (n > bestCount) {
+      bestCount = n;
+      best = code;
+    }
+  }
+  return best;
+}
+
 String equipmentLabel(AppLocalizations l10n, String code) {
   return switch (code) {
     'BARBELL' => l10n.equipmentBarbell,

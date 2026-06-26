@@ -12,7 +12,7 @@ class WorkoutTemplateController extends StreamNotifier<List<WorkoutTemplate>> {
   @override
   Stream<List<WorkoutTemplate>> build() => _repo.watchAll();
 
-  Future<void> createTemplate({
+  Future<String> createTemplate({
     required String name,
     required List<TemplateExercise> exercises,
   }) {

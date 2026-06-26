@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../application/exercise_controller.dart';
@@ -34,34 +36,24 @@ class TemplatesTab extends ConsumerWidget {
   Future<void> _delete(
       BuildContext context, WidgetRef ref, WorkoutTemplate template) async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.deleteTemplateQuestionTitle),
-        content: Text(l10n.deleteTemplateConfirmMessage(template.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.cancelButton),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.deleteButton),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDeleteDialog(
+      context,
+      title: l10n.deleteTemplateQuestionTitle,
+      message: l10n.deleteTemplateConfirmMessage(template.name),
     );
-    if (confirmed != true || !context.mounted) return;
+    if (!confirmed || !context.mounted) return;
 
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref
           .read(workoutTemplateControllerProvider.notifier)
           .deleteTemplate(template.clientId);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.templateDeletedMessage)));
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.templateDeletedMessage);
+      }
     } catch (_) {
-      messenger
-          .showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteTemplateMessage)));
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotDeleteTemplateMessage);
+      }
     }
   }
 
@@ -169,17 +161,10 @@ class _TemplateCard extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     final categories = _categories();
-    final primaryCategory = categories.isNotEmpty ? categories.first : null;
-    final Color badgeBg;
-    final Color badgeIconColor;
-    if (primaryCategory != null) {
-      final mc = muscleGroupColor(primaryCategory, context);
-      badgeBg = mc.withValues(alpha: 0.15);
-      badgeIconColor = mc;
-    } else {
-      badgeBg = scheme.primaryContainer;
-      badgeIconColor = scheme.onPrimaryContainer;
-    }
+    // Templates keep the neutral green badge (matching the design); the
+    // muscle-group colours appear only on the category chips below.
+    final badgeBg = scheme.primaryContainer;
+    final badgeIconColor = scheme.onPrimaryContainer;
 
     return Card(
       elevation: 0,
@@ -189,94 +174,133 @@ class _TemplateCard extends StatelessWidget {
       ),
       margin: const EdgeInsets.only(bottom: 10),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onStart,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header row
-              Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Info section (tappable → start) ──────────────────────────────
+          InkWell(
+            onTap: onStart,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: badgeBg,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        _templateIcon(categories),
-                        size: 24,
-                        color: badgeIconColor,
+                  // Header row
+                  Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: badgeBg,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            _templateIcon(categories),
+                            size: 24,
+                            color: badgeIconColor,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 13),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          template.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ).copyWith(color: scheme.onSurface),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              template.name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ).copyWith(color: scheme.onSurface),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              l10n.exercisesCountLabel(template.exercises.length),
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                              ).copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          l10n.exercisesCountLabel(template.exercises.length),
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                          ).copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      switch (value) {
-                        case 'edit':
-                          onEdit();
-                        case 'delete':
-                          onDelete();
-                      }
-                    },
-                    icon: Icon(Icons.more_vert,
-                        size: 20, color: scheme.onSurfaceVariant),
-                    padding: EdgeInsets.zero,
-                    itemBuilder: (_) => [
-                      PopupMenuItem(value: 'edit', child: Text(l10n.editMenuItem)),
-                      PopupMenuItem(
-                          value: 'delete', child: Text(l10n.deleteButton)),
+                      ),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'edit':
+                              onEdit();
+                            case 'delete':
+                              onDelete();
+                          }
+                        },
+                        icon: Icon(Icons.more_vert,
+                            size: 20, color: scheme.onSurfaceVariant),
+                        padding: EdgeInsets.zero,
+                        itemBuilder: (_) => [
+                          PopupMenuItem(value: 'edit', child: Text(l10n.editMenuItem)),
+                          PopupMenuItem(
+                              value: 'delete', child: Text(l10n.deleteButton)),
+                        ],
+                      ),
                     ],
                   ),
+
+                  // Category chips
+                  if (categories.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: categories
+                          .map((c) => _CategoryChip(
+                                label: muscleGroupLabel(l10n, c),
+                                color: muscleGroupColor(c, context),
+                              ))
+                          .toList(),
+                    ),
+                  ],
                 ],
               ),
-
-              // Category chips
-              if (categories.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: categories
-                      .map((c) => _CategoryChip(
-                            label: muscleGroupLabel(l10n, c),
-                            color: muscleGroupColor(c, context),
-                          ))
-                      .toList(),
-                ),
-              ],
-            ],
+            ),
           ),
-        ),
+
+          // ── Start button ─────────────────────────────────────────────────
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonal(
+                onPressed: onStart,
+                style: FilledButton.styleFrom(
+                  backgroundColor: scheme.primaryContainer,
+                  foregroundColor: scheme.onPrimaryContainer,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.card - 4),
+                  ),
+                  textStyle: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.play_arrow_rounded, size: 20),
+                    const SizedBox(width: 6),
+                    Text(l10n.startWorkoutButton),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

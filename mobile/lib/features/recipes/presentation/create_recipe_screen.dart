@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -6,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../nutrition/domain/food.dart';
 import '../../nutrition/presentation/widgets/add_macros_sheet.dart';
 import '../../nutrition/presentation/widgets/add_meal_entry_sheet.dart';
@@ -28,6 +30,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   late final TextEditingController _description;
   final List<({Food food, double grams})> _ingredients = [];
   bool _saving = false;
+  bool _pendingSave = false;
+  String? _recipeClientId;
+  Timer? _debounce;
   late bool _favorite;
 
   bool get _isEditing => widget.recipe != null;
@@ -66,10 +71,19 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
         ));
       }
     }
+    _name.addListener(_onTextChanged);
+    _description.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    if (!_isEditing && _recipeClientId == null) return;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), _autoSave);
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _name.dispose();
     _description.dispose();
     super.dispose();
@@ -85,6 +99,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     );
     if (draft != null) {
       setState(() => _ingredients.add((food: draft.food, grams: draft.grams)));
+      _autoSave();
     }
   }
 
@@ -98,6 +113,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     );
     if (draft != null) {
       setState(() => _ingredients.add((food: draft.food, grams: draft.grams)));
+      _autoSave();
     }
   }
 
@@ -115,51 +131,64 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     );
     if (draft != null) {
       setState(() => _ingredients[index] = (food: draft.food, grams: draft.grams));
+      _autoSave();
     }
   }
 
-  Future<void> _save() async {
-    if (_saving) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    if (_name.text.trim().isEmpty) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.enterANameMessage)));
+  void _removeIngredient(int index) {
+    setState(() => _ingredients.removeAt(index));
+    _autoSave();
+  }
+
+  Future<void> _autoSave() async {
+    if (_ingredients.isEmpty) return;
+    final name = _name.text.trim();
+    if (name.isEmpty) return;
+    if (_saving) {
+      _pendingSave = true;
       return;
     }
-    if (_ingredients.isEmpty) {
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.addAtLeastOneIngredientMessage)));
-      return;
-    }
+    _pendingSave = false;
     setState(() => _saving = true);
-    final navigator = Navigator.of(context);
+    try {
+      await _persist();
+    } catch (_) {
+      if (mounted) {
+        AppSnackbar.showError(
+          context,
+          title: AppLocalizations.of(context)!.couldNotSaveRecipeMessage,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+        if (_pendingSave) Future.microtask(_autoSave);
+      }
+    }
+  }
+
+  Future<void> _persist() async {
+    final notifier = ref.read(recipeControllerProvider.notifier);
+    final name = _name.text.trim();
     final description = _description.text.trim();
     final ingredients = _ingredients
         .map((e) => RecipeIngredientInput(foodClientId: e.food.clientId, grams: e.grams))
         .toList();
-    try {
-      final notifier = ref.read(recipeControllerProvider.notifier);
-      if (_isEditing) {
-        await notifier.updateRecipe(
-          widget.recipe!.clientId,
-          name: _name.text.trim(),
-          description: description.isEmpty ? null : description,
-          favorite: _favorite,
-          ingredients: ingredients,
-        );
-      } else {
-        await notifier.createRecipe(
-          name: _name.text.trim(),
-          description: description.isEmpty ? null : description,
-          favorite: _favorite,
-          ingredients: ingredients,
-        );
-      }
-      navigator.pop();
-    } catch (_) {
-      setState(() => _saving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.couldNotSaveRecipeMessage)),
+    final id = _isEditing ? widget.recipe!.clientId : _recipeClientId;
+    if (id != null) {
+      await notifier.updateRecipe(
+        id,
+        name: name,
+        description: description.isEmpty ? null : description,
+        favorite: _favorite,
+        ingredients: ingredients,
+      );
+    } else {
+      _recipeClientId = await notifier.createRecipe(
+        name: name,
+        description: description.isEmpty ? null : description,
+        favorite: _favorite,
+        ingredients: ingredients,
       );
     }
   }
@@ -246,7 +275,10 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
 
               // ── Favorite toggle ─────────────────────────────────────────
               GestureDetector(
-                onTap: () => setState(() => _favorite = !_favorite),
+                onTap: () {
+                  setState(() => _favorite = !_favorite);
+                  if (_isEditing || _recipeClientId != null) _autoSave();
+                },
                 behavior: HitTestBehavior.opaque,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -275,7 +307,10 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                       ),
                       Switch(
                         value: _favorite,
-                        onChanged: (v) => setState(() => _favorite = v),
+                        onChanged: (v) {
+                          setState(() => _favorite = v);
+                          if (_isEditing || _recipeClientId != null) _autoSave();
+                        },
                       ),
                     ],
                   ),
@@ -317,7 +352,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                       food: e.value.food,
                       grams: e.value.grams,
                       onTap: () => _editIngredient(e.key),
-                      onRemove: () => setState(() => _ingredients.removeAt(e.key)),
+                      onRemove: () => _removeIngredient(e.key),
                     ),
                   )),
 
@@ -353,9 +388,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             child: _DetailBar(
               title: _isEditing ? l10n.editRecipeTitle : l10n.newRecipeTitle,
               onBack: () => Navigator.of(context).pop(),
-              onSave: _saving ? null : _save,
               saving: _saving,
-              saveLabel: l10n.saveButton,
             ),
           ),
         ],
@@ -372,16 +405,12 @@ class _DetailBar extends StatelessWidget {
   const _DetailBar({
     required this.title,
     required this.onBack,
-    required this.onSave,
     required this.saving,
-    required this.saveLabel,
   });
 
   final String title;
   final VoidCallback onBack;
-  final VoidCallback? onSave;
   final bool saving;
-  final String saveLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -441,6 +470,7 @@ class _DetailBar extends StatelessWidget {
                   ),
                 ),
               ),
+              // Auto-save indicator
               if (saving)
                 SizedBox(
                   width: 18,
@@ -451,22 +481,7 @@ class _DetailBar extends StatelessWidget {
                   ),
                 )
               else
-                GestureDetector(
-                  onTap: onSave,
-                  behavior: HitTestBehavior.opaque,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                    child: Text(
-                      saveLabel,
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: scheme.primary,
-                      ),
-                    ),
-                  ),
-                ),
+                const SizedBox(width: 18),
             ],
           ),
         ),

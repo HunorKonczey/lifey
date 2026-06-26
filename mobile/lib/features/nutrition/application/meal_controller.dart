@@ -65,7 +65,7 @@ class MealController extends StreamNotifier<List<Meal>> {
     _resubscribe();
   }
 
-  Future<void> logMeal({
+  Future<String> logMeal({
     required DateTime dateTime,
     required MealType mealType,
     required List<MealEntryInput> entries,

@@ -12,7 +12,7 @@ class RecipeController extends StreamNotifier<List<Recipe>> {
   @override
   Stream<List<Recipe>> build() => _repo.watchAll();
 
-  Future<void> createRecipe({
+  Future<String> createRecipe({
     required String name,
     String? description,
     bool favorite = false,

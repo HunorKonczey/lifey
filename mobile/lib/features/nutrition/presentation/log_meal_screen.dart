@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../application/meal_controller.dart';
 import '../data/meal_repository.dart';
 import '../domain/food.dart';
@@ -31,6 +32,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
   late DateTime _dateTime;
   final List<({Food food, double grams})> _entries = [];
   bool _saving = false;
+  bool _pendingSave = false;
+  String? _mealClientId;
 
   bool get _isEditing => widget.meal != null;
 
@@ -96,6 +99,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       time?.minute ?? _dateTime.minute,
     );
     setState(() => _dateTime = picked.isAfter(now) ? now : picked);
+    _autoSave();
   }
 
   Future<void> _addEntry() async {
@@ -108,6 +112,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     );
     if (draft != null) {
       setState(() => _entries.add((food: draft.food, grams: draft.grams)));
+      _autoSave();
     }
   }
 
@@ -121,6 +126,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     );
     if (draft != null) {
       setState(() => _entries.add((food: draft.food, grams: draft.grams)));
+      _autoSave();
     }
   }
 
@@ -138,38 +144,52 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     );
     if (draft != null) {
       setState(() => _entries[index] = (food: draft.food, grams: draft.grams));
+      _autoSave();
     }
   }
 
-  Future<void> _save() async {
-    if (_saving) return;
-    final l10n = AppLocalizations.of(context)!;
-    if (_entries.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.addAtLeastOneFoodMessage)),
-      );
+  void _removeEntry(int index) {
+    setState(() => _entries.removeAt(index));
+    _autoSave();
+  }
+
+  Future<void> _autoSave() async {
+    if (_entries.isEmpty) return;
+    if (_saving) {
+      _pendingSave = true;
       return;
     }
+    _pendingSave = false;
     setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final errorMsg = l10n.couldNotSaveMealMessage;
+    try {
+      await _persist();
+    } catch (_) {
+      if (mounted) {
+        AppSnackbar.showError(
+          context,
+          title: AppLocalizations.of(context)!.couldNotSaveMealMessage,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+        if (_pendingSave) Future.microtask(_autoSave);
+      }
+    }
+  }
+
+  Future<void> _persist() async {
+    final notifier = ref.read(mealControllerProvider.notifier);
     final entries = _entries
         .map((e) => MealEntryInput(foodClientId: e.food.clientId, grams: e.grams))
         .toList();
-    try {
-      final notifier = ref.read(mealControllerProvider.notifier);
-      if (_isEditing) {
-        await notifier.updateMeal(widget.meal!.clientId,
-            dateTime: _dateTime, mealType: _mealType, entries: entries);
-      } else {
-        await notifier.logMeal(
-            dateTime: _dateTime, mealType: _mealType, entries: entries);
-      }
-      navigator.pop();
-    } catch (_) {
-      setState(() => _saving = false);
-      messenger.showSnackBar(SnackBar(content: Text(errorMsg)));
+    final id = _isEditing ? widget.meal!.clientId : _mealClientId;
+    if (id != null) {
+      await notifier.updateMeal(id,
+          dateTime: _dateTime, mealType: _mealType, entries: entries);
+    } else {
+      _mealClientId = await notifier.logMeal(
+          dateTime: _dateTime, mealType: _mealType, entries: entries);
     }
   }
 
@@ -198,7 +218,10 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
               const SizedBox(height: 8),
               _MealTypeRow(
                 selected: _mealType,
-                onChanged: (t) => setState(() => _mealType = t),
+                onChanged: (t) {
+                  setState(() => _mealType = t);
+                  _autoSave();
+                },
                 l10n: l10n,
               ),
 
@@ -248,7 +271,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
                       food: e.value.food,
                       grams: e.value.grams,
                       onTap: () => _editEntry(e.key),
-                      onRemove: () => setState(() => _entries.removeAt(e.key)),
+                      onRemove: () => _removeEntry(e.key),
                     ),
                   )),
 
@@ -284,9 +307,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
             child: _DetailBar(
               title: _isEditing ? l10n.editMealTitle : l10n.logMealTitle,
               onBack: () => Navigator.of(context).pop(),
-              onSave: _saving ? null : _save,
               saving: _saving,
-              saveLabel: l10n.saveButton,
             ),
           ),
         ],
@@ -303,16 +324,12 @@ class _DetailBar extends StatelessWidget {
   const _DetailBar({
     required this.title,
     required this.onBack,
-    required this.onSave,
     required this.saving,
-    required this.saveLabel,
   });
 
   final String title;
   final VoidCallback onBack;
-  final VoidCallback? onSave;
   final bool saving;
-  final String saveLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -374,7 +391,7 @@ class _DetailBar extends StatelessWidget {
                   ),
                 ),
               ),
-              // Save
+              // Auto-save indicator
               if (saving)
                 SizedBox(
                   width: 18,
@@ -385,22 +402,7 @@ class _DetailBar extends StatelessWidget {
                   ),
                 )
               else
-                GestureDetector(
-                  onTap: onSave,
-                  behavior: HitTestBehavior.opaque,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                    child: Text(
-                      saveLabel,
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: scheme.primary,
-                      ),
-                    ),
-                  ),
-                ),
+                const SizedBox(width: 18),
             ],
           ),
         ),

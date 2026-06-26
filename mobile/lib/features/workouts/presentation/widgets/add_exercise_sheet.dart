@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,6 +28,7 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
   String? _equipment;
   bool _submitting = false;
   String? _error;
+  Timer? _autoSaveDebounce;
 
   bool get _isEdit => widget.exercise != null;
 
@@ -35,10 +38,35 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
     _name = TextEditingController(text: widget.exercise?.name ?? '');
     _category = widget.exercise?.category;
     _equipment = widget.exercise?.equipment;
+    if (_isEdit) {
+      _name.addListener(_scheduleAutoSave);
+    }
+  }
+
+  void _scheduleAutoSave() {
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = Timer(const Duration(milliseconds: 500), _autoSaveInBackground);
+  }
+
+  Future<void> _autoSaveInBackground() async {
+    if (_submitting) return;
+    final name = _name.text.trim();
+    if (name.isEmpty) return;
+    try {
+      await ref.read(exerciseControllerProvider.notifier).updateExercise(
+        widget.exercise!.clientId,
+        name: name,
+        category: _category,
+        equipment: _equipment,
+      );
+    } catch (_) {
+      // Silent fail — the explicit save button surfaces errors.
+    }
   }
 
   @override
   void dispose() {
+    _autoSaveDebounce?.cancel();
     _name.dispose();
     super.dispose();
   }
@@ -111,7 +139,10 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
               codes: kMuscleGroups,
               selected: _category,
               labelBuilder: (code) => muscleGroupLabel(l10n, code),
-              onSelected: (code) => setState(() => _category = _category == code ? null : code),
+              onSelected: (code) {
+                setState(() => _category = _category == code ? null : code);
+                if (_isEdit) _autoSaveInBackground();
+              },
             ),
             const SizedBox(height: 12),
             _ChipSection(
@@ -119,7 +150,10 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
               codes: kEquipments,
               selected: _equipment,
               labelBuilder: (code) => equipmentLabel(l10n, code),
-              onSelected: (code) => setState(() => _equipment = _equipment == code ? null : code),
+              onSelected: (code) {
+                setState(() => _equipment = _equipment == code ? null : code);
+                if (_isEdit) _autoSaveInBackground();
+              },
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),

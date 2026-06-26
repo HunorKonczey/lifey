@@ -88,7 +88,7 @@ class RecipeRepository {
     });
   }
 
-  Future<void> create({
+  Future<String> create({
     required String name,
     String? description,
     bool favorite = false,
@@ -112,6 +112,7 @@ class RecipeRepository {
       payload: _payload(
           name: name, description: description, favorite: favorite, ingredients: ingredients),
     );
+    return clientId;
   }
 
   Future<void> update(

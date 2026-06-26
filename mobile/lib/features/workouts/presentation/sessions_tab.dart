@@ -7,8 +7,12 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
+import '../application/exercise_controller.dart';
 import '../application/workout_session_controller.dart';
+import '../domain/exercise_enums.dart';
 import '../domain/workout_session.dart';
 import 'log_session_screen.dart';
 
@@ -31,6 +35,18 @@ class SessionsTab extends ConsumerStatefulWidget {
 class _SessionsTabState extends ConsumerState<SessionsTab> {
   static final _dateLabel = DateFormat('EEE, MMM d · HH:mm');
 
+  /// Muscle group with the most exercises in [session], or null when unknown.
+  static String? _dominantCategory(
+      WorkoutSession session, Map<String, String?> categoryByExercise) {
+    final exerciseIds = <String>{
+      for (final ex in session.exercises) ex.exerciseClientId,
+      for (final set in session.sets) set.exerciseClientId,
+    };
+    return dominantMuscleGroup(
+      exerciseIds.map((id) => categoryByExercise[id]),
+    );
+  }
+
   Future<void> _edit(BuildContext context, WorkoutSession session) {
     return Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => LogSessionScreen(session: session)),
@@ -38,13 +54,16 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref, WorkoutSession session) async {
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(workoutSessionControllerProvider.notifier).deleteSession(session.clientId);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.workoutDeletedMessage)));
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.workoutDeletedMessage);
+      }
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteWorkoutMessage)));
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotDeleteWorkoutMessage);
+      }
       await ref.read(workoutSessionControllerProvider.notifier).refresh();
     }
   }
@@ -52,24 +71,12 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
   Future<void> _confirmDelete(
       BuildContext context, WidgetRef ref, WorkoutSession session) async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.deleteWorkoutQuestionTitle),
-        content: Text(l10n.deleteWorkoutConfirmMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.cancelButton),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.deleteButton),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDeleteDialog(
+      context,
+      title: l10n.deleteWorkoutQuestionTitle,
+      message: l10n.deleteWorkoutConfirmMessage,
     );
-    if (confirmed == true && context.mounted) {
+    if (confirmed && context.mounted) {
       await _delete(context, ref, session);
     }
   }
@@ -79,6 +86,13 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
     final state = ref.watch(workoutSessionControllerProvider);
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
+
+    // Exercise clientId → muscle-group code, for colouring each card's icon by
+    // the session's dominant muscle group.
+    final categoryByExercise = ref.watch(exerciseControllerProvider).maybeWhen(
+          data: (exercises) => {for (final e in exercises) e.clientId: e.category},
+          orElse: () => const <String, String?>{},
+        );
 
     return state.when(
       data: (sessions) {
@@ -111,11 +125,10 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
             itemCount: filtered.length,
             itemBuilder: (context, index) => _SessionCard(
               session: filtered[index],
+              categoryCode: _dominantCategory(filtered[index], categoryByExercise),
               dateLabel: _dateLabel,
               onEdit: () => _edit(context, filtered[index]),
-              onDelete: () => _delete(context, ref, filtered[index]),
-              onDeleteTap: () =>
-                  _confirmDelete(context, ref, filtered[index]),
+              onDelete: () => _confirmDelete(context, ref, filtered[index]),
             ),
           ),
         );
@@ -137,17 +150,20 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
 class _SessionCard extends StatelessWidget {
   const _SessionCard({
     required this.session,
+    required this.categoryCode,
     required this.dateLabel,
     required this.onEdit,
     required this.onDelete,
-    required this.onDeleteTap,
   });
 
   final WorkoutSession session;
+  final String? categoryCode;
   final DateFormat dateLabel;
   final VoidCallback onEdit;
+
+  /// Asks for confirmation, then deletes. Shared by the swipe gesture and the
+  /// trailing delete button.
   final VoidCallback onDelete;
-  final VoidCallback onDeleteTap;
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +178,17 @@ class _SessionCard extends StatelessWidget {
         .take(4)
         .join(', ');
 
+    final Color badgeBg;
+    final Color badgeIconColor;
+    if (categoryCode != null) {
+      final mc = muscleGroupColor(categoryCode!, context);
+      badgeBg = mc.withValues(alpha: 0.15);
+      badgeIconColor = mc;
+    } else {
+      badgeBg = scheme.primaryContainer;
+      badgeIconColor = scheme.onPrimaryContainer;
+    }
+
     return Dismissible(
       key: ValueKey(session.clientId),
       direction: DismissDirection.endToStart,
@@ -175,7 +202,12 @@ class _SessionCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         child: Icon(Icons.delete, color: scheme.onErrorContainer),
       ),
-      onDismissed: (_) => onDelete(),
+      // Confirm before deleting; the local cache stream removes the tile once
+      // the delete lands, so we always report `false` here.
+      confirmDismiss: (_) async {
+        onDelete();
+        return false;
+      },
       child: Card(
         elevation: 0,
         color: scheme.surfaceContainerHigh,
@@ -197,14 +229,14 @@ class _SessionCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
+                    color: badgeBg,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: Icon(
                       Icons.fitness_center,
                       size: 22,
-                      color: scheme.onPrimaryContainer,
+                      color: badgeIconColor,
                     ),
                   ),
                 ),
@@ -283,18 +315,18 @@ class _SessionCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Delete tap target
-                GestureDetector(
-                  onTap: onDeleteTap,
-                  behavior: HitTestBehavior.opaque,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: Icon(
-                      Icons.more_vert,
-                      size: 18,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                // Delete button
+                IconButton(
+                  onPressed: onDelete,
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: scheme.onSurfaceVariant,
                   ),
+                  tooltip: l10n.deleteWorkoutTooltip,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),

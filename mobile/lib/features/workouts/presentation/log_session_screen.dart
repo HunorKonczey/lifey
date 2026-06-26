@@ -12,6 +12,8 @@ import '../../../core/health/health_service.dart';
 import '../../../core/health/health_workout_import_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
@@ -40,7 +42,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   // Used only for formatting the Apple workout date in the pairing dialog.
   static final _label = DateFormat('EEE, MMM d · HH:mm');
 
-  late DateTime _startedAt;
+  DateTime? _startedAt;
   DateTime? _finishedAt;
 
   /// The persisted session's clientId. Set when editing an existing session,
@@ -82,7 +84,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   void initState() {
     super.initState();
     final session = widget.session;
-    _startedAt = session?.startedAt ?? DateTime.now();
+    // For existing sessions, start time is known. For new sessions _startedAt
+    // stays null until the first set is persisted — the timer only starts then.
+    _startedAt = session?.startedAt;
     _finishedAt = session?.finishedAt;
 
     if (session != null) {
@@ -127,7 +131,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       }
     }
 
-    if (_finishedAt == null) {
+    // Only start the ticker immediately when editing an existing in-progress
+    // session. For new sessions the ticker starts lazily in _persist() once
+    // the first set is saved.
+    if (_isEditing && _finishedAt == null) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() => _now = DateTime.now());
       });
@@ -200,7 +207,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   }
 
   String _formatElapsed() {
-    final duration = (_finishedAt ?? _now).difference(_startedAt);
+    if (_startedAt == null) return '0:00';
+    final duration = (_finishedAt ?? _now).difference(_startedAt!);
     final h = duration.inHours;
     final m = duration.inMinutes % 60;
     final s = duration.inSeconds % 60;
@@ -286,18 +294,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final hasDone = _blocks[bi].rows.any((r) => r.isDone);
     if (hasDone) {
       final l10n = AppLocalizations.of(context)!;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.removeExerciseTitle),
-          content: Text(l10n.removeExerciseConfirmMessage),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.cancelButton)),
-            TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.removeButton)),
-          ],
-        ),
+      final confirmed = await showAppConfirmDialog(
+        context,
+        title: l10n.removeExerciseTitle,
+        message: l10n.removeExerciseConfirmMessage,
+        confirmLabel: l10n.removeButton,
+        cancelLabel: l10n.cancelButton,
+        icon: Icons.remove_circle_rounded,
+        accentColor: const Color(0xFFD66B5A),
       );
       if (confirmed != true || !mounted) return;
     }
@@ -331,12 +335,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   Future<void> _autoSave() async {
     if (_saving) return;
     setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     try {
       await _persist();
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotSaveSessionMessage)));
+      if (mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotSaveSessionMessage);
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -346,8 +351,25 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final notifier = ref.read(workoutSessionControllerProvider.notifier);
     final existingId = _sessionClientId;
     if (existingId == null) {
+      // Don't create the session until at least one set is logged, unless we
+      // are finishing (finishedAt != null means the user explicitly hit Finish).
+      if (_buildSets().isEmpty && _finishedAt == null) return;
+
+      // First real save: stamp the start time now and kick off the ticker.
+      if (_startedAt == null) {
+        _startedAt = DateTime.now();
+        if (_finishedAt == null) {
+          setState(() {});
+          _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+            if (mounted) setState(() => _now = DateTime.now());
+          });
+          _hrTicker = Timer.periodic(_kHrPollInterval, (_) => _pollHeartRate());
+          _pollHeartRate();
+        }
+      }
+
       _sessionClientId = await notifier.logSession(
-        startedAt: _startedAt,
+        startedAt: _startedAt!,
         finishedAt: _finishedAt,
         exercises: _buildPlanned(),
         sets: _buildSets(),
@@ -355,7 +377,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     } else {
       await notifier.updateSession(
         existingId,
-        startedAt: _startedAt,
+        startedAt: _startedAt!,
         finishedAt: _finishedAt,
         exercises: _buildPlanned(),
         sets: _buildSets(),
@@ -367,6 +389,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   /// Does NOT navigate — the caller decides where to go.
   Future<void> _persistFinished() async {
     _finishedAt = DateTime.now();
+    // If no set was ever logged, start = finish (session was created via Finish).
+    _startedAt ??= _finishedAt;
     _ticker?.cancel();
     _ticker = null;
     _hrTicker?.cancel();
@@ -378,7 +402,6 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   Future<void> _finishWorkout() async {
     if (_saving) return;
     setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     final importService = ref.read(healthWorkoutImportServiceProvider);
 
@@ -398,27 +421,18 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
       if (workout != null) {
         // Pairing dialog.
-        final pair = await showDialog<bool?>(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: Text(l10n.pairAppleWorkoutTitle),
-            content: Text(l10n.pairAppleWorkoutMessage(
-              _label.format(workout.startDate.toLocal()),
-              workout.activeCalories?.round().toString() ?? '–',
-              workout.averageHeartRate?.round().toString() ?? '–',
-            )),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(l10n.finishWithoutPairingButton),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(l10n.pairAndFinishButton),
-              ),
-            ],
+        final pair = await showAppConfirmDialog(
+          context,
+          title: l10n.pairAppleWorkoutTitle,
+          message: l10n.pairAppleWorkoutMessage(
+            _label.format(workout.startDate.toLocal()),
+            workout.activeCalories?.round().toString() ?? '–',
+            workout.averageHeartRate?.round().toString() ?? '–',
           ),
+          confirmLabel: l10n.pairAndFinishButton,
+          cancelLabel: l10n.finishWithoutPairingButton,
+          icon: Icons.link_rounded,
+          barrierDismissible: false,
         );
         if (!mounted || pair == null) return; // barrier dismiss = stay
         await _persistFinished();
@@ -426,7 +440,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         if (pair) {
           await importService.importInto(
             sessionClientId: _sessionClientId!,
-            startedAt: _startedAt,
+            startedAt: _startedAt!,
             exercises: _buildPlanned(),
             sets: _buildSets(),
             workout: workout,
@@ -436,23 +450,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         _navigateToDashboard();
       } else {
         // No Apple workout found — dialog instead of snackbar.
-        final finish = await showDialog<bool?>(
-          context: context,
+        final finish = await showAppConfirmDialog(
+          context,
+          title: l10n.noAppleWorkoutTitle,
+          message: l10n.noAppleWorkoutMessage,
+          confirmLabel: l10n.finishAnywayButton,
+          cancelLabel: l10n.cancelButton,
+          icon: Icons.fitness_center_rounded,
           barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: Text(l10n.noAppleWorkoutTitle),
-            content: Text(l10n.noAppleWorkoutMessage),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(l10n.cancelButton),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(l10n.finishAnywayButton),
-              ),
-            ],
-          ),
         );
         if (!mounted || finish != true) return; // Cancel = stay
         await _persistFinished();
@@ -461,7 +466,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       }
     } catch (_) {
       if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotSaveSessionMessage)));
+        AppSnackbar.showError(context, title: l10n.couldNotSaveSessionMessage);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -524,31 +529,33 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.timer, size: 18, color: scheme.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        _formatElapsed(),
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: scheme.onSurface,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                if (_startedAt != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.timer, size: 18, color: scheme.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          _formatElapsed(),
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: scheme.onSurface,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
                 // Near-live heart rate, shown only once it's clearly changing.
                 if (_showHeartRate && _currentHeartRate != null) ...[
                   const SizedBox(width: 8),

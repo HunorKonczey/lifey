@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 import '../../application/barcode_lookup_controller.dart';
 import '../../application/food_controller.dart';
 import '../../domain/food.dart';
@@ -34,6 +37,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
   bool _scanning = false;
   String? _error;
   String? _barcode;
+  Timer? _autoSaveDebounce;
 
   bool get _isEditing => widget.food != null;
 
@@ -51,6 +55,14 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
     _fat = TextEditingController(text: num(food?.fatPer100g));
     _barcode = food?.barcode;
 
+    if (_isEditing) {
+      _name.addListener(_scheduleAutoSave);
+      _calories.addListener(_scheduleAutoSave);
+      _protein.addListener(_scheduleAutoSave);
+      _carbs.addListener(_scheduleAutoSave);
+      _fat.addListener(_scheduleAutoSave);
+    }
+
     if (widget.initialBarcode != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _lookupBarcode(widget.initialBarcode!);
@@ -63,6 +75,7 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
 
   @override
   void dispose() {
+    _autoSaveDebounce?.cancel();
     _name.dispose();
     _calories.dispose();
     _protein.dispose();
@@ -117,25 +130,60 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
           });
         case BarcodeLookupNotFound():
           setState(() => _barcode = barcode);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(l10n.noBarcodeMatchMessage),
-          ));
+          AppSnackbar.showInfo(context, title: l10n.noBarcodeMatchMessage);
         case BarcodeLookupOffline():
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(l10n.offlineCantLookupMessage),
-          ));
+          AppSnackbar.showError(context, title: l10n.offlineCantLookupMessage);
         case BarcodeLookupIdle():
         case BarcodeLookupLoading():
           break;
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(AppLocalizations.of(context)!.couldNotLookupBarcodeMessage),
-        ));
+        AppSnackbar.showError(
+          context,
+          title: AppLocalizations.of(context)!.couldNotLookupBarcodeMessage,
+        );
       }
     } finally {
       if (mounted) setState(() => _scanning = false);
+    }
+  }
+
+  void _scheduleAutoSave() {
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = Timer(const Duration(milliseconds: 500), _autoSaveInBackground);
+  }
+
+  Future<void> _autoSaveInBackground() async {
+    if (_submitting) return;
+    final name = _name.text.trim();
+    if (name.isEmpty) return;
+    final calories = _parse(_calories.text);
+    if (calories == null || calories < 0) return;
+    final protein = _parse(_protein.text);
+    if (protein == null || protein < 0) return;
+    final carbsText = _carbs.text.trim();
+    if (carbsText.isNotEmpty) {
+      final v = _parse(carbsText);
+      if (v == null || v < 0) return;
+    }
+    final fatText = _fat.text.trim();
+    if (fatText.isNotEmpty) {
+      final v = _parse(fatText);
+      if (v == null || v < 0) return;
+    }
+    try {
+      await ref.read(foodControllerProvider.notifier).updateFood(
+        widget.food!.clientId,
+        name: name,
+        calories: calories,
+        protein: protein,
+        carbs: carbsText.isEmpty ? null : _parse(carbsText),
+        fat: fatText.isEmpty ? null : _parse(fatText),
+        barcode: _barcode,
+      );
+    } catch (_) {
+      // Silent fail — the explicit save button surfaces errors.
     }
   }
 

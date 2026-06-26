@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -26,24 +28,19 @@ class WaterSourcesScreen extends ConsumerWidget {
 
   Future<void> _delete(BuildContext context, WidgetRef ref, WaterSource source) async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.deleteWaterSourceQuestionTitle),
-        content: Text(l10n.deleteWaterSourceConfirmMessage(source.name)),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.cancelButton)),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.deleteButton)),
-        ],
-      ),
+    final confirmed = await showConfirmDeleteDialog(
+      context,
+      title: l10n.deleteWaterSourceQuestionTitle,
+      message: l10n.deleteWaterSourceConfirmMessage(source.name),
     );
-    if (confirmed != true || !context.mounted) return;
+    if (!confirmed || !context.mounted) return;
 
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(waterSourceControllerProvider.notifier).deleteSource(source.clientId);
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteWaterSourceMessage)));
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotDeleteWaterSourceMessage);
+      }
     }
   }
 

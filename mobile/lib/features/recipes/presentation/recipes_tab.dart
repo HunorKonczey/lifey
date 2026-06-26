@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -41,14 +43,16 @@ class RecipesTab extends ConsumerWidget {
 
   Future<void> _delete(
       BuildContext context, WidgetRef ref, Recipe recipe) async {
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     try {
       await ref.read(recipeControllerProvider.notifier).deleteRecipe(recipe.clientId);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.deletedFoodMessage(recipe.name))));
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.deletedFoodMessage(recipe.name));
+      }
     } catch (_) {
-      messenger.showSnackBar(
-          SnackBar(content: Text(l10n.couldNotDeleteFoodMessage(recipe.name))));
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotDeleteFoodMessage(recipe.name));
+      }
       await ref.read(recipeControllerProvider.notifier).refresh();
     }
   }
@@ -131,7 +135,17 @@ class _RecipeCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         child: Icon(Icons.delete, color: scheme.onErrorContainer),
       ),
-      onDismissed: (_) => onDelete(),
+      // Confirm first; the local cache stream removes the tile once the
+      // delete lands, so we never let Dismissible drop it itself.
+      confirmDismiss: (_) async {
+        final confirmed = await showConfirmDeleteDialog(
+          context,
+          title: l10n.deleteRecipeQuestionTitle,
+          message: l10n.deleteRecipeConfirmMessage(recipe.name),
+        );
+        if (confirmed) onDelete();
+        return false;
+      },
       child: Card(
         elevation: 0,
         color: scheme.surfaceContainerHigh,

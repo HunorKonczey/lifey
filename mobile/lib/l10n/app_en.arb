@@ -241,6 +241,30 @@
     "couldNotDeleteMealMessage": "Couldn't delete the meal",
     "@couldNotDeleteMealMessage": {"description": "Snackbar shown when deleting a meal fails"},
 
+    "deleteFoodQuestionTitle": "Delete food?",
+    "@deleteFoodQuestionTitle": {"description": "Confirmation dialog title for deleting a food"},
+
+    "deleteFoodConfirmMessage": "\"{name}\" will be removed.",
+    "@deleteFoodConfirmMessage": {"description": "Confirmation dialog body for deleting a food", "placeholders": {"name": {"type": "String"}}},
+
+    "deleteMealQuestionTitle": "Delete meal?",
+    "@deleteMealQuestionTitle": {"description": "Confirmation dialog title for deleting a meal"},
+
+    "deleteMealConfirmMessage": "This meal and its items will be removed.",
+    "@deleteMealConfirmMessage": {"description": "Confirmation dialog body for deleting a meal"},
+
+    "deleteExerciseQuestionTitle": "Delete exercise?",
+    "@deleteExerciseQuestionTitle": {"description": "Confirmation dialog title for deleting an exercise"},
+
+    "deleteExerciseConfirmMessage": "\"{name}\" will be removed.",
+    "@deleteExerciseConfirmMessage": {"description": "Confirmation dialog body for deleting an exercise", "placeholders": {"name": {"type": "String"}}},
+
+    "deleteRecipeQuestionTitle": "Delete recipe?",
+    "@deleteRecipeQuestionTitle": {"description": "Confirmation dialog title for deleting a recipe"},
+
+    "deleteRecipeConfirmMessage": "\"{name}\" will be removed.",
+    "@deleteRecipeConfirmMessage": {"description": "Confirmation dialog body for deleting a recipe", "placeholders": {"name": {"type": "String"}}},
+
     "totalProteinLabel": "{grams} g protein",
     "@totalProteinLabel": {"description": "Total protein for a meal card", "placeholders": {"grams": {"type": "String"}}},
 
@@ -507,6 +531,9 @@
 
     "templateFabLabel": "Template",
     "@templateFabLabel": {"description": "FAB label when on the Templates tab"},
+
+    "startWorkoutButton": "Start workout",
+    "@startWorkoutButton": {"description": "Button on a template card to start a workout from that template"},
 
     "exerciseFabLabel": "Exercise",
     "@exerciseFabLabel": {"description": "FAB label when on the Exercises tab"},

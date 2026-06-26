@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
@@ -69,16 +71,19 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref, Food food) async {
-    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     try {
       // Deletes immediately offline-first; if the food still turns out to be
       // used in a meal/recipe, that 409 only surfaces later when this syncs
       // (no UI for failed-operation review yet, so it just stays queued).
       await ref.read(foodControllerProvider.notifier).deleteFood(food.clientId);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.deletedFoodMessage(food.name))));
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.deletedFoodMessage(food.name));
+      }
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.couldNotDeleteFoodMessage(food.name))));
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotDeleteFoodMessage(food.name));
+      }
     }
   }
 
@@ -165,6 +170,7 @@ class _FoodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Dismissible(
       key: ValueKey(food.clientId),
@@ -180,7 +186,12 @@ class _FoodCard extends StatelessWidget {
         child: Icon(Icons.delete, color: scheme.onErrorContainer),
       ),
       confirmDismiss: (_) async {
-        onDelete();
+        final confirmed = await showConfirmDeleteDialog(
+          context,
+          title: l10n.deleteFoodQuestionTitle,
+          message: l10n.deleteFoodConfirmMessage(food.name),
+        );
+        if (confirmed) onDelete();
         // The local cache stream removes the tile on its own once
         // the delete lands; don't let Dismissible do it too.
         return false;

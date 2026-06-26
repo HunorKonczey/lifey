@@ -54,7 +54,7 @@ class WorkoutTemplateRepository {
     });
   }
 
-  Future<void> create({required String name, required List<TemplateExercise> exercises}) async {
+  Future<String> create({required String name, required List<TemplateExercise> exercises}) async {
     final clientId = newClientId();
     await _db.transaction(() async {
       await _db.into(_db.workoutTemplates).insert(
@@ -67,6 +67,7 @@ class WorkoutTemplateRepository {
       entityType: 'workout_template',
       payload: _payload(name: name, exercises: exercises),
     );
+    return clientId;
   }
 
   Future<void> update(
