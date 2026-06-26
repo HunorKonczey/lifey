@@ -282,6 +282,7 @@
     "noRecipesYetTitle": "Még nincsenek receptek",
     "noIngredientsMessage": "Nincs hozzávaló",
     "totalCaloriesProteinLabel": "≈ {calories} kcal · {protein} g fehérje",
+    "perServingCaloriesProteinLabel": "≈ {calories} kcal · {protein} g fehérje / adag",
     "logAsMealButton": "Naplózás mint étkezés",
     "markFavorite": "Kedvencnek jelölés",
     "removeFavorite": "Kedvenc eltávolítása",

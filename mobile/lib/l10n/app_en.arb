@@ -823,6 +823,9 @@
     "totalCaloriesProteinLabel": "≈ {calories} kcal · {protein} g protein",
     "@totalCaloriesProteinLabel": {"description": "A recipe's total calories and protein", "placeholders": {"calories": {"type": "String"}, "protein": {"type": "String"}}},
 
+    "perServingCaloriesProteinLabel": "≈ {calories} kcal · {protein} g protein / serving",
+    "@perServingCaloriesProteinLabel": {"description": "A recipe's per-serving calories and protein (shown when servings > 1)", "placeholders": {"calories": {"type": "String"}, "protein": {"type": "String"}}},
+
     "logAsMealButton": "Log as meal",
     "@logAsMealButton": {"description": "Button on a recipe card to log it as a meal"},
 

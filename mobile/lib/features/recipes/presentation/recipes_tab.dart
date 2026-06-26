@@ -200,10 +200,15 @@ class _RecipeCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        l10n.totalCaloriesProteinLabel(
-                          recipe.totalCalories.toStringAsFixed(0),
-                          recipe.totalProtein.toStringAsFixed(0),
-                        ),
+                        recipe.servings > 1
+                            ? l10n.perServingCaloriesProteinLabel(
+                                (recipe.totalCalories / recipe.servings).toStringAsFixed(0),
+                                (recipe.totalProtein / recipe.servings).toStringAsFixed(0),
+                              )
+                            : l10n.totalCaloriesProteinLabel(
+                                recipe.totalCalories.toStringAsFixed(0),
+                                recipe.totalProtein.toStringAsFixed(0),
+                              ),
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
