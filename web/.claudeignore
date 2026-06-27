@@ -1,0 +1,19 @@
+# Build outputs
+.next/
+out/
+dist/
+
+# Dependencies — never read these
+node_modules/
+
+# Generated / cache
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env files with secrets
+.env*.local
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

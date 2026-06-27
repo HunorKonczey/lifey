@@ -1,23 +1,38 @@
 package com.lifey.common.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
- * Permissive CORS for local development so a Flutter web/Safari build (served on a
- * different origin) can call the API. Tighten the allowed origins before production.
+ * Single CORS source used by both Spring MVC and Spring Security.
+ * Explicit allowed origins are required when allowCredentials=true
+ * (wildcard "*" is rejected by the CORS spec in that case).
  */
 @Configuration
-public class WebCorsConfig implements WebMvcConfigurer {
+public class WebCorsConfig {
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                .allowedOriginPatterns("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                // Explicit so the `Authorization: Bearer <token>` header always survives
-                // CORS preflight, regardless of Spring's default-header behavior.
-                .allowedHeaders("*");
+    @Value("${lifey.cors.allowed-origins}")
+    private String allowedOriginsRaw;
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        List<String> origins = List.of(allowedOriginsRaw.split(","));
+
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(origins);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", config);
+        return source;
     }
 }

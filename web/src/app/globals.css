@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+/* ─── FOUC prevention: apply theme class before paint ─── */
+/* Inline script in layout.tsx sets data-theme on <html> */
+
+/* ─── Design tokens — dark (default) ─── */
+:root {
+  --bg:                 #161611;
+  --surface:            #1C1E16;
+  --surface-container:  #22241B;
+  --surface-high:       #2A2C20;
+  --surface-highest:    #32342A;
+  --primary:            #9DAE6B;
+  --secondary:          #C49A6C;
+  --tertiary:           #6E9A6A;
+  --on-surface:         #F1F0E4;
+  --on-surface-variant: #A8A899;
+  --muted:              #777264;
+  --outline:            #3C3E32;
+  --border:             transparent;
+  --error:              #CF6679;
+
+  /* Metric accent colours */
+  --metric-kcal:    #E0915A;
+  --metric-protein: #9DAE6B;
+  --metric-carbs:   #D8B35A;
+  --metric-fat:     #8E8EC4;
+  --metric-steps:   #B08AC8;
+  --metric-weight:  #8AA0B4;
+  --metric-water:   #6FA8C4;
+  --metric-hr:      #C46A6A;
+
+  /* Goal tone */
+  --goal-positive: #9DAE6B;
+  --goal-negative: #E08A52;
+
+  /* Radius scale */
+  --r-sm:    8px;
+  --r-md:    16px;
+  --r-input: 18px;
+  --r-card:  20px;
+  --r-lg:    24px;
+  --r-nav:   28px;
+  --r-pill:  999px;
+
+  /* Motion */
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 350ms;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+
+  /* Shadow */
+  --shadow-float: 0 1px 3px rgba(0, 0, 0, .18);
+}
+
+/* ─── Light theme ─── */
+[data-theme="light"] {
+  --bg:                 #F3F2E8;
+  --surface:            #FFFFFF;
+  --surface-container:  #ECEBDE;
+  --surface-high:       #FFFFFF;
+  --surface-highest:    #ECEBDE;
+  --primary:            #586E38;
+  --secondary:          #8A6A42;
+  --tertiary:           #4A7A52;
+  --on-surface:         #1E1F18;
+  --on-surface-variant: #5C5C50;
+  --muted:              #9A9A8C;
+  --outline:            #CDCBBC;
+  --border:             #E2E0D2;
+  --error:              #CF6679;
+
+  --metric-kcal:    #D27A3E;
+  --metric-protein: #586E38;
+  --metric-carbs:   #B8902F;
+  --metric-fat:     #6A6AB0;
+  --metric-steps:   #8A6AB0;
+  --metric-weight:  #5E7A92;
+  --metric-water:   #4E8AA8;
+  --metric-hr:      #C46A6A;
+
+  --goal-positive: #4A7A52;
+  --goal-negative: #E08A52;
+}
+
+/* ─── Tailwind theme extension ─── */
+@theme inline {
+  --color-bg:                 var(--bg);
+  --color-surface:            var(--surface);
+  --color-surface-container:  var(--surface-container);
+  --color-surface-high:       var(--surface-high);
+  --color-surface-highest:    var(--surface-highest);
+  --color-primary:            var(--primary);
+  --color-secondary:          var(--secondary);
+  --color-tertiary:           var(--tertiary);
+  --color-on-surface:         var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-muted:              var(--muted);
+  --color-outline:            var(--outline);
+  --color-error:              var(--error);
+
+  --color-metric-kcal:    var(--metric-kcal);
+  --color-metric-protein: var(--metric-protein);
+  --color-metric-carbs:   var(--metric-carbs);
+  --color-metric-fat:     var(--metric-fat);
+  --color-metric-steps:   var(--metric-steps);
+  --color-metric-weight:  var(--metric-weight);
+  --color-metric-water:   var(--metric-water);
+
+  --radius-sm:    var(--r-sm);
+  --radius-md:    var(--r-md);
+  --radius-input: var(--r-input);
+  --radius-card:  var(--r-card);
+  --radius-lg:    var(--r-lg);
+  --radius-nav:   var(--r-nav);
+  --radius-pill:  var(--r-pill);
+
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+}
+
+/* ─── Base styles ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  background: var(--bg);
+  color: var(--on-surface);
+}
+
+body {
+  min-height: 100%;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--on-surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Tabular numbers for all metrics ─── */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ─── Skeleton pulse animation ─── */
+@keyframes lifeyPulse {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 0.28; }
+}
+.skeleton-pulse {
+  animation: lifeyPulse 1.4s ease-in-out infinite;
+  background: var(--surface-highest);
+  border-radius: var(--r-sm);
+}
+
+/* ─── Scrollbar (dark) ─── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--outline); border-radius: var(--r-pill); }

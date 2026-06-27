@@ -45,6 +45,8 @@ springdoc:
     path: /swagger-ui.html
 
 lifey:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   jwt:
     # Dev-only default. MUST be overridden via JWT_SECRET in any shared/production
     # environment — anyone with this value can forge access tokens for any user.
