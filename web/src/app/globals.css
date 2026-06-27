@@ -142,6 +142,17 @@ body {
 /* ─── Tabular numbers for all metrics ─── */
 .tabular { font-variant-numeric: tabular-nums; }
 
+/* ─── A11y: visible focus ring for keyboard navigation ─── */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+/* Don't show the ring for mouse clicks, only keyboard */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* ─── Skeleton pulse animation ─── */
 @keyframes lifeyPulse {
   0%, 100% { opacity: 0.55; }

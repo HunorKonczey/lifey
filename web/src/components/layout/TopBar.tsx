@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useDateStore } from "@/lib/hooks/useDateStore";
+import { useUiStore } from "@/lib/hooks/useUiStore";
 import { ThemeToggle } from "./ThemeToggle";
 import { format, addDays, subDays } from "date-fns";
 
@@ -19,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
 export function TopBar() {
   const pathname = usePathname();
   const { date, setDate } = useDateStore();
+  const toggleDrawer = useUiStore((s) => s.toggleDrawer);
 
   const title =
     Object.entries(PAGE_TITLES).find(([prefix]) =>
@@ -36,7 +38,17 @@ export function TopBar() {
         borderBottom: "1px solid var(--outline)",
       }}
     >
-      <h1 className="text-lg font-bold">{title}</h1>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={toggleDrawer}
+          className="p-1.5 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container md:hidden"
+          style={{ color: "var(--on-surface)" }}
+          aria-label="Open menu"
+        >
+          <span className="material-symbols-rounded text-xl">menu</span>
+        </button>
+        <h1 className="text-lg font-bold">{title}</h1>
+      </div>
 
       {/* Date picker */}
       <div className="flex items-center gap-1">

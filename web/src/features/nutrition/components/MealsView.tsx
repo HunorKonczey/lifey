@@ -1,0 +1,178 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { mealApi } from "../api";
+import { settingsApi } from "@/features/settings/api";
+import { queryKeys } from "@/lib/api/queryKeys";
+import { useDateStore } from "@/lib/hooks/useDateStore";
+import { useToast } from "@/lib/hooks/useToast";
+import { Skeleton } from "@/components/status/Skeleton";
+import { ErrorState } from "@/components/status/ErrorState";
+import { AddMealEntryDialog } from "./AddMealEntryDialog";
+import type { MealResponse, MealType } from "../types";
+
+const MEAL_GROUPS: { type: MealType; label: string; icon: string }[] = [
+  { type: "BREAKFAST", label: "Breakfast", icon: "bakery_dining" },
+  { type: "LUNCH", label: "Lunch", icon: "lunch_dining" },
+  { type: "DINNER", label: "Dinner", icon: "dinner_dining" },
+  { type: "SNACK", label: "Snack", icon: "icecream" },
+];
+
+function entryKcal(m: MealResponse) {
+  return m.entries.reduce((s, e) => s + e.calories, 0);
+}
+function entryProtein(m: MealResponse) {
+  return m.entries.reduce((s, e) => s + e.protein, 0);
+}
+
+export function MealsView() {
+  const { date } = useDateStore();
+  const queryClient = useQueryClient();
+  const { show } = useToast();
+  const dateStr = format(date, "yyyy-MM-dd");
+  const [addingTo, setAddingTo] = useState<MealType | null>(null);
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: queryKeys.meals.all(),
+    queryFn: mealApi.list,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: queryKeys.settings.all(),
+    queryFn: settingsApi.get,
+    staleTime: 5 * 60_000,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => mealApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
+      show("Meal removed", "success");
+    },
+    onError: () => show("Failed to remove", "error"),
+  });
+
+  const todayMeals = (data ?? []).filter(
+    (m) => format(new Date(m.dateTime), "yyyy-MM-dd") === dateStr,
+  );
+
+  const totalKcal = todayMeals.reduce((s, m) => s + entryKcal(m), 0);
+  const totalProtein = todayMeals.reduce((s, m) => s + entryProtein(m), 0);
+  const totalItems = todayMeals.reduce((s, m) => s + m.entries.length, 0);
+
+  const calorieGoal = settings?.dailyCalorieGoal ?? 2000;
+  const proteinGoal = settings?.dailyProteinGoal ?? 150;
+
+  if (isLoading) {
+    return (
+      <div className="flex gap-6">
+        <div className="flex-1 flex flex-col gap-3">
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="card" className="h-24" />)}
+        </div>
+        <Skeleton variant="card" className="w-[300px] h-80" />
+      </div>
+    );
+  }
+
+  if (isError) return <ErrorState onRetry={refetch} />;
+
+  return (
+    <div className="flex gap-6">
+      {/* Meal groups */}
+      <div className="flex-1 min-w-0 flex flex-col gap-3">
+        {MEAL_GROUPS.map(({ type, label, icon }) => {
+          const meals = todayMeals.filter((m) => m.mealType === type);
+          const groupKcal = meals.reduce((s, m) => s + entryKcal(m), 0);
+          return (
+            <div key={type} className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-rounded text-xl" style={{ color: "var(--metric-kcal)" }}>{icon}</span>
+                <span className="font-bold text-sm">{label}</span>
+                {groupKcal > 0 && (
+                  <span className="ml-auto text-sm font-semibold tabular" style={{ color: "var(--metric-kcal)" }}>
+                    {Math.round(groupKcal)} kcal
+                  </span>
+                )}
+              </div>
+
+              {meals.flatMap((m) =>
+                m.entries.map((e, i) => (
+                  <div key={`${m.id}-${i}`} className="flex items-center justify-between py-2 group"
+                    style={{ borderTop: "1px solid var(--outline)" }}>
+                    <div>
+                      <p className="text-sm font-semibold">{e.foodName}</p>
+                      <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
+                        {Math.round(e.quantityInGrams)}g · {Math.round(e.calories)} kcal · {Math.round(e.protein)}g P
+                      </p>
+                    </div>
+                    <button onClick={() => deleteMutation.mutate(m.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                      style={{ color: "var(--muted)" }} aria-label="Remove">
+                      <span className="material-symbols-rounded text-lg">close</span>
+                    </button>
+                  </div>
+                )),
+              )}
+
+              <button onClick={() => setAddingTo(type)}
+                className="w-full mt-2 py-2 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors"
+                style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}>
+                <span className="material-symbols-rounded text-lg">add</span> Add to {label.toLowerCase()}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Daily summary sticky panel */}
+      <div className="w-[300px] shrink-0">
+        <div className="sticky top-6 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
+          <p className="text-sm font-bold mb-4">Daily summary</p>
+
+          <div className="flex items-end gap-2 mb-1">
+            <span className="text-3xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
+              {Math.round(totalKcal).toLocaleString()}
+            </span>
+            <span className="text-sm font-semibold mb-1" style={{ color: "var(--on-surface-variant)" }}>
+              / {calorieGoal.toLocaleString()} kcal
+            </span>
+          </div>
+          <div className="h-2 rounded-[var(--r-pill)] overflow-hidden mb-4" style={{ background: "var(--surface-highest)" }}>
+            <div className="h-full rounded-[var(--r-pill)] transition-all"
+              style={{
+                width: `${Math.min(totalKcal / calorieGoal, 1) * 100}%`,
+                background: totalKcal > calorieGoal ? "var(--goal-negative)" : "var(--metric-kcal)",
+              }} />
+          </div>
+
+          {/* Protein bar */}
+          <div className="flex justify-between text-xs mb-1">
+            <span style={{ color: "var(--metric-protein)" }}>Protein</span>
+            <span className="tabular" style={{ color: "var(--on-surface-variant)" }}>
+              {Math.round(totalProtein)} / {proteinGoal}g
+            </span>
+          </div>
+          <div className="h-1.5 rounded-[var(--r-pill)] overflow-hidden mb-4" style={{ background: "var(--surface-highest)" }}>
+            <div className="h-full rounded-[var(--r-pill)]"
+              style={{ width: `${Math.min(totalProtein / proteinGoal, 1) * 100}%`, background: "var(--metric-protein)" }} />
+          </div>
+
+          <div className="flex justify-between pt-3 text-sm" style={{ borderTop: "1px solid var(--outline)" }}>
+            <span style={{ color: "var(--on-surface-variant)" }}>Meals</span>
+            <span className="font-semibold tabular">{todayMeals.length}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span style={{ color: "var(--on-surface-variant)" }}>Items</span>
+            <span className="font-semibold tabular">{totalItems}</span>
+          </div>
+        </div>
+      </div>
+
+      {addingTo && (
+        <AddMealEntryDialog mealType={addingTo} date={date} onClose={() => setAddingTo(null)} />
+      )}
+    </div>
+  );
+}

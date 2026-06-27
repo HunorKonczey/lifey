@@ -38,6 +38,9 @@ export default function RootLayout({
             `,
           }}
         />
+        {/* Material Symbols is an icon font loaded globally via <link> by design
+            (next/font doesn't support variable icon fonts well). */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"

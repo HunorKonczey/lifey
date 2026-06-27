@@ -185,6 +185,7 @@ export default function DashboardPage() {
               currentLiters={totalWaterL}
               goalLiters={settings?.dailyWaterGoalLiters ?? 2.5}
               sources={waterSourcesQ.data ?? []}
+              date={date}
             />
           )}
 

@@ -9,17 +9,19 @@ import { ErrorBoundary } from "@/components/status/ErrorBoundary";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, isLoading, initialize } = useSessionStore();
+  const { user, isLoading, initFailed, initialize } = useSessionStore();
 
   useEffect(() => {
     initialize();
   }, [initialize]);
 
+  // Only redirect when initialize() itself determined there is no session.
+  // API-level 401s on individual queries are handled by TanStack Query error states.
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && initFailed) {
       router.push("/login");
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, initFailed, router]);
 
   if (isLoading) {
     return (
@@ -34,7 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) return null;
+  if (!user && !initFailed) return null;
 
   return (
     <div className="flex min-h-screen bg-bg">

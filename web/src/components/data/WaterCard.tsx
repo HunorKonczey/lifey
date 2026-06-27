@@ -9,25 +9,36 @@ interface WaterCardProps {
   currentLiters: number;
   goalLiters: number;
   sources: WaterSourceResponse[];
+  /** The day this card logs against; defaults to now. */
+  date?: Date;
 }
 
 const SEGMENTS = 8;
 
-export function WaterCard({ currentLiters, goalLiters, sources }: WaterCardProps) {
+/** Anchor at noon of the given local day, clamped to now (PastOrPresent-safe). */
+function consumedAtFor(date?: Date): string {
+  if (!date) return new Date().toISOString();
+  const dt = new Date(date);
+  dt.setHours(12, 0, 0, 0);
+  const now = new Date();
+  return (dt > now ? now : dt).toISOString();
+}
+
+export function WaterCard({ currentLiters, goalLiters, sources, date }: WaterCardProps) {
   const queryClient = useQueryClient();
   const filled = goalLiters > 0 ? Math.min(currentLiters / goalLiters, 1) : 0;
   const filledSegments = Math.round(filled * SEGMENTS);
 
   const addMutation = useMutation({
-    mutationFn: (volumeLiters: number) =>
-      waterApi.entries.create({ volumeLiters }),
-    onMutate: async (volumeLiters) => {
+    mutationFn: ({ volumeLiters, sourceId }: { volumeLiters: number; sourceId?: number | null }) =>
+      waterApi.entries.create({ consumedAt: consumedAtFor(date), volumeLiters, sourceId }),
+    onMutate: async ({ volumeLiters }) => {
       // optimistic update
       await queryClient.cancelQueries({ queryKey: queryKeys.waterEntries.all() });
       const prev = queryClient.getQueryData(queryKeys.waterEntries.all());
       queryClient.setQueryData(queryKeys.waterEntries.all(), (old: { volumeLiters: number }[] = []) => [
         ...old,
-        { id: Date.now(), consumedAt: new Date().toISOString(), volumeLiters, sourceId: null, sourceName: null },
+        { id: Date.now(), consumedAt: consumedAtFor(date), volumeLiters, sourceId: null, sourceName: null },
       ]);
       return { prev };
     },
@@ -82,7 +93,7 @@ export function WaterCard({ currentLiters, goalLiters, sources }: WaterCardProps
         {quickSources.map((src) => (
           <button
             key={src.id}
-            onClick={() => addMutation.mutate(src.volumeLiters)}
+            onClick={() => addMutation.mutate({ volumeLiters: src.volumeLiters, sourceId: src.id > 0 ? src.id : null })}
             disabled={addMutation.isPending}
             className="flex-1 py-1.5 rounded-[var(--r-input)] text-xs font-semibold transition-opacity disabled:opacity-50"
             style={{

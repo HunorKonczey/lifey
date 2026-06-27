@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api/client";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const setUser = useSessionStore((s) => s.setUser);
+  const applyTokens = useSessionStore((s) => s.applyTokens);
 
   const {
     register,
@@ -24,12 +24,10 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     try {
-      const res = await authApi.register({
-        name: data.name,
-        email: data.email,
-        password: data.password,
-      });
-      setUser(res.user, res.accessToken);
+      // Register returns no tokens — log in immediately afterwards.
+      await authApi.register({ email: data.email, password: data.password });
+      const res = await authApi.login({ email: data.email, password: data.password });
+      applyTokens(res.accessToken, res.refreshToken);
       router.push("/dashboard");
     } catch (err) {
       const message =
@@ -61,7 +59,6 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         {(
           [
-            { field: "name", label: "Name", type: "text", icon: "person", placeholder: "Your name", autoComplete: "name" },
             { field: "email", label: "Email", type: "email", icon: "mail", placeholder: "you@example.com", autoComplete: "email" },
             { field: "password", label: "Password", type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },
             { field: "confirmPassword", label: "Confirm password", type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },

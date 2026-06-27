@@ -13,8 +13,9 @@ export interface WaterEntryResponse {
 }
 
 export interface WaterEntryRequest {
+  consumedAt: string; // Instant, must be past or present
   volumeLiters: number;
-  sourceId?: number;
+  sourceId?: number | null;
 }
 
 export interface WaterSourceRequest {

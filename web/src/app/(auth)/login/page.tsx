@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api/client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const setUser = useSessionStore((s) => s.setUser);
+  const applyTokens = useSessionStore((s) => s.applyTokens);
 
   const {
     register,
@@ -25,7 +25,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       const res = await authApi.login(data);
-      setUser(res.user, res.accessToken);
+      applyTokens(res.accessToken, res.refreshToken);
       router.push("/dashboard");
     } catch (err) {
       const message =

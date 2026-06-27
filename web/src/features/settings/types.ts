@@ -4,12 +4,12 @@ export type LanguagePreference = "SYSTEM" | "ENGLISH" | "HUNGARIAN";
 
 export interface SettingsResponse {
   unitSystem: UnitSystem;
-  dailyCalorieGoal: number;
-  dailyProteinGoal: number;
-  dailyCarbsGoal: number;
-  dailyFatGoal: number;
-  dailyWaterGoalLiters: number;
-  dailyStepGoal: number;
+  dailyCalorieGoal: number | null;
+  dailyProteinGoal: number | null;
+  dailyCarbsGoal: number | null;
+  dailyFatGoal: number | null;
+  dailyWaterGoalLiters: number | null;
+  dailyStepGoal: number | null;
   theme: ThemePreference;
   language: LanguagePreference;
 }

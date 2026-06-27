@@ -2,64 +2,122 @@
 
 import { create } from "zustand";
 import { setAccessToken, registerTokenRefresher } from "@/lib/api/client";
+import { decodeJwt } from "@/lib/utils/jwt";
 import { authApi } from "./api";
-import type { UserResponse } from "./types";
+import type { SessionUser } from "./types";
+
+const SESSION_KEY = "lifey_refresh_token";
+
+function saveRefreshToken(token: string) {
+  try {
+    sessionStorage.setItem(SESSION_KEY, token);
+  } catch { /* ignore */ }
+}
+
+function getRefreshToken(): string | null {
+  try {
+    return sessionStorage.getItem(SESSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function clearRefreshToken() {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch { /* ignore */ }
+}
+
+/** Build the display user from the access-token JWT claims. */
+function userFromAccessToken(accessToken: string): SessionUser | null {
+  const claims = decodeJwt(accessToken);
+  if (!claims) return null;
+  return {
+    id: Number(claims.sub),
+    email: claims.email,
+    roles: claims.roles ?? [],
+  };
+}
 
 interface SessionState {
-  user: UserResponse | null;
+  user: SessionUser | null;
   isLoading: boolean;
-  setUser: (user: UserResponse | null, token: string | null) => void;
+  initFailed: boolean;
+  /** Persist the token pair and derive the user from the access token. */
+  applyTokens: (accessToken: string, refreshToken: string) => void;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
   initialize: () => Promise<void>;
 }
 
-export const useSessionStore = create<SessionState>((set) => ({
+export const useSessionStore = create<SessionState>((set, get) => ({
   user: null,
   isLoading: true,
+  initFailed: false,
 
-  setUser: (user, token) => {
-    setAccessToken(token);
-    set({ user, isLoading: false });
+  applyTokens: (accessToken, refreshToken) => {
+    setAccessToken(accessToken);
+    saveRefreshToken(refreshToken);
+    set({
+      user: userFromAccessToken(accessToken),
+      isLoading: false,
+      initFailed: false,
+    });
   },
 
   logout: async () => {
-    try { await authApi.logout(); } catch { /* ignore */ }
+    const rt = getRefreshToken();
+    clearRefreshToken();
     setAccessToken(null);
-    set({ user: null });
+    set({ user: null, initFailed: false });
+    if (rt) {
+      try { await authApi.logout(rt); } catch { /* ignore */ }
+    }
   },
 
   logoutAll: async () => {
-    try { await authApi.logoutAll(); } catch { /* ignore */ }
+    clearRefreshToken();
     setAccessToken(null);
-    set({ user: null });
+    set({ user: null, initFailed: false });
+    try { await authApi.logoutAll(); } catch { /* ignore */ }
   },
 
   initialize: async () => {
-    // Already authenticated (e.g. just logged in) — nothing to do
     if (get().user) {
       set({ isLoading: false });
       return;
     }
+    const rt = getRefreshToken();
+    if (!rt) {
+      set({ user: null, isLoading: false, initFailed: true });
+      return;
+    }
     try {
-      const res = await authApi.refresh();
+      const res = await authApi.refresh(rt);
       setAccessToken(res.accessToken);
-      set({ user: res.user, isLoading: false });
+      saveRefreshToken(res.refreshToken);
+      set({
+        user: userFromAccessToken(res.accessToken),
+        isLoading: false,
+        initFailed: false,
+      });
     } catch {
+      clearRefreshToken();
       setAccessToken(null);
-      set({ user: null, isLoading: false });
+      set({ user: null, isLoading: false, initFailed: true });
     }
   },
 }));
 
-// Register single-flight refresh with the API client
+// Single-flight refresh for 401 interception
 registerTokenRefresher(async () => {
+  const rt = getRefreshToken();
+  if (!rt) return null;
   try {
-    const res = await authApi.refresh();
-    useSessionStore.getState().setUser(res.user, res.accessToken);
+    const res = await authApi.refresh(rt);
+    useSessionStore.getState().applyTokens(res.accessToken, res.refreshToken);
     return res.accessToken;
   } catch {
-    useSessionStore.getState().setUser(null, null);
     return null;
   }
 });

@@ -1,16 +1,26 @@
-export type Role = "ROLE_USER" | "ROLE_TRAINER";
+export type Role = "ROLE_USER" | "ROLE_ADMIN";
 
+/** Backend UserResponse (from POST /auth/register). */
 export interface UserResponse {
   id: number;
   email: string;
-  name: string;
   roles: Role[];
+  createdAt: string;
 }
 
+/** Backend AuthResponse (from /auth/login and /auth/refresh). No user object. */
 export interface AuthResponse {
   accessToken: string;
-  refreshToken?: string;
-  user: UserResponse;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+}
+
+/** Derived from the access-token JWT claims for display. */
+export interface SessionUser {
+  id: number;
+  email: string;
+  roles: string[];
 }
 
 export interface LoginRequest {
@@ -19,7 +29,6 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  name: string;
   email: string;
   password: string;
 }
