@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  .mi{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  .fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+  @keyframes lifeyPulse{0%,100%{opacity:.55;}50%{opacity:.28;}}
+</style>
+</helmet>
+
+<!-- ======================= TITLE BLOCK ======================= -->
+<div style="position:absolute;left:0px;top:-150px;width:1400px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div style="width:54px;height:54px;border-radius:16px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:32px;">eco</span></div>
+    <div>
+      <div style="font-size:34px;font-weight:800;color:#1c1d18;letter-spacing:-0.8px;">Lifey Web — Design</div>
+      <div style="font-size:16px;font-weight:500;color:#6a6a60;">Sötét-first, barnás-zöld identitás · bal sidebar · adatdús többoszlopos · online-first állapotok</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 1 · DESIGN TOKENS ======================= -->
+<div style="position:absolute;left:0px;top:0px;width:1180px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">01 · Design system — tokens &amp; type</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:36px;color:#F1F0E4;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px;">
+      <!-- dark surfaces -->
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin-bottom:14px;">Dark — surfaces</div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="display:flex;align-items:center;gap:13px;"><div style="width:46px;height:46px;border-radius:12px;background:#161611;border:1px solid #3C3E32;"></div><div><div style="font-size:13px;font-weight:700;">bg</div><div style="font-size:11.5px;color:#A8A899;font-family:monospace;">#161611</div></div></div>
+          <div style="display:flex;align-items:center;gap:13px;"><div style="width:46px;height:46px;border-radius:12px;background:#1C1E16;"></div><div><div style="font-size:13px;font-weight:700;">surface</div><div style="font-size:11.5px;color:#A8A899;font-family:monospace;">#1C1E16</div></div></div>
+          <div style="display:flex;align-items:center;gap:13px;"><div style="width:46px;height:46px;border-radius:12px;background:#22241B;"></div><div><div style="font-size:13px;font-weight:700;">surfaceContainer</div><div style="font-size:11.5px;color:#A8A899;font-family:monospace;">#22241B</div></div></div>
+          <div style="display:flex;align-items:center;gap:13px;"><div style="width:46px;height:46px;border-radius:12px;background:#2A2C20;"></div><div><div style="font-size:13px;font-weight:700;">…High</div><div style="font-size:11.5px;color:#A8A899;font-family:monospace;">#2A2C20</div></div></div>
+          <div style="display:flex;align-items:center;gap:13px;"><div style="width:46px;height:46px;border-radius:12px;background:#32342A;"></div><div><div style="font-size:13px;font-weight:700;">…Highest</div><div style="font-size:11.5px;color:#A8A899;font-family:monospace;">#32342A</div></div></div>
+        </div>
+      </div>
+      <!-- accents -->
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin-bottom:14px;">Accents &amp; metrics</div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;">
+          <div style="flex:1;text-align:center;"><div style="height:46px;border-radius:12px;background:#9DAE6B;"></div><div style="font-size:11px;font-weight:700;margin-top:6px;">primary</div><div style="font-size:10px;color:#A8A899;font-family:monospace;">#9DAE6B</div></div>
+          <div style="flex:1;text-align:center;"><div style="height:46px;border-radius:12px;background:#C49A6C;"></div><div style="font-size:11px;font-weight:700;margin-top:6px;">secondary</div><div style="font-size:10px;color:#A8A899;font-family:monospace;">#C49A6C</div></div>
+          <div style="flex:1;text-align:center;"><div style="height:46px;border-radius:12px;background:#6E9A6A;"></div><div style="font-size:11px;font-weight:700;margin-top:6px;">tertiary</div><div style="font-size:10px;color:#A8A899;font-family:monospace;">#6E9A6A</div></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:6px;background:#22241B;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#E0915A;"></span>Kcal</span>
+          <span style="display:flex;align-items:center;gap:6px;background:#22241B;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#9DAE6B;"></span>Protein</span>
+          <span style="display:flex;align-items:center;gap:6px;background:#22241B;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#D8B35A;"></span>Carbs</span>
+          <span style="display:flex;align-items:center;gap:6px;background:#22241B;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#8E8EC4;"></span>Fat</span>
+          <span style="display:flex;align-items:center;gap:6px;background:#22241B;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#B08AC8;"></span>Steps</span>
+          <span style="display:flex;align-items:center;gap:6px;background:#22241B;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#6FA8C4;"></span>Water</span>
+          <span style="display:flex;align-items:center;gap:6px;background:#22241B;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#8AA0B4;"></span>Weight</span>
+        </div>
+      </div>
+    </div>
+    <!-- type + radius -->
+    <div style="height:1px;background:#3C3E32;margin:30px 0;"></div>
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:34px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin-bottom:16px;">Type — Plus Jakarta Sans</div>
+        <div style="font-size:34px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;">1,780 <span style="font-size:16px;color:#A8A899;font-weight:600;">display · tabular</span></div>
+        <div style="font-size:26px;font-weight:700;margin-top:10px;">Headline — page title</div>
+        <div style="font-size:20px;font-weight:700;margin-top:8px;color:#F1F0E4;">Title — section header</div>
+        <div style="font-size:15px;font-weight:500;margin-top:8px;color:#A8A899;">Body medium — supporting copy and descriptions.</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-top:8px;color:#777264;">LABEL SMALL · ALL CAPS</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin-bottom:16px;">Radius scale</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+          <div style="text-align:center;"><div style="width:62px;height:48px;background:#2A2C20;border-radius:8px;"></div><div style="font-size:10.5px;color:#A8A899;margin-top:5px;">sm·8</div></div>
+          <div style="text-align:center;"><div style="width:62px;height:48px;background:#2A2C20;border-radius:16px;"></div><div style="font-size:10.5px;color:#A8A899;margin-top:5px;">md·16</div></div>
+          <div style="text-align:center;"><div style="width:62px;height:48px;background:#2A2C20;border-radius:20px;"></div><div style="font-size:10.5px;color:#A8A899;margin-top:5px;">card·20</div></div>
+          <div style="text-align:center;"><div style="width:62px;height:48px;background:#2A2C20;border-radius:24px;"></div><div style="font-size:10.5px;color:#A8A899;margin-top:5px;">lg·24</div></div>
+          <div style="text-align:center;"><div style="width:62px;height:48px;background:#2A2C20;border-radius:28px;"></div><div style="font-size:10.5px;color:#A8A899;margin-top:5px;">nav·28</div></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin:18px 0 10px;">Light theme</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;height:40px;border-radius:10px;background:#F3F2E8;border:1px solid #CDCBBC;"></div>
+          <div style="flex:1;height:40px;border-radius:10px;background:#FFFFFF;border:1px solid #CDCBBC;"></div>
+          <div style="flex:1;height:40px;border-radius:10px;background:#586E38;"></div>
+          <div style="flex:1;height:40px;border-radius:10px;background:#8A6A42;"></div>
+          <div style="flex:1;height:40px;border-radius:10px;background:#4A7A52;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 2 · APP SHELL ANATOMY ======================= -->
+<div style="position:absolute;left:1320px;top:0px;width:1480px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">02 · App shell — sidebar · rail · top bar</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:760px;">
+
+    <!-- EXPANDED SIDEBAR -->
+    <div style="width:248px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:24px;padding:20px 14px;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;gap:11px;padding:4px 8px 22px;">
+        <div style="width:38px;height:38px;border-radius:12px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:23px;">eco</span></div>
+        <span style="font-size:19px;font-weight:800;color:#F1F0E4;letter-spacing:-0.4px;">Lifey</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <div style="display:flex;align-items:center;gap:13px;background:#9DAE6B;color:#161611;border-radius:14px;padding:11px 14px;"><span class="mi fill" style="font-size:22px;">dashboard</span><span style="font-size:14px;font-weight:700;">Dashboard</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">restaurant</span><span style="font-size:14px;font-weight:600;">Nutrition</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">fitness_center</span><span style="font-size:14px;font-weight:600;">Workouts</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">monitor_weight</span><span style="font-size:14px;font-weight:600;">Weight</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">water_drop</span><span style="font-size:14px;font-weight:600;">Water</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">directions_walk</span><span style="font-size:14px;font-weight:600;">Steps</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">bar_chart</span><span style="font-size:14px;font-weight:600;">Statistics</span></div>
+      </div>
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:3px;">
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">settings</span><span style="font-size:14px;font-weight:600;">Settings</span></div>
+        <div style="display:flex;align-items:center;gap:11px;background:#161611;border-radius:14px;padding:10px 12px;margin-top:8px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:14px;font-weight:800;">M</div>
+          <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#F1F0E4;">Márk</div><div style="font-size:11px;color:#A8A899;">Free plan</div></div>
+          <span class="mi" style="font-size:20px;color:#A8A899;">unfold_more</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: rail + topbar + note -->
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px 14px 14px 0;min-width:0;">
+      <!-- top bar -->
+      <div style="background:#2A2C20;border-radius:20px;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 22px;margin-bottom:14px;">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Dashboard</div>
+          <div style="font-size:11px;font-weight:500;color:#A8A899;">Home · Today</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="display:flex;align-items:center;gap:9px;background:#161611;border-radius:13px;padding:9px 14px;color:#F1F0E4;"><span class="mi" style="font-size:19px;color:#9DAE6B;">calendar_today</span><span style="font-size:13px;font-weight:700;">Wed, Jun 24</span><span class="mi" style="font-size:18px;color:#A8A899;">expand_more</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:21px;">search</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:21px;">dark_mode</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:15px;font-weight:800;">M</div>
+        </div>
+      </div>
+      <!-- rail + caption -->
+      <div style="flex:1;display:flex;gap:14px;">
+        <!-- collapsed rail -->
+        <div style="width:74px;flex:none;background:#2A2C20;border-radius:22px;padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <div style="width:44px;height:44px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;margin-bottom:12px;"><span class="mi fill" style="font-size:22px;">eco</span></div>
+          <div style="width:48px;height:42px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:22px;">dashboard</span></div>
+          <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">restaurant</span></div>
+          <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">fitness_center</span></div>
+          <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">monitor_weight</span></div>
+          <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">water_drop</span></div>
+          <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">directions_walk</span></div>
+          <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">bar_chart</span></div>
+          <div style="margin-top:auto;width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">settings</span></div>
+        </div>
+        <!-- annotations -->
+        <div style="flex:1;background:#1C1E16;border-radius:22px;padding:26px;display:flex;flex-direction:column;justify-content:center;gap:18px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#777264;">Shell anatomy</div>
+          <div style="display:flex;align-items:flex-start;gap:13px;"><div style="width:30px;height:30px;border-radius:9px;background:rgba(157,174,107,.16);display:flex;align-items:center;justify-content:center;color:#9DAE6B;flex:none;"><span class="mi fill" style="font-size:18px;">view_sidebar</span></div><div><div style="font-size:14.5px;font-weight:700;color:#F1F0E4;">Bal sidebar (nav 28 radius)</div><div style="font-size:12.5px;color:#A8A899;margin-top:2px;line-height:1.5;">Mindig látható, beúsztatott, surfaceContainerHigh. ≥1280px teljes, 768–1279px ikon-rail.</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:13px;"><div style="width:30px;height:30px;border-radius:9px;background:rgba(196,154,108,.16);display:flex;align-items:center;justify-content:center;color:#C49A6C;flex:none;"><span class="mi fill" style="font-size:18px;">calendar_month</span></div><div><div style="font-size:14.5px;font-weight:700;color:#F1F0E4;">Top bar</div><div style="font-size:12.5px;color:#A8A899;margin-top:2px;line-height:1.5;">Oldal-cím + breadcrumb, globális dátumválasztó, kereső, téma-váltó, user menü.</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:13px;"><div style="width:30px;height:30px;border-radius:9px;background:rgba(111,168,196,.16);display:flex;align-items:center;justify-content:center;color:#6FA8C4;flex:none;"><span class="mi fill" style="font-size:18px;">grid_view</span></div><div><div style="font-size:14.5px;font-weight:700;color:#F1F0E4;">Adatdús tartalom</div><div style="font-size:12.5px;color:#A8A899;margin-top:2px;line-height:1.5;">Többoszlopos grid, master-detail, lapozott táblázatok, egyszerre több grafikon.</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 3 · DASHBOARD (DARK) ======================= -->
+<div style="position:absolute;left:0px;top:1100px;width:1480px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">03 · Dashboard — loaded (dark)</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:920px;">
+    <!-- rail -->
+    <div style="width:74px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:22px;padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;margin-bottom:12px;"><span class="mi fill" style="font-size:22px;">eco</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:22px;">dashboard</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">restaurant</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">fitness_center</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">monitor_weight</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">water_drop</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">directions_walk</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">bar_chart</span></div>
+      <div style="margin-top:auto;width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">settings</span></div>
+    </div>
+    <!-- main -->
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px;min-width:0;">
+      <!-- topbar -->
+      <div style="background:#2A2C20;border-radius:20px;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 22px;margin-bottom:14px;flex:none;">
+        <div><div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Dashboard</div><div style="font-size:11px;font-weight:500;color:#A8A899;">Today · Wed, Jun 24</div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="display:flex;align-items:center;gap:7px;background:#161611;border-radius:13px;padding:9px 13px;color:#F1F0E4;"><span class="mi" style="font-size:18px;color:#A8A899;">chevron_left</span><span style="font-size:13px;font-weight:700;">Today</span><span class="mi" style="font-size:18px;color:#A8A899;">chevron_right</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:21px;">search</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:21px;">dark_mode</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:15px;font-weight:800;">M</div>
+        </div>
+      </div>
+      <!-- content grid -->
+      <div style="flex:1;display:flex;gap:14px;min-height:0;">
+        <!-- left/main column -->
+        <div style="flex:1;display:flex;flex-direction:column;gap:14px;min-width:0;">
+          <!-- hero kcal + macros row -->
+          <div style="display:flex;gap:14px;">
+            <!-- kcal hero -->
+            <div style="flex:1.1;background:#22241B;border-radius:24px;padding:22px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="display:flex;align-items:center;gap:9px;color:#E0915A;"><span class="mi fill" style="font-size:22px;">local_fire_department</span><span style="font-size:13px;font-weight:700;color:#A8A899;">Calories</span></div><span style="font-size:11px;font-weight:700;color:#161611;background:#9DAE6B;padding:4px 11px;border-radius:999px;">On track</span></div>
+              <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:46px;font-weight:800;color:#F1F0E4;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;">1,780</span><span style="font-size:15px;font-weight:600;color:#A8A899;">/ 2,200 kcal</span></div>
+              <div style="height:10px;background:#161611;border-radius:999px;overflow:hidden;margin:14px 0 8px;"><div style="width:81%;height:100%;background:linear-gradient(90deg,#E0915A,#D8B35A);border-radius:999px;"></div></div>
+              <div style="font-size:12.5px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">420 kcal remaining</div>
+            </div>
+            <!-- macros stacked -->
+            <div style="flex:1;display:flex;flex-direction:column;gap:14px;">
+              <div style="flex:1;background:#1C1E16;border-radius:20px;padding:15px 17px;display:flex;align-items:center;gap:14px;">
+                <div style="position:relative;width:46px;height:46px;flex:none;"><svg viewBox="0 0 36 36" style="width:46px;height:46px;transform:rotate(-90deg);"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#161611" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#9DAE6B" stroke-width="4" stroke-dasharray="97" stroke-dashoffset="24" stroke-linecap="round"/></svg></div>
+                <div style="flex:1;"><div style="font-size:11.5px;font-weight:600;color:#A8A899;">Protein</div><div style="font-size:21px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">96 <span style="font-size:12px;color:#A8A899;">/ 130g</span></div></div>
+                <span class="mi fill" style="font-size:22px;color:#9DAE6B;">egg_alt</span>
+              </div>
+              <div style="flex:1;background:#1C1E16;border-radius:20px;padding:15px 17px;display:flex;align-items:center;gap:14px;">
+                <div style="position:relative;width:46px;height:46px;flex:none;"><svg viewBox="0 0 36 36" style="width:46px;height:46px;transform:rotate(-90deg);"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#161611" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#D8B35A" stroke-width="4" stroke-dasharray="97" stroke-dashoffset="10" stroke-linecap="round"/></svg></div>
+                <div style="flex:1;"><div style="font-size:11.5px;font-weight:600;color:#A8A899;">Carbs</div><div style="font-size:21px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">210 <span style="font-size:12px;color:#A8A899;">/ 240g</span></div></div>
+                <span class="mi fill" style="font-size:22px;color:#D8B35A;">bakery_dining</span>
+              </div>
+              <div style="flex:1;background:#1C1E16;border-radius:20px;padding:15px 17px;display:flex;align-items:center;gap:14px;">
+                <div style="position:relative;width:46px;height:46px;flex:none;"><svg viewBox="0 0 36 36" style="width:46px;height:46px;transform:rotate(-90deg);"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#161611" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#8E8EC4" stroke-width="4" stroke-dasharray="97" stroke-dashoffset="42" stroke-linecap="round"/></svg></div>
+                <div style="flex:1;"><div style="font-size:11.5px;font-weight:600;color:#A8A899;">Fat</div><div style="font-size:21px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">52 <span style="font-size:12px;color:#A8A899;">/ 73g</span></div></div>
+                <span class="mi fill" style="font-size:22px;color:#8E8EC4;">water_drop</span>
+              </div>
+            </div>
+          </div>
+          <!-- water + steps + weight row -->
+          <div style="display:flex;gap:14px;">
+            <div style="flex:1;background:#1C1E16;border-radius:20px;padding:17px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;color:#6FA8C4;"><span class="mi fill" style="font-size:20px;">water_drop</span><span style="font-size:12.5px;font-weight:700;color:#A8A899;">Water</span></div><span style="font-size:12px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">1.6 / 2.5 L</span></div>
+              <div style="display:flex;gap:5px;margin-bottom:13px;">
+                <div style="flex:1;height:30px;border-radius:7px;background:#6FA8C4;"></div><div style="flex:1;height:30px;border-radius:7px;background:#6FA8C4;"></div><div style="flex:1;height:30px;border-radius:7px;background:#6FA8C4;"></div><div style="flex:1;height:30px;border-radius:7px;background:#6FA8C4;"></div><div style="flex:1;height:30px;border-radius:7px;background:#2A2C20;"></div><div style="flex:1;height:30px;border-radius:7px;background:#2A2C20;"></div>
+              </div>
+              <div style="display:flex;gap:7px;"><div style="flex:1;background:#22241B;border-radius:11px;padding:7px 0;text-align:center;font-size:12px;font-weight:700;color:#6FA8C4;">+250</div><div style="flex:1;background:#22241B;border-radius:11px;padding:7px 0;text-align:center;font-size:12px;font-weight:700;color:#6FA8C4;">+500</div><div style="flex:1;background:#22241B;border-radius:11px;padding:7px 0;text-align:center;font-size:12px;font-weight:700;color:#A8A899;">Cup</div></div>
+            </div>
+            <div style="flex:1;background:#1C1E16;border-radius:20px;padding:17px;">
+              <div style="display:flex;align-items:center;gap:8px;color:#B08AC8;margin-bottom:12px;"><span class="mi fill" style="font-size:20px;">directions_walk</span><span style="font-size:12.5px;font-weight:700;color:#A8A899;">Steps</span></div>
+              <div style="font-size:30px;font-weight:800;color:#F1F0E4;letter-spacing:-1px;font-variant-numeric:tabular-nums;">7,840</div>
+              <div style="font-size:11.5px;font-weight:600;color:#A8A899;margin:2px 0 11px;">/ 10,000 goal</div>
+              <div style="height:8px;background:#161611;border-radius:999px;overflow:hidden;"><div style="width:78%;height:100%;background:#B08AC8;border-radius:999px;"></div></div>
+            </div>
+            <div style="flex:1;background:#1C1E16;border-radius:20px;padding:17px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;color:#8AA0B4;"><span class="mi fill" style="font-size:20px;">monitor_weight</span><span style="font-size:12.5px;font-weight:700;color:#A8A899;">Weight</span></div><span class="mi" style="font-size:19px;color:#777264;">chevron_right</span></div>
+              <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-size:30px;font-weight:800;color:#F1F0E4;letter-spacing:-1px;font-variant-numeric:tabular-nums;">78.4</span><span style="font-size:13px;font-weight:600;color:#A8A899;">kg</span></div>
+              <div style="display:flex;align-items:center;gap:4px;color:#9DAE6B;margin-top:4px;"><span class="mi" style="font-size:17px;">trending_down</span><span style="font-size:12.5px;font-weight:700;">−0.6 kg this week</span></div>
+            </div>
+          </div>
+          <!-- recent workouts -->
+          <div style="flex:1;background:#1C1E16;border-radius:20px;padding:18px;min-height:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-size:15px;font-weight:700;color:#F1F0E4;">Recent workouts</span><span style="font-size:12.5px;font-weight:700;color:#9DAE6B;">View all</span></div>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <div style="background:#22241B;border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:13px;"><div style="width:40px;height:40px;border-radius:12px;background:#161611;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">fitness_center</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#F1F0E4;">Push day</div><div style="font-size:11.5px;color:#A8A899;">6 exercises · 52 min</div></div><span style="font-size:12px;font-weight:700;color:#A8A899;">Today</span></div>
+              <div style="background:#22241B;border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:13px;"><div style="width:40px;height:40px;border-radius:12px;background:#161611;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">directions_run</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#F1F0E4;">Leg day</div><div style="font-size:11.5px;color:#A8A899;">7 exercises · 64 min</div></div><span style="font-size:12px;font-weight:700;color:#A8A899;">Mon</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- right narrow column: weekly mini charts -->
+        <div style="width:268px;flex:none;background:#22241B;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:13px;font-weight:700;color:#F1F0E4;">This week</div>
+          <div>
+            <div style="font-size:11.5px;font-weight:600;color:#A8A899;margin-bottom:8px;">Calories</div>
+            <svg viewBox="0 0 230 70" style="width:100%;height:auto;"><polyline points="6,52 40,40 74,46 108,30 142,36 176,22 224,28" fill="none" stroke="#E0915A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="224" cy="28" r="4" fill="#E0915A"/></svg>
+          </div>
+          <div>
+            <div style="font-size:11.5px;font-weight:600;color:#A8A899;margin-bottom:8px;">Weight</div>
+            <svg viewBox="0 0 230 70" style="width:100%;height:auto;"><polyline points="6,24 40,30 74,28 108,40 142,44 176,52 224,56" fill="none" stroke="#8AA0B4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="224" cy="56" r="4" fill="#8AA0B4"/></svg>
+          </div>
+          <div>
+            <div style="font-size:11.5px;font-weight:600;color:#A8A899;margin-bottom:8px;">Workouts</div>
+            <div style="display:flex;align-items:flex-end;gap:6px;height:56px;">
+              <div style="flex:1;height:40%;background:#9DAE6B;border-radius:5px;"></div><div style="flex:1;height:70%;background:#9DAE6B;border-radius:5px;"></div><div style="flex:1;height:25%;background:#2A2C20;border-radius:5px;"></div><div style="flex:1;height:85%;background:#9DAE6B;border-radius:5px;"></div><div style="flex:1;height:55%;background:#9DAE6B;border-radius:5px;"></div><div style="flex:1;height:100%;background:#9DAE6B;border-radius:5px;"></div><div style="flex:1;height:20%;background:#2A2C20;border-radius:5px;"></div>
+            </div>
+          </div>
+          <div style="margin-top:auto;background:#161611;border-radius:14px;padding:13px;"><div style="font-size:11.5px;font-weight:600;color:#A8A899;margin-bottom:3px;">Streak</div><div style="display:flex;align-items:center;gap:7px;"><span class="mi fill" style="font-size:22px;color:#E0915A;">local_fire_department</span><span style="font-size:22px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">12 days</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 4 · DASHBOARD STATES ======================= -->
+<div style="position:absolute;left:1560px;top:1100px;width:760px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">04 · Online-first states — skeleton · empty · error</div>
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <!-- skeleton -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9DAE6B;margin-bottom:14px;">Skeleton loading</div>
+      <div style="display:flex;gap:14px;">
+        <div style="flex:1.1;background:#22241B;border-radius:22px;padding:20px;">
+          <div style="width:90px;height:13px;border-radius:6px;background:#32342A;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+          <div style="width:150px;height:38px;border-radius:9px;background:#32342A;margin-top:16px;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+          <div style="width:100%;height:10px;border-radius:6px;background:#32342A;margin-top:18px;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+          <div style="width:60%;height:11px;border-radius:6px;background:#32342A;margin-top:12px;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:12px;">
+          <div style="flex:1;background:#1C1E16;border-radius:18px;padding:15px;display:flex;align-items:center;gap:13px;"><div style="width:42px;height:42px;border-radius:50%;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="flex:1;"><div style="width:55px;height:10px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="width:80px;height:16px;border-radius:6px;background:#2A2C20;margin-top:8px;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div></div>
+          <div style="flex:1;background:#1C1E16;border-radius:18px;padding:15px;display:flex;align-items:center;gap:13px;"><div style="width:42px;height:42px;border-radius:50%;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="flex:1;"><div style="width:55px;height:10px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="width:80px;height:16px;border-radius:6px;background:#2A2C20;margin-top:8px;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- empty -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#C49A6C;margin-bottom:14px;">Empty state</div>
+      <div style="background:#1C1E16;border-radius:20px;padding:38px 24px;text-align:center;">
+        <div style="width:64px;height:64px;border-radius:20px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;margin:0 auto 16px;"><span class="mi" style="font-size:34px;">nature</span></div>
+        <div style="font-size:17px;font-weight:800;color:#F1F0E4;">Nincs még adat ma</div>
+        <div style="font-size:13px;font-weight:500;color:#A8A899;margin-top:6px;line-height:1.5;max-width:340px;margin-left:auto;margin-right:auto;">Kezdd a napod egy étkezés vagy edzés naplózásával — itt jelennek meg az összegzők.</div>
+        <div style="display:inline-flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:14px;padding:11px 20px;font-size:14px;font-weight:800;margin-top:18px;"><span class="mi" style="font-size:20px;">add</span>Első bejegyzés</div>
+      </div>
+    </div>
+    <!-- error -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#CF6679;margin-bottom:14px;">Error state</div>
+      <div style="background:#1C1E16;border-radius:20px;padding:32px 24px;text-align:center;">
+        <div style="width:64px;height:64px;border-radius:20px;background:rgba(207,102,121,.14);display:flex;align-items:center;justify-content:center;color:#CF6679;margin:0 auto 16px;"><span class="mi fill" style="font-size:34px;">cloud_off</span></div>
+        <div style="font-size:17px;font-weight:800;color:#F1F0E4;">Nem sikerült betölteni</div>
+        <div style="font-size:13px;font-weight:500;color:#A8A899;margin-top:6px;line-height:1.5;">Ellenőrizd a kapcsolatot, és próbáld újra.</div>
+        <div style="display:inline-flex;align-items:center;gap:8px;background:#2A2C20;color:#F1F0E4;border-radius:14px;padding:11px 20px;font-size:14px;font-weight:700;margin-top:18px;"><span class="mi" style="font-size:20px;color:#9DAE6B;">refresh</span>Újra</div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ======================= FRAME 5 · DASHBOARD (LIGHT) ======================= -->
+<div style="position:absolute;left:0px;top:2200px;width:1480px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">05 · Dashboard — loaded (light)</div>
+  <div style="background:#F3F2E8;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.12);overflow:hidden;display:flex;height:760px;border:1px solid #E2E0D2;">
+    <!-- rail -->
+    <div style="width:74px;flex:none;background:#FFFFFF;margin:14px 0 14px 14px;border-radius:22px;padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:6px;border:1px solid #E2E0D2;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#586E38;display:flex;align-items:center;justify-content:center;color:#fff;margin-bottom:12px;"><span class="mi fill" style="font-size:22px;">eco</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;background:#586E38;display:flex;align-items:center;justify-content:center;color:#fff;"><span class="mi fill" style="font-size:22px;">dashboard</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#5C5C50;"><span class="mi" style="font-size:22px;">restaurant</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#5C5C50;"><span class="mi" style="font-size:22px;">fitness_center</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#5C5C50;"><span class="mi" style="font-size:22px;">monitor_weight</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#5C5C50;"><span class="mi" style="font-size:22px;">water_drop</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#5C5C50;"><span class="mi" style="font-size:22px;">directions_walk</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#5C5C50;"><span class="mi" style="font-size:22px;">bar_chart</span></div>
+      <div style="margin-top:auto;width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#5C5C50;"><span class="mi" style="font-size:22px;">settings</span></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px;min-width:0;">
+      <div style="background:#FFFFFF;border-radius:20px;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 22px;margin-bottom:14px;flex:none;border:1px solid #E2E0D2;">
+        <div><div style="font-size:18px;font-weight:800;color:#1E1F18;letter-spacing:-0.3px;">Dashboard</div><div style="font-size:11px;font-weight:500;color:#5C5C50;">Today · Wed, Jun 24</div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="display:flex;align-items:center;gap:7px;background:#ECEBDE;border-radius:13px;padding:9px 13px;color:#1E1F18;"><span class="mi" style="font-size:18px;color:#5C5C50;">chevron_left</span><span style="font-size:13px;font-weight:700;">Today</span><span class="mi" style="font-size:18px;color:#5C5C50;">chevron_right</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#ECEBDE;display:flex;align-items:center;justify-content:center;color:#5C5C50;"><span class="mi" style="font-size:21px;">search</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#ECEBDE;display:flex;align-items:center;justify-content:center;color:#5C5C50;"><span class="mi" style="font-size:21px;">light_mode</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#4A7A52;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:800;">M</div>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;gap:14px;min-height:0;">
+        <div style="flex:1;display:flex;flex-direction:column;gap:14px;min-width:0;">
+          <div style="display:flex;gap:14px;">
+            <div style="flex:1.1;background:#FFFFFF;border-radius:24px;padding:22px;border:1px solid #E2E0D2;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="display:flex;align-items:center;gap:9px;color:#D27A3E;"><span class="mi fill" style="font-size:22px;">local_fire_department</span><span style="font-size:13px;font-weight:700;color:#5C5C50;">Calories</span></div><span style="font-size:11px;font-weight:700;color:#fff;background:#4A7A52;padding:4px 11px;border-radius:999px;">On track</span></div>
+              <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:46px;font-weight:800;color:#1E1F18;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;">1,780</span><span style="font-size:15px;font-weight:600;color:#5C5C50;">/ 2,200 kcal</span></div>
+              <div style="height:10px;background:#ECEBDE;border-radius:999px;overflow:hidden;margin:14px 0 8px;"><div style="width:81%;height:100%;background:linear-gradient(90deg,#D27A3E,#B8902F);border-radius:999px;"></div></div>
+              <div style="font-size:12.5px;font-weight:600;color:#5C5C50;font-variant-numeric:tabular-nums;">420 kcal remaining</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:14px;">
+              <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:15px 17px;display:flex;align-items:center;gap:14px;border:1px solid #E2E0D2;"><div style="position:relative;width:46px;height:46px;flex:none;"><svg viewBox="0 0 36 36" style="width:46px;height:46px;transform:rotate(-90deg);"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#ECEBDE" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#586E38" stroke-width="4" stroke-dasharray="97" stroke-dashoffset="24" stroke-linecap="round"/></svg></div><div style="flex:1;"><div style="font-size:11.5px;font-weight:600;color:#5C5C50;">Protein</div><div style="font-size:21px;font-weight:800;color:#1E1F18;font-variant-numeric:tabular-nums;">96 <span style="font-size:12px;color:#5C5C50;">/ 130g</span></div></div><span class="mi fill" style="font-size:22px;color:#586E38;">egg_alt</span></div>
+              <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:15px 17px;display:flex;align-items:center;gap:14px;border:1px solid #E2E0D2;"><div style="position:relative;width:46px;height:46px;flex:none;"><svg viewBox="0 0 36 36" style="width:46px;height:46px;transform:rotate(-90deg);"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#ECEBDE" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#B8902F" stroke-width="4" stroke-dasharray="97" stroke-dashoffset="10" stroke-linecap="round"/></svg></div><div style="flex:1;"><div style="font-size:11.5px;font-weight:600;color:#5C5C50;">Carbs</div><div style="font-size:21px;font-weight:800;color:#1E1F18;font-variant-numeric:tabular-nums;">210 <span style="font-size:12px;color:#5C5C50;">/ 240g</span></div></div><span class="mi fill" style="font-size:22px;color:#B8902F;">bakery_dining</span></div>
+              <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:15px 17px;display:flex;align-items:center;gap:14px;border:1px solid #E2E0D2;"><div style="position:relative;width:46px;height:46px;flex:none;"><svg viewBox="0 0 36 36" style="width:46px;height:46px;transform:rotate(-90deg);"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#ECEBDE" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#6A6AB0" stroke-width="4" stroke-dasharray="97" stroke-dashoffset="42" stroke-linecap="round"/></svg></div><div style="flex:1;"><div style="font-size:11.5px;font-weight:600;color:#5C5C50;">Fat</div><div style="font-size:21px;font-weight:800;color:#1E1F18;font-variant-numeric:tabular-nums;">52 <span style="font-size:12px;color:#5C5C50;">/ 73g</span></div></div><span class="mi fill" style="font-size:22px;color:#6A6AB0;">water_drop</span></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;">
+            <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:17px;border:1px solid #E2E0D2;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;color:#4E8AA8;"><span class="mi fill" style="font-size:20px;">water_drop</span><span style="font-size:12.5px;font-weight:700;color:#5C5C50;">Water</span></div><span style="font-size:12px;font-weight:700;color:#5C5C50;font-variant-numeric:tabular-nums;">1.6 / 2.5 L</span></div>
+              <div style="display:flex;gap:5px;margin-bottom:13px;"><div style="flex:1;height:30px;border-radius:7px;background:#4E8AA8;"></div><div style="flex:1;height:30px;border-radius:7px;background:#4E8AA8;"></div><div style="flex:1;height:30px;border-radius:7px;background:#4E8AA8;"></div><div style="flex:1;height:30px;border-radius:7px;background:#4E8AA8;"></div><div style="flex:1;height:30px;border-radius:7px;background:#ECEBDE;"></div><div style="flex:1;height:30px;border-radius:7px;background:#ECEBDE;"></div></div>
+              <div style="display:flex;gap:7px;"><div style="flex:1;background:#ECEBDE;border-radius:11px;padding:7px 0;text-align:center;font-size:12px;font-weight:700;color:#4E8AA8;">+250</div><div style="flex:1;background:#ECEBDE;border-radius:11px;padding:7px 0;text-align:center;font-size:12px;font-weight:700;color:#4E8AA8;">+500</div><div style="flex:1;background:#ECEBDE;border-radius:11px;padding:7px 0;text-align:center;font-size:12px;font-weight:700;color:#5C5C50;">Cup</div></div>
+            </div>
+            <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:17px;border:1px solid #E2E0D2;">
+              <div style="display:flex;align-items:center;gap:8px;color:#8A6AB0;margin-bottom:12px;"><span class="mi fill" style="font-size:20px;">directions_walk</span><span style="font-size:12.5px;font-weight:700;color:#5C5C50;">Steps</span></div>
+              <div style="font-size:30px;font-weight:800;color:#1E1F18;letter-spacing:-1px;font-variant-numeric:tabular-nums;">7,840</div>
+              <div style="font-size:11.5px;font-weight:600;color:#5C5C50;margin:2px 0 11px;">/ 10,000 goal</div>
+              <div style="height:8px;background:#ECEBDE;border-radius:999px;overflow:hidden;"><div style="width:78%;height:100%;background:#8A6AB0;border-radius:999px;"></div></div>
+            </div>
+            <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:17px;border:1px solid #E2E0D2;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="display:flex;align-items:center;gap:8px;color:#5E7A92;"><span class="mi fill" style="font-size:20px;">monitor_weight</span><span style="font-size:12.5px;font-weight:700;color:#5C5C50;">Weight</span></div><span class="mi" style="font-size:19px;color:#9a9a8c;">chevron_right</span></div>
+              <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-size:30px;font-weight:800;color:#1E1F18;letter-spacing:-1px;font-variant-numeric:tabular-nums;">78.4</span><span style="font-size:13px;font-weight:600;color:#5C5C50;">kg</span></div>
+              <div style="display:flex;align-items:center;gap:4px;color:#4A7A52;margin-top:4px;"><span class="mi" style="font-size:17px;">trending_down</span><span style="font-size:12.5px;font-weight:700;">−0.6 kg this week</span></div>
+            </div>
+          </div>
+          <div style="flex:1;background:#FFFFFF;border-radius:20px;padding:18px;min-height:0;border:1px solid #E2E0D2;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-size:15px;font-weight:700;color:#1E1F18;">Recent workouts</span><span style="font-size:12.5px;font-weight:700;color:#586E38;">View all</span></div>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <div style="background:#ECEBDE;border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:13px;"><div style="width:40px;height:40px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;color:#586E38;"><span class="mi fill" style="font-size:21px;">fitness_center</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#1E1F18;">Push day</div><div style="font-size:11.5px;color:#5C5C50;">6 exercises · 52 min</div></div><span style="font-size:12px;font-weight:700;color:#5C5C50;">Today</span></div>
+              <div style="background:#ECEBDE;border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:13px;"><div style="width:40px;height:40px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;color:#586E38;"><span class="mi fill" style="font-size:21px;">directions_run</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:700;color:#1E1F18;">Leg day</div><div style="font-size:11.5px;color:#5C5C50;">7 exercises · 64 min</div></div><span style="font-size:12px;font-weight:700;color:#5C5C50;">Mon</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="width:268px;flex:none;background:#FFFFFF;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:16px;border:1px solid #E2E0D2;">
+          <div style="font-size:13px;font-weight:700;color:#1E1F18;">This week</div>
+          <div><div style="font-size:11.5px;font-weight:600;color:#5C5C50;margin-bottom:8px;">Calories</div><svg viewBox="0 0 230 70" style="width:100%;height:auto;"><polyline points="6,52 40,40 74,46 108,30 142,36 176,22 224,28" fill="none" stroke="#D27A3E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="224" cy="28" r="4" fill="#D27A3E"/></svg></div>
+          <div><div style="font-size:11.5px;font-weight:600;color:#5C5C50;margin-bottom:8px;">Weight</div><svg viewBox="0 0 230 70" style="width:100%;height:auto;"><polyline points="6,24 40,30 74,28 108,40 142,44 176,52 224,56" fill="none" stroke="#5E7A92" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="224" cy="56" r="4" fill="#5E7A92"/></svg></div>
+          <div><div style="font-size:11.5px;font-weight:600;color:#5C5C50;margin-bottom:8px;">Workouts</div><div style="display:flex;align-items:flex-end;gap:6px;height:56px;"><div style="flex:1;height:40%;background:#586E38;border-radius:5px;"></div><div style="flex:1;height:70%;background:#586E38;border-radius:5px;"></div><div style="flex:1;height:25%;background:#ECEBDE;border-radius:5px;"></div><div style="flex:1;height:85%;background:#586E38;border-radius:5px;"></div><div style="flex:1;height:55%;background:#586E38;border-radius:5px;"></div><div style="flex:1;height:100%;background:#586E38;border-radius:5px;"></div><div style="flex:1;height:20%;background:#ECEBDE;border-radius:5px;"></div></div></div>
+          <div style="margin-top:auto;background:#ECEBDE;border-radius:14px;padding:13px;"><div style="font-size:11.5px;font-weight:600;color:#5C5C50;margin-bottom:3px;">Streak</div><div style="display:flex;align-items:center;gap:7px;"><span class="mi fill" style="font-size:22px;color:#D27A3E;">local_fire_department</span><span style="font-size:22px;font-weight:800;color:#1E1F18;font-variant-numeric:tabular-nums;">12 days</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ======================= FRAME 6 · NUTRITION — MEALS (master-detail) ======================= -->
+<div style="position:absolute;left:0px;top:3340px;width:1480px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">06 · Nutrition — Meals (napi napló · master-detail)</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:820px;">
+    <div style="width:74px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:22px;padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;margin-bottom:12px;"><span class="mi fill" style="font-size:22px;">eco</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">dashboard</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:22px;">restaurant</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">fitness_center</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">monitor_weight</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">water_drop</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">directions_walk</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">bar_chart</span></div>
+      <div style="margin-top:auto;width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">settings</span></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px;min-width:0;">
+      <!-- topbar with subtabs -->
+      <div style="background:#2A2C20;border-radius:20px;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 22px;margin-bottom:14px;flex:none;">
+        <div style="display:flex;align-items:center;gap:22px;">
+          <span style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Nutrition</span>
+          <div style="display:flex;background:#161611;border-radius:999px;padding:4px;">
+            <span style="color:#A8A899;font-size:13px;font-weight:600;padding:7px 16px;">Foods</span>
+            <span style="background:#9DAE6B;color:#161611;font-size:13px;font-weight:700;padding:7px 16px;border-radius:999px;">Meals</span>
+            <span style="color:#A8A899;font-size:13px;font-weight:600;padding:7px 16px;">Recipes</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="display:flex;align-items:center;gap:7px;background:#161611;border-radius:13px;padding:9px 13px;color:#F1F0E4;"><span class="mi" style="font-size:18px;color:#A8A899;">chevron_left</span><span style="font-size:13px;font-weight:700;">Wed, Jun 24</span><span class="mi" style="font-size:18px;color:#A8A899;">chevron_right</span></div>
+          <div style="display:flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:13px;padding:10px 16px;font-size:13.5px;font-weight:800;"><span class="mi" style="font-size:19px;">add</span>Add food</div>
+        </div>
+      </div>
+      <!-- master-detail -->
+      <div style="flex:1;display:flex;gap:14px;min-height:0;">
+        <!-- left: day timeline -->
+        <div style="flex:1;display:flex;flex-direction:column;gap:13px;min-width:0;">
+          <!-- breakfast group -->
+          <div style="background:#1C1E16;border-radius:20px;padding:16px 18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="display:flex;align-items:center;gap:9px;"><span class="mi fill" style="font-size:20px;color:#D8B35A;">bakery_dining</span><span style="font-size:15px;font-weight:700;color:#F1F0E4;">Breakfast</span></div><span style="font-size:13px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">519 kcal</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;background:#22241B;border-radius:13px;"><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Oatmeal</div><div style="font-size:11px;color:#A8A899;">100 g</div></div><span style="font-size:12.5px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">389 kcal · 17 P</span></div>
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;background:#22241B;border-radius:13px;"><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Banana</div><div style="font-size:11px;color:#A8A899;">120 g</div></div><span style="font-size:12.5px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">130 kcal · 2 P</span></div>
+            </div>
+          </div>
+          <!-- lunch group (selected) -->
+          <div style="background:#1C1E16;border:1.5px solid #9DAE6B;border-radius:20px;padding:16px 18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="display:flex;align-items:center;gap:9px;"><span class="mi fill" style="font-size:20px;color:#E0915A;">lunch_dining</span><span style="font-size:15px;font-weight:700;color:#F1F0E4;">Lunch</span></div><span style="font-size:13px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">961 kcal</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;background:#22241B;border-radius:13px;"><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Chicken &amp; rice</div><div style="font-size:11px;color:#A8A899;">350 g</div></div><span style="font-size:12.5px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">720 kcal · 38 P</span></div>
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;background:#22241B;border-radius:13px;"><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Greek yogurt</div><div style="font-size:11px;color:#A8A899;">150 g</div></div><span style="font-size:12.5px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">241 kcal · 4 P</span></div>
+            </div>
+          </div>
+          <!-- dinner group empty add -->
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed #3C3E32;border-radius:20px;padding:18px;color:#A8A899;"><span class="mi" style="font-size:21px;">add</span><span style="font-size:13.5px;font-weight:700;">Add dinner</span></div>
+        </div>
+        <!-- right: sticky daily summary -->
+        <div style="width:300px;flex:none;background:#22241B;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:14px;font-weight:700;color:#F1F0E4;">Daily summary</div>
+          <div>
+            <div style="display:flex;align-items:baseline;gap:7px;"><span style="font-size:38px;font-weight:800;color:#F1F0E4;letter-spacing:-1px;font-variant-numeric:tabular-nums;">1,780</span><span style="font-size:13px;font-weight:600;color:#A8A899;">/ 2,200</span></div>
+            <div style="height:9px;background:#161611;border-radius:999px;overflow:hidden;margin-top:10px;"><div style="width:81%;height:100%;background:#E0915A;border-radius:999px;"></div></div>
+            <div style="font-size:12px;font-weight:600;color:#A8A899;margin-top:7px;">420 kcal remaining</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12.5px;font-weight:700;color:#9DAE6B;">Protein</span><span style="font-size:12px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">96 / 130g</span></div><div style="height:7px;background:#161611;border-radius:999px;overflow:hidden;"><div style="width:74%;height:100%;background:#9DAE6B;border-radius:999px;"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12.5px;font-weight:700;color:#D8B35A;">Carbs</span><span style="font-size:12px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">210 / 240g</span></div><div style="height:7px;background:#161611;border-radius:999px;overflow:hidden;"><div style="width:87%;height:100%;background:#D8B35A;border-radius:999px;"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12.5px;font-weight:700;color:#8E8EC4;">Fat</span><span style="font-size:12px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">52 / 73g</span></div><div style="height:7px;background:#161611;border-radius:999px;overflow:hidden;"><div style="width:71%;height:100%;background:#8E8EC4;border-radius:999px;"></div></div></div>
+          </div>
+          <div style="margin-top:auto;display:flex;gap:9px;">
+            <div style="flex:1;background:#161611;border-radius:13px;padding:11px 0;text-align:center;"><div style="font-size:11px;color:#A8A899;font-weight:600;">Meals</div><div style="font-size:18px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">2</div></div>
+            <div style="flex:1;background:#161611;border-radius:13px;padding:11px 0;text-align:center;"><div style="font-size:11px;color:#A8A899;font-weight:600;">Items</div><div style="font-size:18px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">4</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 7 · NUTRITION — FOODS table + Recipes ======================= -->
+<div style="position:absolute;left:1560px;top:3340px;width:1180px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">07 · Nutrition — Foods (lapozott táblázat + barcode) &amp; Recipes</div>
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <!-- Foods table -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="display:flex;align-items:center;gap:9px;background:#1C1E16;border-radius:13px;padding:9px 14px;width:240px;"><span class="mi" style="font-size:19px;color:#777264;">search</span><span style="font-size:13px;color:#777264;">Search foods…</span></div>
+          <div style="display:flex;align-items:center;gap:9px;background:#1C1E16;border-radius:13px;padding:9px 14px;"><span class="mi" style="font-size:19px;color:#9DAE6B;">barcode_scanner</span><span style="font-size:13px;color:#777264;">Barcode…</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:13px;padding:10px 16px;font-size:13.5px;font-weight:800;"><span class="mi" style="font-size:19px;">add</span>New food</div>
+      </div>
+      <!-- table header -->
+      <div style="display:flex;align-items:center;padding:0 14px 10px;border-bottom:1px solid #2A2C20;">
+        <div style="flex:2;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#777264;display:flex;align-items:center;gap:4px;">Name <span class="mi" style="font-size:15px;color:#9DAE6B;">arrow_downward</span></div>
+        <div style="flex:1;text-align:right;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#777264;">Kcal</div>
+        <div style="flex:1;text-align:right;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#777264;">Protein</div>
+        <div style="flex:1;text-align:right;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#777264;">Carbs</div>
+        <div style="flex:1;text-align:right;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#777264;">Fat</div>
+      </div>
+      <!-- rows -->
+      <div style="display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;padding:13px 14px;border-radius:12px;background:#1C1E16;margin-top:8px;"><div style="flex:2;font-size:13.5px;font-weight:700;color:#F1F0E4;">Chicken breast</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">165</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#9DAE6B;font-variant-numeric:tabular-nums;">31</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#D8B35A;font-variant-numeric:tabular-nums;">0</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#8E8EC4;font-variant-numeric:tabular-nums;">3.6</div></div>
+        <div style="display:flex;align-items:center;padding:13px 14px;"><div style="flex:2;font-size:13.5px;font-weight:700;color:#F1F0E4;">Oatmeal</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">389</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#9DAE6B;font-variant-numeric:tabular-nums;">17</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#D8B35A;font-variant-numeric:tabular-nums;">66</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#8E8EC4;font-variant-numeric:tabular-nums;">7</div></div>
+        <div style="display:flex;align-items:center;padding:13px 14px;background:#1C1E16;border-radius:12px;"><div style="flex:2;font-size:13.5px;font-weight:700;color:#F1F0E4;">Greek yogurt</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">59</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#9DAE6B;font-variant-numeric:tabular-nums;">10</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#D8B35A;font-variant-numeric:tabular-nums;">3.6</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#8E8EC4;font-variant-numeric:tabular-nums;">0.4</div></div>
+        <div style="display:flex;align-items:center;padding:13px 14px;"><div style="flex:2;font-size:13.5px;font-weight:700;color:#F1F0E4;">Banana</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">89</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#9DAE6B;font-variant-numeric:tabular-nums;">1.1</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#D8B35A;font-variant-numeric:tabular-nums;">23</div><div style="flex:1;text-align:right;font-size:13px;font-weight:600;color:#8E8EC4;font-variant-numeric:tabular-nums;">0.3</div></div>
+      </div>
+      <!-- pagination -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:0 6px;">
+        <span style="font-size:12px;font-weight:600;color:#A8A899;">1–4 of 128</span>
+        <div style="display:flex;gap:6px;">
+          <div style="width:32px;height:32px;border-radius:10px;background:#1C1E16;display:flex;align-items:center;justify-content:center;color:#777264;"><span class="mi" style="font-size:18px;">chevron_left</span></div>
+          <div style="width:32px;height:32px;border-radius:10px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;font-size:13px;font-weight:800;">1</div>
+          <div style="width:32px;height:32px;border-radius:10px;background:#1C1E16;display:flex;align-items:center;justify-content:center;color:#F1F0E4;font-size:13px;font-weight:700;">2</div>
+          <div style="width:32px;height:32px;border-radius:10px;background:#1C1E16;display:flex;align-items:center;justify-content:center;color:#F1F0E4;"><span class="mi" style="font-size:18px;">chevron_right</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Recipes grid -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-size:15px;font-weight:700;color:#F1F0E4;">Recipes</span><div style="display:flex;align-items:center;gap:6px;background:#1C1E16;border-radius:999px;padding:6px 13px;color:#D8B35A;font-size:12px;font-weight:700;"><span class="mi fill" style="font-size:16px;">star</span>Favorites</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div style="background:#1C1E16;border-radius:16px;padding:15px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div style="width:40px;height:40px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">menu_book</span></div><span class="mi fill" style="font-size:18px;color:#D8B35A;">star</span></div><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Veggie bowl</div><div style="font-size:11.5px;color:#A8A899;margin-top:2px;font-variant-numeric:tabular-nums;">≈ 389 kcal · 4 serv.</div></div>
+        <div style="background:#1C1E16;border-radius:16px;padding:15px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div style="width:40px;height:40px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">menu_book</span></div><span class="mi" style="font-size:18px;color:#777264;">star</span></div><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Protein lunch</div><div style="font-size:11.5px;color:#A8A899;margin-top:2px;font-variant-numeric:tabular-nums;">≈ 908 kcal · 2 serv.</div></div>
+        <div style="background:#1C1E16;border-radius:16px;padding:15px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div style="width:40px;height:40px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">menu_book</span></div><span class="mi" style="font-size:18px;color:#777264;">star</span></div><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Oat breakfast</div><div style="font-size:11.5px;color:#A8A899;margin-top:2px;font-variant-numeric:tabular-nums;">≈ 389 kcal · 1 serv.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ======================= FRAME 8 · WORKOUTS — Templates (master-detail) ======================= -->
+<div style="position:absolute;left:0px;top:4900px;width:1480px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">08 · Workouts — Templates (szerkesztő · drag &amp; drop)</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:760px;">
+    <div style="width:74px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:22px;padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;margin-bottom:12px;"><span class="mi fill" style="font-size:22px;">eco</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">dashboard</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">restaurant</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:22px;">fitness_center</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">monitor_weight</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">water_drop</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">directions_walk</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">bar_chart</span></div>
+      <div style="margin-top:auto;width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">settings</span></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px;min-width:0;">
+      <div style="background:#2A2C20;border-radius:20px;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 22px;margin-bottom:14px;flex:none;">
+        <div style="display:flex;align-items:center;gap:22px;">
+          <span style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Workouts</span>
+          <div style="display:flex;background:#161611;border-radius:999px;padding:4px;">
+            <span style="color:#A8A899;font-size:13px;font-weight:600;padding:7px 16px;">Sessions</span>
+            <span style="background:#9DAE6B;color:#161611;font-size:13px;font-weight:700;padding:7px 16px;border-radius:999px;">Templates</span>
+            <span style="color:#A8A899;font-size:13px;font-weight:600;padding:7px 16px;">Exercises</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:13px;padding:10px 16px;font-size:13.5px;font-weight:800;"><span class="mi" style="font-size:19px;">add</span>New template</div>
+      </div>
+      <div style="flex:1;display:flex;gap:14px;min-height:0;">
+        <!-- master list -->
+        <div style="width:280px;flex:none;display:flex;flex-direction:column;gap:10px;">
+          <div style="background:#1C1E16;border:1.5px solid #9DAE6B;border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;"><div style="width:40px;height:40px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">fitness_center</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Push day</div><div style="font-size:11px;color:#A8A899;">4 exercises</div></div></div>
+          <div style="background:#1C1E16;border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;"><div style="width:40px;height:40px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">fitness_center</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Pull day</div><div style="font-size:11px;color:#A8A899;">5 exercises</div></div></div>
+          <div style="background:#1C1E16;border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;"><div style="width:40px;height:40px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">directions_run</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Leg day</div><div style="font-size:11px;color:#A8A899;">7 exercises</div></div></div>
+        </div>
+        <!-- detail editor -->
+        <div style="flex:1;background:#22241B;border-radius:22px;padding:20px;display:flex;flex-direction:column;min-width:0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <div style="background:#161611;border:1.5px solid #9DAE6B;border-radius:14px;height:48px;display:flex;align-items:center;padding:0 16px;min-width:240px;"><span style="font-size:16px;font-weight:700;color:#F1F0E4;">Push day</span><span style="width:2px;height:20px;background:#9DAE6B;margin-left:2px;"></span></div>
+            <div style="display:flex;align-items:center;gap:8px;color:#A8A899;font-size:12.5px;font-weight:700;"><span class="mi" style="font-size:18px;">drag_indicator</span>Húzd a sorrendhez</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="background:#1C1E16;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:12px;"><span class="mi" style="font-size:22px;color:#777264;">drag_indicator</span><div style="width:38px;height:38px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Bench press</div><div style="font-size:11.5px;color:#A8A899;">Barbell · Chest</div></div><div style="display:flex;align-items:center;gap:7px;background:#22241B;border-radius:11px;padding:7px 12px;"><span style="font-size:12px;font-weight:700;color:#A8A899;">Sets</span><span style="font-size:14px;font-weight:800;color:#9DAE6B;font-variant-numeric:tabular-nums;">3</span></div><div style="width:32px;height:32px;border-radius:11px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">close</span></div></div>
+            <div style="background:#1C1E16;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:12px;opacity:.55;transform:rotate(-0.6deg);box-shadow:0 12px 28px rgba(0,0,0,.45);"><span class="mi" style="font-size:22px;color:#9DAE6B;">drag_indicator</span><div style="width:38px;height:38px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Overhead press</div><div style="font-size:11.5px;color:#A8A899;">Barbell · Shoulders</div></div><div style="display:flex;align-items:center;gap:7px;background:#22241B;border-radius:11px;padding:7px 12px;"><span style="font-size:12px;font-weight:700;color:#A8A899;">Sets</span><span style="font-size:14px;font-weight:800;color:#9DAE6B;font-variant-numeric:tabular-nums;">3</span></div><div style="width:32px;height:32px;border-radius:11px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">close</span></div></div>
+            <div style="background:#1C1E16;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:12px;"><span class="mi" style="font-size:22px;color:#777264;">drag_indicator</span><div style="width:38px;height:38px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">sports_gymnastics</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Cable fly</div><div style="font-size:11.5px;color:#A8A899;">Cable · Chest</div></div><div style="display:flex;align-items:center;gap:7px;background:#22241B;border-radius:11px;padding:7px 12px;"><span style="font-size:12px;font-weight:700;color:#A8A899;">Sets</span><span style="font-size:14px;font-weight:800;color:#9DAE6B;font-variant-numeric:tabular-nums;">4</span></div><div style="width:32px;height:32px;border-radius:11px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">close</span></div></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed #3C3E32;border-radius:15px;padding:14px;color:#A8A899;margin-top:10px;"><span class="mi" style="font-size:21px;">add</span><span style="font-size:13.5px;font-weight:700;">Add exercise</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 9 · WORKOUTS — Session logger + Exercises ======================= -->
+<div style="position:absolute;left:1560px;top:4900px;width:1180px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">09 · Workouts — Session logger &amp; Exercises (szűrők)</div>
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <!-- session logger -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div><div style="font-size:16px;font-weight:800;color:#F1F0E4;">Push day · live session</div><div style="font-size:11.5px;color:#A8A899;">Started 18:30 · rest timer 1:30</div></div><div style="display:flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:13px;padding:10px 16px;font-size:13.5px;font-weight:800;"><span class="mi" style="font-size:19px;">check</span>Finish</div></div>
+      <!-- exercise block -->
+      <div style="background:#1C1E16;border-radius:18px;padding:16px;">
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;"><div style="width:38px;height:38px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span></div><span style="font-size:15px;font-weight:800;color:#F1F0E4;">Bench press</span><span style="font-size:11.5px;color:#A8A899;margin-left:auto;">PR 85 kg</span></div>
+        <!-- set table header -->
+        <div style="display:flex;align-items:center;padding:0 6px 8px;"><div style="width:44px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:#777264;">Set</div><div style="flex:1;text-align:center;font-size:10.5px;font-weight:700;text-transform:uppercase;color:#777264;">Previous</div><div style="flex:1;text-align:center;font-size:10.5px;font-weight:700;text-transform:uppercase;color:#777264;">Kg</div><div style="flex:1;text-align:center;font-size:10.5px;font-weight:700;text-transform:uppercase;color:#777264;">Reps</div><div style="width:44px;"></div></div>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <div style="display:flex;align-items:center;background:#22241B;border-radius:11px;padding:9px 6px;"><div style="width:44px;text-align:center;font-size:13px;font-weight:800;color:#A8A899;">1</div><div style="flex:1;text-align:center;font-size:12px;color:#777264;font-variant-numeric:tabular-nums;">60×10</div><div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">60</div><div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">10</div><div style="width:44px;text-align:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">check_circle</span></div></div>
+          <div style="display:flex;align-items:center;background:#22241B;border-radius:11px;padding:9px 6px;"><div style="width:44px;text-align:center;font-size:13px;font-weight:800;color:#A8A899;">2</div><div style="flex:1;text-align:center;font-size:12px;color:#777264;font-variant-numeric:tabular-nums;">62×8</div><div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">62.5</div><div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">8</div><div style="width:44px;text-align:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">check_circle</span></div></div>
+          <div style="display:flex;align-items:center;background:#161611;border:1.5px solid #9DAE6B;border-radius:11px;padding:9px 6px;"><div style="width:44px;text-align:center;font-size:13px;font-weight:800;color:#9DAE6B;">3</div><div style="flex:1;text-align:center;font-size:12px;color:#777264;font-variant-numeric:tabular-nums;">62×7</div><div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">62.5</div><div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#9DAE6B;font-variant-numeric:tabular-nums;">7|</div><div style="width:44px;text-align:center;color:#777264;"><span class="mi" style="font-size:21px;">radio_button_unchecked</span></div></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:10px;color:#9DAE6B;font-size:12.5px;font-weight:700;"><span class="mi" style="font-size:18px;">add</span>Add set</div>
+      </div>
+    </div>
+    <!-- exercises filters -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+          <span style="background:#9DAE6B;color:#161611;font-size:12px;font-weight:700;padding:6px 13px;border-radius:999px;">All</span>
+          <span style="background:#1C1E16;color:#A8A899;font-size:12px;font-weight:600;padding:6px 13px;border-radius:999px;">Chest</span>
+          <span style="background:#1C1E16;color:#A8A899;font-size:12px;font-weight:600;padding:6px 13px;border-radius:999px;">Back</span>
+          <span style="background:#1C1E16;color:#A8A899;font-size:12px;font-weight:600;padding:6px 13px;border-radius:999px;">Barbell</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:13px;padding:9px 15px;font-size:13px;font-weight:800;"><span class="mi" style="font-size:18px;">add</span>New</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;gap:12px;background:#1C1E16;border-radius:13px;padding:11px 14px;"><div style="width:38px;height:38px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span></div><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Bench press</div><div style="font-size:11px;color:#A8A899;">Barbell · Chest</div></div><span class="mi" style="font-size:20px;color:#777264;">chevron_right</span></div>
+        <div style="display:flex;align-items:center;gap:12px;background:#1C1E16;border-radius:13px;padding:11px 14px;"><div style="width:38px;height:38px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#6FA8C4;"><span class="mi fill" style="font-size:20px;">fitness_center</span></div><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Deadlift</div><div style="font-size:11px;color:#A8A899;">Barbell · Back</div></div><span class="mi" style="font-size:20px;color:#777264;">chevron_right</span></div>
+        <div style="display:flex;align-items:center;gap:12px;background:#1C1E16;border-radius:13px;padding:11px 14px;"><div style="width:38px;height:38px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#6FA8C4;"><span class="mi fill" style="font-size:20px;">sports_gymnastics</span></div><div style="flex:1;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Pull-up</div><div style="font-size:11px;color:#A8A899;">Bodyweight · Back</div></div><span class="mi" style="font-size:20px;color:#777264;">chevron_right</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ======================= FRAME 10 · STATISTICS (DARK, multi-chart) ======================= -->
+<div style="position:absolute;left:0px;top:5800px;width:1480px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">10 · Statistics — multi-chart dashboard (dark)</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:900px;">
+    <div style="width:74px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:22px;padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;margin-bottom:12px;"><span class="mi fill" style="font-size:22px;">eco</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">dashboard</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">restaurant</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">fitness_center</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">monitor_weight</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">water_drop</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">directions_walk</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:22px;">bar_chart</span></div>
+      <div style="margin-top:auto;width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">settings</span></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px;min-width:0;">
+      <div style="background:#2A2C20;border-radius:20px;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 22px;margin-bottom:14px;flex:none;">
+        <div><div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Statistics</div><div style="font-size:11px;font-weight:500;color:#A8A899;">Jun 2026 · vs. May</div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="display:flex;background:#161611;border-radius:999px;padding:4px;">
+            <span style="color:#A8A899;font-size:12.5px;font-weight:600;padding:7px 16px;">Week</span>
+            <span style="background:#C49A6C;color:#231a10;font-size:12.5px;font-weight:700;padding:7px 16px;border-radius:999px;">Month</span>
+            <span style="color:#A8A899;font-size:12.5px;font-weight:600;padding:7px 16px;">Year</span>
+          </div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:21px;">ios_share</span></div>
+        </div>
+      </div>
+      <!-- KPI row -->
+      <div style="display:flex;gap:14px;margin-bottom:14px;">
+        <div style="flex:1;background:#1C1E16;border-radius:18px;padding:16px;"><div style="display:flex;align-items:center;gap:7px;color:#E0915A;margin-bottom:9px;"><span class="mi fill" style="font-size:18px;">local_fire_department</span><span style="font-size:11.5px;font-weight:600;color:#A8A899;">Avg calories</span></div><div style="font-size:25px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;">2,341</div><div style="display:flex;align-items:center;gap:3px;color:#9DAE6B;margin-top:3px;"><span class="mi" style="font-size:15px;">trending_up</span><span style="font-size:11px;font-weight:700;">+4% vs May</span></div></div>
+        <div style="flex:1;background:#1C1E16;border-radius:18px;padding:16px;"><div style="display:flex;align-items:center;gap:7px;color:#9DAE6B;margin-bottom:9px;"><span class="mi fill" style="font-size:18px;">fitness_center</span><span style="font-size:11.5px;font-weight:600;color:#A8A899;">Workouts</span></div><div style="font-size:25px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;">18</div><div style="display:flex;align-items:center;gap:3px;color:#9DAE6B;margin-top:3px;"><span class="mi" style="font-size:15px;">trending_up</span><span style="font-size:11px;font-weight:700;">+3 vs May</span></div></div>
+        <div style="flex:1;background:#1C1E16;border-radius:18px;padding:16px;"><div style="display:flex;align-items:center;gap:7px;color:#8AA0B4;margin-bottom:9px;"><span class="mi fill" style="font-size:18px;">monitor_weight</span><span style="font-size:11.5px;font-weight:600;color:#A8A899;">Weight Δ</span></div><div style="font-size:25px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;">−2.1<span style="font-size:13px;color:#A8A899;"> kg</span></div><div style="display:flex;align-items:center;gap:3px;color:#9DAE6B;margin-top:3px;"><span class="mi" style="font-size:15px;">trending_down</span><span style="font-size:11px;font-weight:700;">on goal</span></div></div>
+        <div style="flex:1;background:#1C1E16;border-radius:18px;padding:16px;"><div style="display:flex;align-items:center;gap:7px;color:#D8B35A;margin-bottom:9px;"><span class="mi fill" style="font-size:18px;">local_mall</span><span style="font-size:11.5px;font-weight:600;color:#A8A899;">Volume</span></div><div style="font-size:25px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;">82<span style="font-size:13px;color:#A8A899;"> t</span></div><div style="display:flex;align-items:center;gap:3px;color:#9DAE6B;margin-top:3px;"><span class="mi" style="font-size:15px;">trending_up</span><span style="font-size:11px;font-weight:700;">+6% lifted</span></div></div>
+      </div>
+      <!-- charts grid -->
+      <div style="flex:1;display:grid;grid-template-columns:1.4fr 1fr;grid-template-rows:1fr 1fr;gap:14px;min-height:0;">
+        <!-- calories + macro trend (big) -->
+        <div style="background:#22241B;border-radius:20px;padding:18px;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-size:14px;font-weight:700;color:#F1F0E4;">Calories &amp; macros</span><div style="display:flex;gap:12px;"><span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#A8A899;"><span style="width:9px;height:9px;border-radius:50%;background:#E0915A;"></span>kcal</span><span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#A8A899;"><span style="width:9px;height:9px;border-radius:50%;background:#9DAE6B;"></span>protein</span></div></div>
+          <svg viewBox="0 0 560 200" preserveAspectRatio="none" style="width:100%;flex:1;">
+            <line x1="0" y1="50" x2="560" y2="50" stroke="#2f3127" stroke-width="1"/><line x1="0" y1="100" x2="560" y2="100" stroke="#2f3127" stroke-width="1"/><line x1="0" y1="150" x2="560" y2="150" stroke="#2f3127" stroke-width="1"/>
+            <polygon points="10,120 90,100 170,110 250,72 330,84 410,58 490,70 550,46 550,200 10,200" fill="#E0915A" fill-opacity="0.1"/>
+            <polyline points="10,120 90,100 170,110 250,72 330,84 410,58 490,70 550,46" fill="none" stroke="#E0915A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="10,150 90,140 170,148 250,128 330,132 410,118 490,124 550,110" fill="none" stroke="#9DAE6B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 0"/>
+            <circle cx="550" cy="46" r="5" fill="#E0915A"/>
+          </svg>
+        </div>
+        <!-- weight trend -->
+        <div style="background:#22241B;border-radius:20px;padding:18px;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-size:14px;font-weight:700;color:#F1F0E4;">Weight</span><span style="font-size:11px;font-weight:700;color:#161611;background:#9DAE6B;padding:3px 9px;border-radius:999px;">−2.1 kg</span></div>
+          <svg viewBox="0 0 360 180" preserveAspectRatio="none" style="width:100%;flex:1;">
+            <line x1="0" y1="120" x2="360" y2="120" stroke="#9DAE6B" stroke-width="1.5" stroke-dasharray="4 5" stroke-opacity="0.55"/>
+            <polygon points="10,30 60,42 110,40 160,60 210,56 260,78 310,90 350,100 350,180 10,180" fill="#8AA0B4" fill-opacity="0.12"/>
+            <polyline points="10,30 60,42 110,40 160,60 210,56 260,78 310,90 350,100" fill="none" stroke="#8AA0B4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="350" cy="100" r="5" fill="#8AA0B4"/>
+          </svg>
+        </div>
+        <!-- training volume bars -->
+        <div style="background:#22241B;border-radius:20px;padding:18px;display:flex;flex-direction:column;">
+          <div style="font-size:14px;font-weight:700;color:#F1F0E4;margin-bottom:14px;">Training volume / week</div>
+          <div style="flex:1;display:flex;align-items:flex-end;gap:14px;">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="width:100%;height:58%;background:#D8B35A;border-radius:7px;"></div><span style="font-size:10.5px;font-weight:700;color:#777264;">W1</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="width:100%;height:74%;background:#D8B35A;border-radius:7px;"></div><span style="font-size:10.5px;font-weight:700;color:#777264;">W2</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="width:100%;height:66%;background:#D8B35A;border-radius:7px;"></div><span style="font-size:10.5px;font-weight:700;color:#777264;">W3</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;"><div style="width:100%;height:100%;background:#9DAE6B;border-radius:7px;"></div><span style="font-size:10.5px;font-weight:700;color:#A8A899;">W4</span></div>
+          </div>
+        </div>
+        <!-- water + steps mini -->
+        <div style="background:#22241B;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:14px;">
+          <div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:12.5px;font-weight:700;color:#6FA8C4;">Water avg</span><span style="font-size:12px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">2.1 L/d</span></div><svg viewBox="0 0 320 50" preserveAspectRatio="none" style="width:100%;height:42px;"><polyline points="6,38 50,28 94,32 138,20 182,26 226,16 270,22 314,14" fill="none" stroke="#6FA8C4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:12.5px;font-weight:700;color:#B08AC8;">Steps avg</span><span style="font-size:12px;font-weight:700;color:#A8A899;font-variant-numeric:tabular-nums;">8,420/d</span></div><div style="display:flex;align-items:flex-end;gap:5px;height:42px;"><div style="flex:1;height:50%;background:#B08AC8;border-radius:4px;"></div><div style="flex:1;height:80%;background:#B08AC8;border-radius:4px;"></div><div style="flex:1;height:35%;background:#3C3E32;border-radius:4px;"></div><div style="flex:1;height:90%;background:#B08AC8;border-radius:4px;"></div><div style="flex:1;height:65%;background:#B08AC8;border-radius:4px;"></div><div style="flex:1;height:100%;background:#B08AC8;border-radius:4px;"></div><div style="flex:1;height:45%;background:#3C3E32;border-radius:4px;"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 11 · STATISTICS (LIGHT) ======================= -->
+<div style="position:absolute;left:1560px;top:5800px;width:1180px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">11 · Statistics — light theme</div>
+  <div style="background:#F3F2E8;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:20px;border:1px solid #E2E0D2;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div><div style="font-size:18px;font-weight:800;color:#1E1F18;letter-spacing:-0.3px;">Statistics</div><div style="font-size:11px;font-weight:500;color:#5C5C50;">Jun 2026 · vs. May</div></div>
+      <div style="display:flex;background:#FFFFFF;border-radius:999px;padding:4px;border:1px solid #E2E0D2;"><span style="color:#5C5C50;font-size:12.5px;font-weight:600;padding:7px 16px;">Week</span><span style="background:#8A6A42;color:#fff;font-size:12.5px;font-weight:700;padding:7px 16px;border-radius:999px;">Month</span><span style="color:#5C5C50;font-size:12.5px;font-weight:600;padding:7px 16px;">Year</span></div>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:14px;">
+      <div style="flex:1;background:#FFFFFF;border-radius:18px;padding:15px;border:1px solid #E2E0D2;"><div style="display:flex;align-items:center;gap:7px;color:#D27A3E;margin-bottom:8px;"><span class="mi fill" style="font-size:17px;">local_fire_department</span><span style="font-size:11px;font-weight:600;color:#5C5C50;">Avg kcal</span></div><div style="font-size:23px;font-weight:800;color:#1E1F18;font-variant-numeric:tabular-nums;">2,341</div><div style="display:flex;align-items:center;gap:3px;color:#4A7A52;margin-top:2px;"><span class="mi" style="font-size:14px;">trending_up</span><span style="font-size:10.5px;font-weight:700;">+4%</span></div></div>
+      <div style="flex:1;background:#FFFFFF;border-radius:18px;padding:15px;border:1px solid #E2E0D2;"><div style="display:flex;align-items:center;gap:7px;color:#586E38;margin-bottom:8px;"><span class="mi fill" style="font-size:17px;">fitness_center</span><span style="font-size:11px;font-weight:600;color:#5C5C50;">Workouts</span></div><div style="font-size:23px;font-weight:800;color:#1E1F18;font-variant-numeric:tabular-nums;">18</div><div style="display:flex;align-items:center;gap:3px;color:#4A7A52;margin-top:2px;"><span class="mi" style="font-size:14px;">trending_up</span><span style="font-size:10.5px;font-weight:700;">+3</span></div></div>
+      <div style="flex:1;background:#FFFFFF;border-radius:18px;padding:15px;border:1px solid #E2E0D2;"><div style="display:flex;align-items:center;gap:7px;color:#5E7A92;margin-bottom:8px;"><span class="mi fill" style="font-size:17px;">monitor_weight</span><span style="font-size:11px;font-weight:600;color:#5C5C50;">Weight Δ</span></div><div style="font-size:23px;font-weight:800;color:#1E1F18;font-variant-numeric:tabular-nums;">−2.1</div><div style="display:flex;align-items:center;gap:3px;color:#4A7A52;margin-top:2px;"><span class="mi" style="font-size:14px;">trending_down</span><span style="font-size:10.5px;font-weight:700;">on goal</span></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;">
+      <div style="background:#FFFFFF;border-radius:20px;padding:18px;border:1px solid #E2E0D2;">
+        <div style="font-size:14px;font-weight:700;color:#1E1F18;margin-bottom:12px;">Calories &amp; macros</div>
+        <svg viewBox="0 0 460 170" preserveAspectRatio="none" style="width:100%;height:170px;">
+          <line x1="0" y1="45" x2="460" y2="45" stroke="#ECEBDE" stroke-width="1.5"/><line x1="0" y1="90" x2="460" y2="90" stroke="#ECEBDE" stroke-width="1.5"/><line x1="0" y1="135" x2="460" y2="135" stroke="#ECEBDE" stroke-width="1.5"/>
+          <polygon points="10,110 80,92 150,100 220,66 290,76 360,52 420,62 450,42 450,170 10,170" fill="#D27A3E" fill-opacity="0.1"/>
+          <polyline points="10,110 80,92 150,100 220,66 290,76 360,52 420,62 450,42" fill="none" stroke="#D27A3E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="10,140 80,130 150,138 220,120 290,124 360,110 420,116 450,104" fill="none" stroke="#586E38" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="450" cy="42" r="5" fill="#D27A3E"/>
+        </svg>
+      </div>
+      <div style="background:#FFFFFF;border-radius:20px;padding:18px;border:1px solid #E2E0D2;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-size:14px;font-weight:700;color:#1E1F18;">Weight</span><span style="font-size:11px;font-weight:700;color:#fff;background:#4A7A52;padding:3px 9px;border-radius:999px;">−2.1 kg</span></div>
+        <svg viewBox="0 0 300 170" preserveAspectRatio="none" style="width:100%;height:170px;">
+          <line x1="0" y1="115" x2="300" y2="115" stroke="#4A7A52" stroke-width="1.5" stroke-dasharray="4 5" stroke-opacity="0.5"/>
+          <polygon points="10,30 50,42 90,40 130,60 170,56 210,78 250,90 290,100 290,170 10,170" fill="#5E7A92" fill-opacity="0.12"/>
+          <polyline points="10,30 50,42 90,40 130,60 170,56 210,78 250,90 290,100" fill="none" stroke="#5E7A92" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="290" cy="100" r="5" fill="#5E7A92"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ======================= FRAME 12 · WEIGHT ======================= -->
+<div style="position:absolute;left:0px;top:6840px;width:940px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">12 · Weight — trend + history (master-detail)</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="display:flex;align-items:center;gap:10px;color:#8AA0B4;"><span class="mi fill" style="font-size:24px;">monitor_weight</span><span style="font-size:18px;font-weight:800;color:#F1F0E4;">Weight</span></div><div style="display:flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:13px;padding:10px 16px;font-size:13.5px;font-weight:800;"><span class="mi" style="font-size:19px;">add</span>New entry</div></div>
+    <div style="display:flex;gap:14px;">
+      <!-- chart -->
+      <div style="flex:1.5;background:#22241B;border-radius:20px;padding:18px;">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px;"><div><div style="font-size:12px;color:#A8A899;font-weight:600;">Current</div><div style="display:flex;align-items:baseline;gap:5px;"><span style="font-size:34px;font-weight:800;color:#F1F0E4;letter-spacing:-1px;font-variant-numeric:tabular-nums;">78.4</span><span style="font-size:13px;color:#A8A899;font-weight:600;">kg</span></div></div><div style="display:flex;background:#161611;border-radius:999px;padding:3px;"><span style="color:#A8A899;font-size:11px;font-weight:600;padding:6px 12px;">1M</span><span style="background:#8AA0B4;color:#0d1116;font-size:11px;font-weight:700;padding:6px 12px;border-radius:999px;">3M</span><span style="color:#A8A899;font-size:11px;font-weight:600;padding:6px 12px;">1Y</span></div></div>
+        <svg viewBox="0 0 480 170" preserveAspectRatio="none" style="width:100%;height:170px;">
+          <line x1="0" y1="130" x2="480" y2="130" stroke="#9DAE6B" stroke-width="1.5" stroke-dasharray="4 5" stroke-opacity="0.55"/>
+          <polygon points="10,28 70,40 130,38 190,58 250,54 310,76 370,86 440,98 440,170 10,170" fill="#8AA0B4" fill-opacity="0.13"/>
+          <polyline points="10,28 70,40 130,38 190,58 250,54 310,76 370,86 440,98" fill="none" stroke="#8AA0B4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="440" cy="98" r="5" fill="#8AA0B4"/>
+        </svg>
+        <div style="font-size:11px;font-weight:700;color:#9DAE6B;margin-top:6px;">Goal 76.0 kg · −2.4 to go</div>
+      </div>
+      <!-- history -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;">History</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#1C1E16;border-radius:13px;padding:11px 14px;"><span style="font-size:13px;font-weight:700;color:#F1F0E4;">Jun 24</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">78.4</span><span style="font-size:11px;font-weight:700;color:#9DAE6B;">−0.6</span></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#1C1E16;border-radius:13px;padding:11px 14px;"><span style="font-size:13px;font-weight:700;color:#F1F0E4;">Jun 17</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">79.0</span><span style="font-size:11px;font-weight:700;color:#9DAE6B;">−0.4</span></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#1C1E16;border-radius:13px;padding:11px 14px;"><span style="font-size:13px;font-weight:700;color:#F1F0E4;">Jun 10</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">79.4</span><span style="font-size:11px;font-weight:700;color:#E08A52;">+0.2</span></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#1C1E16;border-radius:13px;padding:11px 14px;"><span style="font-size:13px;font-weight:700;color:#F1F0E4;">Jun 03</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">79.2</span><span style="font-size:11px;font-weight:700;color:#9DAE6B;">−0.5</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 13 · WATER ======================= -->
+<div style="position:absolute;left:1000px;top:6840px;width:560px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">13 · Water — quick add + sources</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+    <div style="display:flex;align-items:center;gap:10px;color:#6FA8C4;margin-bottom:16px;"><span class="mi fill" style="font-size:24px;">water_drop</span><span style="font-size:18px;font-weight:800;color:#F1F0E4;">Water</span></div>
+    <div style="background:#22241B;border-radius:20px;padding:20px;margin-bottom:14px;">
+      <div style="display:flex;align-items:baseline;gap:6px;justify-content:center;"><span style="font-size:40px;font-weight:800;color:#F1F0E4;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;">1.6</span><span style="font-size:15px;font-weight:600;color:#A8A899;">/ 2.5 L</span></div>
+      <div style="display:flex;gap:5px;margin:16px 0;"><div style="flex:1;height:38px;border-radius:8px;background:#6FA8C4;"></div><div style="flex:1;height:38px;border-radius:8px;background:#6FA8C4;"></div><div style="flex:1;height:38px;border-radius:8px;background:#6FA8C4;"></div><div style="flex:1;height:38px;border-radius:8px;background:#6FA8C4;"></div><div style="flex:1;height:38px;border-radius:8px;background:#2A2C20;"></div><div style="flex:1;height:38px;border-radius:8px;background:#2A2C20;"></div></div>
+      <div style="display:flex;gap:9px;">
+        <div style="flex:1;background:#161611;border-radius:13px;padding:11px 0;text-align:center;color:#6FA8C4;"><div style="font-size:16px;font-weight:800;">+250</div><div style="font-size:10px;color:#A8A899;font-weight:600;">Glass</div></div>
+        <div style="flex:1;background:#161611;border-radius:13px;padding:11px 0;text-align:center;color:#6FA8C4;"><div style="font-size:16px;font-weight:800;">+500</div><div style="font-size:10px;color:#A8A899;font-weight:600;">Bottle</div></div>
+        <div style="flex:1;background:#161611;border-radius:13px;padding:11px 0;text-align:center;color:#6FA8C4;"><div style="font-size:16px;font-weight:800;">+330</div><div style="font-size:10px;color:#A8A899;font-weight:600;">Can</div></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;">Sources</span><span style="font-size:12px;font-weight:700;color:#9DAE6B;">Manage</span></div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:11px;background:#1C1E16;border-radius:13px;padding:10px 13px;"><div style="width:34px;height:34px;border-radius:11px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#6FA8C4;"><span class="mi fill" style="font-size:19px;">local_drink</span></div><span style="flex:1;font-size:13px;font-weight:700;color:#F1F0E4;">Glass</span><span style="font-size:12px;font-weight:700;color:#A8A899;">250 ml</span></div>
+      <div style="display:flex;align-items:center;gap:11px;background:#1C1E16;border-radius:13px;padding:10px 13px;"><div style="width:34px;height:34px;border-radius:11px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#6FA8C4;"><span class="mi fill" style="font-size:19px;">sports_bar</span></div><span style="flex:1;font-size:13px;font-weight:700;color:#F1F0E4;">Bottle</span><span style="font-size:12px;font-weight:700;color:#A8A899;">500 ml</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 14 · STEPS ======================= -->
+<div style="position:absolute;left:1600px;top:6840px;width:560px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">14 · Steps — manual entry + trend</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+    <div style="display:flex;align-items:center;gap:10px;color:#B08AC8;margin-bottom:16px;"><span class="mi fill" style="font-size:24px;">directions_walk</span><span style="font-size:18px;font-weight:800;color:#F1F0E4;">Steps</span></div>
+    <div style="background:#22241B;border-radius:20px;padding:20px;margin-bottom:14px;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px;">
+        <div><div style="font-size:12px;color:#A8A899;font-weight:600;">Today</div><div style="font-size:36px;font-weight:800;color:#F1F0E4;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;">7,840</div><div style="font-size:11.5px;color:#A8A899;font-weight:600;">/ 10,000 goal</div></div>
+        <div style="display:flex;align-items:center;gap:7px;background:#161611;border-radius:12px;padding:9px 13px;color:#B08AC8;"><span class="mi" style="font-size:18px;">edit</span><span style="font-size:12.5px;font-weight:700;">Edit</span></div>
+      </div>
+      <div style="height:9px;background:#161611;border-radius:999px;overflow:hidden;"><div style="width:78%;height:100%;background:#B08AC8;border-radius:999px;"></div></div>
+    </div>
+    <div style="background:#1C1E16;border-radius:18px;padding:16px;">
+      <div style="font-size:13px;font-weight:700;color:#F1F0E4;margin-bottom:14px;">Last 7 days</div>
+      <div style="display:flex;align-items:flex-end;gap:9px;height:90px;">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><div style="width:100%;height:55%;background:#B08AC8;border-radius:6px;"></div><span style="font-size:10px;font-weight:700;color:#777264;">M</span></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><div style="width:100%;height:82%;background:#B08AC8;border-radius:6px;"></div><span style="font-size:10px;font-weight:700;color:#777264;">T</span></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><div style="width:100%;height:38%;background:#3C3E32;border-radius:6px;"></div><span style="font-size:10px;font-weight:700;color:#777264;">W</span></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><div style="width:100%;height:95%;background:#B08AC8;border-radius:6px;"></div><span style="font-size:10px;font-weight:700;color:#777264;">T</span></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><div style="width:100%;height:70%;background:#B08AC8;border-radius:6px;"></div><span style="font-size:10px;font-weight:700;color:#777264;">F</span></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><div style="width:100%;height:100%;background:#B08AC8;border-radius:6px;"></div><span style="font-size:10px;font-weight:700;color:#777264;">S</span></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><div style="width:100%;height:48%;background:#B08AC8;border-radius:6px;"></div><span style="font-size:10px;font-weight:700;color:#777264;">S</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ======================= FRAME 15 · SETTINGS (master-detail) ======================= -->
+<div style="position:absolute;left:0px;top:7700px;width:1180px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">15 · Settings — sub-nav + content (daily goals)</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;display:flex;gap:16px;">
+    <!-- settings sub-nav -->
+    <div style="width:230px;flex:none;display:flex;flex-direction:column;gap:5px;">
+      <div style="font-size:18px;font-weight:800;color:#F1F0E4;padding:4px 10px 14px;">Settings</div>
+      <div style="display:flex;align-items:center;gap:11px;background:#22241B;color:#F1F0E4;border-radius:13px;padding:11px 13px;"><span class="mi fill" style="font-size:20px;color:#9DAE6B;">person</span><span style="font-size:13.5px;font-weight:700;">Profile</span></div>
+      <div style="display:flex;align-items:center;gap:11px;background:#9DAE6B;color:#161611;border-radius:13px;padding:11px 13px;"><span class="mi fill" style="font-size:20px;">flag</span><span style="font-size:13.5px;font-weight:700;">Daily goals</span></div>
+      <div style="display:flex;align-items:center;gap:11px;color:#A8A899;border-radius:13px;padding:11px 13px;"><span class="mi" style="font-size:20px;">straighten</span><span style="font-size:13.5px;font-weight:600;">Units</span></div>
+      <div style="display:flex;align-items:center;gap:11px;color:#A8A899;border-radius:13px;padding:11px 13px;"><span class="mi" style="font-size:20px;">palette</span><span style="font-size:13.5px;font-weight:600;">Theme</span></div>
+      <div style="display:flex;align-items:center;gap:11px;color:#A8A899;border-radius:13px;padding:11px 13px;"><span class="mi" style="font-size:20px;">translate</span><span style="font-size:13.5px;font-weight:600;">Language</span></div>
+      <div style="display:flex;align-items:center;gap:11px;color:#A8A899;border-radius:13px;padding:11px 13px;"><span class="mi" style="font-size:20px;">security</span><span style="font-size:13.5px;font-weight:600;">Security</span></div>
+    </div>
+    <!-- content -->
+    <div style="flex:1;background:#1C1E16;border-radius:20px;padding:22px;min-width:0;">
+      <div style="font-size:17px;font-weight:800;color:#F1F0E4;margin-bottom:4px;">Daily goals</div>
+      <div style="font-size:12.5px;font-weight:500;color:#A8A899;margin-bottom:20px;">Ezekhez igazodik a dashboard cél-progress és a cél-tónus színezés.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;">
+        <div style="background:#22241B;border-radius:15px;padding:14px 16px;"><div style="display:flex;align-items:center;gap:8px;color:#E0915A;margin-bottom:10px;"><span class="mi fill" style="font-size:18px;">local_fire_department</span><span style="font-size:12px;font-weight:600;color:#A8A899;">Calories</span></div><div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:22px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">2,200</span><span style="font-size:12px;color:#A8A899;font-weight:600;">kcal</span></div></div>
+        <div style="background:#22241B;border-radius:15px;padding:14px 16px;"><div style="display:flex;align-items:center;gap:8px;color:#9DAE6B;margin-bottom:10px;"><span class="mi fill" style="font-size:18px;">egg_alt</span><span style="font-size:12px;font-weight:600;color:#A8A899;">Protein</span></div><div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:22px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">130</span><span style="font-size:12px;color:#A8A899;font-weight:600;">g</span></div></div>
+        <div style="background:#22241B;border-radius:15px;padding:14px 16px;"><div style="display:flex;align-items:center;gap:8px;color:#D8B35A;margin-bottom:10px;"><span class="mi fill" style="font-size:18px;">bakery_dining</span><span style="font-size:12px;font-weight:600;color:#A8A899;">Carbs</span></div><div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:22px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">240</span><span style="font-size:12px;color:#A8A899;font-weight:600;">g</span></div></div>
+        <div style="background:#22241B;border-radius:15px;padding:14px 16px;"><div style="display:flex;align-items:center;gap:8px;color:#8E8EC4;margin-bottom:10px;"><span class="mi fill" style="font-size:18px;">water_drop</span><span style="font-size:12px;font-weight:600;color:#A8A899;">Fat</span></div><div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:22px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">73</span><span style="font-size:12px;color:#A8A899;font-weight:600;">g</span></div></div>
+        <div style="background:#22241B;border-radius:15px;padding:14px 16px;"><div style="display:flex;align-items:center;gap:8px;color:#6FA8C4;margin-bottom:10px;"><span class="mi fill" style="font-size:18px;">water_drop</span><span style="font-size:12px;font-weight:600;color:#A8A899;">Water</span></div><div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:22px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">2.5</span><span style="font-size:12px;color:#A8A899;font-weight:600;">L</span></div></div>
+        <div style="background:#22241B;border-radius:15px;padding:14px 16px;"><div style="display:flex;align-items:center;gap:8px;color:#B08AC8;margin-bottom:10px;"><span class="mi fill" style="font-size:18px;">directions_walk</span><span style="font-size:12px;font-weight:600;color:#A8A899;">Steps</span></div><div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:22px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">10,000</span><span style="font-size:12px;color:#A8A899;font-weight:600;">/d</span></div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding-top:18px;border-top:1px solid #2A2C20;">
+        <div style="display:flex;gap:10px;align-items:center;"><span style="font-size:12.5px;font-weight:600;color:#A8A899;">Theme</span><div style="display:flex;background:#22241B;border-radius:999px;padding:3px;"><span style="color:#A8A899;font-size:11.5px;font-weight:600;padding:6px 13px;">Light</span><span style="background:#9DAE6B;color:#161611;font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:999px;">Dark</span><span style="color:#A8A899;font-size:11.5px;font-weight:600;padding:6px 13px;">System</span></div></div>
+        <div style="display:flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:13px;padding:11px 20px;font-size:13.5px;font-weight:800;">Save changes</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 16 · AUTH ======================= -->
+<div style="position:absolute;left:1240px;top:7700px;width:560px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">16 · Auth — login (branded)</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:44px 40px;display:flex;flex-direction:column;align-items:center;">
+    <div style="width:60px;height:60px;border-radius:19px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;margin-bottom:18px;"><span class="mi fill" style="font-size:34px;">eco</span></div>
+    <div style="font-size:24px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;">Welcome back</div>
+    <div style="font-size:13.5px;font-weight:500;color:#A8A899;margin-top:6px;margin-bottom:28px;">Sign in to continue to Lifey</div>
+    <div style="width:100%;display:flex;flex-direction:column;gap:13px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#777264;margin-bottom:7px;">Email</div>
+        <div style="background:#1C1E16;border-radius:16px;height:52px;display:flex;align-items:center;gap:11px;padding:0 16px;"><span class="mi" style="font-size:20px;color:#777264;">mail</span><span style="font-size:14px;color:#F1F0E4;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ff929e8d94bf9a879e928f939ad19c9092">[email&#160;protected]</a></span></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#777264;margin-bottom:7px;">Password</div>
+        <div style="background:#1C1E16;border:1.5px solid #9DAE6B;border-radius:16px;height:52px;display:flex;align-items:center;gap:11px;padding:0 16px;"><span class="mi" style="font-size:20px;color:#9DAE6B;">lock</span><span style="font-size:14px;letter-spacing:3px;color:#F1F0E4;">••••••••</span><span class="mi" style="font-size:20px;color:#777264;margin-left:auto;">visibility</span></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;"><span style="font-size:12px;font-weight:700;color:#9DAE6B;">Forgot password?</span></div>
+      <div style="background:#9DAE6B;color:#161611;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;margin-top:4px;">Sign in</div>
+      <div style="text-align:center;font-size:13px;color:#A8A899;font-weight:500;margin-top:6px;">No account? <span style="color:#9DAE6B;font-weight:700;">Create one</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 17 · STATES GALLERY ======================= -->
+<div style="position:absolute;left:1840px;top:7700px;width:760px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">17 · Data states — table skeleton · empty · error</div>
+  <div style="display:flex;flex-direction:column;gap:18px;">
+    <!-- table skeleton -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9DAE6B;margin-bottom:14px;">Table skeleton</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <div style="display:flex;align-items:center;gap:14px;padding:4px 6px;"><div style="width:120px;height:11px;border-radius:5px;background:#32342A;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="flex:1;"></div><div style="width:50px;height:11px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="width:50px;height:11px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+        <div style="background:#1C1E16;border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px;"><div style="width:140px;height:13px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="flex:1;"></div><div style="width:46px;height:13px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="width:46px;height:13px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+        <div style="background:#1C1E16;border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px;"><div style="width:110px;height:13px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="flex:1;"></div><div style="width:46px;height:13px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="width:46px;height:13px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+        <div style="background:#1C1E16;border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px;"><div style="width:130px;height:13px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="flex:1;"></div><div style="width:46px;height:13px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="width:46px;height:13px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+      </div>
+    </div>
+    <!-- chart skeleton + empty inline -->
+    <div style="display:flex;gap:18px;">
+      <div style="flex:1;background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9DAE6B;margin-bottom:14px;">Chart skeleton</div>
+        <div style="background:#1C1E16;border-radius:16px;padding:16px;"><div style="width:80px;height:11px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;margin-bottom:16px;"></div><div style="display:flex;align-items:flex-end;gap:8px;height:80px;"><div style="flex:1;height:50%;background:#2A2C20;border-radius:6px;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="flex:1;height:75%;background:#2A2C20;border-radius:6px;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="flex:1;height:40%;background:#2A2C20;border-radius:6px;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="flex:1;height:90%;background:#2A2C20;border-radius:6px;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="flex:1;height:60%;background:#2A2C20;border-radius:6px;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div></div>
+      </div>
+      <div style="flex:1;background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#C49A6C;margin-bottom:14px;">Empty period</div>
+        <div style="background:#1C1E16;border-radius:16px;padding:26px 16px;text-align:center;"><div style="width:50px;height:50px;border-radius:16px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#C49A6C;margin:0 auto 12px;"><span class="mi" style="font-size:28px;">bar_chart</span></div><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Nincs adat erre az időszakra</div><div style="font-size:12px;color:#A8A899;margin-top:5px;">Válassz másik tartományt.</div></div>
+      </div>
+    </div>
+    <!-- inline error toast -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#CF6679;margin-bottom:14px;">Inline error (API)</div>
+      <div style="background:#1C1E16;border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;border:1px solid rgba(207,102,121,.22);"><div style="width:42px;height:42px;border-radius:13px;background:rgba(207,102,121,.14);display:flex;align-items:center;justify-content:center;color:#CF6679;"><span class="mi fill" style="font-size:23px;">cloud_off</span></div><div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Couldn't load statistics</div><div style="font-size:12px;color:#A8A899;margin-top:1px;">Server returned 503 · GlobalExceptionHandler</div></div><div style="display:flex;align-items:center;gap:7px;background:#2A2C20;color:#F1F0E4;border-radius:12px;padding:9px 15px;font-size:13px;font-weight:700;"><span class="mi" style="font-size:18px;color:#9DAE6B;">refresh</span>Retry</div></div>
+    </div>
+  </div>
+</div></x-dc>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>
