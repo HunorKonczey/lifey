@@ -145,6 +145,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                   autofocus: _isEditing,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
                     labelText: l10n.quantityLabel,
                     suffixText: 'g',

@@ -144,6 +144,7 @@ class _AddWaterSheetState extends ConsumerState<AddWaterSheet> {
                 child: TextField(
                   controller: _amountController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
                     labelText: l10n.amountLabel,
                     suffixText: 'L',

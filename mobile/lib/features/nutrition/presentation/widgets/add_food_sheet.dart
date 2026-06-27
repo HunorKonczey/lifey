@@ -273,10 +273,12 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
               controller: _name,
               autofocus: !_isEditing,
               textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: l10n.nameLabel,
                 border: const OutlineInputBorder(),
               ),
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? l10n.requiredFieldError : null,
             ),
@@ -288,11 +290,13 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                     controller: _calories,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: l10n.caloriesLabel,
                       suffixText: 'kcal',
                       border: const OutlineInputBorder(),
                     ),
+                    onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                     validator: _validateRequiredNumber,
                   ),
                 ),
@@ -302,11 +306,13 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                     controller: _protein,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: l10n.proteinLabel,
                       suffixText: 'g',
                       border: const OutlineInputBorder(),
                     ),
+                    onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                     validator: _validateRequiredNumber,
                   ),
                 ),
@@ -320,11 +326,13 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                     controller: _carbs,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: l10n.carbsOptionalLabel,
                       suffixText: 'g',
                       border: const OutlineInputBorder(),
                     ),
+                    onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                     validator: _validateOptionalNumber,
                   ),
                 ),
@@ -334,11 +342,13 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
                     controller: _fat,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.done,
                     decoration: InputDecoration(
                       labelText: l10n.fatOptionalLabel,
                       suffixText: 'g',
                       border: const OutlineInputBorder(),
                     ),
+                    onFieldSubmitted: (_) => _submit(),
                     validator: _validateOptionalNumber,
                   ),
                 ),

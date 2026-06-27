@@ -85,6 +85,7 @@ class _AddWeightSheetState extends ConsumerState<AddWeightSheet> {
               controller: _weightController,
               autofocus: true,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.done,
               decoration: InputDecoration(
                 labelText: l10n.weightTitle,
                 suffixText: 'kg',

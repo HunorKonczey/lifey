@@ -133,10 +133,12 @@ class _AddMacrosSheetState extends ConsumerState<AddMacrosSheet> {
               controller: _name,
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: l10n.nameLabel,
                 border: const OutlineInputBorder(),
               ),
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? l10n.requiredFieldError : null,
             ),
@@ -145,12 +147,14 @@ class _AddMacrosSheetState extends ConsumerState<AddMacrosSheet> {
             TextFormField(
               controller: _grams,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: l10n.quantityLabel,
                 suffixText: 'g',
                 helperText: l10n.macrosQuantityHelperText,
                 border: const OutlineInputBorder(),
               ),
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               validator: _validateOptionalPositive,
             ),
             const SizedBox(height: 12),
@@ -162,11 +166,13 @@ class _AddMacrosSheetState extends ConsumerState<AddMacrosSheet> {
                     controller: _calories,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: l10n.caloriesLabel,
                       suffixText: 'kcal',
                       border: const OutlineInputBorder(),
                     ),
+                    onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                     validator: _validateRequiredNonNegative,
                   ),
                 ),
@@ -176,11 +182,13 @@ class _AddMacrosSheetState extends ConsumerState<AddMacrosSheet> {
                     controller: _protein,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: l10n.proteinLabel,
                       suffixText: 'g',
                       border: const OutlineInputBorder(),
                     ),
+                    onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                     validator: _validateRequiredNonNegative,
                   ),
                 ),
@@ -195,11 +203,13 @@ class _AddMacrosSheetState extends ConsumerState<AddMacrosSheet> {
                     controller: _carbs,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: l10n.carbsOptionalLabel,
                       suffixText: 'g',
                       border: const OutlineInputBorder(),
                     ),
+                    onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                     validator: _validateOptionalNonNegative,
                   ),
                 ),
@@ -209,11 +219,13 @@ class _AddMacrosSheetState extends ConsumerState<AddMacrosSheet> {
                     controller: _fat,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.done,
                     decoration: InputDecoration(
                       labelText: l10n.fatOptionalLabel,
                       suffixText: 'g',
                       border: const OutlineInputBorder(),
                     ),
+                    onFieldSubmitted: (_) => _submit(),
                     validator: _validateOptionalNonNegative,
                   ),
                 ),

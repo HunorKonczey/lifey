@@ -84,17 +84,20 @@ class _AddWaterSourceSheetState extends ConsumerState<AddWaterSourceSheet> {
               controller: _name,
               autofocus: true,
               textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: l10n.nameLabel,
                 hintText: l10n.waterSourceNameHint,
                 border: const OutlineInputBorder(),
               ),
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               validator: (v) => (v == null || v.trim().isEmpty) ? l10n.requiredFieldError : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _volume,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.done,
               decoration: InputDecoration(
                 labelText: l10n.volumeLabel,
                 suffixText: 'L',

@@ -79,7 +79,19 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
   /// The row currently shown in "edit mode" (close icon visible).
   int? _editingIndex;
 
-  Future<void> _openEditor(int index) async {
+  Future<void> _handleDoubleTap(int index) async {
+    widget.onRowDuplicate(index);
+    // onRowDuplicate mutates block.rows in-place, so index+1 already exists.
+    await _openEditor(index + 1, focusReps: false);
+  }
+
+  Future<void> _handleAddSet(bool focusReps) async {
+    widget.onAddSet();
+    // onAddSet appends a blank row in-place; open editor for it immediately.
+    await _openEditor(widget.block.rows.length - 1, focusReps: focusReps);
+  }
+
+  Future<void> _openEditor(int index, {bool focusReps = false}) async {
     setState(() => _editingIndex = index);
     final row = widget.block.rows[index];
     final result = await showModalBottomSheet<({double? weight, int? reps})>(
@@ -90,6 +102,7 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
       builder: (_) => _CompactSetEditor(
         initialWeight: row.weight,
         initialReps: row.reps,
+        focusReps: focusReps,
       ),
     );
     if (!mounted) return;
@@ -134,15 +147,15 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
             _SetRowTile(
               index: i,
               row: widget.block.rows[i],
-              onTap: () => _openEditor(i),
-              onDoubleTap: () => widget.onRowDuplicate(i),
+              onTap: (focusReps) => _openEditor(i, focusReps: focusReps),
+              onDoubleTap: () => _handleDoubleTap(i),
               onTrailingTap: () => _handleTrailingTap(i),
               scheme: scheme,
             ),
             const SizedBox(height: 5),
           ],
           const SizedBox(height: 5),
-          _AddSetRow(onAddSet: widget.onAddSet, scheme: scheme),
+          _AddSetRow(onAddSet: _handleAddSet, scheme: scheme),
         ],
       ),
     );
@@ -252,7 +265,8 @@ class _SetRowTile extends StatelessWidget {
 
   final int index;
   final SetRow row;
-  final VoidCallback onTap;
+  // focusReps: false = weight field, true = reps field
+  final void Function(bool focusReps) onTap;
   final VoidCallback onDoubleTap;
   final VoidCallback onTrailingTap;
   final ColorScheme scheme;
@@ -275,10 +289,12 @@ class _SetRowTile extends StatelessWidget {
     final trailingIcon = isDone ? Icons.check_circle : Icons.close;
     final trailingColor = isDone ? scheme.primary : dimmed;
 
-    return GestureDetector(
-      onTap: onTap,
-      onDoubleTap: onDoubleTap,
-      child: Container(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GestureDetector(
+          onTapUp: (d) => onTap(d.localPosition.dx >= constraints.maxWidth / 2),
+          onDoubleTap: onDoubleTap,
+          child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
         decoration: BoxDecoration(
           color: isDone ? scheme.primary.withValues(alpha: 0.10) : Colors.transparent,
@@ -337,7 +353,9 @@ class _SetRowTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -349,34 +367,37 @@ class _SetRowTile extends StatelessWidget {
 class _AddSetRow extends StatelessWidget {
   const _AddSetRow({required this.onAddSet, required this.scheme});
 
-  final VoidCallback onAddSet;
+  final void Function(bool focusReps) onAddSet;
   final ColorScheme scheme;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onAddSet,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 11),
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(13),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add, size: 20, color: scheme.primary),
-            const SizedBox(width: 7),
-            Text(
-              AppLocalizations.of(context)!.addSetTitle,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: scheme.primary,
+    final l10n = AppLocalizations.of(context)!;
+    return LayoutBuilder(
+      builder: (context, constraints) => GestureDetector(
+        onTapUp: (d) => onAddSet(d.localPosition.dx >= constraints.maxWidth / 2),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add, size: 20, color: scheme.primary),
+              const SizedBox(width: 7),
+              Text(
+                l10n.addSetTitle,
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.primary,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -388,10 +409,11 @@ class _AddSetRow extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _CompactSetEditor extends StatefulWidget {
-  const _CompactSetEditor({this.initialWeight, this.initialReps});
+  const _CompactSetEditor({this.initialWeight, this.initialReps, this.focusReps = false});
 
   final double? initialWeight;
   final int? initialReps;
+  final bool focusReps;
 
   @override
   State<_CompactSetEditor> createState() => _CompactSetEditorState();
@@ -447,12 +469,14 @@ class _CompactSetEditorState extends State<_CompactSetEditor> {
                 Expanded(
                   child: TextFormField(
                     controller: _weight,
-                    autofocus: true,
+                    autofocus: !widget.focusReps,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: l10n.kgColumnLabel,
                       border: const OutlineInputBorder(),
                     ),
+                    onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return null;
                       final n = double.tryParse(v.trim().replaceAll(',', '.'));
@@ -466,11 +490,14 @@ class _CompactSetEditorState extends State<_CompactSetEditor> {
                 Expanded(
                   child: TextFormField(
                     controller: _reps,
+                    autofocus: widget.focusReps,
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
                     decoration: InputDecoration(
                       labelText: l10n.repsLabel,
                       border: const OutlineInputBorder(),
                     ),
+                    onFieldSubmitted: (_) => _submit(),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return null;
                       final n = int.tryParse(v.trim());

@@ -58,20 +58,21 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   DateTime _now = DateTime.now();
 
   // ── Near-live heart rate (Apple Health, running sessions only) ──
-  // HealthKit doesn't stream live samples to an iPhone app, so we poll the
-  // latest synced sample. We only reveal the readout once the value has
-  // actually moved a few times — that's our proxy for "there's a workout (or
-  // something) driving the heart rate", and it avoids surfacing a single stale
-  // resting sample.
+  // HealthKit doesn't stream live samples to an iPhone app: the Apple Watch
+  // syncs heart-rate samples into the store in batches with a short delay, so
+  // we poll the latest one. We reveal the readout as soon as a *fresh* sample
+  // shows up — a sample landing this recently is itself proof the watch is
+  // actively feeding live data (a workout), which is a faster and more reliable
+  // signal than waiting for the value to move a few times (it never would while
+  // the heart rate is steady). If the data dries up the latest sample ages past
+  // the fresh window, the query returns nothing, and we hide the readout rather
+  // than leaving a frozen number on screen.
   static const _kHrPollInterval = Duration(seconds: 5);
-  static const _kHrFreshWindow = Duration(minutes: 5);
-  static const _kHrRevealAfterChanges = 3;
+  static const _kHrFreshWindow = Duration(minutes: 2);
 
   Timer? _hrTicker;
-  int? _currentHeartRate; // latest bpm; only shown once [_showHeartRate]
-  int? _lastSeenHeartRate; // for change detection
-  DateTime? _lastHrSampleAt; // dedupe repeated reads of the same sample
-  int _hrChangeCount = 0;
+  int? _currentHeartRate; // latest bpm; only shown while [_showHeartRate]
+  DateTime? _lastHrSampleAt; // timestamp of the sample currently shown
   bool _showHeartRate = false;
 
   bool get _isEditing => widget.session != null;
@@ -154,8 +155,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   // Near-live heart rate
   // ---------------------------------------------------------------------------
 
-  /// Polls Apple Health for the latest heart-rate sample and, once the value
-  /// has changed [_kHrRevealAfterChanges] times, reveals it in the top bar.
+  /// Polls Apple Health for the latest heart-rate sample. A sample that landed
+  /// within [_kHrFreshWindow] counts as live and is shown immediately; once the
+  /// freshest sample ages past that window the watch has stopped feeding us
+  /// data, so we hide the readout instead of leaving a stale value on screen.
   /// No-ops on Android, when the session is finished, or when the user hasn't
   /// enabled the Apple Health connection.
   Future<void> _pollHeartRate() async {
@@ -165,7 +168,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
     final sample =
         await ref.read(healthServiceProvider).latestHeartRate(within: _kHrFreshWindow);
-    if (!mounted || sample == null) return;
+    if (!mounted) return;
+
+    // No fresh sample → the watch isn't syncing live data right now. Hide a
+    // previously shown value rather than leaving it frozen on screen.
+    if (sample == null) {
+      if (_showHeartRate) setState(() => _showHeartRate = false);
+      return;
+    }
 
     // Skip if HealthKit handed us the same sample again (no new data synced).
     if (_lastHrSampleAt != null && !sample.timestamp.isAfter(_lastHrSampleAt!)) {
@@ -173,15 +183,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
     _lastHrSampleAt = sample.timestamp;
 
-    final bpm = sample.bpm.round();
-    if (_lastSeenHeartRate != null && bpm != _lastSeenHeartRate) {
-      _hrChangeCount++;
-    }
-    _lastSeenHeartRate = bpm;
-
     setState(() {
-      _currentHeartRate = bpm;
-      if (_hrChangeCount >= _kHrRevealAfterChanges) _showHeartRate = true;
+      _currentHeartRate = sample.bpm.round();
+      _showHeartRate = true;
     });
   }
 
@@ -556,7 +560,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                     ),
                   ),
                 ],
-                // Near-live heart rate, shown only once it's clearly changing.
+                // Near-live heart rate, shown while a fresh sample is arriving.
                 if (_showHeartRate && _currentHeartRate != null) ...[
                   const SizedBox(width: 8),
                   Container(
@@ -617,7 +621,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final safeBottom = MediaQuery.paddingOf(context).bottom;
     final statusTop = MediaQuery.paddingOf(context).top;
     final barTop = statusTop + 8.0;
-    final contentTop = barTop + 58.0 + 8.0;
+    const restBannerHeight = 50.0;
+    final restBannerVisible = _finishedAt == null && lastDoneAt != null;
+    final restBannerTop = barTop + 58.0 + 8.0;
+    final contentTop = restBannerVisible
+        ? restBannerTop + restBannerHeight + 8.0
+        : barTop + 58.0 + 8.0;
 
     // Finish button is only shown for running (not-yet-finished) sessions.
     final showFinishButton = _finishedAt == null;
@@ -661,12 +670,6 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 const SizedBox(height: 13),
               ],
 
-              // Rest banner (running sessions, after first completed set).
-              if (_finishedAt == null && lastDoneAt != null) ...[
-                _RestBanner(lastSetAt: lastDoneAt, now: _now),
-                const SizedBox(height: 13),
-              ],
-
               // Exercise cards.
               for (int bi = 0; bi < _blocks.length; bi++) ...[
                 ExerciseSessionCard(
@@ -695,6 +698,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             right: 12,
             child: _buildTopBar(context, scheme, l10n, title),
           ),
+
+          // ── Pinned rest banner ──
+          if (restBannerVisible)
+            Positioned(
+              top: restBannerTop,
+              left: 16,
+              right: 16,
+              child: _RestBanner(lastSetAt: lastDoneAt!, now: _now),
+            ),
 
           // ── Sticky "Finish workout" button ──
           if (showFinishButton)
