@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api/client";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const applyTokens = useSessionStore((s) => s.applyTokens);
+  const applyAccessToken = useSessionStore((s) => s.applyAccessToken);
 
   const {
     register,
@@ -27,7 +27,7 @@ export default function RegisterPage() {
       // Register returns no tokens — log in immediately afterwards.
       await authApi.register({ email: data.email, password: data.password });
       const res = await authApi.login({ email: data.email, password: data.password });
-      applyTokens(res.accessToken, res.refreshToken);
+      applyAccessToken(res.accessToken);
       router.push("/dashboard");
     } catch (err) {
       const message =

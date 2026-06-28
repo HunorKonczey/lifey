@@ -6,16 +6,19 @@ export const authApi = {
   register: (body: RegisterRequest) =>
     api.post<UserResponse>("/auth/register", body),
 
+  // Sets the refresh token as an httpOnly cookie; access token comes in the body.
   login: (body: LoginRequest) =>
     api.post<AuthResponse>("/auth/login", body),
 
-  refresh: (refreshToken: string) =>
-    api.post<AuthResponse>("/auth/refresh", { refreshToken }),
+  // Refresh token is read from the httpOnly cookie (sent automatically with credentials).
+  refresh: () =>
+    api.post<AuthResponse>("/auth/refresh"),
 
-  logout: (refreshToken: string) =>
-    api.post<void>("/auth/logout", { refreshToken }),
+  // Reads + clears the refresh cookie server-side.
+  logout: () =>
+    api.post<void>("/auth/logout"),
 
-  // Revokes all tokens for the authenticated user (uses access token, no body).
+  // Revokes all tokens for the authenticated user (uses access token) + clears cookie.
   logoutAll: () =>
     api.post<void>("/auth/logout-all"),
 };
