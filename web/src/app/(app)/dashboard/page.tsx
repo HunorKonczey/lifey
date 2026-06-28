@@ -213,7 +213,7 @@ export default function DashboardPage() {
           ) : (
             <StatCard
               label="Weight"
-              value={latestWeight?.weight ?? "—"}
+              value={latestWeight ? latestWeight.weight.toFixed(1) : "—"}
               unit={latestWeight ? "kg" : ""}
               icon="monitor_weight"
               color="var(--metric-weight)"
@@ -297,7 +297,7 @@ export default function DashboardPage() {
               {stats?.latestWeight != null && (
                 <div className="flex justify-between text-sm">
                   <span style={{ color: "var(--on-surface-variant)" }}>Latest weight</span>
-                  <span className="font-semibold tabular">{stats.latestWeight} kg</span>
+                  <span className="font-semibold tabular">{stats.latestWeight.toFixed(1)} kg</span>
                 </div>
               )}
             </div>

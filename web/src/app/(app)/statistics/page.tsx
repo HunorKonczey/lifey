@@ -148,7 +148,7 @@ export default function StatisticsPage() {
           color="var(--metric-kcal)" delta={current.avgCalories - previous.avgCalories} higherIsBetter={false} />
         <KpiCard label="Workouts" value={String(current.workoutCount)} icon="exercise"
           color="var(--tertiary)" delta={current.workoutCount - previous.workoutCount} higherIsBetter />
-        <KpiCard label="Weight" value={current.latestWeight != null ? `${current.latestWeight} kg` : "—"}
+        <KpiCard label="Weight" value={current.latestWeight != null ? `${current.latestWeight.toFixed(1)} kg` : "—"}
           icon="monitor_weight" color="var(--metric-weight)" delta={weightDeltaPrev} higherIsBetter={false} deltaUnit=" kg" />
         <KpiCard label="Training volume" value={`${Math.round(current.totalVolume).toLocaleString()} kg`} icon="fitness_center"
           color="var(--metric-protein)" delta={Math.round(current.totalVolume - previous.totalVolume)} higherIsBetter deltaUnit=" kg" />
