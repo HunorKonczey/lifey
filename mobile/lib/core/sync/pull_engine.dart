@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../local_db/app_database.dart';
@@ -41,19 +42,38 @@ class PullEngine {
     try {
       // Order matters: entities referenced by others (as a clientId lookup)
       // are pulled first.
-      await _pullFoods();
-      await _pullExercises();
-      await _pullWaterSources();
-      await _pullWeightEntries();
-      await _pullWaterEntries();
-      await _pullDailySteps();
-      await _pullSettings();
-      await _pullWorkoutTemplates();
-      await _pullWorkoutSessions();
-      await _pullRecipes();
-      await _pullMeals();
+      //
+      // Each entity is pulled in its own guard so a failure in one — a
+      // malformed payload, an unexpected null, or a duplicate-serverId
+      // collision that makes `getSingleOrNull()` throw — can't abort the
+      // whole refresh and leave every *later* entity (water, steps, meals…)
+      // stale. The failing entity keeps its last-known local state and is
+      // retried on the next pull; the rest still refresh. Without this, the
+      // first throwing entity (foods) silently stops the entire sync — the
+      // only network call that goes out is its GET.
+      await _guard('foods', _pullFoods);
+      await _guard('exercises', _pullExercises);
+      await _guard('water_sources', _pullWaterSources);
+      await _guard('weight_entries', _pullWeightEntries);
+      await _guard('water_entries', _pullWaterEntries);
+      await _guard('daily_steps', _pullDailySteps);
+      await _guard('settings', _pullSettings);
+      await _guard('workout_templates', _pullWorkoutTemplates);
+      await _guard('workout_sessions', _pullWorkoutSessions);
+      await _guard('recipes', _pullRecipes);
+      await _guard('meals', _pullMeals);
     } finally {
       _running = false;
+    }
+  }
+
+  /// Runs a single entity pull, swallowing (and logging) any error so the
+  /// remaining entities in [pullAll] still get refreshed.
+  Future<void> _guard(String entity, Future<void> Function() pull) async {
+    try {
+      await pull();
+    } catch (e, st) {
+      debugPrint('PullEngine: $entity pull failed, continuing: $e\n$st');
     }
   }
 
@@ -512,13 +532,18 @@ class PullEngine {
   }
 
   Future<String?> _localClientId(String table, int serverId) async {
-    final row = await _db
+    // LIMIT 1 + take-first rather than getSingleOrNull: if a prior interrupted
+    // or concurrent pull ever left two local rows sharing one server_id,
+    // getSingleOrNull throws "Too many elements", which would abort the whole
+    // entity pull. Tolerate the duplicate here (any matching clientId is fine
+    // for the lookup) instead of crashing the refresh.
+    final rows = await _db
         .customSelect(
-          'SELECT client_id FROM $table WHERE server_id = ?',
+          'SELECT client_id FROM $table WHERE server_id = ? LIMIT 1',
           variables: [Variable.withInt(serverId)],
         )
-        .getSingleOrNull();
-    return row?.read<String>('client_id');
+        .get();
+    return rows.isEmpty ? null : rows.first.read<String>('client_id');
   }
 
   /// True if [clientId] has a local edit that still needs to reach the

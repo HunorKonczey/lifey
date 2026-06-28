@@ -124,6 +124,24 @@ class OutboxWriter {
     _kick();
   }
 
+  /// Resets every non-network failed operation for [entityType] back to
+  /// `pending` so that they are retried on the next sync pass. Useful when
+  /// the underlying backend issue (e.g. a too-strict validation constraint)
+  /// has been fixed server-side and stuck ops need a fresh attempt.
+  /// Network-error failures already auto-retry, so they are left alone.
+  Future<void> resetFailed(String entityType) async {
+    final updated = await (_db.update(_db.pendingOperations)
+          ..where((t) =>
+              t.entityType.equals(entityType) &
+              t.status.equals('failed') &
+              t.lastError.isNotLike('[network] %')))
+        .write(const PendingOperationsCompanion(
+      status: Value('pending'),
+      lastError: Value(null),
+    ));
+    if (updated > 0) _kick();
+  }
+
   /// Drops every queued operation for [clientId] without sending anything.
   /// The local row (if any) is left as-is — it simply stays a purely local,
   /// never-synced entity rather than being retried forever or silently

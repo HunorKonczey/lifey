@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/steps/data/step_count_repository.dart';
+import '../sync/outbox_writer.dart';
 import 'health_preferences.dart';
 import 'health_service.dart';
 
@@ -24,6 +25,11 @@ class StepHistoryImporter {
     try {
       final prefs = _ref.read(healthPreferencesProvider);
       if (!(await prefs.isEnabled())) return;
+
+      // Reset any step-count ops that previously failed with a non-network
+      // error (e.g. a @PastOrPresent 400 during the 2-hour UTC lag window)
+      // so they are retried now that the server clock has caught up.
+      await _ref.read(outboxWriterProvider).resetFailed('daily_step_count');
 
       final service = _ref.read(healthServiceProvider);
       final repo = _ref.read(stepCountRepositoryProvider);

@@ -8,17 +8,11 @@ import { settingsApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useDateStore } from "@/lib/hooks/useDateStore";
 import { useToast } from "@/lib/hooks/useToast";
+import { logTimestampFor } from "@/lib/utils/logTime";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 
 const SEGMENTS = 10;
-
-function consumedAtFor(date: Date): string {
-  const dt = new Date(date);
-  dt.setHours(12, 0, 0, 0);
-  const now = new Date();
-  return (dt > now ? now : dt).toISOString();
-}
 
 export default function WaterPage() {
   const { date } = useDateStore();
@@ -42,13 +36,13 @@ export default function WaterPage() {
 
   const addMutation = useMutation({
     mutationFn: ({ volumeLiters, sourceId }: { volumeLiters: number; sourceId?: number | null }) =>
-      waterApi.entries.create({ consumedAt: consumedAtFor(date), volumeLiters, sourceId }),
+      waterApi.entries.create({ consumedAt: logTimestampFor(date), volumeLiters, sourceId }),
     onMutate: async ({ volumeLiters }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.waterEntries.all() });
       const prev = queryClient.getQueryData(queryKeys.waterEntries.all());
       queryClient.setQueryData(queryKeys.waterEntries.all(), (old: unknown[] = []) => [
         ...old,
-        { id: Date.now(), consumedAt: consumedAtFor(date), volumeLiters, sourceId: null, sourceName: null },
+        { id: Date.now(), consumedAt: logTimestampFor(date), volumeLiters, sourceId: null, sourceName: null },
       ]);
       return { prev };
     },
