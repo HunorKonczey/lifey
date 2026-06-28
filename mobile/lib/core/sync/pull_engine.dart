@@ -39,6 +39,7 @@ class PullEngine {
   Future<void> pullAll() async {
     if (_running) return;
     _running = true;
+    debugPrint('PullEngine: pullAll START');
     try {
       // Order matters: entities referenced by others (as a clientId lookup)
       // are pulled first.
@@ -64,6 +65,7 @@ class PullEngine {
       await _guard('meals', _pullMeals);
     } finally {
       _running = false;
+      debugPrint('PullEngine: pullAll DONE');
     }
   }
 
@@ -72,8 +74,9 @@ class PullEngine {
   Future<void> _guard(String entity, Future<void> Function() pull) async {
     try {
       await pull();
+      debugPrint('PullEngine: $entity OK');
     } catch (e, st) {
-      debugPrint('PullEngine: $entity pull failed, continuing: $e\n$st');
+      debugPrint('PullEngine: $entity FAILED, continuing: $e\n$st');
     }
   }
 
@@ -554,12 +557,23 @@ class PullEngine {
   /// optimistic write from the failed edit) would diverge from the server's
   /// truth forever.
   Future<bool> _hasPendingOperation(String clientId) async {
-    final row = await (_db.select(_db.pendingOperations)
+    // A clientId can legitimately have more than one pending row (e.g. a
+    // create plus a queued update against it — see OutboxWriter.enqueueUpdate),
+    // so query ALL of them: getSingleOrNull would throw "Too many elements"
+    // and abort the entire pull. Block server-overwrite if any row is still
+    // queued (pending/syncing) or failed for a network reason that retries on
+    // its own; a non-network failure never retries, so it must not block.
+    final rows = await (_db.select(_db.pendingOperations)
           ..where((t) => t.clientId.equals(clientId)))
-        .getSingleOrNull();
-    if (row == null) return false;
-    if (row.status == 'failed') return row.lastError?.startsWith('[network] ') ?? false;
-    return true;
+        .get();
+    for (final row in rows) {
+      if (row.status == 'failed') {
+        if (row.lastError?.startsWith('[network] ') ?? false) return true;
+      } else {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Deletes local rows in [table] whose serverId no longer appears in this
