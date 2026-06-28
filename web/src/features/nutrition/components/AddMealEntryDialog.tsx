@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { foodApi, mealApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
+import { logTimestampFor } from "@/lib/utils/logTime";
 import type { MealType, FoodResponse } from "../types";
 
 interface AddMealEntryDialogProps {
@@ -76,12 +77,8 @@ function SearchMode({ mealType, date, onClose }: { mealType: MealType; date: Dat
 
   const mutation = useMutation({
     mutationFn: () => {
-      const dt = new Date(date);
-      dt.setHours(12, 0, 0, 0);
-      const now = new Date();
-      const dateTime = dt > now ? now : dt;
       return mealApi.create({
-        dateTime: dateTime.toISOString(),
+        dateTime: logTimestampFor(date),
         mealType,
         name: null,
         entries: [{ foodId: picked!.id, quantityInGrams: grams }],
@@ -186,12 +183,8 @@ function MacrosMode({ mealType, date, onClose }: { mealType: MealType; date: Dat
         hidden: true,
       });
 
-      const dt = new Date(date);
-      dt.setHours(12, 0, 0, 0);
-      const now = new Date();
-      const dateTime = dt > now ? now : dt;
       return mealApi.create({
-        dateTime: dateTime.toISOString(),
+        dateTime: logTimestampFor(date),
         mealType,
         name: null,
         entries: [{ foodId: food.id, quantityInGrams: grams }],

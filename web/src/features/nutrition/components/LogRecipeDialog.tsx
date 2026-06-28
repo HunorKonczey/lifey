@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { mealApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
+import { logTimestampFor } from "@/lib/utils/logTime";
 import type { RecipeResponse, MealType } from "../types";
 
 const MEAL_TYPES: { value: MealType; label: string }[] = [
@@ -48,12 +49,8 @@ export function LogRecipeDialog({
 
   const mutation = useMutation({
     mutationFn: () => {
-      const dt = new Date(date);
-      dt.setHours(12, 0, 0, 0);
-      const now = new Date();
-      const dateTime = dt > now ? now : dt;
       return mealApi.create({
-        dateTime: dateTime.toISOString(),
+        dateTime: logTimestampFor(date),
         mealType,
         name: recipe.name,
         entries: recipe.ingredients.map((i) => ({

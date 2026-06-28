@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { waterApi } from "@/features/water/api";
 import type { WaterSourceResponse } from "@/features/water/types";
 import { queryKeys } from "@/lib/api/queryKeys";
+import { logTimestampFor } from "@/lib/utils/logTime";
 
 interface WaterCardProps {
   currentLiters: number;
@@ -15,15 +16,6 @@ interface WaterCardProps {
 
 const SEGMENTS = 8;
 
-/** Anchor at noon of the given local day, clamped to now (PastOrPresent-safe). */
-function consumedAtFor(date?: Date): string {
-  if (!date) return new Date().toISOString();
-  const dt = new Date(date);
-  dt.setHours(12, 0, 0, 0);
-  const now = new Date();
-  return (dt > now ? now : dt).toISOString();
-}
-
 export function WaterCard({ currentLiters, goalLiters, sources, date }: WaterCardProps) {
   const queryClient = useQueryClient();
   const filled = goalLiters > 0 ? Math.min(currentLiters / goalLiters, 1) : 0;
@@ -31,14 +23,14 @@ export function WaterCard({ currentLiters, goalLiters, sources, date }: WaterCar
 
   const addMutation = useMutation({
     mutationFn: ({ volumeLiters, sourceId }: { volumeLiters: number; sourceId?: number | null }) =>
-      waterApi.entries.create({ consumedAt: consumedAtFor(date), volumeLiters, sourceId }),
+      waterApi.entries.create({ consumedAt: logTimestampFor(date), volumeLiters, sourceId }),
     onMutate: async ({ volumeLiters }) => {
       // optimistic update
       await queryClient.cancelQueries({ queryKey: queryKeys.waterEntries.all() });
       const prev = queryClient.getQueryData(queryKeys.waterEntries.all());
       queryClient.setQueryData(queryKeys.waterEntries.all(), (old: { volumeLiters: number }[] = []) => [
         ...old,
-        { id: Date.now(), consumedAt: consumedAtFor(date), volumeLiters, sourceId: null, sourceName: null },
+        { id: Date.now(), consumedAt: logTimestampFor(date), volumeLiters, sourceId: null, sourceName: null },
       ]);
       return { prev };
     },
