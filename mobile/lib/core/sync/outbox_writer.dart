@@ -134,7 +134,7 @@ class OutboxWriter {
           ..where((t) =>
               t.entityType.equals(entityType) &
               t.status.equals('failed') &
-              t.lastError.isNotLike('[network] %')))
+              t.lastError.like('[network] %').not()))
         .write(const PendingOperationsCompanion(
       status: Value('pending'),
       lastError: Value(null),
