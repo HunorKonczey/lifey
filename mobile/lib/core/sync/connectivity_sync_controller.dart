@@ -15,9 +15,9 @@ import 'sync_engine_provider.dart';
 /// - Draining the outbox ([SyncEngine.sync]) — on startup, connectivity
 ///   restore, app foreground, and a lightweight periodic timer while the
 ///   app stays open.
-/// - Refreshing from the server ([PullEngine.pullAll]) — only on startup
-///   and connectivity restore, always *after* a drain so a just-created
-///   row already carries its serverId before the pull runs.
+/// - Refreshing from the server ([PullEngine.pullAll]) — on startup,
+///   connectivity restore, and app foreground, always *after* a drain so a
+///   just-created row already carries its serverId before the pull runs.
 ///
 /// True background sync (while the app is fully closed) is out of scope
 /// for this phase.
@@ -63,7 +63,7 @@ class ConnectivitySyncController with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(_syncEngine.sync());
+      unawaited(_refresh());
     }
   }
 

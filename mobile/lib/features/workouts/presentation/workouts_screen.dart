@@ -11,8 +11,8 @@ import '../application/exercise_controller.dart';
 import '../domain/exercise_enums.dart';
 import 'create_template_screen.dart';
 import 'exercises_tab.dart';
-import 'log_session_screen.dart';
 import 'sessions_tab.dart';
+import 'template_picker_screen.dart';
 import 'templates_tab.dart';
 import 'widgets/add_exercise_sheet.dart';
 
@@ -67,7 +67,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
 
   void _logSession() {
     Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(builder: (_) => const LogSessionScreen()),
+      MaterialPageRoute(builder: (_) => const TemplatePickerScreen()),
     );
   }
 

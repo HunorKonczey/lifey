@@ -6,6 +6,7 @@ import { settingsApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTheme } from "@/lib/hooks/useTheme";
+import { useLocale } from "@/lib/hooks/useLocale";
 import { useSessionStore } from "@/features/auth/store";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Skeleton } from "@/components/status/Skeleton";
@@ -38,6 +39,7 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { show } = useToast();
   const { setTheme } = useTheme();
+  const { setLanguage } = useLocale();
   const { user, logoutAll } = useSessionStore();
   const [section, setSection] = useState<Section>("profile");
   const [form, setForm] = useState<SettingsResponse | null>(null);
@@ -169,7 +171,7 @@ export default function SettingsPage() {
                 { value: "HUNGARIAN", label: "Magyar" },
               ]}
               value={form.language}
-              onChange={(v) => saveImmediate({ language: v })}
+              onChange={(v) => { setLanguage(v); saveImmediate({ language: v }); }}
             />
           </Panel>
         )}

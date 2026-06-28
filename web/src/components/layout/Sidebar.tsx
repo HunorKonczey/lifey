@@ -2,21 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useSessionStore } from "@/features/auth/store";
 import { useUiStore } from "@/lib/hooks/useUiStore";
 import { useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", icon: "dashboard", label: "Dashboard" },
-  { href: "/nutrition", icon: "restaurant", label: "Nutrition" },
-  { href: "/workouts", icon: "fitness_center", label: "Workouts" },
-  { href: "/weight", icon: "monitor_weight", label: "Weight" },
-  { href: "/water", icon: "water_drop", label: "Water" },
-  { href: "/steps", icon: "directions_walk", label: "Steps" },
-  { href: "/statistics", icon: "bar_chart", label: "Statistics" },
+  { href: "/dashboard", icon: "dashboard", key: "dashboard" },
+  { href: "/nutrition", icon: "restaurant", key: "nutrition" },
+  { href: "/workouts", icon: "fitness_center", key: "workouts" },
+  { href: "/weight", icon: "monitor_weight", key: "weight" },
+  { href: "/water", icon: "water_drop", key: "water" },
+  { href: "/steps", icon: "directions_walk", key: "steps" },
+  { href: "/statistics", icon: "bar_chart", key: "statistics" },
 ] as const;
 
 export function Sidebar() {
+  const t = useTranslations("nav");
   const pathname = usePathname();
   const { user, logout } = useSessionStore();
   const { drawerOpen, closeDrawer } = useUiStore();
@@ -81,8 +83,9 @@ export function Sidebar() {
 
         {/* Nav */}
         <nav className="flex-1 flex flex-col gap-1 px-2">
-          {NAV_ITEMS.map(({ href, icon, label }) => {
+          {NAV_ITEMS.map(({ href, icon, key }) => {
             const active = pathname.startsWith(href);
+            const label = t(key);
             return (
               <Link
                 key={href}
@@ -117,7 +120,7 @@ export function Sidebar() {
               background: pathname.startsWith("/settings") ? "var(--primary)" : "transparent",
               color: pathname.startsWith("/settings") ? "#1E1F18" : "var(--on-surface-variant)",
             }}
-            title={collapsed ? "Settings" : undefined}
+            title={collapsed ? t("settings") : undefined}
           >
             <span
               className="material-symbols-rounded text-xl shrink-0"
@@ -125,7 +128,7 @@ export function Sidebar() {
             >
               settings
             </span>
-            {!collapsed && <span className="text-sm font-semibold">Settings</span>}
+            {!collapsed && <span className="text-sm font-semibold">{t("settings")}</span>}
           </Link>
 
           {!collapsed && user && (

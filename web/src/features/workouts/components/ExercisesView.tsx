@@ -23,9 +23,22 @@ export function ExercisesView() {
     queryFn: exerciseApi.list,
   });
 
-  const exercises = (data ?? []).filter(
+  const filtered = (data ?? []).filter(
     (e) => categoryFilter === "ALL" || e.category === categoryFilter,
   );
+
+  // Build ordered groups: categories in MUSCLE_GROUPS order, then null at end
+  const groups: { key: string | null; label: string; items: ExerciseResponse[] }[] = [];
+  if (categoryFilter === "ALL") {
+    for (const cat of MUSCLE_GROUPS) {
+      const items = filtered.filter((e) => e.category === cat);
+      if (items.length > 0) groups.push({ key: cat, label: humanizeEnum(cat), items });
+    }
+    const uncategorized = filtered.filter((e) => !e.category);
+    if (uncategorized.length > 0) groups.push({ key: null, label: "Uncategorized", items: uncategorized });
+  } else {
+    groups.push({ key: categoryFilter, label: humanizeEnum(categoryFilter), items: filtered });
+  }
 
   // Only show category chips that exist in the data (plus ALL)
   const presentCategories = Array.from(
@@ -52,26 +65,33 @@ export function ExercisesView() {
           <Skeleton variant="table" />
         ) : isError ? (
           <ErrorState onRetry={refetch} />
-        ) : exercises.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <EmptyState icon="fitness_center" title="No exercises yet" body="Add exercises to build workout templates." />
         ) : (
-          <div className="flex flex-col gap-2">
-            {exercises.map((e) => (
-              <button key={e.id} onClick={() => { setEditing(e); setCreating(false); }}
-                className="flex items-center gap-3 px-4 py-3 rounded-[var(--r-card)] text-left transition-colors"
-                style={{
-                  background: "var(--surface)",
-                  outline: editing?.id === e.id ? "2px solid var(--primary)" : "none",
-                }}>
-                <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)" }}>exercise</span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{e.name}</p>
-                  <p className="text-xs" style={{ color: "var(--muted)" }}>
-                    {humanizeEnum(e.equipment)} · {humanizeEnum(e.category)}
-                  </p>
-                </div>
-                <span className="material-symbols-rounded text-lg" style={{ color: "var(--muted)" }}>chevron_right</span>
-              </button>
+          <div className="flex flex-col gap-6">
+            {groups.map((group) => (
+              <div key={group.key ?? "__none__"} className="flex flex-col gap-2">
+                <p className="text-xs font-bold uppercase tracking-widest px-1" style={{ color: "var(--on-surface-variant)" }}>
+                  {group.label}
+                </p>
+                {group.items.map((e) => (
+                  <button key={e.id} onClick={() => { setEditing(e); setCreating(false); }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-[var(--r-card)] text-left transition-colors"
+                    style={{
+                      background: "var(--surface)",
+                      outline: editing?.id === e.id ? "2px solid var(--primary)" : "none",
+                    }}>
+                    <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)" }}>exercise</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm">{e.name}</p>
+                      <p className="text-xs" style={{ color: "var(--muted)" }}>
+                        {humanizeEnum(e.equipment)}
+                      </p>
+                    </div>
+                    <span className="material-symbols-rounded text-lg" style={{ color: "var(--muted)" }}>chevron_right</span>
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
         )}
@@ -80,6 +100,7 @@ export function ExercisesView() {
       {(editing || creating) && (
         <div className="w-[320px] shrink-0">
           <ExerciseEditor
+            key={editing?.id ?? "new"}
             exercise={editing}
             onSaved={() => { setEditing(null); setCreating(false); queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all() }); }}
             onCancel={() => { setEditing(null); setCreating(false); }}

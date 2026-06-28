@@ -126,7 +126,7 @@ export default function WeightPage() {
               <div>
                 <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Current</p>
                 <p className="text-3xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
-                  {latest?.weight} <span className="text-base" style={{ color: "var(--on-surface-variant)" }}>kg</span>
+                  {latest?.weight.toFixed(1)} <span className="text-base" style={{ color: "var(--on-surface-variant)" }}>kg</span>
                 </p>
               </div>
               <SegmentedControl options={RANGE_OPTIONS} value={range} onChange={setRange} size="sm" />
@@ -153,7 +153,7 @@ export default function WeightPage() {
                       {format(new Date(w.date), "MMM d, yyyy")}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold tabular">{w.weight} kg</span>
+                      <span className="text-sm font-semibold tabular">{w.weight.toFixed(1)} kg</span>
                       {delta != null && delta !== 0 && (
                         <span className="text-xs tabular font-semibold"
                           style={{ color: delta < 0 ? "var(--goal-positive)" : "var(--goal-negative)" }}>

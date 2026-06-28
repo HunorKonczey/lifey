@@ -535,6 +535,15 @@
     "startWorkoutButton": "Start workout",
     "@startWorkoutButton": {"description": "Button on a template card to start a workout from that template"},
 
+    "chooseTemplateTitle": "Choose template",
+    "@chooseTemplateTitle": {"description": "Title of the template picker screen shown when tapping the log FAB"},
+
+    "emptyWorkoutLabel": "Empty workout",
+    "@emptyWorkoutLabel": {"description": "Option on the template picker to start a session without a template"},
+
+    "emptyWorkoutSubtitle": "Start without a template",
+    "@emptyWorkoutSubtitle": {"description": "Subtitle for the empty workout option on the template picker"},
+
     "exerciseFabLabel": "Exercise",
     "@exerciseFabLabel": {"description": "FAB label when on the Exercises tab"},
 

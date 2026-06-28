@@ -181,6 +181,9 @@
     "logFabLabel": "Napló",
     "templateFabLabel": "Sablon",
     "startWorkoutButton": "Edzés indítása",
+    "chooseTemplateTitle": "Válassz sablont",
+    "emptyWorkoutLabel": "Üres edzés",
+    "emptyWorkoutSubtitle": "Sablon nélkül indulj",
     "exerciseFabLabel": "Gyakorlat",
 
     "waterAmountLabel": "{current} / {goal} L",

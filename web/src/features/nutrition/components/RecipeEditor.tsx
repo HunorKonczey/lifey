@@ -31,7 +31,8 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
     recipe
       ? recipe.ingredients.map((i) => ({
           foodId: i.foodId, quantityInGrams: i.quantityInGrams,
-          foodName: i.foodName, caloriesPer100g: 0,
+          foodName: i.foodName,
+          caloriesPer100g: i.quantityInGrams > 0 ? (i.calories * 100) / i.quantityInGrams : 0,
         }))
       : [],
   );

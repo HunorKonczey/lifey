@@ -1,32 +1,21 @@
 "use client";
 
 import { NextIntlClientProvider } from "next-intl";
-import { useEffect, useState } from "react";
+import enMessages from "../../../messages/en.json";
+import huMessages from "../../../messages/hu.json";
+import type { Locale } from "@/lib/hooks/useLocale";
 
-type Messages = Record<string, unknown>;
-
-async function loadMessages(locale: string): Promise<Messages> {
-  const msgs = await import(`../../../messages/${locale}.json`);
-  return msgs.default as Messages;
-}
+const MESSAGES = { en: enMessages, hu: huMessages } as Record<string, Record<string, unknown>>;
 
 export function I18nProvider({
   locale,
   children,
 }: {
-  locale: "en" | "hu";
+  locale: Locale;
   children: React.ReactNode;
 }) {
-  const [messages, setMessages] = useState<Messages | null>(null);
-
-  useEffect(() => {
-    loadMessages(locale).then(setMessages);
-  }, [locale]);
-
-  if (!messages) return <>{children}</>;
-
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider locale={locale} messages={MESSAGES[locale]}>
       {children}
     </NextIntlClientProvider>
   );
