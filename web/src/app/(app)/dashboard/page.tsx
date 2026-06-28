@@ -53,6 +53,10 @@ export default function DashboardPage() {
         queryFn: () => statisticsApi.daily(dateStr),
       },
       {
+        queryKey: queryKeys.statistics.weekly(dateStr),
+        queryFn: () => statisticsApi.weekly(dateStr),
+      },
+      {
         queryKey: queryKeys.settings.all(),
         queryFn: settingsApi.get,
         staleTime: 5 * 60_000,
@@ -84,10 +88,11 @@ export default function DashboardPage() {
     ],
   });
 
-  const [statsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ] =
+  const [statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ] =
     results;
 
   const stats = statsQ.data;
+  const weeklyStats = weeklyStatsQ.data;
   const settings = settingsQ.data;
   const todayMeals = mealsQ.data ? filterToday(mealsQ.data as MealResponse[], dateStr) : [];
   const todayWater = waterEntriesQ.data
@@ -96,7 +101,11 @@ export default function DashboardPage() {
   const todaySteps = stepsQ.data
     ? (filterToday(stepsQ.data as DailyStepCountResponse[], dateStr)[0] ?? null)
     : null;
-  const latestWeight = weightsQ.data?.at(-1) ?? null;
+  // The API list isn't guaranteed to be date-sorted, so sort before taking the
+  // newest — otherwise we'd show whatever entry happens to be last in insertion order.
+  const latestWeight = weightsQ.data
+    ? ([...weightsQ.data].sort((a, b) => a.date.localeCompare(b.date)).at(-1) ?? null)
+    : null;
   const recentSessions = sessionsQ.data?.slice(-5).reverse() ?? [];
 
   const totalKcal = todayMeals.flatMap((m) => m.entries).reduce((s, e) => s + e.calories, 0);
@@ -105,8 +114,8 @@ export default function DashboardPage() {
   const totalFat = stats?.totalFat ?? 0;
   const totalWaterL = todayWater.reduce((s, e) => s + e.volumeLiters, 0);
 
-  const isLoading = statsQ.isLoading || settingsQ.isLoading;
-  const hasError = statsQ.isError || settingsQ.isError;
+  const isLoading = statsQ.isLoading || weeklyStatsQ.isLoading || settingsQ.isLoading;
+  const hasError = statsQ.isError || weeklyStatsQ.isError || settingsQ.isError;
 
   if (isLoading) {
     return (
@@ -131,6 +140,7 @@ export default function DashboardPage() {
       <ErrorState
         onRetry={() => {
           statsQ.refetch();
+          weeklyStatsQ.refetch();
           settingsQ.refetch();
         }}
       />
@@ -270,34 +280,34 @@ export default function DashboardPage() {
       >
         <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
           <p className="text-sm font-bold mb-3">This week</p>
-          {statsQ.isLoading ? (
+          {weeklyStatsQ.isLoading ? (
             <Skeleton variant="text" />
           ) : (
             <div className="flex flex-col gap-3">
               <div className="flex justify-between text-sm">
                 <span style={{ color: "var(--on-surface-variant)" }}>Avg calories</span>
                 <span className="font-semibold tabular">
-                  {stats?.totalCalories != null
-                    ? Math.round(stats.totalCalories / 7).toLocaleString()
+                  {weeklyStats?.totalCalories != null
+                    ? Math.round(weeklyStats.totalCalories / 7).toLocaleString()
                     : "—"}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span style={{ color: "var(--on-surface-variant)" }}>Workouts</span>
-                <span className="font-semibold tabular">{stats?.workoutCount ?? "—"}</span>
+                <span className="font-semibold tabular">{weeklyStats?.workoutCount ?? "—"}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span style={{ color: "var(--on-surface-variant)" }}>Avg water</span>
                 <span className="font-semibold tabular">
-                  {stats?.totalWater != null
-                    ? (stats.totalWater / 7).toFixed(1) + " L"
+                  {weeklyStats?.totalWater != null
+                    ? (weeklyStats.totalWater / 7).toFixed(1) + " L"
                     : "—"}
                 </span>
               </div>
-              {stats?.latestWeight != null && (
+              {weeklyStats?.latestWeight != null && (
                 <div className="flex justify-between text-sm">
                   <span style={{ color: "var(--on-surface-variant)" }}>Latest weight</span>
-                  <span className="font-semibold tabular">{stats.latestWeight.toFixed(1)} kg</span>
+                  <span className="font-semibold tabular">{weeklyStats.latestWeight.toFixed(1)} kg</span>
                 </div>
               )}
             </div>

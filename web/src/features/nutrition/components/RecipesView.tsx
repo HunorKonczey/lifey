@@ -8,12 +8,14 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { RecipeEditor } from "./RecipeEditor";
+import { LogRecipeDialog } from "./LogRecipeDialog";
 import type { RecipeResponse } from "../types";
 
 export function RecipesView() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [editing, setEditing] = useState<RecipeResponse | null>(null);
   const [creating, setCreating] = useState(false);
+  const [logging, setLogging] = useState<RecipeResponse | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.recipes.all(),
@@ -56,21 +58,29 @@ export function RecipesView() {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           {recipes.map((r) => (
-            <button key={r.id} onClick={() => { setEditing(r); setCreating(false); }}
-              className="flex flex-col gap-2 p-4 rounded-[var(--r-card)] text-left transition-colors"
+            <div key={r.id}
+              className="flex flex-col gap-2 p-4 rounded-[var(--r-card)] text-left"
               style={{ background: "var(--surface)" }}>
-              <div className="flex items-start justify-between">
-                <span className="material-symbols-rounded text-xl" style={{ color: "var(--secondary)" }}>menu_book</span>
-                {r.favorite && (
-                  <span className="material-symbols-rounded text-lg"
-                    style={{ color: "var(--metric-carbs)", fontVariationSettings: "'FILL' 1" }}>star</span>
-                )}
-              </div>
-              <p className="font-bold text-sm">{r.name}</p>
-              <p className="text-xs" style={{ color: "var(--muted)" }}>
-                {r.ingredients.length} ingredients · {r.servings} serv.
-              </p>
-            </button>
+              <button onClick={() => { setEditing(r); setCreating(false); }}
+                className="flex flex-col gap-2 text-left flex-1">
+                <div className="flex items-start justify-between">
+                  <span className="material-symbols-rounded text-xl" style={{ color: "var(--secondary)" }}>menu_book</span>
+                  {r.favorite && (
+                    <span className="material-symbols-rounded text-lg"
+                      style={{ color: "var(--metric-carbs)", fontVariationSettings: "'FILL' 1" }}>star</span>
+                  )}
+                </div>
+                <p className="font-bold text-sm">{r.name}</p>
+                <p className="text-xs" style={{ color: "var(--muted)" }}>
+                  {r.ingredients.length} ingredients · {r.servings} serv.
+                </p>
+              </button>
+              <button onClick={() => setLogging(r)}
+                className="mt-1 flex items-center justify-center gap-1 h-8 rounded-[var(--r-input)] text-xs font-semibold transition-colors"
+                style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}>
+                <span className="material-symbols-rounded text-base">restaurant</span> Log as meal
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -82,6 +92,10 @@ export function RecipesView() {
           onSaved={() => { setEditing(null); setCreating(false); }}
           onCancel={() => { setEditing(null); setCreating(false); }}
         />
+      )}
+
+      {logging && (
+        <LogRecipeDialog recipe={logging} date={new Date()} onClose={() => setLogging(null)} />
       )}
     </div>
   );
