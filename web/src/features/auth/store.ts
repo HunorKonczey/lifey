@@ -6,6 +6,18 @@ import { decodeJwt } from "@/lib/utils/jwt";
 import { authApi } from "./api";
 import type { SessionUser } from "./types";
 
+const RT_KEY = "lifey-rt";
+
+function getStoredRefreshToken(): string | null {
+  try { return localStorage.getItem(RT_KEY); } catch { return null; }
+}
+function saveRefreshToken(token: string) {
+  try { localStorage.setItem(RT_KEY, token); } catch { /* ignore */ }
+}
+function clearRefreshToken() {
+  try { localStorage.removeItem(RT_KEY); } catch { /* ignore */ }
+}
+
 /** Build the display user from the access-token JWT claims. */
 function userFromAccessToken(accessToken: string): SessionUser | null {
   const claims = decodeJwt(accessToken);
@@ -21,9 +33,9 @@ interface SessionState {
   user: SessionUser | null;
   isLoading: boolean;
   initFailed: boolean;
-  /** Store the access token in memory and derive the user. The refresh token
-   *  lives only in the httpOnly cookie set by the backend. */
-  applyAccessToken: (accessToken: string) => void;
+  /** Store the access token in memory, persist the refresh token to localStorage,
+   *  and derive the user from the access-token JWT claims. */
+  applyAccessToken: (accessToken: string, refreshToken?: string) => void;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
   initialize: () => Promise<void>;
@@ -34,19 +46,22 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   isLoading: true,
   initFailed: false,
 
-  applyAccessToken: (accessToken) => {
+  applyAccessToken: (accessToken, refreshToken) => {
     setAccessToken(accessToken);
+    if (refreshToken) saveRefreshToken(refreshToken);
     set({ user: userFromAccessToken(accessToken), isLoading: false, initFailed: false });
   },
 
   logout: async () => {
     setAccessToken(null);
+    clearRefreshToken();
     set({ user: null, initFailed: false });
     try { await authApi.logout(); } catch { /* ignore */ }
   },
 
   logoutAll: async () => {
     setAccessToken(null);
+    clearRefreshToken();
     set({ user: null, initFailed: false });
     try { await authApi.logoutAll(); } catch { /* ignore */ }
   },
@@ -56,25 +71,34 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       set({ isLoading: false });
       return;
     }
-    // Try to restore the session from the httpOnly refresh cookie.
+    const stored = getStoredRefreshToken();
+    if (!stored) {
+      set({ user: null, isLoading: false, initFailed: true });
+      return;
+    }
     try {
-      const res = await authApi.refresh();
+      const res = await authApi.refresh(stored);
       setAccessToken(res.accessToken);
+      saveRefreshToken(res.refreshToken); // rotate stored token
       set({ user: userFromAccessToken(res.accessToken), isLoading: false, initFailed: false });
     } catch {
       setAccessToken(null);
+      clearRefreshToken();
       set({ user: null, isLoading: false, initFailed: true });
     }
   },
 }));
 
-// Single-flight refresh for 401 interception — relies on the refresh cookie.
+// Single-flight refresh for 401 interception.
 registerTokenRefresher(async () => {
+  const stored = getStoredRefreshToken();
+  if (!stored) return null;
   try {
-    const res = await authApi.refresh();
-    useSessionStore.getState().applyAccessToken(res.accessToken);
+    const res = await authApi.refresh(stored);
+    useSessionStore.getState().applyAccessToken(res.accessToken, res.refreshToken);
     return res.accessToken;
   } catch {
+    clearRefreshToken();
     return null;
   }
 });

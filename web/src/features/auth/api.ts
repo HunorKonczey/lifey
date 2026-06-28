@@ -10,9 +10,10 @@ export const authApi = {
   login: (body: LoginRequest) =>
     api.post<AuthResponse>("/auth/login", body),
 
-  // Refresh token is read from the httpOnly cookie (sent automatically with credentials).
-  refresh: () =>
-    api.post<AuthResponse>("/auth/refresh"),
+  // Accepts the refresh token in the body (cross-origin safe) or falls back to
+  // the httpOnly cookie if no token is provided (same-site setups).
+  refresh: (refreshToken?: string) =>
+    api.post<AuthResponse>("/auth/refresh", refreshToken ? { refreshToken } : undefined),
 
   // Reads + clears the refresh cookie server-side.
   logout: () =>

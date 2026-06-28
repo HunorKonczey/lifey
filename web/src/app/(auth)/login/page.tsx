@@ -25,7 +25,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       const res = await authApi.login(data);
-      applyAccessToken(res.accessToken);
+      applyAccessToken(res.accessToken, res.refreshToken);
       router.push("/dashboard");
     } catch (err) {
       const message =
