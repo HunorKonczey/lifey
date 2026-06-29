@@ -301,7 +301,8 @@ class PullEngine {
         await (_db.delete(_db.workoutTemplateExercises)
               ..where((t) => t.templateClientId.equals(clientId)))
             .go();
-        for (final entry in entriesJson) {
+        for (var i = 0; i < entriesJson.length; i++) {
+          final entry = entriesJson[i];
           final exerciseServerId = entry['exerciseId'] as int;
           final exerciseClientId = await _localClientId('exercises', exerciseServerId);
           if (exerciseClientId == null) continue; // dangling ref — exercise not pulled yet
@@ -312,6 +313,7 @@ class PullEngine {
                   templateClientId: clientId,
                   exerciseClientId: exerciseClientId,
                   targetSets: Value(targetSets),
+                  sortOrder: Value(i),
                 ),
               );
         }
