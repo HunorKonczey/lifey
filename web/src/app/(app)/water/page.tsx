@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 
 const SEGMENTS = 10;
+const QUICK_AMOUNTS = [0.25, 0.5, 1.0];
 
 export default function WaterPage() {
   const { date } = useDateStore();
@@ -22,6 +23,7 @@ export default function WaterPage() {
   const [managing, setManaging] = useState(false);
   const [newName, setNewName] = useState("");
   const [newVol, setNewVol] = useState("");
+  const [customInput, setCustomInput] = useState("");
 
   const entriesQ = useQuery({ queryKey: queryKeys.waterEntries.all(), queryFn: waterApi.entries.list });
   const sourcesQ = useQuery({ queryKey: queryKeys.waterSources.all(), queryFn: waterApi.sources.list });
@@ -81,6 +83,16 @@ export default function WaterPage() {
         { id: -3, name: "Can", volumeLiters: 0.33 },
       ];
 
+  function handleCustomAdd() {
+    const parsed = parseFloat(customInput.replace(",", "."));
+    if (isNaN(parsed) || parsed <= 0) {
+      show("Enter a valid amount", "error");
+      return;
+    }
+    addMutation.mutate({ volumeLiters: parsed, sourceId: null });
+    setCustomInput("");
+  }
+
   if (entriesQ.isLoading || sourcesQ.isLoading) {
     return <div className="flex gap-6"><Skeleton variant="card" className="flex-1 h-80" /><Skeleton variant="card" className="w-[300px] h-80" /></div>;
   }
@@ -108,16 +120,56 @@ export default function WaterPage() {
             ))}
           </div>
 
+          {/* Saved sources */}
           <div className="flex flex-wrap gap-2">
             {quickSources.map((src) => (
               <button key={src.id}
                 onClick={() => addMutation.mutate({ volumeLiters: src.volumeLiters, sourceId: src.id > 0 ? src.id : null })}
-                className="flex items-center gap-1 px-4 py-2 rounded-[var(--r-input)] text-sm font-semibold transition-opacity"
+                disabled={addMutation.isPending}
+                className="flex items-center gap-1 px-4 py-2 rounded-[var(--r-input)] text-sm font-semibold transition-opacity disabled:opacity-50"
                 style={{ background: "var(--surface-container)", color: "var(--metric-water)", border: "1px solid var(--outline)" }}>
                 <span className="material-symbols-rounded text-lg">add</span>
                 {src.volumeLiters >= 1 ? `${src.volumeLiters}L` : `${Math.round(src.volumeLiters * 1000)}ml`} {src.name}
               </button>
             ))}
+          </div>
+
+          {/* Custom amount */}
+          <div className="flex flex-col gap-2 pt-3" style={{ borderTop: "1px solid var(--outline)" }}>
+            <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Custom amount</p>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_AMOUNTS.map((amount) => (
+                <button key={amount}
+                  onClick={() => addMutation.mutate({ volumeLiters: amount, sourceId: null })}
+                  disabled={addMutation.isPending}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-[var(--r-input)] text-sm font-semibold transition-opacity disabled:opacity-50"
+                  style={{ background: "var(--surface-container)", color: "var(--metric-water)", border: "1px solid var(--outline)" }}>
+                  <span className="material-symbols-rounded text-base">add</span>
+                  {amount >= 1 ? `${amount}L` : `${Math.round(amount * 1000)}ml`}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                step="0.05"
+                min="0"
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCustomAdd()}
+                placeholder="e.g. 0.35"
+                className="flex-1 px-3 h-9 rounded-[var(--r-md)] outline-none text-sm tabular"
+                style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+              />
+              <span className="self-center text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>L</span>
+              <button
+                onClick={handleCustomAdd}
+                disabled={addMutation.isPending || !customInput}
+                className="px-4 h-9 rounded-[var(--r-md)] text-sm font-semibold transition-opacity disabled:opacity-50"
+                style={{ background: "var(--primary)", color: "var(--on-primary)" }}>
+                Add
+              </button>
+            </div>
           </div>
 
           {/* Today's entries */}
