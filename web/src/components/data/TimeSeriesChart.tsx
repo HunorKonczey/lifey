@@ -57,7 +57,7 @@ export function TimeSeriesChart({
             fontSize: 12,
           }}
           labelStyle={{ color: "var(--on-surface-variant)" }}
-          formatter={(v) => [`${v}${unit}`, ""] as [string, string]}
+          formatter={(v) => [`${typeof v === "number" ? +v.toFixed(2) : v}${unit}`, ""] as [string, string]}
         />
         {goalLine != null && (
           <ReferenceLine

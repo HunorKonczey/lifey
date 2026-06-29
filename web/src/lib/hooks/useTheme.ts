@@ -22,13 +22,21 @@ function applyTheme(theme: "dark" | "light") {
   }
 }
 
+function getInitialPreference(): ThemeValue {
+  try {
+    const stored = localStorage.getItem("lifey-theme");
+    if (stored === "dark" || stored === "light") return stored;
+  } catch { /* ignore */ }
+  return "system";
+}
+
 interface ThemeState {
   preference: ThemeValue;
   setTheme: (pref: ThemeValue) => void;
 }
 
 export const useTheme = create<ThemeState>((set) => ({
-  preference: "system",
+  preference: getInitialPreference(),
   setTheme: (pref) => {
     set({ preference: pref });
     applyTheme(resolveTheme(pref));
