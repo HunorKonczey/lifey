@@ -15,8 +15,8 @@ spring:
       # that always keeps a connection open to Postgres is itself outbound
       # traffic, which stops the service from ever being seen as idle and
       # put to sleep.
-      minimum-idle: 0
-      idle-timeout: 60000
+      # minimum-idle: 0
+      # idle-timeout: 60000
   jpa:
     hibernate:
       ddl-auto: validate
