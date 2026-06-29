@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/lib/providers";
 import "./globals.css";
 
@@ -48,6 +50,8 @@ export default function RootLayout({
       </head>
       <body className="min-h-full antialiased bg-bg text-on-surface" suppressHydrationWarning>
         <Providers>{children}</Providers>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
