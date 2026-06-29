@@ -44,6 +44,22 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+management:
+  endpoints:
+    web:
+      # Only expose the health endpoint over HTTP (at /actuator/health) — nothing
+      # else (env, beans, mappings, ...) is reachable, so no internals leak.
+      exposure:
+        include: health
+  endpoint:
+    health:
+      # Plain UP/DOWN for unauthenticated callers — don't leak component details
+      # (db, disk, ...) on a public health-check endpoint.
+      show-details: never
+      # Adds /actuator/health/liveness and /readiness groups for PaaS probes.
+      probes:
+        enabled: true
+
 lifey:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}

@@ -1,0 +1,11 @@
+# Production-only overrides. Activate by setting SPRING_PROFILES_ACTIVE=prod
+# on the deployment (e.g. as a Railway env var).
+#
+# Swagger UI and the OpenAPI spec are dev/internal tooling — disabling both
+# means /swagger-ui.html and /v3/api-docs return 404 in production, so the API
+# surface isn't advertised publicly.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

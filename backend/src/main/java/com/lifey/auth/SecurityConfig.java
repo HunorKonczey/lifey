@@ -19,7 +19,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 /**
  * Stateless, JWT-based security: no sessions, no CSRF (there's no cookie-based
  * session to forge), every {@code /api/**} route requires a valid access token
- * except the handful of public auth endpoints and the API docs.
+ * except the handful of public auth endpoints, the API docs, and the
+ * actuator health check.
  */
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -31,7 +32,9 @@ public class SecurityConfig {
             "/api/v1/auth/refresh",
             "/swagger-ui.html",
             "/swagger-ui/**",
-            "/v3/api-docs/**"
+            "/v3/api-docs/**",
+            "/actuator/health",
+            "/actuator/health/**"
     };
 
     @Bean
