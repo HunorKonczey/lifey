@@ -85,7 +85,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       context: context,
       initialDate: _dateTime,
       firstDate: DateTime(2000),
-      lastDate: now,
+      lastDate: DateTime(now.year + 2),
     );
     if (date == null || !mounted) return;
     final time = await showTimePicker(
@@ -98,7 +98,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       time?.hour ?? _dateTime.hour,
       time?.minute ?? _dateTime.minute,
     );
-    setState(() => _dateTime = picked.isAfter(now) ? now : picked);
+    setState(() => _dateTime = picked);
     _autoSave();
   }
 
