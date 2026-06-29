@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { SessionsView } from "@/features/workouts/components/SessionsView";
 import { TemplatesView } from "@/features/workouts/components/TemplatesView";
 import { ExercisesView } from "@/features/workouts/components/ExercisesView";
+import { useUiStore } from "@/lib/hooks/useUiStore";
 
 type Tab = "sessions" | "templates" | "exercises";
 
@@ -15,7 +15,8 @@ const TABS: { value: Tab; label: string; icon: string }[] = [
 ];
 
 export default function WorkoutsPage() {
-  const [tab, setTab] = useState<Tab>("sessions");
+  const tab = useUiStore((s) => s.workoutsTab);
+  const setTab = useUiStore((s) => s.setWorkoutsTab);
 
   return (
     <div className="flex flex-col gap-5">
