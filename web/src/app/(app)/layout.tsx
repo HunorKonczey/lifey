@@ -14,7 +14,7 @@ import { ErrorBoundary } from "@/components/status/ErrorBoundary";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, isLoading, initFailed, initialize } = useSessionStore();
+  const { user, isLoading, initialize } = useSessionStore();
   const { locale, setLanguage } = useLocale();
 
   const { data: settings } = useQuery({
@@ -31,13 +31,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     initialize();
   }, [initialize]);
 
-  // Only redirect when initialize() itself determined there is no session.
-  // API-level 401s on individual queries are handled by TanStack Query error states.
+  // Redirect to login whenever there is no authenticated user (covers both
+  // a failed initialize() and an explicit logout()).
   useEffect(() => {
-    if (!isLoading && initFailed) {
+    if (!isLoading && !user) {
       router.push("/login");
     }
-  }, [isLoading, initFailed, router]);
+  }, [isLoading, user, router]);
 
   if (isLoading) {
     return (
@@ -52,7 +52,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user && !initFailed) return null;
+  if (!user) return null;
 
   return (
     <I18nProvider locale={locale}>

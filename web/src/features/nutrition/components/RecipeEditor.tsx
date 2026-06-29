@@ -16,6 +16,7 @@ interface RecipeEditorProps {
 interface DraftIngredient extends RecipeIngredientRequest {
   foodName: string;
   caloriesPer100g: number;
+  proteinPer100g: number;
 }
 
 export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
@@ -33,6 +34,7 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
           foodId: i.foodId, quantityInGrams: i.quantityInGrams,
           foodName: i.foodName,
           caloriesPer100g: i.quantityInGrams > 0 ? (i.calories * 100) / i.quantityInGrams : 0,
+          proteinPer100g: i.quantityInGrams > 0 ? (i.protein * 100) / i.quantityInGrams : 0,
         }))
       : [],
   );
@@ -47,13 +49,16 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
   const addIngredient = (f: FoodResponse) => {
     setIngredients((prev) => [
       ...prev,
-      { foodId: f.id, quantityInGrams: 100, foodName: f.name, caloriesPer100g: f.caloriesPer100g },
+      { foodId: f.id, quantityInGrams: 100, foodName: f.name, caloriesPer100g: f.caloriesPer100g, proteinPer100g: f.proteinPer100g },
     ]);
     setSearch("");
   };
 
   const totalKcal = ingredients.reduce(
     (s, i) => s + (i.caloriesPer100g * i.quantityInGrams) / 100, 0,
+  );
+  const totalProtein = ingredients.reduce(
+    (s, i) => s + (i.proteinPer100g * i.quantityInGrams) / 100, 0,
   );
 
   const mutation = useMutation({
@@ -165,6 +170,9 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
           <span style={{ color: "var(--on-surface-variant)" }}>Total</span>
           <span className="font-semibold" style={{ color: "var(--metric-kcal)" }}>
             {Math.round(totalKcal)} kcal · {Math.round(totalKcal / servings)} / serving
+          </span>
+          <span className="font-semibold" style={{ color: "var(--metric-protein)" }}>
+            {Math.round(totalProtein)}g protein · {Math.round(totalProtein / servings)}g / serving
           </span>
         </div>
 

@@ -168,6 +168,16 @@ body {
 button { cursor: pointer; }
 button:disabled { cursor: default; }
 
+/* ─── Kill browser autofill background ─── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-container) inset !important;
+  -webkit-text-fill-color: var(--on-surface) !important;
+  caret-color: var(--on-surface);
+  transition: background-color 99999s ease-in-out 0s;
+}
+
 /* ─── Number input: hide spinners ─── */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
