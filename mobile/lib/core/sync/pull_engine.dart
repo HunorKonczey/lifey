@@ -497,8 +497,16 @@ class PullEngine {
 
         await (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
         for (final entry in entriesJson) {
-          final foodClientId = await _localClientId('foods', entry['foodId'] as int);
-          if (foodClientId == null) continue; // dangling ref — food master row not pulled
+          final foodServerId = entry['foodId'] as int;
+          var foodClientId = await _localClientId('foods', foodServerId);
+          // Hidden foods (quick-macro entries) are not returned by GET /foods,
+          // so they can be missing from the local cache. Fetch the individual
+          // food via GET /foods/{id} and store it locally so the meal entry
+          // can reference it.
+          if (foodClientId == null) {
+            foodClientId = await _fetchAndStoreFood(foodServerId);
+          }
+          if (foodClientId == null) continue; // still not found — skip entry
           await _db.into(_db.mealEntries).insert(
                 MealEntriesCompanion.insert(
                   clientId: newClientId(),
@@ -576,6 +584,33 @@ class PullEngine {
       }
     }
     return false;
+  }
+
+  /// Fetches a single food by server id and stores it locally. Used to recover
+  /// hidden foods (quick-macro entries) that are absent from the GET /foods
+  /// list response but are still referenced by meal entries. Returns the new
+  /// local clientId on success, or null if the server returns 404 or errors.
+  Future<String?> _fetchAndStoreFood(int serverId) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>('/foods/$serverId');
+      final json = response.data;
+      if (json == null) return null;
+      final clientId = newClientId();
+      await _db.into(_db.foods).insert(FoodsCompanion.insert(
+            clientId: clientId,
+            serverId: Value(serverId),
+            name: json['name'] as String,
+            caloriesPer100g: (json['caloriesPer100g'] as num).toDouble(),
+            proteinPer100g: (json['proteinPer100g'] as num).toDouble(),
+            carbsPer100g: Value((json['carbsPer100g'] as num?)?.toDouble()),
+            fatPer100g: Value((json['fatPer100g'] as num?)?.toDouble()),
+            barcode: Value(json['barcode'] as String?),
+            hidden: Value(json['hidden'] as bool? ?? true),
+          ));
+      return clientId;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Deletes local rows in [table] whose serverId no longer appears in this

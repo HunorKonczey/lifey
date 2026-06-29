@@ -39,7 +39,8 @@ class _MealsTabState extends ConsumerState<MealsTab> {
 
   bool _nearBottom = false;
 
-  bool _handleScrollNotification(ScrollNotification notification) {
+  bool _handleScrollNotification(ScrollNotification notification, bool canLoadMore) {
+    if (!canLoadMore) return false;
     final metrics = notification.metrics;
     final isNearBottom = metrics.maxScrollExtent - metrics.pixels <= _loadMoreThreshold;
     if (isNearBottom && !_nearBottom) {
@@ -98,14 +99,19 @@ class _MealsTabState extends ConsumerState<MealsTab> {
           );
         }
 
+        // Only offer "load more" when the filter isn't hiding meals from the
+        // current page. If filtered < meals, the extra DB rows are from other
+        // date ranges and loading more won't help the current view.
+        final canLoadMore = hasMore && filtered.length == meals.length;
+
         return RefreshIndicator(
           displacement: widget.topPadding,
           onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
           child: NotificationListener<ScrollNotification>(
-            onNotification: _handleScrollNotification,
+            onNotification: (n) => _handleScrollNotification(n, canLoadMore),
             child: ListView.builder(
               padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
-              itemCount: filtered.length + (hasMore ? 1 : 0),
+              itemCount: filtered.length + (canLoadMore ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index >= filtered.length) {
                   return const Padding(
