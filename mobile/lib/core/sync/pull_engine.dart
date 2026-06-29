@@ -107,7 +107,7 @@ class PullEngine {
             );
       }
     }
-    await _deleteMissing('foods', seen);
+    await _deleteMissing('foods', seen, additionalWhere: 'AND hidden = false');
   }
 
   Future<void> _pullExercises() async {
@@ -582,13 +582,22 @@ class PullEngine {
   /// pull's [seenServerIds] (removed server-side, or by another device) and
   /// have no pending operation of their own. [onDelete] runs first so
   /// callers can clean up child rows before the parent disappears.
+  ///
+  /// [additionalWhere] is appended verbatim to the WHERE clause (e.g.
+  /// `"AND hidden = false"`) so callers can exclude rows the server never
+  /// returns — hidden foods are the canonical case: they are created locally
+  /// and synced up, but the backend's GET /foods endpoint omits them, so
+  /// without the filter they would be deleted on every pull.
   Future<void> _deleteMissing(
     String table,
     Set<int> seenServerIds, {
     Future<void> Function(String clientId)? onDelete,
+    String additionalWhere = '',
   }) async {
     final rows = await _db
-        .customSelect('SELECT client_id, server_id FROM $table WHERE server_id IS NOT NULL')
+        .customSelect(
+          'SELECT client_id, server_id FROM $table WHERE server_id IS NOT NULL $additionalWhere',
+        )
         .get();
     for (final row in rows) {
       final serverId = row.read<int>('server_id');
