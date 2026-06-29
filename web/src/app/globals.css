@@ -164,6 +164,15 @@ body {
   border-radius: var(--r-sm);
 }
 
+/* ─── Buttons ─── */
+button { cursor: pointer; }
+button:disabled { cursor: default; }
+
+/* ─── Number input: hide spinners ─── */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
+
 /* ─── Scrollbar (dark) ─── */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
