@@ -59,7 +59,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final foodsState = ref.watch(foodControllerProvider);
+    final foodsState = ref.watch(foodSearchProvider);
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final l10n = AppLocalizations.of(context)!;
 

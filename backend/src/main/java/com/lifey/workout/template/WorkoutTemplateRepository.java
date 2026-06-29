@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface WorkoutTemplateRepository extends JpaRepository<WorkoutTemplate, Long> {
 
-    List<WorkoutTemplate> findAllByUserId(Long userId);
+    List<WorkoutTemplate> findAllByUserIdOrderByNameAsc(Long userId);
 
     Optional<WorkoutTemplate> findByIdAndUserId(Long id, Long userId);
 

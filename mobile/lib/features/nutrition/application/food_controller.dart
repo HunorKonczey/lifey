@@ -130,3 +130,10 @@ class FoodController extends StreamNotifier<List<Food>> {
 
 final foodControllerProvider =
     StreamNotifierProvider<FoodController, List<Food>>(FoodController.new);
+
+/// Unlimted food stream for autocomplete/search — bypasses the paginated
+/// [foodControllerProvider] so a user can find any food by name regardless
+/// of how far they've scrolled the food catalog.
+final foodSearchProvider = StreamProvider<List<Food>>((ref) {
+  return ref.watch(foodRepositoryProvider).watchAll();
+});

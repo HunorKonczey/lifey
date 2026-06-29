@@ -35,7 +35,7 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
     @Override
     @Transactional(readOnly = true)
     public List<WorkoutTemplateResponse> findAll() {
-        return templateRepository.findAllByUserId(currentUserProvider.getUserId()).stream()
+        return templateRepository.findAllByUserIdOrderByNameAsc(currentUserProvider.getUserId()).stream()
                 .map(WorkoutTemplateMapper::toResponse)
                 .toList();
     }
