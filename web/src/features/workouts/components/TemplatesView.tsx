@@ -16,9 +16,40 @@ import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
+import { MUSCLE_GROUPS } from "../types";
 import type {
   WorkoutTemplateResponse, TemplateExerciseEntry, ExerciseResponse,
 } from "../types";
+
+const MUSCLE_GROUP_LABELS: Record<string, string> = {
+  CHEST: "Chest", BACK: "Back", SHOULDERS: "Shoulders", BICEPS: "Biceps",
+  TRICEPS: "Triceps", FOREARMS: "Forearms", QUADS: "Quads", HAMSTRINGS: "Hamstrings",
+  GLUTES: "Glutes", CALVES: "Calves", ABS: "Abs", CARDIO: "Cardio",
+  FULL_BODY: "Full Body", OTHER: "Other",
+};
+
+function muscleGroupColor(code: string): string {
+  switch (code) {
+    case "CHEST": case "QUADS":                        return "var(--metric-kcal)";
+    case "SHOULDERS": case "GLUTES":                   return "var(--metric-carbs)";
+    case "TRICEPS": case "FOREARMS": case "ABS":       return "var(--metric-fat)";
+    case "BACK":                                       return "var(--metric-water)";
+    case "BICEPS":                                     return "var(--metric-protein)";
+    case "HAMSTRINGS": case "CALVES":                  return "var(--metric-steps)";
+    default:                                           return "var(--metric-weight)";
+  }
+}
+
+function templateCategories(t: WorkoutTemplateResponse, exercisesById: Map<number, ExerciseResponse>): string[] {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const code of MUSCLE_GROUPS) {
+    if (t.exercises.some((e) => exercisesById.get(e.exerciseId)?.category === code)) {
+      if (!seen.has(code)) { seen.add(code); ordered.push(code); }
+    }
+  }
+  return ordered;
+}
 
 export function TemplatesView() {
   const [selectedId, setSelectedId] = useState<number | "new" | null>(null);
@@ -38,6 +69,8 @@ export function TemplatesView() {
     : selectedId != null ? (data ?? []).find((t) => t.id === selectedId) ?? null
     : null;
 
+  const exercisesById = new Map((exercises ?? []).map((e) => [e.id, e]));
+
   return (
     <div className="flex gap-6">
       {/* Master list */}
@@ -55,20 +88,36 @@ export function TemplatesView() {
         ) : (data ?? []).length === 0 ? (
           <EmptyState icon="list_alt" title="No templates" body="Create a workout template." />
         ) : (
-          (data ?? []).map((t) => (
-            <button key={t.id} onClick={() => setSelectedId(t.id)}
-              className="flex items-center gap-3 px-4 py-3 rounded-[var(--r-card)] text-left transition-colors"
-              style={{
-                background: "var(--surface)",
-                outline: selectedId === t.id ? "2px solid var(--primary)" : "none",
-              }}>
-              <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)" }}>list_alt</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">{t.name}</p>
-                <p className="text-xs" style={{ color: "var(--muted)" }}>{t.exercises.length} exercises</p>
-              </div>
-            </button>
-          ))
+          (data ?? []).map((t) => {
+            const cats = templateCategories(t, exercisesById);
+            return (
+              <button key={t.id} onClick={() => setSelectedId(t.id)}
+                className="flex items-start gap-3 px-4 py-3 rounded-[var(--r-card)] text-left transition-colors"
+                style={{
+                  background: "var(--surface)",
+                  outline: selectedId === t.id ? "2px solid var(--primary)" : "none",
+                }}>
+                <span className="material-symbols-rounded text-xl mt-0.5" style={{ color: "var(--tertiary)" }}>list_alt</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{t.name}</p>
+                  <p className="text-xs mb-1.5" style={{ color: "var(--muted)" }}>{t.exercises.length} exercises</p>
+                  {cats.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {cats.map((c) => {
+                        const color = muscleGroupColor(c);
+                        return (
+                          <span key={c} className="text-[10px] font-bold leading-none px-2 py-1 rounded-[var(--r-pill)]"
+                            style={{ color, background: `color-mix(in srgb, ${color} 15%, transparent)` }}>
+                            {MUSCLE_GROUP_LABELS[c] ?? c}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })
         )}
       </div>
 

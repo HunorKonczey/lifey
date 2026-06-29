@@ -88,17 +88,17 @@ export function FoodsView() {
     {
       key: "protein", header: "Protein", sortable: true, align: "right", color: "var(--metric-protein)",
       sortValue: (f) => f.proteinPer100g,
-      render: (f) => `${f.proteinPer100g}g`,
+      render: (f) => `${+f.proteinPer100g.toFixed(1)}g`,
     },
     {
       key: "carbs", header: "Carbs", sortable: true, align: "right", color: "var(--metric-carbs)",
       sortValue: (f) => f.carbsPer100g ?? 0,
-      render: (f) => (f.carbsPer100g != null ? `${f.carbsPer100g}g` : "—"),
+      render: (f) => (f.carbsPer100g != null ? `${+f.carbsPer100g.toFixed(1)}g` : "—"),
     },
     {
       key: "fat", header: "Fat", sortable: true, align: "right", color: "var(--metric-fat)",
       sortValue: (f) => f.fatPer100g ?? 0,
-      render: (f) => (f.fatPer100g != null ? `${f.fatPer100g}g` : "—"),
+      render: (f) => (f.fatPer100g != null ? `${+f.fatPer100g.toFixed(1)}g` : "—"),
     },
   ];
 

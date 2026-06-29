@@ -11,6 +11,29 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 
+function muscleGroupColor(category: string | null): string {
+  switch (category) {
+    case "CHEST":
+    case "QUADS":       return "var(--metric-kcal)";
+    case "SHOULDERS":
+    case "GLUTES":      return "var(--metric-carbs)";
+    case "TRICEPS":
+    case "FOREARMS":
+    case "ABS":         return "var(--metric-fat)";
+    case "BACK":        return "var(--metric-water)";
+    case "BICEPS":      return "var(--metric-protein)";
+    case "HAMSTRINGS":
+    case "CALVES":      return "var(--metric-steps)";
+    default:            return "var(--metric-weight)";
+  }
+}
+
+function categoryIcon(e: ExerciseResponse): string {
+  if (e.category === "CARDIO") return "directions_run";
+  if (e.equipment === "BODYWEIGHT") return "sports_gymnastics";
+  return "fitness_center";
+}
+
 export function ExercisesView() {
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -81,7 +104,19 @@ export function ExercisesView() {
                       background: "var(--surface)",
                       outline: editing?.id === e.id ? "2px solid var(--primary)" : "none",
                     }}>
-                    <span className="material-symbols-rounded text-xl" style={{ color: "var(--tertiary)" }}>exercise</span>
+                    <div
+                      className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{
+                        background: `color-mix(in srgb, ${muscleGroupColor(e.category)} 15%, transparent)`,
+                      }}
+                    >
+                      <span
+                        className="material-symbols-rounded text-xl"
+                        style={{ color: muscleGroupColor(e.category) }}
+                      >
+                        {categoryIcon(e)}
+                      </span>
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm">{e.name}</p>
                       <p className="text-xs" style={{ color: "var(--muted)" }}>
