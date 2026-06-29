@@ -20,10 +20,10 @@ const MEAL_GROUPS: { type: MealType; label: string; icon: string }[] = [
   { type: "SNACK", label: "Snack", icon: "icecream" },
 ];
 
-function entryKcal(m: MealResponse) {
+function mealKcal(m: MealResponse) {
   return m.entries.reduce((s, e) => s + e.calories, 0);
 }
-function entryProtein(m: MealResponse) {
+function mealProtein(m: MealResponse) {
   return m.entries.reduce((s, e) => s + e.protein, 0);
 }
 
@@ -58,8 +58,8 @@ export function MealsView() {
     (m) => format(new Date(m.dateTime), "yyyy-MM-dd") === dateStr,
   );
 
-  const totalKcal = todayMeals.reduce((s, m) => s + entryKcal(m), 0);
-  const totalProtein = todayMeals.reduce((s, m) => s + entryProtein(m), 0);
+  const totalKcal = todayMeals.reduce((s, m) => s + mealKcal(m), 0);
+  const totalProtein = todayMeals.reduce((s, m) => s + mealProtein(m), 0);
   const totalItems = todayMeals.reduce((s, m) => s + m.entries.length, 0);
 
   const calorieGoal = settings?.dailyCalorieGoal ?? 2000;
@@ -81,13 +81,14 @@ export function MealsView() {
   return (
     <div className="flex gap-6">
       {/* Meal groups */}
-      <div className="flex-1 min-w-0 flex flex-col gap-3">
+      <div className="flex-1 min-w-0 flex flex-col gap-6">
         {MEAL_GROUPS.map(({ type, label, icon }) => {
           const meals = todayMeals.filter((m) => m.mealType === type);
-          const groupKcal = meals.reduce((s, m) => s + entryKcal(m), 0);
+          const groupKcal = meals.reduce((s, m) => s + mealKcal(m), 0);
           return (
-            <div key={type} className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-              <div className="flex items-center gap-2 mb-3">
+            <div key={type} className="flex flex-col gap-2">
+              {/* Section header */}
+              <div className="flex items-center gap-2 px-1">
                 <span className="material-symbols-rounded text-xl" style={{ color: "var(--metric-kcal)" }}>{icon}</span>
                 <span className="font-bold text-sm">{label}</span>
                 {groupKcal > 0 && (
@@ -97,28 +98,22 @@ export function MealsView() {
                 )}
               </div>
 
-              {meals.flatMap((m) =>
-                m.entries.map((e, i) => (
-                  <div key={`${m.id}-${i}`} className="flex items-center justify-between py-2 group"
-                    style={{ borderTop: "1px solid var(--outline)" }}>
-                    <div>
-                      <p className="text-sm font-semibold">{e.foodName}</p>
-                      <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
-                        {Math.round(e.quantityInGrams)}g · {Math.round(e.calories)} kcal · {Math.round(e.protein)}g P
-                      </p>
-                    </div>
-                    <button onClick={() => deleteMutation.mutate(m.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                      style={{ color: "var(--muted)" }} aria-label="Remove">
-                      <span className="material-symbols-rounded text-lg">close</span>
-                    </button>
-                  </div>
-                )),
-              )}
+              {/* Meal cards */}
+              {meals.map((meal) => (
+                <MealCard
+                  key={meal.id}
+                  meal={meal}
+                  onDelete={() => deleteMutation.mutate(meal.id)}
+                  isDeleting={deleteMutation.isPending && deleteMutation.variables === meal.id}
+                />
+              ))}
 
-              <button onClick={() => setAddingTo(type)}
-                className="w-full mt-2 py-2 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors"
-                style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}>
+              {/* Add button */}
+              <button
+                onClick={() => setAddingTo(type)}
+                className="w-full py-2.5 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors hover:bg-surface-container"
+                style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}
+              >
                 <span className="material-symbols-rounded text-lg">add</span> Add to {label.toLowerCase()}
               </button>
             </div>
@@ -132,7 +127,7 @@ export function MealsView() {
           <p className="text-sm font-bold mb-4">Daily summary</p>
 
           <div className="flex items-end gap-2 mb-1">
-            <span className="text-3xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
+            <span className="text-3xl font-extrabold tabular">
               {Math.round(totalKcal).toLocaleString()}
             </span>
             <span className="text-sm font-semibold mb-1" style={{ color: "var(--on-surface-variant)" }}>
@@ -140,14 +135,15 @@ export function MealsView() {
             </span>
           </div>
           <div className="h-2 rounded-[var(--r-pill)] overflow-hidden mb-4" style={{ background: "var(--surface-highest)" }}>
-            <div className="h-full rounded-[var(--r-pill)] transition-all"
+            <div
+              className="h-full rounded-[var(--r-pill)] transition-all"
               style={{
                 width: `${Math.min(totalKcal / calorieGoal, 1) * 100}%`,
                 background: totalKcal > calorieGoal ? "var(--goal-negative)" : "var(--metric-kcal)",
-              }} />
+              }}
+            />
           </div>
 
-          {/* Protein bar */}
           <div className="flex justify-between text-xs mb-1">
             <span style={{ color: "var(--metric-protein)" }}>Protein</span>
             <span className="tabular" style={{ color: "var(--on-surface-variant)" }}>
@@ -155,8 +151,10 @@ export function MealsView() {
             </span>
           </div>
           <div className="h-1.5 rounded-[var(--r-pill)] overflow-hidden mb-4" style={{ background: "var(--surface-highest)" }}>
-            <div className="h-full rounded-[var(--r-pill)]"
-              style={{ width: `${Math.min(totalProtein / proteinGoal, 1) * 100}%`, background: "var(--metric-protein)" }} />
+            <div
+              className="h-full rounded-[var(--r-pill)]"
+              style={{ width: `${Math.min(totalProtein / proteinGoal, 1) * 100}%`, background: "var(--metric-protein)" }}
+            />
           </div>
 
           <div className="flex justify-between pt-3 text-sm" style={{ borderTop: "1px solid var(--outline)" }}>
@@ -173,6 +171,65 @@ export function MealsView() {
       {addingTo && (
         <AddMealEntryDialog mealType={addingTo} date={date} onClose={() => setAddingTo(null)} />
       )}
+    </div>
+  );
+}
+
+function MealCard({
+  meal,
+  onDelete,
+  isDeleting,
+}: {
+  meal: MealResponse;
+  onDelete: () => void;
+  isDeleting: boolean;
+}) {
+  const kcal = Math.round(mealKcal(meal));
+  const protein = Math.round(mealProtein(meal));
+  const time = format(new Date(meal.dateTime), "HH:mm");
+  const title = meal.name ?? (meal.entries.length === 1 ? meal.entries[0].foodName : "Meal");
+
+  return (
+    <div
+      className="rounded-[var(--r-card)] p-4 group"
+      style={{ background: "var(--surface)" }}
+    >
+      {/* Card header */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm truncate">{title}</p>
+          <p className="text-xs tabular mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
+            {time} · {kcal} kcal · {protein}g P
+          </p>
+        </div>
+        <button
+          onClick={onDelete}
+          disabled={isDeleting}
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-[var(--r-sm)] hover:bg-surface-container disabled:opacity-30"
+          style={{ color: "var(--muted)" }}
+          aria-label="Remove meal"
+        >
+          <span className="material-symbols-rounded text-lg">delete</span>
+        </button>
+      </div>
+
+      {/* Ingredient rows */}
+      <div className="flex flex-col">
+        {meal.entries.map((e, i) => (
+          <div
+            key={i}
+            className="flex items-center justify-between py-1.5"
+            style={{ borderTop: "1px solid var(--outline)" }}
+          >
+            <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+              {e.foodName}
+            </span>
+            <span className="text-xs tabular ml-4 shrink-0" style={{ color: "var(--muted)" }}>
+              {Math.round(e.quantityInGrams)}g · {Math.round(e.calories)} kcal · {Math.round(e.protein)}g P
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
