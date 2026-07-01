@@ -20,12 +20,16 @@ final class MealMapper {
                 .map(entry -> {
                     Food food = entry.getFood();
                     double grams = entry.getQuantityInGrams();
+                    double carbsPer100g = food.getCarbsPer100g() != null ? food.getCarbsPer100g() : 0.0;
+                    double fatPer100g = food.getFatPer100g() != null ? food.getFatPer100g() : 0.0;
                     return new MealEntryResponse(
                             food.getId(),
                             food.getName(),
                             grams,
                             food.getCaloriesPer100g() * grams / 100.0,
-                            food.getProteinPer100g() * grams / 100.0);
+                            food.getProteinPer100g() * grams / 100.0,
+                            carbsPer100g * grams / 100.0,
+                            fatPer100g * grams / 100.0);
                 })
                 .toList();
 

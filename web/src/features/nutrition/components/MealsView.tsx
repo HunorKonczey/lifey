@@ -33,6 +33,7 @@ export function MealsView() {
   const { show } = useToast();
   const dateStr = format(date, "yyyy-MM-dd");
   const [addingTo, setAddingTo] = useState<MealType | null>(null);
+  const [editingMeal, setEditingMeal] = useState<MealResponse | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.meals.all(),
@@ -103,6 +104,7 @@ export function MealsView() {
                 <MealCard
                   key={meal.id}
                   meal={meal}
+                  onEdit={() => setEditingMeal(meal)}
                   onDelete={() => deleteMutation.mutate(meal.id)}
                   isDeleting={deleteMutation.isPending && deleteMutation.variables === meal.id}
                 />
@@ -171,16 +173,27 @@ export function MealsView() {
       {addingTo && (
         <AddMealEntryDialog mealType={addingTo} date={date} onClose={() => setAddingTo(null)} />
       )}
+
+      {editingMeal && (
+        <AddMealEntryDialog
+          mealType={editingMeal.mealType}
+          date={new Date(editingMeal.dateTime)}
+          meal={editingMeal}
+          onClose={() => setEditingMeal(null)}
+        />
+      )}
     </div>
   );
 }
 
 function MealCard({
   meal,
+  onEdit,
   onDelete,
   isDeleting,
 }: {
   meal: MealResponse;
+  onEdit: () => void;
   onDelete: () => void;
   isDeleting: boolean;
 }) {
@@ -202,15 +215,25 @@ function MealCard({
             {time} · {kcal} kcal · {protein}g P
           </p>
         </div>
-        <button
-          onClick={onDelete}
-          disabled={isDeleting}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-[var(--r-sm)] hover:bg-surface-container disabled:opacity-30"
-          style={{ color: "var(--muted)" }}
-          aria-label="Remove meal"
-        >
-          <span className="material-symbols-rounded text-lg">delete</span>
-        </button>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={onEdit}
+            className="p-1 rounded-[var(--r-sm)] hover:bg-surface-container"
+            style={{ color: "var(--muted)" }}
+            aria-label="Edit meal"
+          >
+            <span className="material-symbols-rounded text-lg">edit</span>
+          </button>
+          <button
+            onClick={onDelete}
+            disabled={isDeleting}
+            className="p-1 rounded-[var(--r-sm)] hover:bg-surface-container disabled:opacity-30"
+            style={{ color: "var(--muted)" }}
+            aria-label="Remove meal"
+          >
+            <span className="material-symbols-rounded text-lg">delete</span>
+          </button>
+        </div>
       </div>
 
       {/* Ingredient rows */}

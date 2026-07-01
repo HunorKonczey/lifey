@@ -91,7 +91,6 @@ export default function DashboardPage() {
   const [statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ] =
     results;
 
-  const stats = statsQ.data;
   const weeklyStats = weeklyStatsQ.data;
   const settings = settingsQ.data;
   const todayMeals = mealsQ.data ? filterToday(mealsQ.data as MealResponse[], dateStr) : [];
@@ -108,10 +107,11 @@ export default function DashboardPage() {
     : null;
   const recentSessions = sessionsQ.data?.slice(-5).reverse() ?? [];
 
-  const totalKcal = todayMeals.flatMap((m) => m.entries).reduce((s, e) => s + e.calories, 0);
-  const totalProtein = todayMeals.flatMap((m) => m.entries).reduce((s, e) => s + e.protein, 0);
-  const totalCarbs = stats?.totalCarbs ?? 0;
-  const totalFat = stats?.totalFat ?? 0;
+  const todayEntries = todayMeals.flatMap((m) => m.entries);
+  const totalKcal = todayEntries.reduce((s, e) => s + e.calories, 0);
+  const totalProtein = todayEntries.reduce((s, e) => s + e.protein, 0);
+  const totalCarbs = todayEntries.reduce((s, e) => s + e.carbs, 0);
+  const totalFat = todayEntries.reduce((s, e) => s + e.fat, 0);
   const totalWaterL = todayWater.reduce((s, e) => s + e.volumeLiters, 0);
 
   const isLoading = statsQ.isLoading || weeklyStatsQ.isLoading || settingsQ.isLoading;

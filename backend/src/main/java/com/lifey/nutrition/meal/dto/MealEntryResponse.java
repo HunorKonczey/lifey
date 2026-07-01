@@ -5,6 +5,8 @@ public record MealEntryResponse(
         String foodName,
         Double quantityInGrams,
         Double calories,
-        Double protein
+        Double protein,
+        Double carbs,
+        Double fat
 ) {
 }

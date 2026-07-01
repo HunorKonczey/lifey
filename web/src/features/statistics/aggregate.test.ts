@@ -20,9 +20,9 @@ describe("aggregate", () => {
   it("sums meal calories per day and averages over logged days", () => {
     const meals: MealResponse[] = [
       { id: 1, dateTime: "2026-06-02T12:00:00Z", mealType: "LUNCH", name: null,
-        entries: [{ foodId: 1, foodName: "x", quantityInGrams: 100, calories: 500, protein: 30 }] },
+        entries: [{ foodId: 1, foodName: "x", quantityInGrams: 100, calories: 500, protein: 30, carbs: 40, fat: 10 }] },
       { id: 2, dateTime: "2026-06-02T18:00:00Z", mealType: "DINNER", name: null,
-        entries: [{ foodId: 2, foodName: "y", quantityInGrams: 100, calories: 300, protein: 20 }] },
+        entries: [{ foodId: 2, foodName: "y", quantityInGrams: 100, calories: 300, protein: 20, carbs: 25, fat: 8 }] },
     ];
     const r = aggregate({ ...emptyRaw, meals }, new Date("2026-06-01T00:00:00Z"), new Date("2026-06-07T00:00:00Z"));
     // Only one day has data → avg = 800
@@ -50,7 +50,7 @@ describe("aggregate", () => {
   it("excludes data outside the window", () => {
     const meals: MealResponse[] = [
       { id: 1, dateTime: "2026-05-01T12:00:00Z", mealType: "LUNCH", name: null,
-        entries: [{ foodId: 1, foodName: "x", quantityInGrams: 100, calories: 999, protein: 10 }] },
+        entries: [{ foodId: 1, foodName: "x", quantityInGrams: 100, calories: 999, protein: 10, carbs: 100, fat: 5 }] },
     ];
     const r = aggregate({ ...emptyRaw, meals }, new Date("2026-06-01T00:00:00Z"), new Date("2026-06-07T00:00:00Z"));
     expect(r.avgCalories).toBe(0);

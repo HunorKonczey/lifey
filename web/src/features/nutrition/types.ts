@@ -41,6 +41,8 @@ export interface MealEntryResponse {
   quantityInGrams: number;
   calories: number;
   protein: number;
+  carbs: number;
+  fat: number;
 }
 
 export interface MealResponse {

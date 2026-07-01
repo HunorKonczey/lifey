@@ -6,18 +6,71 @@ import { foodApi, mealApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { logTimestampFor } from "@/lib/utils/logTime";
-import type { MealType, FoodResponse } from "../types";
+import type { MealType, FoodResponse, MealResponse } from "../types";
 
 interface AddMealEntryDialogProps {
   mealType: MealType;
   date: Date;
   onClose: () => void;
+  /** When set, the dialog edits this existing meal's items instead of creating a new meal. */
+  meal?: MealResponse;
 }
 
 type Mode = "search" | "macros";
 
-export function AddMealEntryDialog({ mealType, date, onClose }: AddMealEntryDialogProps) {
+interface DraftItem {
+  foodId: number;
+  foodName: string;
+  quantityInGrams: number;
+  caloriesPer100g: number;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatPer100g: number;
+}
+
+function draftItemsFromMeal(meal: MealResponse): DraftItem[] {
+  return meal.entries.map((e) => ({
+    foodId: e.foodId,
+    foodName: e.foodName,
+    quantityInGrams: e.quantityInGrams,
+    caloriesPer100g: e.quantityInGrams > 0 ? ((e.calories ?? 0) * 100) / e.quantityInGrams : 0,
+    proteinPer100g: e.quantityInGrams > 0 ? ((e.protein ?? 0) * 100) / e.quantityInGrams : 0,
+    carbsPer100g: e.quantityInGrams > 0 ? ((e.carbs ?? 0) * 100) / e.quantityInGrams : 0,
+    fatPer100g: e.quantityInGrams > 0 ? ((e.fat ?? 0) * 100) / e.quantityInGrams : 0,
+  }));
+}
+
+export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEntryDialogProps) {
+  const queryClient = useQueryClient();
+  const { show } = useToast();
+  const isEditing = meal != null;
   const [mode, setMode] = useState<Mode>("search");
+  const [items, setItems] = useState<DraftItem[]>(() => (meal ? draftItemsFromMeal(meal) : []));
+
+  const addItem = (item: DraftItem) => setItems((prev) => [...prev, item]);
+  const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
+  const updateGrams = (idx: number, grams: number) =>
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, quantityInGrams: grams } : it)));
+
+  const totalKcal = items.reduce((s, i) => s + (i.caloriesPer100g * i.quantityInGrams) / 100, 0);
+  const totalProtein = items.reduce((s, i) => s + (i.proteinPer100g * i.quantityInGrams) / 100, 0);
+  const totalCarbs = items.reduce((s, i) => s + (i.carbsPer100g * i.quantityInGrams) / 100, 0);
+  const totalFat = items.reduce((s, i) => s + (i.fatPer100g * i.quantityInGrams) / 100, 0);
+
+  const saveMutation = useMutation({
+    mutationFn: () => {
+      const entries = items.map((i) => ({ foodId: i.foodId, quantityInGrams: i.quantityInGrams }));
+      return meal
+        ? mealApi.update(meal.id, { dateTime: meal.dateTime, mealType: meal.mealType, name: meal.name, entries })
+        : mealApi.create({ dateTime: logTimestampFor(date), mealType, name: null, entries });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
+      show(isEditing ? "Meal updated" : "Meal saved", "success");
+      onClose();
+    },
+    onError: () => show(isEditing ? "Failed to update meal" : "Failed to save meal", "error"),
+  });
 
   return (
     <div
@@ -26,12 +79,14 @@ export function AddMealEntryDialog({ mealType, date, onClose }: AddMealEntryDial
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-[var(--r-lg)] p-5 flex flex-col gap-4"
+        className="w-full max-w-md rounded-[var(--r-lg)] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
         style={{ background: "var(--surface)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-base capitalize">Add to {mealType.toLowerCase()}</h3>
+          <h3 className="font-bold text-base capitalize">
+            {isEditing ? `Edit ${mealType.toLowerCase()}` : `Add to ${mealType.toLowerCase()}`}
+          </h3>
           <button onClick={onClose} aria-label="Close"
             className="p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container">
             <span className="material-symbols-rounded">close</span>
@@ -52,19 +107,53 @@ export function AddMealEntryDialog({ mealType, date, onClose }: AddMealEntryDial
           ))}
         </div>
 
-        {mode === "search" ? (
-          <SearchMode mealType={mealType} date={date} onClose={onClose} />
-        ) : (
-          <MacrosMode mealType={mealType} date={date} onClose={onClose} />
+        {mode === "search" ? <SearchMode onAdd={addItem} /> : <MacrosMode onAdd={addItem} />}
+
+        {/* Items added so far */}
+        {items.length > 0 && (
+          <div className="flex flex-col gap-2 pt-2" style={{ borderTop: "1px solid var(--outline)" }}>
+            <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+              Items ({items.length})
+            </p>
+            {items.map((it, idx) => (
+              <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-[var(--r-md)]"
+                style={{ background: "var(--surface-container)" }}>
+                <span className="flex-1 min-w-0 text-sm font-semibold truncate">{it.foodName}</span>
+                <input type="number" min={1} value={it.quantityInGrams}
+                  onChange={(e) => updateGrams(idx, Math.max(1, Number(e.target.value)))}
+                  className="w-16 px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
+                  style={{ background: "var(--surface)", border: "1px solid var(--outline)" }} />
+                <span className="text-xs" style={{ color: "var(--muted)" }}>g</span>
+                <button onClick={() => removeItem(idx)} style={{ color: "var(--muted)" }} aria-label="Remove item">
+                  <span className="material-symbols-rounded text-lg">close</span>
+                </button>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm tabular px-1">
+              <span style={{ color: "var(--metric-kcal)" }}>{Math.round(totalKcal)} kcal</span>
+              <span style={{ color: "var(--metric-protein)" }}>{Math.round(totalProtein)}g P</span>
+              <span style={{ color: "var(--metric-carbs)" }}>{Math.round(totalCarbs)}g C</span>
+              <span style={{ color: "var(--metric-fat)" }}>{Math.round(totalFat)}g F</span>
+            </div>
+          </div>
         )}
+
+        <button onClick={() => saveMutation.mutate()} disabled={items.length === 0 || saveMutation.isPending}
+          className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
+          style={{ background: "var(--primary)", color: "#1E1F18" }}>
+          {saveMutation.isPending
+            ? "Saving…"
+            : isEditing
+              ? "Save changes"
+              : `Save meal${items.length > 0 ? ` (${items.length})` : ""}`}
+        </button>
       </div>
     </div>
   );
 }
 
-function SearchMode({ mealType, date, onClose }: { mealType: MealType; date: Date; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const { show } = useToast();
+function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<FoodResponse | null>(null);
   const [grams, setGrams] = useState(100);
@@ -75,25 +164,24 @@ function SearchMode({ mealType, date, onClose }: { mealType: MealType; date: Dat
     .filter((f) => !f.hidden && f.name.toLowerCase().includes(search.toLowerCase()))
     .slice(0, 8);
 
-  const mutation = useMutation({
-    mutationFn: () => {
-      return mealApi.create({
-        dateTime: logTimestampFor(date),
-        mealType,
-        name: null,
-        entries: [{ foodId: picked!.id, quantityInGrams: grams }],
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
-      show("Added to meal", "success");
-      onClose();
-    },
-    onError: () => show("Failed to add", "error"),
-  });
-
   const previewKcal = picked ? Math.round((picked.caloriesPer100g * grams) / 100) : 0;
   const previewProtein = picked ? Math.round((picked.proteinPer100g * grams) / 100) : 0;
+
+  const addAndReset = () => {
+    if (!picked) return;
+    onAdd({
+      foodId: picked.id,
+      foodName: picked.name,
+      quantityInGrams: grams,
+      caloriesPer100g: picked.caloriesPer100g,
+      proteinPer100g: picked.proteinPer100g,
+      carbsPer100g: picked.carbsPer100g ?? 0,
+      fatPer100g: picked.fatPer100g ?? 0,
+    });
+    setPicked(null);
+    setSearch("");
+    setGrams(100);
+  };
 
   if (!picked) {
     return (
@@ -145,17 +233,16 @@ function SearchMode({ mealType, date, onClose }: { mealType: MealType; date: Dat
         <span style={{ color: "var(--metric-protein)" }}>{previewProtein}g protein</span>
       </div>
 
-      <button onClick={() => mutation.mutate()} disabled={mutation.isPending}
-        className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
+      <button onClick={addAndReset}
+        className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity"
         style={{ background: "var(--primary)", color: "#1E1F18" }}>
-        {mutation.isPending ? "Adding…" : "Add to meal"}
+        Add item
       </button>
     </>
   );
 }
 
-function MacrosMode({ mealType, date, onClose }: { mealType: MealType; date: Date; onClose: () => void }) {
-  const queryClient = useQueryClient();
+function MacrosMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
   const { show } = useToast();
   const [name, setName] = useState("");
   const [gramsStr, setGramsStr] = useState("");
@@ -164,7 +251,7 @@ function MacrosMode({ mealType, date, onClose }: { mealType: MealType; date: Dat
   const [carbs, setCarbs] = useState("");
   const [fat, setFat] = useState("");
 
-  const mutation = useMutation({
+  const createFoodMutation = useMutation({
     mutationFn: async () => {
       const grams = gramsStr.trim() ? Math.max(1, Number(gramsStr)) : 100;
       const kcalVal = Number(kcal);
@@ -183,22 +270,29 @@ function MacrosMode({ mealType, date, onClose }: { mealType: MealType; date: Dat
         hidden: true,
       });
 
-      return mealApi.create({
-        dateTime: logTimestampFor(date),
-        mealType,
-        name: null,
-        entries: [{ foodId: food.id, quantityInGrams: grams }],
+      return { food, grams };
+    },
+    onSuccess: ({ food, grams }) => {
+      onAdd({
+        foodId: food.id,
+        foodName: food.name,
+        quantityInGrams: grams,
+        caloriesPer100g: food.caloriesPer100g,
+        proteinPer100g: food.proteinPer100g,
+        carbsPer100g: food.carbsPer100g ?? 0,
+        fatPer100g: food.fatPer100g ?? 0,
       });
+      setName("");
+      setGramsStr("");
+      setKcal("");
+      setProtein("");
+      setCarbs("");
+      setFat("");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
-      show("Added to meal", "success");
-      onClose();
-    },
-    onError: () => show("Failed to add", "error"),
+    onError: () => show("Failed to add item", "error"),
   });
 
-  const canSubmit = kcal.trim() !== "" && protein.trim() !== "" && !mutation.isPending;
+  const canSubmit = kcal.trim() !== "" && protein.trim() !== "" && !createFoodMutation.isPending;
 
   return (
     <>
@@ -256,10 +350,10 @@ function MacrosMode({ mealType, date, onClose }: { mealType: MealType; date: Dat
         </div>
       )}
 
-      <button onClick={() => mutation.mutate()} disabled={!canSubmit}
+      <button onClick={() => createFoodMutation.mutate()} disabled={!canSubmit}
         className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
         style={{ background: "var(--primary)", color: "#1E1F18" }}>
-        {mutation.isPending ? "Adding…" : "Add to meal"}
+        {createFoodMutation.isPending ? "Adding…" : "Add item"}
       </button>
     </>
   );
