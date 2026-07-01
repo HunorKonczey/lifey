@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'features/settings/application/settings_controller.dart';
 import 'features/settings/domain/user_settings.dart';
+import 'features/workouts/application/workout_resume_prompt.dart';
 import 'l10n/app_localizations.dart';
 import 'shared/widgets/offline_banner.dart';
 
@@ -37,6 +38,8 @@ class LifeyApp extends ConsumerWidget {
     ref.watch(stepImportLifecycleProvider);
     // Phase 2 — fires the step-goal notification on app resume (iOS only).
     ref.watch(stepGoalNotifierProvider);
+    // Resumes an in-progress workout after the OS kills the app mid-session.
+    ref.watch(workoutResumePromptProvider);
 
     final router = ref.watch(appRouterProvider);
     final settings = ref.watch(settingsControllerProvider).value;

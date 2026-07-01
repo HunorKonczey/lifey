@@ -38,14 +38,21 @@ So "show 30–50, then load more" actually splits into **two independent problem
   deliverable and exactly matches the request: list 30–50, scroll to the bottom
   to trigger the next page. Self-contained per feature, no backend or sync
   changes, fully offline-compatible.
-- **Phase 2 (pageable backend endpoints)** makes the API able to serve pages.
-  Keep it backward compatible so nothing breaks while the pull is migrated.
-- **Phase 3 (incremental / delta sync)** is the real long-term scalability fix:
-  only pull rows changed since the last sync (`updatedSince` cursor + soft-delete
-  tombstones), so the pull cost is proportional to *changes*, not table size.
+- **Phase 2 (pageable + searchable backend endpoint)** makes the API able to
+  serve pages, and now has two real consumers: the mobile sync pull *and* the
+  web `FoodsView` table, which today fetches the whole catalog and filters
+  client-side — the same unbounded-response problem this phase exists to fix.
+  Keep it backward compatible so nothing breaks while callers migrate.
+- **Phase 3 (incremental / delta sync)** is mobile-only and the real long-term
+  scalability fix for the sync pull: only pull rows changed since the last sync
+  (`updatedSince` cursor + soft-delete tombstones), so the pull cost is
+  proportional to *changes*, not table size. Web has no local cache to keep
+  converged, so it stays on Phase 2's plain pagination indefinitely.
 
-Ship Phase 1 first — it delivers the visible UX. Phases 2–3 are a separate track
-that can land later when the catalog actually gets large.
+Ship Phase 1 first — it delivers the visible UX. Phase 2 should follow fairly
+soon after, since the web table is unbounded today; Phase 3 is a separate,
+larger track that can land later once the catalog is actually large enough to
+justify the sync-contract change.
 
 Recommended page size: **40** (inside the 30–50 band), tunable via one constant.
 
@@ -143,75 +150,189 @@ each feature's existing ordering (e.g. meals/sessions likely by date desc).
 
 ---
 
-## Phase 2 — Pageable backend list endpoints (sync payload)
+## Phase 1 status (as of this revision)
+
+Foods and Meals have already shipped Phase 1 on mobile:
+`FoodRepository.watchPaged`/`FoodController.loadMore` (`mobile/lib/features/nutrition/data/food_repository.dart`,
+`mobile/lib/features/nutrition/application/food_controller.dart`) windowed-scroll the
+Foods tab, and the same pattern is live for Meals. Recipes/Exercises/Sessions
+(Phase 1.3) are still open.
+
+Critically, Phase 1 also already added `foodSearchProvider`
+(`food_controller.dart`), a **second, unbounded** stream over
+`FoodRepository.watchAll()` used only by the meal-entry autocomplete
+(`mobile/lib/features/nutrition/presentation/widgets/add_meal_entry_sheet.dart`).
+It deliberately bypasses the paginated window so a user can find *any* food by
+name while logging a meal, regardless of how far they've scrolled the Foods tab.
+This is a hard constraint on everything below: **whatever Phase 2/3 do to the
+sync pull, the local mobile foods table must still end up a complete, current
+mirror of the server catalog** — paging/delta only change how it gets there, not
+what it contains. Breaking that silently breaks food autocomplete.
+
+A web frontend has also since shipped (`web/src/features/nutrition/components/FoodsView.tsx`).
+It currently calls `foodApi.list()` → `GET /api/v1/foods` for the **entire**
+table and does search/pagination client-side (`DataTable`'s built-in
+25-rows-per-page slicing, plus a client-side `.filter()` by name). This is the
+exact same unbounded-response problem Phase 2 was designed to fix — so Phase 2
+now has two consumers to serve, not one, and that reshapes its design below.
+
+---
+
+## Phase 2 — Pageable + searchable backend endpoint (serves web *and* the mobile sync pull)
 
 ### Goal
-Backend list endpoints can return pages so the sync pull no longer transfers the
-whole table in one response. Backward compatible: existing non-paged callers keep
-working until the pull is migrated.
+One backend capability, two consumers, different needs:
+
+| Consumer | Needs | Page size |
+|---|---|---|
+| Mobile sync pull (`PullEngine._pullFoods`) | ALL rows, no search, just chunked so no single response is huge | ~200–500 |
+| Web `FoodsView` | True server-side pagination **and** server-side search — it must stop fetching the whole table up front | ~25–50 (matches `DataTable`'s current page size) |
+
+Both are satisfied by the same paged+searchable endpoint; only the query params
+differ. Backward compatible: today's unpaged callers keep working unchanged.
 
 ### Design
-- Use Spring Data `Pageable`. Add an overload/variant: `GET /api/v1/foods?page=0&size=200`
-  returning a page envelope `{ "content": [...], "page": 0, "size": 200, "totalElements": N, "last": bool }`.
-- Keep the existing `GET /api/v1/foods` (no params) returning the full list for
-  backward compatibility, OR make the no-param call default to page 0 with a large
-  size. Decide explicitly and document it in `docs/05-backend-api.md`.
-- `FoodRepository` already extends `JpaRepository`, so `findAll(Pageable)` exists;
-  add a service method `Page<FoodResponse> findAll(Pageable)` and map via the
-  existing `FoodMapper`.
-- Deterministic ordering is required for stable paging — order by `name, id` (or
-  `id`) explicitly; never rely on insertion order.
+- **Same path, param-switched handlers** — avoids inventing a second URL for what
+  is conceptually the same resource, and Spring supports this cleanly via
+  `@GetMapping` `params` matching on `FoodController`:
+  - `@GetMapping(params = "!page")` — today's behavior, byte-for-byte: returns
+    `List<FoodResponse>`, unpaged, full catalog. This is the backward-compat
+    story — no query params means nothing changed.
+  - `@GetMapping(params = "page")` — new: takes a Spring Data `Pageable`
+    (`page`, `size`, `sort`) plus an optional `search` param (case-insensitive
+    `name` contains-match). Returns `Page<FoodResponse>` directly — Spring Boot
+    serializes `Page<T>` to `{ content, totalElements, totalPages, number,
+    size, last, ... }` with no hand-rolled envelope needed.
+- `@PageableDefault(size = 200, sort = {"name", "id"})` on the paged handler —
+  `id` is the tiebreaker required for deterministic paging (unchanged from the
+  original plan). Web overrides `size` down to its own page size per request.
+- Repository: add
+  `Page<Food> findByHiddenFalse(Pageable pageable)` and
+  `Page<Food> findByHiddenFalseAndNameContainingIgnoreCase(String search, Pageable pageable)`;
+  the service picks the search variant only when `search` is non-blank. Reuses
+  the existing "hidden foods never appear in pickers/catalog" rule
+  (`FoodServiceImpl.findAll`) for both.
+- Deterministic ordering (`name, id`) applies to both variants; never rely on
+  insertion order.
 
-> Note: page size for the **sync pull** (e.g. 200–500) is unrelated to the UI page
-> size (40). The pull pages purely to cap response size / avoid timeouts.
+### Web pagination/search — decision to make explicit
+`DataTable` currently sorts and paginates whatever `rows` array it's handed,
+client-side. Once `FoodsView` only holds one server page at a time (25–50 rows),
+that breaks for two reasons: (1) client search would only search the current
+page, and (2) client column-sort would only sort the current page. Resolve both
+by making search and sort server-driven for Foods specifically:
+- The search box drives the `search` query param (debounce ~300ms so it isn't
+  refetching on every keystroke).
+- Column-sort clicks map to the `sort` param passed to `Pageable` instead of
+  local `Array.sort`.
+- Give `DataTable` an optional controlled-pagination/controlled-sort mode (page,
+  totalPages, onPageChange, sortKey, sortDir, onSortChange) that, when present,
+  skips its internal slicing/sorting and just renders the rows it's given.
+  Every other table (recipes, exercises, workout templates/sessions) keeps using
+  today's client-side mode unchanged — those catalogs are expected to stay small
+  and don't need this.
+
+> Note: page size for the **sync pull** (200–500) is unrelated to the **UI** page
+> size, which is unrelated again to the web table's page size (25–50). All three
+> just set different `size` values against the same endpoint.
 
 ### Files
-- `backend/.../food/FoodController.java`, `FoodService.java`, `FoodServiceImpl.java`.
+- `backend/.../food/FoodController.java`, `FoodService.java`, `FoodServiceImpl.java`, `FoodRepository.java`.
 - `docs/05-backend-api.md` (document the contract).
 - Tests: `FoodControllerTest`, `FoodServiceImplTest`.
+- `web/src/features/nutrition/api.ts`, `web/src/lib/api/queryKeys.ts`,
+  `web/src/features/nutrition/components/FoodsView.tsx`, `web/src/components/data/DataTable.tsx`.
+- `mobile/lib/core/sync/pull_engine.dart`.
 
-### Prompt 2.1 — pageable endpoint (Foods)
+### Prompt 2.1 — pageable + searchable endpoint (Foods) — backend
 ```
 Read backend/src/main/java/com/lifey/nutrition/food/FoodController.java,
 FoodService.java, FoodServiceImpl.java, FoodMapper.java, FoodRepository.java and
 the existing controller test FoodControllerTest.java.
 
-Add Spring Data Pageable support to the foods list endpoint without breaking the
-current contract. Add a service method `Page<FoodResponse> findAll(Pageable
-pageable)` backed by `foodRepository.findAll(pageable)` mapped with FoodMapper,
-with deterministic ordering by name then id. Expose it on GET /api/v1/foods using
-@PageableDefault(size = 200) and a stable sort, returning the page content plus
-pagination metadata (page, size, totalElements, last). Keep backward
-compatibility: a request with no page/size params must still return all foods in
-a single response (either keep the existing List endpoint or default size large
-enough) — pick one approach, implement it, and note the decision in a comment.
-Add a Service interface method + Impl per project conventions. Update
-docs/05-backend-api.md with the new query params and response shape. Add/extend
-tests covering the first page, the last page, and the no-params backward-compat
-case. Use Java 24, constructor injection, Maven; do not add new frameworks.
+Add a second GET /api/v1/foods handler, split from the existing one by Spring's
+params matching so both can coexist on the same path:
+- @GetMapping(params = "!page") — today's findAll(), completely unchanged
+  (List<FoodResponse>, unpaged, backward compatible for any existing caller).
+- @GetMapping(params = "page") — new handler taking a Pageable (page, size,
+  sort) plus an optional `search` request param (case-insensitive name
+  contains-match), defaulted via @PageableDefault(size = 200, sort = {"name",
+  "id"}). Returns Page<FoodResponse> as-is (let Spring Boot serialize Page<T>
+  natively — content/totalElements/totalPages/number/size/last — do not hand-rig
+  a custom envelope).
+
+Add repository methods Page<Food> findByHiddenFalse(Pageable pageable) and
+Page<Food> findByHiddenFalseAndNameContainingIgnoreCase(String search, Pageable
+pageable). Add matching service interface + impl methods (search variant used
+only when `search` is non-blank), mapping rows through the existing FoodMapper.
+Keep the "hidden foods excluded from catalog listings" rule consistent with
+findAll(). Update docs/05-backend-api.md documenting both the unpaged and paged
+contract (query params, response shape, and that `page` presence is the switch).
+Add/extend tests: first page, last page, search hit/miss, and the no-params
+backward-compat case returning the full unpaged list. Use Java 24, constructor
+injection, Maven; do not add new frameworks.
 ```
 
-### Prompt 2.2 — paged sync pull (mobile)
+### Prompt 2.2 — migrate web Foods table to server pagination + search
 ```
-Read mobile/lib/core/sync/pull_engine.dart.
+Read web/src/features/nutrition/components/FoodsView.tsx,
+web/src/features/nutrition/api.ts, web/src/lib/api/queryKeys.ts, and
+web/src/components/data/DataTable.tsx. Backend now exposes
+GET /api/v1/foods?page=&size=&search=&sort= returning a Spring Page<FoodResponse>
+(see docs/05-backend-api.md) — read that section for the exact response shape.
+
+Replace FoodsView's foodApi.list() + client-side name filter with a paginated,
+server-searched query: add foodApi.page({ page, size, search, sort }) to api.ts,
+a queryKeys.foods.page(params) key, and drive page/search/sort as component
+state, debouncing the search input (~300ms) before it hits the query key so
+typing doesn't refetch on every keystroke. Reset to page 0 whenever the search
+term or sort changes.
+
+Extend DataTable with an optional controlled-pagination/controlled-sort mode
+(current page, total pages, onPageChange, sortKey, sortDir, onSortChange) that,
+when provided, renders exactly the rows passed in and delegates paging/sorting
+to the caller instead of doing its own client-side slicing/sorting — but do NOT
+change its default (uncontrolled) behavior, since recipes/exercises/workout
+tables still rely on it staying client-side. Wire FoodsView's table into the new
+controlled mode. Keep the barcode-lookup flow, editor panel, and empty/error
+states working as they are today.
+```
+
+### Prompt 2.3 — paged sync pull (mobile)
+```
+Read mobile/lib/core/sync/pull_engine.dart and
+mobile/lib/features/nutrition/application/food_controller.dart (specifically
+foodSearchProvider and FoodRepository.watchAll — do not touch these, just
+understand why they exist: unbounded local search for meal-entry autocomplete).
 
 Migrate _pullFoods to consume the paged foods endpoint: loop GET
-/foods?page=N&size=200 accumulating all pages until `last` is true, building the
-same `seen` set across all pages before calling _deleteMissing('foods', seen).
-The reconciliation semantics must stay identical to today (full set is still
-materialized locally for offline use — paging only chunks the transfer). Add a
-small shared helper to fetch all pages of a paged endpoint so other _pull*
-methods can reuse it. Do not change the pending-operation skip logic.
+/foods?page=N&size=200 (no `search` — the pull always wants everything)
+accumulating all pages until `last` is true, building the same `seen` set across
+all pages before calling _deleteMissing('foods', seen). The reconciliation
+semantics must stay identical to today, and the local `foods` table must still
+end up containing every non-hidden server row after the pull completes — paging
+only chunks the transfer, it must not leave the local cache partial. (This
+matters concretely: foodSearchProvider's autocomplete depends on the local table
+being complete, not just the currently-scrolled window.) Add a small shared
+helper to fetch all pages of a paged endpoint so other _pull* methods can reuse
+it later. Do not change the pending-operation skip logic.
 ```
 
 ---
 
-## Phase 3 — Incremental / delta sync (the real scalability fix)
+## Phase 3 — Incremental / delta sync (mobile-only; the real scalability fix)
 
 ### Goal
-Stop re-pulling the entire table on every sync. Pull only rows changed since the
-last successful sync. This is what actually keeps cost flat as the catalog grows;
-Phase 2 alone still transfers everything (just in chunks).
+Stop re-pulling the entire table on every mobile sync. Pull only rows changed
+since the last successful sync. This is what actually keeps cost flat as the
+catalog grows; Phase 2 alone still transfers everything (just in chunks).
+
+**This track is mobile-only.** The web app isn't offline-first and holds no
+persisted local mirror — every `FoodsView` page load just re-queries the Phase 2
+paged+searchable endpoint on demand, so plain pagination is a complete,
+permanent solution for web. A delta/cursor mechanism buys web nothing (there's
+no local cache to keep converged) and should not be built for it. Delta sync
+exists purely to shrink `PullEngine.pullAll()`'s cost on mobile.
 
 ### Design (larger, separate track)
 - Backend: every syncable entity exposes `updatedAt` (already on `BaseEntity`?
@@ -220,12 +341,22 @@ Phase 2 alone still transfers everything (just in chunks).
 - Soft deletes: a hard-deleted row currently vanishes, so a delta pull can't tell
   the client to delete it. Introduce tombstones — a `deletedAt` column (or a
   `deletions` feed) so `updatedSince` can report removals. This replaces the
-  `_deleteMissing` full-scan, which is incompatible with delta sync.
+  `_deleteMissing` full-scan, which is incompatible with delta sync (it requires
+  fetching the full table to diff against, which is exactly what delta sync
+  stops doing).
 - Mobile: persist a per-entity `lastSyncedAt` cursor; pass it as `updatedSince`;
-  apply upserts for returned rows and deletes for returned tombstones; advance the
-  cursor to the newest `updatedAt` seen.
+  apply upserts for returned rows and deletes for returned tombstones; advance
+  the cursor to the newest `updatedAt` seen.
 - Decide cursor safety (use server clock, handle equal timestamps via `>=` plus
   id, overlap window to avoid missing concurrent writes).
+- **Local-cache completeness invariant carries over from Phase 2**: the first
+  sync for a device must still be a full pull (delta sync only kicks in once a
+  `lastSyncedAt` cursor exists), and every delta applied afterward must keep the
+  local `foods` table converged with the server, deletions included. Add an
+  explicit acceptance check for this: after any delta pull, meal-entry
+  autocomplete (`add_meal_entry_sheet.dart`'s `foodSearchProvider`) must still
+  surface every non-hidden food that exists server-side, including ones created
+  long before the device's most recent sync — not just recently-changed rows.
 
 > This is a meaningful change to the sync contract and the `_deleteMissing`
 > reconciliation model — scope it as its own design doc + migration before
@@ -237,23 +368,34 @@ Phase 2 alone still transfers everything (just in chunks).
 Produce a design doc (docs/15-delta-sync.md) for incremental sync of the nutrition
 foods entity as a pilot. Cover: the updatedSince query contract and response
 ordering; the tombstone/soft-delete strategy to propagate deletions (Flyway
-migration sketch); the mobile per-entity lastSyncedAt cursor and how it replaces
-PullEngine._deleteMissing; clock-skew / equal-timestamp / concurrent-write edge
-cases; and a backward-compatible rollout sequence (backend first, then mobile).
-Do not write implementation code yet — this is the design and migration plan.
+migration sketch); the mobile per-entity lastSyncedAt cursor, how a device with
+no cursor yet still does a full initial pull, and how the cursor mechanism
+replaces PullEngine._deleteMissing; clock-skew / equal-timestamp /
+concurrent-write edge cases; an explicit acceptance criterion that the local
+foods table (and therefore foodSearchProvider's meal-entry autocomplete, see
+food_controller.dart) stays a complete mirror of the server catalog after every
+delta pull, not just a window of recent changes; and a backward-compatible
+rollout sequence (backend first, then mobile). Note explicitly that this track
+is mobile-only — the web frontend has no local cache and stays on Phase 2's
+plain pagination indefinitely. Do not write implementation code yet — this is
+the design and migration plan.
 ```
 
 ---
 
 ## 3. Suggested order of work
 
-1. **Phase 1.1 + 1.2** — Foods tab pagination (visible win, ship first).
-2. **Phase 1.3** — roll out to meals / recipes / exercises / sessions.
-3. **Phase 2.1 + 2.2** — pageable foods endpoint + paged pull (when payload size
-   becomes a real problem).
-4. **Phase 3** — delta sync design spike, then implement per entity.
+1. **Phase 1.1 + 1.2** — Foods tab pagination — **done**.
+2. **Phase 1.3** — roll out to recipes / exercises / sessions (meals already
+   done alongside foods).
+3. **Phase 2.1** — pageable + searchable `/foods` endpoint (backend).
+4. **Phase 2.2** — migrate web `FoodsView` to server pagination + search — do
+   this promptly once 2.1 ships, since the web table is the one actively
+   fetching the full catalog on every load today.
+5. **Phase 2.3** — paged mobile sync pull (once payload size is a real problem;
+   less urgent than 2.2 since the pull already works, just not cheaply).
+6. **Phase 3** — delta sync design spike, then implement for mobile only.
 
 Phase 1 is independently shippable and reversible. Don't start Phase 3 until
 Phase 2 is in place and the catalog is actually large enough to justify the sync
 contract change.
-```

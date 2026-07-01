@@ -26,8 +26,10 @@ import 'widgets/exercise_session_card.dart';
 ///
 /// Exercises are represented as [ExerciseBlock]s — one card per exercise —
 /// each carrying a list of [SetRow]s. Only rows with [SetRow.doneAt] set are
-/// persisted as [ExerciseSetInput]s. Rows without doneAt are UI-only plan rows
-/// (generated from targetSets or added ad-hoc) that do not survive a session close.
+/// persisted as [ExerciseSetInput]s; their values (weight/reps) don't survive
+/// a session close. The *count* of rows (done + blank) is persisted as each
+/// exercise's targetSets (see [_buildPlanned]), so a blank row added ad-hoc
+/// still regenerates the next time the session is opened.
 class LogSessionScreen extends ConsumerStatefulWidget {
   const LogSessionScreen({super.key, this.session, this.template});
 
@@ -248,10 +250,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     return '$m:${s.toString().padLeft(2, '0')}';
   }
 
+  /// targetSets here means "how many rows (done + blank) this exercise has
+  /// right now", not the original template goal — so a blank row added via
+  /// "+ add set" or removed via the delete icon regenerates correctly next
+  /// time the session reopens, instead of always reverting to the template's
+  /// original set count.
   List<PlannedExerciseInput> _buildPlanned() => _blocks
       .map((b) => PlannedExerciseInput(
             exerciseClientId: b.exerciseClientId,
-            targetSets: b.targetSets,
+            targetSets: b.rows.length,
           ))
       .toList();
 
@@ -320,6 +327,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   void _handleAddSet(int bi) {
     setState(() => _blocks[bi].rows.add(SetRow()));
+    if (_sessionClientId != null) _autoSave();
   }
 
   Future<void> _handleRemoveExercise(int bi) async {
