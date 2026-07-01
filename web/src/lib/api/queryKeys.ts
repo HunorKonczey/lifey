@@ -24,6 +24,8 @@ export const queryKeys = {
   },
   recipes: {
     all: () => ["recipes"] as const,
+    page: (params: { page: number; size?: number; search?: string }) =>
+      ["recipes", "page", params] as const,
     detail: (id: number) => ["recipes", id] as const,
   },
   exercises: {

@@ -45,6 +45,17 @@ public class RecipeServiceImpl implements RecipeService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<RecipeResponse> findPage(Pageable pageable, String search) {
+        Long userId = currentUserProvider.getUserId();
+        Page<Recipe> page = (search == null || search.isBlank())
+                ? recipeRepository.findByUserIdAndDeletedAtIsNull(userId, pageable)
+                : recipeRepository.findByUserIdAndDeletedAtIsNullAndNameContainingIgnoreCase(
+                        userId, search.trim(), pageable);
+        return page.map(RecipeMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<RecipeResponse> findDelta(Instant updatedSince, Pageable pageable) {
         // Delta-sync feed: fixed ordering, includes tombstoned rows — see
         // docs/16-delta-sync-rollout.md and RecipeRepository.findByUserIdAndUpdatedAtGreaterThanEqual.

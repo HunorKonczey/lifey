@@ -15,9 +15,12 @@ import 'widgets/log_recipe_sheet.dart';
 
 /// "Recipes" tab: tap to edit, quick "log as meal", and swipe-to-delete.
 class RecipesTab extends ConsumerWidget {
-  const RecipesTab({super.key, this.topPadding = 0});
+  const RecipesTab({super.key, this.topPadding = 0, this.searchQuery});
 
   final double topPadding;
+
+  /// When non-empty, filters the (already fully-loaded) recipe list by name.
+  final String? searchQuery;
 
   Future<void> _logAsMeal(BuildContext context, Recipe recipe) {
     return showModalBottomSheet<void>(
@@ -62,28 +65,34 @@ class RecipesTab extends ConsumerWidget {
     final state = ref.watch(recipeControllerProvider);
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final query = searchQuery?.trim().toLowerCase() ?? '';
 
     return RefreshIndicator(
       displacement: topPadding,
       onRefresh: () => ref.read(recipeControllerProvider.notifier).refresh(),
       child: state.when(
         data: (recipes) {
-          if (recipes.isEmpty) {
+          final visible = query.isEmpty
+              ? recipes
+              : recipes.where((r) => r.name.toLowerCase().contains(query)).toList();
+          if (visible.isEmpty) {
             return EmptyView(
-              icon: Icons.menu_book_outlined,
-              title: l10n.noRecipesYetTitle,
-              subtitle: l10n.tapPlusToCreateOneMessage,
+              icon: query.isEmpty ? Icons.menu_book_outlined : Icons.search_off,
+              title: query.isEmpty ? l10n.noRecipesYetTitle : l10n.noSearchResultsTitle,
+              subtitle: query.isEmpty
+                  ? l10n.tapPlusToCreateOneMessage
+                  : l10n.tryDifferentSearchMessage,
             );
           }
           return ListView.builder(
             padding: EdgeInsets.fromLTRB(12, topPadding, 12, bottomPad + 88),
-            itemCount: recipes.length,
+            itemCount: visible.length,
             itemBuilder: (context, index) => _RecipeCard(
-              recipe: recipes[index],
-              onDelete: () => _delete(context, ref, recipes[index]),
-              onLogAsMeal: () => _logAsMeal(context, recipes[index]),
-              onEdit: () => _edit(context, recipes[index]),
-              onToggleFavorite: () => _toggleFavorite(ref, recipes[index]),
+              recipe: visible[index],
+              onDelete: () => _delete(context, ref, visible[index]),
+              onLogAsMeal: () => _logAsMeal(context, visible[index]),
+              onEdit: () => _edit(context, visible[index]),
+              onToggleFavorite: () => _toggleFavorite(ref, visible[index]),
             ),
           );
         },

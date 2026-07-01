@@ -36,8 +36,20 @@ export const mealApi = {
   delete: (id: number) => api.delete(`/meals/${id}`),
 };
 
+export interface RecipePageParams {
+  page: number;
+  size?: number;
+  search?: string;
+}
+
 export const recipeApi = {
   list: () => api.get<RecipeResponse[]>("/recipes"),
+  page: ({ page, size, search }: RecipePageParams) => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (size != null) params.set("size", String(size));
+    if (search) params.set("search", search);
+    return api.get<Page<RecipeResponse>>(`/recipes?${params.toString()}`);
+  },
   get: (id: number) => api.get<RecipeResponse>(`/recipes/${id}`),
   create: (body: RecipeRequest) => api.post<RecipeResponse>("/recipes", body),
   update: (id: number, body: RecipeRequest) => api.put<RecipeResponse>(`/recipes/${id}`, body),

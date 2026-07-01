@@ -16,9 +16,14 @@ import 'widgets/add_food_sheet.dart';
 /// scroll-triggered pagination over the local cache (see
 /// docs/14-pagination-plan.md).
 class FoodsTab extends ConsumerStatefulWidget {
-  const FoodsTab({super.key, this.topPadding = 0});
+  const FoodsTab({super.key, this.topPadding = 0, this.searchQuery});
 
   final double topPadding;
+
+  /// When non-empty, the tab shows the full food catalog (via
+  /// [foodSearchProvider], bypassing pagination) filtered by name instead of
+  /// the normal paginated [foodControllerProvider] window.
+  final String? searchQuery;
 
   @override
   ConsumerState<FoodsTab> createState() => _FoodsTabState();
@@ -89,6 +94,11 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final query = widget.searchQuery?.trim() ?? '';
+    if (query.isNotEmpty) {
+      return _buildSearchResults(context, query);
+    }
+
     final state = ref.watch(foodControllerProvider);
     final l10n = AppLocalizations.of(context)!;
     // .notifier access doesn't itself trigger a rebuild; `hasMore` is read
@@ -144,6 +154,48 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
           error: error,
           onRetry: () => ref.read(foodControllerProvider.notifier).refresh(),
         ),
+      ),
+    );
+  }
+
+  /// Filters the full (unpaginated) [foodSearchProvider] catalog by [query] —
+  /// bypasses [foodControllerProvider]'s pagination window entirely, matching
+  /// the pattern already used for the meal-entry food autocomplete.
+  Widget _buildSearchResults(BuildContext context, String query) {
+    final foodsState = ref.watch(foodSearchProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final lowerQuery = query.toLowerCase();
+
+    return foodsState.when(
+      data: (foods) {
+        final matches =
+            foods.where((f) => f.name.toLowerCase().contains(lowerQuery)).toList();
+        if (matches.isEmpty) {
+          return EmptyView(
+            icon: Icons.search_off,
+            title: l10n.noSearchResultsTitle,
+            subtitle: l10n.tryDifferentSearchMessage,
+          );
+        }
+        return ListView.builder(
+          padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
+          itemCount: matches.length,
+          itemBuilder: (context, index) {
+            final food = matches[index];
+            return _FoodCard(
+              food: food,
+              macroLine: _macroLine(context, food),
+              onTap: () => _edit(context, food),
+              onDelete: () => _delete(context, ref, food),
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => ErrorView(
+        error: error,
+        onRetry: () => ref.invalidate(foodSearchProvider),
       ),
     );
   }

@@ -8,7 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -19,6 +22,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,6 +67,41 @@ class RecipeControllerTest {
                 .andExpect(jsonPath("$.status").value(400));
 
         verify(recipeService, never()).create(any());
+    }
+
+    @Test
+    void list_withNoParams_neverCallsPagedVariant() throws Exception {
+        when(recipeService.findAll()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/recipes")).andExpect(status().isOk());
+
+        verify(recipeService, never()).findPage(any(), any());
+    }
+
+    @Test
+    void findPage_withSearch_passesSearchThrough() throws Exception {
+        Pageable pageable = PageRequest.of(0, 200, org.springframework.data.domain.Sort.by("name", "id"));
+        Page<RecipeResponse> page = new PageImpl<>(
+                List.of(new RecipeResponse(2L, "Banana bread", null, false, 1, List.of(), Instant.now(), null)),
+                pageable, 1);
+        when(recipeService.findPage(eq(pageable), eq("banana"))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/recipes").param("page", "0").param("search", "banana"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].name").value("Banana bread"));
+    }
+
+    @Test
+    void findPage_noSearch_passesNullThrough() throws Exception {
+        Pageable pageable = PageRequest.of(0, 200, org.springframework.data.domain.Sort.by("name", "id"));
+        Page<RecipeResponse> page = new PageImpl<>(
+                List.of(new RecipeResponse(1L, "Apple pie", null, false, 1, List.of(), Instant.now(), null)),
+                pageable, 1);
+        when(recipeService.findPage(eq(pageable), isNull())).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/recipes").param("page", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].name").value("Apple pie"));
     }
 
     @Test

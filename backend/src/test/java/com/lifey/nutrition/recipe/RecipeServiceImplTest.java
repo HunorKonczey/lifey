@@ -29,6 +29,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -187,6 +189,46 @@ class RecipeServiceImplTest {
         service.update(3L, request);
 
         assertThat(existing.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T08:00:00Z"));
+    }
+
+    @Test
+    void findPage_noSearch_usesDeletedAtIsNullQuery() {
+        Pageable pageable = PageRequest.of(0, 2);
+        Page<Recipe> page = new PageImpl<>(List.of(recipe(1L, "Apple pie", false)), pageable, 1);
+        when(recipeRepository.findByUserIdAndDeletedAtIsNull(USER_ID, pageable)).thenReturn(page);
+
+        Page<RecipeResponse> result = service.findPage(pageable, null);
+
+        assertThat(result.getContent()).singleElement()
+                .satisfies(r -> assertThat(r.name()).isEqualTo("Apple pie"));
+        verify(recipeRepository, never())
+                .findByUserIdAndDeletedAtIsNullAndNameContainingIgnoreCase(any(), any(), any());
+    }
+
+    @Test
+    void findPage_blankSearch_treatedAsNoSearch() {
+        Pageable pageable = PageRequest.of(0, 2);
+        when(recipeRepository.findByUserIdAndDeletedAtIsNull(USER_ID, pageable)).thenReturn(Page.empty(pageable));
+
+        service.findPage(pageable, "   ");
+
+        verify(recipeRepository).findByUserIdAndDeletedAtIsNull(USER_ID, pageable);
+        verify(recipeRepository, never())
+                .findByUserIdAndDeletedAtIsNullAndNameContainingIgnoreCase(any(), any(), any());
+    }
+
+    @Test
+    void findPage_withSearch_usesSearchQueryAndTrimsIt() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Recipe> page = new PageImpl<>(List.of(recipe(2L, "Banana bread", false)), pageable, 1);
+        when(recipeRepository.findByUserIdAndDeletedAtIsNullAndNameContainingIgnoreCase(
+                eq(USER_ID), eq("banana"), eq(pageable))).thenReturn(page);
+
+        Page<RecipeResponse> result = service.findPage(pageable, "  banana  ");
+
+        assertThat(result.getContent()).singleElement()
+                .satisfies(r -> assertThat(r.name()).isEqualTo("Banana bread"));
+        verify(recipeRepository, never()).findByUserIdAndDeletedAtIsNull(any(), any());
     }
 
     @Test

@@ -214,6 +214,18 @@
     "tapPlusToAddOneMessage": "Tap + to add one",
     "@tapPlusToAddOneMessage": {"description": "Empty state subtitle on the Foods tab"},
 
+    "searchFoodsHint": "Search foods…",
+    "@searchFoodsHint": {"description": "Placeholder for the inline search field on the Foods tab"},
+
+    "searchRecipesHint": "Search recipes…",
+    "@searchRecipesHint": {"description": "Placeholder for the inline search field on the Recipes tab"},
+
+    "noSearchResultsTitle": "No results",
+    "@noSearchResultsTitle": {"description": "Empty state title when a search has no matches"},
+
+    "tryDifferentSearchMessage": "Try a different search term",
+    "@tryDifferentSearchMessage": {"description": "Empty state subtitle when a search has no matches"},
+
     "deletedFoodMessage": "Deleted {name}",
     "@deletedFoodMessage": {"description": "Snackbar shown after deleting a food", "placeholders": {"name": {"type": "String"}}},
 

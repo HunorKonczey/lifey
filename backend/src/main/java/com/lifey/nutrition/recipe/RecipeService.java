@@ -12,6 +12,8 @@ public interface RecipeService {
 
     List<RecipeResponse> findAll();
 
+    Page<RecipeResponse> findPage(Pageable pageable, String search);
+
     Page<RecipeResponse> findDelta(Instant updatedSince, Pageable pageable);
 
     RecipeResponse findById(Long id);

@@ -44,8 +44,16 @@ class NutritionScreen extends ConsumerStatefulWidget {
 class _NutritionScreenState extends ConsumerState<NutritionScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
   DateRangeFilter _mealsFilter = DateRangeFilter.today;
   DateRangeFilter _macrosFilter = DateRangeFilter.week;
+  bool _searching = false;
+  String _searchQuery = '';
+
+  /// Search only applies to catalog-like tabs: Recipes (1) and Foods (2).
+  /// Meals (0) is excluded per product decision, and Macros (3) is a
+  /// read-only chart with nothing to search.
+  bool get _searchableTab => _tabController.index == 1 || _tabController.index == 2;
 
   @override
   void initState() {
@@ -61,12 +69,33 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onSubTabChanged() {
-    setState(() {});
+    // A search context (query + open state) belongs to whichever list it was
+    // typed against — switching tabs would otherwise leave a Recipes search
+    // silently filtering the Foods list, or an inapplicable search open on
+    // Meals/Macros.
+    _searchController.clear();
+    setState(() {
+      _searching = false;
+      _searchQuery = '';
+    });
     _pushFab();
+  }
+
+  void _openSearch() {
+    setState(() => _searching = true);
+  }
+
+  void _closeSearch() {
+    _searchController.clear();
+    setState(() {
+      _searching = false;
+      _searchQuery = '';
+    });
   }
 
   void _consumePendingTab() {
@@ -183,8 +212,14 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                 controller: _tabController,
                 children: [
                   MealsTab(topPadding: contentTop, filter: _mealsFilter),
-                  RecipesTab(topPadding: contentTop),
-                  FoodsTab(topPadding: contentTop),
+                  RecipesTab(
+                    topPadding: contentTop,
+                    searchQuery: _searching ? _searchQuery : null,
+                  ),
+                  FoodsTab(
+                    topPadding: contentTop,
+                    searchQuery: _searching ? _searchQuery : null,
+                  ),
                   MacrosTab(topPadding: contentTop, filter: _macrosFilter),
                 ],
               ),
@@ -202,11 +237,20 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: AdaptiveAppBar(
                       title: l10n.nutritionTitle,
+                      searching: _searching,
+                      searchController: _searchController,
+                      searchHint: _tabController.index == 1
+                          ? l10n.searchRecipesHint
+                          : l10n.searchFoodsHint,
+                      onSearchChanged: (value) =>
+                          setState(() => _searchQuery = value),
+                      onSearchClose: _closeSearch,
                       actions: [
-                        AdaptiveAppBarAction(
-                          icon: Icons.search,
-                          onPressed: () {}, // TODO(new-feature #B1): food search
-                        ),
+                        if (_searchableTab)
+                          AdaptiveAppBarAction(
+                            icon: Icons.search,
+                            onPressed: _openSearch,
+                          ),
                         AdaptiveAppBarAction(
                           icon: Icons.qr_code_scanner,
                           onPressed: _openBarcodeScanner,

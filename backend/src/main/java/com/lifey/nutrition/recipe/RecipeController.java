@@ -36,9 +36,21 @@ public class RecipeController {
     }
 
     @Operation(summary = "List all recipes")
-    @GetMapping(params = "!updatedSince")
+    @GetMapping(params = {"!updatedSince", "!page"})
     public List<RecipeResponse> findAll() {
         return recipeService.findAll();
+    }
+
+    @Operation(summary = "List recipes, paged and optionally searched",
+            description = "Backs the web recipes view. `search` case-insensitively matches on name; "
+                    + "omit it to page through everything. Response is a standard Spring Data page: "
+                    + "content, totalElements, totalPages, number, size, last, ...")
+    @GetMapping(params = {"!updatedSince", "page"})
+    public Page<RecipeResponse> findPage(
+            @PageableDefault(size = 200, sort = {"name", "id"}) Pageable pageable,
+            @Parameter(description = "Case-insensitive name contains-match")
+            @RequestParam(required = false) String search) {
+        return recipeService.findPage(pageable, search);
     }
 
     @Operation(summary = "Delta-sync feed of recipes",

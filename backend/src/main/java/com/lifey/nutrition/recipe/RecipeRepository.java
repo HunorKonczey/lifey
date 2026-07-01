@@ -12,6 +12,11 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
 
     List<Recipe> findAllByUserIdAndDeletedAtIsNullOrderByFavoriteDescNameAsc(Long userId);
 
+    Page<Recipe> findByUserIdAndDeletedAtIsNull(Long userId, Pageable pageable);
+
+    Page<Recipe> findByUserIdAndDeletedAtIsNullAndNameContainingIgnoreCase(
+            Long userId, String search, Pageable pageable);
+
     Optional<Recipe> findByIdAndUserId(Long id, Long userId);
 
     /**

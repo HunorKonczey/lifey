@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { recipeApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -12,23 +12,47 @@ import { RecipeEditor } from "./RecipeEditor";
 import { LogRecipeDialog } from "./LogRecipeDialog";
 import type { RecipeResponse } from "../types";
 
+const PAGE_SIZE = 200;
+const SEARCH_DEBOUNCE_MS = 300;
+
 export function RecipesView() {
   const { date } = useDateStore();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [editing, setEditing] = useState<RecipeResponse | null>(null);
   const [creating, setCreating] = useState(false);
   const [logging, setLogging] = useState<RecipeResponse | null>(null);
 
+  // Debounce the search box so typing doesn't refetch on every keystroke —
+  // mirrors FoodsView's search (see FoodsView.tsx).
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  const pageParams = { page: 0, size: PAGE_SIZE, search: debouncedSearch || undefined };
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.recipes.all(),
-    queryFn: recipeApi.list,
+    queryKey: queryKeys.recipes.page(pageParams),
+    queryFn: () => recipeApi.page(pageParams),
   });
 
-  const recipes = (data ?? []).filter((r) => !favoritesOnly || r.favorite);
+  const recipes = (data?.content ?? []).filter((r) => !favoritesOnly || r.favorite);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 px-3 h-9 rounded-[var(--r-input)] flex-1 min-w-[180px]"
+          style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}>
+          <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>search</span>
+          <input
+            value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search recipes…"
+            className="flex-1 bg-transparent outline-none text-sm"
+          />
+        </div>
+
         <button onClick={() => setFavoritesOnly((f) => !f)}
           className="flex items-center gap-1 px-3 h-9 rounded-[var(--r-pill)] text-sm font-semibold transition-colors"
           style={{
@@ -55,8 +79,13 @@ export function RecipesView() {
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : recipes.length === 0 ? (
-        <EmptyState icon="menu_book" title="No recipes yet"
-          body="Create a recipe to quickly log meals you eat often." />
+        <EmptyState
+          icon="menu_book"
+          title={debouncedSearch ? "No recipes match" : "No recipes yet"}
+          body={debouncedSearch
+            ? "Try a different search term."
+            : "Create a recipe to quickly log meals you eat often."}
+        />
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           {recipes.map((r) => (

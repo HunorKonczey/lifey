@@ -47,6 +47,11 @@ class AdaptiveAppBar extends StatelessWidget {
     this.onBack,
     this.actions = const [],
     this.trailing,
+    this.searching = false,
+    this.searchController,
+    this.onSearchChanged,
+    this.searchHint,
+    this.onSearchClose,
   });
 
   /// Main title — shown in both states, animates size.
@@ -63,6 +68,23 @@ class AdaptiveAppBar extends StatelessWidget {
 
   /// Optional widget placed after the icon actions (e.g. a "Save" text button).
   final Widget? trailing;
+
+  /// When true, the title is replaced by an inline search field and [actions]/
+  /// [trailing] are replaced by a single close button (calling [onSearchClose]).
+  /// Defaults to false so every other call site is unaffected.
+  final bool searching;
+
+  /// Controller for the inline search field. Required when [searching] is true.
+  final TextEditingController? searchController;
+
+  /// Called on every keystroke while [searching].
+  final ValueChanged<String>? onSearchChanged;
+
+  /// Placeholder text for the inline search field.
+  final String? searchHint;
+
+  /// Called when the close (X) button is tapped while [searching].
+  final VoidCallback? onSearchClose;
 
   @override
   Widget build(BuildContext context) {
@@ -113,30 +135,58 @@ class AdaptiveAppBar extends StatelessWidget {
                 SizedBox(width: collapsed ? 6 : 10),
               ],
 
-              // ── Title + optional subtitle ─────────────────────────────
+              // ── Title + optional subtitle, or the inline search field ──
               Expanded(
-                child: _TitleBlock(
-                  title: title,
-                  subtitle: subtitle,
-                  collapsed: collapsed,
-                  scheme: scheme,
-                ),
+                child: searching
+                    ? TextField(
+                        controller: searchController,
+                        onChanged: onSearchChanged,
+                        autofocus: true,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: collapsed ? 15.0 : 17.0,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          border: InputBorder.none,
+                          hintText: searchHint,
+                          hintStyle: TextStyle(color: scheme.onSurfaceVariant),
+                        ),
+                      )
+                    : _TitleBlock(
+                        title: title,
+                        subtitle: subtitle,
+                        collapsed: collapsed,
+                        scheme: scheme,
+                      ),
               ),
 
-              // ── Actions ───────────────────────────────────────────────
-              for (final a in actions) ...[
+              // ── Actions, or a single close button while searching ──────
+              if (searching) ...[
                 const SizedBox(width: 4),
                 _AppBarButton(
-                  icon: a.icon,
-                  onPressed: a.onPressed,
-                  tooltip: a.tooltip,
+                  icon: Icons.close,
+                  onPressed: onSearchClose ?? () {},
                   collapsed: collapsed,
                   scheme: scheme,
                 ),
-              ],
-              if (trailing != null) ...[
-                const SizedBox(width: 4),
-                trailing!,
+              ] else ...[
+                for (final a in actions) ...[
+                  const SizedBox(width: 4),
+                  _AppBarButton(
+                    icon: a.icon,
+                    onPressed: a.onPressed,
+                    tooltip: a.tooltip,
+                    collapsed: collapsed,
+                    scheme: scheme,
+                  ),
+                ],
+                if (trailing != null) ...[
+                  const SizedBox(width: 4),
+                  trailing!,
+                ],
               ],
             ],
           ),
