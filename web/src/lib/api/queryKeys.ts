@@ -12,6 +12,8 @@ export const queryKeys = {
   },
   foods: {
     all: () => ["foods"] as const,
+    page: (params: { page: number; size?: number; search?: string; sort?: string }) =>
+      ["foods", "page", params] as const,
     barcode: (barcode: string) => ["foods", "barcode", barcode] as const,
     detail: (id: number) => ["foods", id] as const,
   },

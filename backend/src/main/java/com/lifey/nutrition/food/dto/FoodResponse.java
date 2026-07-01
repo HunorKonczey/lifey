@@ -1,5 +1,7 @@
 package com.lifey.nutrition.food.dto;
 
+import java.time.Instant;
+
 public record FoodResponse(
         Long id,
         String name,
@@ -8,6 +10,10 @@ public record FoodResponse(
         Double carbsPer100g,
         Double fatPer100g,
         String barcode,
-        boolean hidden
+        boolean hidden,
+        // Delta-sync fields (docs/15-delta-sync.md) — updatedAt drives the
+        // mobile cursor; deletedAt is non-null only for tombstoned rows.
+        Instant updatedAt,
+        Instant deletedAt
 ) {
 }

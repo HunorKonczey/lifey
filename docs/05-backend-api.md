@@ -3,6 +3,25 @@
 ## Nutrition
 
 GET /api/v1/foods
+* Unpaged, backward-compatible contract: returns the full (non-hidden) catalog
+  as a JSON array. Used by any caller that doesn't pass a `page` param.
+
+GET /api/v1/foods?page=&size=&sort=&search=
+* Paged + optionally searched variant, routed via the same path (Spring
+  `@GetMapping(params = "page")` — presence of `page` is the switch). Params:
+  `page` (0-based), `size` (default 200), `sort` (Spring Data sort expr,
+  defaults to `name,asc` then `id,asc` for a deterministic tiebreak), `search`
+  (optional, case-insensitive `name` contains-match; omitted = no filter).
+  Response is a Spring Data `Page<FoodResponse>` serialized as-is:
+  `{ content: [...], totalElements, totalPages, number, size, last, ... }`.
+* Two consumers use this with different `size`: the web foods table
+  (~25–50, driven by `search`) and the mobile sync pull (~200–500, no
+  `search` — it always wants the full catalog, just chunked).
+* Pattern to reuse for other long lists (recipes, exercises, ...): same
+  path, `params = "page"` vs `params = "!page"` on two controller methods,
+  a `findBy<Field>(Pageable)` / `findBy<Field>And<SearchField>ContainingIgnoreCase(String, Pageable)`
+  pair on the repository, and the service returning `Page<T>` untouched via
+  `.map(Mapper::toResponse)`.
 
 GET /api/v1/foods/{id}
 

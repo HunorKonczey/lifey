@@ -14,6 +14,7 @@ import 'tables/pending_operations_table.dart';
 import 'tables/recipe_tables.dart';
 import 'tables/settings_table.dart';
 import 'tables/step_count_table.dart';
+import 'tables/sync_cursor_table.dart';
 import 'tables/water_tables.dart';
 import 'tables/weight_table.dart';
 import 'tables/workout_session_tables.dart';
@@ -48,12 +49,13 @@ part 'app_database.g.dart';
   UserSettingsTable,
   PendingOperations,
   DailyStepCounts,
+  SyncCursors,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -145,6 +147,12 @@ class AppDatabase extends _$AppDatabase {
           if (from < 17) {
             await m.addColumn(workoutSessions, workoutSessions.templateClientId);
             await m.addColumn(workoutSessions, workoutSessions.templateName);
+          }
+          // V18: per-entity delta-sync cursor (docs/15-delta-sync.md). No
+          // rows yet for any entity means every _pull* still takes the
+          // full-pull bootstrap path until its first successful delta pull.
+          if (from < 18) {
+            await m.createTable(syncCursors);
           }
         },
       );

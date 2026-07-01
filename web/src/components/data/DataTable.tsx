@@ -12,6 +12,22 @@ export interface Column<T> {
   sortValue?: (row: T) => string | number;
 }
 
+/**
+ * Drives pagination/sorting from the server instead of DataTable's own
+ * client-side slicing/sort. Pass this when `rows` is already just the current
+ * page (e.g. a Spring `Page<T>` response) — DataTable then renders `rows`
+ * as-is and delegates page/sort changes to the caller.
+ */
+export interface ServerPagination {
+  page: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalElements?: number;
+  sortKey?: string | null;
+  sortDir?: "asc" | "desc";
+  onSortChange?: (key: string) => void;
+}
+
 interface DataTableProps<T> {
   columns: Column<T>[];
   rows: T[];
@@ -19,16 +35,21 @@ interface DataTableProps<T> {
   selectedKey?: string | number | null;
   onRowClick?: (row: T) => void;
   pageSize?: number;
+  serverPagination?: ServerPagination;
 }
 
 export function DataTable<T>({
-  columns, rows, rowKey, selectedKey, onRowClick, pageSize = 25,
+  columns, rows, rowKey, selectedKey, onRowClick, pageSize = 25, serverPagination,
 }: DataTableProps<T>) {
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [page, setPage] = useState(0);
+  const [localSortKey, setLocalSortKey] = useState<string | null>(null);
+  const [localSortDir, setLocalSortDir] = useState<"asc" | "desc">("asc");
+  const [localPage, setLocalPage] = useState(0);
+
+  const sortKey = serverPagination ? (serverPagination.sortKey ?? null) : localSortKey;
+  const sortDir = serverPagination ? (serverPagination.sortDir ?? "asc") : localSortDir;
 
   const sorted = useMemo(() => {
+    if (serverPagination) return rows;
     if (!sortKey) return rows;
     const col = columns.find((c) => c.key === sortKey);
     if (!col?.sortValue) return rows;
@@ -38,18 +59,31 @@ export function DataTable<T>({
       const cmp = va < vb ? -1 : va > vb ? 1 : 0;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [rows, sortKey, sortDir, columns]);
+  }, [rows, sortKey, sortDir, columns, serverPagination]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const safePage = Math.min(page, totalPages - 1);
-  const pageRows = sorted.slice(safePage * pageSize, safePage * pageSize + pageSize);
+  const totalPages = serverPagination ? serverPagination.totalPages : Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage = serverPagination ? serverPagination.page : Math.min(localPage, totalPages - 1);
+  const pageRows = serverPagination ? sorted : sorted.slice(safePage * pageSize, safePage * pageSize + pageSize);
+  const totalCount = serverPagination ? (serverPagination.totalElements ?? sorted.length) : sorted.length;
+
+  const goToPage = (next: number) => {
+    if (serverPagination) {
+      serverPagination.onPageChange(next);
+    } else {
+      setLocalPage(next);
+    }
+  };
 
   const toggleSort = (key: string) => {
+    if (serverPagination) {
+      serverPagination.onSortChange?.(key);
+      return;
+    }
     if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      setLocalSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
-      setSortKey(key);
-      setSortDir("asc");
+      setLocalSortKey(key);
+      setLocalSortDir("asc");
     }
   };
 
@@ -114,14 +148,14 @@ export function DataTable<T>({
       </div>
 
       {/* Pagination */}
-      {sorted.length > pageSize && (
+      {totalPages > 1 && (
         <div className="flex items-center justify-between mt-3 text-sm" style={{ color: "var(--on-surface-variant)" }}>
           <span className="tabular">
-            {safePage * pageSize + 1}–{Math.min((safePage + 1) * pageSize, sorted.length)} of {sorted.length}
+            {safePage * pageSize + 1}–{Math.min(safePage * pageSize + pageRows.length, totalCount)} of {totalCount}
           </span>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              onClick={() => goToPage(Math.max(0, safePage - 1))}
               disabled={safePage === 0}
               className="p-1 rounded-[var(--r-sm)] disabled:opacity-40 transition-colors hover:bg-surface-container"
               aria-label="Previous page"
@@ -130,7 +164,7 @@ export function DataTable<T>({
             </button>
             <span className="tabular px-2">{safePage + 1} / {totalPages}</span>
             <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              onClick={() => goToPage(Math.min(totalPages - 1, safePage + 1))}
               disabled={safePage >= totalPages - 1}
               className="p-1 rounded-[var(--r-sm)] disabled:opacity-40 transition-colors hover:bg-surface-container"
               aria-label="Next page"

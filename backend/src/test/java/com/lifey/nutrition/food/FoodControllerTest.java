@@ -8,13 +8,20 @@ import com.lifey.nutrition.food.dto.FoodResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,7 +46,7 @@ class FoodControllerTest {
     @Test
     void list_returnsOkWithJson() throws Exception {
         when(foodService.findAll())
-                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false)));
+                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false, Instant.now(), null)));
 
         mockMvc.perform(get("/api/v1/foods"))
                 .andExpect(status().isOk())
@@ -48,9 +55,78 @@ class FoodControllerTest {
     }
 
     @Test
+    void list_withNoParams_neverCallsPagedVariant() throws Exception {
+        when(foodService.findAll())
+                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false, Instant.now(), null)));
+
+        mockMvc.perform(get("/api/v1/foods")).andExpect(status().isOk());
+
+        verify(foodService, never()).findPage(any(), any(), any());
+    }
+
+    @Test
+    void findPage_firstPage_returnsPageEnvelope() throws Exception {
+        Pageable pageable = PageRequest.of(0, 2, org.springframework.data.domain.Sort.by("name", "id"));
+        Page<FoodResponse> page = new PageImpl<>(
+                List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false, Instant.now(), null)),
+                pageable, 3);
+        when(foodService.findPage(eq(pageable), isNull(), isNull())).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/foods").param("page", "0").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].name").value("Chicken"))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.last").value(false));
+    }
+
+    @Test
+    void findPage_lastPage_returnsLastTrue() throws Exception {
+        Pageable pageable = PageRequest.of(1, 2, org.springframework.data.domain.Sort.by("name", "id"));
+        Page<FoodResponse> page = new PageImpl<>(
+                List.of(new FoodResponse(3L, "Rice", 130.0, 2.7, null, null, null, false, Instant.now(), null)),
+                pageable, 3);
+        when(foodService.findPage(eq(pageable), isNull(), isNull())).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/foods").param("page", "1").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].name").value("Rice"))
+                .andExpect(jsonPath("$.last").value(true));
+    }
+
+    @Test
+    void findPage_withSearch_passesSearchThrough() throws Exception {
+        Pageable pageable = PageRequest.of(0, 200, org.springframework.data.domain.Sort.by("name", "id"));
+        Page<FoodResponse> page = new PageImpl<>(
+                List.of(new FoodResponse(2L, "Rice cake", 380.0, 8.0, null, null, null, false, Instant.now(), null)),
+                pageable, 1);
+        when(foodService.findPage(eq(pageable), eq("rice"), isNull())).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/foods").param("page", "0").param("search", "rice"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].name").value("Rice cake"));
+    }
+
+    @Test
+    void findPage_withUpdatedSince_passesInstantThrough() throws Exception {
+        Pageable pageable = PageRequest.of(0, 200, org.springframework.data.domain.Sort.by("name", "id"));
+        Instant since = Instant.parse("2026-06-01T00:00:00Z");
+        Page<FoodResponse> page = new PageImpl<>(
+                List.of(new FoodResponse(4L, "Old Rice", 130.0, 2.7, null, null, null, false,
+                        Instant.parse("2026-06-15T00:00:00Z"), Instant.parse("2026-06-15T00:00:00Z"))),
+                pageable, 1);
+        when(foodService.findPage(eq(pageable), isNull(), eq(since))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/foods").param("page", "0").param("updatedSince", since.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].name").value("Old Rice"))
+                .andExpect(jsonPath("$.content[0].deletedAt").exists());
+    }
+
+    @Test
     void create_returnsCreated() throws Exception {
         when(foodService.create(any()))
-                .thenReturn(new FoodResponse(7L, "Rice", 130.0, 2.7, null, null, null, false));
+                .thenReturn(new FoodResponse(7L, "Rice", 130.0, 2.7, null, null, null, false, Instant.now(), null));
 
         mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Rice\",\"caloriesPer100g\":130,\"proteinPer100g\":2.7,\"hidden\":false}"))

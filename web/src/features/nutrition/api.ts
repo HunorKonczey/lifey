@@ -1,12 +1,26 @@
-import { api } from "@/lib/api/client";
+import { api, type Page } from "@/lib/api/client";
 import type {
   FoodResponse, FoodRequest, BarcodeLookupResponse,
   MealResponse, MealRequest,
   RecipeResponse, RecipeRequest,
 } from "./types";
 
+export interface FoodPageParams {
+  page: number;
+  size?: number;
+  search?: string;
+  sort?: string;
+}
+
 export const foodApi = {
   list: () => api.get<FoodResponse[]>("/foods"),
+  page: ({ page, size, search, sort }: FoodPageParams) => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (size != null) params.set("size", String(size));
+    if (search) params.set("search", search);
+    if (sort) params.set("sort", sort);
+    return api.get<Page<FoodResponse>>(`/foods?${params.toString()}`);
+  },
   get: (id: number) => api.get<FoodResponse>(`/foods/${id}`),
   create: (body: FoodRequest) => api.post<FoodResponse>("/foods", body),
   update: (id: number, body: FoodRequest) => api.put<FoodResponse>(`/foods/${id}`, body),

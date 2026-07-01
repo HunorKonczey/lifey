@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { foodApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
@@ -13,23 +13,53 @@ import { FoodEditor } from "./FoodEditor";
 import type { FoodResponse } from "../types";
 import type { FoodFormValues } from "../schemas";
 
+const PAGE_SIZE = 25;
+const SEARCH_DEBOUNCE_MS = 300;
+
+// Maps DataTable column keys to the backend's sortable JPA property names —
+// they diverge for the metric columns (short UI labels vs. entity fields).
+const SORT_FIELDS: Record<string, string> = {
+  name: "name",
+  kcal: "caloriesPer100g",
+  protein: "proteinPer100g",
+  carbs: "carbsPer100g",
+  fat: "fatPer100g",
+};
+
 export function FoodsView() {
   const { show } = useToast();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [barcode, setBarcode] = useState("");
   const [barcodeLoading, setBarcodeLoading] = useState(false);
   const [selected, setSelected] = useState<FoodResponse | null>(null);
   const [creating, setCreating] = useState(false);
   const [prefill, setPrefill] = useState<(Partial<FoodFormValues> & { barcode?: string }) | undefined>();
 
+  // Debounce the search box so typing doesn't refetch on every keystroke.
+  // Reset to page 0 alongside it, since a new search term invalidates the
+  // current page position.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(0);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  const sort = sortKey ? `${SORT_FIELDS[sortKey] ?? sortKey},${sortDir}` : undefined;
+  const pageParams = { page, size: PAGE_SIZE, search: debouncedSearch || undefined, sort };
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.foods.all(),
-    queryFn: foodApi.list,
+    queryKey: queryKeys.foods.page(pageParams),
+    queryFn: () => foodApi.page(pageParams),
+    placeholderData: keepPreviousData,
   });
 
-  const foods = (data ?? []).filter((f) =>
-    f.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const foods = data?.content ?? [];
 
   const handleBarcode = async () => {
     if (!barcode.trim()) return;
@@ -37,12 +67,12 @@ export function FoodsView() {
     try {
       const res = await foodApi.barcode(barcode.trim());
       if (res.source === "LOCAL" && res.id != null) {
-        const existing = (data ?? []).find((f) => f.id === res.id);
-        if (existing) {
-          setSelected(existing);
-          setCreating(false);
-          show("Found in your catalog", "success");
-        }
+        // Fetch directly rather than searching the current (server-paged)
+        // `foods` page — the matching food may live on a different page.
+        const existing = foods.find((f) => f.id === res.id) ?? (await foodApi.get(res.id));
+        setSelected(existing);
+        setCreating(false);
+        show("Found in your catalog", "success");
       } else {
         // OPENFOODFACTS — prefill new-food editor
         setSelected(null);
@@ -149,8 +179,13 @@ export function FoodsView() {
         ) : isError ? (
           <ErrorState onRetry={refetch} />
         ) : foods.length === 0 ? (
-          <EmptyState icon="nutrition" title="No foods yet"
-            body="Add a food manually or scan a barcode to get started." />
+          <EmptyState
+            icon="nutrition"
+            title={debouncedSearch ? "No foods match" : "No foods yet"}
+            body={debouncedSearch
+              ? "Try a different search term."
+              : "Add a food manually or scan a barcode to get started."}
+          />
         ) : (
           <DataTable
             columns={columns}
@@ -158,6 +193,24 @@ export function FoodsView() {
             rowKey={(f) => f.id}
             selectedKey={selected?.id ?? null}
             onRowClick={(f) => { setSelected(f); setCreating(false); }}
+            pageSize={PAGE_SIZE}
+            serverPagination={{
+              page,
+              totalPages: data?.totalPages ?? 1,
+              totalElements: data?.totalElements,
+              onPageChange: setPage,
+              sortKey,
+              sortDir,
+              onSortChange: (key) => {
+                if (sortKey === key) {
+                  setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                } else {
+                  setSortKey(key);
+                  setSortDir("asc");
+                }
+                setPage(0);
+              },
+            }}
           />
         )}
       </div>

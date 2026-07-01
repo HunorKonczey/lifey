@@ -36,7 +36,9 @@ final class FoodMapper {
                 food.getCarbsPer100g(),
                 food.getFatPer100g(),
                 food.getBarcode(),
-                food.isHidden()
+                food.isHidden(),
+                food.getUpdatedAt(),
+                food.getDeletedAt()
         );
     }
 }

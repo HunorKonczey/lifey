@@ -4,8 +4,12 @@ import com.lifey.nutrition.food.dto.BarcodeLookupResponse;
 import com.lifey.nutrition.food.dto.FoodRequest;
 import com.lifey.nutrition.food.dto.FoodResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,9 +18,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.util.List;
 
 @Tag(name = "Foods", description = "Manage foods and their per-100g macros")
@@ -32,10 +38,31 @@ public class FoodController {
         this.barcodeLookupService = barcodeLookupService;
     }
 
-    @Operation(summary = "List all foods")
-    @GetMapping
+    @Operation(summary = "List all foods",
+            description = "Unpaged: always returns the full catalog. Kept for backward compatibility "
+                    + "with existing callers (e.g. the mobile offline sync pull migrating to /foods?page=...). "
+                    + "Any request carrying a `page` param is routed to the paged handler below instead.")
+    @GetMapping(params = "!page")
     public List<FoodResponse> findAll() {
         return foodService.findAll();
+    }
+
+    @Operation(summary = "List foods, paged and optionally searched or delta-synced",
+            description = "Backs the web foods table and the mobile offline sync pull. `search` "
+                    + "case-insensitively matches on name; omit it to page through everything. "
+                    + "`updatedSince` (ISO-8601 instant) switches to the delta-sync feed (see "
+                    + "docs/15-delta-sync.md): `search` is ignored, hidden/deleted rows are included, "
+                    + "and ordering is fixed to updatedAt,id ascending; a non-null `deletedAt` on a "
+                    + "returned row is a tombstone. Response is a standard Spring Data page: content, "
+                    + "totalElements, totalPages, number, size, last, ...")
+    @GetMapping(params = "page")
+    public Page<FoodResponse> findPage(
+            @PageableDefault(size = 200, sort = {"name", "id"}) Pageable pageable,
+            @Parameter(description = "Case-insensitive name contains-match")
+            @RequestParam(required = false) String search,
+            @Parameter(description = "ISO-8601 instant — switches to the delta-sync feed")
+            @RequestParam(required = false) Instant updatedSince) {
+        return foodService.findPage(pageable, search, updatedSince);
     }
 
     @Operation(summary = "Get a food by id")

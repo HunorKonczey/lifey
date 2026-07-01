@@ -4,9 +4,14 @@ import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.dto.FoodRequest;
 import com.lifey.nutrition.food.dto.FoodResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -25,6 +30,39 @@ public class FoodServiceImpl implements FoodService {
         return repository.findAllByHiddenFalseOrderByName().stream()
                 .map(FoodMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<FoodResponse> findPage(Pageable pageable, String search, Instant updatedSince) {
+        if (updatedSince != null) {
+            // Delta-sync feed: fixed ordering, no hidden filter, no search —
+            // see docs/15-delta-sync.md and FoodRepository.findByUpdatedAtGreaterThanEqual.
+            Pageable deltaPageable = PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    Sort.by(Sort.Order.asc("updatedAt"), Sort.Order.asc("id")));
+            return repository.findByUpdatedAtGreaterThanEqual(updatedSince, deltaPageable)
+                    .map(FoodMapper::toResponse);
+        }
+        Pageable sortedPageable = withNullsLast(pageable);
+        Page<Food> page = (search == null || search.isBlank())
+                ? repository.findByHiddenFalse(sortedPageable)
+                : repository.findByHiddenFalseAndNameContainingIgnoreCase(search.trim(), sortedPageable);
+        return page.map(FoodMapper::toResponse);
+    }
+
+    /**
+     * Metric columns (calories/protein/carbs/fat) are nullable, and the database's
+     * default null ordering puts them first on a descending sort — from the user's
+     * point of view a food with no data for that column should always sort to the
+     * bottom, in either direction, rather than jumping to the top on DESC.
+     */
+    private static Pageable withNullsLast(Pageable pageable) {
+        Sort sort = pageable.getSort();
+        if (sort.isUnsorted()) return pageable;
+        Sort nullsLastSort = Sort.by(sort.stream().map(Sort.Order::nullsLast).toList());
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), nullsLastSort);
     }
 
     @Override
@@ -78,6 +116,7 @@ public class FoodServiceImpl implements FoodService {
     public void delete(Long id) {
         Food food = getOrThrow(id);
         food.setHidden(true);
+        food.setDeletedAt(Instant.now());
     }
 
     private Food getOrThrow(Long id) {

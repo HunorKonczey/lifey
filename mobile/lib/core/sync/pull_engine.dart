@@ -80,34 +80,132 @@ class PullEngine {
     }
   }
 
+  /// Re-fetches a handful of already-applied rows on every delta pull rather
+  /// than trusting the exact boundary timestamp — the mitigation for
+  /// concurrent-write clock skew described in docs/15-delta-sync.md §4(c).
+  /// Harmless: re-applying an already-current row is just an idempotent
+  /// upsert (or a delete-of-an-already-deleted row, also a no-op).
+  static const _cursorOverlap = Duration(seconds: 10);
+
   Future<void> _pullFoods() async {
-    final items = await _getList('/foods');
+    // Foods is the pilot entity for delta sync (docs/15-delta-sync.md). No
+    // cursor yet (first sync ever, or first sync since this device installed
+    // a delta-sync-capable build) means a full bootstrap pull, exactly as
+    // before; a cursor means only what changed since then is fetched.
+    //
+    // Either way, the local `foods` table must still end up a complete
+    // mirror of every non-hidden, non-deleted server row — foodSearchProvider's
+    // meal-entry autocomplete (mobile/lib/features/nutrition/application/food_controller.dart)
+    // depends on searching the full local cache, not just the paginated
+    // window shown in the Foods tab.
+    final cursor = await _getSyncCursor('foods');
+    if (cursor == null) {
+      await _pullFoodsFull();
+    } else {
+      await _pullFoodsDelta(cursor);
+    }
+  }
+
+  Future<void> _pullFoodsFull() async {
+    final items = await _getAllPages('/foods', size: 200);
     final seen = <int>{};
+    DateTime? maxUpdatedAt;
     for (final json in items) {
       final serverId = json['id'] as int;
       seen.add(serverId);
-      final existingClientId = await _localClientId('foods', serverId);
-      if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
-
-      final values = FoodsCompanion(
-        name: Value(json['name'] as String),
-        caloriesPer100g: Value((json['caloriesPer100g'] as num).toDouble()),
-        proteinPer100g: Value((json['proteinPer100g'] as num).toDouble()),
-        carbsPer100g: Value((json['carbsPer100g'] as num?)?.toDouble()),
-        fatPer100g: Value((json['fatPer100g'] as num?)?.toDouble()),
-        barcode: Value(json['barcode'] as String?),
-        hidden: Value(json['hidden'] as bool? ?? false),
-      );
-      if (existingClientId != null) {
-        await (_db.update(_db.foods)..where((t) => t.clientId.equals(existingClientId)))
-            .write(values);
-      } else {
-        await _db.into(_db.foods).insert(
-              values.copyWith(clientId: Value(newClientId()), serverId: Value(serverId)),
-            );
-      }
+      await _upsertFood(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
     }
     await _deleteMissing('foods', seen, additionalWhere: 'AND hidden = false');
+    // An empty catalog leaves maxUpdatedAt null, so no cursor is seeded —
+    // the next pull just takes this same full-pull branch again, which is
+    // correct and cheap (nothing to pull) until the first food exists.
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('foods', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullFoodsDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/foods',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteFoodTombstone(json['id'] as int);
+      } else {
+        await _upsertFood(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    // No rows changed since the last pull — leave the cursor as-is rather
+    // than advancing it to "now" (which would be the client-clock mistake
+    // docs/15-delta-sync.md §4(a) warns against).
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('foods', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _upsertFood(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('foods', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final values = FoodsCompanion(
+      name: Value(json['name'] as String),
+      caloriesPer100g: Value((json['caloriesPer100g'] as num).toDouble()),
+      proteinPer100g: Value((json['proteinPer100g'] as num).toDouble()),
+      carbsPer100g: Value((json['carbsPer100g'] as num?)?.toDouble()),
+      fatPer100g: Value((json['fatPer100g'] as num?)?.toDouble()),
+      barcode: Value(json['barcode'] as String?),
+      hidden: Value(json['hidden'] as bool? ?? false),
+    );
+    if (existingClientId != null) {
+      await (_db.update(_db.foods)..where((t) => t.clientId.equals(existingClientId)))
+          .write(values);
+    } else {
+      await _db.into(_db.foods).insert(
+            values.copyWith(clientId: Value(newClientId()), serverId: Value(serverId)),
+          );
+    }
+  }
+
+  /// Applies a delta-feed tombstone: deletes the local row for [serverId] if
+  /// present and not itself mid-sync. Unlike [_pullFoodsFull]'s
+  /// `_deleteMissing`, this never touches rows the feed didn't mention.
+  Future<void> _deleteFoodTombstone(int serverId) async {
+    final clientId = await _localClientId('foods', serverId);
+    if (clientId == null) return; // already absent locally — nothing to do
+    if (await _hasPendingOperation(clientId)) return;
+    await (_db.delete(_db.foods)..where((t) => t.clientId.equals(clientId))).go();
+    // customStatement-free delete already notifies watchers via Drift's own
+    // table-change tracking, unlike _deleteMissing's raw customStatement path.
+  }
+
+  DateTime? _maxUpdatedAt(DateTime? current, Map<String, dynamic> json) {
+    final raw = json['updatedAt'] as String?;
+    if (raw == null) return current;
+    final parsed = DateTime.parse(raw).toUtc();
+    if (current == null || parsed.isAfter(current)) return parsed;
+    return current;
+  }
+
+  Future<DateTime?> _getSyncCursor(String entityType) async {
+    final row = await (_db.select(_db.syncCursors)
+          ..where((t) => t.entityType.equals(entityType)))
+        .getSingleOrNull();
+    return row?.lastSyncedAt;
+  }
+
+  Future<void> _setSyncCursor(String entityType, DateTime value) async {
+    await _db.into(_db.syncCursors).insertOnConflictUpdate(
+          SyncCursorsCompanion(
+            entityType: Value(entityType),
+            lastSyncedAt: Value(value),
+          ),
+        );
   }
 
   Future<void> _pullExercises() async {
@@ -535,6 +633,39 @@ class PullEngine {
   Future<List<Map<String, dynamic>>> _getList(String basePath) async {
     final response = await _dio.get<List<dynamic>>(basePath);
     return (response.data ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  /// Fetches every page of a `page`/`size`-pageable endpoint (see
+  /// docs/05-backend-api.md — the pageable+searchable pattern introduced for
+  /// Foods) and returns the concatenated `content` across all pages, looping
+  /// until the server reports `last: true`. This only chunks the transfer —
+  /// callers still get the full result set, same as [_getList], so switching
+  /// a `_pull*` method from [_getList] to this one changes nothing about what
+  /// ends up in the local table, only how many requests it takes to get there.
+  Future<List<Map<String, dynamic>>> _getAllPages(
+    String basePath, {
+    int size = 200,
+    Map<String, dynamic>? extraQueryParameters,
+  }) async {
+    final items = <Map<String, dynamic>>[];
+    var page = 0;
+    while (true) {
+      final response = await _dio.get<Map<String, dynamic>>(
+        basePath,
+        queryParameters: {
+          'page': page,
+          'size': size,
+          ...?extraQueryParameters,
+        },
+      );
+      final json = response.data;
+      if (json == null) break;
+      final content = (json['content'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+      items.addAll(content);
+      if ((json['last'] as bool? ?? true) || content.isEmpty) break;
+      page++;
+    }
+    return items;
   }
 
   /// Maps a list of server ids in [table] to their local clientIds, in

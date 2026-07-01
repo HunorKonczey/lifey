@@ -1,5 +1,17 @@
 import { env } from "@/lib/env";
 
+// Spring Data `Page<T>` as serialized by any GET .../{resource}?page=... endpoint
+// migrated to the pageable+searchable pattern (see docs/05-backend-api.md — Foods
+// is the first, other long lists follow the same shape).
+export interface Page<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+  last: boolean;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,

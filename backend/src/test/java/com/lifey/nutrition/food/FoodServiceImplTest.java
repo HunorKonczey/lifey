@@ -9,13 +9,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,6 +54,96 @@ class FoodServiceImplTest {
         when(repository.findAllByHiddenFalseOrderByName()).thenReturn(List.of());
 
         assertThat(service.findAll()).isEmpty();
+    }
+
+    @Test
+    void findPage_noSearch_usesHiddenFalseQuery() {
+        Pageable pageable = PageRequest.of(0, 2);
+        Page<Food> page = new PageImpl<>(List.of(food(1L, "Chicken", 165, 31)), pageable, 1);
+        when(repository.findByHiddenFalse(pageable)).thenReturn(page);
+
+        Page<FoodResponse> result = service.findPage(pageable, null, null);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).singleElement()
+                .satisfies(r -> assertThat(r.name()).isEqualTo("Chicken"));
+        verify(repository, never()).findByHiddenFalseAndNameContainingIgnoreCase(any(), any());
+    }
+
+    @Test
+    void findPage_blankSearch_treatedAsNoSearch() {
+        Pageable pageable = PageRequest.of(0, 2);
+        when(repository.findByHiddenFalse(pageable)).thenReturn(Page.empty(pageable));
+
+        service.findPage(pageable, "   ", null);
+
+        verify(repository).findByHiddenFalse(pageable);
+        verify(repository, never()).findByHiddenFalseAndNameContainingIgnoreCase(any(), any());
+    }
+
+    @Test
+    void findPage_sortedByNullableColumn_forcesNullsLast() {
+        Pageable requested = PageRequest.of(0, 10, org.springframework.data.domain.Sort.by(
+                org.springframework.data.domain.Sort.Direction.DESC, "fatPer100g"));
+        when(repository.findByHiddenFalse(any())).thenReturn(Page.empty(requested));
+
+        service.findPage(requested, null, null);
+
+        org.mockito.ArgumentCaptor<Pageable> captor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+        verify(repository).findByHiddenFalse(captor.capture());
+        org.springframework.data.domain.Sort.Order order = captor.getValue().getSort().getOrderFor("fatPer100g");
+        assertThat(order).isNotNull();
+        assertThat(order.getDirection()).isEqualTo(org.springframework.data.domain.Sort.Direction.DESC);
+        assertThat(order.getNullHandling()).isEqualTo(org.springframework.data.domain.Sort.NullHandling.NULLS_LAST);
+    }
+
+    @Test
+    void findPage_unsorted_leavesPageableUntouched() {
+        Pageable unsorted = PageRequest.of(0, 10);
+        when(repository.findByHiddenFalse(unsorted)).thenReturn(Page.empty(unsorted));
+
+        service.findPage(unsorted, null, null);
+
+        verify(repository).findByHiddenFalse(unsorted);
+    }
+
+    @Test
+    void findPage_withSearch_usesSearchQueryAndTrimsIt() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Food> page = new PageImpl<>(List.of(food(2L, "Rice", 130, 2.7)), pageable, 1);
+        when(repository.findByHiddenFalseAndNameContainingIgnoreCase(eq("rice"), eq(pageable)))
+                .thenReturn(page);
+
+        Page<FoodResponse> result = service.findPage(pageable, "  rice  ", null);
+
+        assertThat(result.getContent()).singleElement()
+                .satisfies(r -> assertThat(r.name()).isEqualTo("Rice"));
+        verify(repository, never()).findByHiddenFalse(any());
+    }
+
+    @Test
+    void findPage_withUpdatedSince_usesDeltaQueryIgnoringSearchAndForcesOrdering() {
+        Pageable requested = PageRequest.of(0, 200);
+        Instant since = Instant.parse("2026-06-01T00:00:00Z");
+        Food deleted = food(4L, "Old Rice", 130, 2.7);
+        deleted.setDeletedAt(Instant.parse("2026-06-15T00:00:00Z"));
+        when(repository.findByUpdatedAtGreaterThanEqual(eq(since), any()))
+                .thenReturn(new PageImpl<>(List.of(deleted), requested, 1));
+
+        Page<FoodResponse> result = service.findPage(requested, "should be ignored", since);
+
+        assertThat(result.getContent()).singleElement()
+                .satisfies(r -> assertThat(r.deletedAt()).isEqualTo(deleted.getDeletedAt()));
+        verify(repository, never()).findByHiddenFalse(any());
+        verify(repository, never()).findByHiddenFalseAndNameContainingIgnoreCase(any(), any());
+
+        org.mockito.ArgumentCaptor<Pageable> captor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+        verify(repository).findByUpdatedAtGreaterThanEqual(eq(since), captor.capture());
+        org.springframework.data.domain.Sort sort = captor.getValue().getSort();
+        assertThat(sort.getOrderFor("updatedAt").getDirection())
+                .isEqualTo(org.springframework.data.domain.Sort.Direction.ASC);
+        assertThat(sort.getOrderFor("id").getDirection())
+                .isEqualTo(org.springframework.data.domain.Sort.Direction.ASC);
     }
 
     @Test
@@ -138,13 +234,14 @@ class FoodServiceImplTest {
     }
 
     @Test
-    void delete_softDeletesFood() {
+    void delete_softDeletesFoodAndSetsTombstone() {
         Food food = food(5L, "Banana", 89, 1.1);
         when(repository.findById(5L)).thenReturn(Optional.of(food));
 
         service.delete(5L);
 
         assertThat(food.isHidden()).isTrue();
+        assertThat(food.getDeletedAt()).isNotNull();
         verify(repository, never()).delete(any());
     }
 
