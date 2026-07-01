@@ -10,9 +10,14 @@ import com.lifey.workout.session.dto.WorkoutSessionRequest;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
 import com.lifey.workout.template.WorkoutTemplate;
 import com.lifey.workout.template.WorkoutTemplateRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -40,9 +45,22 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     @Override
     @Transactional(readOnly = true)
     public List<WorkoutSessionResponse> findAll() {
-        return sessionRepository.findAllByUserIdOrderByStartedAtDesc(currentUserProvider.getUserId()).stream()
+        return sessionRepository.findAllByUserIdAndDeletedAtIsNullOrderByStartedAtDesc(currentUserProvider.getUserId()).stream()
                 .map(WorkoutSessionMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<WorkoutSessionResponse> findDelta(Instant updatedSince, Pageable pageable) {
+        // Delta-sync feed: fixed ordering, includes tombstoned rows — see
+        // docs/16-delta-sync-rollout.md and WorkoutSessionRepository.findByUserIdAndUpdatedAtGreaterThanEqual.
+        Pageable deltaPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.asc("updatedAt"), Sort.Order.asc("id")));
+        return sessionRepository.findByUserIdAndUpdatedAtGreaterThanEqual(currentUserProvider.getUserId(), updatedSince, deltaPageable)
+                .map(WorkoutSessionMapper::toResponse);
     }
 
     @Override
@@ -77,16 +95,18 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         session.setHealthWorkoutId(request.healthWorkoutId());
         replacePlannedExercises(session, request.exerciseIds());
         replaceSets(session, request.sets());
+        // Sets/planned exercises are child rows with no delta feed of their own
+        // (docs/16 §2.3) — a child-only edit could leave every WorkoutSession
+        // scalar field unchanged, so Hibernate's dirty-checking could skip
+        // @PreUpdate. Bump explicitly so it always fires.
+        session.setUpdatedAt(Instant.now());
         return WorkoutSessionMapper.toResponse(session);
     }
 
     @Override
     public void delete(Long id) {
-        Long userId = currentUserProvider.getUserId();
-        if (!sessionRepository.existsByIdAndUserId(id, userId)) {
-            throw new ResourceNotFoundException("Workout session not found: " + id);
-        }
-        sessionRepository.deleteByIdAndUserId(id, userId);
+        WorkoutSession session = getOrThrow(id);
+        session.setDeletedAt(Instant.now());
     }
 
     private WorkoutSession getOrThrow(Long id) {

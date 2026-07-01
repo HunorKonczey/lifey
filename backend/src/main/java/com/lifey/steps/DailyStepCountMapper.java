@@ -22,7 +22,9 @@ final class DailyStepCountMapper {
         return new DailyStepCountResponse(
                 entry.getId(),
                 entry.getDate(),
-                entry.getSteps()
+                entry.getSteps(),
+                entry.getUpdatedAt(),
+                entry.getDeletedAt()
         );
     }
 }

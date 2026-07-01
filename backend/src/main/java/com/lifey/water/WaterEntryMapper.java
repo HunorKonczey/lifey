@@ -18,7 +18,9 @@ final class WaterEntryMapper {
                 entry.getConsumedAt(),
                 entry.getVolumeLiters(),
                 source != null ? source.getId() : null,
-                source != null ? source.getName() : null
+                source != null ? source.getName() : null,
+                entry.getUpdatedAt(),
+                entry.getDeletedAt()
         );
     }
 }

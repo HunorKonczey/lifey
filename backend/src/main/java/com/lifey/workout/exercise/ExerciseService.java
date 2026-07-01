@@ -2,7 +2,10 @@ package com.lifey.workout.exercise;
 
 import com.lifey.workout.exercise.dto.ExerciseRequest;
 import com.lifey.workout.exercise.dto.ExerciseResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -11,6 +14,8 @@ import java.util.List;
 public interface ExerciseService {
 
     List<ExerciseResponse> findAll();
+
+    Page<ExerciseResponse> findDelta(Instant updatedSince, Pageable pageable);
 
     ExerciseResponse findById(Long id);
 

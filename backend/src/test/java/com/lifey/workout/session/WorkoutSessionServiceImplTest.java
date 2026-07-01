@@ -18,6 +18,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,8 +30,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -222,19 +226,62 @@ class WorkoutSessionServiceImplTest {
 
     @Test
     void delete_throwsWhenMissing() {
-        when(sessionRepository.existsByIdAndUserId(99L, USER_ID)).thenReturn(false);
+        when(sessionRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
-    void delete_removesWhenExists() {
-        when(sessionRepository.existsByIdAndUserId(3L, USER_ID)).thenReturn(true);
+    void delete_setsDeletedAtInsteadOfRemovingRow() {
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
 
         service.delete(3L);
 
-        verify(sessionRepository).deleteByIdAndUserId(3L, USER_ID);
+        assertThat(existing.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    void update_childOnlyEditBumpsParentUpdatedAt() {
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        existing.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        existing.setUpdatedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(exerciseRepository.findById(1L)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+
+        // Same startedAt/finishedAt/etc as before — only the sets differ.
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(), List.of(new ExerciseSetRequest(1L, 8, 70.0,
+                        Instant.parse("2026-06-18T05:30:00Z"))),
+                null, null, null, null);
+
+        service.update(3L, request);
+
+        assertThat(existing.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T05:00:00Z"));
+    }
+
+    @Test
+    void findDelta_isUserScopedAndIncludesTombstones() {
+        WorkoutSession deleted = new WorkoutSession();
+        deleted.setId(2L);
+        deleted.setDeletedAt(Instant.parse("2026-06-19T00:00:00Z"));
+
+        Instant since = Instant.parse("2026-06-17T00:00:00Z");
+        Pageable requested = PageRequest.of(0, 50);
+        Page<WorkoutSession> page = new PageImpl<>(List.of(deleted));
+        when(sessionRepository.findByUserIdAndUpdatedAtGreaterThanEqual(eq(USER_ID), eq(since), any()))
+                .thenReturn(page);
+
+        Page<WorkoutSessionResponse> result = service.findDelta(since, requested);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> {
+            assertThat(r.id()).isEqualTo(2L);
+            assertThat(r.deletedAt()).isEqualTo(deleted.getDeletedAt());
+        });
     }
 
     private static Exercise exercise(Long id, String name) {

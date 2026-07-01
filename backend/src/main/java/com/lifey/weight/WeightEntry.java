@@ -1,6 +1,6 @@
 package com.lifey.weight;
 
-import com.lifey.common.domain.BaseEntity;
+import com.lifey.common.domain.SyncableEntity;
 import com.lifey.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,7 +18,7 @@ import java.time.LocalDate;
 @Setter
 @Entity
 @Table(name = "weight_entries")
-public class WeightEntry extends BaseEntity {
+public class WeightEntry extends SyncableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)

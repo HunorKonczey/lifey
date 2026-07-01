@@ -3,9 +3,14 @@ package com.lifey.workout.exercise;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.workout.exercise.dto.ExerciseRequest;
 import com.lifey.workout.exercise.dto.ExerciseResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -21,9 +26,22 @@ public class ExerciseServiceImpl implements ExerciseService {
     @Override
     @Transactional(readOnly = true)
     public List<ExerciseResponse> findAll() {
-        return repository.findAllByOrderByNameAsc().stream()
+        return repository.findAllByDeletedAtIsNullOrderByNameAsc().stream()
                 .map(ExerciseMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ExerciseResponse> findDelta(Instant updatedSince, Pageable pageable) {
+        // Delta-sync feed: fixed ordering, includes tombstoned rows — see
+        // docs/16-delta-sync-rollout.md and ExerciseRepository.findByUpdatedAtGreaterThanEqual.
+        Pageable deltaPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.asc("updatedAt"), Sort.Order.asc("id")));
+        return repository.findByUpdatedAtGreaterThanEqual(updatedSince, deltaPageable)
+                .map(ExerciseMapper::toResponse);
     }
 
     @Override
@@ -46,10 +64,8 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Exercise not found: " + id);
-        }
-        repository.deleteById(id);
+        Exercise exercise = getOrThrow(id);
+        exercise.setDeletedAt(Instant.now());
     }
 
     private Exercise getOrThrow(Long id) {

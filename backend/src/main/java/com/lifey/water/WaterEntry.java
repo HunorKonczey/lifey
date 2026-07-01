@@ -1,6 +1,6 @@
 package com.lifey.water;
 
-import com.lifey.common.domain.BaseEntity;
+import com.lifey.common.domain.SyncableEntity;
 import com.lifey.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -23,7 +23,7 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "water_entries")
-public class WaterEntry extends BaseEntity {
+public class WaterEntry extends SyncableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)

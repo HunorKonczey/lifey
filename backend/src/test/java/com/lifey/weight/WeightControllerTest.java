@@ -5,14 +5,17 @@ import com.lifey.weight.dto.WeightResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,7 +38,8 @@ class WeightControllerTest {
     @Test
     void list_returnsOk() throws Exception {
         when(weightService.findAll())
-                .thenReturn(List.of(new WeightResponse(1L, LocalDate.of(2026, 6, 18), 80.0)));
+                .thenReturn(List.of(new WeightResponse(1L, LocalDate.of(2026, 6, 18), 80.0,
+                        Instant.parse("2026-06-18T08:00:00Z"), null)));
 
         mockMvc.perform(get("/api/v1/weights"))
                 .andExpect(status().isOk())
@@ -44,9 +48,23 @@ class WeightControllerTest {
     }
 
     @Test
+    void delta_returnsPageIncludingTombstones() throws Exception {
+        Instant since = Instant.parse("2026-06-17T00:00:00Z");
+        WeightResponse tombstoned = new WeightResponse(2L, LocalDate.of(2026, 6, 18), 80.0,
+                Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"));
+        when(weightService.findDelta(eq(since), any())).thenReturn(new PageImpl<>(List.of(tombstoned)));
+
+        mockMvc.perform(get("/api/v1/weights").param("updatedSince", since.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(2))
+                .andExpect(jsonPath("$.content[0].deletedAt").exists());
+    }
+
+    @Test
     void create_returnsCreated() throws Exception {
         when(weightService.create(any()))
-                .thenReturn(new WeightResponse(5L, LocalDate.of(2026, 6, 1), 78.4));
+                .thenReturn(new WeightResponse(5L, LocalDate.of(2026, 6, 1), 78.4,
+                        Instant.parse("2026-06-01T00:00:00Z"), null));
 
         mockMvc.perform(post("/api/v1/weights").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"date\":\"2026-06-01\",\"weight\":78.4}"))

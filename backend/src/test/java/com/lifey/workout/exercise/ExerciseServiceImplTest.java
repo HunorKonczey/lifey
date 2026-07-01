@@ -8,15 +8,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,7 +34,7 @@ class ExerciseServiceImplTest {
 
     @Test
     void findAll_mapsExercises() {
-        when(repository.findAllByOrderByNameAsc()).thenReturn(List.of(exercise(1L, "Squat")));
+        when(repository.findAllByDeletedAtIsNullOrderByNameAsc()).thenReturn(List.of(exercise(1L, "Squat")));
 
         List<ExerciseResponse> result = service.findAll();
 
@@ -47,7 +51,7 @@ class ExerciseServiceImplTest {
         Exercise e = exercise(2L, "Bench Press");
         e.setCategory(MuscleGroup.CHEST);
         e.setEquipment(Equipment.BARBELL);
-        when(repository.findAllByOrderByNameAsc()).thenReturn(List.of(e));
+        when(repository.findAllByDeletedAtIsNullOrderByNameAsc()).thenReturn(List.of(e));
 
         List<ExerciseResponse> result = service.findAll();
 
@@ -110,20 +114,38 @@ class ExerciseServiceImplTest {
 
     @Test
     void delete_throwsWhenMissing() {
-        when(repository.existsById(99L)).thenReturn(false);
+        when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
-        verify(repository, never()).deleteById(any());
     }
 
     @Test
-    void delete_removesWhenExists() {
-        when(repository.existsById(1L)).thenReturn(true);
+    void delete_setsDeletedAtInsteadOfRemovingRow() {
+        Exercise existing = exercise(1L, "Squat");
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
 
         service.delete(1L);
 
-        verify(repository).deleteById(1L);
+        assertThat(existing.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    void findDelta_includesTombstonesGlobally() {
+        Exercise deleted = exercise(2L, "Deleted exercise");
+        deleted.setDeletedAt(Instant.parse("2026-06-19T00:00:00Z"));
+
+        Instant since = Instant.parse("2026-06-17T00:00:00Z");
+        Pageable requested = PageRequest.of(0, 50);
+        Page<Exercise> page = new PageImpl<>(List.of(deleted));
+        when(repository.findByUpdatedAtGreaterThanEqual(eq(since), any())).thenReturn(page);
+
+        Page<ExerciseResponse> result = service.findDelta(since, requested);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> {
+            assertThat(r.id()).isEqualTo(2L);
+            assertThat(r.deletedAt()).isEqualTo(deleted.getDeletedAt());
+        });
     }
 
     private static Exercise exercise(Long id, String name) {

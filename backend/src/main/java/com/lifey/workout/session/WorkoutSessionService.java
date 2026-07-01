@@ -2,12 +2,17 @@ package com.lifey.workout.session;
 
 import com.lifey.workout.session.dto.WorkoutSessionRequest;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface WorkoutSessionService {
 
     List<WorkoutSessionResponse> findAll();
+
+    Page<WorkoutSessionResponse> findDelta(Instant updatedSince, Pageable pageable);
 
     WorkoutSessionResponse create(WorkoutSessionRequest request);
 

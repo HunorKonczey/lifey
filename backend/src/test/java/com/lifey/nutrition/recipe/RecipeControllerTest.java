@@ -8,17 +8,21 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -35,7 +39,8 @@ class RecipeControllerTest {
     @Test
     void create_returnsCreatedWithIngredients() throws Exception {
         when(recipeService.create(any())).thenReturn(new RecipeResponse(7L, "Chicken & rice", "prep", true, 2,
-                List.of(new RecipeIngredientResponse(1L, "Chicken", 200.0, 330.0, 62.0))));
+                List.of(new RecipeIngredientResponse(1L, "Chicken", 200.0, 330.0, 62.0)),
+                Instant.parse("2026-06-18T08:00:00Z"), null));
 
         mockMvc.perform(post("/api/v1/recipes").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Chicken & rice\",\"description\":\"prep\",\"favorite\":true,"
@@ -58,6 +63,19 @@ class RecipeControllerTest {
                 .andExpect(jsonPath("$.status").value(400));
 
         verify(recipeService, never()).create(any());
+    }
+
+    @Test
+    void delta_returnsPageIncludingTombstones() throws Exception {
+        Instant since = Instant.parse("2026-06-17T00:00:00Z");
+        RecipeResponse tombstoned = new RecipeResponse(2L, "Deleted recipe", null, false, 1, List.of(),
+                Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"));
+        when(recipeService.findDelta(eq(since), any())).thenReturn(new PageImpl<>(List.of(tombstoned)));
+
+        mockMvc.perform(get("/api/v1/recipes").param("updatedSince", since.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(2))
+                .andExpect(jsonPath("$.content[0].deletedAt").exists());
     }
 
     @Test

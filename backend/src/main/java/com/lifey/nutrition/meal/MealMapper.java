@@ -34,7 +34,9 @@ final class MealMapper {
                 meal.getDateTime(),
                 meal.getMealType(),
                 meal.getName(),
-                entries
+                entries,
+                meal.getUpdatedAt(),
+                meal.getDeletedAt()
         );
     }
 }

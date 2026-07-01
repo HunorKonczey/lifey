@@ -35,7 +35,9 @@ final class RecipeMapper {
                 recipe.getDescription(),
                 recipe.isFavorite(),
                 recipe.getServings(),
-                ingredients
+                ingredients,
+                recipe.getUpdatedAt(),
+                recipe.getDeletedAt()
         );
     }
 }

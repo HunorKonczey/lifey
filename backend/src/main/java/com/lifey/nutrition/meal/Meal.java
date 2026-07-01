@@ -1,6 +1,6 @@
 package com.lifey.nutrition.meal;
 
-import com.lifey.common.domain.BaseEntity;
+import com.lifey.common.domain.SyncableEntity;
 import com.lifey.user.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -19,11 +19,18 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Only the parent Meal is delta-synced (see docs/16-delta-sync-rollout.md) —
+ * entries are never independently tombstoned, so any entry-only edit must
+ * explicitly bump {@code updatedAt} (see MealServiceImpl#update, which cannot
+ * rely on Hibernate dirty-checking a Meal scalar field when only the child
+ * collection changed).
+ */
 @Getter
 @Setter
 @Entity
 @Table(name = "meals")
-public class Meal extends BaseEntity {
+public class Meal extends SyncableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)

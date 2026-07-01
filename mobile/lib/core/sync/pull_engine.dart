@@ -209,29 +209,80 @@ class PullEngine {
   }
 
   Future<void> _pullExercises() async {
+    final cursor = await _getSyncCursor('exercises');
+    if (cursor == null) {
+      await _pullExercisesFull();
+    } else {
+      await _pullExercisesDelta(cursor);
+    }
+  }
+
+  Future<void> _pullExercisesFull() async {
     final items = await _getList('/exercises');
     final seen = <int>{};
+    DateTime? maxUpdatedAt;
     for (final json in items) {
       final serverId = json['id'] as int;
       seen.add(serverId);
-      final existingClientId = await _localClientId('exercises', serverId);
-      if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
-
-      final values = ExercisesCompanion(
-        name: Value(json['name'] as String),
-        category: Value(json['category'] as String?),
-        equipment: Value(json['equipment'] as String?),
-      );
-      if (existingClientId != null) {
-        await (_db.update(_db.exercises)..where((t) => t.clientId.equals(existingClientId)))
-            .write(values);
-      } else {
-        await _db.into(_db.exercises).insert(
-              values.copyWith(clientId: Value(newClientId()), serverId: Value(serverId)),
-            );
-      }
+      await _upsertExercise(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
     }
     await _deleteMissing('exercises', seen);
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('exercises', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullExercisesDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/exercises',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteExerciseTombstone(json['id'] as int);
+      } else {
+        await _upsertExercise(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('exercises', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _upsertExercise(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('exercises', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final values = ExercisesCompanion(
+      name: Value(json['name'] as String),
+      category: Value(json['category'] as String?),
+      equipment: Value(json['equipment'] as String?),
+    );
+    if (existingClientId != null) {
+      await (_db.update(_db.exercises)..where((t) => t.clientId.equals(existingClientId)))
+          .write(values);
+    } else {
+      await _db.into(_db.exercises).insert(
+            values.copyWith(clientId: Value(newClientId()), serverId: Value(serverId)),
+          );
+    }
+  }
+
+  /// Mirrors [_deleteFoodTombstone]: exercises are shared/referenced (by
+  /// workout templates and sessions) the same way foods are, so a tombstoned
+  /// exercise is deleted locally the same way — dangling references left in
+  /// local template/session child rows are a pre-existing gap (see
+  /// docs/16-delta-sync-rollout.md §1), not something this pull introduces.
+  Future<void> _deleteExerciseTombstone(int serverId) async {
+    final clientId = await _localClientId('exercises', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await (_db.delete(_db.exercises)..where((t) => t.clientId.equals(clientId))).go();
   }
 
   Future<void> _pullWaterSources() async {
@@ -260,91 +311,229 @@ class PullEngine {
   }
 
   Future<void> _pullWeightEntries() async {
+    final cursor = await _getSyncCursor('weight_entries');
+    if (cursor == null) {
+      await _pullWeightEntriesFull();
+    } else {
+      await _pullWeightEntriesDelta(cursor);
+    }
+  }
+
+  Future<void> _pullWeightEntriesFull() async {
     final items = await _getList('/weights');
     final seen = <int>{};
+    DateTime? maxUpdatedAt;
     for (final json in items) {
       final serverId = json['id'] as int;
       seen.add(serverId);
-      final existingClientId = await _localClientId('weight_entries', serverId);
-      if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
-
-      final date = DateTime.parse(json['date'] as String);
-      final weight = (json['weight'] as num).toDouble();
-      if (existingClientId != null) {
-        // recordedAt is local-only metadata (when this device first saw the
-        // row) — left untouched on update.
-        await (_db.update(_db.weightEntries)..where((t) => t.clientId.equals(existingClientId)))
-            .write(WeightEntriesCompanion(date: Value(date), weight: Value(weight)));
-      } else {
-        await _db.into(_db.weightEntries).insert(WeightEntriesCompanion.insert(
-              clientId: newClientId(),
-              serverId: Value(serverId),
-              date: date,
-              weight: weight,
-              recordedAt: DateTime.now(),
-            ));
-      }
+      await _upsertWeightEntry(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
     }
     await _deleteMissing('weight_entries', seen);
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('weight_entries', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullWeightEntriesDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/weights',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteWeightEntryTombstone(json['id'] as int);
+      } else {
+        await _upsertWeightEntry(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('weight_entries', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _upsertWeightEntry(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('weight_entries', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final date = DateTime.parse(json['date'] as String);
+    final weight = (json['weight'] as num).toDouble();
+    if (existingClientId != null) {
+      // recordedAt is local-only metadata (when this device first saw the
+      // row) — left untouched on update.
+      await (_db.update(_db.weightEntries)..where((t) => t.clientId.equals(existingClientId)))
+          .write(WeightEntriesCompanion(date: Value(date), weight: Value(weight)));
+    } else {
+      await _db.into(_db.weightEntries).insert(WeightEntriesCompanion.insert(
+            clientId: newClientId(),
+            serverId: Value(serverId),
+            date: date,
+            weight: weight,
+            recordedAt: DateTime.now(),
+          ));
+    }
+  }
+
+  Future<void> _deleteWeightEntryTombstone(int serverId) async {
+    final clientId = await _localClientId('weight_entries', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await (_db.delete(_db.weightEntries)..where((t) => t.clientId.equals(clientId))).go();
   }
 
   Future<void> _pullDailySteps() async {
+    final cursor = await _getSyncCursor('daily_step_counts');
+    if (cursor == null) {
+      await _pullDailyStepsFull();
+    } else {
+      await _pullDailyStepsDelta(cursor);
+    }
+  }
+
+  Future<void> _pullDailyStepsFull() async {
     final items = await _getList('/steps');
     final seen = <int>{};
+    DateTime? maxUpdatedAt;
     for (final json in items) {
       final serverId = json['id'] as int;
       seen.add(serverId);
-      final existingClientId = await _localClientId('daily_step_counts', serverId);
-      if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
-
-      final date = DateTime.parse(json['date'] as String);
-      final steps = (json['steps'] as num).toInt();
-      if (existingClientId != null) {
-        await (_db.update(_db.dailyStepCounts)
-              ..where((t) => t.clientId.equals(existingClientId)))
-            .write(DailyStepCountsCompanion(
-          date: Value(date),
-          steps: Value(steps),
-        ));
-      } else {
-        await _db.into(_db.dailyStepCounts).insert(DailyStepCountsCompanion.insert(
-              clientId: newClientId(),
-              serverId: Value(serverId),
-              date: date,
-              steps: steps,
-            ));
-      }
+      await _upsertDailyStepCount(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
     }
     await _deleteMissing('daily_step_counts', seen);
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('daily_step_counts', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullDailyStepsDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/steps',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteDailyStepCountTombstone(json['id'] as int);
+      } else {
+        await _upsertDailyStepCount(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('daily_step_counts', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _upsertDailyStepCount(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('daily_step_counts', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final date = DateTime.parse(json['date'] as String);
+    final steps = (json['steps'] as num).toInt();
+    if (existingClientId != null) {
+      await (_db.update(_db.dailyStepCounts)
+            ..where((t) => t.clientId.equals(existingClientId)))
+          .write(DailyStepCountsCompanion(
+        date: Value(date),
+        steps: Value(steps),
+      ));
+    } else {
+      await _db.into(_db.dailyStepCounts).insert(DailyStepCountsCompanion.insert(
+            clientId: newClientId(),
+            serverId: Value(serverId),
+            date: date,
+            steps: steps,
+          ));
+    }
+  }
+
+  Future<void> _deleteDailyStepCountTombstone(int serverId) async {
+    final clientId = await _localClientId('daily_step_counts', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await (_db.delete(_db.dailyStepCounts)..where((t) => t.clientId.equals(clientId))).go();
   }
 
   Future<void> _pullWaterEntries() async {
+    final cursor = await _getSyncCursor('water_entries');
+    if (cursor == null) {
+      await _pullWaterEntriesFull();
+    } else {
+      await _pullWaterEntriesDelta(cursor);
+    }
+  }
+
+  Future<void> _pullWaterEntriesFull() async {
     final items = await _getList('/water-entries');
     final seen = <int>{};
+    DateTime? maxUpdatedAt;
     for (final json in items) {
       final serverId = json['id'] as int;
       seen.add(serverId);
-      final existingClientId = await _localClientId('water_entries', serverId);
-      if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
-
-      final sourceServerId = json['sourceId'] as int?;
-      final sourceClientId =
-          sourceServerId == null ? null : await _localClientId('water_sources', sourceServerId);
-      final values = WaterEntriesCompanion(
-        sourceClientId: Value(sourceClientId),
-        volumeLiters: Value((json['volumeLiters'] as num).toDouble()),
-        consumedAt: Value(DateTime.parse(json['consumedAt'] as String)),
-      );
-      if (existingClientId != null) {
-        await (_db.update(_db.waterEntries)..where((t) => t.clientId.equals(existingClientId)))
-            .write(values);
-      } else {
-        await _db.into(_db.waterEntries).insert(
-              values.copyWith(clientId: Value(newClientId()), serverId: Value(serverId)),
-            );
-      }
+      await _upsertWaterEntry(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
     }
     await _deleteMissing('water_entries', seen);
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('water_entries', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullWaterEntriesDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/water-entries',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteWaterEntryTombstone(json['id'] as int);
+      } else {
+        await _upsertWaterEntry(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('water_entries', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _upsertWaterEntry(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('water_entries', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final sourceServerId = json['sourceId'] as int?;
+    final sourceClientId =
+        sourceServerId == null ? null : await _localClientId('water_sources', sourceServerId);
+    final values = WaterEntriesCompanion(
+      sourceClientId: Value(sourceClientId),
+      volumeLiters: Value((json['volumeLiters'] as num).toDouble()),
+      consumedAt: Value(DateTime.parse(json['consumedAt'] as String)),
+    );
+    if (existingClientId != null) {
+      await (_db.update(_db.waterEntries)..where((t) => t.clientId.equals(existingClientId)))
+          .write(values);
+    } else {
+      await _db.into(_db.waterEntries).insert(
+            values.copyWith(clientId: Value(newClientId()), serverId: Value(serverId)),
+          );
+    }
+  }
+
+  Future<void> _deleteWaterEntryTombstone(int serverId) async {
+    final clientId = await _localClientId('water_entries', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await (_db.delete(_db.waterEntries)..where((t) => t.clientId.equals(clientId))).go();
   }
 
   Future<void> _pullSettings() async {
@@ -371,51 +560,23 @@ class PullEngine {
   }
 
   Future<void> _pullWorkoutTemplates() async {
+    final cursor = await _getSyncCursor('workout_templates');
+    if (cursor == null) {
+      await _pullWorkoutTemplatesFull();
+    } else {
+      await _pullWorkoutTemplatesDelta(cursor);
+    }
+  }
+
+  Future<void> _pullWorkoutTemplatesFull() async {
     final items = await _getList('/workout-templates');
     final seen = <int>{};
+    DateTime? maxUpdatedAt;
     for (final json in items) {
       final serverId = json['id'] as int;
       seen.add(serverId);
-      final existingClientId = await _localClientId('workout_templates', serverId);
-      if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
-
-      final clientId = existingClientId ?? newClientId();
-      final values = WorkoutTemplatesCompanion(name: Value(json['name'] as String));
-      // BE now returns structured exercises: [{exerciseId, targetSets}, ...]
-      final entriesJson =
-          (json['exercises'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
-      // Transacted so a crash partway through can't leave this template's
-      // row updated but its exercise links deleted-and-not-reinserted.
-      await _db.transaction(() async {
-        if (existingClientId != null) {
-          await (_db.update(_db.workoutTemplates)..where((t) => t.clientId.equals(clientId)))
-              .write(values);
-        } else {
-          await _db.into(_db.workoutTemplates).insert(
-                values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
-              );
-        }
-
-        await (_db.delete(_db.workoutTemplateExercises)
-              ..where((t) => t.templateClientId.equals(clientId)))
-            .go();
-        for (var i = 0; i < entriesJson.length; i++) {
-          final entry = entriesJson[i];
-          final exerciseServerId = entry['exerciseId'] as int;
-          final exerciseClientId = await _localClientId('exercises', exerciseServerId);
-          if (exerciseClientId == null) continue; // dangling ref — exercise not pulled yet
-          final targetSets = entry['targetSets'] as int?;
-          await _db.into(_db.workoutTemplateExercises).insert(
-                WorkoutTemplateExercisesCompanion.insert(
-                  clientId: newClientId(),
-                  templateClientId: clientId,
-                  exerciseClientId: exerciseClientId,
-                  targetSets: Value(targetSets),
-                  sortOrder: Value(i),
-                ),
-              );
-        }
-      });
+      await _upsertWorkoutTemplate(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
     }
     await _deleteMissing(
       'workout_templates',
@@ -424,82 +585,112 @@ class PullEngine {
             ..where((t) => t.templateClientId.equals(clientId)))
           .go(),
     );
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('workout_templates', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullWorkoutTemplatesDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/workout-templates',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteWorkoutTemplateTombstone(json['id'] as int);
+      } else {
+        await _upsertWorkoutTemplate(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('workout_templates', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  /// Upserts one template row and unconditionally replaces all of its local
+  /// exercise links — called from both the full pull (every row, every time)
+  /// and the delta pull (every upserted row), per
+  /// docs/16-delta-sync-rollout.md §2.3: exercise links are never
+  /// independently delta-synced, so any edit to the template — including an
+  /// exercise-only edit, since that bumps the template's own `updatedAt` —
+  /// must bring a fresh full set of children.
+  Future<void> _upsertWorkoutTemplate(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('workout_templates', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final clientId = existingClientId ?? newClientId();
+    final values = WorkoutTemplatesCompanion(name: Value(json['name'] as String));
+    // BE returns structured exercises: [{exerciseId, targetSets}, ...]
+    final entriesJson =
+        (json['exercises'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+    // Transacted so a crash partway through can't leave this template's
+    // row updated but its exercise links deleted-and-not-reinserted.
+    await _db.transaction(() async {
+      if (existingClientId != null) {
+        await (_db.update(_db.workoutTemplates)..where((t) => t.clientId.equals(clientId)))
+            .write(values);
+      } else {
+        await _db.into(_db.workoutTemplates).insert(
+              values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
+            );
+      }
+
+      await (_db.delete(_db.workoutTemplateExercises)
+            ..where((t) => t.templateClientId.equals(clientId)))
+          .go();
+      for (var i = 0; i < entriesJson.length; i++) {
+        final entry = entriesJson[i];
+        final exerciseServerId = entry['exerciseId'] as int;
+        final exerciseClientId = await _localClientId('exercises', exerciseServerId);
+        if (exerciseClientId == null) continue; // dangling ref — exercise not pulled yet
+        final targetSets = entry['targetSets'] as int?;
+        await _db.into(_db.workoutTemplateExercises).insert(
+              WorkoutTemplateExercisesCompanion.insert(
+                clientId: newClientId(),
+                templateClientId: clientId,
+                exerciseClientId: exerciseClientId,
+                targetSets: Value(targetSets),
+                sortOrder: Value(i),
+              ),
+            );
+      }
+    });
+  }
+
+  Future<void> _deleteWorkoutTemplateTombstone(int serverId) async {
+    final clientId = await _localClientId('workout_templates', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await _db.transaction(() async {
+      await (_db.delete(_db.workoutTemplateExercises)
+            ..where((t) => t.templateClientId.equals(clientId)))
+          .go();
+      await (_db.delete(_db.workoutTemplates)..where((t) => t.clientId.equals(clientId))).go();
+    });
   }
 
   Future<void> _pullWorkoutSessions() async {
+    final cursor = await _getSyncCursor('workout_sessions');
+    if (cursor == null) {
+      await _pullWorkoutSessionsFull();
+    } else {
+      await _pullWorkoutSessionsDelta(cursor);
+    }
+  }
+
+  Future<void> _pullWorkoutSessionsFull() async {
     final items = await _getList('/workout-sessions');
     final seen = <int>{};
+    DateTime? maxUpdatedAt;
     for (final json in items) {
       final serverId = json['id'] as int;
       seen.add(serverId);
-      final existingClientId = await _localClientId('workout_sessions', serverId);
-      if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
-
-      final clientId = existingClientId ?? newClientId();
-      final finishedRaw = json['finishedAt'] as String?;
-      final templateServerId = json['templateId'] as int?;
-      final templateClientId = templateServerId != null
-          ? await _localClientId('workout_templates', templateServerId)
-          : null;
-      final values = WorkoutSessionsCompanion(
-        startedAt: Value(DateTime.parse(json['startedAt'] as String)),
-        finishedAt: Value(finishedRaw != null ? DateTime.parse(finishedRaw) : null),
-        activeCalories: Value((json['activeCalories'] as num?)?.toDouble()),
-        averageHeartRate: Value((json['averageHeartRate'] as num?)?.toDouble()),
-        healthWorkoutId: Value(json['healthWorkoutId'] as String?),
-        templateClientId: Value(templateClientId),
-        templateName: Value(json['templateName'] as String?),
-      );
-      final plannedExerciseIds = await _mapServerIds(
-        'exercises',
-        ((json['exercises'] as List<dynamic>? ?? const []))
-            .map((e) => (e as Map<String, dynamic>)['exerciseId'] as int)
-            .toList(),
-      );
-      final setsJson = (json['sets'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
-      // Transacted so a crash partway through can't leave this session's
-      // row updated but its exercise links / sets deleted-and-not-reinserted.
-      await _db.transaction(() async {
-        if (existingClientId != null) {
-          await (_db.update(_db.workoutSessions)..where((t) => t.clientId.equals(clientId)))
-              .write(values);
-        } else {
-          await _db.into(_db.workoutSessions).insert(
-                values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
-              );
-        }
-
-        await (_db.delete(_db.workoutSessionExercises)
-              ..where((t) => t.sessionClientId.equals(clientId)))
-            .go();
-        for (final exerciseClientId in plannedExerciseIds) {
-          await _db.into(_db.workoutSessionExercises).insert(
-                WorkoutSessionExercisesCompanion.insert(
-                  clientId: newClientId(),
-                  sessionClientId: clientId,
-                  exerciseClientId: exerciseClientId,
-                ),
-              );
-        }
-
-        await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId)))
-            .go();
-        for (final setJson in setsJson) {
-          final exerciseClientId =
-              await _localClientId('exercises', setJson['exerciseId'] as int);
-          if (exerciseClientId == null) continue; // dangling ref — exercise master row not pulled
-          await _db.into(_db.exerciseSets).insert(
-                ExerciseSetsCompanion.insert(
-                  clientId: newClientId(),
-                  sessionClientId: clientId,
-                  exerciseClientId: exerciseClientId,
-                  reps: (setJson['reps'] as num).toInt(),
-                  weight: (setJson['weight'] as num).toDouble(),
-                  performedAt: DateTime.parse(setJson['performedAt'] as String),
-                ),
-              );
-        }
-      });
+      await _upsertWorkoutSession(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
     }
     await _deleteMissing(
       'workout_sessions',
@@ -512,54 +703,141 @@ class PullEngine {
             .go();
       },
     );
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('workout_sessions', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullWorkoutSessionsDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/workout-sessions',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteWorkoutSessionTombstone(json['id'] as int);
+      } else {
+        await _upsertWorkoutSession(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('workout_sessions', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  /// Upserts one session row and unconditionally replaces both of its local
+  /// child sets (planned exercises + logged sets) — called from both the
+  /// full pull and the delta pull's upsert branch, per
+  /// docs/16-delta-sync-rollout.md §2.3: neither child table is independently
+  /// delta-synced, so any edit to the session — including a sets-only edit,
+  /// since that bumps the session's own `updatedAt` — must bring a fresh full
+  /// set of children.
+  Future<void> _upsertWorkoutSession(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('workout_sessions', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final clientId = existingClientId ?? newClientId();
+    final finishedRaw = json['finishedAt'] as String?;
+    final templateServerId = json['templateId'] as int?;
+    final templateClientId = templateServerId != null
+        ? await _localClientId('workout_templates', templateServerId)
+        : null;
+    final values = WorkoutSessionsCompanion(
+      startedAt: Value(DateTime.parse(json['startedAt'] as String)),
+      finishedAt: Value(finishedRaw != null ? DateTime.parse(finishedRaw) : null),
+      activeCalories: Value((json['activeCalories'] as num?)?.toDouble()),
+      averageHeartRate: Value((json['averageHeartRate'] as num?)?.toDouble()),
+      healthWorkoutId: Value(json['healthWorkoutId'] as String?),
+      templateClientId: Value(templateClientId),
+      templateName: Value(json['templateName'] as String?),
+    );
+    final plannedExerciseIds = await _mapServerIds(
+      'exercises',
+      ((json['exercises'] as List<dynamic>? ?? const []))
+          .map((e) => (e as Map<String, dynamic>)['exerciseId'] as int)
+          .toList(),
+    );
+    final setsJson = (json['sets'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+    // Transacted so a crash partway through can't leave this session's
+    // row updated but its exercise links / sets deleted-and-not-reinserted.
+    await _db.transaction(() async {
+      if (existingClientId != null) {
+        await (_db.update(_db.workoutSessions)..where((t) => t.clientId.equals(clientId)))
+            .write(values);
+      } else {
+        await _db.into(_db.workoutSessions).insert(
+              values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
+            );
+      }
+
+      await (_db.delete(_db.workoutSessionExercises)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .go();
+      for (final exerciseClientId in plannedExerciseIds) {
+        await _db.into(_db.workoutSessionExercises).insert(
+              WorkoutSessionExercisesCompanion.insert(
+                clientId: newClientId(),
+                sessionClientId: clientId,
+                exerciseClientId: exerciseClientId,
+              ),
+            );
+      }
+
+      await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId)))
+          .go();
+      for (final setJson in setsJson) {
+        final exerciseClientId =
+            await _localClientId('exercises', setJson['exerciseId'] as int);
+        if (exerciseClientId == null) continue; // dangling ref — exercise master row not pulled
+        await _db.into(_db.exerciseSets).insert(
+              ExerciseSetsCompanion.insert(
+                clientId: newClientId(),
+                sessionClientId: clientId,
+                exerciseClientId: exerciseClientId,
+                reps: (setJson['reps'] as num).toInt(),
+                weight: (setJson['weight'] as num).toDouble(),
+                performedAt: DateTime.parse(setJson['performedAt'] as String),
+              ),
+            );
+      }
+    });
+  }
+
+  Future<void> _deleteWorkoutSessionTombstone(int serverId) async {
+    final clientId = await _localClientId('workout_sessions', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await _db.transaction(() async {
+      await (_db.delete(_db.workoutSessionExercises)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .go();
+      await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId))).go();
+      await (_db.delete(_db.workoutSessions)..where((t) => t.clientId.equals(clientId))).go();
+    });
   }
 
   Future<void> _pullRecipes() async {
+    final cursor = await _getSyncCursor('recipes');
+    if (cursor == null) {
+      await _pullRecipesFull();
+    } else {
+      await _pullRecipesDelta(cursor);
+    }
+  }
+
+  Future<void> _pullRecipesFull() async {
     final items = await _getList('/recipes');
     final seen = <int>{};
+    DateTime? maxUpdatedAt;
     for (final json in items) {
       final serverId = json['id'] as int;
       seen.add(serverId);
-      final existingClientId = await _localClientId('recipes', serverId);
-      if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
-
-      final clientId = existingClientId ?? newClientId();
-      final values = RecipesCompanion(
-        name: Value(json['name'] as String),
-        description: Value(json['description'] as String?),
-        favorite: Value(json['favorite'] as bool? ?? false),
-        servings: Value(json['servings'] as int? ?? 1),
-      );
-      final ingredientsJson =
-          (json['ingredients'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
-      // Transacted so a crash partway through (e.g. a malformed later
-      // ingredient) can't leave this recipe's row updated but its
-      // ingredients deleted-and-not-reinserted.
-      await _db.transaction(() async {
-        if (existingClientId != null) {
-          await (_db.update(_db.recipes)..where((t) => t.clientId.equals(clientId)))
-              .write(values);
-        } else {
-          await _db.into(_db.recipes).insert(
-                values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
-              );
-        }
-
-        await (_db.delete(_db.recipeIngredients)..where((t) => t.recipeClientId.equals(clientId)))
-            .go();
-        for (final ingredient in ingredientsJson) {
-          final foodClientId = await _localClientId('foods', ingredient['foodId'] as int);
-          if (foodClientId == null) continue; // dangling ref — food master row not pulled
-          await _db.into(_db.recipeIngredients).insert(
-                RecipeIngredientsCompanion.insert(
-                  clientId: newClientId(),
-                  recipeClientId: clientId,
-                  foodClientId: foodClientId,
-                  quantityInGrams: (ingredient['quantityInGrams'] as num).toDouble(),
-                ),
-              );
-        }
-      });
+      await _upsertRecipe(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
     }
     await _deleteMissing(
       'recipes',
@@ -568,59 +846,110 @@ class PullEngine {
           (_db.delete(_db.recipeIngredients)..where((t) => t.recipeClientId.equals(clientId)))
               .go(),
     );
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('recipes', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullRecipesDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/recipes',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteRecipeTombstone(json['id'] as int);
+      } else {
+        await _upsertRecipe(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('recipes', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  /// Upserts one recipe row and unconditionally replaces all of its local
+  /// ingredients — called from both the full pull and the delta pull's
+  /// upsert branch, per docs/16-delta-sync-rollout.md §2.3: ingredients are
+  /// never independently delta-synced, so any edit to the recipe — including
+  /// an ingredient-only edit, since that bumps the recipe's own `updatedAt` —
+  /// must bring a fresh full set of children.
+  Future<void> _upsertRecipe(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('recipes', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final clientId = existingClientId ?? newClientId();
+    final values = RecipesCompanion(
+      name: Value(json['name'] as String),
+      description: Value(json['description'] as String?),
+      favorite: Value(json['favorite'] as bool? ?? false),
+      servings: Value(json['servings'] as int? ?? 1),
+    );
+    final ingredientsJson =
+        (json['ingredients'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+    // Transacted so a crash partway through (e.g. a malformed later
+    // ingredient) can't leave this recipe's row updated but its
+    // ingredients deleted-and-not-reinserted.
+    await _db.transaction(() async {
+      if (existingClientId != null) {
+        await (_db.update(_db.recipes)..where((t) => t.clientId.equals(clientId)))
+            .write(values);
+      } else {
+        await _db.into(_db.recipes).insert(
+              values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
+            );
+      }
+
+      await (_db.delete(_db.recipeIngredients)..where((t) => t.recipeClientId.equals(clientId)))
+          .go();
+      for (final ingredient in ingredientsJson) {
+        final foodClientId = await _localClientId('foods', ingredient['foodId'] as int);
+        if (foodClientId == null) continue; // dangling ref — food master row not pulled
+        await _db.into(_db.recipeIngredients).insert(
+              RecipeIngredientsCompanion.insert(
+                clientId: newClientId(),
+                recipeClientId: clientId,
+                foodClientId: foodClientId,
+                quantityInGrams: (ingredient['quantityInGrams'] as num).toDouble(),
+              ),
+            );
+      }
+    });
+  }
+
+  Future<void> _deleteRecipeTombstone(int serverId) async {
+    final clientId = await _localClientId('recipes', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await _db.transaction(() async {
+      await (_db.delete(_db.recipeIngredients)..where((t) => t.recipeClientId.equals(clientId)))
+          .go();
+      await (_db.delete(_db.recipes)..where((t) => t.clientId.equals(clientId))).go();
+    });
   }
 
   Future<void> _pullMeals() async {
+    final cursor = await _getSyncCursor('meals');
+    if (cursor == null) {
+      await _pullMealsFull();
+    } else {
+      await _pullMealsDelta(cursor);
+    }
+  }
+
+  Future<void> _pullMealsFull() async {
     final items = await _getList('/meals');
     final seen = <int>{};
+    DateTime? maxUpdatedAt;
     for (final json in items) {
       final serverId = json['id'] as int;
       seen.add(serverId);
-      final existingClientId = await _localClientId('meals', serverId);
-      if (existingClientId != null && await _hasPendingOperation(existingClientId)) continue;
-
-      final clientId = existingClientId ?? newClientId();
-      final values = MealsCompanion(
-        mealDateTime: Value(DateTime.parse(json['dateTime'] as String)),
-        mealType: Value(json['mealType'] as String),
-        name: Value(json['name'] as String?),
-      );
-      final entriesJson =
-          (json['entries'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
-      // Transacted so a crash partway through (e.g. a malformed later
-      // entry) can't leave this meal's row updated but its entries
-      // deleted-and-not-reinserted.
-      await _db.transaction(() async {
-        if (existingClientId != null) {
-          await (_db.update(_db.meals)..where((t) => t.clientId.equals(clientId))).write(values);
-        } else {
-          await _db.into(_db.meals).insert(
-                values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
-              );
-        }
-
-        await (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
-        for (final entry in entriesJson) {
-          final foodServerId = entry['foodId'] as int;
-          var foodClientId = await _localClientId('foods', foodServerId);
-          // Hidden foods (quick-macro entries) are not returned by GET /foods,
-          // so they can be missing from the local cache. Fetch the individual
-          // food via GET /foods/{id} and store it locally so the meal entry
-          // can reference it.
-          if (foodClientId == null) {
-            foodClientId = await _fetchAndStoreFood(foodServerId);
-          }
-          if (foodClientId == null) continue; // still not found — skip entry
-          await _db.into(_db.mealEntries).insert(
-                MealEntriesCompanion.insert(
-                  clientId: newClientId(),
-                  mealClientId: clientId,
-                  foodClientId: foodClientId,
-                  quantityInGrams: (entry['quantityInGrams'] as num).toDouble(),
-                ),
-              );
-        }
-      });
+      await _upsertMeal(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
     }
     await _deleteMissing(
       'meals',
@@ -628,6 +957,94 @@ class PullEngine {
       onDelete: (clientId) =>
           (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go(),
     );
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('meals', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullMealsDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/meals',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteMealTombstone(json['id'] as int);
+      } else {
+        await _upsertMeal(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('meals', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  /// Upserts one meal row and unconditionally replaces all of its local
+  /// entries — called from both the full pull and the delta pull's upsert
+  /// branch, per docs/16-delta-sync-rollout.md §2.3: entries are never
+  /// independently delta-synced, so any edit to the meal — including an
+  /// entry-only edit (grams changed, food swapped), since that bumps the
+  /// meal's own `updatedAt` — must bring a fresh full set of entries.
+  Future<void> _upsertMeal(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('meals', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final clientId = existingClientId ?? newClientId();
+    final values = MealsCompanion(
+      mealDateTime: Value(DateTime.parse(json['dateTime'] as String)),
+      mealType: Value(json['mealType'] as String),
+      name: Value(json['name'] as String?),
+    );
+    final entriesJson =
+        (json['entries'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+    // Transacted so a crash partway through (e.g. a malformed later
+    // entry) can't leave this meal's row updated but its entries
+    // deleted-and-not-reinserted.
+    await _db.transaction(() async {
+      if (existingClientId != null) {
+        await (_db.update(_db.meals)..where((t) => t.clientId.equals(clientId))).write(values);
+      } else {
+        await _db.into(_db.meals).insert(
+              values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
+            );
+      }
+
+      await (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
+      for (final entry in entriesJson) {
+        final foodServerId = entry['foodId'] as int;
+        var foodClientId = await _localClientId('foods', foodServerId);
+        // Hidden foods (quick-macro entries) are not returned by GET /foods,
+        // so they can be missing from the local cache. Fetch the individual
+        // food via GET /foods/{id} and store it locally so the meal entry
+        // can reference it.
+        if (foodClientId == null) {
+          foodClientId = await _fetchAndStoreFood(foodServerId);
+        }
+        if (foodClientId == null) continue; // still not found — skip entry
+        await _db.into(_db.mealEntries).insert(
+              MealEntriesCompanion.insert(
+                clientId: newClientId(),
+                mealClientId: clientId,
+                foodClientId: foodClientId,
+                quantityInGrams: (entry['quantityInGrams'] as num).toDouble(),
+              ),
+            );
+      }
+    });
+  }
+
+  Future<void> _deleteMealTombstone(int serverId) async {
+    final clientId = await _localClientId('meals', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await _db.transaction(() async {
+      await (_db.delete(_db.mealEntries)..where((t) => t.mealClientId.equals(clientId))).go();
+      await (_db.delete(_db.meals)..where((t) => t.clientId.equals(clientId))).go();
+    });
   }
 
   Future<List<Map<String, dynamic>>> _getList(String basePath) async {

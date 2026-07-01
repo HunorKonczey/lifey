@@ -1,6 +1,6 @@
 package com.lifey.steps;
 
-import com.lifey.common.domain.BaseEntity;
+import com.lifey.common.domain.SyncableEntity;
 import com.lifey.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,7 +24,7 @@ import java.time.LocalDate;
                 columnNames = {"user_id", "entry_date"}
         )
 )
-public class DailyStepCount extends BaseEntity {
+public class DailyStepCount extends SyncableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)

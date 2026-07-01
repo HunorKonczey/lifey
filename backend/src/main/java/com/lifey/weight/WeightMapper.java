@@ -22,7 +22,9 @@ final class WeightMapper {
         return new WeightResponse(
                 entry.getId(),
                 entry.getDate(),
-                entry.getWeight()
+                entry.getWeight(),
+                entry.getUpdatedAt(),
+                entry.getDeletedAt()
         );
     }
 }

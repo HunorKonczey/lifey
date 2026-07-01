@@ -15,13 +15,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -119,11 +125,58 @@ class WorkoutTemplateServiceImplTest {
 
     @Test
     void delete_throwsWhenMissing() {
-        when(templateRepository.existsByIdAndUserId(99L, USER_ID)).thenReturn(false);
+        when(templateRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Workout template not found: 99");
+    }
+
+    @Test
+    void delete_setsDeletedAtInsteadOfRemovingRow() {
+        WorkoutTemplate existing = new WorkoutTemplate();
+        existing.setId(9L);
+        when(templateRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(existing));
+
+        service.delete(9L);
+
+        assertThat(existing.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    void update_exerciseLinkOnlyEditBumpsParentUpdatedAt() {
+        WorkoutTemplate existing = new WorkoutTemplate();
+        existing.setId(9L);
+        existing.setName("Push day");
+        existing.setUpdatedAt(Instant.parse("2026-06-18T08:00:00Z"));
+        when(templateRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(existing));
+        when(exerciseRepository.findById(1L)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+
+        // Same name as before — only the exercise link's target sets differ.
+        service.update(9L, new WorkoutTemplateRequest("Push day",
+                List.of(new TemplateExerciseEntry(1L, 5))));
+
+        assertThat(existing.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T08:00:00Z"));
+    }
+
+    @Test
+    void findDelta_isUserScopedAndIncludesTombstones() {
+        WorkoutTemplate deleted = new WorkoutTemplate();
+        deleted.setId(2L);
+        deleted.setDeletedAt(Instant.parse("2026-06-19T00:00:00Z"));
+
+        Instant since = Instant.parse("2026-06-17T00:00:00Z");
+        Pageable requested = PageRequest.of(0, 50);
+        Page<WorkoutTemplate> page = new PageImpl<>(List.of(deleted));
+        when(templateRepository.findByUserIdAndUpdatedAtGreaterThanEqual(eq(USER_ID), eq(since), any()))
+                .thenReturn(page);
+
+        Page<WorkoutTemplateResponse> result = service.findDelta(since, requested);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> {
+            assertThat(r.id()).isEqualTo(2L);
+            assertThat(r.deletedAt()).isEqualTo(deleted.getDeletedAt());
+        });
     }
 
     private static Exercise exercise(Long id, String name) {

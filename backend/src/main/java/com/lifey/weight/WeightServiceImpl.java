@@ -5,6 +5,10 @@ import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.UserRepository;
 import com.lifey.weight.dto.WeightRequest;
 import com.lifey.weight.dto.WeightResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,9 +33,22 @@ public class WeightServiceImpl implements WeightService {
     @Override
     @Transactional(readOnly = true)
     public List<WeightResponse> findAll() {
-        return repository.findAllByUserIdOrderByDateDescRecordedAtDesc(currentUserProvider.getUserId()).stream()
+        return repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(currentUserProvider.getUserId()).stream()
                 .map(WeightMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<WeightResponse> findDelta(Instant updatedSince, Pageable pageable) {
+        // Delta-sync feed: fixed ordering, includes tombstoned rows — see
+        // docs/16-delta-sync-rollout.md and WeightEntryRepository.findByUserIdAndUpdatedAtGreaterThanEqual.
+        Pageable deltaPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.asc("updatedAt"), Sort.Order.asc("id")));
+        return repository.findByUserIdAndUpdatedAtGreaterThanEqual(currentUserProvider.getUserId(), updatedSince, deltaPageable)
+                .map(WeightMapper::toResponse);
     }
 
     @Override
@@ -47,9 +64,8 @@ public class WeightServiceImpl implements WeightService {
     @Override
     public void delete(Long id) {
         Long userId = currentUserProvider.getUserId();
-        if (!repository.existsByIdAndUserId(id, userId)) {
-            throw new ResourceNotFoundException("Weight entry not found: " + id);
-        }
-        repository.deleteByIdAndUserId(id, userId);
+        WeightEntry entry = repository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Weight entry not found: " + id));
+        entry.setDeletedAt(Instant.now());
     }
 }

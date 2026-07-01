@@ -5,9 +5,14 @@ import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.UserRepository;
 import com.lifey.water.dto.WaterEntryRequest;
 import com.lifey.water.dto.WaterEntryResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -30,9 +35,22 @@ public class WaterEntryServiceImpl implements WaterEntryService {
     @Override
     @Transactional(readOnly = true)
     public List<WaterEntryResponse> findAll() {
-        return repository.findAllByUserIdOrderByConsumedAtDesc(currentUserProvider.getUserId()).stream()
+        return repository.findAllByUserIdAndDeletedAtIsNullOrderByConsumedAtDesc(currentUserProvider.getUserId()).stream()
                 .map(WaterEntryMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<WaterEntryResponse> findDelta(Instant updatedSince, Pageable pageable) {
+        // Delta-sync feed: fixed ordering, includes tombstoned rows — see
+        // docs/16-delta-sync-rollout.md and WaterEntryRepository.findByUserIdAndUpdatedAtGreaterThanEqual.
+        Pageable deltaPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.asc("updatedAt"), Sort.Order.asc("id")));
+        return repository.findByUserIdAndUpdatedAtGreaterThanEqual(currentUserProvider.getUserId(), updatedSince, deltaPageable)
+                .map(WaterEntryMapper::toResponse);
     }
 
     @Override
@@ -55,9 +73,8 @@ public class WaterEntryServiceImpl implements WaterEntryService {
     @Override
     public void delete(Long id) {
         Long userId = currentUserProvider.getUserId();
-        if (!repository.existsByIdAndUserId(id, userId)) {
-            throw new ResourceNotFoundException("Water entry not found: " + id);
-        }
-        repository.deleteByIdAndUserId(id, userId);
+        WaterEntry entry = repository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Water entry not found: " + id));
+        entry.setDeletedAt(Instant.now());
     }
 }

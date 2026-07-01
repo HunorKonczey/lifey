@@ -8,9 +8,14 @@ import com.lifey.nutrition.meal.dto.MealEntryRequest;
 import com.lifey.nutrition.meal.dto.MealRequest;
 import com.lifey.nutrition.meal.dto.MealResponse;
 import com.lifey.user.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -33,9 +38,22 @@ public class MealServiceImpl implements MealService {
     @Override
     @Transactional(readOnly = true)
     public List<MealResponse> findAll() {
-        return mealRepository.findAllByUserIdOrderByDateTimeDesc(currentUserProvider.getUserId()).stream()
+        return mealRepository.findAllByUserIdAndDeletedAtIsNullOrderByDateTimeDesc(currentUserProvider.getUserId()).stream()
                 .map(MealMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<MealResponse> findDelta(Instant updatedSince, Pageable pageable) {
+        // Delta-sync feed: fixed ordering, includes tombstoned rows — see
+        // docs/16-delta-sync-rollout.md and MealRepository.findByUserIdAndUpdatedAtGreaterThanEqual.
+        Pageable deltaPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.asc("updatedAt"), Sort.Order.asc("id")));
+        return mealRepository.findByUserIdAndUpdatedAtGreaterThanEqual(currentUserProvider.getUserId(), updatedSince, deltaPageable)
+                .map(MealMapper::toResponse);
     }
 
     @Override
@@ -56,16 +74,18 @@ public class MealServiceImpl implements MealService {
         meal.setMealType(request.mealType());
         meal.setName(request.name());
         replaceEntries(meal, request.entries());
+        // Entries are child rows with no delta feed of their own (docs/16 §2.3) — an
+        // entry-only edit (e.g. grams changed, food swapped, dateTime/mealType/name
+        // unchanged) would leave Meal's own scalar fields untouched, so Hibernate's
+        // dirty-checking could skip @PreUpdate. Bump explicitly so it always fires.
+        meal.setUpdatedAt(Instant.now());
         return MealMapper.toResponse(meal);
     }
 
     @Override
     public void delete(Long id) {
-        Long userId = currentUserProvider.getUserId();
-        if (!mealRepository.existsByIdAndUserId(id, userId)) {
-            throw new ResourceNotFoundException("Meal not found: " + id);
-        }
-        mealRepository.deleteByIdAndUserId(id, userId);
+        Meal meal = getOrThrow(id);
+        meal.setDeletedAt(Instant.now());
     }
 
     private Meal getOrThrow(Long id) {

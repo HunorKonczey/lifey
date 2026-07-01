@@ -6,13 +6,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,7 +38,8 @@ class ExerciseControllerTest {
     @Test
     void list_returnsOk() throws Exception {
         when(exerciseService.findAll())
-                .thenReturn(List.of(new ExerciseResponse(1L, "Bench Press", "CHEST", "BARBELL")));
+                .thenReturn(List.of(new ExerciseResponse(1L, "Bench Press", "CHEST", "BARBELL",
+                        Instant.parse("2026-06-18T08:00:00Z"), null)));
 
         mockMvc.perform(get("/api/v1/exercises"))
                 .andExpect(status().isOk())
@@ -47,7 +51,8 @@ class ExerciseControllerTest {
     @Test
     void list_nullCategoryAndEquipmentReturnsOk() throws Exception {
         when(exerciseService.findAll())
-                .thenReturn(List.of(new ExerciseResponse(2L, "Plank", null, null)));
+                .thenReturn(List.of(new ExerciseResponse(2L, "Plank", null, null,
+                        Instant.parse("2026-06-18T08:00:00Z"), null)));
 
         mockMvc.perform(get("/api/v1/exercises"))
                 .andExpect(status().isOk())
@@ -57,7 +62,8 @@ class ExerciseControllerTest {
 
     @Test
     void create_returnsCreated() throws Exception {
-        when(exerciseService.create(any())).thenReturn(new ExerciseResponse(9L, "Lateral Raise", "SHOULDERS", null));
+        when(exerciseService.create(any())).thenReturn(new ExerciseResponse(9L, "Lateral Raise", "SHOULDERS", null,
+                Instant.parse("2026-06-18T08:00:00Z"), null));
 
         mockMvc.perform(post("/api/v1/exercises").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Lateral Raise\",\"category\":\"SHOULDERS\"}"))
@@ -82,6 +88,19 @@ class ExerciseControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(exerciseService, never()).create(any());
+    }
+
+    @Test
+    void delta_returnsPageIncludingTombstones() throws Exception {
+        Instant since = Instant.parse("2026-06-17T00:00:00Z");
+        ExerciseResponse tombstoned = new ExerciseResponse(2L, "Deleted exercise", null, null,
+                Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"));
+        when(exerciseService.findDelta(eq(since), any())).thenReturn(new PageImpl<>(List.of(tombstoned)));
+
+        mockMvc.perform(get("/api/v1/exercises").param("updatedSince", since.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(2))
+                .andExpect(jsonPath("$.content[0].deletedAt").exists());
     }
 
     @Test

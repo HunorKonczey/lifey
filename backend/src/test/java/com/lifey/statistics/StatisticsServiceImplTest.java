@@ -103,15 +103,15 @@ class StatisticsServiceImplTest {
         when(mealRepository.sumProteinSince(eq(USER_ID), any())).thenReturn(protein);
         when(mealRepository.sumCarbsSince(eq(USER_ID), any())).thenReturn(30.0);
         when(mealRepository.sumFatSince(eq(USER_ID), any())).thenReturn(10.0);
-        when(workoutSessionRepository.countByUserIdAndStartedAtGreaterThanEqual(eq(USER_ID), any(Instant.class)))
+        when(workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(eq(USER_ID), any(Instant.class)))
                 .thenReturn(workouts);
         if (weight == null) {
-            when(weightEntryRepository.findFirstByUserIdOrderByDateDescRecordedAtDesc(USER_ID))
+            when(weightEntryRepository.findFirstByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(USER_ID))
                     .thenReturn(Optional.empty());
         } else {
             WeightEntry e = new WeightEntry();
             e.setWeight(weight);
-            when(weightEntryRepository.findFirstByUserIdOrderByDateDescRecordedAtDesc(USER_ID))
+            when(weightEntryRepository.findFirstByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(USER_ID))
                     .thenReturn(Optional.of(e));
         }
         lenient().when(waterEntryRepository.sumVolumeLitersSince(eq(USER_ID), any(Instant.class)))

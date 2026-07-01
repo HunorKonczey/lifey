@@ -1,5 +1,6 @@
 package com.lifey.nutrition.recipe.dto;
 
+import java.time.Instant;
 import java.util.List;
 
 public record RecipeResponse(
@@ -8,6 +9,8 @@ public record RecipeResponse(
         String description,
         boolean favorite,
         int servings,
-        List<RecipeIngredientResponse> ingredients
+        List<RecipeIngredientResponse> ingredients,
+        Instant updatedAt,
+        Instant deletedAt
 ) {
 }

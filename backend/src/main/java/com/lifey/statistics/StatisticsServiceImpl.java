@@ -78,8 +78,8 @@ public class StatisticsServiceImpl implements StatisticsService {
         double totalProtein = mealRepository.sumProteinSince(userId, fromInstant);
         double totalCarbs = mealRepository.sumCarbsSince(userId, fromInstant);
         double totalFat = mealRepository.sumFatSince(userId, fromInstant);
-        long workoutCount = workoutSessionRepository.countByUserIdAndStartedAtGreaterThanEqual(userId, fromInstant);
-        Double latestWeight = weightEntryRepository.findFirstByUserIdOrderByDateDescRecordedAtDesc(userId)
+        long workoutCount = workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(userId, fromInstant);
+        Double latestWeight = weightEntryRepository.findFirstByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(userId)
                 .map(WeightEntry::getWeight)
                 .orElse(null);
         double totalWater = waterEntryRepository.sumVolumeLitersSince(userId, fromInstant);

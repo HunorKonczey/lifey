@@ -8,9 +8,14 @@ import com.lifey.nutrition.recipe.dto.RecipeIngredientRequest;
 import com.lifey.nutrition.recipe.dto.RecipeRequest;
 import com.lifey.nutrition.recipe.dto.RecipeResponse;
 import com.lifey.user.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -33,9 +38,22 @@ public class RecipeServiceImpl implements RecipeService {
     @Override
     @Transactional(readOnly = true)
     public List<RecipeResponse> findAll() {
-        return recipeRepository.findAllByUserIdOrderByFavoriteDescNameAsc(currentUserProvider.getUserId()).stream()
+        return recipeRepository.findAllByUserIdAndDeletedAtIsNullOrderByFavoriteDescNameAsc(currentUserProvider.getUserId()).stream()
                 .map(RecipeMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RecipeResponse> findDelta(Instant updatedSince, Pageable pageable) {
+        // Delta-sync feed: fixed ordering, includes tombstoned rows — see
+        // docs/16-delta-sync-rollout.md and RecipeRepository.findByUserIdAndUpdatedAtGreaterThanEqual.
+        Pageable deltaPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.asc("updatedAt"), Sort.Order.asc("id")));
+        return recipeRepository.findByUserIdAndUpdatedAtGreaterThanEqual(currentUserProvider.getUserId(), updatedSince, deltaPageable)
+                .map(RecipeMapper::toResponse);
     }
 
     @Override
@@ -64,16 +82,18 @@ public class RecipeServiceImpl implements RecipeService {
         recipe.setFavorite(request.favorite());
         recipe.setServings(servingsOrDefault(request));
         replaceIngredients(recipe, request.ingredients());
+        // Ingredients are child rows with no delta feed of their own (docs/16 §2.3) —
+        // an ingredient-only edit (e.g. quantity changed, food swapped, name/description
+        // unchanged) would leave Recipe's own scalar fields untouched, so Hibernate's
+        // dirty-checking could skip @PreUpdate. Bump explicitly so it always fires.
+        recipe.setUpdatedAt(Instant.now());
         return RecipeMapper.toResponse(recipe);
     }
 
     @Override
     public void delete(Long id) {
-        Long userId = currentUserProvider.getUserId();
-        if (!recipeRepository.existsByIdAndUserId(id, userId)) {
-            throw new ResourceNotFoundException("Recipe not found: " + id);
-        }
-        recipeRepository.deleteByIdAndUserId(id, userId);
+        Recipe recipe = getOrThrow(id);
+        recipe.setDeletedAt(Instant.now());
     }
 
     private static int servingsOrDefault(RecipeRequest request) {

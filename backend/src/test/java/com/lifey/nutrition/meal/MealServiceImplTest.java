@@ -15,6 +15,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.List;
@@ -23,9 +27,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -91,11 +94,61 @@ class MealServiceImplTest {
 
     @Test
     void delete_throwsWhenMissing() {
-        when(mealRepository.existsByIdAndUserId(99L, USER_ID)).thenReturn(false);
+        when(mealRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
-        verify(mealRepository, never()).deleteByIdAndUserId(any(), any());
+    }
+
+    @Test
+    void delete_setsDeletedAtInsteadOfRemovingRow() {
+        Meal meal = new Meal();
+        meal.setId(1L);
+        when(mealRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(meal));
+
+        service.delete(1L);
+
+        assertThat(meal.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    void update_entryOnlyEditBumpsParentUpdatedAt() {
+        Meal meal = new Meal();
+        meal.setId(1L);
+        meal.setDateTime(Instant.parse("2026-06-18T08:00:00Z"));
+        meal.setMealType(MealType.BREAKFAST);
+        meal.setUpdatedAt(Instant.parse("2026-06-18T08:00:00Z"));
+        when(mealRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(meal));
+        when(foodRepository.findById(2L)).thenReturn(Optional.of(food(2L, "Rice")));
+
+        // Same dateTime/mealType/name as before — only the entries differ.
+        MealRequest request = new MealRequest(
+                Instant.parse("2026-06-18T08:00:00Z"), MealType.BREAKFAST, null,
+                List.of(new MealEntryRequest(2L, 150.0)));
+
+        service.update(1L, request);
+
+        assertThat(meal.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T08:00:00Z"));
+    }
+
+    @Test
+    void findDelta_isUserScopedAndIncludesTombstones() {
+        Meal deleted = new Meal();
+        deleted.setId(2L);
+        deleted.setDeletedAt(Instant.parse("2026-06-19T00:00:00Z"));
+
+        Instant since = Instant.parse("2026-06-17T00:00:00Z");
+        Pageable requested = PageRequest.of(0, 50);
+        Page<Meal> page = new PageImpl<>(List.of(deleted));
+        when(mealRepository.findByUserIdAndUpdatedAtGreaterThanEqual(eq(USER_ID), eq(since), any()))
+                .thenReturn(page);
+
+        Page<MealResponse> result = service.findDelta(since, requested);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> {
+            assertThat(r.id()).isEqualTo(2L);
+            assertThat(r.deletedAt()).isEqualTo(deleted.getDeletedAt());
+        });
     }
 
     private static Food food(Long id, String name) {

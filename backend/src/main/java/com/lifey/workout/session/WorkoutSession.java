@@ -1,6 +1,6 @@
 package com.lifey.workout.session;
 
-import com.lifey.common.domain.BaseEntity;
+import com.lifey.common.domain.SyncableEntity;
 import com.lifey.user.User;
 import com.lifey.workout.template.WorkoutTemplate;
 import jakarta.persistence.CascadeType;
@@ -19,11 +19,19 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Only the parent WorkoutSession is delta-synced (see
+ * docs/16-delta-sync-rollout.md) — sets and planned exercises are never
+ * independently tombstoned, so any child-only edit must explicitly bump
+ * {@code updatedAt} (see WorkoutSessionServiceImpl#update, which cannot rely
+ * on Hibernate dirty-checking a session scalar field when only a child
+ * collection changed).
+ */
 @Getter
 @Setter
 @Entity
 @Table(name = "workout_sessions")
-public class WorkoutSession extends BaseEntity {
+public class WorkoutSession extends SyncableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)

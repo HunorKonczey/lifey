@@ -28,7 +28,9 @@ final class ExerciseMapper {
                 exercise.getId(),
                 exercise.getName(),
                 exercise.getCategory() != null ? exercise.getCategory().name() : null,
-                exercise.getEquipment() != null ? exercise.getEquipment().name() : null
+                exercise.getEquipment() != null ? exercise.getEquipment().name() : null,
+                exercise.getUpdatedAt(),
+                exercise.getDeletedAt()
         );
     }
 }

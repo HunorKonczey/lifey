@@ -7,6 +7,8 @@ public record WaterEntryResponse(
         Instant consumedAt,
         Double volumeLiters,
         Long sourceId,
-        String sourceName
+        String sourceName,
+        Instant updatedAt,
+        Instant deletedAt
 ) {
 }

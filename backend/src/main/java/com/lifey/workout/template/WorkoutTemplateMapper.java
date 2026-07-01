@@ -22,7 +22,9 @@ final class WorkoutTemplateMapper {
         return new WorkoutTemplateResponse(
                 template.getId(),
                 template.getName(),
-                exercises
+                exercises,
+                template.getUpdatedAt(),
+                template.getDeletedAt()
         );
     }
 }

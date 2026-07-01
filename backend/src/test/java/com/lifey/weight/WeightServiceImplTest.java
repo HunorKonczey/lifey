@@ -13,15 +13,21 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,7 +55,7 @@ class WeightServiceImplTest {
 
     @Test
     void findAll_mapsEntriesToResponses() {
-        when(repository.findAllByUserIdOrderByDateDescRecordedAtDesc(USER_ID))
+        when(repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(USER_ID))
                 .thenReturn(List.of(entry(1L, LocalDate.of(2026, 6, 18), 80.0)));
 
         List<WeightResponse> result = service.findAll();
@@ -82,20 +88,39 @@ class WeightServiceImplTest {
 
     @Test
     void delete_throwsWhenMissing() {
-        when(repository.existsByIdAndUserId(99L, USER_ID)).thenReturn(false);
+        when(repository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
-        verify(repository, never()).deleteByIdAndUserId(99L, USER_ID);
     }
 
     @Test
-    void delete_removesWhenExists() {
-        when(repository.existsByIdAndUserId(1L, USER_ID)).thenReturn(true);
+    void delete_setsDeletedAtInsteadOfRemovingRow() {
+        WeightEntry e = entry(1L, LocalDate.of(2026, 6, 18), 80.0);
+        when(repository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(e));
 
         service.delete(1L);
 
-        verify(repository).deleteByIdAndUserId(1L, USER_ID);
+        assertThat(e.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    void findDelta_isUserScopedAndIncludesTombstones() {
+        WeightEntry deleted = entry(2L, LocalDate.of(2026, 6, 18), 80.0);
+        deleted.setDeletedAt(Instant.parse("2026-06-19T00:00:00Z"));
+
+        Instant since = Instant.parse("2026-06-17T00:00:00Z");
+        Pageable requested = PageRequest.of(0, 50);
+        Page<WeightEntry> page = new PageImpl<>(List.of(deleted));
+        when(repository.findByUserIdAndUpdatedAtGreaterThanEqual(eq(USER_ID), eq(since), any()))
+                .thenReturn(page);
+
+        Page<WeightResponse> result = service.findDelta(since, requested);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> {
+            assertThat(r.id()).isEqualTo(2L);
+            assertThat(r.deletedAt()).isEqualTo(deleted.getDeletedAt());
+        });
     }
 
     private static WeightEntry entry(Long id, LocalDate date, double weight) {

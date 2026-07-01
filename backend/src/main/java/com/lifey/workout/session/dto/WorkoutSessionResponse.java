@@ -13,6 +13,8 @@ public record WorkoutSessionResponse(
         Double averageHeartRate,
         String healthWorkoutId,
         Long templateId,
-        String templateName
+        String templateName,
+        Instant updatedAt,
+        Instant deletedAt
 ) {
 }

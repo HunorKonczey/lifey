@@ -10,6 +10,8 @@ public record MealResponse(
         Instant dateTime,
         MealType mealType,
         String name,
-        List<MealEntryResponse> entries
+        List<MealEntryResponse> entries,
+        Instant updatedAt,
+        Instant deletedAt
 ) {
 }

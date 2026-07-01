@@ -15,13 +15,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -130,7 +136,7 @@ class RecipeServiceImplTest {
         Recipe nonFavorite = recipe(2L, "Banana bread", false);
         // The repository's ORDER BY favorite DESC, name ASC is what actually
         // ranks favorites first; the service just needs to preserve that order.
-        when(recipeRepository.findAllByUserIdOrderByFavoriteDescNameAsc(USER_ID))
+        when(recipeRepository.findAllByUserIdAndDeletedAtIsNullOrderByFavoriteDescNameAsc(USER_ID))
                 .thenReturn(List.of(favorite, nonFavorite));
 
         List<RecipeResponse> result = service.findAll();
@@ -139,6 +145,67 @@ class RecipeServiceImplTest {
                 .containsExactly("Apple pie", "Banana bread");
         assertThat(result).extracting(RecipeResponse::favorite)
                 .containsExactly(true, false);
+    }
+
+    @Test
+    void delete_throwsWhenMissing() {
+        when(recipeRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.delete(99L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void delete_setsDeletedAtInsteadOfRemovingRow() {
+        Recipe existing = recipe(1L, "Apple pie", false);
+        when(recipeRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(existing));
+
+        service.delete(1L);
+
+        assertThat(existing.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    void update_ingredientOnlyEditBumpsParentUpdatedAt() {
+        Recipe existing = new Recipe();
+        existing.setId(3L);
+        existing.setName("Old");
+        existing.setUpdatedAt(Instant.parse("2026-06-18T08:00:00Z"));
+        RecipeIngredient old = new RecipeIngredient();
+        old.setRecipe(existing);
+        old.setFood(food(2L, "Rice"));
+        old.setQuantityInGrams(50.0);
+        existing.getIngredients().add(old);
+
+        when(recipeRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(foodRepository.findById(2L)).thenReturn(Optional.of(food(2L, "Rice")));
+
+        // Same name/description/favorite/servings as before — only the ingredient quantity differs.
+        RecipeRequest request = new RecipeRequest("Old", null, false, 1,
+                List.of(new RecipeIngredientRequest(2L, 150.0)));
+
+        service.update(3L, request);
+
+        assertThat(existing.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T08:00:00Z"));
+    }
+
+    @Test
+    void findDelta_isUserScopedAndIncludesTombstones() {
+        Recipe deleted = recipe(2L, "Deleted recipe", false);
+        deleted.setDeletedAt(Instant.parse("2026-06-19T00:00:00Z"));
+
+        Instant since = Instant.parse("2026-06-17T00:00:00Z");
+        Pageable requested = PageRequest.of(0, 50);
+        Page<Recipe> page = new PageImpl<>(List.of(deleted));
+        when(recipeRepository.findByUserIdAndUpdatedAtGreaterThanEqual(eq(USER_ID), eq(since), any()))
+                .thenReturn(page);
+
+        Page<RecipeResponse> result = service.findDelta(since, requested);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> {
+            assertThat(r.id()).isEqualTo(2L);
+            assertThat(r.deletedAt()).isEqualTo(deleted.getDeletedAt());
+        });
     }
 
     private static Recipe recipe(Long id, String name, boolean favorite) {

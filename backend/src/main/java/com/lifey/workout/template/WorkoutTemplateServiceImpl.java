@@ -8,9 +8,14 @@ import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.template.dto.TemplateExerciseEntry;
 import com.lifey.workout.template.dto.WorkoutTemplateRequest;
 import com.lifey.workout.template.dto.WorkoutTemplateResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -35,9 +40,22 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
     @Override
     @Transactional(readOnly = true)
     public List<WorkoutTemplateResponse> findAll() {
-        return templateRepository.findAllByUserIdOrderByNameAsc(currentUserProvider.getUserId()).stream()
+        return templateRepository.findAllByUserIdAndDeletedAtIsNullOrderByNameAsc(currentUserProvider.getUserId()).stream()
                 .map(WorkoutTemplateMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<WorkoutTemplateResponse> findDelta(Instant updatedSince, Pageable pageable) {
+        // Delta-sync feed: fixed ordering, includes tombstoned rows — see
+        // docs/16-delta-sync-rollout.md and WorkoutTemplateRepository.findByUserIdAndUpdatedAtGreaterThanEqual.
+        Pageable deltaPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.asc("updatedAt"), Sort.Order.asc("id")));
+        return templateRepository.findByUserIdAndUpdatedAtGreaterThanEqual(currentUserProvider.getUserId(), updatedSince, deltaPageable)
+                .map(WorkoutTemplateMapper::toResponse);
     }
 
     @Override
@@ -60,16 +78,18 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
         WorkoutTemplate template = getOrThrow(id);
         template.setName(request.name());
         replaceExercises(template, request.exercises());
+        // Exercise links are child rows with no delta feed of their own (docs/16 §2.3)
+        // — a link-only edit (e.g. reordered, target sets changed, name unchanged)
+        // would leave WorkoutTemplate's own scalar fields untouched, so Hibernate's
+        // dirty-checking could skip @PreUpdate. Bump explicitly so it always fires.
+        template.setUpdatedAt(Instant.now());
         return WorkoutTemplateMapper.toResponse(template);
     }
 
     @Override
     public void delete(Long id) {
-        Long userId = currentUserProvider.getUserId();
-        if (!templateRepository.existsByIdAndUserId(id, userId)) {
-            throw new ResourceNotFoundException("Workout template not found: " + id);
-        }
-        templateRepository.deleteByIdAndUserId(id, userId);
+        WorkoutTemplate template = getOrThrow(id);
+        template.setDeletedAt(Instant.now());
     }
 
     private WorkoutTemplate getOrThrow(Long id) {
