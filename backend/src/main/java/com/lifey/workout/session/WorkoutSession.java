@@ -2,6 +2,7 @@ package com.lifey.workout.session;
 
 import com.lifey.common.domain.BaseEntity;
 import com.lifey.user.User;
+import com.lifey.workout.template.WorkoutTemplate;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -57,4 +58,17 @@ public class WorkoutSession extends BaseEntity {
     /** HKWorkout UUID. Non-null means this session was paired with an Apple Health workout. */
     @Column(name = "health_workout_id")
     private String healthWorkoutId;
+
+    /** The template this session was started from, if any. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "template_id")
+    private WorkoutTemplate template;
+
+    /**
+     * Snapshot of the template's name at the time this session was started,
+     * so the session still shows what it was called even if the template is
+     * later renamed or deleted.
+     */
+    @Column(name = "template_name")
+    private String templateName;
 }

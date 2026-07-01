@@ -419,10 +419,28 @@ class _WorkoutTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      dateLabel,
-                      style: theme.textTheme.bodyLarge,
-                    ),
+                    if (workout.templateName != null) ...[
+                      Text(
+                        workout.templateName!,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        dateLabel,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ] else ...[
+                      Text(
+                        dateLabel,
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                    ],
                     const SizedBox(height: 2),
                     Text(
                       exercises,

@@ -8,6 +8,8 @@ import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.session.dto.ExerciseSetRequest;
 import com.lifey.workout.session.dto.WorkoutSessionRequest;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
+import com.lifey.workout.template.WorkoutTemplate;
+import com.lifey.workout.template.WorkoutTemplateRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,15 +22,18 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     private final WorkoutSessionRepository sessionRepository;
     private final ExerciseRepository exerciseRepository;
     private final UserRepository userRepository;
+    private final WorkoutTemplateRepository templateRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public WorkoutSessionServiceImpl(WorkoutSessionRepository sessionRepository,
                                      ExerciseRepository exerciseRepository,
                                      UserRepository userRepository,
+                                     WorkoutTemplateRepository templateRepository,
                                      CurrentUserProvider currentUserProvider) {
         this.sessionRepository = sessionRepository;
         this.exerciseRepository = exerciseRepository;
         this.userRepository = userRepository;
+        this.templateRepository = templateRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -49,6 +54,14 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         session.setActiveCalories(request.activeCalories());
         session.setAverageHeartRate(request.averageHeartRate());
         session.setHealthWorkoutId(request.healthWorkoutId());
+        if (request.templateId() != null) {
+            WorkoutTemplate template = templateRepository.findByIdAndUserId(
+                            request.templateId(), currentUserProvider.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Workout template not found: " + request.templateId()));
+            session.setTemplate(template);
+            session.setTemplateName(template.getName());
+        }
         replacePlannedExercises(session, request.exerciseIds());
         replaceSets(session, request.sets());
         return WorkoutSessionMapper.toResponse(sessionRepository.save(session));

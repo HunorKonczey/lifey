@@ -384,5 +384,6 @@
     "avgBpmLabel": "átl. bpm",
     "setColumnLabel": "SZETT",
     "kgColumnLabel": "KG",
-    "repsColumnLabel": "ISM."
+    "repsColumnLabel": "ISM.",
+    "previousColumnLabel": "ELŐZŐ"
 }

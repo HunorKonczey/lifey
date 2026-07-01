@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { recipeApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
+import { useDateStore } from "@/lib/hooks/useDateStore";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
@@ -12,6 +13,7 @@ import { LogRecipeDialog } from "./LogRecipeDialog";
 import type { RecipeResponse } from "../types";
 
 export function RecipesView() {
+  const { date } = useDateStore();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [editing, setEditing] = useState<RecipeResponse | null>(null);
   const [creating, setCreating] = useState(false);
@@ -95,7 +97,7 @@ export function RecipesView() {
       )}
 
       {logging && (
-        <LogRecipeDialog recipe={logging} date={new Date()} onClose={() => setLogging(null)} />
+        <LogRecipeDialog recipe={logging} date={date} onClose={() => setLogging(null)} />
       )}
     </div>
   );

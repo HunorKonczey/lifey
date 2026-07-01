@@ -246,13 +246,28 @@ class _SessionCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Template name, when this session was started from one.
+                      if (session.templateName != null) ...[
+                        Text(
+                          session.templateName!,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 1),
+                      ],
                       // Date + Apple Health badge + status chip
                       Row(
                         children: [
                           Expanded(
                             child: Text(
                               dateLabel.format(session.startedAt.toLocal()),
-                              style: theme.textTheme.bodyLarge,
+                              style: session.templateName != null
+                                  ? theme.textTheme.labelMedium
+                                      ?.copyWith(color: scheme.onSurfaceVariant)
+                                  : theme.textTheme.bodyLarge,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),

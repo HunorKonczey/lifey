@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../data/workout_session_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Presentation-layer models — screen state only, never persisted directly.
@@ -29,9 +30,15 @@ class ExerciseBlock {
   });
 
   final String exerciseClientId;
-  String exerciseName; // may be filled from catalog after construction (template case)
+  String
+      exerciseName; // may be filled from catalog after construction (template case)
   final int? targetSets;
   final List<SetRow> rows;
+
+  /// Previous-performance hints for this exercise, sorted to line up
+  /// positionally with [rows] (index 0 = row 0, etc). Filled asynchronously
+  /// after construction — see [LogSessionScreen._loadPreviousPerformance].
+  List<PreviousSetHint> previousSets = const [];
 }
 
 // ---------------------------------------------------------------------------
@@ -147,6 +154,9 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
             _SetRowTile(
               index: i,
               row: widget.block.rows[i],
+              previous: i < widget.block.previousSets.length
+                  ? widget.block.previousSets[i]
+                  : null,
               onTap: (focusReps) => _openEditor(i, focusReps: focusReps),
               onDoubleTap: () => _handleDoubleTap(i),
               onTrailingTap: () => _handleTrailingTap(i),
@@ -220,8 +230,12 @@ class _CardHeader extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Column header: SET / KG / REPS
+// Column header: SET / PREV / KG / REPS
 // ---------------------------------------------------------------------------
+
+/// Width of the "previous performance" column — narrower than the Kg/Reps
+/// columns, matching its smaller, muted hint text.
+const double _kPreviousColumnWidth = 54;
 
 class _ColumnHeader extends StatelessWidget {
   const _ColumnHeader({required this.scheme});
@@ -240,6 +254,11 @@ class _ColumnHeader extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(width: 34, child: Text(l10n.setColumnLabel, style: style)),
+          SizedBox(
+            width: _kPreviousColumnWidth,
+            child: Text(l10n.previousColumnLabel,
+                style: style?.copyWith(fontSize: 9)),
+          ),
           Expanded(child: Text(l10n.kgColumnLabel, style: style)),
           Expanded(child: Text(l10n.repsColumnLabel, style: style)),
           const SizedBox(width: 34),
@@ -257,6 +276,7 @@ class _SetRowTile extends StatelessWidget {
   const _SetRowTile({
     required this.index,
     required this.row,
+    required this.previous,
     required this.onTap,
     required this.onDoubleTap,
     required this.onTrailingTap,
@@ -265,6 +285,7 @@ class _SetRowTile extends StatelessWidget {
 
   final int index;
   final SetRow row;
+  final PreviousSetHint? previous;
   // focusReps: false = weight field, true = reps field
   final void Function(bool focusReps) onTap;
   final VoidCallback onDoubleTap;
@@ -276,6 +297,18 @@ class _SetRowTile extends StatelessWidget {
     return w.toString();
   }
 
+  /// Green up-arrow if [current] beat [previous], red down-arrow if it fell
+  /// short, nothing if unchanged or there's nothing to compare against.
+  Widget? _deltaArrow(num? current, num? previous) {
+    if (current == null || previous == null || current == previous) return null;
+    final up = current > previous;
+    return Icon(
+      up ? Icons.arrow_upward : Icons.arrow_downward,
+      size: 13,
+      color: up ? const Color(0xFF4CAF50) : const Color(0xFFD66B5A),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDone = row.isDone;
@@ -284,6 +317,12 @@ class _SetRowTile extends StatelessWidget {
     final valueColor = isDone ? scheme.onSurface : dimmed;
     final weightText = row.weight != null ? _formatWeight(row.weight!) : '—';
     final repsText = row.reps != null ? row.reps.toString() : '—';
+    final previousText = previous != null
+        ? '${_formatWeight(previous!.weight)}×${previous!.reps}'
+        : '—';
+    final weightArrow =
+        isDone ? _deltaArrow(row.weight, previous?.weight) : null;
+    final repsArrow = isDone ? _deltaArrow(row.reps, previous?.reps) : null;
 
     // Done row: check_circle (reopen on tap). Plan row: close (delete on tap).
     final trailingIcon = isDone ? Icons.check_circle : Icons.close;
@@ -295,64 +334,97 @@ class _SetRowTile extends StatelessWidget {
           onTapUp: (d) => onTap(d.localPosition.dx >= constraints.maxWidth / 2),
           onDoubleTap: onDoubleTap,
           child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
-        decoration: BoxDecoration(
-          color: isDone ? scheme.primary.withValues(alpha: 0.10) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 34,
-              child: Text(
-                '${index + 1}',
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: setNumColor,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
+            decoration: BoxDecoration(
+              color: isDone
+                  ? scheme.primary.withValues(alpha: 0.10)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
             ),
-            Expanded(
-              child: Text(
-                weightText,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: valueColor,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 34,
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: setNumColor,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                repsText,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: valueColor,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                SizedBox(
+                  width: _kPreviousColumnWidth,
+                  child: Text(
+                    previousText,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: dimmed,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            // Separate tap target so trailing icon doesn't compete with row
-            GestureDetector(
-              onTap: onTrailingTap,
-              behavior: HitTestBehavior.opaque,
-              child: SizedBox(
-                width: 34,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Icon(trailingIcon, size: 22, color: trailingColor),
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        weightText,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: valueColor,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      if (weightArrow != null) ...[
+                        const SizedBox(width: 3),
+                        weightArrow
+                      ],
+                    ],
+                  ),
                 ),
-              ),
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        repsText,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: valueColor,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      if (repsArrow != null) ...[
+                        const SizedBox(width: 3),
+                        repsArrow
+                      ],
+                    ],
+                  ),
+                ),
+                // Separate tap target so trailing icon doesn't compete with row
+                GestureDetector(
+                  onTap: onTrailingTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: 34,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Icon(trailingIcon, size: 22, color: trailingColor),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
           ),
         );
       },
@@ -375,7 +447,8 @@ class _AddSetRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) => GestureDetector(
-        onTapUp: (d) => onAddSet(d.localPosition.dx >= constraints.maxWidth / 2),
+        onTapUp: (d) =>
+            onAddSet(d.localPosition.dx >= constraints.maxWidth / 2),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 11),
           decoration: BoxDecoration(
@@ -409,7 +482,8 @@ class _AddSetRow extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _CompactSetEditor extends StatefulWidget {
-  const _CompactSetEditor({this.initialWeight, this.initialReps, this.focusReps = false});
+  const _CompactSetEditor(
+      {this.initialWeight, this.initialReps, this.focusReps = false});
 
   final double? initialWeight;
   final int? initialReps;
@@ -447,7 +521,8 @@ class _CompactSetEditorState extends State<_CompactSetEditor> {
     if (!_formKey.currentState!.validate()) return;
     final weight = double.tryParse(_weight.text.trim().replaceAll(',', '.'));
     final reps = int.tryParse(_reps.text.trim());
-    Navigator.of(context).pop<({double? weight, int? reps})>((weight: weight, reps: reps));
+    Navigator.of(context)
+        .pop<({double? weight, int? reps})>((weight: weight, reps: reps));
   }
 
   @override
@@ -462,7 +537,8 @@ class _CompactSetEditorState extends State<_CompactSetEditor> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(l10n.editSetTitle, style: Theme.of(context).textTheme.titleLarge),
+            Text(l10n.editSetTitle,
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -470,7 +546,8 @@ class _CompactSetEditorState extends State<_CompactSetEditor> {
                   child: TextFormField(
                     controller: _weight,
                     autofocus: !widget.focusReps,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: l10n.kgColumnLabel,

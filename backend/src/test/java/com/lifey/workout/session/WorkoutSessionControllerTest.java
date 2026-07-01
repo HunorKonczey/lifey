@@ -42,7 +42,7 @@ class WorkoutSessionControllerTest {
                 List.of(new ExerciseSummary(1L, "Bench Press")),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 10, 60.0,
                         Instant.parse("2026-06-01T05:05:00Z"))),
-                null, null, null));
+                null, null, null, null, null));
 
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","
@@ -65,7 +65,7 @@ class WorkoutSessionControllerTest {
                 List.of(new ExerciseSummary(1L, "Bench Press")),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 10, 60.0,
                         Instant.parse("2026-06-01T05:05:00Z"))),
-                450.0, 132.0, "HK-UUID-1"));
+                450.0, 132.0, "HK-UUID-1", null, null));
 
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","
@@ -85,7 +85,7 @@ class WorkoutSessionControllerTest {
     void create_emptyExercisesAndSetsReturnsCreated() throws Exception {
         when(workoutSessionService.create(any())).thenReturn(new WorkoutSessionResponse(5L,
                 Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
-                null, null, null));
+                null, null, null, null, null));
 
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","
@@ -124,7 +124,7 @@ class WorkoutSessionControllerTest {
                 List.of(new ExerciseSummary(1L, "Bench Press")),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 8, 70.0,
                         Instant.parse("2026-06-01T05:35:00Z"))),
-                null, null, null));
+                null, null, null, null, null));
 
         mockMvc.perform(put("/api/v1/workout-sessions/2").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","

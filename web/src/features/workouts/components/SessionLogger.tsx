@@ -24,17 +24,41 @@ interface SessionLoggerProps {
   onFinished: () => void;
 }
 
-function previousSet(
+/**
+ * The most recent *other* session that logged sets for `exerciseId`,
+ * preferring one started from the same `templateId` if given. Falls back to
+ * the most recent session with this exercise regardless of template when the
+ * template-scoped search comes up empty (or no template was given). Returns
+ * that session's sets for this exercise sorted by weight descending, so
+ * callers can pair them positionally with the current session's rows.
+ */
+function previousSets(
   history: WorkoutSessionResponse[],
   currentId: number,
   exerciseId: number,
-): ExerciseSetResponse | null {
-  const candidates = history
-    .filter((s) => s.id !== currentId)
-    .flatMap((s) => s.sets)
+  templateId: number | null,
+): ExerciseSetResponse[] {
+  const others = history.filter((s) => s.id !== currentId);
+
+  const lastSessionWithExercise = (candidates: WorkoutSessionResponse[]) =>
+    candidates
+      .filter((s) => s.sets.some((set) => set.exerciseId === exerciseId))
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())[0] ?? null;
+
+  const session =
+    (templateId != null ? lastSessionWithExercise(others.filter((s) => s.templateId === templateId)) : null) ??
+    lastSessionWithExercise(others);
+  if (!session) return [];
+
+  return session.sets
     .filter((set) => set.exerciseId === exerciseId)
-    .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
-  return candidates[0] ?? null;
+    .sort((a, b) => b.weight - a.weight);
+}
+
+/** "up" if `current` beat `previous`, "down" if it fell short, null if unchanged/incomparable. */
+function delta(current: number, previous: number | undefined): "up" | "down" | null {
+  if (previous === undefined || current === previous) return null;
+  return current > previous ? "up" : "down";
 }
 
 export function SessionLogger({ session, history, onFinished }: SessionLoggerProps) {
@@ -93,7 +117,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
       {/* Header */}
       <div className="flex items-center justify-between rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
         <div>
-          <p className="font-bold text-base">Active workout</p>
+          <p className="font-bold text-base">{session.templateName ?? "Active workout"}</p>
           <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
             Started {format(new Date(session.startedAt), "HH:mm")}
           </p>
@@ -119,7 +143,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
           This session has no planned exercises.
         </div>
       ) : exercises.map((ex) => {
-        const prev = previousSet(history, session.id, ex.exerciseId);
+        const prevSets = previousSets(history, session.id, ex.exerciseId, session.templateId);
         const exDrafts = drafts
           .map((d, i) => ({ d, i }))
           .filter(({ d }) => d.exerciseId === ex.exerciseId);
@@ -137,21 +161,41 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
               <span></span>
             </div>
 
-            {exDrafts.map(({ d, i }, localIdx) => (
+            {exDrafts.map(({ d, i }, localIdx) => {
+              const prev = prevSets[localIdx];
+              const weightDelta = d.done ? delta(d.weight, prev?.weight) : null;
+              const repsDelta = d.done ? delta(d.reps, prev?.reps) : null;
+              return (
               <div key={i} className="grid grid-cols-[40px_1fr_1fr_1fr_44px] gap-2 items-center px-1 py-1 rounded-[var(--r-sm)]"
                 style={{ outline: d.done ? "1px solid color-mix(in srgb, var(--primary) 40%, transparent)" : "none" }}>
                 <span className="text-sm tabular font-semibold">{localIdx + 1}</span>
                 <span className="text-xs tabular" style={{ color: "var(--muted)" }}>
                   {prev ? `${prev.weight}kg × ${prev.reps}` : "—"}
                 </span>
-                <input type="number" value={d.weight} min={0} step="0.5"
-                  onChange={(e) => updateDraft(i, { weight: Number(e.target.value) })}
-                  className="w-full px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
-                  style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
-                <input type="number" value={d.reps} min={0}
-                  onChange={(e) => updateDraft(i, { reps: Number(e.target.value) })}
-                  className="w-full px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
-                  style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
+                <div className="relative">
+                  <input type="number" value={d.weight} min={0} step="0.5"
+                    onChange={(e) => updateDraft(i, { weight: Number(e.target.value) })}
+                    className="w-full px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
+                    style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
+                  {weightDelta && (
+                    <span className="material-symbols-rounded absolute right-1 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+                      style={{ color: weightDelta === "up" ? "#4CAF50" : "#D66B5A" }}>
+                      {weightDelta === "up" ? "arrow_upward" : "arrow_downward"}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input type="number" value={d.reps} min={0}
+                    onChange={(e) => updateDraft(i, { reps: Number(e.target.value) })}
+                    className="w-full px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
+                    style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
+                  {repsDelta && (
+                    <span className="material-symbols-rounded absolute right-1 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+                      style={{ color: repsDelta === "up" ? "#4CAF50" : "#D66B5A" }}>
+                      {repsDelta === "up" ? "arrow_upward" : "arrow_downward"}
+                    </span>
+                  )}
+                </div>
                 <button onClick={() => updateDraft(i, { done: !d.done })}
                   className="w-8 h-8 rounded-[var(--r-sm)] flex items-center justify-center transition-colors"
                   style={{
@@ -161,7 +205,8 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
                   <span className="material-symbols-rounded text-lg">check</span>
                 </button>
               </div>
-            ))}
+              );
+            })}
 
             <button onClick={() => addSet(ex.exerciseId)}
               className="w-full mt-2 py-1.5 rounded-[var(--r-sm)] text-xs font-semibold flex items-center justify-center gap-1"

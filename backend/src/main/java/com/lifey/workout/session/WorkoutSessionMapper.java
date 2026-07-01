@@ -37,7 +37,9 @@ final class WorkoutSessionMapper {
                 sets,
                 session.getActiveCalories(),
                 session.getAverageHeartRate(),
-                session.getHealthWorkoutId()
+                session.getHealthWorkoutId(),
+                session.getTemplate() != null ? session.getTemplate().getId() : null,
+                session.getTemplateName()
         );
     }
 }

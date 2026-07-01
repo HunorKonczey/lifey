@@ -1100,5 +1100,8 @@
     "@kgColumnLabel": {"description": "Column header for the weight column in the exercise card set table"},
 
     "repsColumnLabel": "REPS",
-    "@repsColumnLabel": {"description": "Column header for the repetitions column in the exercise card set table"}
+    "@repsColumnLabel": {"description": "Column header for the repetitions column in the exercise card set table"},
+
+    "previousColumnLabel": "PREV.",
+    "@previousColumnLabel": {"description": "Column header for the previous-performance hint column in the exercise card set table"}
 }

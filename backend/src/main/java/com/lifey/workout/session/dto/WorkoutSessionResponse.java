@@ -11,6 +11,8 @@ public record WorkoutSessionResponse(
         List<ExerciseSetResponse> sets,
         Double activeCalories,
         Double averageHeartRate,
-        String healthWorkoutId
+        String healthWorkoutId,
+        Long templateId,
+        String templateName
 ) {
 }

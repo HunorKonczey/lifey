@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
 
@@ -31,6 +32,9 @@ class AuthControllerTest {
 
     @MockitoBean
     AuthService authService;
+
+    @MockitoBean
+    JwtProperties jwtProperties;
 
     @Test
     void register_returnsCreated() throws Exception {
@@ -58,6 +62,7 @@ class AuthControllerTest {
     void login_returnsTokenPair() throws Exception {
         when(authService.login(any()))
                 .thenReturn(new AuthResponse("access-token", "refresh-token", 900L));
+        when(jwtProperties.refreshTokenTtl()).thenReturn(Duration.ofDays(30));
 
         mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"user@example.com\",\"password\":\"password123\"}"))
@@ -73,7 +78,7 @@ class AuthControllerTest {
         when(authService.login(any())).thenThrow(new InvalidCredentialsException("Invalid email or password"));
 
         mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"user@example.com\",\"password\":\"wrong\"}"))
+                        .content("{\"email\":\"user@example.com\",\"password\":\"wrong-password\"}"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -81,6 +86,7 @@ class AuthControllerTest {
     void refresh_returnsNewTokenPair() throws Exception {
         when(authService.refresh("old-refresh-token"))
                 .thenReturn(new AuthResponse("new-access-token", "new-refresh-token", 900L));
+        when(jwtProperties.refreshTokenTtl()).thenReturn(Duration.ofDays(30));
 
         mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"old-refresh-token\"}"))

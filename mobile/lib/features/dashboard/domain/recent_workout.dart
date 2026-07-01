@@ -9,6 +9,7 @@ class RecentWorkout {
     this.finishedAt,
     this.activeCalories,
     this.categoryCode,
+    this.templateName,
   });
 
   final String clientId;
@@ -16,6 +17,9 @@ class RecentWorkout {
   final DateTime? finishedAt;
   final int setCount;
   final List<String> exerciseNames;
+
+  /// Snapshot of the template's name this session was started from, if any.
+  final String? templateName;
 
   /// Dominant muscle-group code among this session's exercises (the group with
   /// the most exercises), used to colour the dashboard tile. Null when none of

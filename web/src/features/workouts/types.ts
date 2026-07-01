@@ -66,6 +66,8 @@ export interface WorkoutSessionResponse {
   activeCalories: number | null;
   averageHeartRate: number | null;
   healthWorkoutId: string | null;
+  templateId: number | null;
+  templateName: string | null;
 }
 
 export interface ExerciseSetRequest {
@@ -83,4 +85,5 @@ export interface WorkoutSessionRequest {
   activeCalories?: number | null;
   averageHeartRate?: number | null;
   healthWorkoutId?: string | null;
+  templateId?: number | null;
 }

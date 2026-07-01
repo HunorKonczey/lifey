@@ -142,6 +142,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _hrTicker = Timer.periodic(_kHrPollInterval, (_) => _pollHeartRate());
       _pollHeartRate(); // don't wait a full interval for the first read
     }
+
+    unawaited(_loadPreviousPerformance(_blocks));
   }
 
   @override
@@ -166,8 +168,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final enabled = ref.read(appleHealthControllerProvider).value ?? false;
     if (!enabled) return;
 
-    final sample =
-        await ref.read(healthServiceProvider).latestHeartRate(within: _kHrFreshWindow);
+    final sample = await ref
+        .read(healthServiceProvider)
+        .latestHeartRate(within: _kHrFreshWindow);
     if (!mounted) return;
 
     // No fresh sample → the watch isn't syncing live data right now. Hide a
@@ -178,7 +181,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
 
     // Skip if HealthKit handed us the same sample again (no new data synced).
-    if (_lastHrSampleAt != null && !sample.timestamp.isAfter(_lastHrSampleAt!)) {
+    if (_lastHrSampleAt != null &&
+        !sample.timestamp.isAfter(_lastHrSampleAt!)) {
       return;
     }
     _lastHrSampleAt = sample.timestamp;
@@ -196,6 +200,28 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   List<SetRow> _generateRows(int? targetSets) {
     final count = (targetSets != null && targetSets > 0) ? targetSets : 1;
     return List.generate(count, (_) => SetRow());
+  }
+
+  /// clientId of the template this session was (or is being) started from,
+  /// whether it's a brand-new session or one already being edited.
+  String? get _templateClientId =>
+      widget.template?.clientId ?? widget.session?.templateClientId;
+
+  /// Fetches and fills in [ExerciseBlock.previousSets] for each of [blocks],
+  /// so the exercise cards can show what was done last time. Fire-and-forget
+  /// from initState / after adding an exercise — not awaited by callers.
+  Future<void> _loadPreviousPerformance(List<ExerciseBlock> blocks) async {
+    final repo = ref.read(workoutSessionRepositoryProvider);
+    final templateClientId = _templateClientId;
+    for (final block in blocks) {
+      final previous = await repo.getPreviousPerformance(
+        exerciseClientId: block.exerciseClientId,
+        templateClientId: templateClientId,
+        excludeSessionClientId: _sessionClientId,
+      );
+      if (!mounted) return;
+      setState(() => block.previousSets = previous);
+    }
   }
 
   DateTime? _lastDoneAt() {
@@ -284,7 +310,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         _blocks[bi].rows[nextIdx].weight = row.weight;
         _blocks[bi].rows[nextIdx].reps = row.reps;
       } else {
-        _blocks[bi].rows.insert(nextIdx, SetRow(weight: row.weight, reps: row.reps));
+        _blocks[bi]
+            .rows
+            .insert(nextIdx, SetRow(weight: row.weight, reps: row.reps));
       }
     });
     _autoSave();
@@ -323,12 +351,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       builder: (_) => AddExerciseToSessionSheet(excludeIds: excluded),
     );
     if (draft == null || !mounted) return;
-    setState(() => _blocks.add(ExerciseBlock(
-          exerciseClientId: draft.exercise.clientId,
-          exerciseName: draft.exercise.name,
-          targetSets: draft.targetSets,
-          rows: _generateRows(draft.targetSets),
-        )));
+    final block = ExerciseBlock(
+      exerciseClientId: draft.exercise.clientId,
+      exerciseName: draft.exercise.name,
+      targetSets: draft.targetSets,
+      rows: _generateRows(draft.targetSets),
+    );
+    setState(() => _blocks.add(block));
+    unawaited(_loadPreviousPerformance([block]));
     if (_sessionClientId != null) await _autoSave();
   }
 
@@ -377,6 +407,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         finishedAt: _finishedAt,
         exercises: _buildPlanned(),
         sets: _buildSets(),
+        templateClientId: widget.template?.clientId,
+        templateName: widget.template?.name,
       );
     } else {
       await notifier.updateSession(
@@ -410,7 +442,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final importService = ref.read(healthWorkoutImportServiceProvider);
 
     try {
-      final appleEnabled = ref.read(appleHealthControllerProvider).value ?? false;
+      final appleEnabled =
+          ref.read(appleHealthControllerProvider).value ?? false;
 
       if (!appleEnabled) {
         await _persistFinished();
@@ -481,8 +514,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   // Top bar
   // ---------------------------------------------------------------------------
 
-  Widget _buildTopBar(
-      BuildContext context, ColorScheme scheme, AppLocalizations l10n, String title) {
+  Widget _buildTopBar(BuildContext context, ColorScheme scheme,
+      AppLocalizations l10n, String title) {
     return Container(
       height: 58,
       decoration: BoxDecoration(
@@ -514,7 +547,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                       borderRadius: BorderRadius.circular(13),
                     ),
                     child: Center(
-                      child: Icon(Icons.arrow_back, size: 22, color: scheme.onSurfaceVariant),
+                      child: Icon(Icons.arrow_back,
+                          size: 22, color: scheme.onSurfaceVariant),
                     ),
                   ),
                 ),
@@ -536,7 +570,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 if (_startedAt != null) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
                       color: scheme.surfaceContainerLowest,
                       borderRadius: BorderRadius.circular(13),
@@ -564,7 +599,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 if (_showHeartRate && _currentHeartRate != null) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
                       color: scheme.surfaceContainerLowest,
                       borderRadius: BorderRadius.circular(13),
@@ -572,7 +608,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.favorite, size: 18, color: context.metricColors.heart),
+                        Icon(Icons.favorite,
+                            size: 18, color: context.metricColors.heart),
                         const SizedBox(width: 6),
                         Text(
                           '$_currentHeartRate',
@@ -631,10 +668,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     // Finish button is only shown for running (not-yet-finished) sessions.
     final showFinishButton = _finishedAt == null;
     // ListView needs extra bottom room so content isn't hidden behind the sticky button.
-    final listBottomPad = showFinishButton ? (safeBottom + 24 + 54 + 16) : (safeBottom + 16);
+    final listBottomPad =
+        showFinishButton ? (safeBottom + 24 + 54 + 16) : (safeBottom + 16);
 
     final title = _isEditing
-        ? l10n.editWorkoutTitle
+        ? (widget.session!.templateName ?? l10n.editWorkoutTitle)
         : (template != null ? template.name : l10n.logWorkoutTitle);
 
     return Scaffold(
@@ -645,14 +683,18 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             padding: EdgeInsets.fromLTRB(16, contentTop, 16, listBottomPad),
             children: [
               // Health stat cards (Apple-imported finished sessions only).
-              if (widget.session?.finishedAt != null && widget.session!.fromAppleHealth) ...[
+              if (widget.session?.finishedAt != null &&
+                  widget.session!.fromAppleHealth) ...[
                 Row(
                   children: [
                     Expanded(
                       child: _HealthStatCard(
                         icon: Icons.local_fire_department,
                         iconColor: context.metricColors.calories,
-                        value: widget.session!.activeCalories?.round().toString() ?? '–',
+                        value: widget.session!.activeCalories
+                                ?.round()
+                                .toString() ??
+                            '–',
                         label: l10n.activeKcalLabel,
                       ),
                     ),
@@ -661,7 +703,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                       child: _HealthStatCard(
                         icon: Icons.favorite,
                         iconColor: context.metricColors.heart,
-                        value: widget.session!.averageHeartRate?.round().toString() ?? '–',
+                        value: widget.session!.averageHeartRate
+                                ?.round()
+                                .toString() ??
+                            '–',
                         label: l10n.avgBpmLabel,
                       ),
                     ),
@@ -721,8 +766,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                   style: FilledButton.styleFrom(
                     backgroundColor: scheme.primary,
                     foregroundColor: scheme.onPrimary,
-                    disabledBackgroundColor: scheme.primary.withValues(alpha: 0.6),
-                    disabledForegroundColor: scheme.onPrimary.withValues(alpha: 0.7),
+                    disabledBackgroundColor:
+                        scheme.primary.withValues(alpha: 0.6),
+                    disabledForegroundColor:
+                        scheme.onPrimary.withValues(alpha: 0.7),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -820,7 +867,8 @@ class _DashedBorderPainter extends CustomPainter {
 
     final inset = strokeWidth / 2;
     final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(inset, inset, size.width - strokeWidth, size.height - strokeWidth),
+      Rect.fromLTWH(
+          inset, inset, size.width - strokeWidth, size.height - strokeWidth),
       Radius.circular(radius),
     );
     const dashLen = 7.0;
@@ -841,7 +889,9 @@ class _DashedBorderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashedBorderPainter old) =>
-      old.color != color || old.strokeWidth != strokeWidth || old.radius != radius;
+      old.color != color ||
+      old.strokeWidth != strokeWidth ||
+      old.radius != radius;
 }
 
 // ---------------------------------------------------------------------------

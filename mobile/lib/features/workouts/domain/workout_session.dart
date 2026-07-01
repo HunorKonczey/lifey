@@ -42,6 +42,8 @@ class WorkoutSession {
     this.activeCalories,
     this.averageHeartRate,
     this.healthWorkoutId,
+    this.templateClientId,
+    this.templateName,
   });
 
   final String clientId;
@@ -59,6 +61,14 @@ class WorkoutSession {
 
   /// HKWorkout UUID this session was paired with, if imported from Apple Health.
   final String? healthWorkoutId;
+
+  /// clientId of the template this session was started from, null when
+  /// started as an empty workout (or predates this field).
+  final String? templateClientId;
+
+  /// Snapshot of the template's name at the time this session was started,
+  /// null when started as an empty workout (or predates this field).
+  final String? templateName;
 
   bool get inProgress => finishedAt == null;
 

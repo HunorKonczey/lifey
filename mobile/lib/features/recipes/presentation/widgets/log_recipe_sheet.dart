@@ -56,7 +56,7 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
       context: context,
       initialDate: _dateTime,
       firstDate: DateTime(2000),
-      lastDate: now,
+      lastDate: DateTime(now.year + 2),
     );
     if (date == null || !mounted) return;
     final time = await showTimePicker(
@@ -66,7 +66,7 @@ class _LogRecipeSheetState extends ConsumerState<LogRecipeSheet> {
     if (!mounted) return;
     final picked = DateTime(date.year, date.month, date.day,
         time?.hour ?? _dateTime.hour, time?.minute ?? _dateTime.minute);
-    setState(() => _dateTime = picked.isAfter(now) ? now : picked);
+    setState(() => _dateTime = picked);
   }
 
   void _decrementPortionDivisor() {

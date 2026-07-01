@@ -98,6 +98,7 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
       categoryCode: dominantMuscleGroup(
         exerciseIds.map((id) => categoryByExercise[id]),
       ),
+      templateName: session.templateName,
     );
   }).toList();
 

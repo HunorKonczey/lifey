@@ -33,6 +33,15 @@ class ExerciseSetInput {
   final DateTime performedAt;
 }
 
+/// A previously logged set for an exercise, used as a hint for what to aim
+/// for in the current session (see [WorkoutSessionRepository.getPreviousPerformance]).
+class PreviousSetHint {
+  const PreviousSetHint({required this.weight, required this.reps});
+
+  final double weight;
+  final int reps;
+}
+
 /// Local-first access to workout sessions and their planned-exercise/set
 /// children. Sessions, their planned exercises and their sets are always
 /// written together (see [create]/[update]), so watching just the
@@ -47,14 +56,17 @@ class WorkoutSessionRepository {
   Stream<List<WorkoutSession>> watchAll() {
     final sessions$ = _db.select(_db.workoutSessions).watch();
     final pendingOps$ = _db.select(_db.pendingOperations).watch();
-    return combineLatest2(sessions$, pendingOps$, (rows, ops) => (rows, ops)).asyncMap((pair) async {
+    return combineLatest2(sessions$, pendingOps$, (rows, ops) => (rows, ops))
+        .asyncMap((pair) async {
       final (allSessionRows, ops) = pair;
       final blocked = blockedByActiveDelete(ops);
-      final sessionRows = allSessionRows.where((r) => !blocked.contains(r.clientId)).toList();
+      final sessionRows =
+          allSessionRows.where((r) => !blocked.contains(r.clientId)).toList();
       if (sessionRows.isEmpty) return const <WorkoutSession>[];
 
       final exerciseNames = {
-        for (final row in await _db.select(_db.exercises).get()) row.clientId: row.name,
+        for (final row in await _db.select(_db.exercises).get())
+          row.clientId: row.name,
       };
 
       final exercisesBySession = <String, List<SessionExercise>>{};
@@ -108,6 +120,8 @@ class WorkoutSessionRepository {
     double? activeCalories,
     double? averageHeartRate,
     String? healthWorkoutId,
+    String? templateClientId,
+    String? templateName,
   }) async {
     final clientId = newClientId();
     await _db.transaction(() async {
@@ -119,6 +133,8 @@ class WorkoutSessionRepository {
               activeCalories: Value(activeCalories),
               averageHeartRate: Value(averageHeartRate),
               healthWorkoutId: Value(healthWorkoutId),
+              templateClientId: Value(templateClientId),
+              templateName: Value(templateName),
             ),
           );
       await _insertChildren(clientId, exercises, sets);
@@ -134,6 +150,7 @@ class WorkoutSessionRepository {
         activeCalories: activeCalories,
         averageHeartRate: averageHeartRate,
         healthWorkoutId: healthWorkoutId,
+        templateClientId: templateClientId,
       ),
     );
     return clientId;
@@ -150,7 +167,9 @@ class WorkoutSessionRepository {
     String? healthWorkoutId,
   }) async {
     await _db.transaction(() async {
-      await (_db.update(_db.workoutSessions)..where((t) => t.clientId.equals(clientId))).write(
+      await (_db.update(_db.workoutSessions)
+            ..where((t) => t.clientId.equals(clientId)))
+          .write(
         WorkoutSessionsCompanion(
           startedAt: Value(startedAt),
           finishedAt: Value(finishedAt),
@@ -162,7 +181,9 @@ class WorkoutSessionRepository {
       await (_db.delete(_db.workoutSessionExercises)
             ..where((t) => t.sessionClientId.equals(clientId)))
           .go();
-      await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId))).go();
+      await (_db.delete(_db.exerciseSets)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .go();
       await _insertChildren(clientId, exercises, sets);
     });
     await _outbox.enqueueUpdate(
@@ -186,15 +207,19 @@ class WorkoutSessionRepository {
     // delete, the session and its exercise links/sets stay (hidden by the
     // controller's filter) until that delete is confirmed — see
     // EntitySyncConfig.cleanupChildren's doc.
-    final queued = await _outbox.enqueueDelete(clientId: clientId, entityType: 'workout_session');
+    final queued = await _outbox.enqueueDelete(
+        clientId: clientId, entityType: 'workout_session');
     if (!queued) {
       await _db.transaction(() async {
         await (_db.delete(_db.workoutSessionExercises)
               ..where((t) => t.sessionClientId.equals(clientId)))
             .go();
-        await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId)))
+        await (_db.delete(_db.exerciseSets)
+              ..where((t) => t.sessionClientId.equals(clientId)))
             .go();
-        await (_db.delete(_db.workoutSessions)..where((t) => t.clientId.equals(clientId))).go();
+        await (_db.delete(_db.workoutSessions)
+              ..where((t) => t.clientId.equals(clientId)))
+            .go();
       });
     }
   }
@@ -236,11 +261,14 @@ class WorkoutSessionRepository {
     double? activeCalories,
     double? averageHeartRate,
     String? healthWorkoutId,
+    String? templateClientId,
   }) {
     return {
       'startedAt': startedAt.toUtc().toIso8601String(),
-      if (finishedAt != null) 'finishedAt': finishedAt.toUtc().toIso8601String(),
-      'exerciseIds': exercises.map((e) => clientRef(e.exerciseClientId)).toList(),
+      if (finishedAt != null)
+        'finishedAt': finishedAt.toUtc().toIso8601String(),
+      'exerciseIds':
+          exercises.map((e) => clientRef(e.exerciseClientId)).toList(),
       'sets': sets
           .map((s) => {
                 'exerciseId': clientRef(s.exerciseClientId),
@@ -252,6 +280,7 @@ class WorkoutSessionRepository {
       if (activeCalories != null) 'activeCalories': activeCalories,
       if (averageHeartRate != null) 'averageHeartRate': averageHeartRate,
       if (healthWorkoutId != null) 'healthWorkoutId': healthWorkoutId,
+      if (templateClientId != null) 'templateId': clientRef(templateClientId),
     };
   }
 
@@ -270,10 +299,78 @@ class WorkoutSessionRepository {
       activeCalories: row.activeCalories,
       averageHeartRate: row.averageHeartRate,
       healthWorkoutId: row.healthWorkoutId,
+      templateClientId: row.templateClientId,
+      templateName: row.templateName,
     );
+  }
+
+  /// Finds the most recent *other* session that logged sets for
+  /// [exerciseClientId], preferring one started from the same
+  /// [templateClientId] if given. Falls back to the most recent session with
+  /// this exercise regardless of template when the template-scoped search
+  /// comes up empty (or no template was given). Returns the matching
+  /// session's sets for this exercise, sorted by weight descending so callers
+  /// can pair them positionally with the current session's rows.
+  Future<List<PreviousSetHint>> getPreviousPerformance({
+    required String exerciseClientId,
+    String? templateClientId,
+    String? excludeSessionClientId,
+  }) async {
+    if (templateClientId != null) {
+      final scoped = await _lastSessionSets(
+        exerciseClientId: exerciseClientId,
+        excludeSessionClientId: excludeSessionClientId,
+        templateClientId: templateClientId,
+      );
+      if (scoped.isNotEmpty) return scoped;
+    }
+    return _lastSessionSets(
+      exerciseClientId: exerciseClientId,
+      excludeSessionClientId: excludeSessionClientId,
+    );
+  }
+
+  Future<List<PreviousSetHint>> _lastSessionSets({
+    required String exerciseClientId,
+    String? excludeSessionClientId,
+    String? templateClientId,
+  }) async {
+    final query = _db.select(_db.exerciseSets).join([
+      innerJoin(
+        _db.workoutSessions,
+        _db.workoutSessions.clientId
+            .equalsExp(_db.exerciseSets.sessionClientId),
+      ),
+    ])
+      ..where(_db.exerciseSets.exerciseClientId.equals(exerciseClientId))
+      ..orderBy([OrderingTerm.desc(_db.workoutSessions.startedAt)]);
+    if (excludeSessionClientId != null) {
+      query.where(
+          _db.workoutSessions.clientId.equals(excludeSessionClientId).not());
+    }
+    if (templateClientId != null) {
+      query
+          .where(_db.workoutSessions.templateClientId.equals(templateClientId));
+    }
+
+    final rows = await query.get();
+    if (rows.isEmpty) return const [];
+
+    final latestSessionId = rows.first.readTable(_db.workoutSessions).clientId;
+    final sets = rows
+        .map((r) => r.readTable(_db.exerciseSets))
+        .where((s) => s.sessionClientId == latestSessionId)
+        .toList()
+      ..sort((a, b) => b.weight.compareTo(a.weight));
+
+    return [
+      for (final s in sets) PreviousSetHint(weight: s.weight, reps: s.reps)
+    ];
   }
 }
 
-final workoutSessionRepositoryProvider = Provider<WorkoutSessionRepository>((ref) {
-  return WorkoutSessionRepository(ref.watch(appDatabaseProvider), ref.watch(outboxWriterProvider));
+final workoutSessionRepositoryProvider =
+    Provider<WorkoutSessionRepository>((ref) {
+  return WorkoutSessionRepository(
+      ref.watch(appDatabaseProvider), ref.watch(outboxWriterProvider));
 });

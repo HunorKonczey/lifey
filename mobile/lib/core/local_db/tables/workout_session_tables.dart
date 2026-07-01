@@ -21,6 +21,16 @@ class WorkoutSessions extends Table {
   /// HKWorkout UUID this session was paired with, if imported from Apple Health.
   TextColumn get healthWorkoutId => text().nullable()();
 
+  /// clientId of the template this session was started from, if any. Not a
+  /// Drift `.references()` FK — deleting a template must not be blocked by
+  /// (or cascade into) sessions that were started from it.
+  TextColumn get templateClientId => text().nullable()();
+
+  /// Snapshot of the template's name at the time this session was started,
+  /// so the session still shows what it was called even if the template is
+  /// later renamed or deleted.
+  TextColumn get templateName => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

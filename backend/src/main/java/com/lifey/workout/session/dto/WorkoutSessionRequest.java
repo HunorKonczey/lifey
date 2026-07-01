@@ -40,6 +40,12 @@ public record WorkoutSessionRequest(
         Double averageHeartRate,
 
         /* HKWorkout UUID this session was paired with, if imported from Apple Health. */
-        String healthWorkoutId
+        String healthWorkoutId,
+
+        /*
+         * The template this session was started from, if any. Only read on
+         * create — a session's template link doesn't change once it's started.
+         */
+        Long templateId
 ) {
 }

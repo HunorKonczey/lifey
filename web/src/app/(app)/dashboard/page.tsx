@@ -252,7 +252,7 @@ export default function DashboardPage() {
                 >
                   <div>
                     <p className="text-sm font-semibold">
-                      {s.exercises.map((e) => e.exerciseName).join(", ") || "Workout"}
+                      {s.templateName ?? (s.exercises.map((e) => e.exerciseName).join(", ") || "Workout")}
                     </p>
                     <p className="text-xs" style={{ color: "var(--muted)" }}>
                       {format(new Date(s.startedAt), "MMM d, HH:mm")}

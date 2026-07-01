@@ -339,12 +339,18 @@ class PullEngine {
 
       final clientId = existingClientId ?? newClientId();
       final finishedRaw = json['finishedAt'] as String?;
+      final templateServerId = json['templateId'] as int?;
+      final templateClientId = templateServerId != null
+          ? await _localClientId('workout_templates', templateServerId)
+          : null;
       final values = WorkoutSessionsCompanion(
         startedAt: Value(DateTime.parse(json['startedAt'] as String)),
         finishedAt: Value(finishedRaw != null ? DateTime.parse(finishedRaw) : null),
         activeCalories: Value((json['activeCalories'] as num?)?.toDouble()),
         averageHeartRate: Value((json['averageHeartRate'] as num?)?.toDouble()),
         healthWorkoutId: Value(json['healthWorkoutId'] as String?),
+        templateClientId: Value(templateClientId),
+        templateName: Value(json['templateName'] as String?),
       );
       final plannedExerciseIds = await _mapServerIds(
         'exercises',

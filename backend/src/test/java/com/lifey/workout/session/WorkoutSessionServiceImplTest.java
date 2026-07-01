@@ -10,6 +10,8 @@ import com.lifey.workout.session.dto.ExerciseSetRequest;
 import com.lifey.workout.session.dto.ExerciseSummary;
 import com.lifey.workout.session.dto.WorkoutSessionRequest;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
+import com.lifey.workout.template.WorkoutTemplate;
+import com.lifey.workout.template.WorkoutTemplateRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +45,9 @@ class WorkoutSessionServiceImplTest {
     UserRepository userRepository;
 
     @Mock
+    WorkoutTemplateRepository templateRepository;
+
+    @Mock
     CurrentUserProvider currentUserProvider;
 
     @InjectMocks
@@ -67,7 +72,7 @@ class WorkoutSessionServiceImplTest {
         Instant performedAt = Instant.parse("2026-06-18T05:05:00Z");
         WorkoutSessionRequest request = new WorkoutSessionRequest(started, null,
                 List.of(1L, 4L), List.of(new ExerciseSetRequest(1L, 10, 60.0, performedAt)),
-                450.0, 132.0, "HK-UUID-1");
+                450.0, 132.0, "HK-UUID-1", null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -95,7 +100,7 @@ class WorkoutSessionServiceImplTest {
         });
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
-                null, null, null);
+                null, null, null, null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -112,7 +117,7 @@ class WorkoutSessionServiceImplTest {
         when(exerciseRepository.findById(99L)).thenReturn(Optional.empty());
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(99L), List.of(),
-                null, null, null);
+                null, null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -126,11 +131,42 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(), List.of(new ExerciseSetRequest(99L, 5, 100.0,
                         Instant.parse("2026-06-18T05:05:00Z"))),
-                null, null, null);
+                null, null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Exercise not found: 99");
+    }
+
+    @Test
+    void create_resolvesTemplateAndSnapshotsItsName() {
+        when(templateRepository.findByIdAndUserId(7L, USER_ID))
+                .thenReturn(Optional.of(template(7L, "Push Day")));
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> {
+            WorkoutSession s = inv.getArgument(0);
+            s.setId(6L);
+            return s;
+        });
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, 7L);
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.templateId()).isEqualTo(7L);
+        assertThat(result.templateName()).isEqualTo("Push Day");
+    }
+
+    @Test
+    void create_throwsWhenTemplateMissing() {
+        when(templateRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, 99L);
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Workout template not found: 99");
     }
 
     @Test
@@ -157,7 +193,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), finished,
                 List.of(1L), List.of(new ExerciseSetRequest(1L, 8, 70.0,
                         Instant.parse("2026-06-18T05:30:00Z"))),
-                480.0, 140.0, "HK-UUID-2");
+                480.0, 140.0, "HK-UUID-2", null);
 
         WorkoutSessionResponse result = service.update(3L, request);
 
@@ -178,7 +214,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(), List.of(new ExerciseSetRequest(1L, 5, 50.0,
                         Instant.parse("2026-06-18T05:05:00Z"))),
-                null, null, null);
+                null, null, null, null);
 
         assertThatThrownBy(() -> service.update(99L, request))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -206,5 +242,12 @@ class WorkoutSessionServiceImplTest {
         e.setId(id);
         e.setName(name);
         return e;
+    }
+
+    private static WorkoutTemplate template(Long id, String name) {
+        WorkoutTemplate t = new WorkoutTemplate();
+        t.setId(id);
+        t.setName(name);
+        return t;
     }
 }

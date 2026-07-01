@@ -53,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -139,6 +139,12 @@ class AppDatabase extends _$AppDatabase {
           // V16: meals can carry an optional name (set when logging from a recipe).
           if (from < 16) {
             await m.addColumn(meals, meals.name);
+          }
+          // V17: workout sessions record which template they were started
+          // from, if any — the template's clientId plus a name snapshot.
+          if (from < 17) {
+            await m.addColumn(workoutSessions, workoutSessions.templateClientId);
+            await m.addColumn(workoutSessions, workoutSessions.templateName);
           }
         },
       );

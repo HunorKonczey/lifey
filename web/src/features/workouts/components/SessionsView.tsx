@@ -29,7 +29,7 @@ export function SessionsView() {
   });
 
   const startMutation = useMutation({
-    mutationFn: (exerciseIds: number[]) =>
+    mutationFn: ({ exerciseIds, templateId }: { exerciseIds: number[]; templateId?: number | null }) =>
       workoutSessionApi.create({
         startedAt: new Date().toISOString(),
         finishedAt: null,
@@ -38,6 +38,7 @@ export function SessionsView() {
         activeCalories: null,
         averageHeartRate: null,
         healthWorkoutId: null,
+        templateId,
       }),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() });
@@ -104,7 +105,7 @@ export function SessionsView() {
                 <span className="material-symbols-rounded">close</span>
               </button>
             </div>
-            <button onClick={() => startMutation.mutate([])} disabled={startMutation.isPending}
+            <button onClick={() => startMutation.mutate({ exerciseIds: [] })} disabled={startMutation.isPending}
               className="text-left px-4 py-3 rounded-[var(--r-md)] text-sm font-semibold"
               style={{ background: "var(--surface-container)" }}>
               Empty workout
@@ -114,7 +115,8 @@ export function SessionsView() {
               <p className="text-xs" style={{ color: "var(--muted)" }}>No templates yet.</p>
             )}
             {(templates ?? []).map((t) => (
-              <button key={t.id} onClick={() => startMutation.mutate(t.exercises.map((e) => e.exerciseId))}
+              <button key={t.id}
+                onClick={() => startMutation.mutate({ exerciseIds: t.exercises.map((e) => e.exerciseId), templateId: t.id })}
                 disabled={startMutation.isPending}
                 className="text-left px-4 py-3 rounded-[var(--r-md)] text-sm font-semibold transition-colors hover:bg-surface-container"
                 style={{ background: "var(--surface-container)" }}>
@@ -147,7 +149,7 @@ export function SessionsView() {
       <div className="flex items-center gap-3 px-4 py-3 rounded-[var(--r-card)] group" style={{ background: "var(--surface)" }}>
         <button onClick={onOpen} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-2">
-            <p className="font-semibold text-sm truncate">{exNames || "Workout"}</p>
+            <p className="font-semibold text-sm truncate">{session.templateName ?? (exNames || "Workout")}</p>
             {ongoing && (
               <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold"
                 style={{ background: "color-mix(in srgb, var(--primary) 18%, transparent)", color: "var(--primary)" }}>

@@ -18,12 +18,16 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
     DateTime? finishedAt,
     required List<PlannedExerciseInput> exercises,
     required List<ExerciseSetInput> sets,
+    String? templateClientId,
+    String? templateName,
   }) {
     return _repo.create(
       startedAt: startedAt,
       finishedAt: finishedAt,
       exercises: exercises,
       sets: sets,
+      templateClientId: templateClientId,
+      templateName: templateName,
     );
   }
 
