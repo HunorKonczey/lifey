@@ -27,17 +27,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME:hunot08adf@gmail.com}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
 
 server:
   # Railway (and most PaaS hosts) assign the container a port at runtime via
@@ -70,13 +59,6 @@ management:
       # Adds /actuator/health/liveness and /readiness groups for PaaS probes.
       probes:
         enabled: true
-  health:
-    mail:
-      # The mail health indicator opens a live SMTP connection to
-      # smtp.gmail.com on every /actuator/health check. On Railway that
-      # connection times out (~134s), exceeding the platform's healthcheck
-      # timeout and failing the deploy. Mail sending itself is unaffected.
-      enabled: false
 
 lifey:
   cors:
@@ -101,7 +83,11 @@ lifey:
     # contact. Override the contact in deployments via OPENFOODFACTS_USER_AGENT.
     user-agent: ${OPENFOODFACTS_USER_AGENT:Lifey/1.0 (hunorkonczey@gmail.com)}
   mail:
-    from: ${MAIL_USERNAME:hunot08adf@gmail.com}
-    # Off by default (no MAIL_PASSWORD locally) — the sender logs instead of
-    # sending so local dev and tests never require real SMTP credentials.
+    # Resend's shared test domain — works without owning/verifying a domain,
+    # but only delivers to the email address the RESEND_API_KEY account was
+    # signed up with. Switch to a verified domain address once one exists.
+    from: ${MAIL_FROM:onboarding@resend.dev}
+    # Off by default (no RESEND_API_KEY locally) — the sender logs instead of
+    # sending so local dev and tests never require a real Resend account.
     enabled: ${MAIL_ENABLED:false}
+    resend-api-key: ${RESEND_API_KEY:}

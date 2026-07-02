@@ -1,37 +1,37 @@
 package com.lifey.mail;
 
 import com.lifey.user.User;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
 import java.util.Map;
 
 /**
- * Sends mail over the Gmail SMTP connection configured in application.yml, or
- * just logs when {@code app.mail.enabled=false} (default without a
- * {@code MAIL_PASSWORD}). Every send runs on the {@code mailTaskExecutor} (see
- * {@link MailConfig}) and failures are caught here so a bounced email never
- * fails the request that triggered it.
+ * Sends mail through the Resend HTTPS API (https://api.resend.com/emails), or
+ * just logs when {@code lifey.mail.enabled=false} (default without a
+ * {@code RESEND_API_KEY}). Used instead of SMTP because PaaS hosts like
+ * Railway commonly block outbound SMTP ports; the Resend API goes over 443.
+ * Every send runs on the {@code mailTaskExecutor} (see {@link MailConfig})
+ * and failures are caught here so a bounced email never fails the request
+ * that triggered it.
  */
 @Service
-class SmtpMailService implements MailService {
+class ResendMailService implements MailService {
 
-    private static final Logger log = LoggerFactory.getLogger(SmtpMailService.class);
+    private static final Logger log = LoggerFactory.getLogger(ResendMailService.class);
+    private static final String RESEND_API_URL = "https://api.resend.com/emails";
 
-    private final JavaMailSender mailSender;
+    private final RestClient restClient;
     private final MailProperties mailProperties;
     private final MailTemplateRenderer templateRenderer;
     private final MailLanguageResolver languageResolver;
 
-    SmtpMailService(JavaMailSender mailSender, MailProperties mailProperties,
-                     MailTemplateRenderer templateRenderer, MailLanguageResolver languageResolver) {
-        this.mailSender = mailSender;
+    ResendMailService(MailProperties mailProperties, MailTemplateRenderer templateRenderer,
+                       MailLanguageResolver languageResolver) {
+        this.restClient = RestClient.create();
         this.mailProperties = mailProperties;
         this.templateRenderer = templateRenderer;
         this.languageResolver = languageResolver;
@@ -65,15 +65,22 @@ class SmtpMailService implements MailService {
             String html = templateRenderer.renderHtml(templateName, language, placeholders);
             String text = templateRenderer.renderText(templateName, language, placeholders);
 
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(mailProperties.from());
-            helper.setTo(user.getEmail());
-            helper.setSubject(subject);
-            helper.setText(text, html);
+            Map<String, Object> body = Map.of(
+                    "from", mailProperties.from(),
+                    "to", user.getEmail(),
+                    "subject", subject,
+                    "html", html,
+                    "text", text
+            );
 
-            mailSender.send(message);
-        } catch (MessagingException | RuntimeException e) {
+            restClient.post()
+                    .uri(RESEND_API_URL)
+                    .header("Authorization", "Bearer " + mailProperties.resendApiKey())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RuntimeException e) {
             log.error("Failed to send '{}' email to {}", mailType, user.getEmail(), e);
         }
     }
