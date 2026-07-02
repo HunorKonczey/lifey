@@ -20,6 +20,7 @@ import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
+import 'widgets/apple_workout_picker_sheet.dart';
 import 'widgets/exercise_session_card.dart';
 
 /// Full-screen form for logging a session, or editing one when [session] is given.
@@ -531,6 +532,64 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
+  /// Manual "Import from Apple Health" action for a session that's already
+  /// been closed and isn't paired yet — covers finishing the Lifey session
+  /// before the Apple Watch workout itself ended, so [_finishWorkout]'s
+  /// same-moment auto-match found nothing. Opens a picker over the last two
+  /// weeks of unpaired strength workouts rather than re-running the narrow
+  /// auto-match.
+  Future<void> _importFromAppleHealthManually() async {
+    if (_saving || _sessionClientId == null) return;
+    setState(() => _saving = true);
+    final l10n = AppLocalizations.of(context)!;
+    final importService = ref.read(healthWorkoutImportServiceProvider);
+
+    try {
+      final candidates = await importService.findImportableCandidates();
+      if (!mounted) return;
+
+      final workout = await showModalBottomSheet<AppleWorkout>(
+        context: context,
+        useRootNavigator: true,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (_) => AppleWorkoutPickerSheet(candidates: candidates),
+      );
+      if (workout == null || !mounted) return;
+
+      final confirm = await showAppConfirmDialog(
+        context,
+        title: l10n.pairAppleWorkoutTitle,
+        message: l10n.pairAppleWorkoutMessage(
+          _label.format(workout.startDate.toLocal()),
+          workout.activeCalories?.round().toString() ?? '–',
+          workout.averageHeartRate?.round().toString() ?? '–',
+        ),
+        confirmLabel: l10n.pairButton,
+        cancelLabel: l10n.cancelButton,
+        icon: Icons.link_rounded,
+      );
+      if (confirm != true || !mounted) return;
+
+      await importService.importInto(
+        sessionClientId: _sessionClientId!,
+        startedAt: _startedAt!,
+        exercises: _buildPlanned(),
+        sets: _buildSets(),
+        workout: workout,
+      );
+      if (!mounted) return;
+      AppSnackbar.showSuccess(context, title: l10n.workoutPairedWithHealthMessage);
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotSaveSessionMessage);
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Top bar
   // ---------------------------------------------------------------------------
@@ -688,9 +747,19 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
     // Finish button is only shown for running (not-yet-finished) sessions.
     final showFinishButton = _finishedAt == null;
+    // Manual pairing action for a session that's already closed but wasn't
+    // paired with an Apple workout at finish time (e.g. the Apple Watch
+    // workout was still running when Lifey's session was closed).
+    final appleHealthEnabled = ref.watch(appleHealthControllerProvider).value ?? false;
+    final showImportAppleHealthButton = _isEditing &&
+        _finishedAt != null &&
+        !(widget.session?.fromAppleHealth ?? false) &&
+        appleHealthEnabled &&
+        ref.read(healthServiceProvider).isAvailable;
     // ListView needs extra bottom room so content isn't hidden behind the sticky button.
-    final listBottomPad =
-        showFinishButton ? (safeBottom + 24 + 54 + 16) : (safeBottom + 16);
+    final listBottomPad = (showFinishButton || showImportAppleHealthButton)
+        ? (safeBottom + 24 + 54 + 16)
+        : (safeBottom + 16);
 
     final title = _isEditing
         ? (widget.session!.templateName ?? l10n.editWorkoutTitle)
@@ -812,6 +881,47 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                         )
                       : const Icon(Icons.check, size: 20),
                   label: Text(l10n.finishWorkoutButton),
+                ),
+              ),
+            ),
+
+          // ── Sticky "Import from Apple Health" button (closed, unpaired session) ──
+          if (showImportAppleHealthButton)
+            Positioned(
+              bottom: safeBottom + 24,
+              left: 16,
+              right: 16,
+              child: SizedBox(
+                height: 54,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _importFromAppleHealthManually,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: scheme.primary,
+                    foregroundColor: scheme.onPrimary,
+                    disabledBackgroundColor:
+                        scheme.primary.withValues(alpha: 0.6),
+                    disabledForegroundColor:
+                        scheme.onPrimary.withValues(alpha: 0.7),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    textStyle: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  icon: _saving
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: scheme.onPrimary.withValues(alpha: 0.7),
+                          ),
+                        )
+                      : const Icon(Icons.link_rounded, size: 20),
+                  label: Text(l10n.importFromAppleHealthButton),
                 ),
               ),
             ),

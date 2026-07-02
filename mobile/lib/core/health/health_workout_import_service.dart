@@ -26,6 +26,12 @@ class HealthWorkoutImportService {
   /// opened Lifey to import it", not just an immediate same-minute tap.
   static const _window = Duration(days: 1);
 
+  /// Wider lookback for [findImportableCandidates] — the manual picker on an
+  /// already-closed session covers "I closed Lifey before my Apple Watch
+  /// workout ended, and only now got around to pairing it", which can be more
+  /// than a day later.
+  static const _candidatesWindow = Duration(days: 14);
+
   /// The most recently finished strength workout from the last day that isn't
   /// already imported into a session, or null if there's nothing to import.
   /// Read-only.
@@ -34,15 +40,34 @@ class HealthWorkoutImportService {
         await _ref.read(healthServiceProvider).recentStrengthWorkouts(within: _window);
     if (workouts.isEmpty) return null;
 
-    final sessions = _ref.read(workoutSessionControllerProvider).value ?? const <WorkoutSession>[];
-    final alreadyImported =
-        sessions.map((s) => s.healthWorkoutId).whereType<String>().toSet();
-
+    final alreadyImported = _alreadyImportedIds();
     // recentStrengthWorkouts is sorted most-recently-finished first.
     for (final workout in workouts) {
       if (!alreadyImported.contains(workout.uuid)) return workout;
     }
     return null;
+  }
+
+  /// Up to [limit] most-recently-finished strength workouts (within
+  /// [_candidatesWindow]) that aren't already imported into any session, most
+  /// recent first. Backs the manual "pick a workout to pair" sheet a user can
+  /// open on a session that's already been closed. Read-only.
+  Future<List<AppleWorkout>> findImportableCandidates({int limit = 5}) async {
+    final workouts = await _ref
+        .read(healthServiceProvider)
+        .recentStrengthWorkouts(within: _candidatesWindow);
+    if (workouts.isEmpty) return const [];
+
+    final alreadyImported = _alreadyImportedIds();
+    return workouts
+        .where((w) => !alreadyImported.contains(w.uuid))
+        .take(limit)
+        .toList();
+  }
+
+  Set<String> _alreadyImportedIds() {
+    final sessions = _ref.read(workoutSessionControllerProvider).value ?? const <WorkoutSession>[];
+    return sessions.map((s) => s.healthWorkoutId).whereType<String>().toSet();
   }
 
   /// Closes + enriches the session [sessionClientId] with [workout]'s data,

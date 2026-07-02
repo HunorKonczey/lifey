@@ -1006,6 +1006,12 @@
     "noRecentAppleWorkoutMessage": "No recent Apple Health workout found",
     "@noRecentAppleWorkoutMessage": {"description": "Shown when the import button finds no strength workout finished in the last day"},
 
+    "pickAppleWorkoutTitle": "Pick an Apple Health workout",
+    "@pickAppleWorkoutTitle": {"description": "Title of the sheet listing recent Apple Health strength workouts to pair with an already-closed session"},
+
+    "workoutPairedWithHealthMessage": "Workout paired with Apple Health",
+    "@workoutPairedWithHealthMessage": {"description": "Snackbar shown after manually pairing an already-closed session with an Apple Health workout"},
+
     "weightImportedFromHealth": "{count, plural, one{{count} entry imported} other{{count} entries imported}}",
     "@weightImportedFromHealth": {"description": "Snackbar after the weight screen's Apple Health import, reporting how many days were backfilled", "placeholders": {"count": {"type": "int"}}},
 

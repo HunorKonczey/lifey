@@ -347,6 +347,8 @@
     "todaysMealsSectionTitle": "Mai étkezések",
     "noMealsLoggedYetPeriodMessage": "Még nem rögzítettél étkezést.",
     "noRecentAppleWorkoutMessage": "Nincs friss Apple Health edzés",
+    "pickAppleWorkoutTitle": "Válassz Apple Health edzést",
+    "workoutPairedWithHealthMessage": "Edzés párosítva az Apple Health-lel",
     "weightImportedFromHealth": "{count, plural, one{{count} bejegyzés importálva} other{{count} bejegyzés importálva}}",
     "noNewWeightFromHealth": "Nincs új súlyadat",
     "workoutDurationMin": "{count} perc",
