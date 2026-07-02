@@ -121,6 +121,34 @@ class WorkoutSessionServiceImplTest {
     }
 
     @Test
+    void create_dropsIncompleteSetsInsteadOfPersistingThem() {
+        when(exerciseRepository.findById(1L)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> {
+            WorkoutSession s = inv.getArgument(0);
+            s.setId(9L);
+            return s;
+        });
+        Instant performedAt = Instant.parse("2026-06-18T05:05:00Z");
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(),
+                List.of(
+                        new ExerciseSetRequest(1L, null, 60.0, performedAt), // reps not filled in yet
+                        new ExerciseSetRequest(1L, 0, 60.0, performedAt),    // reps zero
+                        new ExerciseSetRequest(1L, 10, null, performedAt),   // weight not filled in yet
+                        new ExerciseSetRequest(1L, 10, -5.0, performedAt),   // negative weight
+                        new ExerciseSetRequest(1L, 10, 60.0, performedAt)    // the one valid set
+                ),
+                null, null, null, null);
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.sets()).singleElement().satisfies(s -> {
+            assertThat(s.reps()).isEqualTo(10);
+            assertThat(s.weight()).isEqualTo(60.0);
+        });
+    }
+
+    @Test
     void create_throwsWhenPlannedExerciseMissing() {
         when(exerciseRepository.findById(99L)).thenReturn(Optional.empty());
         WorkoutSessionRequest request = new WorkoutSessionRequest(

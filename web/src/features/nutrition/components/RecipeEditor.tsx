@@ -30,7 +30,8 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
   const [name, setName] = useState(recipe?.name ?? "");
   const [description, setDescription] = useState(recipe?.description ?? "");
   const [favorite, setFavorite] = useState(recipe?.favorite ?? false);
-  const [servings, setServings] = useState(recipe?.servings ?? 1);
+  const [servingsText, setServingsText] = useState(String(recipe?.servings ?? 1));
+  const servings = Math.max(1, Number(servingsText) || 1);
   const [ingredients, setIngredients] = useState<DraftIngredient[]>(
     recipe
       ? recipe.ingredients.map((i) => ({
@@ -116,8 +117,9 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <label className="text-sm font-semibold">{t("servings")}</label>
-            <input type="number" min={1} value={servings}
-              onChange={(e) => setServings(Math.max(1, Number(e.target.value)))}
+            <input type="number" min={1} value={servingsText}
+              onChange={(e) => setServingsText(e.target.value)}
+              onBlur={() => setServingsText(String(servings))}
               className="w-16 px-2 h-9 rounded-[var(--r-md)] outline-none text-sm tabular"
               style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
           </div>

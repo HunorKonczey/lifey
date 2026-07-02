@@ -12,6 +12,7 @@ import com.lifey.workout.session.dto.WorkoutSessionResponse;
 import com.lifey.workout.template.WorkoutTemplate;
 import com.lifey.workout.template.WorkoutTemplateRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -125,10 +127,21 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     /**
      * Rebuilds the session's set list from the request, resolving each
      * {@code exerciseId}. Relies on {@code orphanRemoval} to delete dropped sets.
+     *
+     * <p>Sets with missing/non-positive reps or a missing/negative weight are
+     * dropped rather than rejected — the mobile client can mark a plan row
+     * "done" before its reps/weight are filled in (see
+     * {@link ExerciseSetRequest}), and such a row is incomplete client state,
+     * not a request the whole save should fail for.
      */
     private void replaceSets(WorkoutSession session, List<ExerciseSetRequest> requested) {
         session.getSets().clear();
         for (ExerciseSetRequest item : requested) {
+            if (!isComplete(item)) {
+                log.warn("Dropping incomplete set for session {} (exerciseId={}, reps={}, weight={})",
+                        session.getId(), item.exerciseId(), item.reps(), item.weight());
+                continue;
+            }
             Exercise exercise = exerciseRepository.findById(item.exerciseId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + item.exerciseId()));
 
@@ -140,5 +153,10 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             set.setPerformedAt(item.performedAt());
             session.getSets().add(set);
         }
+    }
+
+    private boolean isComplete(ExerciseSetRequest item) {
+        return item.reps() != null && item.reps() > 0
+                && item.weight() != null && item.weight() >= 0;
     }
 }

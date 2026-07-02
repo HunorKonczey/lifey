@@ -262,14 +262,20 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           ))
       .toList();
 
+  // Only rows with both reps and weight filled in count as a real set — a
+  // row can be `isDone` (doneAt set) while still missing one of these, e.g.
+  // if a stale autosave fires between marking a row done and the editor
+  // sheet returning a value. Such rows are dropped here rather than sent
+  // with a coalesced 0, which the backend would otherwise have to reject or
+  // silently discard itself.
   List<ExerciseSetInput> _buildSets() => [
         for (final block in _blocks)
           for (final row in block.rows)
-            if (row.isDone)
+            if (row.isDone && row.reps != null && row.reps! > 0 && row.weight != null)
               ExerciseSetInput(
                 exerciseClientId: block.exerciseClientId,
-                reps: row.reps ?? 0,
-                weight: row.weight ?? 0,
+                reps: row.reps!,
+                weight: row.weight!,
                 performedAt: row.doneAt!,
               ),
       ];

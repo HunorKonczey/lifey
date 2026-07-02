@@ -52,10 +52,15 @@ export function DatePicker({ value, onChange, min, max, placeholder, hasError, i
   const [viewDate, setViewDate] = useState(selected ?? max ?? new Date());
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  // Re-sync the visible month when `value` changes from outside (not from a
+  // day click, which already updates viewDate's underlying value directly).
+  // Adjusting state during render (React's blessed pattern for this) instead
+  // of in an effect avoids an extra cascading render.
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     if (selected) setViewDate(selected);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }
 
   useEffect(() => {
     if (!open) return;

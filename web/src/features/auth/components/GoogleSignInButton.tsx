@@ -70,7 +70,9 @@ export function GoogleSignInButton({ mode = "login" }: GoogleSignInButtonProps) 
       window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   const latestRef = useRef({ applyAccessToken, router, show, t, mode });
-  latestRef.current = { applyAccessToken, router, show, t, mode };
+  useEffect(() => {
+    latestRef.current = { applyAccessToken, router, show, t, mode };
+  });
 
   useEffect(() => {
     if (!env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) return;
@@ -118,7 +120,10 @@ export function GoogleSignInButton({ mode = "login" }: GoogleSignInButtonProps) 
           locale,
         });
       })
-      .catch(() => show(t("googleSignInFailed"), "error"));
+      .catch(() => {
+        const { show, t } = latestRef.current;
+        show(t("googleSignInFailed"), "error");
+      });
 
     return () => {
       cancelled = true;

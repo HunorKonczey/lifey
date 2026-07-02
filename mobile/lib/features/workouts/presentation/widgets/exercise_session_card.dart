@@ -624,7 +624,9 @@ class _CompactSetEditorState extends State<_CompactSetEditor> {
                     ),
                     onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return null;
+                      if (v == null || v.trim().isEmpty) {
+                        return l10n.enterANumberError;
+                      }
                       final n = double.tryParse(v.trim().replaceAll(',', '.'));
                       if (n == null) return l10n.enterANumberError;
                       if (n < 0) return l10n.mustBeZeroOrMoreError;
@@ -645,7 +647,9 @@ class _CompactSetEditorState extends State<_CompactSetEditor> {
                     ),
                     onFieldSubmitted: (_) => _submit(),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return null;
+                      if (v == null || v.trim().isEmpty) {
+                        return l10n.enterANumberError;
+                      }
                       final n = int.tryParse(v.trim());
                       if (n == null) return l10n.enterANumberError;
                       if (n <= 0) return l10n.mustBeGreaterThanZeroShortError;

@@ -116,7 +116,8 @@ export default function SettingsPage() {
     : 70;
 
   const {
-    register: registerDetails, watch: watchDetails, setValue: setDetailsValue, reset: resetDetailsForm,
+    register: registerDetails, watch: watchDetails, getValues: getDetailsValues,
+    setValue: setDetailsValue, reset: resetDetailsForm,
     formState: { errors: detailsErrors },
   } = useForm<OnboardingFormValues>({ resolver: zodResolver(onboardingSchema) });
   const [detailsSeededFrom, setDetailsSeededFrom] = useState<typeof details>(undefined);
@@ -221,15 +222,7 @@ export default function SettingsPage() {
                 <HeightField register={registerDetails} setValue={setDetailsValue} errors={detailsErrors} unitSystem={form.unitSystem} />
                 <LifestyleGoalFields register={registerDetails} watch={watchDetails} setValue={setDetailsValue} errors={detailsErrors} unitSystem={form.unitSystem} />
                 <button
-                  onClick={() => saveDetailsMutation.mutate({
-                    gender: watchDetails("gender"),
-                    birthDate: watchDetails("birthDate"),
-                    heightCm: watchDetails("heightCm"),
-                    activityLevel: watchDetails("activityLevel"),
-                    primaryGoal: watchDetails("primaryGoal"),
-                    targetWeightKg: watchDetails("targetWeightKg"),
-                    currentWeightKg: watchDetails("currentWeightKg"),
-                  })}
+                  onClick={() => saveDetailsMutation.mutate(getDetailsValues())}
                   disabled={saveDetailsMutation.isPending}
                   className="mt-1 h-10 px-6 w-fit rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
                   style={{ background: "var(--primary)", color: "#1E1F18" }}>

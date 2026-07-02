@@ -102,15 +102,23 @@ class WorkoutSessionControllerTest {
     }
 
     @Test
-    void create_zeroRepsOrNegativeWeightReturns400() throws Exception {
+    void create_zeroRepsOrNegativeWeightIsAcceptedAndLeftForServiceToDrop() throws Exception {
+        // Reps<=0/negative weight is normal transient client state (a plan row
+        // marked done before it's filled in) — the controller accepts the
+        // request, and WorkoutSessionServiceImpl is responsible for dropping
+        // such incomplete sets rather than persisting them. See
+        // WorkoutSessionServiceImplTest for that behavior.
+        when(workoutSessionService.create(any())).thenReturn(new WorkoutSessionResponse(6L,
+                Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
+
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\",\"exerciseIds\":[],"
                                 + "\"sets\":[{\"exerciseId\":1,\"reps\":0,\"weight\":-5,"
                                 + "\"performedAt\":\"2026-06-01T05:05:00Z\"}]}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400));
+                .andExpect(status().isCreated());
 
-        verify(workoutSessionService, never()).create(any());
+        verify(workoutSessionService).create(any());
     }
 
     @Test

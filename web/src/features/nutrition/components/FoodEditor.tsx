@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -31,7 +31,7 @@ export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps
     { name: "fatPer100g" as const, label: t("fatPer100g"), color: "var(--metric-fat)" },
   ];
 
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } =
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } =
     useForm<FoodFormValues>({
       resolver: zodResolver(foodSchema),
       defaultValues: {
@@ -90,7 +90,7 @@ export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps
     onError: () => show(t("deleteFailed"), "error"),
   });
 
-  const hidden = watch("hidden");
+  const hidden = useWatch({ control, name: "hidden" });
 
   return (
     <form
