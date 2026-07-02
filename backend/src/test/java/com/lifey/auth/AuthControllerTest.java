@@ -34,6 +34,9 @@ class AuthControllerTest {
     AuthService authService;
 
     @MockitoBean
+    PasswordResetService passwordResetService;
+
+    @MockitoBean
     JwtProperties jwtProperties;
 
     @Test
@@ -120,5 +123,66 @@ class AuthControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(authService).logoutAll();
+    }
+
+    @Test
+    void forgotPassword_returnsOkRegardlessOfWhetherEmailExists() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/forgot-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"unknown@example.com\"}"))
+                .andExpect(status().isOk());
+
+        verify(passwordResetService).forgotPassword("unknown@example.com");
+    }
+
+    @Test
+    void resetPassword_validRequestReturnsOk() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"user@example.com\",\"code\":\"123456\",\"newPassword\":\"newpassword123\"}"))
+                .andExpect(status().isOk());
+
+        verify(passwordResetService).resetPassword("user@example.com", "123456", "newpassword123");
+    }
+
+    @Test
+    void resetPassword_invalidCodeReturns400() throws Exception {
+        doThrow(new InvalidResetCodeException("Invalid or expired code"))
+                .when(passwordResetService).resetPassword(any(), any(), any());
+
+        mockMvc.perform(post("/api/v1/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"user@example.com\",\"code\":\"000000\",\"newPassword\":\"newpassword123\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void changePassword_success_returnsFreshTokenPair() throws Exception {
+        when(authService.changePassword(any()))
+                .thenReturn(new AuthResponse("new-access-token", "new-refresh-token", 900L));
+        when(jwtProperties.refreshTokenTtl()).thenReturn(Duration.ofDays(30));
+
+        mockMvc.perform(post("/api/v1/auth/change-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"old-password\",\"newPassword\":\"new-password-123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("new-access-token"))
+                .andExpect(jsonPath("$.refreshToken").value("new-refresh-token"));
+    }
+
+    @Test
+    void changePassword_wrongCurrentPasswordReturns400() throws Exception {
+        when(authService.changePassword(any()))
+                .thenThrow(new IncorrectPasswordException("Current password is incorrect"));
+
+        mockMvc.perform(post("/api/v1/auth/change-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"wrong-password\",\"newPassword\":\"new-password-123\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void changePassword_samePasswordReturns400() throws Exception {
+        when(authService.changePassword(any()))
+                .thenThrow(new SamePasswordException("New password must be different from the current password"));
+
+        mockMvc.perform(post("/api/v1/auth/change-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"same-password\",\"newPassword\":\"same-password\"}"))
+                .andExpect(status().isBadRequest());
     }
 }

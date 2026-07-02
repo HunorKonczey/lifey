@@ -1,6 +1,7 @@
 package com.lifey.auth;
 
 import com.lifey.auth.dto.AuthResponse;
+import com.lifey.auth.dto.ChangePasswordRequest;
 import com.lifey.auth.dto.LoginRequest;
 import com.lifey.auth.dto.RegisterRequest;
 import com.lifey.auth.dto.UserResponse;
@@ -8,6 +9,7 @@ import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,19 +30,22 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final CurrentUserProvider currentUserProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AuthServiceImpl(UserRepository userRepository,
                            RefreshTokenRepository refreshTokenRepository,
                            AuthenticationManager authenticationManager,
                            PasswordEncoder passwordEncoder,
                            JwtService jwtService,
-                           CurrentUserProvider currentUserProvider) {
+                           CurrentUserProvider currentUserProvider,
+                           ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.currentUserProvider = currentUserProvider;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -56,6 +61,7 @@ public class AuthServiceImpl implements AuthService {
         user.setCreatedAt(Instant.now());
         user.setRoles(Set.of(Role.ROLE_USER));
         userRepository.save(user);
+        eventPublisher.publishEvent(new UserRegisteredEvent(user.getId()));
 
         return toUserResponse(user);
     }
@@ -101,6 +107,26 @@ public class AuthServiceImpl implements AuthService {
     public void logout(String rawRefreshToken) {
         refreshTokenRepository.findByTokenHash(TokenHasher.hash(rawRefreshToken))
                 .ifPresent(token -> token.setRevoked(true));
+    }
+
+    @Override
+    public AuthResponse changePassword(ChangePasswordRequest request) {
+        Long userId = currentUserProvider.getUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user " + userId + " not found"));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new IncorrectPasswordException("Current password is incorrect");
+        }
+        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new SamePasswordException("New password must be different from the current password");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        refreshTokenRepository.findAllByUserIdAndRevokedFalse(userId)
+                .forEach(token -> token.setRevoked(true));
+
+        return issueTokenPair(user);
     }
 
     @Override

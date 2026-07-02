@@ -23,7 +23,21 @@
     "noAccount": "Don't have an account?",
     "createOne": "Create one",
     "haveAccount": "Already have an account?",
-    "tagline": "Sign in to continue tracking your progress"
+    "tagline": "Sign in to continue tracking your progress",
+    "forgotPassword": "Forgot password?",
+    "forgotPasswordTitle": "Reset your password",
+    "forgotPasswordTagline": "Enter your email and we'll send you a reset code.",
+    "sendCode": "Send reset code",
+    "sending": "Sending…",
+    "checkYourEmail": "If that email is registered, we've sent a 6-digit code to it.",
+    "resetPasswordTitle": "Enter your reset code",
+    "resetPasswordTagline": "Check your email for the 6-digit code we sent you.",
+    "code": "Reset code",
+    "newPassword": "New password",
+    "resetPassword": "Reset password",
+    "resetting": "Resetting…",
+    "resetSuccess": "Password reset — you can now sign in.",
+    "backToLogin": "Back to sign in"
   },
   "common": {
     "today": "Today",
@@ -91,6 +105,12 @@
     "imperial": "Imperial",
     "english": "English",
     "hungarian": "Hungarian",
-    "logoutAll": "Sign out of all devices"
+    "logoutAll": "Sign out of all devices",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmNewPassword": "Confirm new password",
+    "changePasswordSuccess": "Password changed",
+    "changePasswordError": "Failed to change password"
   }
 }

@@ -77,7 +77,12 @@ export default function LoginPage() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-semibold">Password</label>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold">Password</label>
+            <Link href="/forgot-password" className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
+              Forgot password?
+            </Link>
+          </div>
           <div className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
             style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}>
             <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>lock</span>

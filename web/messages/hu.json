@@ -23,7 +23,21 @@
     "noAccount": "Nincs még fiókod?",
     "createOne": "Hozz létre egyet",
     "haveAccount": "Már van fiókod?",
-    "tagline": "Jelentkezz be a haladásod követéséhez"
+    "tagline": "Jelentkezz be a haladásod követéséhez",
+    "forgotPassword": "Elfelejtett jelszó?",
+    "forgotPasswordTitle": "Jelszó visszaállítása",
+    "forgotPasswordTagline": "Add meg az email címed, és küldünk egy visszaállító kódot.",
+    "sendCode": "Kód küldése",
+    "sending": "Küldés…",
+    "checkYourEmail": "Ha ez az email cím regisztrálva van, küldtünk rá egy 6 számjegyű kódot.",
+    "resetPasswordTitle": "Add meg a visszaállító kódot",
+    "resetPasswordTagline": "Nézd meg az emailedet a 6 számjegyű kódért.",
+    "code": "Visszaállító kód",
+    "newPassword": "Új jelszó",
+    "resetPassword": "Jelszó visszaállítása",
+    "resetting": "Visszaállítás…",
+    "resetSuccess": "A jelszó visszaállítva — most már bejelentkezhetsz.",
+    "backToLogin": "Vissza a bejelentkezéshez"
   },
   "common": {
     "today": "Ma",
@@ -91,6 +105,12 @@
     "imperial": "Angolszász",
     "english": "Angol",
     "hungarian": "Magyar",
-    "logoutAll": "Kijelentkezés minden eszközről"
+    "logoutAll": "Kijelentkezés minden eszközről",
+    "changePassword": "Jelszó módosítása",
+    "currentPassword": "Jelenlegi jelszó",
+    "newPassword": "Új jelszó",
+    "confirmNewPassword": "Új jelszó megerősítése",
+    "changePasswordSuccess": "Jelszó megváltoztatva",
+    "changePasswordError": "Nem sikerült megváltoztatni a jelszót"
   }
 }

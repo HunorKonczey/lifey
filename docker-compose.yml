@@ -27,6 +27,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifey
       SPRING_DATASOURCE_USERNAME: lifey
       SPRING_DATASOURCE_PASSWORD: lifey
+      MAIL_USERNAME: ${MAIL_USERNAME:-hunot08adf@gmail.com}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
     ports:
       - "8080:8080"
 

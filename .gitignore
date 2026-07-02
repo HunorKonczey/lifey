@@ -28,3 +28,8 @@ replay_pid*
 /lifey.iml
 /out/
 /errors/
+
+# Local secrets (docker-compose reads .env from repo root)
+.env
+.env.local
+!.env.example

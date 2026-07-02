@@ -9,3 +9,6 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+lifey:
+  mail:
+    enabled: true

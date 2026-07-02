@@ -10,6 +10,9 @@
     "integrationsLabel": "Integrations",
     "@integrationsLabel": {"description": "Settings group heading for water sources and Apple Health"},
 
+    "accountLabel": "Account",
+    "@accountLabel": {"description": "Settings group heading for account/security actions"},
+
     "unitsLabel": "Units",
     "@unitsLabel": {"description": "Section heading for the unit system selector"},
 
@@ -135,6 +138,54 @@
 
     "signInPromptButton": "Already have an account? Sign in",
     "@signInPromptButton": {"description": "Button on the registration screen that navigates back to login"},
+
+    "forgotPasswordButton": "Forgot password?",
+    "@forgotPasswordButton": {"description": "Link on the login screen to the forgot-password flow"},
+
+    "forgotPasswordTitle": "Reset your password",
+    "@forgotPasswordTitle": {"description": "Title of the forgot-password screen, email step"},
+
+    "forgotPasswordSubtitle": "Enter your email and we'll send you a reset code.",
+    "@forgotPasswordSubtitle": {"description": "Subtitle on the forgot-password screen, email step"},
+
+    "sendResetCodeButton": "Send reset code",
+    "@sendResetCodeButton": {"description": "Button to request a password reset code"},
+
+    "resetCodeSentMessage": "If that email is registered, we've sent a 6-digit code to it.",
+    "@resetCodeSentMessage": {"description": "Generic confirmation shown after requesting a reset code, regardless of whether the email exists"},
+
+    "resetPasswordTitle": "Enter your reset code",
+    "@resetPasswordTitle": {"description": "Title of the forgot-password screen, code+new-password step"},
+
+    "resetPasswordSubtitle": "Check your email for the 6-digit code we sent you.",
+    "@resetPasswordSubtitle": {"description": "Subtitle on the forgot-password screen, code+new-password step"},
+
+    "resetCodeLabel": "Reset code",
+    "@resetCodeLabel": {"description": "Label for the 6-digit reset code field"},
+
+    "invalidResetCodeError": "Enter the 6-digit code",
+    "@invalidResetCodeError": {"description": "Validation error when the reset code isn't 6 digits"},
+
+    "newPasswordLabel": "New password",
+    "@newPasswordLabel": {"description": "Label for the new-password field on reset and change password screens"},
+
+    "resetPasswordButton": "Reset password",
+    "@resetPasswordButton": {"description": "Button to submit the reset code and new password"},
+
+    "passwordResetSuccessMessage": "Password reset — you can now sign in.",
+    "@passwordResetSuccessMessage": {"description": "Snackbar shown after a successful password reset"},
+
+    "backToSignInButton": "Back to sign in",
+    "@backToSignInButton": {"description": "Link back to the login screen"},
+
+    "changePasswordButton": "Change password",
+    "@changePasswordButton": {"description": "Settings row label that opens the change-password screen"},
+
+    "currentPasswordLabel": "Current password",
+    "@currentPasswordLabel": {"description": "Label for the current-password field on the change-password screen"},
+
+    "passwordChangedSuccessMessage": "Password changed",
+    "@passwordChangedSuccessMessage": {"description": "Snackbar shown after a successful password change"},
 
     "addFoodToMealTitle": "Add food to meal",
     "@addFoodToMealTitle": {"description": "Title of the add-meal-entry bottom sheet"},

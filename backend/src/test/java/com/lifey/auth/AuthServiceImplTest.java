@@ -1,6 +1,7 @@
 package com.lifey.auth;
 
 import com.lifey.auth.dto.AuthResponse;
+import com.lifey.auth.dto.ChangePasswordRequest;
 import com.lifey.auth.dto.LoginRequest;
 import com.lifey.auth.dto.RegisterRequest;
 import com.lifey.auth.dto.UserResponse;
@@ -14,6 +15,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.TestingAuthenticationToken;
@@ -53,6 +55,9 @@ class AuthServiceImplTest {
     @Mock
     CurrentUserProvider currentUserProvider;
 
+    @Mock
+    ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     AuthServiceImpl authService;
 
@@ -77,6 +82,7 @@ class AuthServiceImplTest {
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.email()).isEqualTo("new@example.com");
         assertThat(response.roles()).containsExactly(Role.ROLE_USER);
+        verify(eventPublisher).publishEvent(new UserRegisteredEvent(1L));
     }
 
     @Test
@@ -196,6 +202,57 @@ class AuthServiceImplTest {
 
         assertThat(tokenA.isRevoked()).isTrue();
         assertThat(tokenB.isRevoked()).isTrue();
+    }
+
+    @Test
+    void changePassword_success_revokesOldSessionsAndIssuesFreshPair() {
+        User user = user(5L, "user@example.com", Role.ROLE_USER);
+        RefreshToken oldSession = refreshToken(user, false, Instant.now().plus(Duration.ofDays(1)));
+        ChangePasswordRequest request = new ChangePasswordRequest("current-password", "new-password-123");
+        when(currentUserProvider.getUserId()).thenReturn(5L);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("current-password", "hashed")).thenReturn(true);
+        when(passwordEncoder.matches("new-password-123", "hashed")).thenReturn(false);
+        when(passwordEncoder.encode("new-password-123")).thenReturn("new-hashed-password");
+        when(refreshTokenRepository.findAllByUserIdAndRevokedFalse(5L)).thenReturn(List.of(oldSession));
+        when(jwtService.generateAccessToken(user)).thenReturn("new-access-token");
+        when(jwtService.refreshTokenTtl()).thenReturn(Duration.ofDays(30));
+        when(jwtService.accessTokenTtlSeconds()).thenReturn(900L);
+
+        AuthResponse response = authService.changePassword(request);
+
+        assertThat(user.getPasswordHash()).isEqualTo("new-hashed-password");
+        assertThat(oldSession.isRevoked()).isTrue();
+        assertThat(response.accessToken()).isEqualTo("new-access-token");
+        assertThat(response.refreshToken()).isNotBlank();
+        verify(refreshTokenRepository).save(any(RefreshToken.class));
+    }
+
+    @Test
+    void changePassword_wrongCurrentPassword_throwsAndDoesNotChangeAnything() {
+        User user = user(5L, "user@example.com", Role.ROLE_USER);
+        ChangePasswordRequest request = new ChangePasswordRequest("wrong-password", "new-password-123");
+        when(currentUserProvider.getUserId()).thenReturn(5L);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong-password", "hashed")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.changePassword(request))
+                .isInstanceOf(IncorrectPasswordException.class);
+        assertThat(user.getPasswordHash()).isEqualTo("hashed");
+        verify(refreshTokenRepository, never()).findAllByUserIdAndRevokedFalse(any());
+    }
+
+    @Test
+    void changePassword_sameAsCurrentPassword_throws() {
+        User user = user(5L, "user@example.com", Role.ROLE_USER);
+        ChangePasswordRequest request = new ChangePasswordRequest("current-password", "current-password");
+        when(currentUserProvider.getUserId()).thenReturn(5L);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("current-password", "hashed")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.changePassword(request))
+                .isInstanceOf(SamePasswordException.class);
+        verify(refreshTokenRepository, never()).findAllByUserIdAndRevokedFalse(any());
     }
 
     private static User user(Long id, String email, Role... roles) {

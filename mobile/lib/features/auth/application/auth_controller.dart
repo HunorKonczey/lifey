@@ -35,6 +35,30 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
   }
 
+  Future<void> forgotPassword(String email) => _repo.forgotPassword(email);
+
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) =>
+      _repo.resetPassword(email: email, code: code, newPassword: newPassword);
+
+  /// Verifies the current password, sets the new one, and — since the backend
+  /// revokes every refresh token on change — applies the fresh pair it returns
+  /// so this device stays signed in without a full re-login.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final tokens = await _repo.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+    await _storage.save(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
+    state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
+  }
+
   Future<void> logout() async {
     final refreshToken = await _storage.readRefreshToken();
     await _storage.clear();

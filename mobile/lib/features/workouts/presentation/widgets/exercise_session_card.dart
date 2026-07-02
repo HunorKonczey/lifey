@@ -75,7 +75,9 @@ class ExerciseSessionCard extends StatefulWidget {
   /// Double-tap on a row — screen fills next row or appends duplicate.
   final void Function(int index) onRowDuplicate;
 
-  final VoidCallback onAddSet;
+  /// bool arg = whether to prefill the new row from previous performance
+  /// (true when triggered by a double-tap on the "Add set" row).
+  final void Function(bool prefillFromPrevious) onAddSet;
   final VoidCallback onRemoveExercise;
 
   @override
@@ -92,10 +94,20 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
     await _openEditor(index + 1, focusReps: false);
   }
 
-  Future<void> _handleAddSet(bool focusReps) async {
-    widget.onAddSet();
-    // onAddSet appends a blank row in-place; open editor for it immediately.
+  Future<void> _handleAddSet(bool focusReps,
+      {bool prefillFromPrevious = false}) async {
+    widget.onAddSet(prefillFromPrevious);
+    // onAddSet appends a row in-place (optionally prefilled); open editor
+    // for it immediately.
     await _openEditor(widget.block.rows.length - 1, focusReps: focusReps);
+  }
+
+  /// Double-tap on "Add set" — prefill the new row from the previous
+  /// performance at this position, if there is one.
+  Future<void> _handleAddSetDoubleTap() async {
+    final hasPrevious =
+        widget.block.rows.length < widget.block.previousSets.length;
+    await _handleAddSet(false, prefillFromPrevious: hasPrevious);
   }
 
   Future<void> _openEditor(int index, {bool focusReps = false}) async {
@@ -165,7 +177,11 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
             const SizedBox(height: 5),
           ],
           const SizedBox(height: 5),
-          _AddSetRow(onAddSet: _handleAddSet, scheme: scheme),
+          _AddSetRow(
+            onAddSet: _handleAddSet,
+            onDoubleTap: _handleAddSetDoubleTap,
+            scheme: scheme,
+          ),
         ],
       ),
     );
@@ -298,9 +314,19 @@ class _SetRowTile extends StatelessWidget {
   }
 
   /// Green up-arrow if [current] beat [previous], red down-arrow if it fell
-  /// short, nothing if unchanged or there's nothing to compare against.
-  Widget? _deltaArrow(num? current, num? previous) {
-    if (current == null || previous == null || current == previous) return null;
+  /// short. If unchanged, shows a gray dash when [showStagnant] is set
+  /// (reps), otherwise nothing (weight). Nothing if there's nothing to
+  /// compare against.
+  Widget? _deltaArrow(num? current, num? previous, {bool showStagnant = false}) {
+    if (current == null || previous == null) return null;
+    if (current == previous) {
+      if (!showStagnant) return null;
+      return Icon(
+        Icons.remove,
+        size: 13,
+        color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
+      );
+    }
     final up = current > previous;
     return Icon(
       up ? Icons.arrow_upward : Icons.arrow_downward,
@@ -322,7 +348,8 @@ class _SetRowTile extends StatelessWidget {
         : '—';
     final weightArrow =
         isDone ? _deltaArrow(row.weight, previous?.weight) : null;
-    final repsArrow = isDone ? _deltaArrow(row.reps, previous?.reps) : null;
+    final repsArrow =
+        isDone ? _deltaArrow(row.reps, previous?.reps, showStagnant: true) : null;
 
     // Done row: check_circle (reopen on tap). Plan row: close (delete on tap).
     final trailingIcon = isDone ? Icons.check_circle : Icons.close;
@@ -437,9 +464,14 @@ class _SetRowTile extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _AddSetRow extends StatelessWidget {
-  const _AddSetRow({required this.onAddSet, required this.scheme});
+  const _AddSetRow({
+    required this.onAddSet,
+    required this.onDoubleTap,
+    required this.scheme,
+  });
 
   final void Function(bool focusReps) onAddSet;
+  final VoidCallback onDoubleTap;
   final ColorScheme scheme;
 
   @override
@@ -449,6 +481,7 @@ class _AddSetRow extends StatelessWidget {
       builder: (context, constraints) => GestureDetector(
         onTapUp: (d) =>
             onAddSet(d.localPosition.dx >= constraints.maxWidth / 2),
+        onDoubleTap: onDoubleTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 11),
           decoration: BoxDecoration(

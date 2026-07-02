@@ -27,6 +27,17 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:hunot08adf@gmail.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   # Railway (and most PaaS hosts) assign the container a port at runtime via
@@ -82,3 +93,8 @@ lifey:
     # OpenFoodFacts requires a descriptive User-Agent identifying the app and a
     # contact. Override the contact in deployments via OPENFOODFACTS_USER_AGENT.
     user-agent: ${OPENFOODFACTS_USER_AGENT:Lifey/1.0 (hunorkonczey@gmail.com)}
+  mail:
+    from: ${MAIL_USERNAME:hunot08adf@gmail.com}
+    # Off by default (no MAIL_PASSWORD locally) — the sender logs instead of
+    # sending so local dev and tests never require real SMTP credentials.
+    enabled: ${MAIL_ENABLED:false}

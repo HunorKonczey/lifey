@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { settingsApi } from "@/features/settings/api";
+import { authApi } from "@/features/auth/api";
+import { changePasswordSchema, type ChangePasswordFormValues } from "@/features/auth/schemas";
 import { queryKeys } from "@/lib/api/queryKeys";
+import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { useLocale } from "@/lib/hooks/useLocale";
@@ -36,14 +42,37 @@ const GOAL_FIELDS: { key: keyof SettingsResponse; label: string; color: string; 
 ];
 
 export default function SettingsPage() {
+  const t = useTranslations("settings");
   const queryClient = useQueryClient();
   const { show } = useToast();
   const { setTheme } = useTheme();
   const { setLanguage } = useLocale();
-  const { user, logoutAll } = useSessionStore();
+  const { user, logoutAll, applyAccessToken } = useSessionStore();
   const [section, setSection] = useState<Section>("profile");
   const [form, setForm] = useState<SettingsResponse | null>(null);
   const [seededFrom, setSeededFrom] = useState<SettingsResponse | null>(null);
+
+  const {
+    register: registerPassword,
+    handleSubmit: handlePasswordSubmit,
+    reset: resetPasswordForm,
+    setError: setPasswordError,
+    formState: { errors: passwordErrors, isSubmitting: isChangingPassword },
+  } = useForm<ChangePasswordFormValues>({ resolver: zodResolver(changePasswordSchema) });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: (body: ChangePasswordFormValues) =>
+      authApi.changePassword({ currentPassword: body.currentPassword, newPassword: body.newPassword }),
+    onSuccess: (res) => {
+      applyAccessToken(res.accessToken, res.refreshToken);
+      resetPasswordForm();
+      show(t("changePasswordSuccess"), "success");
+    },
+    onError: (err) => {
+      const message = err instanceof ApiError ? err.message : t("changePasswordError");
+      setPasswordError("currentPassword", { message });
+    },
+  });
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.settings.all(),
@@ -178,17 +207,43 @@ export default function SettingsPage() {
 
         {section === "security" && (
           <Panel title="Security">
-            <Field label="Password">
-              <ReadonlyValue>••••••••</ReadonlyValue>
-            </Field>
-            <p className="text-xs mb-5" style={{ color: "var(--muted)" }}>
-              Password change is not available yet.
-            </p>
+            <form
+              onSubmit={handlePasswordSubmit((data) => changePasswordMutation.mutate(data))}
+              className="flex flex-col gap-4 mb-6"
+            >
+              {(
+                [
+                  { field: "currentPassword", label: t("currentPassword"), autoComplete: "current-password" },
+                  { field: "newPassword", label: t("newPassword"), autoComplete: "new-password" },
+                  { field: "confirmPassword", label: t("confirmNewPassword"), autoComplete: "new-password" },
+                ] as const
+              ).map(({ field, label, autoComplete }) => (
+                <Field key={field} label={label}>
+                  <input
+                    {...registerPassword(field)}
+                    type="password"
+                    placeholder="••••••••"
+                    autoComplete={autoComplete}
+                    className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm"
+                    style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+                  />
+                  {passwordErrors[field] && (
+                    <p className="text-xs" style={{ color: "var(--error)" }}>{passwordErrors[field]?.message}</p>
+                  )}
+                </Field>
+              ))}
+              <button type="submit" disabled={isChangingPassword}
+                className="h-10 px-6 w-fit rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
+                style={{ background: "var(--primary)", color: "#1E1F18" }}>
+                {t("changePassword")}
+              </button>
+            </form>
+
             <button onClick={() => logoutAll()}
               className="flex items-center gap-2 h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm"
               style={{ background: "color-mix(in srgb, var(--error) 15%, transparent)", color: "var(--error)" }}>
               <span className="material-symbols-rounded text-lg">logout</span>
-              Sign out of all devices
+              {t("logoutAll")}
             </button>
           </Panel>
         )}

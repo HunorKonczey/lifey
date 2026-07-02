@@ -1,9 +1,12 @@
 package com.lifey.auth;
 
 import com.lifey.auth.dto.AuthResponse;
+import com.lifey.auth.dto.ChangePasswordRequest;
+import com.lifey.auth.dto.ForgotPasswordRequest;
 import com.lifey.auth.dto.LoginRequest;
 import com.lifey.auth.dto.RefreshRequest;
 import com.lifey.auth.dto.RegisterRequest;
+import com.lifey.auth.dto.ResetPasswordRequest;
 import com.lifey.auth.dto.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,15 +33,18 @@ public class AuthController {
     private static final String COOKIE_PATH = "/api/v1/auth";
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
     private final JwtProperties jwtProperties;
     private final boolean cookieSecure;
     private final String cookieSameSite;
 
     public AuthController(AuthService authService,
+                          PasswordResetService passwordResetService,
                           JwtProperties jwtProperties,
                           @Value("${lifey.cookie.secure}") boolean cookieSecure,
                           @Value("${lifey.cookie.same-site}") String cookieSameSite) {
         this.authService = authService;
+        this.passwordResetService = passwordResetService;
         this.jwtProperties = jwtProperties;
         this.cookieSecure = cookieSecure;
         this.cookieSameSite = cookieSameSite;
@@ -88,6 +94,30 @@ public class AuthController {
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, clearedRefreshCookie().toString())
                 .build();
+    }
+
+    @Operation(summary = "Request a password reset code by email",
+            description = "Always returns 200 regardless of whether the email is registered, "
+                    + "so this endpoint can't be used to enumerate accounts.")
+    @PostMapping("/forgot-password")
+    @ResponseStatus(HttpStatus.OK)
+    public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.forgotPassword(request.email());
+    }
+
+    @Operation(summary = "Reset a password using the emailed code")
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.OK)
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.email(), request.code(), request.newPassword());
+    }
+
+    @Operation(summary = "Change the current user's password",
+            description = "Revokes every refresh token for the user (including the one used for this "
+                    + "request) and returns a fresh token pair, so the calling device stays logged in.")
+    @PostMapping("/change-password")
+    public ResponseEntity<AuthResponse> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        return withRefreshCookie(authService.changePassword(request));
     }
 
     // ─── helpers ───

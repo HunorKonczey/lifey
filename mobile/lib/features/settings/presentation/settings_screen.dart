@@ -12,6 +12,7 @@ import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
+import '../../auth/presentation/change_password_screen.dart';
 import '../../water/presentation/water_sources_screen.dart';
 import '../application/settings_controller.dart';
 import '../domain/user_settings.dart';
@@ -462,6 +463,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const _RowDivider(),
                       const _AppleHealthRow(),
                     ],
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Account ────────────────────────────────────────────────
+                _GroupLabel(l10n.accountLabel),
+                const SizedBox(height: 8),
+                _SettingsCard(
+                  children: [
+                    _SettingRow(
+                      icon: Icons.lock_outline,
+                      iconColor: scheme.primary,
+                      label: l10n.changePasswordButton,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        size: 22,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ],

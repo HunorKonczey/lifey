@@ -1,5 +1,13 @@
 import { api } from "@/lib/api/client";
-import type { AuthResponse, LoginRequest, RegisterRequest, UserResponse } from "./types";
+import type {
+  AuthResponse,
+  ChangePasswordRequest,
+  ForgotPasswordRequest,
+  LoginRequest,
+  RegisterRequest,
+  ResetPasswordRequest,
+  UserResponse,
+} from "./types";
 
 export const authApi = {
   // Returns UserResponse (no tokens) — caller must log in afterwards.
@@ -22,4 +30,15 @@ export const authApi = {
   // Revokes all tokens for the authenticated user (uses access token) + clears cookie.
   logoutAll: () =>
     api.post<void>("/auth/logout-all"),
+
+  // Always resolves (200), regardless of whether the email is registered.
+  forgotPassword: (body: ForgotPasswordRequest) =>
+    api.post<void>("/auth/forgot-password", body),
+
+  resetPassword: (body: ResetPasswordRequest) =>
+    api.post<void>("/auth/reset-password", body),
+
+  // Returns a fresh token pair so the calling device stays logged in.
+  changePassword: (body: ChangePasswordRequest) =>
+    api.post<AuthResponse>("/auth/change-password", body),
 };

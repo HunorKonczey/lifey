@@ -137,6 +137,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ],
                     ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _submitting ? null : () => context.push('/forgot-password'),
+                        child: Text(l10n.forgotPasswordButton),
+                      ),
+                    ),
 
                     // ── Error ──────────────────────────────────────────────
                     if (_submitError != null) ...[

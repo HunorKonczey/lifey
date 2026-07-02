@@ -29,6 +29,32 @@ class AuthRepository {
   Future<void> logoutAll() async {
     await _dio.post('/auth/logout-all');
   }
+
+  Future<void> forgotPassword(String email) async {
+    await _dio.post('/auth/forgot-password', data: {'email': email});
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    await _dio.post(
+      '/auth/reset-password',
+      data: {'email': email, 'code': code, 'newPassword': newPassword},
+    );
+  }
+
+  Future<AuthTokens> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/change-password',
+      data: {'currentPassword': currentPassword, 'newPassword': newPassword},
+    );
+    return AuthTokens.fromJson(response.data!);
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

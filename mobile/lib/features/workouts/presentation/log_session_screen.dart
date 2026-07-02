@@ -325,8 +325,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _autoSave();
   }
 
-  void _handleAddSet(int bi) {
-    setState(() => _blocks[bi].rows.add(SetRow()));
+  void _handleAddSet(int bi, {bool prefillFromPrevious = false}) {
+    setState(() {
+      final block = _blocks[bi];
+      PreviousSetHint? hint;
+      if (prefillFromPrevious && block.rows.length < block.previousSets.length) {
+        hint = block.previousSets[block.rows.length];
+      }
+      block.rows.add(SetRow(weight: hint?.weight, reps: hint?.reps));
+    });
     if (_sessionClientId != null) _autoSave();
   }
 
@@ -733,7 +740,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                   onRowEdit: (ri, w, r) => _handleRowEdit(bi, ri, w, r),
                   onRowDelete: (ri) => _handleRowDelete(bi, ri),
                   onRowDuplicate: (ri) => _handleRowDuplicate(bi, ri),
-                  onAddSet: () => _handleAddSet(bi),
+                  onAddSet: (prefill) =>
+                      _handleAddSet(bi, prefillFromPrevious: prefill),
                   onRemoveExercise: () => _handleRemoveExercise(bi),
                 ),
                 const SizedBox(height: 13),

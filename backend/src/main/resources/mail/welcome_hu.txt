@@ -1,0 +1,7 @@
+Szia {{name}},
+
+A Lifey fiókod elkészült. Kövesd az edzéseidet, étkezéseidet, vízfogyasztásodat és súlyodat — mind egy helyen.
+
+Ha nem te hoztad létre ezt a fiókot, nyugodtan hagyd figyelmen kívül ezt az emailt.
+
+— A Lifey csapat

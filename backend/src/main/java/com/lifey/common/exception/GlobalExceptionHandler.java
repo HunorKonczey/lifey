@@ -1,7 +1,10 @@
 package com.lifey.common.exception;
 
+import com.lifey.auth.IncorrectPasswordException;
 import com.lifey.auth.InvalidCredentialsException;
+import com.lifey.auth.InvalidResetCodeException;
 import com.lifey.auth.InvalidTokenException;
+import com.lifey.auth.SamePasswordException;
 import com.lifey.auth.TokenExpiredException;
 import com.lifey.auth.TokenRevokedException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -63,6 +66,16 @@ public class GlobalExceptionHandler {
             TokenExpiredException.class, TokenRevokedException.class, AuthenticationException.class})
     public ResponseEntity<ApiError> handleAuthentication(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(InvalidResetCodeException.class)
+    public ResponseEntity<ApiError> handleInvalidResetCode(InvalidResetCodeException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler({IncorrectPasswordException.class, SamePasswordException.class})
+    public ResponseEntity<ApiError> handlePasswordChangeRejection(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(AccessDeniedException.class)
