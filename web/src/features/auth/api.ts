@@ -41,4 +41,9 @@ export const authApi = {
   // Returns a fresh token pair so the calling device stays logged in.
   changePassword: (body: ChangePasswordRequest) =>
     api.post<AuthResponse>("/auth/change-password", body),
+
+  // Exchanges a Google ID token for our own access+refresh pair — find, link,
+  // or create the user server-side (see docs/20-social-login-plan.md).
+  socialGoogleLogin: (idToken: string) =>
+    api.post<AuthResponse>("/auth/social/google", { idToken }),
 };

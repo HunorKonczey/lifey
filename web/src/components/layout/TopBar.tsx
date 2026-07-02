@@ -1,31 +1,34 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useDateStore } from "@/lib/hooks/useDateStore";
 import { useUiStore } from "@/lib/hooks/useUiStore";
 import { ThemeToggle } from "./ThemeToggle";
 import { format, addDays, subDays } from "date-fns";
 
-const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/nutrition": "Nutrition",
-  "/workouts": "Workouts",
-  "/weight": "Weight",
-  "/water": "Water",
-  "/steps": "Steps",
-  "/statistics": "Statistics",
-  "/settings": "Settings",
+const PAGE_TITLE_KEYS: Record<string, string> = {
+  "/dashboard": "dashboard",
+  "/nutrition": "nutrition",
+  "/workouts": "workouts",
+  "/weight": "weight",
+  "/water": "water",
+  "/steps": "steps",
+  "/statistics": "statistics",
+  "/settings": "settings",
 };
 
 export function TopBar() {
+  const t = useTranslations("nav");
+  const common = useTranslations("common");
   const pathname = usePathname();
   const { date, setDate } = useDateStore();
   const toggleDrawer = useUiStore((s) => s.toggleDrawer);
 
-  const title =
-    Object.entries(PAGE_TITLES).find(([prefix]) =>
-      pathname.startsWith(prefix),
-    )?.[1] ?? "Lifey";
+  const titleKey = Object.entries(PAGE_TITLE_KEYS).find(([prefix]) =>
+    pathname.startsWith(prefix),
+  )?.[1];
+  const title = titleKey ? t(titleKey) : "Lifey";
 
   const isToday =
     format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
@@ -43,7 +46,7 @@ export function TopBar() {
           onClick={toggleDrawer}
           className="p-1.5 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container md:hidden"
           style={{ color: "var(--on-surface)" }}
-          aria-label="Open menu"
+          aria-label={common("openMenu")}
         >
           <span className="material-symbols-rounded text-xl">menu</span>
         </button>
@@ -56,7 +59,7 @@ export function TopBar() {
           onClick={() => setDate(subDays(date, 1))}
           className="p-1.5 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container"
           style={{ color: "var(--on-surface-variant)" }}
-          aria-label="Previous day"
+          aria-label={common("previousDay")}
         >
           <span className="material-symbols-rounded text-xl">chevron_left</span>
         </button>
@@ -69,14 +72,14 @@ export function TopBar() {
             color: isToday ? "#1E1F18" : "var(--on-surface)",
           }}
         >
-          {isToday ? "Today" : format(date, "MMM d")}
+          {isToday ? common("today") : format(date, "MMM d")}
         </button>
 
         <button
           onClick={() => setDate(addDays(date, 1))}
           className="p-1.5 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container"
           style={{ color: "var(--on-surface-variant)" }}
-          aria-label="Next day"
+          aria-label={common("nextDay")}
         >
           <span className="material-symbols-rounded text-xl">chevron_right</span>
         </button>

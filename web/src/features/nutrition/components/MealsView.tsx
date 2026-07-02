@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { mealApi } from "../api";
 import { settingsApi } from "@/features/settings/api";
@@ -13,13 +14,6 @@ import { ErrorState } from "@/components/status/ErrorState";
 import { AddMealEntryDialog } from "./AddMealEntryDialog";
 import type { MealResponse, MealType } from "../types";
 
-const MEAL_GROUPS: { type: MealType; label: string; icon: string }[] = [
-  { type: "BREAKFAST", label: "Breakfast", icon: "bakery_dining" },
-  { type: "LUNCH", label: "Lunch", icon: "lunch_dining" },
-  { type: "DINNER", label: "Dinner", icon: "dinner_dining" },
-  { type: "SNACK", label: "Snack", icon: "icecream" },
-];
-
 function mealKcal(m: MealResponse) {
   return m.entries.reduce((s, e) => s + e.calories, 0);
 }
@@ -28,12 +22,21 @@ function mealProtein(m: MealResponse) {
 }
 
 export function MealsView() {
+  const t = useTranslations("nutrition");
+  const d = useTranslations("dashboard");
   const { date } = useDateStore();
   const queryClient = useQueryClient();
   const { show } = useToast();
   const dateStr = format(date, "yyyy-MM-dd");
   const [addingTo, setAddingTo] = useState<MealType | null>(null);
   const [editingMeal, setEditingMeal] = useState<MealResponse | null>(null);
+
+  const MEAL_GROUPS: { type: MealType; label: string; icon: string }[] = [
+    { type: "BREAKFAST", label: t("breakfast"), icon: "bakery_dining" },
+    { type: "LUNCH", label: t("lunch"), icon: "lunch_dining" },
+    { type: "DINNER", label: t("dinner"), icon: "dinner_dining" },
+    { type: "SNACK", label: t("snack"), icon: "icecream" },
+  ];
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.meals.all(),
@@ -50,9 +53,9 @@ export function MealsView() {
     mutationFn: (id: number) => mealApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
-      show("Meal removed", "success");
+      show(t("mealRemoved"), "success");
     },
-    onError: () => show("Failed to remove", "error"),
+    onError: () => show(t("removeFailed"), "error"),
   });
 
   const todayMeals = (data ?? []).filter(
@@ -116,7 +119,7 @@ export function MealsView() {
                 className="w-full py-2.5 rounded-[var(--r-md)] text-sm font-semibold flex items-center justify-center gap-1 transition-colors hover:bg-surface-container"
                 style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}
               >
-                <span className="material-symbols-rounded text-lg">add</span> Add to {label.toLowerCase()}
+                <span className="material-symbols-rounded text-lg">add</span> {t("addTo", { meal: label })}
               </button>
             </div>
           );
@@ -126,7 +129,7 @@ export function MealsView() {
       {/* Daily summary sticky panel */}
       <div className="w-[300px] shrink-0">
         <div className="sticky top-6 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-bold mb-4">Daily summary</p>
+          <p className="text-sm font-bold mb-4">{t("dailySummary")}</p>
 
           <div className="flex items-end gap-2 mb-1">
             <span className="text-3xl font-extrabold tabular">
@@ -147,7 +150,7 @@ export function MealsView() {
           </div>
 
           <div className="flex justify-between text-xs mb-1">
-            <span style={{ color: "var(--metric-protein)" }}>Protein</span>
+            <span style={{ color: "var(--metric-protein)" }}>{d("protein")}</span>
             <span className="tabular" style={{ color: "var(--on-surface-variant)" }}>
               {Math.round(totalProtein)} / {proteinGoal}g
             </span>
@@ -160,11 +163,11 @@ export function MealsView() {
           </div>
 
           <div className="flex justify-between pt-3 text-sm" style={{ borderTop: "1px solid var(--outline)" }}>
-            <span style={{ color: "var(--on-surface-variant)" }}>Meals</span>
+            <span style={{ color: "var(--on-surface-variant)" }}>{t("mealsCount")}</span>
             <span className="font-semibold tabular">{todayMeals.length}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span style={{ color: "var(--on-surface-variant)" }}>Items</span>
+            <span style={{ color: "var(--on-surface-variant)" }}>{t("items")}</span>
             <span className="font-semibold tabular">{totalItems}</span>
           </div>
         </div>
@@ -197,10 +200,11 @@ function MealCard({
   onDelete: () => void;
   isDeleting: boolean;
 }) {
+  const t = useTranslations("nutrition");
   const kcal = Math.round(mealKcal(meal));
   const protein = Math.round(mealProtein(meal));
   const time = format(new Date(meal.dateTime), "HH:mm");
-  const title = meal.name ?? (meal.entries.length === 1 ? meal.entries[0].foodName : "Meal");
+  const title = meal.name ?? (meal.entries.length === 1 ? meal.entries[0].foodName : t("meals"));
 
   return (
     <div
@@ -220,7 +224,7 @@ function MealCard({
             onClick={onEdit}
             className="p-1 rounded-[var(--r-sm)] hover:bg-surface-container"
             style={{ color: "var(--muted)" }}
-            aria-label="Edit meal"
+            aria-label={t("editMealAria")}
           >
             <span className="material-symbols-rounded text-lg">edit</span>
           </button>
@@ -229,7 +233,7 @@ function MealCard({
             disabled={isDeleting}
             className="p-1 rounded-[var(--r-sm)] hover:bg-surface-container disabled:opacity-30"
             style={{ color: "var(--muted)" }}
-            aria-label="Remove meal"
+            aria-label={t("removeMealAria")}
           >
             <span className="material-symbols-rounded text-lg">delete</span>
           </button>

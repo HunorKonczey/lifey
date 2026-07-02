@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { workoutSessionApi, templateApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -13,6 +14,9 @@ import { SessionLogger } from "./SessionLogger";
 import type { WorkoutSessionResponse } from "../types";
 
 export function SessionsView() {
+  const t = useTranslations("workouts");
+  const d = useTranslations("dashboard");
+  const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -44,9 +48,9 @@ export function SessionsView() {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() });
       setActiveId(created.id);
       setStarting(false);
-      show("Workout started", "success");
+      show(t("workoutStarted"), "success");
     },
-    onError: () => show("Failed to start workout", "error"),
+    onError: () => show(t("startFailed"), "error"),
   });
 
   const sessions = (data ?? []).slice().sort(
@@ -61,7 +65,7 @@ export function SessionsView() {
       <div>
         <button onClick={() => setActiveId(null)}
           className="flex items-center gap-1 mb-4 text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>
-          <span className="material-symbols-rounded text-lg">arrow_back</span> Back to history
+          <span className="material-symbols-rounded text-lg">arrow_back</span> {t("backToHistory")}
         </button>
         <SessionLogger session={active} history={sessions} onFinished={() => setActiveId(null)} />
       </div>
@@ -71,11 +75,11 @@ export function SessionsView() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-bold">History</p>
+        <p className="text-sm font-bold">{t("history")}</p>
         <button onClick={() => setStarting(true)}
           className="flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
           style={{ background: "var(--primary)", color: "#1E1F18" }}>
-          <span className="material-symbols-rounded text-lg">play_arrow</span> Start workout
+          <span className="material-symbols-rounded text-lg">play_arrow</span> {t("startWorkout")}
         </button>
       </div>
 
@@ -84,7 +88,7 @@ export function SessionsView() {
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : sessions.length === 0 ? (
-        <EmptyState icon="exercise" title="No workouts yet" body="Start a workout to begin logging." />
+        <EmptyState icon="exercise" title={t("noWorkoutsYet")} body={t("startToBegin")} />
       ) : (
         <div className="flex flex-col gap-2">
           {sessions.map((s) => (
@@ -100,29 +104,29 @@ export function SessionsView() {
           <div className="w-full max-w-md rounded-[var(--r-lg)] p-5 flex flex-col gap-3"
             style={{ background: "var(--surface)" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-base">Start workout</h3>
-              <button onClick={() => setStarting(false)} aria-label="Close" className="p-1 rounded-[var(--r-sm)]">
+              <h3 className="font-bold text-base">{t("startWorkout")}</h3>
+              <button onClick={() => setStarting(false)} aria-label={common("close")} className="p-1 rounded-[var(--r-sm)]">
                 <span className="material-symbols-rounded">close</span>
               </button>
             </div>
             <button onClick={() => startMutation.mutate({ exerciseIds: [] })} disabled={startMutation.isPending}
               className="text-left px-4 py-3 rounded-[var(--r-md)] text-sm font-semibold"
               style={{ background: "var(--surface-container)" }}>
-              Empty workout
+              {t("emptyWorkout")}
             </button>
-            <p className="text-xs font-semibold mt-1" style={{ color: "var(--on-surface-variant)" }}>From template</p>
+            <p className="text-xs font-semibold mt-1" style={{ color: "var(--on-surface-variant)" }}>{t("fromTemplate")}</p>
             {(templates ?? []).length === 0 && (
-              <p className="text-xs" style={{ color: "var(--muted)" }}>No templates yet.</p>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>{t("noTemplatesYet")}</p>
             )}
-            {(templates ?? []).map((t) => (
-              <button key={t.id}
-                onClick={() => startMutation.mutate({ exerciseIds: t.exercises.map((e) => e.exerciseId), templateId: t.id })}
+            {(templates ?? []).map((tpl) => (
+              <button key={tpl.id}
+                onClick={() => startMutation.mutate({ exerciseIds: tpl.exercises.map((e) => e.exerciseId), templateId: tpl.id })}
                 disabled={startMutation.isPending}
                 className="text-left px-4 py-3 rounded-[var(--r-md)] text-sm font-semibold transition-colors hover:bg-surface-container"
                 style={{ background: "var(--surface-container)" }}>
-                {t.name}
+                {tpl.name}
                 <span className="block text-xs font-normal" style={{ color: "var(--muted)" }}>
-                  {t.exercises.length} exercises
+                  {t("exercisesCount", { count: tpl.exercises.length })}
                 </span>
               </button>
             ))}
@@ -141,31 +145,31 @@ export function SessionsView() {
 
     const deleteMutation = useMutation({
       mutationFn: () => workoutSessionApi.delete(session.id),
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() }); show("Session deleted", "success"); },
-      onError: () => show("Failed to delete", "error"),
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() }); show(t("sessionDeleted"), "success"); },
+      onError: () => show(t("deleteFailed"), "error"),
     });
 
     return (
       <div className="flex items-center gap-3 px-4 py-3 rounded-[var(--r-card)] group" style={{ background: "var(--surface)" }}>
         <button onClick={onOpen} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-2">
-            <p className="font-semibold text-sm truncate">{session.templateName ?? (exNames || "Workout")}</p>
+            <p className="font-semibold text-sm truncate">{session.templateName ?? (exNames || d("workoutFallback"))}</p>
             {ongoing && (
               <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold"
                 style={{ background: "color-mix(in srgb, var(--primary) 18%, transparent)", color: "var(--primary)" }}>
-                In progress
+                {t("inProgress")}
               </span>
             )}
           </div>
           <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
             {format(new Date(session.startedAt), "MMM d, HH:mm")}
-            {duration != null && ` · ${duration} min`}
-            {session.sets.length > 0 && ` · ${session.sets.length} sets`}
+            {duration != null && ` · ${duration} ${d("minutes")}`}
+            {session.sets.length > 0 && ` · ${session.sets.length} ${t("sets").toLowerCase()}`}
           </p>
         </button>
         <button onClick={() => deleteMutation.mutate()}
           className="opacity-0 group-hover:opacity-100 transition-opacity p-1" style={{ color: "var(--muted)" }}
-          aria-label="Delete session">
+          aria-label={t("deleteSessionAria")}>
           <span className="material-symbols-rounded text-lg">delete</span>
         </button>
       </div>

@@ -5,6 +5,9 @@ export const queryKeys = {
   settings: {
     all: () => ["settings"] as const,
   },
+  userDetails: {
+    all: () => ["user-details"] as const,
+  },
   statistics: {
     daily: (date: string) => ["statistics", "daily", date] as const,
     weekly: (date: string) => ["statistics", "weekly", date] as const,
@@ -73,4 +76,5 @@ export const invalidationMap = {
   waterSource: [queryKeys.waterSources.all()],
   steps: [queryKeys.steps.all()],
   settings: [queryKeys.settings.all()],
+  userDetails: [queryKeys.userDetails.all()],
 } as const;

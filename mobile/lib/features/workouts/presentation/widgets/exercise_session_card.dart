@@ -110,7 +110,12 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
     await _handleAddSet(false, prefillFromPrevious: hasPrevious);
   }
 
-  Future<void> _openEditor(int index, {bool focusReps = false}) async {
+  Future<void> _openEditor(
+    int index, {
+    bool focusReps = false,
+    double? presetWeight,
+    int? presetReps,
+  }) async {
     setState(() => _editingIndex = index);
     final row = widget.block.rows[index];
     final result = await showModalBottomSheet<({double? weight, int? reps})>(
@@ -119,8 +124,8 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => _CompactSetEditor(
-        initialWeight: row.weight,
-        initialReps: row.reps,
+        initialWeight: presetWeight ?? row.weight,
+        initialReps: presetReps ?? row.reps,
         focusReps: focusReps,
       ),
     );
@@ -129,6 +134,17 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
     if (result != null) {
       widget.onRowEdit(index, result.weight, result.reps);
     }
+  }
+
+  /// Tap on the "PREV" column — open the editor prefilled with the previous
+  /// session's weight/reps for this row, so the user can save it as-is or
+  /// tweak it before confirming.
+  Future<void> _handleUsePrevious(int index, PreviousSetHint previous) {
+    return _openEditor(
+      index,
+      presetWeight: previous.weight,
+      presetReps: previous.reps,
+    );
   }
 
   void _handleTrailingTap(int index) {
@@ -170,6 +186,10 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
                   ? widget.block.previousSets[i]
                   : null,
               onTap: (focusReps) => _openEditor(i, focusReps: focusReps),
+              onTapPrevious: i < widget.block.previousSets.length
+                  ? () =>
+                      _handleUsePrevious(i, widget.block.previousSets[i])
+                  : null,
               onDoubleTap: () => _handleDoubleTap(i),
               onTrailingTap: () => _handleTrailingTap(i),
               scheme: scheme,
@@ -294,6 +314,7 @@ class _SetRowTile extends StatelessWidget {
     required this.row,
     required this.previous,
     required this.onTap,
+    this.onTapPrevious,
     required this.onDoubleTap,
     required this.onTrailingTap,
     required this.scheme,
@@ -304,6 +325,8 @@ class _SetRowTile extends StatelessWidget {
   final PreviousSetHint? previous;
   // focusReps: false = weight field, true = reps field
   final void Function(bool focusReps) onTap;
+  /// Tap on the "PREV" column — null when there's no previous value to use.
+  final VoidCallback? onTapPrevious;
   final VoidCallback onDoubleTap;
   final VoidCallback onTrailingTap;
   final ColorScheme scheme;
@@ -383,16 +406,29 @@ class _SetRowTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                SizedBox(
-                  width: _kPreviousColumnWidth,
-                  child: Text(
-                    previousText,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: dimmed,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                // Separate tap target so tapping "PREV" fills this row from
+                // the previous session instead of competing with the row tap.
+                GestureDetector(
+                  onTap: onTapPrevious,
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: _kPreviousColumnWidth,
+                    child: Text(
+                      previousText,
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: onTapPrevious != null
+                            ? scheme.primary.withValues(alpha: 0.85)
+                            : dimmed,
+                        decoration: onTapPrevious != null
+                            ? TextDecoration.underline
+                            : null,
+                        decorationColor:
+                            scheme.primary.withValues(alpha: 0.4),
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ),
                 ),

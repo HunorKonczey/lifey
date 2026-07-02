@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 interface EmptyStateProps {
   icon?: string;
   title?: string;
@@ -7,10 +11,13 @@ interface EmptyStateProps {
 
 export function EmptyState({
   icon = "inbox",
-  title = "Nothing here yet",
-  body = "Add your first entry to get started.",
+  title,
+  body,
   action,
 }: EmptyStateProps) {
+  const t = useTranslations("status");
+  const resolvedTitle = title ?? t("emptyTitle");
+  const resolvedBody = body ?? t("emptyBody");
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
       <div
@@ -25,9 +32,9 @@ export function EmptyState({
         </span>
       </div>
       <div>
-        <p className="font-bold text-base mb-1">{title}</p>
+        <p className="font-bold text-base mb-1">{resolvedTitle}</p>
         <p className="text-sm max-w-xs" style={{ color: "var(--on-surface-variant)" }}>
-          {body}
+          {resolvedBody}
         </p>
       </div>
       {action}

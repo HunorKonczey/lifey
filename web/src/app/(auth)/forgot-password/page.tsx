@@ -84,13 +84,14 @@ export default function ForgotPasswordPage() {
               <div
                 className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
                 style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+                data-ring-frame
               >
                 <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>mail</span>
                 <input
                   {...emailForm.register("email")}
                   type="email"
                   placeholder="you@example.com"
-                  className="flex-1 bg-transparent outline-none text-sm"
+                  className="flex-1 min-w-0 bg-transparent outline-none text-sm"
                   autoComplete="email"
                 />
               </div>
@@ -130,6 +131,7 @@ export default function ForgotPasswordPage() {
               <div
                 className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
                 style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+                data-ring-frame
               >
                 <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>pin</span>
                 <input
@@ -138,7 +140,7 @@ export default function ForgotPasswordPage() {
                   inputMode="numeric"
                   maxLength={6}
                   placeholder="000000"
-                  className="flex-1 bg-transparent outline-none text-sm tracking-[0.3em]"
+                  className="flex-1 min-w-0 bg-transparent outline-none text-sm tracking-[0.3em]"
                   autoComplete="one-time-code"
                 />
               </div>
@@ -167,7 +169,7 @@ export default function ForgotPasswordPage() {
                     type="password"
                     placeholder="••••••••"
                     autoComplete="new-password"
-                    className="flex-1 bg-transparent outline-none text-sm"
+                    className="flex-1 min-w-0 bg-transparent outline-none text-sm"
                   />
                 </div>
                 {resetForm.formState.errors[field] && (

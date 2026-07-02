@@ -19,6 +19,7 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const t = useTranslations("nav");
+  const common = useTranslations("common");
   const pathname = usePathname();
   const { user, logout } = useSessionStore();
   const { drawerOpen, closeDrawer } = useUiStore();
@@ -64,7 +65,7 @@ export function Sidebar() {
             onClick={() => setCollapsed((c) => !c)}
             className="ml-auto p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-highest hidden md:block"
             style={{ color: "var(--on-surface-variant)" }}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? common("expandSidebar") : common("collapseSidebar")}
           >
             <span className="material-symbols-rounded text-xl">
               {collapsed ? "chevron_right" : "chevron_left"}
@@ -75,7 +76,7 @@ export function Sidebar() {
             onClick={closeDrawer}
             className="ml-auto p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-highest md:hidden"
             style={{ color: "var(--on-surface-variant)" }}
-            aria-label="Close menu"
+            aria-label={common("closeMenu")}
           >
             <span className="material-symbols-rounded text-xl">close</span>
           </button>
@@ -150,8 +151,8 @@ export function Sidebar() {
                 onClick={logout}
                 className="p-1 rounded-[var(--r-sm)] transition-colors"
                 style={{ color: "var(--on-surface-variant)" }}
-                aria-label="Sign out"
-                title="Sign out"
+                aria-label={common("signOut")}
+                title={common("signOut")}
               >
                 <span className="material-symbols-rounded text-xl">logout</span>
               </button>

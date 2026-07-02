@@ -21,6 +21,7 @@ import '../../workouts/domain/exercise_enums.dart';
 import '../../workouts/presentation/log_session_screen.dart';
 import '../../nutrition/domain/meal.dart';
 import '../../nutrition/presentation/nutrition_screen.dart';
+import '../../onboarding/presentation/widgets/onboarding_banner.dart';
 import '../application/dashboard_controller.dart';
 import '../application/today_steps_controller.dart';
 import '../domain/dashboard_data.dart';
@@ -207,6 +208,9 @@ class _DashboardBody extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad),
       children: [
+        // ── Onboarding banner (hidden once onboarded or dismissed) ─────────
+        const OnboardingBanner(),
+
         // ── Water ────────────────────────────────────────────────────────
         WaterCard(
           currentLiters: stats.water,

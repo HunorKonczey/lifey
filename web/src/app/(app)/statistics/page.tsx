@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { subDays, startOfDay, endOfDay } from "date-fns";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { mealApi } from "@/features/nutrition/api";
@@ -24,12 +25,6 @@ import type { WorkoutSessionResponse } from "@/features/workouts/types";
 
 type Range = "WEEK" | "MONTH" | "YEAR";
 
-const RANGE_OPTIONS: { value: Range; label: string }[] = [
-  { value: "WEEK", label: "Week" },
-  { value: "MONTH", label: "Month" },
-  { value: "YEAR", label: "Year" },
-];
-
 const RANGE_DAYS: Record<Range, number> = { WEEK: 7, MONTH: 30, YEAR: 365 };
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -42,7 +37,14 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 }
 
 export default function StatisticsPage() {
+  const t = useTranslations("statistics");
   const [range, setRange] = useState<Range>("WEEK");
+
+  const RANGE_OPTIONS: { value: Range; label: string }[] = [
+    { value: "WEEK", label: t("week") },
+    { value: "MONTH", label: t("month") },
+    { value: "YEAR", label: t("year") },
+  ];
 
   const results = useQueries({
     queries: [
@@ -122,8 +124,8 @@ export default function StatisticsPage() {
     raw.meals.length || raw.weights.length || raw.water.length || raw.steps.length || raw.sessions.length;
 
   if (!hasAnyData) {
-    return <EmptyState icon="bar_chart" title="No data yet"
-      body="Log meals, workouts, weight, water or steps to see your statistics." />;
+    return <EmptyState icon="bar_chart" title={t("noDataYet")}
+      body={t("logToSeeStats")} />;
   }
 
   const weightDeltaPrev =
@@ -138,45 +140,45 @@ export default function StatisticsPage() {
         <button onClick={exportCsv}
           className="flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
           style={{ background: "var(--surface)", border: "1px solid var(--outline)", color: "var(--on-surface-variant)" }}>
-          <span className="material-symbols-rounded text-lg">ios_share</span> Export
+          <span className="material-symbols-rounded text-lg">ios_share</span> {t("export")}
         </button>
       </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Avg calories" value={current.avgCalories.toLocaleString()} icon="local_fire_department"
+        <KpiCard label={t("avgCalories")} value={current.avgCalories.toLocaleString()} icon="local_fire_department"
           color="var(--metric-kcal)" delta={current.avgCalories - previous.avgCalories} higherIsBetter={false} />
-        <KpiCard label="Workouts" value={String(current.workoutCount)} icon="exercise"
+        <KpiCard label={t("workouts")} value={String(current.workoutCount)} icon="exercise"
           color="var(--tertiary)" delta={current.workoutCount - previous.workoutCount} higherIsBetter />
-        <KpiCard label="Weight" value={current.latestWeight != null ? `${current.latestWeight.toFixed(1)} kg` : "—"}
+        <KpiCard label={t("weight")} value={current.latestWeight != null ? `${current.latestWeight.toFixed(1)} kg` : "—"}
           icon="monitor_weight" color="var(--metric-weight)" delta={weightDeltaPrev} higherIsBetter={false} deltaUnit=" kg" />
-        <KpiCard label="Training volume" value={`${Math.round(current.totalVolume).toLocaleString()} kg`} icon="fitness_center"
+        <KpiCard label={t("trainingVolume")} value={`${Math.round(current.totalVolume).toLocaleString()} kg`} icon="fitness_center"
           color="var(--metric-protein)" delta={Math.round(current.totalVolume - previous.totalVolume)} higherIsBetter deltaUnit=" kg" />
       </div>
 
       {/* Chart grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Calories">
+        <ChartCard title={t("calories")}>
           <TimeSeriesChart data={current.caloriesSeries} color="var(--metric-kcal)" unit=" kcal" />
         </ChartCard>
 
-        <ChartCard title="Weight">
+        <ChartCard title={t("weight")}>
           {current.weightSeries.length > 0 ? (
             <TimeSeriesChart data={current.weightSeries} color="var(--metric-weight)" unit=" kg" />
           ) : (
-            <p className="text-sm text-center py-16" style={{ color: "var(--muted)" }}>No weight entries in this period</p>
+            <p className="text-sm text-center py-16" style={{ color: "var(--muted)" }}>{t("noWeightEntries")}</p>
           )}
         </ChartCard>
 
-        <ChartCard title="Training volume">
+        <ChartCard title={t("trainingVolume")}>
           {current.totalVolume > 0 ? (
             <TimeSeriesChart data={current.volumeSeries} color="var(--metric-protein)" unit=" kg" />
           ) : (
-            <p className="text-sm text-center py-16" style={{ color: "var(--muted)" }}>No sets logged in this period</p>
+            <p className="text-sm text-center py-16" style={{ color: "var(--muted)" }}>{t("noSetsLogged")}</p>
           )}
         </ChartCard>
 
-        <ChartCard title="Steps">
+        <ChartCard title={t("steps")}>
           <TimeSeriesChart data={current.stepsSeries} color="var(--metric-steps)" />
         </ChartCard>
       </div>

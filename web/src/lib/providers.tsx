@@ -5,8 +5,11 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
 import { Toaster } from "@/components/ui/Toaster";
 import { ApiError } from "@/lib/api/client";
+import { useLocale } from "@/lib/hooks/useLocale";
+import { I18nProvider } from "@/lib/i18n/provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const { locale } = useLocale();
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -30,8 +33,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster />
+      <I18nProvider locale={locale}>
+        {children}
+        <Toaster />
+      </I18nProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

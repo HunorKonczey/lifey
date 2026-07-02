@@ -4,12 +4,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { registerSchema, type RegisterFormValues } from "@/features/auth/schemas";
 import { authApi } from "@/features/auth/api";
 import { useSessionStore } from "@/features/auth/store";
+import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { ApiError } from "@/lib/api/client";
 
 export default function RegisterPage() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const applyAccessToken = useSessionStore((s) => s.applyAccessToken);
 
@@ -28,10 +31,10 @@ export default function RegisterPage() {
       await authApi.register({ email: data.email, password: data.password });
       const res = await authApi.login({ email: data.email, password: data.password });
       applyAccessToken(res.accessToken);
-      router.push("/dashboard");
+      router.push("/onboarding");
     } catch (err) {
       const message =
-        err instanceof ApiError ? err.message : "Registration failed";
+        err instanceof ApiError ? err.message : t("registrationFailed");
       setError("email", { message });
     }
   };
@@ -51,17 +54,17 @@ export default function RegisterPage() {
         <span className="text-xl font-bold tracking-tight">Lifey</span>
       </div>
 
-      <h1 className="text-2xl font-bold mb-1">Create account</h1>
+      <h1 className="text-2xl font-bold mb-1">{t("register")}</h1>
       <p className="text-sm mb-8" style={{ color: "var(--on-surface-variant)" }}>
-        Start tracking your fitness journey
+        {t("registerTagline")}
       </p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         {(
           [
-            { field: "email", label: "Email", type: "email", icon: "mail", placeholder: "you@example.com", autoComplete: "email" },
-            { field: "password", label: "Password", type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },
-            { field: "confirmPassword", label: "Confirm password", type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },
+            { field: "email", label: t("email"), type: "email", icon: "mail", placeholder: "you@example.com", autoComplete: "email" },
+            { field: "password", label: t("password"), type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },
+            { field: "confirmPassword", label: t("confirmPassword"), type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },
           ] as const
         ).map(({ field, label, type, icon, placeholder, autoComplete }) => (
           <div key={field} className="flex flex-col gap-1">
@@ -69,6 +72,7 @@ export default function RegisterPage() {
             <div
               className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
               style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+              data-ring-frame
             >
               <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>{icon}</span>
               <input
@@ -76,7 +80,7 @@ export default function RegisterPage() {
                 type={type}
                 placeholder={placeholder}
                 autoComplete={autoComplete}
-                className="flex-1 bg-transparent outline-none text-sm"
+                className="flex-1 min-w-0 bg-transparent outline-none text-sm"
               />
             </div>
             {errors[field] && (
@@ -91,14 +95,16 @@ export default function RegisterPage() {
           className="mt-2 h-11 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
           style={{ background: "var(--primary)", color: "#1E1F18" }}
         >
-          {isSubmitting ? "Creating account…" : "Create account"}
+          {isSubmitting ? t("creating") : t("register")}
         </button>
       </form>
 
+      <GoogleSignInButton mode="register" />
+
       <p className="mt-6 text-center text-sm" style={{ color: "var(--on-surface-variant)" }}>
-        Already have an account?{" "}
+        {t("haveAccount")}{" "}
         <Link href="/login" className="font-semibold" style={{ color: "var(--primary)" }}>
-          Sign in
+          {t("signIn")}
         </Link>
       </p>
     </div>

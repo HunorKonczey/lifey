@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useToast, type ToastVariant } from "@/lib/hooks/useToast";
 
 const VARIANT_STYLES: Record<ToastVariant, { bg: string; icon: string }> = {
@@ -10,6 +11,7 @@ const VARIANT_STYLES: Record<ToastVariant, { bg: string; icon: string }> = {
 };
 
 export function Toaster() {
+  const t = useTranslations("common");
   const { toasts, dismiss } = useToast();
 
   if (toasts.length === 0) return null;
@@ -19,12 +21,12 @@ export function Toaster() {
       className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"
       aria-live="polite"
     >
-      {toasts.map((t) => {
-        const { bg, icon } = VARIANT_STYLES[t.variant];
-        const isColored = t.variant !== "default";
+      {toasts.map((toast) => {
+        const { bg, icon } = VARIANT_STYLES[toast.variant];
+        const isColored = toast.variant !== "default";
         return (
           <div
-            key={t.id}
+            key={toast.id}
             className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-[var(--r-card)] shadow-lg text-sm font-semibold max-w-sm"
             style={{
               background: bg,
@@ -36,11 +38,11 @@ export function Toaster() {
             <span className="material-symbols-rounded text-xl shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>
               {icon}
             </span>
-            <span className="flex-1">{t.message}</span>
+            <span className="flex-1">{toast.message}</span>
             <button
-              onClick={() => dismiss(t.id)}
+              onClick={() => dismiss(toast.id)}
               className="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
-              aria-label="Dismiss"
+              aria-label={t("close")}
             >
               <span className="material-symbols-rounded text-lg">close</span>
             </button>

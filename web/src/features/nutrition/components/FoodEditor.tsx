@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { foodApi } from "../api";
 import { foodSchema, type FoodFormValues } from "../schemas";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -17,16 +18,18 @@ interface FoodEditorProps {
   onCancel: () => void;
 }
 
-const MACRO_FIELDS = [
-  { name: "caloriesPer100g" as const, label: "Calories / 100g", color: "var(--metric-kcal)" },
-  { name: "proteinPer100g" as const, label: "Protein / 100g", color: "var(--metric-protein)" },
-  { name: "carbsPer100g" as const, label: "Carbs / 100g", color: "var(--metric-carbs)" },
-  { name: "fatPer100g" as const, label: "Fat / 100g", color: "var(--metric-fat)" },
-];
-
 export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps) {
+  const t = useTranslations("nutrition.foodEditor");
+  const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
+
+  const MACRO_FIELDS = [
+    { name: "caloriesPer100g" as const, label: t("caloriesPer100g"), color: "var(--metric-kcal)" },
+    { name: "proteinPer100g" as const, label: t("proteinPer100g"), color: "var(--metric-protein)" },
+    { name: "carbsPer100g" as const, label: t("carbsPer100g"), color: "var(--metric-carbs)" },
+    { name: "fatPer100g" as const, label: t("fatPer100g"), color: "var(--metric-fat)" },
+  ];
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } =
     useForm<FoodFormValues>({
@@ -71,20 +74,20 @@ export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps
       food ? foodApi.update(food.id, values) : foodApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.foods.all() });
-      show(food ? "Food updated" : "Food created", "success");
+      show(food ? t("updated") : t("created"), "success");
       onSaved();
     },
-    onError: () => show("Failed to save food", "error"),
+    onError: () => show(t("saveFailed"), "error"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => foodApi.delete(food!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.foods.all() });
-      show("Food deleted", "success");
+      show(t("deleted"), "success");
       onSaved();
     },
-    onError: () => show("Failed to delete food", "error"),
+    onError: () => show(t("deleteFailed"), "error"),
   });
 
   const hidden = watch("hidden");
@@ -96,8 +99,8 @@ export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps
       style={{ background: "var(--surface)" }}
     >
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-base">{food ? "Edit food" : "New food"}</h3>
-        <button type="button" onClick={onCancel} aria-label="Close"
+        <h3 className="font-bold text-base">{food ? t("editFood") : t("newFood")}</h3>
+        <button type="button" onClick={onCancel} aria-label={common("close")}
           className="p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container"
           style={{ color: "var(--on-surface-variant)" }}>
           <span className="material-symbols-rounded">close</span>
@@ -105,7 +108,7 @@ export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Name</label>
+        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("name")}</label>
         <input
           {...register("name")}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm"
@@ -130,7 +133,7 @@ export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Barcode (optional)</label>
+        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("barcodeOptional")}</label>
         <input
           {...register("barcode")}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
@@ -144,7 +147,7 @@ export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps
         onClick={() => setValue("hidden", !hidden)}
         className="flex items-center justify-between px-1"
       >
-        <span className="text-sm font-semibold">Hidden from search</span>
+        <span className="text-sm font-semibold">{t("hiddenFromSearch")}</span>
         <span
           className="relative w-10 h-6 rounded-[var(--r-pill)] transition-colors"
           style={{ background: hidden ? "var(--primary)" : "var(--surface-highest)" }}
@@ -163,7 +166,7 @@ export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps
           className="flex-1 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
           style={{ background: "var(--primary)", color: "#1E1F18" }}
         >
-          {mutation.isPending ? "Saving…" : "Save"}
+          {mutation.isPending ? common("saving") : common("save")}
         </button>
         {food && (
           <button
@@ -172,7 +175,7 @@ export function FoodEditor({ food, prefill, onSaved, onCancel }: FoodEditorProps
             disabled={deleteMutation.isPending}
             className="px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-colors"
             style={{ background: "color-mix(in srgb, var(--error) 15%, transparent)", color: "var(--error)" }}
-            aria-label="Delete food"
+            aria-label={t("deleteAria")}
           >
             <span className="material-symbols-rounded text-xl">delete</span>
           </button>

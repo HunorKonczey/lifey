@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export interface Column<T> {
   key: string;
@@ -41,6 +42,7 @@ interface DataTableProps<T> {
 export function DataTable<T>({
   columns, rows, rowKey, selectedKey, onRowClick, pageSize = 25, serverPagination,
 }: DataTableProps<T>) {
+  const t = useTranslations("common");
   const [localSortKey, setLocalSortKey] = useState<string | null>(null);
   const [localSortDir, setLocalSortDir] = useState<"asc" | "desc">("asc");
   const [localPage, setLocalPage] = useState(0);
@@ -151,14 +153,18 @@ export function DataTable<T>({
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-3 text-sm" style={{ color: "var(--on-surface-variant)" }}>
           <span className="tabular">
-            {safePage * pageSize + 1}–{Math.min(safePage * pageSize + pageRows.length, totalCount)} of {totalCount}
+            {t("rangeOf", {
+              from: safePage * pageSize + 1,
+              to: Math.min(safePage * pageSize + pageRows.length, totalCount),
+              total: totalCount,
+            })}
           </span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => goToPage(Math.max(0, safePage - 1))}
               disabled={safePage === 0}
               className="p-1 rounded-[var(--r-sm)] disabled:opacity-40 transition-colors hover:bg-surface-container"
-              aria-label="Previous page"
+              aria-label={t("previousPage")}
             >
               <span className="material-symbols-rounded text-xl">chevron_left</span>
             </button>
@@ -167,7 +173,7 @@ export function DataTable<T>({
               onClick={() => goToPage(Math.min(totalPages - 1, safePage + 1))}
               disabled={safePage >= totalPages - 1}
               className="p-1 rounded-[var(--r-sm)] disabled:opacity-40 transition-colors hover:bg-surface-container"
-              aria-label="Next page"
+              aria-label={t("nextPage")}
             >
               <span className="material-symbols-rounded text-xl">chevron_right</span>
             </button>

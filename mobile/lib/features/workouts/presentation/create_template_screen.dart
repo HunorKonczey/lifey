@@ -315,7 +315,7 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
                     Icon(Icons.add, size: 18, color: scheme.primary),
                     const SizedBox(width: 4),
                     Text(
-                      'Add',
+                      l10n.addButton,
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -539,8 +539,9 @@ class _TargetSetsDialogState extends State<_TargetSetsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Target sets'),
+      title: Text(l10n.targetSetsDialogTitle),
       content: TextField(
         controller: _ctrl,
         keyboardType: TextInputType.number,
@@ -555,7 +556,7 @@ class _TargetSetsDialogState extends State<_TargetSetsDialog> {
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, _ctrl.text.trim()),
-          child: const Text('OK'),
+          child: Text(l10n.okButton),
         ),
       ],
     );
@@ -587,6 +588,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
@@ -598,7 +600,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
           children: [
             TextField(
               decoration: InputDecoration(
-                hintText: 'Search exercises…',
+                hintText: l10n.searchExercisesHint,
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: scheme.surfaceContainerHigh,

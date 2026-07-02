@@ -433,6 +433,15 @@
     "addSetTitle": "Add set",
     "@addSetTitle": {"description": "Title/button for adding a set to a workout session"},
 
+    "targetSetsDialogTitle": "Target sets",
+    "@targetSetsDialogTitle": {"description": "Title of the dialog for entering a template exercise's target set count"},
+
+    "okButton": "OK",
+    "@okButton": {"description": "Label for a generic OK/confirm dialog button"},
+
+    "searchExercisesHint": "Search exercises…",
+    "@searchExercisesHint": {"description": "Placeholder for the search field in the exercise picker sheet"},
+
     "editSetTitle": "Edit set",
     "@editSetTitle": {"description": "Title for editing an existing logged set"},
 
@@ -1175,5 +1184,173 @@
     "@repsColumnLabel": {"description": "Column header for the repetitions column in the exercise card set table"},
 
     "previousColumnLabel": "PREV.",
-    "@previousColumnLabel": {"description": "Column header for the previous-performance hint column in the exercise card set table"}
+    "@previousColumnLabel": {"description": "Column header for the previous-performance hint column in the exercise card set table"},
+
+    "onboardingWelcomeTitle": "Let's personalize your plan",
+    "@onboardingWelcomeTitle": {"description": "Onboarding wizard: welcome step title"},
+
+    "onboardingWelcomeMessage": "A few quick questions help us suggest the right calorie, macro, and water goals for you.",
+    "@onboardingWelcomeMessage": {"description": "Onboarding wizard: welcome step body"},
+
+    "onboardingGetStartedButton": "Get started",
+    "@onboardingGetStartedButton": {"description": "Onboarding wizard: welcome step CTA"},
+
+    "onboardingSkipButton": "Skip",
+    "@onboardingSkipButton": {"description": "Onboarding wizard: skip link shown on every step"},
+
+    "onboardingBackButton": "Back",
+    "@onboardingBackButton": {"description": "Onboarding wizard: back navigation button"},
+
+    "onboardingNextButton": "Next",
+    "@onboardingNextButton": {"description": "Onboarding wizard: next-step button"},
+
+    "onboardingAboutYouTitle": "About you",
+    "@onboardingAboutYouTitle": {"description": "Onboarding wizard: step 2 title"},
+
+    "onboardingGenderLabel": "Gender",
+    "@onboardingGenderLabel": {"description": "Onboarding wizard: gender field label"},
+
+    "onboardingGenderMale": "Male",
+    "@onboardingGenderMale": {"description": "Onboarding wizard: gender option"},
+
+    "onboardingGenderFemale": "Female",
+    "@onboardingGenderFemale": {"description": "Onboarding wizard: gender option"},
+
+    "onboardingGenderUnspecified": "Prefer not to say",
+    "@onboardingGenderUnspecified": {"description": "Onboarding wizard: gender option"},
+
+    "onboardingBirthDateLabel": "Date of birth",
+    "@onboardingBirthDateLabel": {"description": "Onboarding wizard: birth date field label"},
+
+    "onboardingRequiredFieldError": "Please choose an option for every field",
+    "@onboardingRequiredFieldError": {"description": "Onboarding wizard: generic required-selection error"},
+
+    "onboardingInvalidBirthDateError": "Enter a valid birth date (age 13–120)",
+    "@onboardingInvalidBirthDateError": {"description": "Onboarding wizard: birth date validation error"},
+
+    "onboardingBodyTitle": "Body",
+    "@onboardingBodyTitle": {"description": "Onboarding wizard: step 3 title"},
+
+    "onboardingHeightLabel": "Height",
+    "@onboardingHeightLabel": {"description": "Onboarding wizard: height field label"},
+
+    "onboardingFeetSuffix": "ft",
+    "@onboardingFeetSuffix": {"description": "Onboarding wizard: feet input suffix"},
+
+    "onboardingInchesSuffix": "in",
+    "@onboardingInchesSuffix": {"description": "Onboarding wizard: inches input suffix"},
+
+    "onboardingCurrentWeightLabel": "Current weight",
+    "@onboardingCurrentWeightLabel": {"description": "Onboarding wizard: current weight field label"},
+
+    "onboardingHeightRangeError": "Height must be between 80–250 cm",
+    "@onboardingHeightRangeError": {"description": "Onboarding wizard: height validation error"},
+
+    "onboardingWeightRangeError": "Weight must be between 30–300 kg",
+    "@onboardingWeightRangeError": {"description": "Onboarding wizard: weight validation error"},
+
+    "onboardingLifestyleTitle": "Lifestyle & goal",
+    "@onboardingLifestyleTitle": {"description": "Onboarding wizard: step 4 title"},
+
+    "onboardingActivityLevelLabel": "Activity level",
+    "@onboardingActivityLevelLabel": {"description": "Onboarding wizard: activity level field label"},
+
+    "onboardingActivitySedentary": "Sedentary",
+    "@onboardingActivitySedentary": {"description": "Onboarding wizard: activity level option"},
+
+    "onboardingActivityLight": "Light",
+    "@onboardingActivityLight": {"description": "Onboarding wizard: activity level option"},
+
+    "onboardingActivityModerate": "Moderate",
+    "@onboardingActivityModerate": {"description": "Onboarding wizard: activity level option"},
+
+    "onboardingActivityActive": "Active",
+    "@onboardingActivityActive": {"description": "Onboarding wizard: activity level option"},
+
+    "onboardingActivityVeryActive": "Very active",
+    "@onboardingActivityVeryActive": {"description": "Onboarding wizard: activity level option"},
+
+    "onboardingActivityDescriptionSedentary": "Little or no exercise",
+    "@onboardingActivityDescriptionSedentary": {"description": "Onboarding wizard: activity level description"},
+
+    "onboardingActivityDescriptionLight": "Light exercise 1–3 days/week",
+    "@onboardingActivityDescriptionLight": {"description": "Onboarding wizard: activity level description"},
+
+    "onboardingActivityDescriptionModerate": "Moderate exercise 3–5 days/week",
+    "@onboardingActivityDescriptionModerate": {"description": "Onboarding wizard: activity level description"},
+
+    "onboardingActivityDescriptionActive": "Hard exercise 6–7 days/week",
+    "@onboardingActivityDescriptionActive": {"description": "Onboarding wizard: activity level description"},
+
+    "onboardingActivityDescriptionVeryActive": "Very hard exercise + physical job",
+    "@onboardingActivityDescriptionVeryActive": {"description": "Onboarding wizard: activity level description"},
+
+    "onboardingPrimaryGoalLabel": "Primary goal",
+    "@onboardingPrimaryGoalLabel": {"description": "Onboarding wizard: primary goal field label"},
+
+    "onboardingGoalLoseWeight": "Lose weight",
+    "@onboardingGoalLoseWeight": {"description": "Onboarding wizard: primary goal option"},
+
+    "onboardingGoalMaintain": "Maintain",
+    "@onboardingGoalMaintain": {"description": "Onboarding wizard: primary goal option"},
+
+    "onboardingGoalGainMuscle": "Gain muscle",
+    "@onboardingGoalGainMuscle": {"description": "Onboarding wizard: primary goal option"},
+
+    "onboardingTargetWeightOptionalLabel": "Target weight (optional)",
+    "@onboardingTargetWeightOptionalLabel": {"description": "Onboarding wizard: optional target weight field label"},
+
+    "onboardingSuggestedTitle": "Your suggested plan",
+    "@onboardingSuggestedTitle": {"description": "Onboarding wizard: step 5 title"},
+
+    "onboardingCalculatingMessage": "Calculating your suggested goals…",
+    "@onboardingCalculatingMessage": {"description": "Onboarding wizard: loading state while suggest-goals is in flight"},
+
+    "onboardingSuggestedFromMessage": "Based on a BMR of {bmr} kcal and a TDEE of {tdee} kcal",
+    "@onboardingSuggestedFromMessage": {"description": "Onboarding wizard: transparency note under the suggested goals", "placeholders": {"bmr": {"type": "int"}, "tdee": {"type": "int"}}},
+
+    "onboardingChangeLaterMessage": "You can change this anytime in Settings.",
+    "@onboardingChangeLaterMessage": {"description": "Onboarding wizard: note under the suggested goals"},
+
+    "onboardingApplyGoalsButton": "Apply these goals",
+    "@onboardingApplyGoalsButton": {"description": "Onboarding wizard: accept-suggestion button"},
+
+    "onboardingNotNowButton": "Not now",
+    "@onboardingNotNowButton": {"description": "Onboarding wizard: decline-suggestion button"},
+
+    "onboardingSavingMessage": "Saving…",
+    "@onboardingSavingMessage": {"description": "Onboarding wizard: button label while finishing submission"},
+
+    "onboardingSuggestFailedMessage": "Failed to calculate suggested goals",
+    "@onboardingSuggestFailedMessage": {"description": "Onboarding wizard: error shown when suggest-goals fails"},
+
+    "onboardingCompleteMessage": "You're all set!",
+    "@onboardingCompleteMessage": {"description": "Onboarding wizard: success message shown after finishing"},
+
+    "onboardingBannerTitle": "Finish setting up your profile",
+    "@onboardingBannerTitle": {"description": "Dashboard banner: title, shown when onboarding hasn't been completed"},
+
+    "onboardingBannerBody": "Get personalized calorie, macro, and water goals in under a minute.",
+    "@onboardingBannerBody": {"description": "Dashboard banner: body text"},
+
+    "onboardingBannerCta": "Continue setup",
+    "@onboardingBannerCta": {"description": "Dashboard banner: call-to-action button"},
+
+    "onboardingBannerDismissTooltip": "Dismiss",
+    "@onboardingBannerDismissTooltip": {"description": "Dashboard banner: dismiss button tooltip"},
+
+    "onboardingProfileTileLabel": "Body & goals",
+    "@onboardingProfileTileLabel": {"description": "Settings screen: tile linking to the onboarding-details edit screen"},
+
+    "onboardingEditTitle": "Body & goals",
+    "@onboardingEditTitle": {"description": "Title of the onboarding-details edit screen reached from Settings"},
+
+    "onboardingNotOnboardedMessage": "You haven't completed onboarding yet.",
+    "@onboardingNotOnboardedMessage": {"description": "Shown on the edit screen when the user has no user_details row yet"},
+
+    "onboardingStartOnboardingButton": "Start onboarding",
+    "@onboardingStartOnboardingButton": {"description": "Button that navigates to the onboarding wizard from the edit screen"},
+
+    "onboardingDetailsSavedMessage": "Saved",
+    "@onboardingDetailsSavedMessage": {"description": "Snackbar shown after saving changes on the onboarding-details edit screen"}
 }

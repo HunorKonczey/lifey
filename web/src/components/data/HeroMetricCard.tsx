@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 interface HeroMetricCardProps {
   value: number;
   goal: number;
@@ -5,6 +9,7 @@ interface HeroMetricCardProps {
 }
 
 export function HeroMetricCard({ value, goal, unit = "kcal" }: HeroMetricCardProps) {
+  const t = useTranslations("dashboard");
   const ratio = goal > 0 ? Math.min(value / goal, 1) : 0;
   const over = value > goal;
   const diff = Math.abs(Math.round(value - goal));
@@ -24,7 +29,7 @@ export function HeroMetricCard({ value, goal, unit = "kcal" }: HeroMetricCardPro
           local_fire_department
         </span>
         <span className="text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>
-          Calories
+          {t("calories")}
         </span>
         <div className="ml-auto">
           <span
@@ -36,7 +41,7 @@ export function HeroMetricCard({ value, goal, unit = "kcal" }: HeroMetricCardPro
               color: over ? "var(--goal-negative)" : "var(--goal-positive)",
             }}
           >
-            {over ? `${diff} ${unit} over` : "On track"}
+            {over ? t("over", { diff, unit }) : t("onTrack")}
           </span>
         </div>
       </div>
@@ -64,7 +69,7 @@ export function HeroMetricCard({ value, goal, unit = "kcal" }: HeroMetricCardPro
 
       {!over && (
         <p className="mt-2 text-xs tabular" style={{ color: "var(--on-surface-variant)" }}>
-          {diff} {unit} remaining
+          {t("remaining", { diff, unit })}
         </p>
       )}
     </div>

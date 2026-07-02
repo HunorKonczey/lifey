@@ -14,6 +14,7 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/change_password_screen.dart';
+import '../../onboarding/presentation/onboarding_edit_screen.dart';
 import '../../water/presentation/water_sources_screen.dart';
 import '../application/settings_controller.dart';
 import '../domain/user_settings.dart';
@@ -499,6 +500,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       label: l10n.changePasswordButton,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        size: 22,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const _RowDivider(),
+                    _SettingRow(
+                      icon: Icons.accessibility_new,
+                      iconColor: scheme.primary,
+                      label: l10n.onboardingProfileTileLabel,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const OnboardingEditScreen()),
                       ),
                       trailing: Icon(
                         Icons.chevron_right,

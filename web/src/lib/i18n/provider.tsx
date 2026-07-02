@@ -15,7 +15,7 @@ export function I18nProvider({
   children: React.ReactNode;
 }) {
   return (
-    <NextIntlClientProvider locale={locale} messages={MESSAGES[locale]}>
+    <NextIntlClientProvider locale={locale} messages={MESSAGES[locale]} timeZone="Europe/Budapest">
       {children}
     </NextIntlClientProvider>
   );

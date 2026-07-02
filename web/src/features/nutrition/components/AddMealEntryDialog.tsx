@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { foodApi, mealApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
@@ -41,6 +42,9 @@ function draftItemsFromMeal(meal: MealResponse): DraftItem[] {
 }
 
 export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEntryDialogProps) {
+  const t = useTranslations("nutrition.addMealDialog");
+  const n = useTranslations("nutrition");
+  const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
   const isEditing = meal != null;
@@ -66,11 +70,15 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
-      show(isEditing ? "Meal updated" : "Meal saved", "success");
+      show(isEditing ? t("mealUpdated") : t("mealSaved"), "success");
       onClose();
     },
-    onError: () => show(isEditing ? "Failed to update meal" : "Failed to save meal", "error"),
+    onError: () => show(isEditing ? t("updateFailed") : t("saveFailed"), "error"),
   });
+
+  const mealTypeLabels: Record<MealType, string> = {
+    BREAKFAST: n("breakfast"), LUNCH: n("lunch"), DINNER: n("dinner"), SNACK: n("snack"),
+  };
 
   return (
     <div
@@ -84,10 +92,10 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-base capitalize">
-            {isEditing ? `Edit ${mealType.toLowerCase()}` : `Add to ${mealType.toLowerCase()}`}
+          <h3 className="font-bold text-base">
+            {isEditing ? t("editTitle", { meal: mealTypeLabels[mealType] }) : t("addTitle", { meal: mealTypeLabels[mealType] })}
           </h3>
-          <button onClick={onClose} aria-label="Close"
+          <button onClick={onClose} aria-label={common("close")}
             className="p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container">
             <span className="material-symbols-rounded">close</span>
           </button>
@@ -102,7 +110,7 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
                 background: mode === m ? "var(--primary)" : "transparent",
                 color: mode === m ? "#1E1F18" : "var(--on-surface-variant)",
               }}>
-              {m === "search" ? "Search food" : "Enter macros"}
+              {m === "search" ? t("searchFood") : t("enterMacros")}
             </button>
           ))}
         </div>
@@ -113,7 +121,7 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
         {items.length > 0 && (
           <div className="flex flex-col gap-2 pt-2" style={{ borderTop: "1px solid var(--outline)" }}>
             <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>
-              Items ({items.length})
+              {t("items", { count: items.length })}
             </p>
             {items.map((it, idx) => (
               <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-[var(--r-md)]"
@@ -124,7 +132,7 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
                   className="w-16 px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
                   style={{ background: "var(--surface)", border: "1px solid var(--outline)" }} />
                 <span className="text-xs" style={{ color: "var(--muted)" }}>g</span>
-                <button onClick={() => removeItem(idx)} style={{ color: "var(--muted)" }} aria-label="Remove item">
+                <button onClick={() => removeItem(idx)} style={{ color: "var(--muted)" }} aria-label={t("removeItemAria")}>
                   <span className="material-symbols-rounded text-lg">close</span>
                 </button>
               </div>
@@ -143,10 +151,12 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
           className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
           style={{ background: "var(--primary)", color: "#1E1F18" }}>
           {saveMutation.isPending
-            ? "Saving…"
+            ? common("saving")
             : isEditing
-              ? "Save changes"
-              : `Save meal${items.length > 0 ? ` (${items.length})` : ""}`}
+              ? t("saveChanges")
+              : items.length > 0
+                ? t("saveMealCount", { count: items.length })
+                : t("saveMeal")}
         </button>
       </div>
     </div>
@@ -154,6 +164,8 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
 }
 
 function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
+  const t = useTranslations("nutrition.addMealDialog");
+  const nf = useTranslations("nutrition.foodsView");
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<FoodResponse | null>(null);
   const [grams, setGrams] = useState(100);
@@ -187,10 +199,11 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
     return (
       <>
         <div className="flex items-center gap-2 px-3 h-10 rounded-[var(--r-input)]"
-          style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}>
+          style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+          data-ring-frame>
           <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>search</span>
           <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search foods…" className="flex-1 bg-transparent outline-none text-sm" />
+            placeholder={nf("searchPlaceholder")} className="flex-1 min-w-0 bg-transparent outline-none text-sm" />
         </div>
         <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
           {matches.map((f) => (
@@ -203,7 +216,7 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
             </button>
           ))}
           {search && matches.length === 0 && (
-            <p className="text-sm text-center py-4" style={{ color: "var(--muted)" }}>No matches</p>
+            <p className="text-sm text-center py-4" style={{ color: "var(--muted)" }}>{t("noMatches")}</p>
           )}
         </div>
       </>
@@ -216,12 +229,12 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
         style={{ background: "var(--surface-container)" }}>
         <span className="text-sm font-semibold">{picked.name}</span>
         <button onClick={() => setPicked(null)} className="text-xs" style={{ color: "var(--primary)" }}>
-          Change
+          {t("change")}
         </button>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Quantity (g)</label>
+        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("quantityG")}</label>
         <input type="number" value={grams} min={1}
           onChange={(e) => setGrams(Math.max(1, Number(e.target.value)))}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
@@ -236,13 +249,14 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
       <button onClick={addAndReset}
         className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity"
         style={{ background: "var(--primary)", color: "#1E1F18" }}>
-        Add item
+        {t("addItem")}
       </button>
     </>
   );
 }
 
 function MacrosMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
+  const t = useTranslations("nutrition.addMealDialog");
   const { show } = useToast();
   const [name, setName] = useState("");
   const [gramsStr, setGramsStr] = useState("");
@@ -262,7 +276,7 @@ function MacrosMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
       // Back-calculate per-100g so that stored × grams / 100 = entered totals
       const factor = 100 / grams;
       const food = await foodApi.create({
-        name: name.trim() || "Custom entry",
+        name: name.trim() || t("customEntry"),
         caloriesPer100g: kcalVal * factor,
         proteinPer100g: proteinVal * factor,
         carbsPer100g: carbsVal * factor,
@@ -289,7 +303,7 @@ function MacrosMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
       setCarbs("");
       setFat("");
     },
-    onError: () => show("Failed to add item", "error"),
+    onError: () => show(t("addItemFailed"), "error"),
   });
 
   const canSubmit = kcal.trim() !== "" && protein.trim() !== "" && !createFoodMutation.isPending;
@@ -297,16 +311,16 @@ function MacrosMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
   return (
     <>
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Name</label>
+        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("name")}</label>
         <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Lunch at restaurant"
+          placeholder={t("namePlaceholder")}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm"
           style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
       </div>
 
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>
-          Quantity (g) <span style={{ color: "var(--muted)", fontWeight: 400 }}>— optional, defaults to 100</span>
+          {t("quantityOptional")}
         </label>
         <input type="number" min={1} value={gramsStr} onChange={(e) => setGramsStr(e.target.value)}
           placeholder="100"
@@ -316,25 +330,25 @@ function MacrosMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold" style={{ color: "var(--metric-kcal)" }}>Calories (kcal) *</label>
+          <label className="text-xs font-semibold" style={{ color: "var(--metric-kcal)" }}>{t("caloriesKcal")}</label>
           <input type="number" min={0} value={kcal} onChange={(e) => setKcal(e.target.value)}
             className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
             style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold" style={{ color: "var(--metric-protein)" }}>Protein (g) *</label>
+          <label className="text-xs font-semibold" style={{ color: "var(--metric-protein)" }}>{t("proteinG")}</label>
           <input type="number" min={0} value={protein} onChange={(e) => setProtein(e.target.value)}
             className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
             style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold" style={{ color: "var(--metric-carbs)" }}>Carbs (g)</label>
+          <label className="text-xs font-semibold" style={{ color: "var(--metric-carbs)" }}>{t("carbsG")}</label>
           <input type="number" min={0} value={carbs} onChange={(e) => setCarbs(e.target.value)}
             className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
             style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold" style={{ color: "var(--metric-fat)" }}>Fat (g)</label>
+          <label className="text-xs font-semibold" style={{ color: "var(--metric-fat)" }}>{t("fatG")}</label>
           <input type="number" min={0} value={fat} onChange={(e) => setFat(e.target.value)}
             className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
             style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
@@ -353,7 +367,7 @@ function MacrosMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
       <button onClick={() => createFoodMutation.mutate()} disabled={!canSubmit}
         className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
         style={{ background: "var(--primary)", color: "#1E1F18" }}>
-        {createFoodMutation.isPending ? "Adding…" : "Add item"}
+        {createFoodMutation.isPending ? t("adding") : t("addItem")}
       </button>
     </>
   );

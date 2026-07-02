@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { waterApi } from "@/features/water/api";
 import { settingsApi } from "@/features/settings/api";
@@ -16,6 +17,8 @@ const SEGMENTS = 10;
 const QUICK_AMOUNTS = [0.25, 0.5, 1.0];
 
 export default function WaterPage() {
+  const t = useTranslations("water");
+  const nav = useTranslations("nav");
   const { date } = useDateStore();
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -50,7 +53,7 @@ export default function WaterPage() {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev !== undefined) queryClient.setQueryData(queryKeys.waterEntries.all(), ctx.prev);
-      show("Failed to add", "error");
+      show(t("addFailed"), "error");
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.waterEntries.all() }),
   });
@@ -64,29 +67,29 @@ export default function WaterPage() {
     mutationFn: () => waterApi.sources.create({ name: newName, volumeLiters: Number(newVol) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.waterSources.all() });
-      show("Source added", "success"); setNewName(""); setNewVol("");
+      show(t("sourceAdded"), "success"); setNewName(""); setNewVol("");
     },
-    onError: () => show("Failed to add source", "error"),
+    onError: () => show(t("addSourceFailed"), "error"),
   });
 
   const deleteSource = useMutation({
     mutationFn: (id: number) => waterApi.sources.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.waterSources.all() }); show("Source removed", "success"); },
-    onError: () => show("Failed to remove", "error"),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.waterSources.all() }); show(t("sourceRemoved"), "success"); },
+    onError: () => show(t("removeFailed"), "error"),
   });
 
   const quickSources = (sourcesQ.data ?? []).length > 0
     ? sourcesQ.data!
     : [
-        { id: -1, name: "Glass", volumeLiters: 0.25 },
-        { id: -2, name: "Bottle", volumeLiters: 0.5 },
-        { id: -3, name: "Can", volumeLiters: 0.33 },
+        { id: -1, name: t("defaultGlass"), volumeLiters: 0.25 },
+        { id: -2, name: t("defaultBottle"), volumeLiters: 0.5 },
+        { id: -3, name: t("defaultCan"), volumeLiters: 0.33 },
       ];
 
   function handleCustomAdd() {
     const parsed = parseFloat(customInput.replace(",", "."));
     if (isNaN(parsed) || parsed <= 0) {
-      show("Enter a valid amount", "error");
+      show(t("invalidAmount"), "error");
       return;
     }
     addMutation.mutate({ volumeLiters: parsed, sourceId: null });
@@ -102,7 +105,7 @@ export default function WaterPage() {
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-2">
         <span className="material-symbols-rounded text-2xl" style={{ color: "var(--metric-water)" }}>water_drop</span>
-        <h1 className="text-xl font-bold">Water</h1>
+        <h1 className="text-xl font-bold">{nav("water")}</h1>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -136,7 +139,7 @@ export default function WaterPage() {
 
           {/* Custom amount */}
           <div className="flex flex-col gap-2 pt-3" style={{ borderTop: "1px solid var(--outline)" }}>
-            <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Custom amount</p>
+            <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("customAmount")}</p>
             <div className="flex flex-wrap gap-2">
               {QUICK_AMOUNTS.map((amount) => (
                 <button key={amount}
@@ -157,7 +160,7 @@ export default function WaterPage() {
                 value={customInput}
                 onChange={(e) => setCustomInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCustomAdd()}
-                placeholder="e.g. 0.35"
+                placeholder={t("amountPlaceholder")}
                 className="flex-1 px-3 h-9 rounded-[var(--r-md)] outline-none text-sm tabular"
                 style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
               />
@@ -167,7 +170,7 @@ export default function WaterPage() {
                 disabled={addMutation.isPending || !customInput}
                 className="px-4 h-9 rounded-[var(--r-md)] text-sm font-semibold transition-opacity disabled:opacity-50"
                 style={{ background: "var(--primary)", color: "var(--on-primary)" }}>
-                Add
+                {t("add")}
               </button>
             </div>
           </div>
@@ -178,13 +181,13 @@ export default function WaterPage() {
               {todayEntries.map((e) => (
                 <div key={e.id} className="flex items-center justify-between py-1.5 group">
                   <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
-                    {e.sourceName ?? "Water"} · {format(new Date(e.consumedAt), "HH:mm")}
+                    {e.sourceName ?? t("entryLabel")} · {format(new Date(e.consumedAt), "HH:mm")}
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold tabular">{(e.volumeLiters * 1000).toFixed(0)} ml</span>
                     <button onClick={() => deleteEntry.mutate(e.id)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "var(--muted)" }}
-                      aria-label="Remove">
+                      aria-label={t("removeEntryAria")}>
                       <span className="material-symbols-rounded text-base">close</span>
                     </button>
                   </div>
@@ -197,9 +200,9 @@ export default function WaterPage() {
         {/* Sources management */}
         <div className="w-full lg:w-[300px] shrink-0 rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-bold">Sources</p>
+            <p className="text-sm font-bold">{t("sources")}</p>
             <button onClick={() => setManaging((m) => !m)} className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
-              {managing ? "Done" : "Manage"}
+              {managing ? t("done") : t("manage")}
             </button>
           </div>
 
@@ -213,7 +216,7 @@ export default function WaterPage() {
                     {s.volumeLiters >= 1 ? `${s.volumeLiters}L` : `${Math.round(s.volumeLiters * 1000)}ml`}
                   </span>
                   {managing && (
-                    <button onClick={() => deleteSource.mutate(s.id)} style={{ color: "var(--muted)" }} aria-label="Delete source">
+                    <button onClick={() => deleteSource.mutate(s.id)} style={{ color: "var(--muted)" }} aria-label={t("deleteSourceAria")}>
                       <span className="material-symbols-rounded text-base">close</span>
                     </button>
                   )}
@@ -221,22 +224,22 @@ export default function WaterPage() {
               </div>
             ))}
             {(sourcesQ.data ?? []).length === 0 && (
-              <p className="text-xs" style={{ color: "var(--muted)" }}>No custom sources — defaults shown for quick-add.</p>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>{t("noCustomSources")}</p>
             )}
           </div>
 
           {managing && (
             <div className="flex flex-col gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--outline)" }}>
-              <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Name (e.g. Mug)"
+              <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t("namePlaceholder")}
                 className="px-3 h-9 rounded-[var(--r-md)] outline-none text-sm"
                 style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
-              <input type="number" step="0.05" value={newVol} onChange={(e) => setNewVol(e.target.value)} placeholder="Liters (e.g. 0.3)"
+              <input type="number" step="0.05" value={newVol} onChange={(e) => setNewVol(e.target.value)} placeholder={t("litersPlaceholder")}
                 className="px-3 h-9 rounded-[var(--r-md)] outline-none text-sm tabular"
                 style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
               <button onClick={() => createSource.mutate()} disabled={!newName || !newVol || createSource.isPending}
                 className="h-9 rounded-[var(--r-md)] font-semibold text-sm transition-opacity disabled:opacity-50"
                 style={{ background: "var(--primary)", color: "#1E1F18" }}>
-                Add source
+                {t("addSource")}
               </button>
             </div>
           )}

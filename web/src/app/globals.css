@@ -143,13 +143,31 @@ body {
 .tabular { font-variant-numeric: tabular-nums; }
 
 /* ─── A11y: visible focus ring for keyboard navigation ─── */
+/* Inset (negative offset) so the ring never pokes past an element's own
+   rounded corners; a positive offset + forced border-radius mismatched
+   with elements that set their own (larger) radius, e.g. --r-input. */
 :focus-visible {
   outline: 2px solid var(--primary);
-  outline-offset: 2px;
-  border-radius: var(--r-sm);
+  outline-offset: -2px;
 }
 /* Don't show the ring for mouse clicks, only keyboard */
 :focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─── "Frame" input wrappers: ring the whole pill, not the bare input ─── */
+/* Bare <input>s nested in a padded/rounded wrapper are much shorter than the
+   wrapper itself, so ringing the input directly hugs just the text with
+   almost no breathing room. Ring the marked wrapper instead — it already
+   owns the right border-radius and padding — and suppress the child's own
+   ring so there's no double ring. */
+[data-ring-frame]:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+[data-ring-frame] input:focus-visible,
+[data-ring-frame] select:focus-visible,
+[data-ring-frame] textarea:focus-visible {
   outline: none;
 }
 

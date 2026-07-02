@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { workoutSessionApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -62,6 +63,8 @@ function delta(current: number, previous: number | undefined): "up" | "down" | n
 }
 
 export function SessionLogger({ session, history, onFinished }: SessionLoggerProps) {
+  const t = useTranslations("workouts");
+  const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
 
@@ -93,10 +96,10 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
     mutationFn: (finished: boolean) => workoutSessionApi.update(session.id, buildRequest(finished)),
     onSuccess: (_data, finished) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() });
-      if (finished) { show("Workout finished", "success"); onFinished(); }
-      else show("Progress saved", "success");
+      if (finished) { show(t("workoutFinished"), "success"); onFinished(); }
+      else show(t("progressSaved"), "success");
     },
-    onError: () => show("Failed to save", "error"),
+    onError: () => show(t("saveFailed"), "error"),
   });
 
   const addSet = (exerciseId: number) => {
@@ -117,21 +120,21 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
       {/* Header */}
       <div className="flex items-center justify-between rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
         <div>
-          <p className="font-bold text-base">{session.templateName ?? "Active workout"}</p>
+          <p className="font-bold text-base">{session.templateName ?? t("activeWorkout")}</p>
           <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
-            Started {format(new Date(session.startedAt), "HH:mm")}
+            {t("started", { time: format(new Date(session.startedAt), "HH:mm") })}
           </p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => saveMutation.mutate(false)} disabled={saveMutation.isPending}
             className="px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
             style={{ background: "var(--surface-highest)", color: "var(--on-surface)" }}>
-            Save
+            {common("save")}
           </button>
           <button onClick={() => saveMutation.mutate(true)} disabled={saveMutation.isPending}
             className="px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
             style={{ background: "var(--primary)", color: "#1E1F18" }}>
-            Finish
+            {t("finishShort")}
           </button>
         </div>
       </div>
@@ -140,7 +143,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
       {exercises.length === 0 ? (
         <div className="p-6 text-center text-sm rounded-[var(--r-card)]"
           style={{ background: "var(--surface)", color: "var(--muted)" }}>
-          This session has no planned exercises.
+          {t("noPlannedExercises")}
         </div>
       ) : exercises.map((ex) => {
         const prevSets = previousSets(history, session.id, ex.exerciseId, session.templateId);
@@ -154,10 +157,10 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
             {/* table header */}
             <div className="grid grid-cols-[40px_1fr_1fr_1fr_44px] gap-2 px-1 mb-2 text-xs font-semibold"
               style={{ color: "var(--on-surface-variant)" }}>
-              <span>Set</span>
-              <span>Previous</span>
-              <span>Kg</span>
-              <span>Reps</span>
+              <span>{t("setColumn")}</span>
+              <span>{t("previous")}</span>
+              <span>{t("kg")}</span>
+              <span>{t("reps")}</span>
               <span></span>
             </div>
 
@@ -201,7 +204,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
                   style={{
                     background: d.done ? "var(--primary)" : "var(--surface-container)",
                     color: d.done ? "#1E1F18" : "var(--muted)",
-                  }} aria-label="Mark set done">
+                  }} aria-label={t("markSetDoneAria")}>
                   <span className="material-symbols-rounded text-lg">check</span>
                 </button>
               </div>
@@ -211,7 +214,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
             <button onClick={() => addSet(ex.exerciseId)}
               className="w-full mt-2 py-1.5 rounded-[var(--r-sm)] text-xs font-semibold flex items-center justify-center gap-1"
               style={{ border: "1px dashed var(--outline)", color: "var(--on-surface-variant)" }}>
-              <span className="material-symbols-rounded text-base">add</span> Add set
+              <span className="material-symbols-rounded text-base">add</span> {t("addSet")}
             </button>
           </div>
         );

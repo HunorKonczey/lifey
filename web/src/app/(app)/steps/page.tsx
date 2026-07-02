@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { format, subDays, eachDayOfInterval } from "date-fns";
 import { stepsApi } from "@/features/steps/api";
 import { settingsApi } from "@/features/settings/api";
@@ -12,6 +13,9 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 
 export default function StepsPage() {
+  const t = useTranslations("steps");
+  const nav = useTranslations("nav");
+  const common = useTranslations("common");
   const { date } = useDateStore();
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -35,10 +39,10 @@ export default function StepsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.steps.all() });
-      show("Steps saved", "success");
+      show(t("saved"), "success");
       setEditing(false); setValue("");
     },
-    onError: () => show("Failed to save", "error"),
+    onError: () => show(t("saveFailed"), "error"),
   });
 
   // Last 7 days ending on selected date
@@ -57,7 +61,7 @@ export default function StepsPage() {
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-2">
         <span className="material-symbols-rounded text-2xl" style={{ color: "var(--metric-steps)" }}>directions_walk</span>
-        <h1 className="text-xl font-bold">Steps</h1>
+        <h1 className="text-xl font-bold">{nav("steps")}</h1>
       </div>
 
       {/* Today value */}
@@ -65,18 +69,18 @@ export default function StepsPage() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>
-              {dateStr === format(new Date(), "yyyy-MM-dd") ? "Today" : format(date, "MMM d")}
+              {dateStr === format(new Date(), "yyyy-MM-dd") ? common("today") : format(date, "MMM d")}
             </p>
             <p className="text-4xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
               {(todayEntry?.steps ?? 0).toLocaleString()}
             </p>
-            <p className="text-xs tabular mt-1" style={{ color: "var(--muted)" }}>Goal: {goal.toLocaleString()}</p>
+            <p className="text-xs tabular mt-1" style={{ color: "var(--muted)" }}>{t("goal", { value: goal.toLocaleString() })}</p>
           </div>
           {!editing ? (
             <button onClick={() => { setEditing(true); setValue(String(todayEntry?.steps ?? "")); }}
               className="flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
               style={{ background: "var(--surface-highest)", color: "var(--on-surface)" }}>
-              <span className="material-symbols-rounded text-lg">edit</span> Edit
+              <span className="material-symbols-rounded text-lg">edit</span> {common("edit")}
             </button>
           ) : (
             <div className="flex items-center gap-2">
@@ -85,8 +89,8 @@ export default function StepsPage() {
                 style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
               <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
                 className="h-9 px-4 rounded-[var(--r-input)] font-semibold text-sm"
-                style={{ background: "var(--primary)", color: "#1E1F18" }}>Save</button>
-              <button onClick={() => setEditing(false)} className="h-9 px-3 text-sm" style={{ color: "var(--on-surface-variant)" }}>Cancel</button>
+                style={{ background: "var(--primary)", color: "#1E1F18" }}>{common("save")}</button>
+              <button onClick={() => setEditing(false)} className="h-9 px-3 text-sm" style={{ color: "var(--on-surface-variant)" }}>{common("cancel")}</button>
             </div>
           )}
         </div>
@@ -103,7 +107,7 @@ export default function StepsPage() {
 
       {/* 7-day bar chart */}
       <div className="rounded-[var(--r-card)] p-5" style={{ background: "var(--surface)" }}>
-        <p className="text-sm font-bold mb-4">Last 7 days</p>
+        <p className="text-sm font-bold mb-4">{t("last7Days")}</p>
         <div className="flex items-end justify-between gap-2" style={{ height: 160 }}>
           {bars.map((b) => {
             const reached = b.steps >= goal;

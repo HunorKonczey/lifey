@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { recipeApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useDateStore } from "@/lib/hooks/useDateStore";
@@ -16,6 +17,7 @@ const PAGE_SIZE = 200;
 const SEARCH_DEBOUNCE_MS = 300;
 
 export function RecipesView() {
+  const t = useTranslations("nutrition.recipesView");
   const { date } = useDateStore();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [search, setSearch] = useState("");
@@ -44,12 +46,13 @@ export function RecipesView() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 px-3 h-9 rounded-[var(--r-input)] flex-1 min-w-[180px]"
-          style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}>
+          style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}
+          data-ring-frame>
           <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>search</span>
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search recipes…"
-            className="flex-1 bg-transparent outline-none text-sm"
+            placeholder={t("searchPlaceholder")}
+            className="flex-1 min-w-0 bg-transparent outline-none text-sm"
           />
         </div>
 
@@ -62,13 +65,13 @@ export function RecipesView() {
           }}>
           <span className="material-symbols-rounded text-base"
             style={{ fontVariationSettings: favoritesOnly ? "'FILL' 1" : "'FILL' 0" }}>star</span>
-          Favorites
+          {t("favorites")}
         </button>
 
         <button onClick={() => { setCreating(true); setEditing(null); }}
           className="ml-auto flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
           style={{ background: "var(--primary)", color: "#1E1F18" }}>
-          <span className="material-symbols-rounded text-lg">add</span> New recipe
+          <span className="material-symbols-rounded text-lg">add</span> {t("newRecipe")}
         </button>
       </div>
 
@@ -81,10 +84,10 @@ export function RecipesView() {
       ) : recipes.length === 0 ? (
         <EmptyState
           icon="menu_book"
-          title={debouncedSearch ? "No recipes match" : "No recipes yet"}
+          title={debouncedSearch ? t("noMatch") : t("noRecipes")}
           body={debouncedSearch
-            ? "Try a different search term."
-            : "Create a recipe to quickly log meals you eat often."}
+            ? t("tryDifferentSearch")
+            : t("createToLog")}
         />
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -109,7 +112,7 @@ export function RecipesView() {
               <button onClick={() => setLogging(r)}
                 className="mt-1 flex items-center justify-center gap-1 h-8 rounded-[var(--r-input)] text-xs font-semibold transition-colors"
                 style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}>
-                <span className="material-symbols-rounded text-base">restaurant</span> Log as meal
+                <span className="material-symbols-rounded text-base">restaurant</span> {t("logAsMeal")}
               </button>
             </div>
           ))}

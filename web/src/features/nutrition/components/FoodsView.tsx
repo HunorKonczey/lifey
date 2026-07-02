@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { foodApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
@@ -27,6 +28,7 @@ const SORT_FIELDS: Record<string, string> = {
 };
 
 export function FoodsView() {
+  const t = useTranslations("nutrition.foodsView");
   const { show } = useToast();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -72,7 +74,7 @@ export function FoodsView() {
         const existing = foods.find((f) => f.id === res.id) ?? (await foodApi.get(res.id));
         setSelected(existing);
         setCreating(false);
-        show("Found in your catalog", "success");
+        show(t("foundInCatalog"), "success");
       } else {
         // OPENFOODFACTS — prefill new-food editor
         setSelected(null);
@@ -85,11 +87,11 @@ export function FoodsView() {
           barcode: res.barcode,
         });
         setCreating(true);
-        show("Loaded from OpenFoodFacts — review and save", "success");
+        show(t("loadedFromOff"), "success");
       }
       setBarcode("");
     } catch {
-      show("Barcode not found", "warning");
+      show(t("barcodeNotFound"), "warning");
     } finally {
       setBarcodeLoading(false);
     }
@@ -97,7 +99,7 @@ export function FoodsView() {
 
   const columns: Column<FoodResponse>[] = [
     {
-      key: "name", header: "Name", sortable: true,
+      key: "name", header: t("colName"), sortable: true,
       sortValue: (f) => f.name.toLowerCase(),
       render: (f) => (
         <span className="font-semibold" style={{ color: "var(--on-surface)" }}>
@@ -111,22 +113,22 @@ export function FoodsView() {
       ),
     },
     {
-      key: "kcal", header: "Kcal", sortable: true, align: "right", color: "var(--metric-kcal)",
+      key: "kcal", header: t("colKcal"), sortable: true, align: "right", color: "var(--metric-kcal)",
       sortValue: (f) => f.caloriesPer100g,
       render: (f) => Math.round(f.caloriesPer100g),
     },
     {
-      key: "protein", header: "Protein", sortable: true, align: "right", color: "var(--metric-protein)",
+      key: "protein", header: t("colProtein"), sortable: true, align: "right", color: "var(--metric-protein)",
       sortValue: (f) => f.proteinPer100g,
       render: (f) => `${+f.proteinPer100g.toFixed(1)}g`,
     },
     {
-      key: "carbs", header: "Carbs", sortable: true, align: "right", color: "var(--metric-carbs)",
+      key: "carbs", header: t("colCarbs"), sortable: true, align: "right", color: "var(--metric-carbs)",
       sortValue: (f) => f.carbsPer100g ?? 0,
       render: (f) => (f.carbsPer100g != null ? `${+f.carbsPer100g.toFixed(1)}g` : "—"),
     },
     {
-      key: "fat", header: "Fat", sortable: true, align: "right", color: "var(--metric-fat)",
+      key: "fat", header: t("colFat"), sortable: true, align: "right", color: "var(--metric-fat)",
       sortValue: (f) => f.fatPer100g ?? 0,
       render: (f) => (f.fatPer100g != null ? `${+f.fatPer100g.toFixed(1)}g` : "—"),
     },
@@ -140,27 +142,29 @@ export function FoodsView() {
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 px-3 h-10 rounded-[var(--r-input)] flex-1 min-w-[180px]"
-            style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}>
+            style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}
+            data-ring-frame>
             <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>search</span>
             <input
               value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search foods…"
-              className="flex-1 bg-transparent outline-none text-sm"
+              placeholder={t("searchPlaceholder")}
+              className="flex-1 min-w-0 bg-transparent outline-none text-sm"
             />
           </div>
 
           <div className="flex items-center gap-2 px-3 h-10 rounded-[var(--r-input)] min-w-[200px]"
-            style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}>
+            style={{ background: "var(--surface)", border: "1px solid var(--outline)" }}
+            data-ring-frame>
             <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>barcode_scanner</span>
             <input
               value={barcode} onChange={(e) => setBarcode(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleBarcode()}
-              placeholder="Barcode…"
-              className="flex-1 bg-transparent outline-none text-sm tabular"
+              placeholder={t("barcodePlaceholder")}
+              className="flex-1 min-w-0 bg-transparent outline-none text-sm tabular"
             />
             <button onClick={handleBarcode} disabled={barcodeLoading}
               className="text-xs font-semibold disabled:opacity-50" style={{ color: "var(--primary)" }}>
-              {barcodeLoading ? "…" : "Look up"}
+              {barcodeLoading ? "…" : t("lookUp")}
             </button>
           </div>
 
@@ -169,7 +173,7 @@ export function FoodsView() {
             className="flex items-center gap-1 px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
             style={{ background: "var(--primary)", color: "#1E1F18" }}
           >
-            <span className="material-symbols-rounded text-lg">add</span> New food
+            <span className="material-symbols-rounded text-lg">add</span> {t("newFood")}
           </button>
         </div>
 
@@ -181,10 +185,10 @@ export function FoodsView() {
         ) : foods.length === 0 ? (
           <EmptyState
             icon="nutrition"
-            title={debouncedSearch ? "No foods match" : "No foods yet"}
+            title={debouncedSearch ? t("noMatch") : t("noFoods")}
             body={debouncedSearch
-              ? "Try a different search term."
-              : "Add a food manually or scan a barcode to get started."}
+              ? t("tryDifferentSearch")
+              : t("addManually")}
           />
         ) : (
           <DataTable

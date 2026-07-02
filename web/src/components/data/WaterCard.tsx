@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { waterApi } from "@/features/water/api";
 import type { WaterSourceResponse } from "@/features/water/types";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -17,6 +18,8 @@ interface WaterCardProps {
 const SEGMENTS = 8;
 
 export function WaterCard({ currentLiters, goalLiters, sources, date }: WaterCardProps) {
+  const t = useTranslations("dashboard");
+  const tWater = useTranslations("water");
   const queryClient = useQueryClient();
   const filled = goalLiters > 0 ? Math.min(currentLiters / goalLiters, 1) : 0;
   const filledSegments = Math.round(filled * SEGMENTS);
@@ -47,8 +50,8 @@ export function WaterCard({ currentLiters, goalLiters, sources, date }: WaterCar
   const quickSources = sources.length > 0
     ? sources.slice(0, 3)
     : [
-        { id: -1, name: "Glass", volumeLiters: 0.25 },
-        { id: -2, name: "Bottle", volumeLiters: 0.5 },
+        { id: -1, name: tWater("defaultGlass"), volumeLiters: 0.25 },
+        { id: -2, name: tWater("defaultBottle"), volumeLiters: 0.5 },
       ];
 
   return (
@@ -60,7 +63,7 @@ export function WaterCard({ currentLiters, goalLiters, sources, date }: WaterCar
         >
           water_drop
         </span>
-        <span className="text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>Water</span>
+        <span className="text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("water")}</span>
         <span className="ml-auto text-sm font-bold tabular">
           {currentLiters.toFixed(1)} <span style={{ color: "var(--on-surface-variant)" }}>/ {goalLiters.toFixed(1)} L</span>
         </span>

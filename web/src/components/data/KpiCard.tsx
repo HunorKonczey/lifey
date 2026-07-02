@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 interface KpiCardProps {
   label: string;
   value: string;
@@ -12,6 +16,7 @@ interface KpiCardProps {
 export function KpiCard({
   label, value, icon, color, delta, higherIsBetter = true, deltaUnit = "",
 }: KpiCardProps) {
+  const t = useTranslations("common");
   const hasDelta = delta != null && delta !== 0;
   const good = delta != null && (higherIsBetter ? delta > 0 : delta < 0);
 
@@ -31,7 +36,7 @@ export function KpiCard({
             {delta! > 0 ? "trending_up" : "trending_down"}
           </span>
           <span className="tabular">
-            {delta! > 0 ? "+" : ""}{delta!.toLocaleString()}{deltaUnit} vs previous
+            {delta! > 0 ? "+" : ""}{delta!.toLocaleString()}{deltaUnit} {t("vsPrevious")}
           </span>
         </div>
       )}

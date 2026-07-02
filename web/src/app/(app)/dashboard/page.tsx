@@ -2,6 +2,7 @@
 
 import { useQueries } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { useDateStore } from "@/lib/hooks/useDateStore";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -12,6 +13,7 @@ import { waterApi } from "@/features/water/api";
 import { stepsApi } from "@/features/steps/api";
 import { mealApi } from "@/features/nutrition/api";
 import { workoutSessionApi } from "@/features/workouts/api";
+import { OnboardingBanner } from "@/components/app/OnboardingBanner";
 import { HeroMetricCard } from "@/components/data/HeroMetricCard";
 import { MacroRing } from "@/components/data/MacroRing";
 import { StatCard } from "@/components/data/StatCard";
@@ -42,6 +44,7 @@ function filterToday<T extends { dateTime?: string; consumedAt?: string; date?: 
 }
 
 export default function DashboardPage() {
+  const t = useTranslations("dashboard");
   const { date } = useDateStore();
   const router = useRouter();
   const dateStr = localDateStr(date);
@@ -148,7 +151,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col gap-4">
+      <OnboardingBanner />
+      <div className="flex gap-6">
       {/* Main column */}
       <div className="flex flex-col gap-4 flex-1 min-w-0">
 
@@ -162,7 +167,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-3 gap-4">
           <div className="rounded-[var(--r-card)] p-4 flex justify-center" style={{ background: "var(--surface)" }}>
             <MacroRing
-              label="Protein"
+              label={t("protein")}
               value={totalProtein}
               goal={settings?.dailyProteinGoal ?? 150}
               color="var(--metric-protein)"
@@ -170,7 +175,7 @@ export default function DashboardPage() {
           </div>
           <div className="rounded-[var(--r-card)] p-4 flex justify-center" style={{ background: "var(--surface)" }}>
             <MacroRing
-              label="Carbs"
+              label={t("carbs")}
               value={totalCarbs}
               goal={settings?.dailyCarbsGoal ?? 250}
               color="var(--metric-carbs)"
@@ -178,7 +183,7 @@ export default function DashboardPage() {
           </div>
           <div className="rounded-[var(--r-card)] p-4 flex justify-center" style={{ background: "var(--surface)" }}>
             <MacroRing
-              label="Fat"
+              label={t("fat")}
               value={totalFat}
               goal={settings?.dailyFatGoal ?? 65}
               color="var(--metric-fat)"
@@ -203,7 +208,7 @@ export default function DashboardPage() {
             <Skeleton variant="card" className="h-40" />
           ) : (
             <StatCard
-              label="Steps"
+              label={t("steps")}
               value={todaySteps?.steps ?? 0}
               icon="directions_walk"
               color="var(--metric-steps)"
@@ -213,7 +218,7 @@ export default function DashboardPage() {
                   : undefined
               }
               goalReached={(todaySteps?.steps ?? 0) >= (settings?.dailyStepGoal ?? 10000)}
-              subtitle={`Goal: ${(settings?.dailyStepGoal ?? 10000).toLocaleString()}`}
+              subtitle={t("goal", { value: (settings?.dailyStepGoal ?? 10000).toLocaleString() })}
               onClick={() => router.push("/steps")}
             />
           )}
@@ -222,12 +227,12 @@ export default function DashboardPage() {
             <Skeleton variant="card" className="h-40" />
           ) : (
             <StatCard
-              label="Weight"
+              label={t("weight")}
               value={latestWeight ? latestWeight.weight.toFixed(1) : "—"}
               unit={latestWeight ? "kg" : ""}
               icon="monitor_weight"
               color="var(--metric-weight)"
-              subtitle={latestWeight ? latestWeight.date : "No entry yet"}
+              subtitle={latestWeight ? latestWeight.date : t("noEntryYet")}
               onClick={() => router.push("/weight")}
             />
           )}
@@ -235,12 +240,12 @@ export default function DashboardPage() {
 
         {/* Recent workouts */}
         <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-bold mb-3">Recent workouts</p>
+          <p className="text-sm font-bold mb-3">{t("recentWorkouts")}</p>
           {sessionsQ.isLoading ? (
             <Skeleton variant="table" />
           ) : recentSessions.length === 0 ? (
             <p className="text-sm py-4 text-center" style={{ color: "var(--on-surface-variant)" }}>
-              No workouts yet
+              {t("noWorkoutsYet")}
             </p>
           ) : (
             <div className="flex flex-col gap-2">
@@ -252,7 +257,7 @@ export default function DashboardPage() {
                 >
                   <div>
                     <p className="text-sm font-semibold">
-                      {s.templateName ?? (s.exercises.map((e) => e.exerciseName).join(", ") || "Workout")}
+                      {s.templateName ?? (s.exercises.map((e) => e.exerciseName).join(", ") || t("workoutFallback"))}
                     </p>
                     <p className="text-xs" style={{ color: "var(--muted)" }}>
                       {format(new Date(s.startedAt), "MMM d, HH:mm")}
@@ -263,7 +268,7 @@ export default function DashboardPage() {
                       {Math.round(
                         (new Date(s.finishedAt).getTime() - new Date(s.startedAt).getTime()) / 60000,
                       )}{" "}
-                      min
+                      {t("minutes")}
                     </span>
                   )}
                 </div>
@@ -279,13 +284,13 @@ export default function DashboardPage() {
         style={{ width: 268 }}
       >
         <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-bold mb-3">This week</p>
+          <p className="text-sm font-bold mb-3">{t("thisWeek")}</p>
           {weeklyStatsQ.isLoading ? (
             <Skeleton variant="text" />
           ) : (
             <div className="flex flex-col gap-3">
               <div className="flex justify-between text-sm">
-                <span style={{ color: "var(--on-surface-variant)" }}>Avg calories</span>
+                <span style={{ color: "var(--on-surface-variant)" }}>{t("avgCalories")}</span>
                 <span className="font-semibold tabular">
                   {weeklyStats?.totalCalories != null
                     ? Math.round(weeklyStats.totalCalories / 7).toLocaleString()
@@ -293,11 +298,11 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span style={{ color: "var(--on-surface-variant)" }}>Workouts</span>
+                <span style={{ color: "var(--on-surface-variant)" }}>{t("workouts")}</span>
                 <span className="font-semibold tabular">{weeklyStats?.workoutCount ?? "—"}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span style={{ color: "var(--on-surface-variant)" }}>Avg water</span>
+                <span style={{ color: "var(--on-surface-variant)" }}>{t("avgWater")}</span>
                 <span className="font-semibold tabular">
                   {weeklyStats?.totalWater != null
                     ? (weeklyStats.totalWater / 7).toFixed(1) + " L"
@@ -306,7 +311,7 @@ export default function DashboardPage() {
               </div>
               {weeklyStats?.latestWeight != null && (
                 <div className="flex justify-between text-sm">
-                  <span style={{ color: "var(--on-surface-variant)" }}>Latest weight</span>
+                  <span style={{ color: "var(--on-surface-variant)" }}>{t("latestWeight")}</span>
                   <span className="font-semibold tabular">{weeklyStats.latestWeight.toFixed(1)} kg</span>
                 </div>
               )}
@@ -315,14 +320,15 @@ export default function DashboardPage() {
         </div>
 
         <div className="rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-          <p className="text-sm font-bold mb-2">Streak</p>
+          <p className="text-sm font-bold mb-2">{t("streak")}</p>
           <p className="text-3xl font-extrabold tabular" style={{ color: "var(--primary)" }}>
             {recentSessions.length}
           </p>
           <p className="text-xs mt-1" style={{ color: "var(--on-surface-variant)" }}>
-            sessions logged
+            {t("sessionsLogged")}
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { format, subMonths, subYears } from "date-fns";
 import { weightApi } from "@/features/weight/api";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -15,12 +16,6 @@ import type { WeightResponse } from "@/features/weight/types";
 
 type Range = "1M" | "3M" | "1Y";
 
-const RANGE_OPTIONS: { value: Range; label: string }[] = [
-  { value: "1M", label: "1M" },
-  { value: "3M", label: "3M" },
-  { value: "1Y", label: "1Y" },
-];
-
 function rangeStart(range: Range): Date {
   const now = new Date();
   if (range === "1M") return subMonths(now, 1);
@@ -29,9 +24,18 @@ function rangeStart(range: Range): Date {
 }
 
 export default function WeightPage() {
+  const t = useTranslations("weight");
+  const nav = useTranslations("nav");
+  const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [range, setRange] = useState<Range>("3M");
+
+  const RANGE_OPTIONS: { value: Range; label: string }[] = [
+    { value: "1M", label: t("range1M") },
+    { value: "3M", label: t("range3M") },
+    { value: "1Y", label: t("range1Y") },
+  ];
   const [adding, setAdding] = useState(false);
   const [newDate, setNewDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [newWeight, setNewWeight] = useState("");
@@ -45,19 +49,19 @@ export default function WeightPage() {
     mutationFn: () => weightApi.create({ date: newDate, weight: Number(newWeight) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.weights.all() });
-      show("Weight logged", "success");
+      show(t("logged"), "success");
       setAdding(false); setNewWeight("");
     },
-    onError: () => show("Failed to save", "error"),
+    onError: () => show(t("saveFailed"), "error"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => weightApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.weights.all() });
-      show("Entry removed", "success");
+      show(t("entryRemoved"), "success");
     },
-    onError: () => show("Failed to remove", "error"),
+    onError: () => show(t("removeFailed"), "error"),
   });
 
   const sorted = (data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
@@ -75,26 +79,26 @@ export default function WeightPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="material-symbols-rounded text-2xl" style={{ color: "var(--metric-weight)" }}>monitor_weight</span>
-          <h1 className="text-xl font-bold">Weight</h1>
+          <h1 className="text-xl font-bold">{nav("weight")}</h1>
         </div>
         <button onClick={() => setAdding((a) => !a)}
           className="flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
           style={{ background: "var(--primary)", color: "#1E1F18" }}>
-          <span className="material-symbols-rounded text-lg">add</span> New entry
+          <span className="material-symbols-rounded text-lg">add</span> {t("newEntry")}
         </button>
       </div>
 
       {adding && (
         <div className="flex flex-wrap items-end gap-3 p-4 rounded-[var(--r-card)]" style={{ background: "var(--surface)" }}>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Date</label>
+            <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("date")}</label>
             <input type="date" value={newDate} max={format(new Date(), "yyyy-MM-dd")}
               onChange={(e) => setNewDate(e.target.value)}
               className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
               style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Weight (kg)</label>
+            <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("weightKg")}</label>
             <input type="number" step="0.1" value={newWeight} autoFocus
               onChange={(e) => setNewWeight(e.target.value)}
               className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular w-32"
@@ -103,7 +107,7 @@ export default function WeightPage() {
           <button onClick={() => createMutation.mutate()} disabled={!newWeight || createMutation.isPending}
             className="h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
             style={{ background: "var(--primary)", color: "#1E1F18" }}>
-            Save
+            {common("save")}
           </button>
         </div>
       )}
@@ -116,15 +120,15 @@ export default function WeightPage() {
       ) : isError ? (
         <ErrorState onRetry={refetch} />
       ) : sorted.length === 0 ? (
-        <EmptyState icon="monitor_weight" title="No weight entries"
-          body="Log your first weight to start tracking your trend." />
+        <EmptyState icon="monitor_weight" title={t("noEntries")}
+          body={t("noEntriesBody")} />
       ) : (
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Chart */}
           <div className="flex-1 min-w-0 rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface)" }}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Current</p>
+                <p className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("current")}</p>
                 <p className="text-3xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>
                   {latest?.weight.toFixed(1)} <span className="text-base" style={{ color: "var(--on-surface-variant)" }}>kg</span>
                 </p>
@@ -134,13 +138,13 @@ export default function WeightPage() {
             {chartData.length > 0 ? (
               <TimeSeriesChart data={chartData} color="var(--metric-weight)" unit=" kg" />
             ) : (
-              <p className="text-sm text-center py-12" style={{ color: "var(--muted)" }}>No data in this range</p>
+              <p className="text-sm text-center py-12" style={{ color: "var(--muted)" }}>{t("noDataInRange")}</p>
             )}
           </div>
 
           {/* History */}
           <div className="w-full lg:w-[300px] shrink-0 rounded-[var(--r-card)] p-4" style={{ background: "var(--surface)" }}>
-            <p className="text-sm font-bold mb-3">History</p>
+            <p className="text-sm font-bold mb-3">{t("history")}</p>
             <div className="flex flex-col">
               {history.map((w, idx) => {
                 // delta vs the next older entry (history is newest-first)
@@ -162,7 +166,7 @@ export default function WeightPage() {
                       )}
                       <button onClick={() => deleteMutation.mutate(w.id)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "var(--muted)" }}
-                        aria-label="Delete entry">
+                        aria-label={t("deleteEntryAria")}>
                         <span className="material-symbols-rounded text-base">close</span>
                       </button>
                     </div>

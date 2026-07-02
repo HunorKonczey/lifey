@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { exerciseApi } from "../api";
 import { MUSCLE_GROUPS, EQUIPMENT, type MuscleGroup, type Equipment, type ExerciseResponse } from "../types";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -35,6 +36,7 @@ function categoryIcon(e: ExerciseResponse): string {
 }
 
 export function ExercisesView() {
+  const t = useTranslations("workouts");
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
@@ -58,7 +60,7 @@ export function ExercisesView() {
       if (items.length > 0) groups.push({ key: cat, label: humanizeEnum(cat), items });
     }
     const uncategorized = filtered.filter((e) => !e.category);
-    if (uncategorized.length > 0) groups.push({ key: null, label: "Uncategorized", items: uncategorized });
+    if (uncategorized.length > 0) groups.push({ key: null, label: t("uncategorized"), items: uncategorized });
   } else {
     groups.push({ key: categoryFilter, label: humanizeEnum(categoryFilter), items: filtered });
   }
@@ -73,14 +75,14 @@ export function ExercisesView() {
       <div className="flex-1 min-w-0 flex flex-col gap-4">
         {/* Filter chips + new */}
         <div className="flex flex-wrap items-center gap-2">
-          <FilterChip label="All" active={categoryFilter === "ALL"} onClick={() => setCategoryFilter("ALL")} />
+          <FilterChip label={t("allFilter")} active={categoryFilter === "ALL"} onClick={() => setCategoryFilter("ALL")} />
           {presentCategories.map((c) => (
             <FilterChip key={c} label={humanizeEnum(c)} active={categoryFilter === c} onClick={() => setCategoryFilter(c)} />
           ))}
           <button onClick={() => { setCreating(true); setEditing(null); }}
             className="ml-auto flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
             style={{ background: "var(--primary)", color: "#1E1F18" }}>
-            <span className="material-symbols-rounded text-lg">add</span> New
+            <span className="material-symbols-rounded text-lg">add</span> {t("newExercise")}
           </button>
         </div>
 
@@ -89,7 +91,7 @@ export function ExercisesView() {
         ) : isError ? (
           <ErrorState onRetry={refetch} />
         ) : filtered.length === 0 ? (
-          <EmptyState icon="fitness_center" title="No exercises yet" body="Add exercises to build workout templates." />
+          <EmptyState icon="fitness_center" title={t("noExercisesYet")} body={t("addExercisesBody")} />
         ) : (
           <div className="flex flex-col gap-6">
             {groups.map((group) => (
@@ -171,6 +173,8 @@ function ExerciseEditor({
   onDeleted: () => void;
   show: (m: string, v?: "success" | "error" | "warning" | "default") => void;
 }) {
+  const t = useTranslations("workouts");
+  const common = useTranslations("common");
   const queryClient = useQueryClient();
   const [name, setName] = useState(exercise?.name ?? "");
   const [category, setCategory] = useState<string>(exercise?.category ?? "");
@@ -185,48 +189,48 @@ function ExerciseEditor({
       };
       return exercise ? exerciseApi.update(exercise.id, body) : exerciseApi.create(body);
     },
-    onSuccess: () => { show(exercise ? "Exercise updated" : "Exercise created", "success"); onSaved(); },
-    onError: () => show("Failed to save", "error"),
+    onSuccess: () => { show(exercise ? t("exerciseUpdated") : t("exerciseCreated"), "success"); onSaved(); },
+    onError: () => show(t("saveExerciseFailed"), "error"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => exerciseApi.delete(exercise!.id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all() }); show("Exercise deleted", "success"); onDeleted(); },
-    onError: () => show("Failed to delete", "error"),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.exercises.all() }); show(t("exerciseDeleted"), "success"); onDeleted(); },
+    onError: () => show(t("deleteExerciseFailed"), "error"),
   });
 
   return (
     <div className="flex flex-col gap-4 p-5 rounded-[var(--r-card)]" style={{ background: "var(--surface)" }}>
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-base">{exercise ? "Edit exercise" : "New exercise"}</h3>
-        <button onClick={onCancel} aria-label="Close" className="p-1 rounded-[var(--r-sm)]">
+        <h3 className="font-bold text-base">{exercise ? t("editExercise") : t("newExerciseTitle")}</h3>
+        <button onClick={onCancel} aria-label={common("close")} className="p-1 rounded-[var(--r-sm)]">
           <span className="material-symbols-rounded">close</span>
         </button>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Name</label>
+        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("exerciseName")}</label>
         <input value={name} onChange={(e) => setName(e.target.value)}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm"
           style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Category</label>
+        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("category")}</label>
         <select value={category} onChange={(e) => setCategory(e.target.value)}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm"
           style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}>
-          <option value="">— None —</option>
+          <option value="">{common("noneOption")}</option>
           {MUSCLE_GROUPS.map((g) => <option key={g} value={g}>{humanizeEnum(g)}</option>)}
         </select>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Equipment</label>
+        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("equipment")}</label>
         <select value={equipment} onChange={(e) => setEquipment(e.target.value)}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm"
           style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}>
-          <option value="">— None —</option>
+          <option value="">{common("noneOption")}</option>
           {EQUIPMENT.map((q) => <option key={q} value={q}>{humanizeEnum(q)}</option>)}
         </select>
       </div>
@@ -235,13 +239,13 @@ function ExerciseEditor({
         <button onClick={() => mutation.mutate()} disabled={!name.trim() || mutation.isPending}
           className="flex-1 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
           style={{ background: "var(--primary)", color: "#1E1F18" }}>
-          {mutation.isPending ? "Saving…" : "Save"}
+          {mutation.isPending ? common("saving") : common("save")}
         </button>
         {exercise && (
           <button onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}
             className="px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
             style={{ background: "color-mix(in srgb, var(--error) 15%, transparent)", color: "var(--error)" }}
-            aria-label="Delete exercise">
+            aria-label={t("deleteExerciseAria")}>
             <span className="material-symbols-rounded text-xl">delete</span>
           </button>
         )}

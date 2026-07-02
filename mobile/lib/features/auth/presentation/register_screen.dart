@@ -1,10 +1,13 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/error_message.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../onboarding/data/user_details_repository.dart';
 import '../application/auth_controller.dart';
 
 /// Account creation. Registering also logs the user in immediately, matching
@@ -45,6 +48,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             email: _emailController.text.trim(),
             password: _passwordController.text,
           );
+      // A fresh registration never has a user_details row yet — go straight
+      // to onboarding instead of the router's default post-login /dashboard.
+      if (mounted) context.go('/onboarding');
     } catch (error) {
       setState(() => _submitError = friendlyError(error));
     } finally {
@@ -62,13 +68,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
     try {
       final signedIn = await ref.read(authControllerProvider.notifier).loginWithGoogle();
-      if (!signedIn && mounted) {
-        setState(() => _submitError = l10n.googleSignInCancelledMessage);
+      if (!signedIn) {
+        if (mounted) setState(() => _submitError = l10n.googleSignInCancelledMessage);
+      } else if (mounted) {
+        // Google sign-in from the register screen may resolve to an
+        // existing account — only route to onboarding if it truly hasn't
+        // been completed yet (GET /user-details 404).
+        await _routeAfterGoogleSignIn();
       }
     } catch (error) {
       setState(() => _submitError = friendlyError(error));
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _routeAfterGoogleSignIn() async {
+    try {
+      await ref.read(userDetailsRepositoryProvider).get();
+      if (mounted) context.go('/dashboard');
+    } on DioException catch (e) {
+      if (!mounted) return;
+      context.go(e.response?.statusCode == 404 ? '/onboarding' : '/dashboard');
     }
   }
 

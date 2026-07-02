@@ -2,19 +2,12 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { useTranslations } from "next-intl";
 import { mealApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { logTimestampFor } from "@/lib/utils/logTime";
 import type { RecipeResponse, MealType } from "../types";
-
-const MEAL_TYPES: { value: MealType; label: string }[] = [
-  { value: "BREAKFAST", label: "Breakfast" },
-  { value: "LUNCH", label: "Lunch" },
-  { value: "DINNER", label: "Dinner" },
-  { value: "SNACK", label: "Snack" },
-];
 
 /** Pick a sensible default meal type based on the current hour (mirrors mobile). */
 function defaultMealType(): MealType {
@@ -37,9 +30,19 @@ export function LogRecipeDialog({
   date: Date;
   onClose: () => void;
 }) {
+  const t = useTranslations("nutrition.logRecipeDialog");
+  const n = useTranslations("nutrition");
+  const common = useTranslations("common");
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [mealType, setMealType] = useState<MealType>(defaultMealType());
+
+  const MEAL_TYPES: { value: MealType; label: string }[] = [
+    { value: "BREAKFAST", label: n("breakfast") },
+    { value: "LUNCH", label: n("lunch") },
+    { value: "DINNER", label: n("dinner") },
+    { value: "SNACK", label: n("snack") },
+  ];
   const [partial, setPartial] = useState(recipe.servings > 1);
   const [divisor, setDivisor] = useState(Math.min(Math.max(recipe.servings, 1), 20));
 
@@ -61,10 +64,10 @@ export function LogRecipeDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
-      show(`Logged ${recipe.name}`, "success");
+      show(t("logged", { name: recipe.name }), "success");
       onClose();
     },
-    onError: () => show("Failed to log recipe", "error"),
+    onError: () => show(t("logFailed"), "error"),
   });
 
   return (
@@ -74,19 +77,19 @@ export function LogRecipeDialog({
         style={{ background: "var(--surface)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-base">Log as meal</h3>
+            <h3 className="font-bold text-base">{t("title")}</h3>
             <p className="text-xs" style={{ color: "var(--muted)" }}>
-              {recipe.name} · {recipe.ingredients.length} ingredients
+              {t("ingredientsSummary", { name: recipe.name, count: recipe.ingredients.length })}
             </p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="p-1 rounded-[var(--r-sm)]">
+          <button onClick={onClose} aria-label={common("close")} className="p-1 rounded-[var(--r-sm)]">
             <span className="material-symbols-rounded">close</span>
           </button>
         </div>
 
         {/* Meal type */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Meal</label>
+          <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("meal")}</label>
           <div className="flex flex-wrap gap-2">
             {MEAL_TYPES.map((m) => (
               <button key={m.value} onClick={() => setMealType(m.value)}
@@ -104,7 +107,7 @@ export function LogRecipeDialog({
 
         {/* Portion split */}
         <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold">Log a single portion</label>
+          <label className="text-sm font-semibold">{t("singlePortion")}</label>
           <button onClick={() => setPartial((p) => !p)} role="switch" aria-checked={partial}
             className="w-11 h-6 rounded-full transition-colors relative shrink-0"
             style={{ background: partial ? "var(--primary)" : "var(--surface-highest)" }}>
@@ -115,7 +118,7 @@ export function LogRecipeDialog({
 
         {partial && (
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>Split into</span>
+            <span className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("splitInto")}</span>
             <div className="flex items-center gap-1 ml-auto">
               <button onClick={() => setDivisor((d) => Math.max(1, d - 1))}
                 className="w-7 h-7 rounded-[var(--r-sm)] flex items-center justify-center" style={{ background: "var(--surface-highest)" }}>
@@ -139,7 +142,7 @@ export function LogRecipeDialog({
         <button onClick={() => mutation.mutate()} disabled={mutation.isPending || recipe.ingredients.length === 0}
           className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
           style={{ background: "var(--primary)", color: "#1E1F18" }}>
-          {mutation.isPending ? "Logging…" : "Log meal"}
+          {mutation.isPending ? t("logging") : t("logMeal")}
         </button>
       </div>
     </div>

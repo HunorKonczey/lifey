@@ -3,11 +3,18 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { settingsApi } from "@/features/settings/api";
 import { authApi } from "@/features/auth/api";
 import { changePasswordSchema, type ChangePasswordFormValues } from "@/features/auth/schemas";
+import { userDetailsApi } from "@/features/onboarding/api";
+import { onboardingSchema, type OnboardingFormValues } from "@/features/onboarding/schemas";
+import { GenderBirthDateFields } from "@/features/onboarding/components/GenderBirthDateFields";
+import { HeightField } from "@/features/onboarding/components/HeightField";
+import { LifestyleGoalFields } from "@/features/onboarding/components/LifestyleGoalFields";
+import { weightApi } from "@/features/weight/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/lib/hooks/useToast";
@@ -23,27 +30,28 @@ import type {
 
 type Section = "profile" | "goals" | "units" | "theme" | "language" | "security";
 
-const SECTIONS: { value: Section; label: string; icon: string }[] = [
-  { value: "profile", label: "Profile", icon: "person" },
-  { value: "goals", label: "Daily goals", icon: "target" },
-  { value: "units", label: "Units", icon: "straighten" },
-  { value: "theme", label: "Theme", icon: "palette" },
-  { value: "language", label: "Language", icon: "translate" },
-  { value: "security", label: "Security", icon: "shield" },
-];
-
-const GOAL_FIELDS: { key: keyof SettingsResponse; label: string; color: string; unit: string }[] = [
-  { key: "dailyCalorieGoal", label: "Calories", color: "var(--metric-kcal)", unit: "kcal" },
-  { key: "dailyProteinGoal", label: "Protein", color: "var(--metric-protein)", unit: "g" },
-  { key: "dailyCarbsGoal", label: "Carbs", color: "var(--metric-carbs)", unit: "g" },
-  { key: "dailyFatGoal", label: "Fat", color: "var(--metric-fat)", unit: "g" },
-  { key: "dailyWaterGoalLiters", label: "Water", color: "var(--metric-water)", unit: "L" },
-  { key: "dailyStepGoal", label: "Steps", color: "var(--metric-steps)", unit: "" },
-];
-
 export default function SettingsPage() {
   const t = useTranslations("settings");
+  const d = useTranslations("dashboard");
   const queryClient = useQueryClient();
+
+  const SECTIONS: { value: Section; label: string; icon: string }[] = [
+    { value: "profile", label: t("profile"), icon: "person" },
+    { value: "goals", label: t("dailyGoals"), icon: "target" },
+    { value: "units", label: t("units"), icon: "straighten" },
+    { value: "theme", label: t("theme"), icon: "palette" },
+    { value: "language", label: t("language"), icon: "translate" },
+    { value: "security", label: t("security"), icon: "shield" },
+  ];
+
+  const GOAL_FIELDS: { key: keyof SettingsResponse; label: string; color: string; unit: string }[] = [
+    { key: "dailyCalorieGoal", label: d("calories"), color: "var(--metric-kcal)", unit: "kcal" },
+    { key: "dailyProteinGoal", label: d("protein"), color: "var(--metric-protein)", unit: "g" },
+    { key: "dailyCarbsGoal", label: d("carbs"), color: "var(--metric-carbs)", unit: "g" },
+    { key: "dailyFatGoal", label: d("fat"), color: "var(--metric-fat)", unit: "g" },
+    { key: "dailyWaterGoalLiters", label: d("water"), color: "var(--metric-water)", unit: "L" },
+    { key: "dailyStepGoal", label: d("steps"), color: "var(--metric-steps)", unit: "" },
+  ];
   const { show } = useToast();
   const { setTheme } = useTheme();
   const { setLanguage } = useLocale();
@@ -86,14 +94,71 @@ export default function SettingsPage() {
     setForm(data);
   }
 
+  const router = useRouter();
+
+  const {
+    data: details, error: detailsError,
+  } = useQuery({
+    queryKey: queryKeys.userDetails.all(),
+    queryFn: userDetailsApi.get,
+    retry: false,
+  });
+  const notOnboarded = detailsError instanceof ApiError && detailsError.status === 404;
+
+  // The wizard's field components share OnboardingFormValues (which includes
+  // currentWeightKg, needed there to seed the first weight_entries row).
+  // Profile editing here never touches weight — it's edited via the Weight
+  // page — so currentWeightKg is seeded from the latest weight entry purely
+  // to satisfy the shared schema's validation and is never submitted below.
+  const { data: weights } = useQuery({ queryKey: queryKeys.weights.all(), queryFn: weightApi.list });
+  const latestWeightKg = weights?.length
+    ? [...weights].sort((a, b) => a.date.localeCompare(b.date)).at(-1)!.weight
+    : 70;
+
+  const {
+    register: registerDetails, watch: watchDetails, setValue: setDetailsValue, reset: resetDetailsForm,
+    formState: { errors: detailsErrors },
+  } = useForm<OnboardingFormValues>({ resolver: zodResolver(onboardingSchema) });
+  const [detailsSeededFrom, setDetailsSeededFrom] = useState<typeof details>(undefined);
+
+  if (details && details !== detailsSeededFrom) {
+    setDetailsSeededFrom(details);
+    resetDetailsForm({
+      gender: details.gender,
+      birthDate: details.birthDate,
+      heightCm: details.heightCm,
+      activityLevel: details.activityLevel,
+      primaryGoal: details.primaryGoal,
+      targetWeightKg: details.targetWeightKg ?? undefined,
+      currentWeightKg: latestWeightKg,
+    });
+  }
+
+  const saveDetailsMutation = useMutation({
+    mutationFn: (body: OnboardingFormValues) =>
+      userDetailsApi.update({
+        gender: body.gender,
+        birthDate: body.birthDate,
+        heightCm: body.heightCm,
+        activityLevel: body.activityLevel,
+        primaryGoal: body.primaryGoal,
+        targetWeightKg: body.targetWeightKg ?? null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.userDetails.all() });
+      show(t("settingsSaved"), "success");
+    },
+    onError: () => show(t("saveSettingsFailed"), "error"),
+  });
+
   const saveMutation = useMutation({
     mutationFn: (body: SettingsResponse) => settingsApi.update(body),
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.all() });
       setForm(saved);
-      show("Settings saved", "success");
+      show(t("settingsSaved"), "success");
     },
-    onError: () => show("Failed to save settings", "error"),
+    onError: () => show(t("saveSettingsFailed"), "error"),
   });
 
   if (isLoading || !form) return <Skeleton variant="card" className="h-96" />;
@@ -126,21 +191,57 @@ export default function SettingsPage() {
       {/* Content */}
       <div className="flex-1 min-w-0 rounded-[var(--r-lg)] p-6" style={{ background: "var(--surface)" }}>
         {section === "profile" && (
-          <Panel title="Profile">
-            <Field label="Email">
+          <Panel title={t("profile")}>
+            <Field label={t("email")}>
               <ReadonlyValue>{user?.email ?? "—"}</ReadonlyValue>
             </Field>
-            <Field label="Roles">
+            <Field label={t("roles")}>
               <ReadonlyValue>{user?.roles.join(", ") ?? "—"}</ReadonlyValue>
             </Field>
-            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
-              Profile editing is not available yet.
-            </p>
+
+            <hr style={{ borderColor: "var(--outline)" }} />
+
+            {notOnboarded ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
+                  {t("onboardingNotDone")}
+                </p>
+                <button onClick={() => router.push("/onboarding")}
+                  className="h-10 px-5 w-fit rounded-[var(--r-input)] font-semibold text-sm"
+                  style={{ background: "var(--primary)", color: "#1E1F18" }}>
+                  {t("startOnboarding")}
+                </button>
+              </div>
+            ) : !details ? (
+              <Skeleton variant="text" />
+            ) : (
+              <>
+                <p className="text-sm font-bold">{t("bodyAndGoals")}</p>
+                <GenderBirthDateFields register={registerDetails} watch={watchDetails} setValue={setDetailsValue} errors={detailsErrors} />
+                <HeightField register={registerDetails} setValue={setDetailsValue} errors={detailsErrors} unitSystem={form.unitSystem} />
+                <LifestyleGoalFields register={registerDetails} watch={watchDetails} setValue={setDetailsValue} errors={detailsErrors} unitSystem={form.unitSystem} />
+                <button
+                  onClick={() => saveDetailsMutation.mutate({
+                    gender: watchDetails("gender"),
+                    birthDate: watchDetails("birthDate"),
+                    heightCm: watchDetails("heightCm"),
+                    activityLevel: watchDetails("activityLevel"),
+                    primaryGoal: watchDetails("primaryGoal"),
+                    targetWeightKg: watchDetails("targetWeightKg"),
+                    currentWeightKg: watchDetails("currentWeightKg"),
+                  })}
+                  disabled={saveDetailsMutation.isPending}
+                  className="mt-1 h-10 px-6 w-fit rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
+                  style={{ background: "var(--primary)", color: "#1E1F18" }}>
+                  {saveDetailsMutation.isPending ? t("saving") : t("saveChanges")}
+                </button>
+              </>
+            )}
           </Panel>
         )}
 
         {section === "goals" && (
-          <Panel title="Daily goals">
+          <Panel title={t("dailyGoals")}>
             <div className="grid grid-cols-2 gap-4">
               {GOAL_FIELDS.map(({ key, label, color, unit }) => (
                 <div key={key} className="flex flex-col gap-1.5 p-3 rounded-[var(--r-card)]"
@@ -158,15 +259,15 @@ export default function SettingsPage() {
             <button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending}
               className="mt-5 h-10 px-6 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
               style={{ background: "var(--primary)", color: "#1E1F18" }}>
-              {saveMutation.isPending ? "Saving…" : "Save changes"}
+              {saveMutation.isPending ? t("saving") : t("saveChanges")}
             </button>
           </Panel>
         )}
 
         {section === "units" && (
-          <Panel title="Units">
+          <Panel title={t("units")}>
             <SegmentedControl<UnitSystem>
-              options={[{ value: "METRIC", label: "Metric" }, { value: "IMPERIAL", label: "Imperial" }]}
+              options={[{ value: "METRIC", label: t("metric") }, { value: "IMPERIAL", label: t("imperial") }]}
               value={form.unitSystem}
               onChange={(v) => saveImmediate({ unitSystem: v })}
             />
@@ -174,12 +275,12 @@ export default function SettingsPage() {
         )}
 
         {section === "theme" && (
-          <Panel title="Theme">
+          <Panel title={t("theme")}>
             <SegmentedControl<ThemePreference>
               options={[
-                { value: "LIGHT", label: "Light" },
-                { value: "DARK", label: "Dark" },
-                { value: "SYSTEM", label: "System" },
+                { value: "LIGHT", label: t("light") },
+                { value: "DARK", label: t("dark") },
+                { value: "SYSTEM", label: t("system") },
               ]}
               value={form.theme}
               onChange={(v) => {
@@ -187,17 +288,17 @@ export default function SettingsPage() {
                 saveImmediate({ theme: v });
               }}
             />
-            <p className="text-xs mt-3" style={{ color: "var(--muted)" }}>Applied immediately.</p>
+            <p className="text-xs mt-3" style={{ color: "var(--muted)" }}>{t("appliedImmediately")}</p>
           </Panel>
         )}
 
         {section === "language" && (
-          <Panel title="Language">
+          <Panel title={t("language")}>
             <SegmentedControl<LanguagePreference>
               options={[
-                { value: "SYSTEM", label: "System" },
-                { value: "ENGLISH", label: "English" },
-                { value: "HUNGARIAN", label: "Magyar" },
+                { value: "SYSTEM", label: t("system") },
+                { value: "ENGLISH", label: t("english") },
+                { value: "HUNGARIAN", label: t("hungarian") },
               ]}
               value={form.language}
               onChange={(v) => { setLanguage(v); saveImmediate({ language: v }); }}
@@ -206,7 +307,7 @@ export default function SettingsPage() {
         )}
 
         {section === "security" && (
-          <Panel title="Security">
+          <Panel title={t("security")}>
             <form
               onSubmit={handlePasswordSubmit((data) => changePasswordMutation.mutate(data))}
               className="flex flex-col gap-4 mb-6"
