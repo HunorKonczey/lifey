@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/health/health_preferences.dart';
+import '../../../core/local_db/database_provider.dart';
 import '../../../core/network/session_events.dart';
 import '../../../core/storage/token_storage.dart';
+import '../../../core/sync/connectivity_sync_controller.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_user.dart';
 
@@ -33,6 +38,10 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     final tokens = await _repo.login(email: email, password: password);
     await _storage.save(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
     state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
+    // Sign-in doesn't itself trigger a connectivity-restore or app-resume
+    // event, so kick off the initial pull explicitly instead of waiting for
+    // one of those triggers (or the 60s timer) to happen to fire.
+    unawaited(ref.read(connectivitySyncControllerProvider).refreshNow());
   }
 
   Future<void> forgotPassword(String email) => _repo.forgotPassword(email);
@@ -62,6 +71,10 @@ class AuthController extends AsyncNotifier<AuthUser?> {
   Future<void> logout() async {
     final refreshToken = await _storage.readRefreshToken();
     await _storage.clear();
+    // Wipe the offline cache too, so a different account signing in on this
+    // device doesn't inherit this account's settings, weight, meals, etc.
+    await ref.read(appDatabaseProvider).clearAllData();
+    await ref.read(healthPreferencesProvider).clear();
     state = const AsyncValue.data(null);
     if (refreshToken != null) {
       try {

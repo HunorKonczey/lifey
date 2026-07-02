@@ -12,6 +12,7 @@ import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/change_password_screen.dart';
 import '../../water/presentation/water_sources_screen.dart';
 import '../application/settings_controller.dart';
@@ -137,6 +138,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(settingsControllerProvider);
+    final email = ref.watch(authControllerProvider).value?.email;
     final l10n = AppLocalizations.of(context)!;
 
     // Initialize form state once on first successful load.
@@ -160,6 +162,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       barTop,
                       contentTop,
                       bottomPad,
+                      email,
                     )
                     : const Center(child: CircularProgressIndicator()),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -178,6 +181,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     double barTop,
     double contentTop,
     double bottomPad,
+    String? email,
   ) {
     final scheme = Theme.of(context).colorScheme;
     final mc = context.metricColors;
@@ -472,6 +476,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const SizedBox(height: 8),
                 _SettingsCard(
                   children: [
+                    if (email != null) ...[
+                      _SettingRow(
+                        icon: Icons.email_outlined,
+                        iconColor: scheme.primary,
+                        label: l10n.emailLabel,
+                        trailing: Text(
+                          email,
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const _RowDivider(),
+                    ],
                     _SettingRow(
                       icon: Icons.lock_outline,
                       iconColor: scheme.primary,

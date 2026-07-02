@@ -47,6 +47,14 @@ class HealthPreferences {
   Future<void> setLastStepGoalNotifiedDate(DateTime date) {
     return _storage.write(key: _lastStepGoalNotifiedKey, value: date.toIso8601String());
   }
+
+  /// Clears device-local health preferences on logout, so a different
+  /// account signing in on this device doesn't inherit them.
+  Future<void> clear() async {
+    await _storage.delete(key: _enabledKey);
+    await _storage.delete(key: _lastWeightImportKey);
+    await _storage.delete(key: _lastStepGoalNotifiedKey);
+  }
 }
 
 final healthPreferencesProvider = Provider<HealthPreferences>((ref) {

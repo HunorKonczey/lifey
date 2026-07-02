@@ -70,6 +70,13 @@ management:
       # Adds /actuator/health/liveness and /readiness groups for PaaS probes.
       probes:
         enabled: true
+  health:
+    mail:
+      # The mail health indicator opens a live SMTP connection to
+      # smtp.gmail.com on every /actuator/health check. On Railway that
+      # connection times out (~134s), exceeding the platform's healthcheck
+      # timeout and failing the deploy. Mail sending itself is unaffected.
+      enabled: false
 
 lifey:
   cors:

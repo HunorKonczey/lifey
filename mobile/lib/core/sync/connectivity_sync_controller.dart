@@ -67,6 +67,11 @@ class ConnectivitySyncController with WidgetsBindingObserver {
     }
   }
 
+  /// Drains the outbox and pulls everything from the server on demand —
+  /// used right after login/register, since signing in doesn't itself fire
+  /// a connectivity-restore or app-resume event.
+  Future<void> refreshNow() => _refresh();
+
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _connectivitySubscription?.cancel();

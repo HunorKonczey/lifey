@@ -5,12 +5,11 @@ import '../domain/user_settings.dart';
 
 /// Streams the signed-in user's settings from the local cache.
 ///
-/// NOTE: the local cache isn't currently scoped per signed-in user — if a
-/// second account ever logs in on the same device, it would see the first
-/// account's cached settings until something overwrites them. Today the app
-/// is effectively single-user-per-device, but if multi-account-per-device
-/// support is ever needed, clearing (or partitioning) the local db on logout
-/// has to be added — see AuthController.logout().
+/// The local cache still isn't scoped per signed-in user (it uses a single
+/// singleton row/tables rather than partitioning by account), but
+/// `AuthController.logout()` wipes the whole local database on sign-out, so a
+/// second account signing in on the same device starts from an empty cache
+/// instead of inheriting the first account's data.
 class SettingsController extends StreamNotifier<UserSettings> {
   SettingsRepository get _repo => ref.read(settingsRepositoryProvider);
 

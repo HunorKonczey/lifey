@@ -217,6 +217,17 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// Wipes every local table. Called on logout so the next signed-in
+  /// account never sees the previous account's cached data (settings,
+  /// weight, meals, workouts, etc.) before its own data has re-synced.
+  Future<void> clearAllData() async {
+    await transaction(() async {
+      for (final table in allTables) {
+        await delete(table).go();
+      }
+    });
+  }
+
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
       final dir = await getApplicationDocumentsDirectory();
