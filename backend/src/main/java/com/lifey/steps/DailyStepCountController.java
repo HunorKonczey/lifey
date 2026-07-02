@@ -2,38 +2,28 @@ package com.lifey.steps;
 
 import com.lifey.steps.dto.DailyStepCountRequest;
 import com.lifey.steps.dto.DailyStepCountResponse;
+import com.lifey.steps.service.DailyStepCountService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
 
 @Tag(name = "Step Tracking", description = "Persisted daily step counts")
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/steps")
 public class DailyStepCountController {
 
     private final DailyStepCountService stepCountService;
-
-    public DailyStepCountController(DailyStepCountService stepCountService) {
-        this.stepCountService = stepCountService;
-    }
 
     @Operation(summary = "List all daily step counts (newest first)")
     @GetMapping(params = "!updatedSince")

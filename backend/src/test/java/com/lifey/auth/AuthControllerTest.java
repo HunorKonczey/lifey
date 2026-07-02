@@ -2,6 +2,11 @@ package com.lifey.auth;
 
 import com.lifey.auth.dto.AuthResponse;
 import com.lifey.auth.dto.UserResponse;
+import com.lifey.auth.exception.*;
+import com.lifey.auth.properties.JwtProperties;
+import com.lifey.auth.service.AuthService;
+import com.lifey.auth.service.PasswordResetService;
+import com.lifey.auth.service.SocialAuthService;
 import com.lifey.user.Role;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,10 +21,7 @@ import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,6 +34,9 @@ class AuthControllerTest {
 
     @MockitoBean
     AuthService authService;
+
+    @MockitoBean
+    SocialAuthService socialAuthService;
 
     @MockitoBean
     PasswordResetService passwordResetService;

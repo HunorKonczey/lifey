@@ -2,6 +2,7 @@ package com.lifey.mail;
 
 import com.lifey.settings.UserSettingsRepository;
 import com.lifey.user.User;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -10,15 +11,12 @@ import org.springframework.stereotype.Component;
  * settings simply has none yet — treated the same as {@code SYSTEM}.
  */
 @Component
-class MailLanguageResolver {
+@RequiredArgsConstructor
+public class MailLanguageResolver {
 
     private final UserSettingsRepository userSettingsRepository;
 
-    MailLanguageResolver(UserSettingsRepository userSettingsRepository) {
-        this.userSettingsRepository = userSettingsRepository;
-    }
-
-    MailLanguage resolve(User user) {
+    public MailLanguage resolve(User user) {
         return userSettingsRepository.findByUserId(user.getId())
                 .map(settings -> MailLanguage.from(settings.getLanguage()))
                 .orElse(MailLanguage.EN);

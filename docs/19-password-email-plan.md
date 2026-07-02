@@ -20,12 +20,13 @@ Existing constraints that apply:
 
 ### Email transport
 
-Sender is a Gmail address for now → use **Gmail SMTP with an App Password** via `spring-boot-starter-mail`.
+~~Gmail SMTP with an App Password~~ — **superseded, see below.** Originally sent via `smtp.gmail.com:587` (STARTTLS) using `spring-boot-starter-mail`, but Railway (and most PaaS hosts) block outbound SMTP ports, so every send timed out in production (`Connection timed out` on port 587) and the `MailHealthIndicator` also made `/actuator/health` hang and fail Railway's healthcheck.
 
-- Host `smtp.gmail.com`, port `587`, STARTTLS.
-- Requires 2FA enabled on the Google account + generated App Password (16 chars). Stored as env var `MAIL_PASSWORD`, never committed.
-- Limit: ~500 mails/day — fine for now. The `MailService` interface must make it trivial to swap in Resend/Brevo/SendGrid later without touching callers.
-- Emails are sent **asynchronously** (`@Async`) and failures are logged but never fail the triggering request (registration must succeed even if the welcome email bounces).
+**Current: Resend HTTPS API** (`https://api.resend.com/emails`, port 443 — not blocked). `com.lifey.mail.ResendMailService` posts via Spring's `RestClient` (no extra dependency, already available from `spring-boot-starter-web`); `spring-boot-starter-mail` was removed from `pom.xml`.
+
+- Config: `lifey.mail.resend-api-key` (env `RESEND_API_KEY`, no default), `lifey.mail.from` (env `MAIL_FROM`, defaults to `onboarding@resend.dev`), `lifey.mail.enabled` (env `MAIL_ENABLED`).
+- **Current limitation:** sending `from` the shared `onboarding@resend.dev` test domain only delivers to the email address the Resend account was signed up with (currently `hunorkonczey@gmail.com`) — fine for solo testing, not usable for real users until a custom domain is verified (see "Future: custom domain for email" below).
+- Emails are still sent **asynchronously** (`@Async`) and failures are logged but never fail the triggering request (registration must succeed even if the welcome email bounces).
 
 ### Reset mechanism: 6-digit code (not link)
 
@@ -213,5 +214,20 @@ Requesting a new code invalidates (deletes or marks used) previous unused codes 
 - [ ] Reset happy path on both clients → old sessions logged out everywhere.
 - [ ] 6 wrong codes → code burned; expired code rejected; code not reusable.
 - [ ] Change password → other devices logged out, current device keeps working.
-- [ ] `MAIL_PASSWORD` absent → app still boots with mail disabled, logs instead of sending.
-- [ ] Gmail App Password documented in backend README (env vars only, nothing committed).
+- [ ] `RESEND_API_KEY` absent → app still boots with mail disabled, logs instead of sending.
+- [ ] Resend setup documented in backend README (env vars only, nothing committed).
+
+---
+
+## Future: custom domain for email (unblocks sending to any recipient)
+
+**Problem:** on the Resend shared test domain (`onboarding@resend.dev`), mail only delivers to the address the Resend account was signed up with. To send welcome/reset emails to real users, a verified custom domain is required.
+
+**Plan:**
+
+1. **Buy a domain** (not yet owned) — candidates: `lifey.app`, `lifey.dev`, `lifey.com`, or a `.hu` if preferred. Registrars considered: [Namecheap](https://www.namecheap.com) (cheap, easy), [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/) (at-cost pricing, and doubles as the DNS host so SPF/DKIM records live in the same dashboard), or a `.hu`-specific registrar (Rackhost, Forpsi) if a `.hu` TLD is chosen.
+2. **Add the domain in Resend** (Domains → Add Domain). Resend generates SPF (TXT), DKIM (CNAME/TXT), and optionally a DMARC record.
+3. **Add those records at the DNS host** (registrar's DNS or Cloudflare if delegated there). Verification is usually automatic within minutes once records propagate.
+4. **Update `MAIL_FROM`** (env var, both local `.env` and Railway) from `onboarding@resend.dev` to an address on the new domain, e.g. `noreply@lifey.app` or `hello@lifey.app`.
+5. **Update `docs/19-password-email-plan.md` and `backend/README.md`** to drop the "test domain, self-only" caveat once verified.
+6. No backend code changes needed — `ResendMailService` already reads `lifey.mail.from` from config, so switching domains is a config-only change.

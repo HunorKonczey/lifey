@@ -7,6 +7,7 @@ String friendlyError(Object error) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
+      case DioExceptionType.transformTimeout:
         return 'The server took too long to respond.';
       case DioExceptionType.connectionError:
         return "Can't reach the server. Is the backend running?";

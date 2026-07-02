@@ -40,6 +40,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!-- NimbusJwtDecoder, used to verify social-login provider ID tokens (Google
+             JWKS) without pulling in each provider's own client SDK. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+        </dependency>
         <!-- Jackson 2: used directly by SecurityConfig's ObjectMapper bean and by
              jjwt-jackson below. Boot 4's auto-configured mapper is Jackson 3
              (tools.jackson), so this isn't pulled in for us automatically. -->

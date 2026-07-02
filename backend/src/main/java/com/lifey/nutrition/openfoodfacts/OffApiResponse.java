@@ -9,13 +9,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * was found and {@code 0} otherwise. All other fields are ignored.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-record OffApiResponse(
+public record OffApiResponse(
         int status,
         OffApiProduct product
 ) {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record OffApiProduct(
+    public record OffApiProduct(
             @JsonProperty("product_name") String productName,
             String brands,
             OffApiNutriments nutriments
@@ -23,7 +23,7 @@ record OffApiResponse(
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record OffApiNutriments(
+    public record OffApiNutriments(
             @JsonProperty("energy-kcal_100g") Double energyKcal100g,
             @JsonProperty("proteins_100g") Double proteins100g,
             @JsonProperty("carbohydrates_100g") Double carbohydrates100g,

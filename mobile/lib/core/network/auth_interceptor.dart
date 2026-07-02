@@ -46,6 +46,10 @@ class AuthInterceptor extends Interceptor {
       return;
     }
 
+    // Captured before the refresh/retry attempt, which may itself replace
+    // the stored token — this is what the *failing* request was sent with.
+    final requestToken = _bearerToken(err.requestOptions.headers['Authorization'] as String?);
+
     try {
       // Concurrent 401s share one in-flight refresh instead of each rotating
       // the (single-use) refresh token themselves.
@@ -57,12 +61,27 @@ class AuthInterceptor extends Interceptor {
       final response = await _mainDio.fetch<dynamic>(retryOptions);
       handler.resolve(response);
     } catch (_) {
-      await _tokenStorage.clear();
-      _onSessionExpired();
+      // A request that started before the user was signed in (e.g. a
+      // resume-triggered background sync fired by the OS UI overlay during
+      // Google sign-in) can still land here *after* a fresh login has
+      // already stored a new, valid token. If storage has moved on to a
+      // different token than the one this stale request failed with, a
+      // newer session is already active — don't tear it down over it.
+      final currentToken = await _tokenStorage.readAccessToken();
+      if (currentToken == null || currentToken == requestToken) {
+        await _tokenStorage.clear();
+        _onSessionExpired();
+      }
       handler.next(err);
     } finally {
       _refreshing = null;
     }
+  }
+
+  String? _bearerToken(String? header) {
+    const prefix = 'Bearer ';
+    if (header == null || !header.startsWith(prefix)) return null;
+    return header.substring(prefix.length);
   }
 
   Future<void> _refresh() async {

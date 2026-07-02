@@ -38,6 +38,8 @@ dependencies:
   # Re-added in the daily-steps feature after being removed with the old background
   # HKObserverQuery machinery in Prompt 1.6.
   flutter_local_notifications: ^19.4.2
+  google_sign_in: ^7.2.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -50,6 +52,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+
+  assets:
+    - assets/icons/google_logo.svg
 
   # Plus Jakarta Sans — bundled for offline-first; no runtime google_fonts fetch.
   # Weights: 400 (Regular) / 500 (Medium) / 600 (SemiBold) / 700 (Bold) / 800 (ExtraBold)

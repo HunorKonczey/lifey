@@ -6,18 +6,18 @@ import com.lifey.nutrition.food.dto.FoodResponse;
 /**
  * Maps between {@link Food} entities and food DTOs.
  */
-final class FoodMapper {
+public final class FoodMapper {
 
     private FoodMapper() {
     }
 
-    static Food toEntity(FoodRequest request) {
+    public static Food toEntity(FoodRequest request) {
         Food food = new Food();
         apply(food, request);
         return food;
     }
 
-    static void apply(Food food, FoodRequest request) {
+    public static void apply(Food food, FoodRequest request) {
         food.setName(request.name().trim());
         food.setCaloriesPer100g(request.caloriesPer100g());
         food.setProteinPer100g(request.proteinPer100g());
@@ -27,7 +27,7 @@ final class FoodMapper {
         food.setHidden(request.hidden());
     }
 
-    static FoodResponse toResponse(Food food) {
+    public static FoodResponse toResponse(Food food) {
         return new FoodResponse(
                 food.getId(),
                 food.getName(),

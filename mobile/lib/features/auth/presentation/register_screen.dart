@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/network/error_message.dart';
 import '../../../core/theme/app_tokens.dart';
@@ -44,6 +45,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             email: _emailController.text.trim(),
             password: _passwordController.text,
           );
+    } catch (error) {
+      setState(() => _submitError = friendlyError(error));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _submitGoogle() async {
+    if (_submitting) return;
+    final l10n = AppLocalizations.of(context)!;
+
+    setState(() {
+      _submitting = true;
+      _submitError = null;
+    });
+    try {
+      final signedIn = await ref.read(authControllerProvider.notifier).loginWithGoogle();
+      if (!signedIn && mounted) {
+        setState(() => _submitError = l10n.googleSignInCancelledMessage);
+      }
     } catch (error) {
       setState(() => _submitError = friendlyError(error));
     } finally {
@@ -165,6 +186,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   )
                                 : Text(l10n.createAccountTitle),
                           ),
+                          const SizedBox(height: 20),
+                          _OrDivider(label: l10n.orDividerLabel),
+                          const SizedBox(height: 20),
+                          _GoogleSignInButton(
+                            label: l10n.continueWithGoogleButton,
+                            onPressed: _submitting ? null : _submitGoogle,
+                          ),
                           const SizedBox(height: 8),
                           TextButton(
                             onPressed: _submitting
@@ -189,6 +217,65 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 // ---------------------------------------------------------------------------
 // Shared auth widgets (duplicated from login_screen — both files are thin)
 // ---------------------------------------------------------------------------
+
+/// "or" divider between the email/password form and the social sign-in
+/// button, so the two options read as distinct paths rather than one form.
+class _OrDivider extends StatelessWidget {
+  const _OrDivider({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final line = Expanded(
+      child: Divider(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+    );
+    return Row(
+      children: [
+        line,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(label, style: TextStyle(color: scheme.onSurfaceVariant)),
+        ),
+        line,
+      ],
+    );
+  }
+}
+
+/// "Continue with Google" button, styled per Google's branding guidelines:
+/// a neutral (white/surface) outlined button with the official multi-color
+/// "G" mark and black/on-surface text — never a custom-colored fill.
+class _GoogleSignInButton extends StatelessWidget {
+  const _GoogleSignInButton({required this.label, required this.onPressed});
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(52),
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        side: BorderSide(color: scheme.outlineVariant),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SvgPicture.asset('assets/icons/google_logo.svg', width: 20, height: 20),
+          const SizedBox(width: 12),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
 
 class _AuthCard extends StatelessWidget {
   const _AuthCard({required this.children});

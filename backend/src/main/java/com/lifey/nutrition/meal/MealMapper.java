@@ -10,12 +10,12 @@ import java.util.List;
  * Maps {@link Meal} entities to meal DTOs. Request-side mapping lives in the
  * service because it needs to resolve {@code foodId}s against the food repository.
  */
-final class MealMapper {
+public final class MealMapper {
 
     private MealMapper() {
     }
 
-    static MealResponse toResponse(Meal meal) {
+    public static MealResponse toResponse(Meal meal) {
         List<MealEntryResponse> entries = meal.getEntries().stream()
                 .map(entry -> {
                     Food food = entry.getFood();

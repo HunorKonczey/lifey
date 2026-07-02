@@ -1,12 +1,6 @@
 package com.lifey.common.exception;
 
-import com.lifey.auth.IncorrectPasswordException;
-import com.lifey.auth.InvalidCredentialsException;
-import com.lifey.auth.InvalidResetCodeException;
-import com.lifey.auth.InvalidTokenException;
-import com.lifey.auth.SamePasswordException;
-import com.lifey.auth.TokenExpiredException;
-import com.lifey.auth.TokenRevokedException;
+import com.lifey.auth.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -63,9 +57,15 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({InvalidCredentialsException.class, InvalidTokenException.class,
-            TokenExpiredException.class, TokenRevokedException.class, AuthenticationException.class})
+            TokenExpiredException.class, TokenRevokedException.class, InvalidSocialTokenException.class,
+            AuthenticationException.class})
     public ResponseEntity<ApiError> handleAuthentication(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, List.of());
+    }
+
+    @ExceptionHandler(UnverifiedEmailException.class)
+    public ResponseEntity<ApiError> handleUnverifiedEmail(UnverifiedEmailException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request, List.of());
     }
 
     @ExceptionHandler(InvalidResetCodeException.class)

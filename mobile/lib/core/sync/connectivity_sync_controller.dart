@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../storage/token_storage.dart';
 import 'pull_engine.dart';
 import 'sync_engine.dart';
 import 'sync_engine_provider.dart';
@@ -22,11 +23,15 @@ import 'sync_engine_provider.dart';
 /// True background sync (while the app is fully closed) is out of scope
 /// for this phase.
 class ConnectivitySyncController with WidgetsBindingObserver {
-  ConnectivitySyncController(this._syncEngine, this._pullEngine, [Connectivity? connectivity])
-      : _connectivity = connectivity ?? Connectivity() {
+  ConnectivitySyncController(
+    this._syncEngine,
+    this._pullEngine,
+    this._tokenStorage, [
+    Connectivity? connectivity,
+  ]) : _connectivity = connectivity ?? Connectivity() {
     WidgetsBinding.instance.addObserver(this);
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(_onConnectivityChanged);
-    _timer = Timer.periodic(_pollInterval, (_) => _syncEngine.sync());
+    _timer = Timer.periodic(_pollInterval, (_) => _guardedSync());
     unawaited(_refresh());
   }
 
@@ -34,6 +39,7 @@ class ConnectivitySyncController with WidgetsBindingObserver {
 
   final SyncEngine _syncEngine;
   final PullEngine _pullEngine;
+  final TokenStorage _tokenStorage;
   final Connectivity _connectivity;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   Timer? _timer;
@@ -42,7 +48,21 @@ class ConnectivitySyncController with WidgetsBindingObserver {
   /// already kicks off a refresh directly above regardless of this flag.
   bool _wasOffline = false;
 
+  /// Every trigger (startup, connectivity restore, app resume, the periodic
+  /// timer) fires unconditionally, logged in or not — there's no session to
+  /// sync against until a token exists, so every one of these would just be
+  /// a guaranteed batch of 401s (and, worse, a stale one landing after a
+  /// fresh login can race the session — see AuthInterceptor). Skip outright
+  /// while signed out.
+  Future<bool> get _isSignedIn async => await _tokenStorage.readAccessToken() != null;
+
+  Future<void> _guardedSync() async {
+    if (!await _isSignedIn) return;
+    await _syncEngine.sync();
+  }
+
   Future<void> _refresh() async {
+    if (!await _isSignedIn) return;
     try {
       await _syncEngine.sync();
       await _pullEngine.pullAll();
@@ -82,8 +102,11 @@ class ConnectivitySyncController with WidgetsBindingObserver {
 /// Plain (non-autoDispose) provider: instantiated once via [LifeyApp] and
 /// kept alive for the app's lifetime, same as [syncEngineProvider].
 final connectivitySyncControllerProvider = Provider<ConnectivitySyncController>((ref) {
-  final controller =
-      ConnectivitySyncController(ref.watch(syncEngineProvider), ref.watch(pullEngineProvider));
+  final controller = ConnectivitySyncController(
+    ref.watch(syncEngineProvider),
+    ref.watch(pullEngineProvider),
+    ref.watch(tokenStorageProvider),
+  );
   ref.onDispose(controller.dispose);
   return controller;
 });

@@ -8,6 +8,7 @@ import '../../../core/network/session_events.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/sync/connectivity_sync_controller.dart';
 import '../data/auth_repository.dart';
+import '../data/google_auth_service.dart';
 import '../domain/auth_user.dart';
 
 /// Holds the signed-in user (or null when logged out) and drives login,
@@ -15,6 +16,7 @@ import '../domain/auth_user.dart';
 class AuthController extends AsyncNotifier<AuthUser?> {
   AuthRepository get _repo => ref.read(authRepositoryProvider);
   TokenStorage get _storage => ref.read(tokenStorageProvider);
+  GoogleAuthService get _googleAuth => ref.read(googleAuthServiceProvider);
 
   @override
   Future<AuthUser?> build() async {
@@ -42,6 +44,20 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     // event, so kick off the initial pull explicitly instead of waiting for
     // one of those triggers (or the 60s timer) to happen to fire.
     unawaited(ref.read(connectivitySyncControllerProvider).refreshNow());
+  }
+
+  /// Runs the native Google sign-in flow and exchanges the ID token for our
+  /// own token pair. Returns false without side effects if the user cancels
+  /// the account picker, so the caller can show a distinct message for that.
+  Future<bool> loginWithGoogle() async {
+    final idToken = await _googleAuth.signIn();
+    if (idToken == null) return false;
+
+    final tokens = await _repo.loginWithGoogle(idToken);
+    await _storage.save(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
+    state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
+    unawaited(ref.read(connectivitySyncControllerProvider).refreshNow());
+    return true;
   }
 
   Future<void> forgotPassword(String email) => _repo.forgotPassword(email);
@@ -82,6 +98,11 @@ class AuthController extends AsyncNotifier<AuthUser?> {
       } catch (_) {
         // Best-effort: the token is already gone client-side either way.
       }
+    }
+    try {
+      await _googleAuth.signOut();
+    } catch (_) {
+      // Best-effort: doesn't affect our own session either way.
     }
   }
 }

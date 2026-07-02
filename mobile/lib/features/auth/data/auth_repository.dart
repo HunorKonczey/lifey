@@ -22,6 +22,14 @@ class AuthRepository {
     return AuthTokens.fromJson(response.data!);
   }
 
+  Future<AuthTokens> loginWithGoogle(String idToken) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/social/google',
+      data: {'idToken': idToken},
+    );
+    return AuthTokens.fromJson(response.data!);
+  }
+
   Future<void> logout(String refreshToken) async {
     await _dio.post('/auth/logout', data: {'refreshToken': refreshToken});
   }

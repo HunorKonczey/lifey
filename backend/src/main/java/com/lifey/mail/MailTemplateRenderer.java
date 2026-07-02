@@ -14,13 +14,13 @@ import java.util.Map;
  * justify a template engine dependency (see docs/19-password-email-plan.md).
  */
 @Component
-class MailTemplateRenderer {
+public class MailTemplateRenderer {
 
-    String renderHtml(String templateName, MailLanguage language, Map<String, String> placeholders) {
+    public String renderHtml(String templateName, MailLanguage language, Map<String, String> placeholders) {
         return render(templateName, language, "html", placeholders);
     }
 
-    String renderText(String templateName, MailLanguage language, Map<String, String> placeholders) {
+    public String renderText(String templateName, MailLanguage language, Map<String, String> placeholders) {
         return render(templateName, language, "txt", placeholders);
     }
 

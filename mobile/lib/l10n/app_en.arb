@@ -142,6 +142,15 @@
     "forgotPasswordButton": "Forgot password?",
     "@forgotPasswordButton": {"description": "Link on the login screen to the forgot-password flow"},
 
+    "continueWithGoogleButton": "Continue with Google",
+    "@continueWithGoogleButton": {"description": "Button to sign in or register with a Google account"},
+
+    "orDividerLabel": "or",
+    "@orDividerLabel": {"description": "Divider label between the email/password form and the social sign-in button"},
+
+    "googleSignInCancelledMessage": "Google sign-in was cancelled.",
+    "@googleSignInCancelledMessage": {"description": "Error shown when the user dismisses the Google account picker"},
+
     "forgotPasswordTitle": "Reset your password",
     "@forgotPasswordTitle": {"description": "Title of the forgot-password screen, email step"},
 

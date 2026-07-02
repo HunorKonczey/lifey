@@ -1,8 +1,10 @@
 package com.lifey.auth;
 
-import com.lifey.mail.MailService;
+import com.lifey.mail.service.MailService;
+
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -17,17 +19,13 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * on the event since AFTER_COMMIT runs outside the original transaction.
  */
 @Component
+@RequiredArgsConstructor
 class WelcomeEmailListener {
 
     private static final Logger log = LoggerFactory.getLogger(WelcomeEmailListener.class);
 
     private final UserRepository userRepository;
     private final MailService mailService;
-
-    WelcomeEmailListener(UserRepository userRepository, MailService mailService) {
-        this.userRepository = userRepository;
-        this.mailService = mailService;
-    }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     void onUserRegistered(UserRegisteredEvent event) {

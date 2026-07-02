@@ -6,24 +6,24 @@ import com.lifey.workout.exercise.dto.ExerciseResponse;
 /**
  * Maps between {@link Exercise} entities and exercise DTOs.
  */
-final class ExerciseMapper {
+public final class ExerciseMapper {
 
     private ExerciseMapper() {
     }
 
-    static Exercise toEntity(ExerciseRequest request) {
+    public static Exercise toEntity(ExerciseRequest request) {
         Exercise exercise = new Exercise();
         apply(exercise, request);
         return exercise;
     }
 
-    static void apply(Exercise exercise, ExerciseRequest request) {
+    public static void apply(Exercise exercise, ExerciseRequest request) {
         exercise.setName(request.name());
         exercise.setCategory(request.category());
         exercise.setEquipment(request.equipment());
     }
 
-    static ExerciseResponse toResponse(Exercise exercise) {
+    public static ExerciseResponse toResponse(Exercise exercise) {
         return new ExerciseResponse(
                 exercise.getId(),
                 exercise.getName(),

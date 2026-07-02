@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lifey.lifey"
+    namespace = "com.khunor.lifey"
     // flutter.compileSdkVersion=36 is set in gradle.properties (the `health`
     // plugin's androidx.health.connect dependency requires compiling
     // against API 35+); reading it here keeps both app and plugin modules
@@ -23,7 +23,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.lifey.lifey"
+        applicationId = "com.khunor.lifey"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // The `health` plugin (lib/core/health/, Phase 0 of

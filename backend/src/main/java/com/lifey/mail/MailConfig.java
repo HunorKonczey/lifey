@@ -15,7 +15,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @Configuration
 @EnableAsync
 @EnableConfigurationProperties(MailProperties.class)
-class MailConfig {
+public class MailConfig {
 
     @Bean
     TaskExecutor mailTaskExecutor() {

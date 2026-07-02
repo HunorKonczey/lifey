@@ -75,6 +75,13 @@ class PullEngine {
     try {
       await pull();
       debugPrint('PullEngine: $entity OK');
+    } on DioException catch (e) {
+      // HTTP failures are routine (e.g. a 401 when a pull races a login or
+      // logout — see AuthInterceptor) and get retried on the next pull, so a
+      // one-line status is enough; the full multi-line DioException.toString()
+      // plus a Dart stack trace per entity is what was making this log
+      // unreadable.
+      debugPrint('PullEngine: $entity FAILED (${e.response?.statusCode ?? e.type}), continuing');
     } catch (e, st) {
       debugPrint('PullEngine: $entity FAILED, continuing: $e\n$st');
     }

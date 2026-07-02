@@ -6,5 +6,5 @@ package com.lifey.auth;
  * this event may be handled after the publishing transaction commits, on a
  * fresh transaction (see {@link WelcomeEmailListener}).
  */
-record UserRegisteredEvent(Long userId) {
+public record UserRegisteredEvent(Long userId) {
 }

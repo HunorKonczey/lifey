@@ -1,6 +1,6 @@
 package com.lifey.auth;
 
-import com.lifey.mail.MailService;
+import com.lifey.mail.service.MailService;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -13,9 +13,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class WelcomeEmailListenerTest {

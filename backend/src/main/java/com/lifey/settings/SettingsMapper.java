@@ -6,12 +6,12 @@ import com.lifey.settings.dto.SettingsResponse;
 /**
  * Maps between {@link UserSettings} entities and settings DTOs.
  */
-final class SettingsMapper {
+public final class SettingsMapper {
 
     private SettingsMapper() {
     }
 
-    static void applyRequest(UserSettings settings, SettingsRequest request) {
+    public static void applyRequest(UserSettings settings, SettingsRequest request) {
         settings.setUnitSystem(request.unitSystem());
         settings.setDailyCalorieGoal(request.dailyCalorieGoal());
         settings.setDailyProteinGoal(request.dailyProteinGoal());
@@ -23,7 +23,7 @@ final class SettingsMapper {
         settings.setLanguage(request.language());
     }
 
-    static SettingsResponse toResponse(UserSettings settings) {
+    public static SettingsResponse toResponse(UserSettings settings) {
         return new SettingsResponse(
                 settings.getUnitSystem(),
                 settings.getDailyCalorieGoal(),

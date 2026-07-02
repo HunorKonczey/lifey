@@ -10,12 +10,12 @@ import java.util.List;
  * Maps {@link WorkoutSession} entities to session DTOs. Request-side mapping lives
  * in the service because it needs to resolve {@code exerciseId}s.
  */
-final class WorkoutSessionMapper {
+public final class WorkoutSessionMapper {
 
     private WorkoutSessionMapper() {
     }
 
-    static WorkoutSessionResponse toResponse(WorkoutSession session) {
+    public static WorkoutSessionResponse toResponse(WorkoutSession session) {
         List<ExerciseSummary> exercises = session.getPlannedExercises().stream()
                 .map(link -> new ExerciseSummary(link.getExercise().getId(), link.getExercise().getName()))
                 .toList();

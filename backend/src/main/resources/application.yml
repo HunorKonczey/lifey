@@ -77,6 +77,11 @@ lifey:
     access-token-ttl: ${JWT_ACCESS_TTL:7d}
     refresh-token-ttl: ${JWT_REFRESH_TTL:30d}
     issuer: lifey-api
+  oauth:
+    google:
+      # Comma-separated list of accepted audiences: Android, iOS, and Web OAuth
+      # client IDs — any of the three is a valid ID-token audience.
+      client-ids: ${OAUTH_GOOGLE_CLIENT_IDS:}
   openfoodfacts:
     base-url: ${OPENFOODFACTS_BASE_URL:https://world.openfoodfacts.org}
     # OpenFoodFacts requires a descriptive User-Agent identifying the app and a

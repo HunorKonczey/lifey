@@ -3,15 +3,7 @@ package com.lifey.workout.session;
 import com.lifey.common.domain.SyncableEntity;
 import com.lifey.user.User;
 import com.lifey.workout.template.WorkoutTemplate;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -55,19 +47,27 @@ public class WorkoutSession extends SyncableEntity {
     @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WorkoutSessionExercise> plannedExercises = new ArrayList<>();
 
-    /** Active energy burned (kcal) over the workout, as reported by Apple Health. */
+    /**
+     * Active energy burned (kcal) over the workout, as reported by Apple Health.
+     */
     @Column(name = "active_calories")
     private Double activeCalories;
 
-    /** Average heart rate (bpm) over the workout interval, as reported by Apple Health. */
+    /**
+     * Average heart rate (bpm) over the workout interval, as reported by Apple Health.
+     */
     @Column(name = "average_heart_rate")
     private Double averageHeartRate;
 
-    /** HKWorkout UUID. Non-null means this session was paired with an Apple Health workout. */
+    /**
+     * HKWorkout UUID. Non-null means this session was paired with an Apple Health workout.
+     */
     @Column(name = "health_workout_id")
     private String healthWorkoutId;
 
-    /** The template this session was started from, if any. */
+    /**
+     * The template this session was started from, if any.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "template_id")
     private WorkoutTemplate template;
