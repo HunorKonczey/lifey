@@ -252,7 +252,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            childAspectRatio: 2.0,
+            childAspectRatio: 1.5,
             children: [
               for (final a in ActivityLevel.values)
                 OptionCard(

@@ -29,6 +29,7 @@ class OptionCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: AppDuration.fast,
         curve: AppCurve.standard,
+        clipBehavior: Clip.antiAlias,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: active
@@ -59,6 +60,8 @@ class OptionCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 description!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 11,
