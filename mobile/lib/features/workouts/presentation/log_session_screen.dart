@@ -841,7 +841,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               top: restBannerTop,
               left: 16,
               right: 16,
-              child: _RestBanner(lastSetAt: lastDoneAt!, now: _now),
+              child: _RestBanner(lastSetAt: lastDoneAt, now: _now),
             ),
 
           // ── Sticky "Finish workout" button ──

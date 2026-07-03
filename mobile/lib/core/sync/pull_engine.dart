@@ -1028,9 +1028,7 @@ class PullEngine {
         // so they can be missing from the local cache. Fetch the individual
         // food via GET /foods/{id} and store it locally so the meal entry
         // can reference it.
-        if (foodClientId == null) {
-          foodClientId = await _fetchAndStoreFood(foodServerId);
-        }
+        foodClientId ??= await _fetchAndStoreFood(foodServerId);
         if (foodClientId == null) continue; // still not found — skip entry
         await _db.into(_db.mealEntries).insert(
               MealEntriesCompanion.insert(

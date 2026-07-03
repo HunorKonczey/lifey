@@ -174,7 +174,7 @@ class _DetailBody extends StatelessWidget {
     final shortDateFmt = DateFormat.MMMd();
     final weightFormat = NumberFormat('0.#');
 
-    String _dayLabel(String key) {
+    String dayLabel(String key) {
       final parts = key.split('-');
       final d = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
       if (d == todayDate) return l10n.weightHistoryTodayLabel;
@@ -340,7 +340,7 @@ class _DetailBody extends StatelessWidget {
           else
             for (final key in dayGroupKeys)
               _DaySetRow(
-                dayLabel: _dayLabel(key),
+                dayLabel: dayLabel(key),
                 sets: dayGroupMap[key]!,
                 weightFormat: weightFormat,
               ),
