@@ -20,4 +20,8 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
     Page<Exercise> findByUserIdAndUpdatedAtGreaterThanEqual(Long userId, Instant since, Pageable pageable);
 
     Optional<Exercise> findByIdAndUserId(Long id, Long userId);
+
+    /** Dedupe lookup for the trainer content-assignment deep copy (see ContentAssignmentServiceImpl). */
+    Optional<Exercise> findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
+            Long userId, Long originTrainerId, Long originSourceId);
 }

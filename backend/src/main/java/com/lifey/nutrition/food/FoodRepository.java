@@ -28,4 +28,8 @@ public interface FoodRepository extends JpaRepository<Food, Long> {
     Optional<Food> findByIdAndUserId(Long id, Long userId);
 
     Optional<Food> findByUserIdAndBarcode(Long userId, String barcode);
+
+    /** Dedupe lookup for the trainer content-assignment deep copy (see ContentAssignmentServiceImpl). */
+    Optional<Food> findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
+            Long userId, Long originTrainerId, Long originSourceId);
 }
