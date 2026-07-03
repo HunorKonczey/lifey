@@ -1,6 +1,8 @@
 package com.lifey.common.exception;
 
 import com.lifey.auth.exception.*;
+import com.lifey.superadmin.exception.CannotModifySelfException;
+import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.trainer.exception.AlreadyClientException;
 import com.lifey.trainer.exception.InviteNotFoundException;
 import com.lifey.trainer.exception.InviteRateLimitedException;
@@ -123,6 +125,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotYourClientException.class)
     public ResponseEntity<ApiError> handleNotYourClient(NotYourClientException ex, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler({RoleNotManageableException.class, CannotModifySelfException.class})
+    public ResponseEntity<ApiError> handleRoleManagementRejection(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

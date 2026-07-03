@@ -87,6 +87,7 @@ public class SecurityConfig {
                         // /api/v1/trainer-invites/** and /api/v1/my-trainers/** are the client-side
                         // (mobile) counterparts and stay on the plain ROLE_USER `authenticated()` rule.
                         .requestMatchers("/api/v1/trainer/**").hasRole("TRAINER")
+                        .requestMatchers("/api/v1/superadmin/**").hasRole("SUPER_ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(entryPoint)
