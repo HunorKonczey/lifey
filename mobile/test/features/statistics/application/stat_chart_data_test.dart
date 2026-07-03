@@ -7,6 +7,8 @@ import 'package:lifey/features/statistics/application/stat_metric_controller.dar
 import 'package:lifey/features/statistics/application/stat_summary_data.dart';
 import 'package:lifey/features/statistics/application/stats_range_controller.dart';
 import 'package:lifey/features/statistics/domain/stat_metric.dart';
+import 'package:lifey/features/steps/data/step_count_repository.dart';
+import 'package:lifey/features/steps/domain/daily_step_count.dart';
 import 'package:lifey/features/water/data/water_entry_repository.dart';
 import 'package:lifey/features/water/domain/water_entry.dart';
 import 'package:lifey/features/weight/application/weight_controller.dart';
@@ -113,6 +115,7 @@ ProviderContainer _buildContainer({
   List<WorkoutSession>? sessions,
   List<WaterEntry>? water,
   List<WeightEntry>? weights,
+  List<DailyStepCount>? steps,
 }) {
   return ProviderContainer(
     overrides: [
@@ -124,6 +127,7 @@ ProviderContainer _buildContainer({
       if (water != null) allWaterEntriesProvider.overrideWith((ref) => Stream.value(water)),
       if (weights != null)
         weightControllerProvider.overrideWith(() => _FakeWeightController(weights)),
+      if (steps != null) allStepCountsProvider.overrideWith((ref) => Stream.value(steps)),
     ],
   );
 }
@@ -369,13 +373,15 @@ void main() {
 
   group('availableStatMetricsProvider', () {
     test('is empty when none of the underlying sources have any data', () async {
-      final container = _buildContainer(meals: [], sessions: [], water: [], weights: []);
+      final container =
+          _buildContainer(meals: [], sessions: [], water: [], weights: [], steps: []);
       addTearDown(container.dispose);
 
       await container.listen(mealControllerProvider.future, (previous, next) {}).read();
       await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
       await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
       await container.listen(weightControllerProvider.future, (previous, next) {}).read();
+      await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
 
       expect(container.read(availableStatMetricsProvider), isEmpty);
     });
@@ -389,6 +395,7 @@ void main() {
         sessions: [_session(startedAt: _day(0))],
         water: [],
         weights: [],
+        steps: [],
       );
       addTearDown(container.dispose);
 
@@ -396,6 +403,7 @@ void main() {
       await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
       await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
       await container.listen(weightControllerProvider.future, (previous, next) {}).read();
+      await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
 
       expect(container.read(availableStatMetricsProvider), {StatMetric.workoutCount});
     });
@@ -412,6 +420,7 @@ void main() {
         ],
         water: [_water(_day(0), 0.5)],
         weights: [_weight(_day(0), 80, recordedAt: _day(0))],
+        steps: [],
       );
       addTearDown(container.dispose);
 
@@ -419,6 +428,7 @@ void main() {
       await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
       await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
       await container.listen(weightControllerProvider.future, (previous, next) {}).read();
+      await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
 
       expect(container.read(availableStatMetricsProvider), {
         StatMetric.calories,
