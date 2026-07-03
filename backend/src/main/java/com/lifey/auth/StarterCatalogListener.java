@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -42,7 +43,12 @@ class StarterCatalogListener {
     private final ExerciseRepository exerciseRepository;
     private final UserRepository userRepository;
 
-    @Transactional
+    // AFTER_COMMIT runs once the registration transaction is already gone, so
+    // this needs its own — REQUIRES_NEW rather than the default REQUIRED,
+    // which Spring rejects here (there's no transaction left to join, and a
+    // plain @Transactional on a @TransactionalEventListener is only valid as
+    // REQUIRES_NEW or NOT_SUPPORTED).
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     void onUserRegistered(UserRegisteredEvent event) {
         try {

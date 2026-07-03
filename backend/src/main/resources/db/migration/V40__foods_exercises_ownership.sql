@@ -19,11 +19,17 @@ alter table exercises add column origin_source_id bigint;
 alter table exercises add column origin_trainer_id bigint references users (id);
 
 -- The earliest non-legacy user keeps the original rows as-is (no copy needed).
-update foods set user_id = (
-    select id from users where lower(email) <> 'legacy@lifey.local' order by id limit 1
+-- Falls back to the legacy placeholder (guaranteed to exist — see
+-- V6__ownership.sql) when there is no real user yet: a brand new database only
+-- has V2__seed_exercises.sql's seed rows and nobody to own them, and the NOT
+-- NULL constraint further down would otherwise fail on those NULL user_ids.
+update foods set user_id = coalesce(
+    (select id from users where lower(email) <> 'legacy@lifey.local' order by id limit 1),
+    (select id from users where lower(email) = 'legacy@lifey.local')
 ) where user_id is null;
-update exercises set user_id = (
-    select id from users where lower(email) <> 'legacy@lifey.local' order by id limit 1
+update exercises set user_id = coalesce(
+    (select id from users where lower(email) <> 'legacy@lifey.local' order by id limit 1),
+    (select id from users where lower(email) = 'legacy@lifey.local')
 ) where user_id is null;
 
 -- The old catalog-wide unique indexes must go before the copy loop below: once
