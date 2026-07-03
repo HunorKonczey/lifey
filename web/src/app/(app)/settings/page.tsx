@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { settingsApi } from "@/features/settings/api";
 import { authApi } from "@/features/auth/api";
 import { changePasswordSchema, type ChangePasswordFormValues } from "@/features/auth/schemas";
+import { AvatarUploader } from "@/features/settings/components/AvatarUploader";
 import { userDetailsApi } from "@/features/onboarding/api";
 import { onboardingSchema, type OnboardingFormValues } from "@/features/onboarding/schemas";
 import { GenderBirthDateFields } from "@/features/onboarding/components/GenderBirthDateFields";
@@ -193,6 +194,8 @@ export default function SettingsPage() {
       <div className="flex-1 min-w-0 rounded-[var(--r-lg)] p-6" style={{ background: "var(--surface)" }}>
         {section === "profile" && (
           <Panel title={t("profile")}>
+            <AvatarUploader />
+
             <Field label={t("email")}>
               <ReadonlyValue>{user?.email ?? "—"}</ReadonlyValue>
             </Field>

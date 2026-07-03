@@ -7,6 +7,8 @@ import '../../../core/local_db/database_provider.dart';
 import '../../../core/network/session_events.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/sync/connectivity_sync_controller.dart';
+import '../../settings/application/avatar_controller.dart';
+import '../../settings/data/avatar_repository.dart';
 import '../data/auth_repository.dart';
 import '../data/google_auth_service.dart';
 import '../domain/auth_user.dart';
@@ -57,6 +59,18 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     await _storage.save(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
     state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
     unawaited(ref.read(connectivitySyncControllerProvider).refreshNow());
+    // The backend imports the Google picture asynchronously after this call
+    // already returned, so an immediate refetch can still race it and cache
+    // a "no avatar" result. Refetch once now and once more after a delay to
+    // pick up the import once it lands.
+    ref.invalidate(avatarControllerProvider);
+    unawaited(
+      Future.delayed(const Duration(seconds: 3), () {
+        if (ref.exists(avatarControllerProvider)) {
+          ref.invalidate(avatarControllerProvider);
+        }
+      }),
+    );
     return true;
   }
 
@@ -91,6 +105,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     // device doesn't inherit this account's settings, weight, meals, etc.
     await ref.read(appDatabaseProvider).clearAllData();
     await ref.read(healthPreferencesProvider).clear();
+    await ref.read(avatarRepositoryProvider).clearCache();
     state = const AsyncValue.data(null);
     if (refreshToken != null) {
       try {

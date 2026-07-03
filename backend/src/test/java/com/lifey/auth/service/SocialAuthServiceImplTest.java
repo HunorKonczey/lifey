@@ -1,5 +1,6 @@
 package com.lifey.auth.service;
 
+import com.lifey.auth.GoogleAvatarCandidateEvent;
 import com.lifey.auth.GoogleIdTokenVerifier;
 import com.lifey.auth.GoogleIdentity;
 import com.lifey.auth.JwtService;
@@ -64,7 +65,7 @@ class SocialAuthServiceImplTest {
         link.setUser(user);
 
         when(googleIdTokenVerifier.verify(ID_TOKEN))
-                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true));
+                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, null));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.of(link));
         stubTokenIssuance(user);
@@ -79,7 +80,7 @@ class SocialAuthServiceImplTest {
     @Test
     void loginWithGoogle_noIdentityNoUser_createsUserAndIdentityAndPublishesEvent() {
         when(googleIdTokenVerifier.verify(ID_TOKEN))
-                .thenReturn(new GoogleIdentity(SUB, "new@example.com", true));
+                .thenReturn(new GoogleIdentity(SUB, "new@example.com", true, null));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.empty());
         when(userRepository.findByEmailIgnoreCase("new@example.com")).thenReturn(Optional.empty());
@@ -110,11 +111,31 @@ class SocialAuthServiceImplTest {
     }
 
     @Test
+    void loginWithGoogle_pictureClaimPresent_publishesAvatarCandidateEventWithResolvedUserId() {
+        User user = existingUser(7L, "user@example.com");
+        UserIdentity link = new UserIdentity();
+        link.setUser(user);
+
+        when(googleIdTokenVerifier.verify(ID_TOKEN))
+                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, "https://example.com/pic.jpg"));
+        when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
+                .thenReturn(Optional.of(link));
+        stubTokenIssuance(user);
+
+        socialAuthService.loginWithGoogle(ID_TOKEN);
+
+        ArgumentCaptor<GoogleAvatarCandidateEvent> captor = ArgumentCaptor.forClass(GoogleAvatarCandidateEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().userId()).isEqualTo(7L);
+        assertThat(captor.getValue().pictureUrl()).isEqualTo("https://example.com/pic.jpg");
+    }
+
+    @Test
     void loginWithGoogle_noIdentityVerifiedEmailMatchesExistingUser_linksWithoutCreatingUser() {
         User existing = existingUser(3L, "user@example.com");
 
         when(googleIdTokenVerifier.verify(ID_TOKEN))
-                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true));
+                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, null));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.empty());
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(existing));
@@ -135,7 +156,7 @@ class SocialAuthServiceImplTest {
         User existing = existingUser(3L, "user@example.com");
 
         when(googleIdTokenVerifier.verify(ID_TOKEN))
-                .thenReturn(new GoogleIdentity(SUB, "user@example.com", false));
+                .thenReturn(new GoogleIdentity(SUB, "user@example.com", false, null));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.empty());
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(existing));

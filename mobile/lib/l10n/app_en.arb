@@ -1351,6 +1351,24 @@
     "onboardingEditTitle": "Body & goals",
     "@onboardingEditTitle": {"description": "Title of the onboarding-details edit screen reached from Settings"},
 
+    "changePhotoLabel": "Change photo",
+    "@changePhotoLabel": {"description": "Settings profile header: link text under the email to change the profile picture"},
+
+    "takePhotoAction": "Take photo",
+    "@takePhotoAction": {"description": "Profile picture sheet: option to take a new photo with the camera"},
+
+    "chooseFromGalleryAction": "Choose from gallery",
+    "@chooseFromGalleryAction": {"description": "Profile picture sheet: option to pick an existing photo from the gallery"},
+
+    "removePhotoAction": "Remove photo",
+    "@removePhotoAction": {"description": "Profile picture sheet: option to remove the current profile picture"},
+
+    "avatarUpdatedMessage": "Profile picture updated",
+    "@avatarUpdatedMessage": {"description": "Snackbar shown after the profile picture is uploaded successfully"},
+
+    "avatarRemovedMessage": "Profile picture removed",
+    "@avatarRemovedMessage": {"description": "Snackbar shown after the profile picture is removed"},
+
     "onboardingNotOnboardedMessage": "You haven't completed onboarding yet.",
     "@onboardingNotOnboardedMessage": {"description": "Shown on the edit screen when the user has no user_details row yet"},
 

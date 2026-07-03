@@ -39,6 +39,12 @@ public class SocialAuthServiceImpl implements SocialAuthService {
                 .map(UserIdentity::getUser)
                 .orElseGet(() -> linkOrCreateUser(identity));
 
+        if (identity.picture() != null) {
+            // Listener decides whether to actually import it (skips if an avatar
+            // already exists) — see GoogleAvatarImportListener.
+            eventPublisher.publishEvent(new GoogleAvatarCandidateEvent(user.getId(), identity.picture()));
+        }
+
         return issueTokenPair(user);
     }
 
