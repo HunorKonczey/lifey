@@ -1,6 +1,12 @@
 package com.lifey.common.exception;
 
 import com.lifey.auth.exception.*;
+import com.lifey.trainer.exception.AlreadyClientException;
+import com.lifey.trainer.exception.InviteNotFoundException;
+import com.lifey.trainer.exception.InviteRateLimitedException;
+import com.lifey.trainer.exception.NotYourClientException;
+import com.lifey.trainer.exception.SelfInviteException;
+import com.lifey.trainer.exception.UserNotFoundForInviteException;
 import com.lifey.user.InvalidImageException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -92,6 +98,31 @@ public class GlobalExceptionHandler {
                                                          HttpServletRequest request) {
         return build(HttpStatus.CONTENT_TOO_LARGE,
                 "Uploaded file exceeds the maximum allowed size", request, List.of(), ex);
+    }
+
+    @ExceptionHandler({InviteNotFoundException.class, UserNotFoundForInviteException.class})
+    public ResponseEntity<ApiError> handleTrainerNotFound(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(AlreadyClientException.class)
+    public ResponseEntity<ApiError> handleAlreadyClient(AlreadyClientException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(SelfInviteException.class)
+    public ResponseEntity<ApiError> handleSelfInvite(SelfInviteException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(InviteRateLimitedException.class)
+    public ResponseEntity<ApiError> handleInviteRateLimited(InviteRateLimitedException ex, HttpServletRequest request) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(NotYourClientException.class)
+    public ResponseEntity<ApiError> handleNotYourClient(NotYourClientException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

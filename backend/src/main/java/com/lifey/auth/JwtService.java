@@ -56,7 +56,7 @@ public class JwtService {
     /**
      * Verifies signature and expiry and returns the decoded claims.
      *
-     * @throws TokenExpiredException if the token's signature is valid but it has expired
+     * @throws TokenExpiredException if the token's signature is valid, but it has expired
      * @throws InvalidTokenException if the token is malformed or its signature doesn't verify
      */
     public Claims parseAccessToken(String token) {

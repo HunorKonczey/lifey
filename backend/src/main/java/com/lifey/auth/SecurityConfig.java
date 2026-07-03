@@ -83,6 +83,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        // Trainer-only web-admin endpoints (docs/personal_trainer/03-backend-terv.md);
+                        // /api/v1/trainer-invites/** and /api/v1/my-trainers/** are the client-side
+                        // (mobile) counterparts and stay on the plain ROLE_USER `authenticated()` rule.
+                        .requestMatchers("/api/v1/trainer/**").hasRole("TRAINER")
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(entryPoint)
