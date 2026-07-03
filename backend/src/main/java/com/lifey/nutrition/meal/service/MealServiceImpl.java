@@ -98,7 +98,7 @@ public class MealServiceImpl implements MealService {
     private void replaceEntries(Meal meal, List<MealEntryRequest> requested) {
         meal.getEntries().clear();
         for (MealEntryRequest item : requested) {
-            Food food = foodRepository.findById(item.foodId())
+            Food food = foodRepository.findByIdAndUserId(item.foodId(), currentUserProvider.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Food not found: " + item.foodId()));
 
             MealEntry entry = new MealEntry();

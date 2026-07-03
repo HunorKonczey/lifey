@@ -1,5 +1,6 @@
 package com.lifey.nutrition.food.service;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
@@ -7,6 +8,7 @@ import com.lifey.nutrition.food.FoodMapper;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.food.dto.FoodRequest;
 import com.lifey.nutrition.food.dto.FoodResponse;
+import com.lifey.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,11 +26,13 @@ import java.util.List;
 public class FoodServiceImpl implements FoodService {
 
     private final FoodRepository repository;
+    private final UserRepository userRepository;
+    private final CurrentUserProvider currentUserProvider;
 
     @Override
     @Transactional(readOnly = true)
     public List<FoodResponse> findAll() {
-        return repository.findAllByHiddenFalseOrderByName().stream()
+        return repository.findAllByUserIdAndHiddenFalseOrderByName(currentUserProvider.getUserId()).stream()
                 .map(FoodMapper::toResponse)
                 .toList();
     }
@@ -36,20 +40,21 @@ public class FoodServiceImpl implements FoodService {
     @Override
     @Transactional(readOnly = true)
     public Page<FoodResponse> findPage(Pageable pageable, String search, Instant updatedSince) {
+        Long userId = currentUserProvider.getUserId();
         if (updatedSince != null) {
             // Delta-sync feed: fixed ordering, no hidden filter, no search —
-            // see docs/15-delta-sync.md and FoodRepository.findByUpdatedAtGreaterThanEqual.
+            // see docs/15-delta-sync.md and FoodRepository.findByUserIdAndUpdatedAtGreaterThanEqual.
             Pageable deltaPageable = PageRequest.of(
                     pageable.getPageNumber(),
                     pageable.getPageSize(),
                     Sort.by(Sort.Order.asc("updatedAt"), Sort.Order.asc("id")));
-            return repository.findByUpdatedAtGreaterThanEqual(updatedSince, deltaPageable)
+            return repository.findByUserIdAndUpdatedAtGreaterThanEqual(userId, updatedSince, deltaPageable)
                     .map(FoodMapper::toResponse);
         }
         Pageable sortedPageable = withNullsLast(pageable);
         Page<Food> page = (search == null || search.isBlank())
-                ? repository.findByHiddenFalse(sortedPageable)
-                : repository.findByHiddenFalseAndNameContainingIgnoreCase(search.trim(), sortedPageable);
+                ? repository.findByUserIdAndHiddenFalse(userId, sortedPageable)
+                : repository.findByUserIdAndHiddenFalseAndNameContainingIgnoreCase(userId, search.trim(), sortedPageable);
         return page.map(FoodMapper::toResponse);
     }
 
@@ -77,7 +82,9 @@ public class FoodServiceImpl implements FoodService {
         if (!request.hidden()) {
             requireUniqueName(request.name().trim(), null);
         }
-        Food saved = repository.save(FoodMapper.toEntity(request));
+        Food food = FoodMapper.toEntity(request);
+        food.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
+        Food saved = repository.save(food);
         return FoodMapper.toResponse(saved);
     }
 
@@ -98,7 +105,7 @@ public class FoodServiceImpl implements FoodService {
      * shown in pickers, so a hidden "Egg" must not block a visible food named "Egg".
      */
     private void requireUniqueName(String name, Long ignoreId) {
-        repository.findByNameIgnoreCase(name)
+        repository.findByUserIdAndNameIgnoreCase(currentUserProvider.getUserId(), name)
                 .filter(existing -> !existing.isHidden())
                 .filter(existing -> !existing.getId().equals(ignoreId))
                 .ifPresent(_ -> {
@@ -121,7 +128,7 @@ public class FoodServiceImpl implements FoodService {
     }
 
     private Food getOrThrow(Long id) {
-        return repository.findById(id)
+        return repository.findByIdAndUserId(id, currentUserProvider.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Food not found: " + id));
     }
 }

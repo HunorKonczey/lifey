@@ -114,7 +114,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     private void replacePlannedExercises(WorkoutSession session, List<Long> exerciseIds) {
         session.getPlannedExercises().clear();
         for (Long exerciseId : exerciseIds) {
-            Exercise exercise = exerciseRepository.findById(exerciseId)
+            Exercise exercise = exerciseRepository.findByIdAndUserId(exerciseId, currentUserProvider.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + exerciseId));
 
             WorkoutSessionExercise link = new WorkoutSessionExercise();
@@ -142,7 +142,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
                         session.getId(), item.exerciseId(), item.reps(), item.weight());
                 continue;
             }
-            Exercise exercise = exerciseRepository.findById(item.exerciseId())
+            Exercise exercise = exerciseRepository.findByIdAndUserId(item.exerciseId(), currentUserProvider.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + item.exerciseId()));
 
             ExerciseSet set = new ExerciseSet();

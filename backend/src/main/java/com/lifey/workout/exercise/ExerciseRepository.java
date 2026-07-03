@@ -6,15 +6,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
 
-    List<Exercise> findAllByDeletedAtIsNullOrderByNameAsc();
+    List<Exercise> findAllByUserIdAndDeletedAtIsNullOrderByNameAsc(Long userId);
 
     /**
-     * Delta-sync feed (docs/16-delta-sync-rollout.md) — global like Foods, no
-     * userId filter; deliberately not deletedAt-filtered so tombstoned rows
-     * (deletedAt set) surface for the mobile client to remove locally.
+     * Delta-sync feed (docs/16-delta-sync-rollout.md) — deliberately not
+     * deletedAt-filtered so tombstoned rows (deletedAt set) surface for the
+     * mobile client to remove locally.
      */
-    Page<Exercise> findByUpdatedAtGreaterThanEqual(Instant since, Pageable pageable);
+    Page<Exercise> findByUserIdAndUpdatedAtGreaterThanEqual(Long userId, Instant since, Pageable pageable);
+
+    Optional<Exercise> findByIdAndUserId(Long id, Long userId);
 }

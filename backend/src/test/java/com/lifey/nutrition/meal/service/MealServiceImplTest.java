@@ -62,7 +62,7 @@ class MealServiceImplTest {
 
     @Test
     void create_resolvesFoodsAndReturnsResponse() {
-        when(foodRepository.findById(1L)).thenReturn(Optional.of(food(1L, "Oats")));
+        when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Oats")));
         when(mealRepository.save(any(Meal.class))).thenAnswer(inv -> {
             Meal m = inv.getArgument(0);
             m.setId(4L);
@@ -85,7 +85,7 @@ class MealServiceImplTest {
 
     @Test
     void create_throwsWhenFoodMissing() {
-        when(foodRepository.findById(99L)).thenReturn(Optional.empty());
+        when(foodRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
         MealRequest request = new MealRequest(
                 Instant.parse("2026-06-18T08:00:00Z"), MealType.SNACK, null,
                 List.of(new MealEntryRequest(99L, 50.0)));
@@ -122,7 +122,7 @@ class MealServiceImplTest {
         meal.setMealType(MealType.BREAKFAST);
         meal.setUpdatedAt(Instant.parse("2026-06-18T08:00:00Z"));
         when(mealRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(meal));
-        when(foodRepository.findById(2L)).thenReturn(Optional.of(food(2L, "Rice")));
+        when(foodRepository.findByIdAndUserId(2L, USER_ID)).thenReturn(Optional.of(food(2L, "Rice")));
 
         // Same dateTime/mealType/name as before — only the entries differ.
         MealRequest request = new MealRequest(

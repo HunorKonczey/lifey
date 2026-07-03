@@ -121,7 +121,7 @@ public class RecipeServiceImpl implements RecipeService {
     private void replaceIngredients(Recipe recipe, List<RecipeIngredientRequest> requested) {
         recipe.getIngredients().clear();
         for (RecipeIngredientRequest item : requested) {
-            Food food = foodRepository.findById(item.foodId())
+            Food food = foodRepository.findByIdAndUserId(item.foodId(), currentUserProvider.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Food not found: " + item.foodId()));
 
             RecipeIngredient ingredient = new RecipeIngredient();

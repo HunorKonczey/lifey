@@ -101,7 +101,7 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
         template.getExercises().clear();
         for (int i = 0; i < entries.size(); i++) {
             TemplateExerciseEntry entry = entries.get(i);
-            Exercise exercise = exerciseRepository.findById(entry.exerciseId())
+            Exercise exercise = exerciseRepository.findByIdAndUserId(entry.exerciseId(), currentUserProvider.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + entry.exerciseId()));
 
             WorkoutTemplateExercise link = new WorkoutTemplateExercise();

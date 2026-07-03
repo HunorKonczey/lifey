@@ -10,20 +10,22 @@ import java.util.Optional;
 
 public interface FoodRepository extends JpaRepository<Food, Long> {
 
-    List<Food> findAllByHiddenFalseOrderByName();
+    List<Food> findAllByUserIdAndHiddenFalseOrderByName(Long userId);
 
-    Page<Food> findByHiddenFalse(Pageable pageable);
+    Page<Food> findByUserIdAndHiddenFalse(Long userId, Pageable pageable);
 
-    Page<Food> findByHiddenFalseAndNameContainingIgnoreCase(String search, Pageable pageable);
+    Page<Food> findByUserIdAndHiddenFalseAndNameContainingIgnoreCase(Long userId, String search, Pageable pageable);
 
     /**
      * Delta-sync feed (docs/15-delta-sync.md) — deliberately not
      * hidden-filtered: it must surface tombstoned rows (hidden = true,
      * deletedAt set) and any edit to an already-hidden shadow food.
      */
-    Page<Food> findByUpdatedAtGreaterThanEqual(Instant since, Pageable pageable);
+    Page<Food> findByUserIdAndUpdatedAtGreaterThanEqual(Long userId, Instant since, Pageable pageable);
 
-    Optional<Food> findByNameIgnoreCase(String name);
+    Optional<Food> findByUserIdAndNameIgnoreCase(Long userId, String name);
 
-    Optional<Food> findByBarcode(String barcode);
+    Optional<Food> findByIdAndUserId(Long id, Long userId);
+
+    Optional<Food> findByUserIdAndBarcode(Long userId, String barcode);
 }

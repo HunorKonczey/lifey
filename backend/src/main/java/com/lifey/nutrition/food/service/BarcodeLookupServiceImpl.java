@@ -1,5 +1,6 @@
 package com.lifey.nutrition.food.service;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
@@ -18,10 +19,11 @@ public class BarcodeLookupServiceImpl implements BarcodeLookupService {
 
     private final FoodRepository foodRepository;
     private final OpenFoodFactsClient openFoodFactsClient;
+    private final CurrentUserProvider currentUserProvider;
 
     @Override
     public BarcodeLookupResponse lookup(String barcode) {
-        return foodRepository.findByBarcode(barcode)
+        return foodRepository.findByUserIdAndBarcode(currentUserProvider.getUserId(), barcode)
                 .map(this::toLocalResponse)
                 .orElseGet(() -> lookupOnOpenFoodFacts(barcode));
     }

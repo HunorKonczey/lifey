@@ -62,8 +62,8 @@ class WorkoutTemplateServiceImplTest {
 
     @Test
     void create_resolvesExercisesAndReturnsResponse() {
-        when(exerciseRepository.findById(1L)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
-        when(exerciseRepository.findById(4L)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
         when(templateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
             WorkoutTemplate t = inv.getArgument(0);
             t.setId(9L);
@@ -85,7 +85,7 @@ class WorkoutTemplateServiceImplTest {
 
     @Test
     void create_throwsWhenExerciseMissing() {
-        when(exerciseRepository.findById(99L)).thenReturn(Optional.empty());
+        when(exerciseRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
         WorkoutTemplateRequest request = new WorkoutTemplateRequest("Bad",
                 List.of(new TemplateExerciseEntry(99L, null)));
 
@@ -103,7 +103,7 @@ class WorkoutTemplateServiceImplTest {
         oldLink.setExercise(exercise(1L, "Bench Press"));
         existing.getExercises().add(oldLink);
         when(templateRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(existing));
-        when(exerciseRepository.findById(4L)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
+        when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
 
         WorkoutTemplateResponse result = service.update(9L, new WorkoutTemplateRequest("Shoulders",
                 List.of(new TemplateExerciseEntry(4L, 4))));
@@ -153,7 +153,7 @@ class WorkoutTemplateServiceImplTest {
         existing.setName("Push day");
         existing.setUpdatedAt(Instant.parse("2026-06-18T08:00:00Z"));
         when(templateRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(existing));
-        when(exerciseRepository.findById(1L)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
 
         // Same name as before — only the exercise link's target sets differ.
         service.update(9L, new WorkoutTemplateRequest("Push day",
