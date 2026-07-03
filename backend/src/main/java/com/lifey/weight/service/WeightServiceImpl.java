@@ -31,7 +31,13 @@ public class WeightServiceImpl implements WeightService {
     @Override
     @Transactional(readOnly = true)
     public List<WeightResponse> findAll() {
-        return repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(currentUserProvider.getUserId()).stream()
+        return findAllForUser(currentUserProvider.getUserId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WeightResponse> findAllForUser(Long userId) {
+        return repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(userId).stream()
                 .map(WeightMapper::toResponse)
                 .toList();
     }

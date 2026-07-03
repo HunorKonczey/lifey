@@ -38,7 +38,13 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     @Override
     @Transactional(readOnly = true)
     public List<WorkoutSessionResponse> findAll() {
-        return sessionRepository.findAllByUserIdAndDeletedAtIsNullOrderByStartedAtDesc(currentUserProvider.getUserId()).stream()
+        return findAllForUser(currentUserProvider.getUserId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WorkoutSessionResponse> findAllForUser(Long userId) {
+        return sessionRepository.findAllByUserIdAndDeletedAtIsNullOrderByStartedAtDesc(userId).stream()
                 .map(WorkoutSessionMapper::toResponse)
                 .toList();
     }

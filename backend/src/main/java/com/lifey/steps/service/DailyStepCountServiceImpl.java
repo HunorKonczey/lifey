@@ -31,7 +31,13 @@ public class DailyStepCountServiceImpl implements DailyStepCountService {
     @Override
     @Transactional(readOnly = true)
     public List<DailyStepCountResponse> findAll() {
-        return repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDesc(currentUserProvider.getUserId()).stream()
+        return findAllForUser(currentUserProvider.getUserId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DailyStepCountResponse> findAllForUser(Long userId) {
+        return repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDesc(userId).stream()
                 .map(DailyStepCountMapper::toResponse)
                 .toList();
     }

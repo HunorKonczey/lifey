@@ -12,6 +12,15 @@ public interface DailyStepCountService {
 
     List<DailyStepCountResponse> findAll();
 
+    /**
+     * Same as {@link #findAll()}, scoped to an explicit user rather than the
+     * current one — used by the trainer client-steps endpoint (see
+     * docs/personal_trainer/03-backend-terv.md). Callers are responsible for
+     * authorizing {@code userId} first (e.g. via
+     * {@code TrainerAccessService.requireActiveClient}).
+     */
+    List<DailyStepCountResponse> findAllForUser(Long userId);
+
     Page<DailyStepCountResponse> findDelta(Instant updatedSince, Pageable pageable);
 
     DailyStepCountResponse create(DailyStepCountRequest request);

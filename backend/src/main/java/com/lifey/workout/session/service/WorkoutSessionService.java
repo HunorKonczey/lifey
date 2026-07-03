@@ -12,6 +12,15 @@ public interface WorkoutSessionService {
 
     List<WorkoutSessionResponse> findAll();
 
+    /**
+     * Same as {@link #findAll()}, scoped to an explicit user rather than the
+     * current one — used by the trainer client-workout-sessions endpoint (see
+     * docs/personal_trainer/03-backend-terv.md). Callers are responsible for
+     * authorizing {@code userId} first (e.g. via
+     * {@code TrainerAccessService.requireActiveClient}).
+     */
+    List<WorkoutSessionResponse> findAllForUser(Long userId);
+
     Page<WorkoutSessionResponse> findDelta(Instant updatedSince, Pageable pageable);
 
     WorkoutSessionResponse create(WorkoutSessionRequest request);
