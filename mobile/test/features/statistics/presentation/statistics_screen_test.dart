@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/nutrition/application/meal_controller.dart';
 import 'package:lifey/features/nutrition/domain/meal.dart';
+import 'package:lifey/features/settings/application/settings_controller.dart';
+import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/statistics/presentation/statistics_screen.dart';
+import 'package:lifey/features/steps/data/step_count_repository.dart';
 import 'package:lifey/features/water/data/water_entry_repository.dart';
 import 'package:lifey/features/weight/application/weight_controller.dart';
 import 'package:lifey/features/weight/domain/weight_entry.dart';
@@ -37,6 +40,11 @@ class _EmptyWeightController extends WeightController {
   Stream<List<WeightEntry>> build() => Stream.value(const []);
 }
 
+class _FakeSettingsController extends SettingsController {
+  @override
+  Stream<UserSettings> build() => Stream.value(const UserSettings.defaults());
+}
+
 Meal _meal(DateTime dateTime, {double calories = 100}) {
   return Meal(
     clientId: 'meal-${dateTime.microsecondsSinceEpoch}',
@@ -67,6 +75,8 @@ Future<void> _pumpStatisticsScreen(WidgetTester tester, MealController Function(
         workoutSessionControllerProvider.overrideWith(_EmptyWorkoutSessionController.new),
         weightControllerProvider.overrideWith(_EmptyWeightController.new),
         allWaterEntriesProvider.overrideWith((ref) => Stream.value(const [])),
+        allStepCountsProvider.overrideWith((ref) => Stream.value(const [])),
+        settingsControllerProvider.overrideWith(_FakeSettingsController.new),
       ],
       child: const MaterialApp(
         locale: Locale('en'),
