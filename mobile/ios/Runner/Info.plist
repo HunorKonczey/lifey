@@ -27,7 +27,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>A kamera használata szükséges az élelmiszerek vonalkódjának beolvasásához.</string>
+	<string>A kamera használata szükséges az élelmiszerek vonalkódjának beolvasásához, illetve profilkép készítéséhez.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>A fényképtár elérése szükséges a profilkép kiválasztásához.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>A Lifey az Apple Health-ből olvassa be az edzéseket, a lépésszámot és a testsúlyt, hogy automatikusan kiegészítse a naplódat.</string>
 	<key>NSAppTransportSecurity</key>

@@ -55,13 +55,23 @@ async function refreshOnce(): Promise<string | null> {
   return refreshPromise;
 }
 
+interface RequestConfig {
+  retry?: boolean;
+  /** "blob" for binary responses (e.g. the profile picture) — skips JSON parsing. */
+  parseAs?: "json" | "blob";
+}
+
 async function request<T>(
   path: string,
   init: RequestInit = {},
-  retry = true,
+  config: RequestConfig = {},
 ): Promise<T> {
+  const { retry = true, parseAs = "json" } = config;
+  // FormData sets its own multipart boundary in the Content-Type header —
+  // letting fetch do that means not setting the header ourselves at all.
+  const isFormData = init.body instanceof FormData;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(init.headers as Record<string, string>),
   };
 
@@ -81,7 +91,7 @@ async function request<T>(
     const newToken = await refreshOnce();
     if (newToken) {
       setAccessToken(newToken);
-      return request<T>(path, init, false);
+      return request<T>(path, init, { retry: false, parseAs });
     }
     setAccessToken(null);
     throw new ApiError(401, "UNAUTHORIZED", "Session expired");
@@ -102,6 +112,8 @@ async function request<T>(
 
   if (res.status === 204) return undefined as T;
 
+  if (parseAs === "blob") return (await res.blob()) as unknown as T;
+
   // Some endpoints (e.g. forgot-password) return 200 with an empty body —
   // res.json() throws on empty input, so check for content first.
   const text = await res.text();
@@ -116,4 +128,9 @@ export const api = {
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
   delete: <T = void>(path: string) => request<T>(path, { method: "DELETE" }),
+  /** Binary GET (e.g. the profile picture) — 404 still throws, callers decide how to treat it. */
+  getBlob: (path: string) => request<Blob>(path, { method: "GET" }, { parseAs: "blob" }),
+  /** PUT with a multipart body (e.g. a file upload) instead of JSON. */
+  putForm: (path: string, formData: FormData) =>
+    request<void>(path, { method: "PUT", body: formData }),
 };

@@ -67,6 +67,25 @@ class GoogleIdTokenVerifierTest {
         assertThat(identity.sub()).isEqualTo(SUBJECT);
         assertThat(identity.email()).isEqualTo("user@example.com");
         assertThat(identity.emailVerified()).isTrue();
+        assertThat(identity.picture()).isNull();
+    }
+
+    @Test
+    void verify_tokenWithPictureClaim_returnsIdentityWithPicture() throws Exception {
+        JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
+                .subject(SUBJECT)
+                .issuer("https://accounts.google.com")
+                .audience(CLIENT_ID)
+                .expirationTime(Date.from(Instant.now().plusSeconds(300)))
+                .claim("email", "user@example.com")
+                .claim("email_verified", true)
+                .claim("picture", "https://lh3.googleusercontent.com/a/abc123=s96-c");
+        SignedJWT jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(keyId).build(), claims.build());
+        jwt.sign(new RSASSASigner(privateKey));
+
+        GoogleIdentity identity = verifier.verify(jwt.serialize());
+
+        assertThat(identity.picture()).isEqualTo("https://lh3.googleusercontent.com/a/abc123=s96-c");
     }
 
     @Test

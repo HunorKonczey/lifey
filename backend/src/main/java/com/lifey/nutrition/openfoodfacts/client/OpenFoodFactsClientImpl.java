@@ -3,17 +3,25 @@ package com.lifey.nutrition.openfoodfacts.client;
 import com.lifey.nutrition.openfoodfacts.OffApiResponse;
 import com.lifey.nutrition.openfoodfacts.OffProduct;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.util.Optional;
 
 @Component
-@RequiredArgsConstructor
 class OpenFoodFactsClientImpl implements OpenFoodFactsClient {
 
     private final RestClient restClient;
+
+    // Explicit constructor (not @RequiredArgsConstructor) so the @Qualifier
+    // lands on the actual constructor parameter — Lombok doesn't copy it
+    // there by default. Needed since the context now has a second RestClient
+    // bean (googleAvatarRestClient, for GoogleAvatarImportListener), making
+    // type-only autowiring ambiguous.
+    OpenFoodFactsClientImpl(@Qualifier("openFoodFactsRestClient") RestClient restClient) {
+        this.restClient = restClient;
+    }
 
     @Override
     public Optional<OffProduct> findByBarcode(String barcode) {

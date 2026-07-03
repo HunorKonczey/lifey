@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { setAccessToken, registerTokenRefresher } from "@/lib/api/client";
+import { queryClient } from "@/lib/queryClient";
 import { decodeJwt } from "@/lib/utils/jwt";
 import { authApi } from "./api";
 import type { SessionUser } from "./types";
@@ -47,14 +48,24 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   initFailed: false,
 
   applyAccessToken: (accessToken, refreshToken) => {
+    const previousUserId = get().user?.id;
+    const nextUser = userFromAccessToken(accessToken);
     setAccessToken(accessToken);
     if (refreshToken) saveRefreshToken(refreshToken);
-    set({ user: userFromAccessToken(accessToken), isLoading: false, initFailed: false });
+    // A different account just signed in on this session (e.g. logout then
+    // Google sign-in as someone else) — drop cached queries (avatar,
+    // settings, etc.) so they don't keep showing the previous user's data
+    // until a hard refresh.
+    if (previousUserId !== undefined && nextUser?.id !== previousUserId) {
+      queryClient.clear();
+    }
+    set({ user: nextUser, isLoading: false, initFailed: false });
   },
 
   logout: async () => {
     setAccessToken(null);
     clearRefreshToken();
+    queryClient.clear();
     set({ user: null, initFailed: false });
     try { await authApi.logout(); } catch { /* ignore */ }
   },
@@ -62,6 +73,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   logoutAll: async () => {
     setAccessToken(null);
     clearRefreshToken();
+    queryClient.clear();
     set({ user: null, initFailed: false });
     try { await authApi.logoutAll(); } catch { /* ignore */ }
   },

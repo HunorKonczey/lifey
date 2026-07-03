@@ -1,6 +1,7 @@
 package com.lifey.common.exception;
 
 import com.lifey.auth.exception.*;
+import com.lifey.user.InvalidImageException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -12,6 +13,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.Instant;
 import java.util.List;
@@ -80,6 +82,18 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
     }
 
+    @ExceptionHandler(InvalidImageException.class)
+    public ResponseEntity<ApiError> handleInvalidImage(InvalidImageException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUploadSize(MaxUploadSizeExceededException ex,
+                                                         HttpServletRequest request) {
+        return build(HttpStatus.CONTENT_TOO_LARGE,
+                "Uploaded file exceeds the maximum allowed size", request, List.of(), ex);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, "Access denied", request, List.of(), ex);
@@ -95,7 +109,9 @@ public class GlobalExceptionHandler {
         if (status.is5xxServerError()) {
             log.error("{} {} -> {} {}", request.getMethod(), request.getRequestURI(), status.value(), message, ex);
         } else {
-            log.warn("{} {} -> {} {}", request.getMethod(), request.getRequestURI(), status.value(), message, ex);
+            // 4xx responses are expected, client-driven outcomes (validation, auth, not-found
+            // while onboarding, etc.) — log a one-liner without the stack trace to keep logs quiet.
+            log.warn("{} {} -> {} {}", request.getMethod(), request.getRequestURI(), status.value(), message);
         }
         ApiError body = new ApiError(
                 Instant.now(),

@@ -4,6 +4,7 @@ export const queryKeys = {
   },
   settings: {
     all: () => ["settings"] as const,
+    avatar: () => ["settings", "avatar"] as const,
   },
   userDetails: {
     all: () => ["user-details"] as const,

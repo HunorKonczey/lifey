@@ -1,7 +1,9 @@
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
+import 'dart:typed_data' show Uint8List;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/health/health_controller.dart';
@@ -16,6 +18,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/change_password_screen.dart';
 import '../../onboarding/presentation/onboarding_edit_screen.dart';
 import '../../water/presentation/water_sources_screen.dart';
+import '../application/avatar_controller.dart';
 import '../application/settings_controller.dart';
 import '../domain/user_settings.dart';
 
@@ -42,6 +45,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int? _fatGoal;
   double? _waterGoal;
   int? _stepGoal;
+  bool _avatarBusy = false;
 
   void _initFromSettings(UserSettings s) {
     _unitSystem = s.unitSystem;
@@ -136,6 +140,83 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  // Opens a bottom-sheet with the take-photo/gallery/remove actions.
+  void _openAvatarSheet(AppLocalizations l10n, {required bool hasAvatar}) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetCtx) {
+        final scheme = Theme.of(sheetCtx).colorScheme;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.photo_camera_outlined, color: scheme.primary),
+              title: Text(l10n.takePhotoAction),
+              onTap: () {
+                Navigator.of(sheetCtx).pop();
+                _pickAndUploadAvatar(ImageSource.camera, l10n);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library_outlined, color: scheme.primary),
+              title: Text(l10n.chooseFromGalleryAction),
+              onTap: () {
+                Navigator.of(sheetCtx).pop();
+                _pickAndUploadAvatar(ImageSource.gallery, l10n);
+              },
+            ),
+            if (hasAvatar)
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: scheme.error),
+                title: Text(l10n.removePhotoAction, style: TextStyle(color: scheme.error)),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _removeAvatar(l10n);
+                },
+              ),
+            SizedBox(height: MediaQuery.paddingOf(context).bottom + 8),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _pickAndUploadAvatar(ImageSource source, AppLocalizations l10n) async {
+    if (_avatarBusy) return;
+    final XFile? picked;
+    try {
+      picked = await ImagePicker().pickImage(source: source, maxWidth: 1024, imageQuality: 85);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+      return;
+    }
+    if (picked == null) return;
+
+    setState(() => _avatarBusy = true);
+    try {
+      await ref.read(avatarControllerProvider.notifier).upload(File(picked.path));
+      if (mounted) AppSnackbar.showSuccess(context, title: l10n.avatarUpdatedMessage);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _avatarBusy = false);
+    }
+  }
+
+  Future<void> _removeAvatar(AppLocalizations l10n) async {
+    if (_avatarBusy) return;
+    setState(() => _avatarBusy = true);
+    try {
+      await ref.read(avatarControllerProvider.notifier).remove();
+      if (mounted) AppSnackbar.showSuccess(context, title: l10n.avatarRemovedMessage);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _avatarBusy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(settingsControllerProvider);
@@ -176,6 +257,59 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _buildProfileHeader(BuildContext context, AppLocalizations l10n, String? email) {
+    final scheme = Theme.of(context).colorScheme;
+    final avatarBytes = ref.watch(avatarControllerProvider).value;
+
+    return Material(
+      color: scheme.surfaceContainer,
+      borderRadius: AppRadius.cardAll,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _openAvatarSheet(l10n, hasAvatar: avatarBytes != null),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              _AvatarCircle(bytes: avatarBytes, email: email, busy: _avatarBusy),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      email ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.changePhotoLabel,
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 22, color: scheme.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildContent(
     BuildContext context,
     AppLocalizations l10n,
@@ -195,6 +329,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: ListView(
               padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad + 32),
               children: [
+                // ── Profile picture ──────────────────────────────────────────
+                _buildProfileHeader(context, l10n, email),
+                const SizedBox(height: 20),
+
                 // ── Preferences ────────────────────────────────────────────
                 _GroupLabel(l10n.preferencesLabel),
                 const SizedBox(height: 8),
@@ -1032,6 +1170,98 @@ class _AppleHealthSwitch extends ConsumerWidget {
                       .setEnabled(v),
       activeThumbColor: Theme.of(context).colorScheme.primary,
       activeTrackColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _AvatarCircle
+// ---------------------------------------------------------------------------
+
+class _AvatarCircle extends StatelessWidget {
+  const _AvatarCircle({
+    required this.bytes,
+    required this.email,
+    required this.busy,
+  });
+
+  final Uint8List? bytes;
+  final String? email;
+  final bool busy;
+
+  static const double _size = 64;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      width: _size,
+      height: _size,
+      child: Stack(
+        children: [
+          ClipOval(
+            child:
+                bytes != null
+                    ? Image.memory(
+                      bytes!,
+                      width: _size,
+                      height: _size,
+                      fit: BoxFit.cover,
+                    )
+                    : Container(
+                      width: _size,
+                      height: _size,
+                      color: scheme.primaryContainer,
+                      alignment: Alignment.center,
+                      child: Text(
+                        (email != null && email!.isNotEmpty)
+                            ? email![0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: scheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+          ),
+          if (busy)
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: scheme.surfaceContainer, width: 2),
+              ),
+              child: Icon(Icons.camera_alt, size: 12, color: scheme.onPrimary),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
