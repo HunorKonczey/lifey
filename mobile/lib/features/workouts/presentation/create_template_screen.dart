@@ -203,9 +203,8 @@ class _CreateTemplateScreenState extends ConsumerState<CreateTemplateScreen> {
           // ── Content ──────────────────────────────────────────────────
           ReorderableListView(
             padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad + 24),
-            onReorder: (oldIndex, newIndex) {
+            onReorderItem: (oldIndex, newIndex) {
               setState(() {
-                if (newIndex > oldIndex) newIndex--;
                 final item = _exercises.removeAt(oldIndex);
                 _exercises.insert(newIndex, item);
               });

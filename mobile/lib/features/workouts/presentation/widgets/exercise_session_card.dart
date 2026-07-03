@@ -85,9 +85,6 @@ class ExerciseSessionCard extends StatefulWidget {
 }
 
 class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
-  /// The row currently shown in "edit mode" (close icon visible).
-  int? _editingIndex;
-
   Future<void> _handleDoubleTap(int index) async {
     widget.onRowDuplicate(index);
     // onRowDuplicate mutates block.rows in-place, so index+1 already exists.
@@ -116,7 +113,6 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
     double? presetWeight,
     int? presetReps,
   }) async {
-    setState(() => _editingIndex = index);
     final row = widget.block.rows[index];
     final result = await showModalBottomSheet<({double? weight, int? reps})>(
       context: context,
@@ -130,7 +126,6 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
       ),
     );
     if (!mounted) return;
-    setState(() => _editingIndex = null);
     if (result != null) {
       widget.onRowEdit(index, result.weight, result.reps);
     }
