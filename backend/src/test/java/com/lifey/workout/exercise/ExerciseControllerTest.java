@@ -35,7 +35,7 @@ class ExerciseControllerTest {
     void list_returnsOk() throws Exception {
         when(exerciseService.findAll())
                 .thenReturn(List.of(new ExerciseResponse(1L, "Bench Press", "CHEST", "BARBELL",
-                        Instant.parse("2026-06-18T08:00:00Z"), null)));
+                        Instant.parse("2026-06-18T08:00:00Z"), null, null)));
 
         mockMvc.perform(get("/api/v1/exercises"))
                 .andExpect(status().isOk())
@@ -48,7 +48,7 @@ class ExerciseControllerTest {
     void list_nullCategoryAndEquipmentReturnsOk() throws Exception {
         when(exerciseService.findAll())
                 .thenReturn(List.of(new ExerciseResponse(2L, "Plank", null, null,
-                        Instant.parse("2026-06-18T08:00:00Z"), null)));
+                        Instant.parse("2026-06-18T08:00:00Z"), null, null)));
 
         mockMvc.perform(get("/api/v1/exercises"))
                 .andExpect(status().isOk())
@@ -59,7 +59,7 @@ class ExerciseControllerTest {
     @Test
     void create_returnsCreated() throws Exception {
         when(exerciseService.create(any())).thenReturn(new ExerciseResponse(9L, "Lateral Raise", "SHOULDERS", null,
-                Instant.parse("2026-06-18T08:00:00Z"), null));
+                Instant.parse("2026-06-18T08:00:00Z"), null, null));
 
         mockMvc.perform(post("/api/v1/exercises").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Lateral Raise\",\"category\":\"SHOULDERS\"}"))
@@ -90,7 +90,7 @@ class ExerciseControllerTest {
     void delta_returnsPageIncludingTombstones() throws Exception {
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
         ExerciseResponse tombstoned = new ExerciseResponse(2L, "Deleted exercise", null, null,
-                Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"));
+                Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"), null);
         when(exerciseService.findDelta(eq(since), any())).thenReturn(new PageImpl<>(List.of(tombstoned)));
 
         mockMvc.perform(get("/api/v1/exercises").param("updatedSince", since.toString()))

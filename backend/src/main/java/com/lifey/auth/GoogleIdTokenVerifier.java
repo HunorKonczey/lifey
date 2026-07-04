@@ -66,6 +66,8 @@ public class GoogleIdTokenVerifier {
 
         boolean emailVerified = Boolean.TRUE.equals(jwt.getClaimAsBoolean("email_verified"));
         String picture = jwt.getClaimAsString("picture");
-        return new GoogleIdentity(sub, email, emailVerified, picture);
+        String givenName = jwt.getClaimAsString("given_name");
+        String familyName = jwt.getClaimAsString("family_name");
+        return new GoogleIdentity(sub, email, emailVerified, picture, givenName, familyName);
     }
 }

@@ -14,12 +14,17 @@ class WorkoutTemplate {
     required this.name,
     required this.exercises,
     this.id,
+    this.originTrainerId,
   });
 
   final String clientId;
   final int? id;
   final String name;
   final List<TemplateExercise> exercises;
+
+  /// Non-null only for a trainer-assigned copy (docs/personal_trainer/05-mobil-terv.md
+  /// §2) — the trainer's server-side user id, drives the "Edzőtől" badge.
+  final int? originTrainerId;
 
   /// Convenience accessor used by screens that only need the exercise ids
   /// (LogSessionScreen, CreateTemplateScreen, TemplatesTab subtitle).

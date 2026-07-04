@@ -4,6 +4,9 @@ import com.lifey.trainer.dto.MyTrainerResponse;
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.TrainerClientResponse;
 import com.lifey.trainer.dto.TrainerInviteResponse;
+import com.lifey.trainer.dto.WeightTrendPoint;
+
+import java.util.List;
 
 /**
  * Maps {@link TrainerClient} rows to the different DTOs each side of the
@@ -24,8 +27,15 @@ public final class TrainerClientMapper {
         return new PendingInviteResponse(tc.getId(), tc.getTrainer().getEmail(), tc.getCreatedAt(), tc.getExpiresAt());
     }
 
-    public static TrainerClientResponse toClientResponse(TrainerClient tc) {
-        return new TrainerClientResponse(tc.getClient().getId(), tc.getClient().getEmail(), tc.getRespondedAt());
+    public static TrainerClientResponse toClientResponse(
+            TrainerClient tc, List<WeightTrendPoint> weightTrend, int assignedPlanCount, int workoutsPerWeek) {
+        return new TrainerClientResponse(
+                tc.getClient().getId(),
+                tc.getClient().getEmail(),
+                tc.getRespondedAt(),
+                weightTrend,
+                assignedPlanCount,
+                workoutsPerWeek);
     }
 
     public static MyTrainerResponse toMyTrainerResponse(TrainerClient tc) {

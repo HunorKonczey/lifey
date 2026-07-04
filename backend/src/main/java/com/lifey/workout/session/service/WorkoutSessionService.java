@@ -13,13 +13,20 @@ public interface WorkoutSessionService {
     List<WorkoutSessionResponse> findAll();
 
     /**
-     * Same as {@link #findAll()}, scoped to an explicit user rather than the
-     * current one — used by the trainer client-workout-sessions endpoint (see
-     * docs/personal_trainer/03-backend-terv.md). Callers are responsible for
-     * authorizing {@code userId} first (e.g. via
+     * Paged history view — backs `GET /workout-sessions?page=`, an additive
+     * alternative to {@link #findAll()} for callers that want to page through
+     * a long history instead of pulling everything at once.
+     */
+    Page<WorkoutSessionResponse> findPage(Pageable pageable);
+
+    /**
+     * Same as {@link #findPage(Pageable)}, scoped to an explicit user rather
+     * than the current one — used by the trainer client-workout-sessions
+     * endpoint (see docs/personal_trainer/03-backend-terv.md). Callers are
+     * responsible for authorizing {@code userId} first (e.g. via
      * {@code TrainerAccessService.requireActiveClient}).
      */
-    List<WorkoutSessionResponse> findAllForUser(Long userId);
+    Page<WorkoutSessionResponse> findPageForUser(Long userId, Pageable pageable);
 
     Page<WorkoutSessionResponse> findDelta(Instant updatedSince, Pageable pageable);
 

@@ -106,6 +106,12 @@
     "emailLabel": "Email",
     "@emailLabel": {"description": "Label for the email field"},
 
+    "firstNameLabel": "First name",
+    "@firstNameLabel": {"description": "Label for the first name field"},
+
+    "lastNameLabel": "Last name",
+    "@lastNameLabel": {"description": "Label for the last name field"},
+
     "passwordLabel": "Password",
     "@passwordLabel": {"description": "Label for the password field"},
 
@@ -1376,5 +1382,68 @@
     "@onboardingStartOnboardingButton": {"description": "Button that navigates to the onboarding wizard from the edit screen"},
 
     "onboardingDetailsSavedMessage": "Saved",
-    "@onboardingDetailsSavedMessage": {"description": "Snackbar shown after saving changes on the onboarding-details edit screen"}
+    "@onboardingDetailsSavedMessage": {"description": "Snackbar shown after saving changes on the onboarding-details edit screen"},
+
+    "onboardingConfirmSaveTitle": "Confirm changes",
+    "@onboardingConfirmSaveTitle": {"description": "Title of the confirm-save popup shown before persisting Body & goals edits"},
+
+    "onboardingConfirmSaveIntroMessage": "Choose which changes to save. Saving them will also recalculate your daily goals.",
+    "@onboardingConfirmSaveIntroMessage": {"description": "Body text of the confirm-save popup"},
+
+    "onboardingConfirmSaveNoChangesMessage": "No changes to save.",
+    "@onboardingConfirmSaveNoChangesMessage": {"description": "Shown in the confirm-save popup when nothing changed"},
+
+    "onboardingRecalculatedGoalsLabel": "Recalculated goals",
+    "@onboardingRecalculatedGoalsLabel": {"description": "Label above the live recalculated goals preview in the confirm-save popup"},
+
+    "trainerInviteCardTitle": "{trainerEmail} invited you to be their client",
+    "@trainerInviteCardTitle": {"description": "Title of the floating trainer-invite card, with the inviting trainer's email", "placeholders": {"trainerEmail": {"type": "String"}}},
+
+    "trainerInviteExpiresIn": "Expires in {hours, plural, one{1 hour} other{{hours} hours}}",
+    "@trainerInviteExpiresIn": {"description": "Relative expiry text on the trainer-invite card", "placeholders": {"hours": {"type": "int"}}},
+
+    "trainerInviteMoreCount": "+{count, plural, one{1 more invite} other{{count} more invites}}",
+    "@trainerInviteMoreCount": {"description": "Shown on the trainer-invite card when more than one invite is pending", "placeholders": {"count": {"type": "int"}}},
+
+    "trainerInviteAcceptButton": "Accept",
+    "@trainerInviteAcceptButton": {"description": "Button that accepts a pending trainer invite"},
+
+    "trainerInviteDeclineButton": "Decline",
+    "@trainerInviteDeclineButton": {"description": "Button that declines a pending trainer invite"},
+
+    "trainerInviteDismissTooltip": "Later",
+    "@trainerInviteDismissTooltip": {"description": "Tooltip for the close/dismiss-for-now icon on the trainer-invite card"},
+
+    "trainerInviteAcceptedMessage": "{trainerEmail} is now your personal trainer. You can leave anytime in Settings.",
+    "@trainerInviteAcceptedMessage": {"description": "Snackbar shown after accepting a trainer invite", "placeholders": {"trainerEmail": {"type": "String"}}},
+
+    "myTrainersSectionLabel": "My trainers",
+    "@myTrainersSectionLabel": {"description": "Settings group heading for the active-trainers section"},
+
+    "myTrainersActiveSinceLabel": "Trainer since {date}",
+    "@myTrainersActiveSinceLabel": {"description": "Shown under a trainer's email in the My trainers list, with a formatted date", "placeholders": {"date": {"type": "String"}}},
+
+    "myTrainersDataSharingExplanation": "Your trainer can see: your stats, steps, weight and workouts. They can't see: your food diary or water intake.",
+    "@myTrainersDataSharingExplanation": {"description": "Short explanation of what data is shared with trainers, shown below the My trainers list"},
+
+    "myTrainersLeaveAction": "Leave",
+    "@myTrainersLeaveAction": {"description": "Action button that ends a trainer relationship"},
+
+    "myTrainersLeaveConfirmTitle": "Leave this trainer?",
+    "@myTrainersLeaveConfirmTitle": {"description": "Title of the confirm dialog shown before leaving a trainer relationship"},
+
+    "myTrainersLeaveConfirmMessage": "{trainerEmail} will no longer be able to see your data.",
+    "@myTrainersLeaveConfirmMessage": {"description": "Body of the confirm dialog shown before leaving a trainer relationship", "placeholders": {"trainerEmail": {"type": "String"}}},
+
+    "originTrainerBadgeLabel": "From trainer",
+    "@originTrainerBadgeLabel": {"description": "Small pill label on a template/recipe card that was assigned by a trainer"},
+
+    "originTrainerSheetTitle": "Who gave you this?",
+    "@originTrainerSheetTitle": {"description": "Title of the bottom sheet shown when tapping the origin-trainer badge"},
+
+    "originTrainerSheetBody": "{trainerEmail} assigned this to you.",
+    "@originTrainerSheetBody": {"description": "Body of the origin-trainer bottom sheet, naming the trainer", "placeholders": {"trainerEmail": {"type": "String"}}},
+
+    "originTrainerUnknown": "This was assigned by a trainer you're no longer connected with.",
+    "@originTrainerUnknown": {"description": "Shown in the origin-trainer bottom sheet when the trainer relationship has since ended"}
 }

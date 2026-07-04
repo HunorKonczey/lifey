@@ -38,7 +38,8 @@ public final class FoodMapper {
                 food.getBarcode(),
                 food.isHidden(),
                 food.getUpdatedAt(),
-                food.getDeletedAt()
+                food.getDeletedAt(),
+                food.getOriginTrainerId()
         );
     }
 }

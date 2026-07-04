@@ -69,6 +69,28 @@ class DailyStepCountServiceImplTest {
     }
 
     @Test
+    void findAll_withRange_delegatesToRangeQuery() {
+        LocalDate from = LocalDate.of(2026, 6, 1);
+        LocalDate to = LocalDate.of(2026, 6, 30);
+        when(repository.findByUserIdAndDeletedAtIsNullAndDateRange(USER_ID, from, to))
+                .thenReturn(List.of(entry(1L, LocalDate.of(2026, 6, 18), 8200)));
+
+        List<DailyStepCountResponse> result = service.findAll(from, to);
+
+        assertThat(result).singleElement().satisfies(r -> assertThat(r.steps()).isEqualTo(8200));
+    }
+
+    @Test
+    void findAllForUser_passesNullBoundsThrough() {
+        when(repository.findByUserIdAndDeletedAtIsNullAndDateRange(99L, null, null))
+                .thenReturn(List.of(entry(2L, LocalDate.of(2026, 6, 18), 500)));
+
+        List<DailyStepCountResponse> result = service.findAllForUser(99L, null, null);
+
+        assertThat(result).singleElement().satisfies(r -> assertThat(r.id()).isEqualTo(2L));
+    }
+
+    @Test
     void create_insertsWhenNoRowForDate() {
         LocalDate date = LocalDate.of(2026, 6, 18);
         when(repository.findByUserIdAndDate(USER_ID, date)).thenReturn(Optional.empty());

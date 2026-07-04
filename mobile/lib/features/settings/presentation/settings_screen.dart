@@ -12,10 +12,13 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/change_password_screen.dart';
+import '../../my_trainers/application/my_trainers_controller.dart';
+import '../../my_trainers/domain/my_trainer.dart';
 import '../../onboarding/presentation/onboarding_edit_screen.dart';
 import '../../water/presentation/water_sources_screen.dart';
 import '../application/avatar_controller.dart';
@@ -220,7 +223,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(settingsControllerProvider);
-    final email = ref.watch(authControllerProvider).value?.email;
+    final authUser = ref.watch(authControllerProvider).value;
+    final email = authUser?.email;
+    final fullName = [authUser?.firstName, authUser?.lastName]
+        .where((part) => part != null && part.isNotEmpty)
+        .join(' ');
     final l10n = AppLocalizations.of(context)!;
 
     // Initialize form state once on first successful load.
@@ -245,6 +252,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       contentTop,
                       bottomPad,
                       email,
+                      fullName,
                     )
                     : const Center(child: CircularProgressIndicator()),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -257,7 +265,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, AppLocalizations l10n, String? email) {
+  Widget _buildProfileHeader(
+    BuildContext context,
+    AppLocalizations l10n,
+    String? email,
+    String fullName,
+  ) {
     final scheme = Theme.of(context).colorScheme;
     final avatarBytes = ref.watch(avatarControllerProvider).value;
 
@@ -278,15 +291,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (fullName.isNotEmpty)
+                      Text(
+                        fullName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
                     Text(
                       email ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
+                        fontSize: fullName.isEmpty ? 15 : 12.5,
+                        fontWeight: fullName.isEmpty ? FontWeight.w700 : FontWeight.w500,
+                        color: fullName.isEmpty ? scheme.onSurface : scheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -317,6 +342,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     double contentTop,
     double bottomPad,
     String? email,
+    String fullName,
   ) {
     final scheme = Theme.of(context).colorScheme;
     final mc = context.metricColors;
@@ -330,7 +356,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad + 32),
               children: [
                 // ── Profile picture ──────────────────────────────────────────
-                _buildProfileHeader(context, l10n, email),
+                _buildProfileHeader(context, l10n, email, fullName),
                 const SizedBox(height: 20),
 
                 // ── Preferences ────────────────────────────────────────────
@@ -609,6 +635,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
+
+                // ── My trainers (hidden entirely when there are none) ───────
+                const _MyTrainersSection(),
 
                 // ── Account ────────────────────────────────────────────────
                 _GroupLabel(l10n.accountLabel),
@@ -1170,6 +1199,127 @@ class _AppleHealthSwitch extends ConsumerWidget {
                       .setEnabled(v),
       activeThumbColor: Theme.of(context).colorScheme.primary,
       activeTrackColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _MyTrainersSection — Settings §"Edzőim"
+// (docs/personal_trainer/05-mobil-terv.md §3). Hidden entirely (not just
+// empty-stated) when the user has no active trainer, per spec.
+// ---------------------------------------------------------------------------
+
+class _MyTrainersSection extends ConsumerWidget {
+  const _MyTrainersSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trainers = ref.watch(myTrainersControllerProvider).value ?? const [];
+    if (trainers.isEmpty) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GroupLabel(l10n.myTrainersSectionLabel),
+        const SizedBox(height: 8),
+        _SettingsCard(
+          children: [
+            for (int i = 0; i < trainers.length; i++) ...[
+              if (i > 0) const _RowDivider(),
+              _MyTrainerRow(trainer: trainers[i]),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            l10n.myTrainersDataSharingExplanation,
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: scheme.onSurfaceVariant,
+              height: 1.4,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+}
+
+class _MyTrainerRow extends ConsumerWidget {
+  const _MyTrainerRow({required this.trainer});
+
+  final MyTrainer trainer;
+
+  Future<void> _leave(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+    final confirmed = await showConfirmDeleteDialog(
+      context,
+      title: l10n.myTrainersLeaveConfirmTitle,
+      message: l10n.myTrainersLeaveConfirmMessage(trainer.trainerEmail),
+    );
+    if (!confirmed) return;
+    try {
+      await ref.read(myTrainersControllerProvider.notifier).leave(trainer.trainerId);
+    } catch (e) {
+      if (context.mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final dateFmt = DateFormat.yMMMd(Localizations.localeOf(context).languageCode);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Icon(Icons.fitness_center, size: 22, color: scheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  trainer.trainerEmail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                Text(
+                  l10n.myTrainersActiveSinceLabel(dateFmt.format(trainer.activeSince)),
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () => _leave(context, ref, l10n),
+            style: TextButton.styleFrom(foregroundColor: scheme.error),
+            child: Text(l10n.myTrainersLeaveAction),
+          ),
+        ],
+      ),
     );
   }
 }

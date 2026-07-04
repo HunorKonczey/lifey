@@ -14,6 +14,10 @@ class Recipes extends Table {
   BoolColumn get favorite => boolean().withDefault(const Constant(false))();
   IntColumn get servings => integer().withDefault(const Constant(1))();
 
+  /// Non-null only for a trainer-assigned copy (docs/personal_trainer/05-mobil-terv.md
+  /// §2) — the trainer's server-side user id, drives the "Edzőtől" badge.
+  IntColumn get originTrainerId => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

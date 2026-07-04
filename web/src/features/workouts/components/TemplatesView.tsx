@@ -45,8 +45,14 @@ function templateCategories(t: WorkoutTemplateResponse, exercisesById: Map<numbe
   return ordered;
 }
 
-export function TemplatesView() {
+interface TemplatesViewProps {
+  /** When provided, admin nav renders a "Kiosztás" button on every row — absent in the own view. */
+  onAssign?: (template: WorkoutTemplateResponse) => void;
+}
+
+export function TemplatesView({ onAssign }: TemplatesViewProps = {}) {
   const t = useTranslations("workouts");
+  const admin = useTranslations("admin.assignDrawer");
   const tm = useTranslations("workouts.muscleGroups");
   const [selectedId, setSelectedId] = useState<number | "new" | null>(null);
 
@@ -87,31 +93,40 @@ export function TemplatesView() {
           (data ?? []).map((tpl) => {
             const cats = templateCategories(tpl, exercisesById);
             return (
-              <button key={tpl.id} onClick={() => setSelectedId(tpl.id)}
-                className="flex items-start gap-3 px-4 py-3 rounded-[var(--r-card)] text-left transition-colors"
+              <div key={tpl.id}
+                className="flex items-start gap-3 px-4 py-3 rounded-[var(--r-card)] transition-colors"
                 style={{
                   background: "var(--surface)",
                   outline: selectedId === tpl.id ? "2px solid var(--primary)" : "none",
                 }}>
-                <span className="material-symbols-rounded text-xl mt-0.5" style={{ color: "var(--tertiary)" }}>list_alt</span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{tpl.name}</p>
-                  <p className="text-xs mb-1.5" style={{ color: "var(--muted)" }}>{t("exercisesCount", { count: tpl.exercises.length })}</p>
-                  {cats.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {cats.map((c) => {
-                        const color = muscleGroupColor(c);
-                        return (
-                          <span key={c} className="text-[10px] font-bold leading-none px-2 py-1 rounded-[var(--r-pill)]"
-                            style={{ color, background: `color-mix(in srgb, ${color} 15%, transparent)` }}>
-                            {tm(c)}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </button>
+                <button onClick={() => setSelectedId(tpl.id)} className="flex items-start gap-3 flex-1 min-w-0 text-left">
+                  <span className="material-symbols-rounded text-xl mt-0.5" style={{ color: "var(--tertiary)" }}>list_alt</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{tpl.name}</p>
+                    <p className="text-xs mb-1.5" style={{ color: "var(--muted)" }}>{t("exercisesCount", { count: tpl.exercises.length })}</p>
+                    {cats.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {cats.map((c) => {
+                          const color = muscleGroupColor(c);
+                          return (
+                            <span key={c} className="text-[10px] font-bold leading-none px-2 py-1 rounded-[var(--r-pill)]"
+                              style={{ color, background: `color-mix(in srgb, ${color} 15%, transparent)` }}>
+                              {tm(c)}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </button>
+                {onAssign && (
+                  <button onClick={() => onAssign(tpl)}
+                    className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold shrink-0 mt-0.5"
+                    style={{ background: "rgba(110,154,106,.18)", color: "var(--tertiary)" }}>
+                    <span className="material-symbols-rounded text-base">person_add</span> {admin("assignAction")}
+                  </button>
+                )}
+              </div>
             );
           })
         )}

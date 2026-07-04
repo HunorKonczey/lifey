@@ -44,6 +44,8 @@ public class AuthServiceImpl implements AuthService {
         User user = new User();
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.setFirstName(request.firstName().trim());
+        user.setLastName(request.lastName().trim());
         user.setCreatedAt(Instant.now());
         user.setRoles(Set.of(Role.ROLE_USER));
         userRepository.save(user);
@@ -137,6 +139,8 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private UserResponse toUserResponse(User user) {
-        return new UserResponse(user.getId(), user.getEmail(), user.getRoles(), user.getCreatedAt());
+        return new UserResponse(
+                user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(),
+                user.getRoles(), user.getCreatedAt());
     }
 }

@@ -14,6 +14,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -72,25 +76,39 @@ public class TrainerClientDataController {
         return statisticsService.monthlyForUser(clientId, date != null ? date : LocalDate.now());
     }
 
-    @Operation(summary = "Client's daily step count history")
+    @Operation(summary = "Client's daily step count history",
+            description = "Optionally bounded to a date range via `from`/`to` (either or both may be omitted).")
     @GetMapping("/steps")
-    public List<DailyStepCountResponse> steps(@PathVariable Long clientId) {
+    public List<DailyStepCountResponse> steps(
+            @PathVariable Long clientId,
+            @Parameter(description = "Inclusive lower bound (yyyy-MM-dd); omit for no lower bound")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Inclusive upper bound (yyyy-MM-dd); omit for no upper bound")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         requireActiveClient(clientId);
-        return dailyStepCountService.findAllForUser(clientId);
+        return dailyStepCountService.findAllForUser(clientId, from, to);
     }
 
-    @Operation(summary = "Client's weight history")
+    @Operation(summary = "Client's weight history",
+            description = "Optionally bounded to a date range via `from`/`to` (either or both may be omitted).")
     @GetMapping("/weights")
-    public List<WeightResponse> weights(@PathVariable Long clientId) {
+    public List<WeightResponse> weights(
+            @PathVariable Long clientId,
+            @Parameter(description = "Inclusive lower bound (yyyy-MM-dd); omit for no lower bound")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Inclusive upper bound (yyyy-MM-dd); omit for no upper bound")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         requireActiveClient(clientId);
-        return weightService.findAllForUser(clientId);
+        return weightService.findAllForUser(clientId, from, to);
     }
 
-    @Operation(summary = "Client's workout session history, including sets and planned exercises")
+    @Operation(summary = "Client's workout session history, paged (newest first), including sets and planned exercises")
     @GetMapping("/workout-sessions")
-    public List<WorkoutSessionResponse> workoutSessions(@PathVariable Long clientId) {
+    public Page<WorkoutSessionResponse> workoutSessions(
+            @PathVariable Long clientId,
+            @PageableDefault(size = 20, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         requireActiveClient(clientId);
-        return workoutSessionService.findAllForUser(clientId);
+        return workoutSessionService.findPageForUser(clientId, pageable);
     }
 
     private void requireActiveClient(Long clientId) {

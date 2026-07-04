@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -26,9 +27,18 @@ public class WorkoutSessionController {
     private final WorkoutSessionService workoutSessionService;
 
     @Operation(summary = "List all workout sessions (newest first)")
-    @GetMapping(params = "!updatedSince")
+    @GetMapping(params = {"!updatedSince", "!page"})
     public List<WorkoutSessionResponse> findAll() {
         return workoutSessionService.findAll();
+    }
+
+    @Operation(summary = "List workout sessions, paged (newest first)",
+            description = "An additive alternative to the unpaged list, for callers that want to "
+                    + "page through a long history instead of pulling everything at once.")
+    @GetMapping(params = {"!updatedSince", "page"})
+    public Page<WorkoutSessionResponse> findPage(
+            @PageableDefault(size = 20, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return workoutSessionService.findPage(pageable);
     }
 
     @Operation(summary = "Delta-sync feed of workout sessions",

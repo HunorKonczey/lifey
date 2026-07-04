@@ -64,7 +64,7 @@ class AuthServiceImplTest {
 
     @Test
     void register_savesUserWithHashedPasswordAndDefaultRole() {
-        RegisterRequest request = new RegisterRequest("new@example.com", "password123");
+        RegisterRequest request = new RegisterRequest("new@example.com", "password123", "Jane", "Doe");
         when(userRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
@@ -79,16 +79,20 @@ class AuthServiceImplTest {
         User saved = captor.getValue();
         assertThat(saved.getEmail()).isEqualTo("new@example.com");
         assertThat(saved.getPasswordHash()).isEqualTo("hashed-password");
+        assertThat(saved.getFirstName()).isEqualTo("Jane");
+        assertThat(saved.getLastName()).isEqualTo("Doe");
         assertThat(saved.getRoles()).containsExactly(Role.ROLE_USER);
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.email()).isEqualTo("new@example.com");
+        assertThat(response.firstName()).isEqualTo("Jane");
+        assertThat(response.lastName()).isEqualTo("Doe");
         assertThat(response.roles()).containsExactly(Role.ROLE_USER);
         verify(eventPublisher).publishEvent(new UserRegisteredEvent(1L));
     }
 
     @Test
     void register_duplicateEmailThrowsAndDoesNotSave() {
-        RegisterRequest request = new RegisterRequest("taken@example.com", "password123");
+        RegisterRequest request = new RegisterRequest("taken@example.com", "password123", "Jane", "Doe");
         when(userRepository.existsByEmailIgnoreCase("taken@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))

@@ -33,8 +33,13 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     return AuthUser.fromAccessToken(accessToken);
   }
 
-  Future<void> register({required String email, required String password}) async {
-    await _repo.register(email: email, password: password);
+  Future<void> register({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  }) async {
+    await _repo.register(email: email, password: password, firstName: firstName, lastName: lastName);
     await login(email: email, password: password);
   }
 

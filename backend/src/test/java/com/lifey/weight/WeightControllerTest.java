@@ -44,6 +44,19 @@ class WeightControllerTest {
     }
 
     @Test
+    void list_withFromAndTo_usesRangeQuery() throws Exception {
+        when(weightService.findAll(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+                .thenReturn(List.of(new WeightResponse(1L, LocalDate.of(2026, 6, 18), 80.0,
+                        Instant.parse("2026-06-18T08:00:00Z"), null)));
+
+        mockMvc.perform(get("/api/v1/weights").param("from", "2026-06-01").param("to", "2026-06-30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].weight").value(80.0));
+
+        verify(weightService, never()).findAll();
+    }
+
+    @Test
     void delta_returnsPageIncludingTombstones() throws Exception {
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
         WeightResponse tombstoned = new WeightResponse(2L, LocalDate.of(2026, 6, 18), 80.0,

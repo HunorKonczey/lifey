@@ -7,6 +7,7 @@ import com.lifey.settings.UserSettingsRepository;
 import com.lifey.settings.dto.SettingsRequest;
 import com.lifey.settings.dto.SettingsResponse;
 import com.lifey.user.UserRepository;
+import com.lifey.userdetails.dto.SuggestGoalsResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,17 @@ public class SettingsServiceImpl implements SettingsService {
     public SettingsResponse update(SettingsRequest request) {
         UserSettings settings = getOrCreate();
         SettingsMapper.applyRequest(settings, request);
+        return SettingsMapper.toResponse(repository.save(settings));
+    }
+
+    @Override
+    public SettingsResponse applyGoals(SuggestGoalsResponse goals) {
+        UserSettings settings = getOrCreate();
+        settings.setDailyCalorieGoal(goals.calories());
+        settings.setDailyProteinGoal(goals.proteinGrams());
+        settings.setDailyCarbsGoal(goals.carbsGrams());
+        settings.setDailyFatGoal(goals.fatGrams());
+        settings.setDailyWaterGoalLiters(goals.waterLiters());
         return SettingsMapper.toResponse(repository.save(settings));
     }
 

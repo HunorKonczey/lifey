@@ -70,6 +70,28 @@ class WeightServiceImplTest {
     }
 
     @Test
+    void findAll_withRange_delegatesToRangeQuery() {
+        LocalDate from = LocalDate.of(2026, 6, 1);
+        LocalDate to = LocalDate.of(2026, 6, 30);
+        when(repository.findByUserIdAndDeletedAtIsNullAndDateRange(USER_ID, from, to))
+                .thenReturn(List.of(entry(1L, LocalDate.of(2026, 6, 18), 80.0)));
+
+        List<WeightResponse> result = service.findAll(from, to);
+
+        assertThat(result).singleElement().satisfies(r -> assertThat(r.weight()).isEqualTo(80.0));
+    }
+
+    @Test
+    void findAllForUser_passesNullBoundsThrough() {
+        when(repository.findByUserIdAndDeletedAtIsNullAndDateRange(99L, null, null))
+                .thenReturn(List.of(entry(2L, LocalDate.of(2026, 6, 18), 60.0)));
+
+        List<WeightResponse> result = service.findAllForUser(99L, null, null);
+
+        assertThat(result).singleElement().satisfies(r -> assertThat(r.id()).isEqualTo(2L));
+    }
+
+    @Test
     void create_savesWithServerStampedRecordedAt() {
         WeightRequest request = new WeightRequest(LocalDate.of(2026, 6, 18), 80.0);
         ArgumentCaptor<WeightEntry> captor = ArgumentCaptor.forClass(WeightEntry.class);

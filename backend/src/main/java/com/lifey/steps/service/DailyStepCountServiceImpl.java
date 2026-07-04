@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -31,13 +32,21 @@ public class DailyStepCountServiceImpl implements DailyStepCountService {
     @Override
     @Transactional(readOnly = true)
     public List<DailyStepCountResponse> findAll() {
-        return findAllForUser(currentUserProvider.getUserId());
+        return repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDesc(currentUserProvider.getUserId()).stream()
+                .map(DailyStepCountMapper::toResponse)
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<DailyStepCountResponse> findAllForUser(Long userId) {
-        return repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDesc(userId).stream()
+    public List<DailyStepCountResponse> findAll(LocalDate from, LocalDate to) {
+        return findAllForUser(currentUserProvider.getUserId(), from, to);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DailyStepCountResponse> findAllForUser(Long userId, LocalDate from, LocalDate to) {
+        return repository.findByUserIdAndDeletedAtIsNullAndDateRange(userId, from, to).stream()
                 .map(DailyStepCountMapper::toResponse)
                 .toList();
     }

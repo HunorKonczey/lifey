@@ -2,6 +2,7 @@ package com.lifey.userdetails;
 
 import com.lifey.userdetails.dto.SuggestGoalsRequest;
 import com.lifey.userdetails.dto.SuggestGoalsResponse;
+import com.lifey.userdetails.dto.UserDetailsPatchRequest;
 import com.lifey.userdetails.dto.UserDetailsRequest;
 import com.lifey.userdetails.dto.UserDetailsResponse;
 import com.lifey.userdetails.service.UserDetailsService;
@@ -31,6 +32,15 @@ public class UserDetailsController {
     @PutMapping
     public UserDetailsResponse update(@Valid @RequestBody UserDetailsRequest request) {
         return userDetailsService.upsert(request);
+    }
+
+    @Operation(summary = "Partially update the current user's onboarding details",
+            description = "Persists only the selected fields (see UserDetailsPatchRequest.fields) and "
+                    + "recalculates + applies the daily calorie/macro/water goals to settings. "
+                    + "Used by the Settings edit confirmation popup.")
+    @PatchMapping
+    public UserDetailsResponse partialUpdate(@Valid @RequestBody UserDetailsPatchRequest request) {
+        return userDetailsService.partialUpdate(request);
     }
 
     @Operation(summary = "Compute suggested daily calorie/macro/water goals",

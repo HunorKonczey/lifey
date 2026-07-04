@@ -68,6 +68,34 @@ class WorkoutSessionServiceImplTest {
     }
 
     @Test
+    void findPage_delegatesToCurrentUser() {
+        Pageable requested = PageRequest.of(0, 20);
+        WorkoutSession session = new WorkoutSession();
+        session.setId(9L);
+        session.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        when(sessionRepository.findByUserIdAndDeletedAtIsNull(USER_ID, requested))
+                .thenReturn(new PageImpl<>(List.of(session)));
+
+        Page<WorkoutSessionResponse> result = service.findPage(requested);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.id()).isEqualTo(9L));
+    }
+
+    @Test
+    void findPageForUser_scopesToExplicitUser() {
+        Pageable requested = PageRequest.of(0, 20);
+        WorkoutSession session = new WorkoutSession();
+        session.setId(10L);
+        session.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        when(sessionRepository.findByUserIdAndDeletedAtIsNull(99L, requested))
+                .thenReturn(new PageImpl<>(List.of(session)));
+
+        Page<WorkoutSessionResponse> result = service.findPageForUser(99L, requested);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.id()).isEqualTo(10L));
+    }
+
+    @Test
     void create_resolvesPlannedExercisesAndSets() {
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
         when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));

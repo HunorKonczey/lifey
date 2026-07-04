@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -31,13 +32,21 @@ public class WeightServiceImpl implements WeightService {
     @Override
     @Transactional(readOnly = true)
     public List<WeightResponse> findAll() {
-        return findAllForUser(currentUserProvider.getUserId());
+        return repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(currentUserProvider.getUserId()).stream()
+                .map(WeightMapper::toResponse)
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<WeightResponse> findAllForUser(Long userId) {
-        return repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(userId).stream()
+    public List<WeightResponse> findAll(LocalDate from, LocalDate to) {
+        return findAllForUser(currentUserProvider.getUserId(), from, to);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WeightResponse> findAllForUser(Long userId, LocalDate from, LocalDate to) {
+        return repository.findByUserIdAndDeletedAtIsNullAndDateRange(userId, from, to).stream()
                 .map(WeightMapper::toResponse)
                 .toList();
     }

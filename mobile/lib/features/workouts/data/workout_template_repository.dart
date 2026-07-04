@@ -136,6 +136,7 @@ class WorkoutTemplateRepository {
       clientId: row.clientId,
       id: row.serverId,
       name: row.name,
+      originTrainerId: row.originTrainerId,
       exercises: links
           .map((l) => TemplateExercise(
                 exerciseClientId: l.exerciseClientId,

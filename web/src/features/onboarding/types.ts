@@ -22,6 +22,19 @@ export interface UserDetailsRequest {
   targetWeightKg?: number | null;
 }
 
+// Mirrors the backend's UserDetailsField enum (com.lifey.userdetails).
+export type UserDetailsField =
+  | "GENDER"
+  | "BIRTH_DATE"
+  | "HEIGHT_CM"
+  | "ACTIVITY_LEVEL"
+  | "PRIMARY_GOAL"
+  | "TARGET_WEIGHT_KG";
+
+export interface UserDetailsPatchRequest extends UserDetailsRequest {
+  fields: UserDetailsField[];
+}
+
 export interface SuggestGoalsRequest {
   gender: Gender;
   birthDate: string;

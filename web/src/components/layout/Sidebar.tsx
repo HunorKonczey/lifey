@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import { useSessionStore } from "@/features/auth/store";
 import { useUiStore } from "@/lib/hooks/useUiStore";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { avatarApi } from "@/features/settings/api";
+import { queryKeys } from "@/lib/api/queryKeys";
 
 const NAV_ITEMS = [
   { href: "/dashboard", icon: "dashboard", key: "dashboard" },
@@ -24,6 +27,19 @@ export function Sidebar() {
   const { user, logout } = useSessionStore();
   const { drawerOpen, closeDrawer } = useUiStore();
   const [collapsed, setCollapsed] = useState(false);
+
+  const { data: avatarBlob } = useQuery({
+    queryKey: queryKeys.settings.avatar(),
+    queryFn: avatarApi.get,
+    staleTime: 5 * 60 * 1000,
+    enabled: !!user,
+  });
+  const avatarUrl = useMemo(() => (avatarBlob ? URL.createObjectURL(avatarBlob) : null), [avatarBlob]);
+  useEffect(() => {
+    return () => {
+      if (avatarUrl) URL.revokeObjectURL(avatarUrl);
+    };
+  }, [avatarUrl]);
 
   // On mobile the rail-collapse is irrelevant — drawer is always full width.
   const width = collapsed ? 74 : 248;
@@ -132,19 +148,55 @@ export function Sidebar() {
             {!collapsed && <span className="text-sm font-semibold">{t("settings")}</span>}
           </Link>
 
+          {user?.roles.includes("ROLE_TRAINER") && (
+            <Link
+              href="/admin"
+              onClick={closeDrawer}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--r-card)] transition-colors"
+              style={{ color: "var(--tertiary)" }}
+              title={collapsed ? t("trainerView") : undefined}
+            >
+              <span className="material-symbols-rounded text-xl shrink-0">fitness_center</span>
+              {!collapsed && <span className="text-sm font-semibold">{t("trainerView")}</span>}
+            </Link>
+          )}
+
+          {user?.roles.includes("ROLE_SUPER_ADMIN") && (
+            <Link
+              href="/superadmin/users"
+              onClick={closeDrawer}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--r-card)] transition-colors"
+              style={{ color: "var(--on-surface-variant)" }}
+              title={collapsed ? t("systemView") : undefined}
+            >
+              <span className="material-symbols-rounded text-xl shrink-0">admin_panel_settings</span>
+              {!collapsed && <span className="text-sm font-semibold">{t("systemView")}</span>}
+            </Link>
+          )}
+
           {!collapsed && user && (
             <div
               className="mt-2 flex items-center gap-3 px-3 py-2 rounded-[var(--r-card)]"
               style={{ background: "var(--surface-container)" }}
             >
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden"
                 style={{ background: "var(--primary)", color: "#1E1F18" }}
               >
-                {user.email.charAt(0).toUpperCase()}
+                {avatarUrl ? (
+                  // Blob object URLs aren't compatible with next/image's optimizer.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  user.email.charAt(0).toUpperCase()
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{user.email.split("@")[0]}</p>
+                <p className="text-sm font-semibold truncate">
+                  {user.firstName && user.lastName
+                    ? `${user.firstName} ${user.lastName}`
+                    : user.email.split("@")[0]}
+                </p>
                 <p className="text-xs truncate" style={{ color: "var(--muted)" }}>{user.email}</p>
               </div>
               <button

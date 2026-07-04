@@ -21,6 +21,8 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
@@ -29,6 +31,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
@@ -47,6 +51,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       await ref.read(authControllerProvider.notifier).register(
             email: _emailController.text.trim(),
             password: _passwordController.text,
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
           );
       // A fresh registration never has a user_details row yet — go straight
       // to onboarding instead of the router's default post-login /dashboard.
@@ -143,10 +149,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           _AuthCard(
                             children: [
                               _AuthField(
+                                controller: _firstNameController,
+                                label: l10n.firstNameLabel,
+                                autofocus: true,
+                                validator: (value) {
+                                  final text = value?.trim() ?? '';
+                                  if (text.isEmpty) return l10n.requiredFieldError;
+                                  return null;
+                                },
+                              ),
+                              _AuthField(
+                                controller: _lastNameController,
+                                label: l10n.lastNameLabel,
+                                validator: (value) {
+                                  final text = value?.trim() ?? '';
+                                  if (text.isEmpty) return l10n.requiredFieldError;
+                                  return null;
+                                },
+                              ),
+                              _AuthField(
                                 controller: _emailController,
                                 label: l10n.emailLabel,
                                 keyboardType: TextInputType.emailAddress,
-                                autofocus: true,
                                 validator: (value) {
                                   final text = value?.trim() ?? '';
                                   if (text.isEmpty) return l10n.requiredFieldError;

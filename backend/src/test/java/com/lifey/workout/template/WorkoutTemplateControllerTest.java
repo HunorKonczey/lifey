@@ -36,7 +36,7 @@ class WorkoutTemplateControllerTest {
         when(workoutTemplateService.create(any()))
                 .thenReturn(new WorkoutTemplateResponse(9L, "Push day",
                         List.of(new TemplateExerciseEntry(1L, 3), new TemplateExerciseEntry(4L, null)),
-                        Instant.parse("2026-06-18T08:00:00Z"), null));
+                        Instant.parse("2026-06-18T08:00:00Z"), null, null));
 
         mockMvc.perform(post("/api/v1/workout-templates").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Push day\",\"exercises\":[{\"exerciseId\":1,\"targetSets\":3},{\"exerciseId\":4}]}"))
@@ -80,7 +80,7 @@ class WorkoutTemplateControllerTest {
         when(workoutTemplateService.update(eq(9L), any()))
                 .thenReturn(new WorkoutTemplateResponse(9L, "Shoulders",
                         List.of(new TemplateExerciseEntry(4L, null)),
-                        Instant.parse("2026-06-18T08:00:00Z"), null));
+                        Instant.parse("2026-06-18T08:00:00Z"), null, null));
 
         mockMvc.perform(put("/api/v1/workout-templates/9").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Shoulders\",\"exercises\":[{\"exerciseId\":4}]}"))
@@ -93,7 +93,7 @@ class WorkoutTemplateControllerTest {
     void delta_returnsPageIncludingTombstones() throws Exception {
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
         WorkoutTemplateResponse tombstoned = new WorkoutTemplateResponse(2L, "Deleted template", List.of(),
-                Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"));
+                Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"), null);
         when(workoutTemplateService.findDelta(eq(since), any())).thenReturn(new PageImpl<>(List.of(tombstoned)));
 
         mockMvc.perform(get("/api/v1/workout-templates").param("updatedSince", since.toString()))

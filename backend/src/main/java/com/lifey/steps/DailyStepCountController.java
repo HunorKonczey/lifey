@@ -11,10 +11,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Tag(name = "Step Tracking", description = "Persisted daily step counts")
@@ -25,10 +27,16 @@ public class DailyStepCountController {
 
     private final DailyStepCountService stepCountService;
 
-    @Operation(summary = "List all daily step counts (newest first)")
+    @Operation(summary = "List daily step counts (newest first)",
+            description = "Optionally bounded to a date range via `from`/`to` (either or both may "
+                    + "be omitted); omit both for the full history.")
     @GetMapping(params = "!updatedSince")
-    public List<DailyStepCountResponse> findAll() {
-        return stepCountService.findAll();
+    public List<DailyStepCountResponse> findAll(
+            @Parameter(description = "Inclusive lower bound (yyyy-MM-dd); omit for no lower bound")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Inclusive upper bound (yyyy-MM-dd); omit for no upper bound")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return from == null && to == null ? stepCountService.findAll() : stepCountService.findAll(from, to);
     }
 
     @Operation(summary = "Delta-sync feed of daily step counts",

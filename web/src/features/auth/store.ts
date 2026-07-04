@@ -26,6 +26,8 @@ function userFromAccessToken(accessToken: string): SessionUser | null {
   return {
     id: Number(claims.sub),
     email: claims.email,
+    firstName: claims.firstName,
+    lastName: claims.lastName,
     roles: claims.roles ?? [],
   };
 }

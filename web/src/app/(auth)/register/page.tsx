@@ -28,7 +28,12 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormValues) => {
     try {
       // Register returns no tokens — log in immediately afterwards.
-      await authApi.register({ email: data.email, password: data.password });
+      await authApi.register({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
       const res = await authApi.login({ email: data.email, password: data.password });
       applyAccessToken(res.accessToken);
       router.push("/onboarding");
@@ -62,6 +67,8 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         {(
           [
+            { field: "firstName", label: t("firstName"), type: "text", icon: "person", placeholder: "Jane", autoComplete: "given-name" },
+            { field: "lastName", label: t("lastName"), type: "text", icon: "person", placeholder: "Doe", autoComplete: "family-name" },
             { field: "email", label: t("email"), type: "email", icon: "mail", placeholder: "you@example.com", autoComplete: "email" },
             { field: "password", label: t("password"), type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },
             { field: "confirmPassword", label: t("confirmPassword"), type: "password", icon: "lock", placeholder: "••••••••", autoComplete: "new-password" },

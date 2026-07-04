@@ -45,6 +45,8 @@ public class JwtService {
         return Jwts.builder()
                 .subject(user.getId().toString())
                 .claim("email", user.getEmail())
+                .claim("firstName", user.getFirstName())
+                .claim("lastName", user.getLastName())
                 .claim("roles", user.getRoles().stream().map(Enum::name).toList())
                 .issuer(properties.issuer())
                 .issuedAt(Date.from(now))

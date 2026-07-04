@@ -61,7 +61,7 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold">{t("email")}</label>
-          <div className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
+          <div className="flex items-center gap-2 px-4 rounded-[var(--r-input)] h-11"
             style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
             data-ring-frame>
             <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>mail</span>

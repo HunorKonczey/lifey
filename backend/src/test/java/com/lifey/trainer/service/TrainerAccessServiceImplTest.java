@@ -2,6 +2,7 @@ package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.trainer.ContentAssignmentRepository;
 import com.lifey.trainer.TrainerClient;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
@@ -9,6 +10,8 @@ import com.lifey.trainer.dto.MyTrainerResponse;
 import com.lifey.trainer.dto.TrainerClientResponse;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.user.User;
+import com.lifey.weight.WeightEntryRepository;
+import com.lifey.workout.session.WorkoutSessionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,6 +24,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +36,15 @@ class TrainerAccessServiceImplTest {
 
     @Mock
     TrainerClientRepository trainerClientRepository;
+
+    @Mock
+    ContentAssignmentRepository contentAssignmentRepository;
+
+    @Mock
+    WeightEntryRepository weightEntryRepository;
+
+    @Mock
+    WorkoutSessionRepository workoutSessionRepository;
 
     @Mock
     CurrentUserProvider currentUserProvider;
@@ -67,12 +81,20 @@ class TrainerAccessServiceImplTest {
         tc.setRespondedAt(Instant.parse("2026-06-01T00:00:00Z"));
         when(trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(TRAINER_ID, TrainerClientStatus.ACTIVE))
                 .thenReturn(List.of(tc));
+        when(weightEntryRepository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(eq(CLIENT_ID), any()))
+                .thenReturn(List.of());
+        when(contentAssignmentRepository.countByTrainerIdAndClientId(TRAINER_ID, CLIENT_ID)).thenReturn(2L);
+        when(workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(eq(CLIENT_ID), any()))
+                .thenReturn(8L);
 
         List<TrainerClientResponse> result = service.findActiveClientsForTrainer();
 
         assertThat(result).singleElement().satisfies(r -> {
             assertThat(r.clientId()).isEqualTo(CLIENT_ID);
             assertThat(r.clientEmail()).isEqualTo("client@example.com");
+            assertThat(r.weightTrend()).isEmpty();
+            assertThat(r.assignedPlanCount()).isEqualTo(2);
+            assertThat(r.workoutsPerWeek()).isEqualTo(2);
         });
     }
 

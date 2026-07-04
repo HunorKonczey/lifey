@@ -10,4 +10,7 @@ public interface ContentAssignmentRepository extends JpaRepository<ContentAssign
 
     boolean existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
             Long trainerId, Long clientId, ContentType contentType, Long sourceId);
+
+    /** Backs the client-card "assigned plans" count (docs/personal_trainer/06-design.md §3.2). */
+    long countByTrainerIdAndClientId(Long trainerId, Long clientId);
 }

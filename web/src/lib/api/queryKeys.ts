@@ -59,6 +59,27 @@ export const queryKeys = {
     all: () => ["steps"] as const,
     byDate: (date: string) => ["steps", "date", date] as const,
   },
+  trainerClients: {
+    all: () => ["trainer-clients"] as const,
+  },
+  trainerInvites: {
+    all: () => ["trainer-invites"] as const,
+  },
+  trainerAssignments: {
+    forClient: (clientId: number) => ["trainer-assignments", "client", clientId] as const,
+  },
+  trainerClientData: {
+    statistics: (clientId: number, period: "daily" | "weekly" | "monthly") =>
+      ["trainer-client-data", clientId, "statistics", period] as const,
+    steps: (clientId: number) => ["trainer-client-data", clientId, "steps"] as const,
+    weights: (clientId: number) => ["trainer-client-data", clientId, "weights"] as const,
+    sessions: (clientId: number, page: number) => ["trainer-client-data", clientId, "sessions", page] as const,
+  },
+  superAdminUsers: {
+    page: (params: { page: number; size?: number; search?: string }) =>
+      ["superadmin-users", "page", params] as const,
+    roleAudit: (userId: number) => ["superadmin-users", userId, "role-audit"] as const,
+  },
 } as const;
 
 /**

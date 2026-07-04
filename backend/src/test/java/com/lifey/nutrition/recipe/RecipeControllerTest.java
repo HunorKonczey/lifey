@@ -41,7 +41,7 @@ class RecipeControllerTest {
     void create_returnsCreatedWithIngredients() throws Exception {
         when(recipeService.create(any())).thenReturn(new RecipeResponse(7L, "Chicken & rice", "prep", true, 2,
                 List.of(new RecipeIngredientResponse(1L, "Chicken", 200.0, 330.0, 62.0)),
-                Instant.parse("2026-06-18T08:00:00Z"), null));
+                Instant.parse("2026-06-18T08:00:00Z"), null, null));
 
         mockMvc.perform(post("/api/v1/recipes").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Chicken & rice\",\"description\":\"prep\",\"favorite\":true,"
@@ -79,7 +79,7 @@ class RecipeControllerTest {
     void findPage_withSearch_passesSearchThrough() throws Exception {
         Pageable pageable = PageRequest.of(0, 200, org.springframework.data.domain.Sort.by("name", "id"));
         Page<RecipeResponse> page = new PageImpl<>(
-                List.of(new RecipeResponse(2L, "Banana bread", null, false, 1, List.of(), Instant.now(), null)),
+                List.of(new RecipeResponse(2L, "Banana bread", null, false, 1, List.of(), Instant.now(), null, null)),
                 pageable, 1);
         when(recipeService.findPage(eq(pageable), eq("banana"))).thenReturn(page);
 
@@ -92,7 +92,7 @@ class RecipeControllerTest {
     void findPage_noSearch_passesNullThrough() throws Exception {
         Pageable pageable = PageRequest.of(0, 200, org.springframework.data.domain.Sort.by("name", "id"));
         Page<RecipeResponse> page = new PageImpl<>(
-                List.of(new RecipeResponse(1L, "Apple pie", null, false, 1, List.of(), Instant.now(), null)),
+                List.of(new RecipeResponse(1L, "Apple pie", null, false, 1, List.of(), Instant.now(), null, null)),
                 pageable, 1);
         when(recipeService.findPage(eq(pageable), isNull())).thenReturn(page);
 
@@ -105,7 +105,7 @@ class RecipeControllerTest {
     void delta_returnsPageIncludingTombstones() throws Exception {
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
         RecipeResponse tombstoned = new RecipeResponse(2L, "Deleted recipe", null, false, 1, List.of(),
-                Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"));
+                Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"), null);
         when(recipeService.findDelta(eq(since), any())).thenReturn(new PageImpl<>(List.of(tombstoned)));
 
         mockMvc.perform(get("/api/v1/recipes").param("updatedSince", since.toString()))

@@ -106,6 +106,45 @@ class UserDetailsControllerTest {
     }
 
     @Test
+    void partialUpdate_emptyFieldsReturns400() throws Exception {
+        mockMvc.perform(patch("/api/v1/user-details").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fields": [],
+                                  "gender": "MALE",
+                                  "birthDate": "1990-01-01",
+                                  "heightCm": 180.0,
+                                  "activityLevel": "MODERATE",
+                                  "primaryGoal": "MAINTAIN"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verify(userDetailsService, never()).partialUpdate(any());
+    }
+
+    @Test
+    void partialUpdate_validRequestReturnsOk() throws Exception {
+        when(userDetailsService.partialUpdate(any())).thenReturn(new UserDetailsResponse(
+                Gender.MALE, LocalDate.of(1990, 1, 1), 182.0, ActivityLevel.MODERATE, PrimaryGoal.MAINTAIN,
+                null, Instant.parse("2026-06-18T08:00:00Z"), Instant.parse("2026-06-18T08:00:00Z")));
+
+        mockMvc.perform(patch("/api/v1/user-details").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fields": ["HEIGHT_CM"],
+                                  "gender": "MALE",
+                                  "birthDate": "1990-01-01",
+                                  "heightCm": 182.0,
+                                  "activityLevel": "MODERATE",
+                                  "primaryGoal": "MAINTAIN"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.heightCm").value(182.0));
+    }
+
+    @Test
     void suggestGoals_returnsComputedValues() throws Exception {
         when(userDetailsService.suggestGoals(any())).thenReturn(
                 new SuggestGoalsResponse(1780, 2759, 2350, 176, 265, 65, 3.1));

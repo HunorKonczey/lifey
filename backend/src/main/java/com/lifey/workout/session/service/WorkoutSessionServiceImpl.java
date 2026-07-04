@@ -38,15 +38,22 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     @Override
     @Transactional(readOnly = true)
     public List<WorkoutSessionResponse> findAll() {
-        return findAllForUser(currentUserProvider.getUserId());
+        return sessionRepository.findAllByUserIdAndDeletedAtIsNullOrderByStartedAtDesc(currentUserProvider.getUserId()).stream()
+                .map(WorkoutSessionMapper::toResponse)
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<WorkoutSessionResponse> findAllForUser(Long userId) {
-        return sessionRepository.findAllByUserIdAndDeletedAtIsNullOrderByStartedAtDesc(userId).stream()
-                .map(WorkoutSessionMapper::toResponse)
-                .toList();
+    public Page<WorkoutSessionResponse> findPage(Pageable pageable) {
+        return findPageForUser(currentUserProvider.getUserId(), pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<WorkoutSessionResponse> findPageForUser(Long userId, Pageable pageable) {
+        return sessionRepository.findByUserIdAndDeletedAtIsNull(userId, pageable)
+                .map(WorkoutSessionMapper::toResponse);
     }
 
     @Override

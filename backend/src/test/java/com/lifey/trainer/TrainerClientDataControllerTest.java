@@ -15,6 +15,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -104,7 +107,7 @@ class TrainerClientDataControllerTest {
 
     @Test
     void steps_returnsClientsStepHistory() throws Exception {
-        when(dailyStepCountService.findAllForUser(CLIENT_ID)).thenReturn(List.of(
+        when(dailyStepCountService.findAllForUser(eq(CLIENT_ID), any(), any())).thenReturn(List.of(
                 new DailyStepCountResponse(1L, LocalDate.of(2026, 6, 1), 8000, Instant.now(), null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/steps", CLIENT_ID))
@@ -113,8 +116,18 @@ class TrainerClientDataControllerTest {
     }
 
     @Test
+    void steps_passesFromAndToThrough() throws Exception {
+        when(dailyStepCountService.findAllForUser(CLIENT_ID, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/steps", CLIENT_ID)
+                        .param("from", "2026-06-01").param("to", "2026-06-30"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void weights_returnsClientsWeightHistory() throws Exception {
-        when(weightService.findAllForUser(CLIENT_ID)).thenReturn(List.of(
+        when(weightService.findAllForUser(eq(CLIENT_ID), any(), any())).thenReturn(List.of(
                 new WeightResponse(1L, LocalDate.of(2026, 6, 1), 80.5, Instant.now(), null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/weights", CLIENT_ID))
@@ -123,15 +136,26 @@ class TrainerClientDataControllerTest {
     }
 
     @Test
+    void weights_passesFromAndToThrough() throws Exception {
+        when(weightService.findAllForUser(CLIENT_ID, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/weights", CLIENT_ID)
+                        .param("from", "2026-06-01").param("to", "2026-06-30"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void workoutSessions_returnsClientsSessionHistory() throws Exception {
-        when(workoutSessionService.findAllForUser(CLIENT_ID)).thenReturn(List.of(
-                new WorkoutSessionResponse(1L, Instant.parse("2026-06-01T08:00:00Z"),
-                        Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
-                        null, null, null, null, null, Instant.now(), null)));
+        WorkoutSessionResponse session = new WorkoutSessionResponse(1L, Instant.parse("2026-06-01T08:00:00Z"),
+                Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
+                null, null, null, null, null, Instant.now(), null);
+        Page<WorkoutSessionResponse> page = new PageImpl<>(List.of(session), PageRequest.of(0, 20), 1);
+        when(workoutSessionService.findPageForUser(eq(CLIENT_ID), any())).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/workout-sessions", CLIENT_ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1));
+                .andExpect(jsonPath("$.content[0].id").value(1));
     }
 
     @Test
