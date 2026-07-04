@@ -10,6 +10,7 @@ import { recipeApi } from "@/features/nutrition/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { KpiCard } from "@/components/data/KpiCard";
 import { Skeleton } from "@/components/status/Skeleton";
+import { ErrorState } from "@/components/status/ErrorState";
 import type { ContentType } from "../types";
 
 const CONTENT_ICON: Record<ContentType, string> = { TEMPLATE: "fitness_center", RECIPE: "restaurant" };
@@ -61,6 +62,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
     : 0;
 
   const isLoading = statsQ.isLoading || weightsQ.isLoading || stepsQ.isLoading || assignmentsQ.isLoading || sessionsQ.isLoading;
+  const isError = statsQ.isError || weightsQ.isError || stepsQ.isError || assignmentsQ.isError || sessionsQ.isError;
 
   if (isLoading) {
     return (
@@ -70,6 +72,21 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
         </div>
         <Skeleton variant="card" className="h-72" />
       </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <ErrorState
+        inline
+        onRetry={() => {
+          statsQ.refetch();
+          weightsQ.refetch();
+          stepsQ.refetch();
+          assignmentsQ.refetch();
+          sessionsQ.refetch();
+        }}
+      />
     );
   }
 

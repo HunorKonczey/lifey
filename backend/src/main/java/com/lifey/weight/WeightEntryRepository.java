@@ -23,12 +23,18 @@ public interface WeightEntryRepository extends JpaRepository<WeightEntry, Long> 
     List<WeightEntry> findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(Long userId, Pageable pageable);
 
     /**
-     * {@code from}/{@code to} are both optional (either or both may be null) —
-     * backs the `?from&to` query params on `GET /weights` and the trainer
-     * client-weights endpoint alike (docs/personal_trainer/03-backend-terv.md).
+     * {@code from}/{@code to} bound the range — callers with an open-ended
+     * bound pass {@link com.lifey.common.util.DateRanges#DISTANT_PAST}/{@code
+     * _FUTURE} rather than null (see WeightServiceImpl#findAllForUser). Do not
+     * change this back to a {@code (:from is null or ...)} form: Postgres can't
+     * infer a type for a parameter used only in an {@code is null} check
+     * ("could not determine data type of parameter $n"), and it only surfaces
+     * once exactly one of from/to is non-null in a caller's actual query —
+     * passing both null lets Hibernate simplify the predicate away and never
+     * hits the bug, which is how this shipped unnoticed.
      */
     @Query("select w from WeightEntry w where w.user.id = :userId and w.deletedAt is null "
-            + "and (:from is null or w.date >= :from) and (:to is null or w.date <= :to) "
+            + "and w.date >= :from and w.date <= :to "
             + "order by w.date desc, w.recordedAt desc")
     List<WeightEntry> findByUserIdAndDeletedAtIsNullAndDateRange(
             @Param("userId") Long userId, @Param("from") LocalDate from, @Param("to") LocalDate to);

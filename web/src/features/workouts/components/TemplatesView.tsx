@@ -94,6 +94,7 @@ export function TemplatesView({ onAssign }: TemplatesViewProps = {}) {
             const cats = templateCategories(tpl, exercisesById);
             return (
               <div key={tpl.id}
+                data-testid="template-row"
                 className="flex items-start gap-3 px-4 py-3 rounded-[var(--r-card)] transition-colors"
                 style={{
                   background: "var(--surface)",
@@ -121,6 +122,7 @@ export function TemplatesView({ onAssign }: TemplatesViewProps = {}) {
                 </button>
                 {onAssign && (
                   <button onClick={() => onAssign(tpl)}
+                    data-testid="assign-template"
                     className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold shrink-0 mt-0.5"
                     style={{ background: "rgba(110,154,106,.18)", color: "var(--tertiary)" }}>
                     <span className="material-symbols-rounded text-base">person_add</span> {admin("assignAction")}

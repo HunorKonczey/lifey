@@ -2,6 +2,7 @@ package com.lifey.weight.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.common.util.DateRanges;
 import com.lifey.user.UserRepository;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
@@ -46,7 +47,9 @@ public class WeightServiceImpl implements WeightService {
     @Override
     @Transactional(readOnly = true)
     public List<WeightResponse> findAllForUser(Long userId, LocalDate from, LocalDate to) {
-        return repository.findByUserIdAndDeletedAtIsNullAndDateRange(userId, from, to).stream()
+        LocalDate effectiveFrom = from != null ? from : DateRanges.DISTANT_PAST;
+        LocalDate effectiveTo = to != null ? to : DateRanges.DISTANT_FUTURE;
+        return repository.findByUserIdAndDeletedAtIsNullAndDateRange(userId, effectiveFrom, effectiveTo).stream()
                 .map(WeightMapper::toResponse)
                 .toList();
     }

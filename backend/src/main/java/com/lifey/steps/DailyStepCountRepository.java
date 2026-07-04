@@ -16,12 +16,18 @@ public interface DailyStepCountRepository extends JpaRepository<DailyStepCount, 
     List<DailyStepCount> findAllByUserIdAndDeletedAtIsNullOrderByDateDesc(Long userId);
 
     /**
-     * {@code from}/{@code to} are both optional (either or both may be null) —
-     * backs the `?from&to` query params on `GET /steps` and the trainer
-     * client-steps endpoint alike (docs/personal_trainer/03-backend-terv.md).
+     * {@code from}/{@code to} bound the range — callers with an open-ended
+     * bound pass {@link com.lifey.common.util.DateRanges#DISTANT_PAST}/{@code
+     * _FUTURE} rather than null (see DailyStepCountServiceImpl#findAllForUser).
+     * Do not change this back to a {@code (:from is null or ...)} form:
+     * Postgres can't infer a type for a parameter used only in an {@code is
+     * null} check ("could not determine data type of parameter $n"), and it
+     * only surfaces once exactly one of from/to is non-null in a caller's
+     * actual query — passing both null lets Hibernate simplify the predicate
+     * away and never hits the bug, which is how this shipped unnoticed.
      */
     @Query("select d from DailyStepCount d where d.user.id = :userId and d.deletedAt is null "
-            + "and (:from is null or d.date >= :from) and (:to is null or d.date <= :to) "
+            + "and d.date >= :from and d.date <= :to "
             + "order by d.date desc")
     List<DailyStepCount> findByUserIdAndDeletedAtIsNullAndDateRange(
             @Param("userId") Long userId, @Param("from") LocalDate from, @Param("to") LocalDate to);

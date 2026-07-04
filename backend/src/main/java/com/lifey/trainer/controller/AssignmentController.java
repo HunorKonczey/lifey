@@ -1,4 +1,4 @@
-package com.lifey.trainer;
+package com.lifey.trainer.controller;
 
 import com.lifey.trainer.dto.AssignmentListItemResponse;
 import com.lifey.trainer.dto.AssignmentRequest;

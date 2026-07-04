@@ -2,6 +2,7 @@ package com.lifey.steps.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.common.util.DateRanges;
 import com.lifey.steps.DailyStepCount;
 import com.lifey.steps.DailyStepCountRepository;
 import com.lifey.steps.dto.DailyStepCountRequest;
@@ -81,8 +82,12 @@ class DailyStepCountServiceImplTest {
     }
 
     @Test
-    void findAllForUser_passesNullBoundsThrough() {
-        when(repository.findByUserIdAndDeletedAtIsNullAndDateRange(99L, null, null))
+    void findAllForUser_resolvesNullBoundsToSentinelDates() {
+        // Repository query uses a plain >=/<= comparison (no "is null or ..."
+        // branch — see DailyStepCountRepository's Javadoc for why), so a null
+        // bound must be resolved to a sentinel before reaching it, not passed
+        // through as null.
+        when(repository.findByUserIdAndDeletedAtIsNullAndDateRange(99L, DateRanges.DISTANT_PAST, DateRanges.DISTANT_FUTURE))
                 .thenReturn(List.of(entry(2L, LocalDate.of(2026, 6, 18), 500)));
 
         List<DailyStepCountResponse> result = service.findAllForUser(99L, null, null);

@@ -1,4 +1,4 @@
-package com.lifey.trainer;
+package com.lifey.trainer.controller;
 
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.RespondToInviteRequest;

@@ -5,6 +5,7 @@ import com.lifey.statistics.dto.StatisticsResponse;
 import com.lifey.statistics.service.StatisticsService;
 import com.lifey.steps.dto.DailyStepCountResponse;
 import com.lifey.steps.service.DailyStepCountService;
+import com.lifey.trainer.controller.TrainerClientDataController;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.trainer.service.TrainerAccessService;
 import com.lifey.weight.dto.WeightResponse;

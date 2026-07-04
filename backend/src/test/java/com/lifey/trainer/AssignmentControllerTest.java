@@ -1,6 +1,7 @@
 package com.lifey.trainer;
 
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.trainer.controller.AssignmentController;
 import com.lifey.trainer.dto.AssignmentListItemResponse;
 import com.lifey.trainer.dto.AssignmentResponse;
 import com.lifey.trainer.exception.NotYourClientException;

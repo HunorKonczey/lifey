@@ -151,14 +151,14 @@ téma- és nyelvváltás megy.
 
 ---
 
-## Sprint 10 — Személyi edző (F10, később — vázlat)
+## Sprint 10 — Személyi edző (F10) — implementálva
 
-> Nem az első kör. Az auth szerepkör-alapú, így ez **ráépítés**. Részletek: `02` F10, `01` jövőbeli rész.
+> Ez a vázlat a `docs/personal_trainer/` mappa részletes terveivel (01–07) valósult meg, nem szó szerint az alábbi 4 sorral — azok ott vannak kifejtve (backend csomagstruktúra, végpontok, admin UI képernyők, ütemterv). Ez a szakasz csak a kereszthivatkozás miatt marad itt.
 
-- [ ] `[BE]` `ROLE_TRAINER` (+opcionálisan `ROLE_CLIENT`); edző–kliens kapcsolat tábla (Flyway).
-- [ ] `[BE]` Meghívó/elfogadás flow; jogosultsági réteg (edző csak a hozzárendelt kliensei adatát, read).
-- [ ] `[BE]` Terv-hozzárendelés végpontok (sablon/étrend klienshez).
-- [ ] `[FE]` RBAC útvonal-védelem + szerepkör-váltó; edző dashboard; kliens-részlet (read); meghívók UI.
+- [x] `[BE]` `ROLE_TRAINER` + `ROLE_SUPER_ADMIN`; `trainer_clients` (V41) + `role_audit_log` (V43) táblák (Flyway).
+- [x] `[BE]` Meghívó/elfogadás flow (`TrainerInviteService`); jogosultsági réteg (`TrainerAccessService.requireActiveClient`, read-only).
+- [x] `[BE]` Terv-hozzárendelés végpontok (`ContentAssignmentService`, deep copy + dedupe, V42).
+- [x] `[FE]` RBAC útvonal-védelem (`(admin)`/`(superadmin)` route group-ok) + edző dashboard (kliens-lista, sparkline + metrikák) + kliens-részlet (read-only tabok) + meghívók UI.
 
 ---
 

@@ -33,11 +33,13 @@ class StarterCatalogListenerTest {
 
     @BeforeEach
     void setUp() {
-        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+        listener.enabled = true;
     }
 
     @Test
     void seedsTheStarterExerciseCatalogForTheNewUser() {
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+
         listener.onUserRegistered(new UserRegisteredEvent(USER_ID));
 
         ArgumentCaptor<Exercise> captor = ArgumentCaptor.forClass(Exercise.class);
@@ -46,6 +48,15 @@ class StarterCatalogListenerTest {
                 "Bench Press", "Squat", "Deadlift", "Overhead Press",
                 "Barbell Row", "Pull Up", "Bicep Curl", "Plank");
         assertThat(captor.getAllValues()).allSatisfy(e -> assertThat(e.getUser()).isNotNull());
+    }
+
+    @Test
+    void doesNothingWhenDisabled() {
+        listener.enabled = false;
+
+        listener.onUserRegistered(new UserRegisteredEvent(USER_ID));
+
+        verify(exerciseRepository, never()).save(any());
     }
 
     @Test

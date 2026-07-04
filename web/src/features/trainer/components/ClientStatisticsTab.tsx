@@ -10,6 +10,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { KpiCard } from "@/components/data/KpiCard";
 import { TimeSeriesChart } from "@/components/data/TimeSeriesChartLazy";
 import { Skeleton } from "@/components/status/Skeleton";
+import { ErrorState } from "@/components/status/ErrorState";
 
 type Period = "daily" | "weekly" | "monthly";
 
@@ -48,6 +49,10 @@ export function ClientStatisticsTab({ clientId }: ClientStatisticsTabProps) {
         <Skeleton variant="chart" />
       </div>
     );
+  }
+
+  if (statsQ.isError || weightsQ.isError) {
+    return <ErrorState inline onRetry={() => { statsQ.refetch(); weightsQ.refetch(); }} />;
   }
 
   const sortedWeights = (weightsQ.data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));

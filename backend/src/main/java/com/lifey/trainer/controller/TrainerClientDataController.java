@@ -1,4 +1,4 @@
-package com.lifey.trainer;
+package com.lifey.trainer.controller;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.statistics.dto.StatisticsResponse;

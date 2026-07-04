@@ -1,5 +1,6 @@
 package com.lifey.trainer;
 
+import com.lifey.trainer.controller.MyTrainersController;
 import com.lifey.trainer.dto.MyTrainerResponse;
 import com.lifey.trainer.service.TrainerAccessService;
 import org.junit.jupiter.api.Test;

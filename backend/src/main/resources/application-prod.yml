@@ -12,3 +12,5 @@ springdoc:
 lifey:
   mail:
     enabled: true
+  starter-catalog:
+    enabled: false

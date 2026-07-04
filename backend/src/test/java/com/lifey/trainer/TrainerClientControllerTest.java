@@ -1,5 +1,6 @@
 package com.lifey.trainer;
 
+import com.lifey.trainer.controller.TrainerClientController;
 import com.lifey.trainer.dto.TrainerClientResponse;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.trainer.service.TrainerAccessService;

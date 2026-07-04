@@ -20,7 +20,12 @@ export function ClientCard({ client, onRevoke, revoking }: ClientCardProps) {
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
 
   return (
-    <div className="relative rounded-[var(--r-lg)] p-5" style={{ background: "var(--surface-container)" }}>
+    <div
+      className="relative rounded-[var(--r-lg)] p-5"
+      style={{ background: "var(--surface-container)" }}
+      data-testid="client-card"
+      data-client-email={client.clientEmail}
+    >
       <div className="flex items-center gap-3">
         <ClientAvatar clientId={client.clientId} email={client.clientEmail} />
         <div className="flex-1 min-w-0">

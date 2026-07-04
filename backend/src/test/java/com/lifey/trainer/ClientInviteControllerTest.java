@@ -1,5 +1,6 @@
 package com.lifey.trainer;
 
+import com.lifey.trainer.controller.ClientInviteController;
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.RespondToInviteRequest;
 import com.lifey.trainer.service.TrainerInviteService;

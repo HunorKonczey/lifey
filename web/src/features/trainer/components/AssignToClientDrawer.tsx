@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
+import { ErrorState } from "@/components/status/ErrorState";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import type { ContentType } from "../types";
 
@@ -61,7 +62,7 @@ export function AssignToClientDrawer({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex justify-end" data-testid="assign-to-client-drawer">
       <div className="absolute inset-0" style={{ background: "rgba(8,9,6,.45)" }} onClick={onClose} />
       <div
         className="relative w-full max-w-[420px] h-full flex flex-col gap-4 p-5.5 overflow-y-auto"
@@ -88,7 +89,9 @@ export function AssignToClientDrawer({
         </div>
 
         <div className="flex flex-col gap-1.5 max-h-[240px] overflow-y-auto">
-          {filteredClients.length === 0 ? (
+          {clientsQ.isError ? (
+            <ErrorState inline onRetry={() => clientsQ.refetch()} />
+          ) : filteredClients.length === 0 ? (
             <p className="text-xs text-center py-4" style={{ color: "var(--muted)" }}>{t("noClientsFound")}</p>
           ) : (
             filteredClients.map((c) => {
@@ -96,6 +99,7 @@ export function AssignToClientDrawer({
               return (
                 <button
                   key={c.clientId}
+                  data-testid="assign-drawer-client-row"
                   onClick={() => setSelectedClientId(c.clientId)}
                   className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors text-left"
                   style={{
@@ -158,6 +162,7 @@ export function AssignToClientDrawer({
           <button
             onClick={() => assignMutation.mutate()}
             disabled={selectedClientId == null || assignMutation.isPending}
+            data-testid="assign-drawer-submit"
             className="flex-[2] text-center rounded-2xl py-3 text-[13.5px] font-extrabold disabled:opacity-40"
             style={{ background: "var(--tertiary)", color: "#161611" }}
           >

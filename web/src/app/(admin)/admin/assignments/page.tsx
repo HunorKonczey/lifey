@@ -24,7 +24,7 @@ export default function AdminAssignmentsPage() {
   const templatesQ = useQuery({ queryKey: queryKeys.workoutTemplates.all(), queryFn: templateApi.list });
   const recipesQ = useQuery({ queryKey: queryKeys.recipes.all(), queryFn: recipeApi.list });
 
-  const clients = clientsQ.data ?? [];
+  const clients = useMemo(() => clientsQ.data ?? [], [clientsQ.data]);
   const assignmentQueries = useQueries({
     queries: clients.map((c) => ({
       queryKey: queryKeys.trainerAssignments.forClient(c.clientId),

@@ -2,6 +2,7 @@ package com.lifey.steps.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.common.util.DateRanges;
 import com.lifey.steps.DailyStepCount;
 import com.lifey.steps.DailyStepCountMapper;
 import com.lifey.steps.DailyStepCountRepository;
@@ -46,7 +47,9 @@ public class DailyStepCountServiceImpl implements DailyStepCountService {
     @Override
     @Transactional(readOnly = true)
     public List<DailyStepCountResponse> findAllForUser(Long userId, LocalDate from, LocalDate to) {
-        return repository.findByUserIdAndDeletedAtIsNullAndDateRange(userId, from, to).stream()
+        LocalDate effectiveFrom = from != null ? from : DateRanges.DISTANT_PAST;
+        LocalDate effectiveTo = to != null ? to : DateRanges.DISTANT_FUTURE;
+        return repository.findByUserIdAndDeletedAtIsNullAndDateRange(userId, effectiveFrom, effectiveTo).stream()
                 .map(DailyStepCountMapper::toResponse)
                 .toList();
     }

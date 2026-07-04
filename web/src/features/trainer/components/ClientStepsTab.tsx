@@ -8,6 +8,7 @@ import { queryKeys } from "@/lib/api/queryKeys";
 import { TimeSeriesChart } from "@/components/data/TimeSeriesChartLazy";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
+import { ErrorState } from "@/components/status/ErrorState";
 
 interface ClientStepsTabProps {
   clientId: number;
@@ -22,6 +23,7 @@ export function ClientStepsTab({ clientId }: ClientStepsTabProps) {
   });
 
   if (stepsQ.isLoading) return <Skeleton variant="chart" />;
+  if (stepsQ.isError) return <ErrorState inline onRetry={() => stepsQ.refetch()} />;
 
   const sorted = (stepsQ.data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
   if (sorted.length === 0) {

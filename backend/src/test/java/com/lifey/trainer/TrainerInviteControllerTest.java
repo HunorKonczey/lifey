@@ -1,5 +1,6 @@
 package com.lifey.trainer;
 
+import com.lifey.trainer.controller.TrainerInviteController;
 import com.lifey.trainer.dto.TrainerInviteResponse;
 import com.lifey.trainer.exception.AlreadyClientException;
 import com.lifey.trainer.exception.InviteRateLimitedException;

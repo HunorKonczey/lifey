@@ -6,6 +6,7 @@ import com.lifey.workout.exercise.ExerciseRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +44,12 @@ class StarterCatalogListener {
     private final ExerciseRepository exerciseRepository;
     private final UserRepository userRepository;
 
+    /** Off in production (lifey.starter-catalog.enabled=false) — every user seeing the
+     * same handful of exercise names is a dev/demo convenience, not something real
+     * users should have forced onto their account. */
+    @Value("${lifey.starter-catalog.enabled:true}")
+    boolean enabled;
+
     // AFTER_COMMIT runs once the registration transaction is already gone, so
     // this needs its own — REQUIRES_NEW rather than the default REQUIRED,
     // which Spring rejects here (there's no transaction left to join, and a
@@ -51,6 +58,9 @@ class StarterCatalogListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     void onUserRegistered(UserRegisteredEvent event) {
+        if (!enabled) {
+            return;
+        }
         try {
             var user = userRepository.getReferenceById(event.userId());
             for (String name : STARTER_EXERCISE_NAMES) {

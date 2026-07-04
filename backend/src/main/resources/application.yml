@@ -83,6 +83,12 @@ lifey:
     access-token-ttl: ${JWT_ACCESS_TTL:7d}
     refresh-token-ttl: ${JWT_REFRESH_TTL:30d}
     issuer: lifey-api
+  starter-catalog:
+    # Seeds every newly registered user with a starter exercise catalog
+    # (StarterCatalogListener) — handy for local dev/demo accounts, but real
+    # users shouldn't have the same handful of exercises forced onto them.
+    # Off in prod (application-prod.yml).
+    enabled: ${STARTER_CATALOG_ENABLED:true}
   oauth:
     google:
       # Comma-separated list of accepted audiences: Android, iOS, and Web OAuth
