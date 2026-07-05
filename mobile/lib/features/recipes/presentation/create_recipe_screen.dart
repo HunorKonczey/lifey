@@ -540,7 +540,8 @@ class _IngredientCard extends StatelessWidget {
   String _kcalLabel() {
     if (food.caloriesPer100g <= 0) return '${grams.toStringAsFixed(0)} g';
     final kcal = (food.caloriesPer100g * grams / 100).round();
-    return '${grams.toStringAsFixed(0)} g · $kcal kcal';
+    final protein = (food.proteinPer100g * grams / 100).round();
+    return '${grams.toStringAsFixed(0)} g · $kcal kcal · ${protein}g P';
   }
 
   @override

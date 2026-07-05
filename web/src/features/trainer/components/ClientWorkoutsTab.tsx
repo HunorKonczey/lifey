@@ -26,7 +26,7 @@ export function ClientWorkoutsTab({ clientId }: ClientWorkoutsTabProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.trainerClientData.sessions(clientId, page),
+    queryKey: queryKeys.trainerClientData.sessions(clientId, page, 15),
     queryFn: () => trainerApi.clientWorkoutSessions(clientId, page, 15),
   });
 

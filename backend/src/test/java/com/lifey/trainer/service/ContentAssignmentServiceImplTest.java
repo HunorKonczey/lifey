@@ -35,6 +35,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -81,8 +82,10 @@ class ContentAssignmentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
-        // Not every test reaches the deep-copy step that resolves these references.
+        // Not every test reaches the deep-copy step that resolves these references,
+        // and the propagate* tests take trainerId as a parameter instead of going
+        // through CurrentUserProvider at all.
+        lenient().when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
         lenient().when(userRepository.getReferenceById(TRAINER_ID)).thenReturn(user(TRAINER_ID));
         lenient().when(userRepository.getReferenceById(CLIENT_ID)).thenReturn(user(CLIENT_ID));
     }
@@ -198,6 +201,213 @@ class ContentAssignmentServiceImplTest {
         verify(workoutTemplateRepository).save(captor.capture());
         assertThat(captor.getValue().getExercises()).singleElement()
                 .satisfies(l -> assertThat(l.getExercise()).isSameAs(existingCopy));
+    }
+
+    @Test
+    void propagateTemplateUpdate_updatesExistingCopyNameAndExercisesAndBumpsUpdatedAt() {
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        source.setName("Push day v2");
+        Exercise sourceExercise = new Exercise();
+        sourceExercise.setId(30L);
+        WorkoutTemplateExercise link = new WorkoutTemplateExercise();
+        link.setExercise(sourceExercise);
+        link.setTargetSets(5);
+        link.setSortOrder(0);
+        source.getExercises().add(link);
+        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
+
+        ContentAssignment assignment = new ContentAssignment();
+        assignment.setClient(user(CLIENT_ID));
+        assignment.setCopiedId(88L);
+        when(contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(TRAINER_ID, ContentType.TEMPLATE, 7L))
+                .thenReturn(List.of(assignment));
+
+        WorkoutTemplate copy = new WorkoutTemplate();
+        copy.setId(88L);
+        copy.setName("Push day");
+        copy.setUpdatedAt(Instant.parse("2026-06-18T08:00:00Z"));
+        when(workoutTemplateRepository.findByIdAndUserId(88L, CLIENT_ID)).thenReturn(Optional.of(copy));
+        when(exerciseRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 30L))
+                .thenReturn(Optional.empty());
+        when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> {
+            Exercise e = inv.getArgument(0);
+            e.setId(99L);
+            return e;
+        });
+
+        service.propagateTemplateUpdate(TRAINER_ID, 7L);
+
+        assertThat(copy.getName()).isEqualTo("Push day v2");
+        assertThat(copy.getExercises()).singleElement().satisfies(l -> {
+            assertThat(l.getExercise().getId()).isEqualTo(99L);
+            assertThat(l.getTargetSets()).isEqualTo(5);
+        });
+        assertThat(copy.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T08:00:00Z"));
+    }
+
+    @Test
+    void propagateTemplateUpdate_skipsAssignmentWhenClientCopyMissing() {
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        source.setName("Push day");
+        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
+
+        ContentAssignment assignment = new ContentAssignment();
+        assignment.setClient(user(CLIENT_ID));
+        assignment.setCopiedId(88L);
+        when(contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(TRAINER_ID, ContentType.TEMPLATE, 7L))
+                .thenReturn(List.of(assignment));
+        when(workoutTemplateRepository.findByIdAndUserId(88L, CLIENT_ID)).thenReturn(Optional.empty());
+
+        service.propagateTemplateUpdate(TRAINER_ID, 7L);
+
+        verify(exerciseRepository, never()).save(any());
+    }
+
+    @Test
+    void propagateTemplateUpdate_reusesAlreadyCopiedExercise() {
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        source.setName("Push day");
+        Exercise sourceExercise = new Exercise();
+        sourceExercise.setId(30L);
+        WorkoutTemplateExercise link = new WorkoutTemplateExercise();
+        link.setExercise(sourceExercise);
+        source.getExercises().add(link);
+        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
+
+        ContentAssignment assignment = new ContentAssignment();
+        assignment.setClient(user(CLIENT_ID));
+        assignment.setCopiedId(88L);
+        when(contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(TRAINER_ID, ContentType.TEMPLATE, 7L))
+                .thenReturn(List.of(assignment));
+        WorkoutTemplate copy = new WorkoutTemplate();
+        copy.setId(88L);
+        when(workoutTemplateRepository.findByIdAndUserId(88L, CLIENT_ID)).thenReturn(Optional.of(copy));
+
+        Exercise existingCopy = new Exercise();
+        existingCopy.setId(55L);
+        when(exerciseRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 30L))
+                .thenReturn(Optional.of(existingCopy));
+
+        service.propagateTemplateUpdate(TRAINER_ID, 7L);
+
+        verify(exerciseRepository, never()).save(any());
+        assertThat(copy.getExercises()).singleElement()
+                .satisfies(l -> assertThat(l.getExercise()).isSameAs(existingCopy));
+    }
+
+    @Test
+    void propagateTemplateUpdate_shrinksCopyExercisesWhenSourceExerciseRemoved() {
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        source.setName("Push day");
+        // source now has zero exercises — trainer removed the only one
+        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
+
+        ContentAssignment assignment = new ContentAssignment();
+        assignment.setClient(user(CLIENT_ID));
+        assignment.setCopiedId(88L);
+        when(contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(TRAINER_ID, ContentType.TEMPLATE, 7L))
+                .thenReturn(List.of(assignment));
+
+        WorkoutTemplate copy = new WorkoutTemplate();
+        copy.setId(88L);
+        WorkoutTemplateExercise staleLink = new WorkoutTemplateExercise();
+        Exercise staleExercise = new Exercise();
+        staleExercise.setId(99L);
+        staleLink.setExercise(staleExercise);
+        copy.getExercises().add(staleLink);
+        when(workoutTemplateRepository.findByIdAndUserId(88L, CLIENT_ID)).thenReturn(Optional.of(copy));
+
+        service.propagateTemplateUpdate(TRAINER_ID, 7L);
+
+        assertThat(copy.getExercises()).isEmpty();
+    }
+
+    @Test
+    void propagateTemplateUpdate_throwsWhenSourceNotOwnedByTrainer() {
+        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.propagateTemplateUpdate(TRAINER_ID, 7L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(contentAssignmentRepository, never()).findByTrainerIdAndContentTypeAndSourceId(any(), any(), any());
+    }
+
+    @Test
+    void propagateRecipeUpdate_updatesExistingCopyFieldsAndIngredientsAndBumpsUpdatedAt() {
+        Recipe source = new Recipe();
+        source.setId(12L);
+        source.setName("Protein shake v2");
+        source.setDescription("blend it longer");
+        source.setServings(3);
+        Food sourceFood = new Food();
+        sourceFood.setId(40L);
+        sourceFood.setName("Whey");
+        sourceFood.setCaloriesPer100g(400);
+        sourceFood.setProteinPer100g(80);
+        RecipeIngredient ingredient = new RecipeIngredient();
+        ingredient.setFood(sourceFood);
+        ingredient.setQuantityInGrams(40);
+        source.getIngredients().add(ingredient);
+        when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.of(source));
+
+        ContentAssignment assignment = new ContentAssignment();
+        assignment.setClient(user(CLIENT_ID));
+        assignment.setCopiedId(66L);
+        when(contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(TRAINER_ID, ContentType.RECIPE, 12L))
+                .thenReturn(List.of(assignment));
+
+        Recipe copy = new Recipe();
+        copy.setId(66L);
+        copy.setName("Protein shake");
+        copy.setUpdatedAt(Instant.parse("2026-06-18T08:00:00Z"));
+        when(recipeRepository.findByIdAndUserId(66L, CLIENT_ID)).thenReturn(Optional.of(copy));
+        when(foodRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 40L))
+                .thenReturn(Optional.empty());
+        when(foodRepository.save(any(Food.class))).thenAnswer(inv -> {
+            Food f = inv.getArgument(0);
+            f.setId(77L);
+            return f;
+        });
+
+        service.propagateRecipeUpdate(TRAINER_ID, 12L);
+
+        assertThat(copy.getName()).isEqualTo("Protein shake v2");
+        assertThat(copy.getDescription()).isEqualTo("blend it longer");
+        assertThat(copy.getServings()).isEqualTo(3);
+        assertThat(copy.getIngredients()).singleElement()
+                .satisfies(i -> assertThat(i.getFood().getId()).isEqualTo(77L));
+        assertThat(copy.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T08:00:00Z"));
+    }
+
+    @Test
+    void propagateRecipeUpdate_skipsAssignmentWhenClientCopyMissing() {
+        Recipe source = new Recipe();
+        source.setId(12L);
+        source.setName("Protein shake");
+        when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.of(source));
+
+        ContentAssignment assignment = new ContentAssignment();
+        assignment.setClient(user(CLIENT_ID));
+        assignment.setCopiedId(66L);
+        when(contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(TRAINER_ID, ContentType.RECIPE, 12L))
+                .thenReturn(List.of(assignment));
+        when(recipeRepository.findByIdAndUserId(66L, CLIENT_ID)).thenReturn(Optional.empty());
+
+        service.propagateRecipeUpdate(TRAINER_ID, 12L);
+
+        verify(foodRepository, never()).save(any());
+    }
+
+    @Test
+    void propagateRecipeUpdate_throwsWhenSourceNotOwnedByTrainer() {
+        when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.propagateRecipeUpdate(TRAINER_ID, 12L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(contentAssignmentRepository, never()).findByTrainerIdAndContentTypeAndSourceId(any(), any(), any());
     }
 
     @Test

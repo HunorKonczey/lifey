@@ -18,4 +18,14 @@ public interface ContentAssignmentService {
 
     /** Removes the assignment and soft-deletes the client's copy it created. */
     void unassign(Long assignmentId);
+
+    /**
+     * Pushes the trainer's latest edit of this template to every client's
+     * already-assigned copy (live sync — see
+     * {@code com.lifey.trainer.AssignedContentSyncListener}).
+     */
+    void propagateTemplateUpdate(Long trainerId, Long templateId);
+
+    /** Pushes the trainer's latest edit of this recipe to every client's already-assigned copy. */
+    void propagateRecipeUpdate(Long trainerId, Long recipeId);
 }

@@ -138,7 +138,17 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
           {ingredients.map((ing, idx) => (
             <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-[var(--r-md)]"
               style={{ background: "var(--surface-container)" }}>
-              <span className="flex-1 text-sm font-semibold">{ing.foodName}</span>
+              <div className="flex-1 min-w-0 flex flex-col">
+                <span className="text-sm font-semibold truncate">{ing.foodName}</span>
+                <span className="flex gap-2 text-xs tabular">
+                  <span style={{ color: "var(--metric-kcal)" }}>
+                    {Math.round((ing.caloriesPer100g * ing.quantityInGrams) / 100)} kcal
+                  </span>
+                  <span style={{ color: "var(--metric-protein)" }}>
+                    {Math.round((ing.proteinPer100g * ing.quantityInGrams) / 100)}g P
+                  </span>
+                </span>
+              </div>
               <input type="number" min={1} value={ing.quantityInGrams}
                 onChange={(e) => setIngredients((prev) =>
                   prev.map((x, i) => i === idx ? { ...x, quantityInGrams: Math.max(1, Number(e.target.value)) } : x))}
@@ -164,8 +174,12 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
             <div className="flex flex-col gap-1">
               {matches.map((f) => (
                 <button key={f.id} onClick={() => addIngredient(f)}
-                  className="text-left px-3 py-1.5 rounded-[var(--r-sm)] text-sm transition-colors hover:bg-surface-container">
-                  {f.name}
+                  className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-[var(--r-sm)] text-sm transition-colors hover:bg-surface-container">
+                  <span className="truncate">{f.name}</span>
+                  <span className="flex gap-2 text-xs tabular shrink-0">
+                    <span style={{ color: "var(--metric-kcal)" }}>{Math.round(f.caloriesPer100g)} kcal</span>
+                    <span style={{ color: "var(--metric-protein)" }}>{Math.round(f.proteinPer100g)}g P</span>
+                  </span>
                 </button>
               ))}
             </div>

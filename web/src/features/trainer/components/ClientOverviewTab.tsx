@@ -44,7 +44,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
     queryFn: () => trainerApi.assignmentsForClient(clientId),
   });
   const sessionsQ = useQuery({
-    queryKey: queryKeys.trainerClientData.sessions(clientId, 0),
+    queryKey: queryKeys.trainerClientData.sessions(clientId, 0, 4),
     queryFn: () => trainerApi.clientWorkoutSessions(clientId, 0, 4),
   });
   const templatesQ = useQuery({ queryKey: queryKeys.workoutTemplates.all(), queryFn: templateApi.list });

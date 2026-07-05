@@ -180,5 +180,63 @@ test.describe("Personal trainer flow", () => {
       await expect(page.getByText(clientEmail)).toBeVisible(); // ClientDetailHeader shows the raw email
       await expect(page.getByText(templateName)).toBeVisible();
     });
+
+    const mealFoodName = `E2E Oatmeal ${runId}`;
+
+    await test.step("client logs a meal for yesterday via the API", async () => {
+      const clientLoginRes = await request.post(`${API_BASE}/auth/login`, {
+        data: { email: clientEmail, password: clientPassword },
+      });
+      expect(clientLoginRes.ok(), await clientLoginRes.text()).toBeTruthy();
+      const { accessToken: clientAccessToken } = await clientLoginRes.json();
+
+      const foodRes = await request.post(`${API_BASE}/foods`, {
+        headers: { Authorization: `Bearer ${clientAccessToken}` },
+        data: {
+          name: mealFoodName,
+          caloriesPer100g: 350,
+          proteinPer100g: 12,
+          carbsPer100g: 60,
+          fatPer100g: 6,
+          hidden: false,
+        },
+      });
+      expect(foodRes.ok(), await foodRes.text()).toBeTruthy();
+      const food: { id: number } = await foodRes.json();
+
+      // Noon (not midnight) avoids day-boundary flakiness when the test runs
+      // close to midnight in the server's local timezone.
+      const yesterdayNoon = new Date();
+      yesterdayNoon.setDate(yesterdayNoon.getDate() - 1);
+      yesterdayNoon.setHours(12, 0, 0, 0);
+
+      const mealRes = await request.post(`${API_BASE}/meals`, {
+        headers: { Authorization: `Bearer ${clientAccessToken}` },
+        data: {
+          dateTime: yesterdayNoon.toISOString(),
+          mealType: "LUNCH",
+          entries: [{ foodId: food.id, quantityInGrams: 200 }],
+        },
+      });
+      expect(mealRes.ok(), await mealRes.text()).toBeTruthy();
+    });
+
+    await test.step("trainer's Nutrition tab shows today empty and is read-only", async () => {
+      await page.getByRole("button", { name: "Nutrition" }).click();
+      await expect(page.getByText("Daily summary")).toBeVisible();
+      await expect(page.getByText(mealFoodName)).not.toBeVisible();
+      await expect(page.getByLabel("Edit meal")).toHaveCount(0);
+      await expect(page.getByLabel("Remove meal")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /Add to/ })).toHaveCount(0);
+    });
+
+    await test.step("day navigator reveals yesterday's logged meal", async () => {
+      await page.getByLabel("Previous day").click();
+      // The food name legitimately appears twice for a single-entry meal:
+      // once as the card title, once as the ingredient row.
+      await expect(page.getByText(mealFoodName).first()).toBeVisible();
+      await expect(page.getByLabel("Edit meal")).toHaveCount(0);
+      await expect(page.getByLabel("Remove meal")).toHaveCount(0);
+    });
   });
 });

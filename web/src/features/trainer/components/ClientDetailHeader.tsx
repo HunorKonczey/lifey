@@ -10,12 +10,13 @@ import type { TrainerClientResponse } from "../types";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
 
-export type ClientTab = "overview" | "statistics" | "steps" | "workouts";
+export type ClientTab = "overview" | "statistics" | "steps" | "nutrition" | "workouts";
 
 const TABS: { key: ClientTab; icon: string }[] = [
   { key: "overview", icon: "dashboard" },
   { key: "statistics", icon: "bar_chart" },
   { key: "steps", icon: "directions_walk" },
+  { key: "nutrition", icon: "restaurant" },
   { key: "workouts", icon: "fitness_center" },
 ];
 

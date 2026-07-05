@@ -9,10 +9,12 @@ import com.lifey.workout.template.WorkoutTemplate;
 import com.lifey.workout.template.WorkoutTemplateExercise;
 import com.lifey.workout.template.WorkoutTemplateMapper;
 import com.lifey.workout.template.WorkoutTemplateRepository;
+import com.lifey.workout.template.WorkoutTemplateUpdatedEvent;
 import com.lifey.workout.template.dto.TemplateExerciseEntry;
 import com.lifey.workout.template.dto.WorkoutTemplateRequest;
 import com.lifey.workout.template.dto.WorkoutTemplateResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +34,7 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
     private final ExerciseRepository exerciseRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -79,6 +82,9 @@ public class WorkoutTemplateServiceImpl implements WorkoutTemplateService {
         // would leave WorkoutTemplate's own scalar fields untouched, so Hibernate's
         // dirty-checking could skip @PreUpdate. Bump explicitly so it always fires.
         template.setUpdatedAt(Instant.now());
+        // Live-sync: push this edit to every client's already-assigned copy
+        // (see AssignedContentSyncListener).
+        eventPublisher.publishEvent(new WorkoutTemplateUpdatedEvent(currentUserProvider.getUserId(), template.getId()));
         return WorkoutTemplateMapper.toResponse(template);
     }
 

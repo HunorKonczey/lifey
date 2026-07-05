@@ -44,13 +44,21 @@ public class SettingsServiceImpl implements SettingsService {
         return SettingsMapper.toResponse(repository.save(settings));
     }
 
+    @Override
+    public SettingsResponse forUser(Long userId) {
+        return SettingsMapper.toResponse(getOrCreate(userId));
+    }
+
     /**
      * Settings rows aren't created at registration (the auth module doesn't know
      * about this feature), so the first read or write for a user creates the
      * default row instead.
      */
     private UserSettings getOrCreate() {
-        Long userId = currentUserProvider.getUserId();
+        return getOrCreate(currentUserProvider.getUserId());
+    }
+
+    private UserSettings getOrCreate(Long userId) {
         return repository.findByUserId(userId).orElseGet(() -> {
             UserSettings settings = new UserSettings();
             settings.setUser(userRepository.getReferenceById(userId));

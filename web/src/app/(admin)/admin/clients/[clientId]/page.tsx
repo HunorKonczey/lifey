@@ -10,6 +10,7 @@ import { ClientDetailHeader, type ClientTab } from "@/features/trainer/component
 import { ClientOverviewTab } from "@/features/trainer/components/ClientOverviewTab";
 import { ClientStatisticsTab } from "@/features/trainer/components/ClientStatisticsTab";
 import { ClientStepsTab } from "@/features/trainer/components/ClientStepsTab";
+import { ClientNutritionTab } from "@/features/trainer/components/ClientNutritionTab";
 import { ClientWorkoutsTab } from "@/features/trainer/components/ClientWorkoutsTab";
 import { Skeleton } from "@/components/status/Skeleton";
 
@@ -81,6 +82,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
       {tab === "overview" && <ClientOverviewTab clientId={clientId} />}
       {tab === "statistics" && <ClientStatisticsTab clientId={clientId} />}
       {tab === "steps" && <ClientStepsTab clientId={clientId} />}
+      {tab === "nutrition" && <ClientNutritionTab clientId={clientId} />}
       {tab === "workouts" && <ClientWorkoutsTab clientId={clientId} />}
     </div>
   );

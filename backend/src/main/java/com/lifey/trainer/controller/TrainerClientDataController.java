@@ -2,10 +2,15 @@ package com.lifey.trainer.controller;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.nutrition.meal.dto.MealResponse;
+import com.lifey.nutrition.meal.service.MealService;
+import com.lifey.settings.dto.SettingsResponse;
+import com.lifey.settings.service.SettingsService;
 import com.lifey.statistics.dto.StatisticsResponse;
 import com.lifey.statistics.service.StatisticsService;
 import com.lifey.steps.dto.DailyStepCountResponse;
 import com.lifey.steps.service.DailyStepCountService;
+import com.lifey.trainer.dto.ClientNutritionGoalsResponse;
 import com.lifey.trainer.service.TrainerAccessService;
 import com.lifey.user.UserAvatar;
 import com.lifey.user.UserAvatarRepository;
@@ -35,9 +40,9 @@ import java.util.List;
  * 01-koncepcio-es-folyamatok.md "4. folyamat" and 03-backend-terv.md). Every
  * method reuses the existing per-user service logic via its {@code *ForUser}
  * entry point — nothing here recomputes statistics or re-queries history, it
- * only adds the trainer-relationship guard on top. Meals and water are
- * deliberately not exposed here (see the docs: meals held back as more
- * privacy-sensitive, water explicitly excluded by product decision).
+ * only adds the trainer-relationship guard on top. Water is deliberately not
+ * exposed here (excluded by product decision); meals were held back initially
+ * as more privacy-sensitive but are now exposed for the trainer nutrition tab.
  */
 @Tag(name = "Trainer Client Data", description = "Trainer's read-only view of an active client's stats/steps/weight/workouts")
 @RestController
@@ -51,6 +56,8 @@ public class TrainerClientDataController {
     private final WeightService weightService;
     private final WorkoutSessionService workoutSessionService;
     private final UserAvatarRepository userAvatarRepository;
+    private final MealService mealService;
+    private final SettingsService settingsService;
     private final CurrentUserProvider currentUserProvider;
 
     @Operation(summary = "Client's stats for today")
@@ -116,6 +123,29 @@ public class TrainerClientDataController {
             @PageableDefault(size = 20, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         requireActiveClient(clientId);
         return workoutSessionService.findPageForUser(clientId, pageable);
+    }
+
+    @Operation(summary = "Client's logged meals",
+            description = "Optionally bounded to a date range via `from`/`to` (either or both may be omitted).")
+    @GetMapping("/meals")
+    public List<MealResponse> meals(
+            @PathVariable Long clientId,
+            @Parameter(description = "Inclusive lower bound (yyyy-MM-dd); omit for no lower bound")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Inclusive upper bound (yyyy-MM-dd); omit for no upper bound")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        requireActiveClient(clientId);
+        return mealService.findAllForUserBetween(clientId, from, to);
+    }
+
+    @Operation(summary = "Client's daily nutrition goals")
+    @GetMapping("/nutrition-goals")
+    public ClientNutritionGoalsResponse nutritionGoals(@PathVariable Long clientId) {
+        requireActiveClient(clientId);
+        SettingsResponse settings = settingsService.forUser(clientId);
+        return new ClientNutritionGoalsResponse(
+                settings.dailyCalorieGoal(), settings.dailyProteinGoal(),
+                settings.dailyCarbsGoal(), settings.dailyFatGoal());
     }
 
     @Operation(summary = "Client's profile picture", description = "404 if the client has no picture set.")

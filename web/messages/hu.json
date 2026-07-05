@@ -71,6 +71,7 @@
         "overview": "Áttekintés",
         "statistics": "Statisztika",
         "steps": "Lépések",
+        "nutrition": "Étkezések",
         "workouts": "Edzések"
       },
       "kpi": {
@@ -103,6 +104,7 @@
       "history": "Előzmények",
       "noSteps": "Még nincs lépés-adat",
       "noStepsBody": "Az elmúlt 30 napban nincs rögzítve semmi.",
+      "noLoggedMeal": "Nincs naplózott étkezés",
       "sessionMeta": "{duration} perc · {count} gyakorlat · {volume} kg volumen",
       "clientUnavailable": "Ez a kliens már nem elérhető",
       "clientUnavailableBody": "A kapcsolat megszűnt — az adatok nem tölthetők be.",

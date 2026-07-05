@@ -50,3 +50,10 @@ export interface AssignmentListItemResponse {
   copiedId: number;
   assignedAt: string;
 }
+
+export interface ClientNutritionGoalsResponse {
+  dailyCalorieGoal: number | null;
+  dailyProteinGoal: number | null;
+  dailyCarbsGoal: number | null;
+  dailyFatGoal: number | null;
+}

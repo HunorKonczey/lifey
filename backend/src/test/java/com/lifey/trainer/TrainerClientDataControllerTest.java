@@ -1,6 +1,14 @@
 package com.lifey.trainer;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.nutrition.meal.MealType;
+import com.lifey.nutrition.meal.dto.MealResponse;
+import com.lifey.nutrition.meal.service.MealService;
+import com.lifey.settings.LanguagePreference;
+import com.lifey.settings.ThemePreference;
+import com.lifey.settings.UnitSystem;
+import com.lifey.settings.dto.SettingsResponse;
+import com.lifey.settings.service.SettingsService;
 import com.lifey.statistics.dto.StatisticsResponse;
 import com.lifey.statistics.service.StatisticsService;
 import com.lifey.steps.dto.DailyStepCountResponse;
@@ -65,6 +73,12 @@ class TrainerClientDataControllerTest {
 
     @MockitoBean
     UserAvatarRepository userAvatarRepository;
+
+    @MockitoBean
+    MealService mealService;
+
+    @MockitoBean
+    SettingsService settingsService;
 
     @MockitoBean
     CurrentUserProvider currentUserProvider;
@@ -188,6 +202,38 @@ class TrainerClientDataControllerTest {
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/avatar", CLIENT_ID))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void meals_returnsClientsLoggedMeals() throws Exception {
+        MealResponse meal = new MealResponse(1L, Instant.parse("2026-06-01T08:00:00Z"),
+                MealType.BREAKFAST, "Breakfast", List.of(), Instant.now(), null);
+        when(mealService.findAllForUserBetween(eq(CLIENT_ID), any(), any())).thenReturn(List.of(meal));
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/meals", CLIENT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].mealType").value("BREAKFAST"));
+    }
+
+    @Test
+    void meals_passesFromAndToThrough() throws Exception {
+        when(mealService.findAllForUserBetween(CLIENT_ID, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/meals", CLIENT_ID)
+                        .param("from", "2026-06-01").param("to", "2026-06-30"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void nutritionGoals_returnsClientsGoals() throws Exception {
+        when(settingsService.forUser(CLIENT_ID)).thenReturn(new SettingsResponse(
+                UnitSystem.METRIC, 2200, 150, 240, 70, 2.5, 10000, ThemePreference.SYSTEM, LanguagePreference.SYSTEM));
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/nutrition-goals", CLIENT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dailyCalorieGoal").value(2200))
+                .andExpect(jsonPath("$.dailyProteinGoal").value(150));
     }
 
     @Test

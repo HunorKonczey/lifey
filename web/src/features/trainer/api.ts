@@ -3,10 +3,12 @@ import type { StatisticsResponse } from "@/features/statistics/types";
 import type { DailyStepCountResponse } from "@/features/steps/types";
 import type { WeightResponse } from "@/features/weight/types";
 import type { WorkoutSessionResponse } from "@/features/workouts/types";
+import type { MealResponse } from "@/features/nutrition/types";
 import type {
   AssignmentListItemResponse,
   AssignmentRequest,
   AssignmentResponse,
+  ClientNutritionGoalsResponse,
   ContentType,
   TrainerClientResponse,
   TrainerInviteRequest,
@@ -50,6 +52,15 @@ export const trainerApi = {
     api.get<Page<WorkoutSessionResponse>>(
       `/trainer/clients/${clientId}/workout-sessions?page=${page}&size=${size}`,
     ),
+  clientMeals: (clientId: number, from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    const qs = params.toString();
+    return api.get<MealResponse[]>(`/trainer/clients/${clientId}/meals${qs ? `?${qs}` : ""}`);
+  },
+  clientNutritionGoals: (clientId: number) =>
+    api.get<ClientNutritionGoalsResponse>(`/trainer/clients/${clientId}/nutrition-goals`),
   /** Returns null (not an error) when the client has no profile picture set. */
   clientAvatar: async (clientId: number): Promise<Blob | null> => {
     try {
