@@ -13,6 +13,7 @@ import { KpiCard } from "@/components/data/KpiCard";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 import { useLocale } from "@/lib/hooks/useLocale";
+import { UnassignButton } from "./UnassignButton";
 import type { ContentType } from "../types";
 
 const CONTENT_ICON: Record<ContentType, string> = { TEMPLATE: "fitness_center", RECIPE: "restaurant" };
@@ -156,6 +157,13 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
                   <span className="text-[11.5px] tabular shrink-0" style={{ color: "var(--muted)" }}>
                     {format(new Date(a.assignedAt), "MMM d.", { locale: dateLocale })}
                   </span>
+                  <UnassignButton
+                    assignmentId={a.id}
+                    clientId={clientId}
+                    contentType={a.contentType}
+                    sourceId={a.sourceId}
+                    contentName={sourceName(a.contentType, a.sourceId)}
+                  />
                 </div>
               ))}
             </div>

@@ -57,6 +57,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   final List<ExerciseBlock> _blocks = [];
 
   bool _saving = false;
+  // Set when an edit arrives while a save is already in flight, so that
+  // edit isn't silently dropped — _autoSave replays once the current save
+  // finishes instead of losing it (see _autoSave).
+  bool _dirty = false;
   Timer? _ticker;
   DateTime _now = DateTime.now();
 
@@ -389,7 +393,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   // ---------------------------------------------------------------------------
 
   Future<void> _autoSave() async {
-    if (_saving) return;
+    if (_saving) {
+      // A save is already writing an older snapshot — remember that a newer
+      // one is waiting so it gets persisted once that save completes,
+      // instead of being silently dropped.
+      _dirty = true;
+      return;
+    }
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context)!;
     try {
@@ -400,6 +410,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+      final needsReplay = _dirty;
+      _dirty = false;
+      if (needsReplay) unawaited(_autoSave());
     }
   }
 

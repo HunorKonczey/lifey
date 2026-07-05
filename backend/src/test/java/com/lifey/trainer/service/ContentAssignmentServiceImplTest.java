@@ -1,7 +1,10 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.mail.MailLanguage;
+import com.lifey.mail.MailLanguageResolver;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.recipe.Recipe;
@@ -69,6 +72,9 @@ class ContentAssignmentServiceImplTest {
 
     @Mock
     CurrentUserProvider currentUserProvider;
+
+    @Mock
+    MailLanguageResolver mailLanguageResolver;
 
     @InjectMocks
     ContentAssignmentServiceImpl service;
@@ -244,6 +250,105 @@ class ContentAssignmentServiceImplTest {
     }
 
     @Test
+    void assign_recipe_reusesClientsExistingFoodWhenNameAndMacrosMatch() {
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+
+        Recipe source = new Recipe();
+        source.setId(12L);
+        source.setName("Protein shake");
+        source.setServings(2);
+        Food sourceFood = new Food();
+        sourceFood.setId(40L);
+        sourceFood.setName("Whey");
+        sourceFood.setCaloriesPer100g(400);
+        sourceFood.setProteinPer100g(80);
+        RecipeIngredient ingredient = new RecipeIngredient();
+        ingredient.setFood(sourceFood);
+        ingredient.setQuantityInGrams(30);
+        source.getIngredients().add(ingredient);
+
+        Food clientsExistingFood = new Food();
+        clientsExistingFood.setId(88L);
+        clientsExistingFood.setName("Whey");
+        clientsExistingFood.setCaloriesPer100g(400);
+        clientsExistingFood.setProteinPer100g(80);
+
+        when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.of(source));
+        when(foodRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 40L))
+                .thenReturn(Optional.empty());
+        when(foodRepository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(CLIENT_ID, "Whey"))
+                .thenReturn(Optional.of(clientsExistingFood));
+        when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.assign(new AssignmentRequest(CLIENT_ID, ContentType.RECIPE, 12L));
+
+        verify(foodRepository, never()).save(any());
+        ArgumentCaptor<Recipe> recipeCaptor = ArgumentCaptor.forClass(Recipe.class);
+        verify(recipeRepository).save(recipeCaptor.capture());
+        assertThat(recipeCaptor.getValue().getIngredients()).singleElement()
+                .satisfies(i -> assertThat(i.getFood()).isSameAs(clientsExistingFood));
+    }
+
+    @Test
+    void assign_recipe_disambiguatesFoodNameWhenClientsExistingFoodHasDifferentMacros() {
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+        when(mailLanguageResolver.resolve(any(User.class))).thenReturn(MailLanguage.HU);
+
+        Recipe source = new Recipe();
+        source.setId(12L);
+        source.setName("Protein shake");
+        source.setServings(2);
+        Food sourceFood = new Food();
+        sourceFood.setId(40L);
+        sourceFood.setName("Whey");
+        sourceFood.setCaloriesPer100g(400);
+        sourceFood.setProteinPer100g(80);
+        RecipeIngredient ingredient = new RecipeIngredient();
+        ingredient.setFood(sourceFood);
+        ingredient.setQuantityInGrams(30);
+        source.getIngredients().add(ingredient);
+
+        Food clientsExistingFood = new Food();
+        clientsExistingFood.setId(88L);
+        clientsExistingFood.setName("Whey");
+        clientsExistingFood.setCaloriesPer100g(250);
+        clientsExistingFood.setProteinPer100g(20);
+
+        when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.of(source));
+        when(foodRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 40L))
+                .thenReturn(Optional.empty());
+        when(foodRepository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(CLIENT_ID, "Whey"))
+                .thenReturn(Optional.of(clientsExistingFood));
+        when(foodRepository.save(any(Food.class))).thenAnswer(inv -> {
+            Food f = inv.getArgument(0);
+            f.setId(77L);
+            return f;
+        });
+        when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.assign(new AssignmentRequest(CLIENT_ID, ContentType.RECIPE, 12L));
+
+        ArgumentCaptor<Food> foodCaptor = ArgumentCaptor.forClass(Food.class);
+        verify(foodRepository).save(foodCaptor.capture());
+        assertThat(foodCaptor.getValue().getName()).isEqualTo("Whey (Edzőtől)");
+    }
+
+    @Test
+    void assign_recipe_throwsWhenAlreadyAssignedToThisClient() {
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+        when(contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
+                TRAINER_ID, CLIENT_ID, ContentType.RECIPE, 12L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.assign(new AssignmentRequest(CLIENT_ID, ContentType.RECIPE, 12L)))
+                .isInstanceOf(DuplicateResourceException.class);
+
+        verify(recipeRepository, never()).findByIdAndUserId(any(), any());
+        verify(contentAssignmentRepository, never()).save(any());
+    }
+
+    @Test
     void assign_recipe_throwsWhenRecipeNotOwnedByTrainer() {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
         when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.empty());
@@ -254,20 +359,55 @@ class ContentAssignmentServiceImplTest {
     }
 
     @Test
-    void assign_flagsPreviouslyAssignedWhenAlreadyAssignedBefore() {
+    void assign_template_throwsWhenAlreadyAssignedToThisClient() {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
-        WorkoutTemplate source = new WorkoutTemplate();
-        source.setId(7L);
-        source.setName("Push day");
-        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
-        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> inv.getArgument(0));
         when(contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
                 TRAINER_ID, CLIENT_ID, ContentType.TEMPLATE, 7L)).thenReturn(true);
-        when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        AssignmentResponse result = service.assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, 7L));
+        assertThatThrownBy(() -> service.assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, 7L)))
+                .isInstanceOf(DuplicateResourceException.class);
 
-        assertThat(result.previouslyAssigned()).isTrue();
+        verify(workoutTemplateRepository, never()).findByIdAndUserId(any(), any());
+        verify(contentAssignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void findAssignedClientIds_returnsClientsAlreadyAssignedThisContent() {
+        ContentAssignment a = new ContentAssignment();
+        a.setClient(user(CLIENT_ID));
+        when(contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(TRAINER_ID, ContentType.RECIPE, 12L))
+                .thenReturn(List.of(a));
+
+        List<Long> result = service.findAssignedClientIds(ContentType.RECIPE, 12L);
+
+        assertThat(result).containsExactly(CLIENT_ID);
+    }
+
+    @Test
+    void unassign_softDeletesTheClientsCopyAndRemovesTheAssignment() {
+        ContentAssignment assignment = new ContentAssignment();
+        assignment.setId(5L);
+        assignment.setClient(user(CLIENT_ID));
+        assignment.setContentType(ContentType.RECIPE);
+        assignment.setCopiedId(66L);
+        when(contentAssignmentRepository.findByIdAndTrainerId(5L, TRAINER_ID)).thenReturn(Optional.of(assignment));
+
+        Recipe copy = new Recipe();
+        copy.setId(66L);
+        when(recipeRepository.findByIdAndUserId(66L, CLIENT_ID)).thenReturn(Optional.of(copy));
+
+        service.unassign(5L);
+
+        assertThat(copy.getDeletedAt()).isNotNull();
+        verify(contentAssignmentRepository).delete(assignment);
+    }
+
+    @Test
+    void unassign_throwsWhenAssignmentNotOwnedByTrainer() {
+        when(contentAssignmentRepository.findByIdAndTrainerId(5L, TRAINER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.unassign(5L)).isInstanceOf(ResourceNotFoundException.class);
+        verify(contentAssignmentRepository, never()).delete(any());
     }
 
     @Test

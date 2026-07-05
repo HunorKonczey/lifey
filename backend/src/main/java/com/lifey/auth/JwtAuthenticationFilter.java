@@ -1,5 +1,6 @@
 package com.lifey.auth;
 
+import com.lifey.auth.service.JwtService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

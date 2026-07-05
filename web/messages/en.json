@@ -116,13 +116,17 @@
       "noClientsFound": "No clients found",
       "content": "Content",
       "moreItems": "+ {count} more {count, plural, one {item} other {items}}",
-      "alreadyAssignedPrefix": "You already assigned this on",
-      "alreadyAssignedSuffix": ". A new copy will be made — the client keeps their existing one.",
+      "alreadyAssignedBadge": "Already assigned",
       "cancel": "Cancel",
       "assign": "Assign",
+      "assignCount": "Assign ({count})",
       "assigning": "Assigning…",
       "assigned": "Assigned to {name}",
-      "assignFailed": "Failed to assign"
+      "assignedMultiple": "Assigned to {count} clients",
+      "assignedPartial": "Assigned to {succeeded} clients, {failed} failed",
+      "assignedPartialAlreadyAssigned": "Assigned to {succeeded} clients, {failed} already had this",
+      "assignFailed": "Failed to assign",
+      "alreadyAssignedFailed": "This is already assigned to the selected client(s)"
     },
     "assignments": {
       "allClients": "All clients",
@@ -131,7 +135,14 @@
       "typeRecipe": "recipe",
       "unknownContent": "Deleted content",
       "noAssignments": "No assignments yet",
-      "noAssignmentsBody": "Assign a workout template or recipe from your own content to see it here."
+      "noAssignmentsBody": "Assign a workout template or recipe from your own content to see it here.",
+      "unassign": "Remove",
+      "unassigned": "Removed from the client's account",
+      "unassignFailed": "Failed to remove",
+      "unassignConfirmTitle": "Remove from client's account",
+      "unassignConfirmBody": "\"{name}\" will be deleted from the client's account. This can't be undone.",
+      "unassignCancel": "Cancel",
+      "unassignConfirm": "Remove"
     }
   },
   "superadmin": {
@@ -398,6 +409,7 @@
     "backToHistory": "Back to history",
     "history": "History",
     "startWorkout": "Start workout",
+    "recommendedWorkout": "Recommended workout",
     "noWorkoutsYet": "No workouts yet",
     "startToBegin": "Start a workout to begin logging.",
     "emptyWorkout": "Empty workout",

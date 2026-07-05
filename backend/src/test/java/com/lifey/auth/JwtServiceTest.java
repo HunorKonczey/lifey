@@ -4,6 +4,7 @@ import com.lifey.auth.exception.InvalidTokenException;
 import com.lifey.auth.exception.TokenExpiredException;
 
 import com.lifey.auth.properties.JwtProperties;
+import com.lifey.auth.service.JwtService;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import io.jsonwebtoken.Jwts;

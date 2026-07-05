@@ -25,6 +25,13 @@ public interface FoodRepository extends JpaRepository<Food, Long> {
 
     Optional<Food> findByUserIdAndNameIgnoreCase(Long userId, String name);
 
+    /**
+     * Matches the {@code foods_name_unique_idx} conflict check (visible foods
+     * only) for the trainer content-assignment deep copy — see
+     * ContentAssignmentServiceImpl.
+     */
+    Optional<Food> findByUserIdAndNameIgnoreCaseAndHiddenFalse(Long userId, String name);
+
     Optional<Food> findByIdAndUserId(Long id, Long userId);
 
     Optional<Food> findByUserIdAndBarcode(Long userId, String barcode);

@@ -67,6 +67,8 @@ export const queryKeys = {
   },
   trainerAssignments: {
     forClient: (clientId: number) => ["trainer-assignments", "client", clientId] as const,
+    assignedClients: (contentType: string, sourceId: number) =>
+      ["trainer-assignments", "assigned-clients", contentType, sourceId] as const,
   },
   trainerClientData: {
     statistics: (clientId: number, period: "daily" | "weekly" | "monthly") =>
@@ -74,6 +76,7 @@ export const queryKeys = {
     steps: (clientId: number) => ["trainer-client-data", clientId, "steps"] as const,
     weights: (clientId: number) => ["trainer-client-data", clientId, "weights"] as const,
     sessions: (clientId: number, page: number) => ["trainer-client-data", clientId, "sessions", page] as const,
+    avatar: (clientId: number) => ["trainer-client-data", clientId, "avatar"] as const,
   },
   superAdminUsers: {
     page: (params: { page: number; size?: number; search?: string }) =>

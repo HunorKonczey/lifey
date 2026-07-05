@@ -9,6 +9,7 @@ import { templateApi } from "@/features/workouts/api";
 import { recipeApi } from "@/features/nutrition/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { ClientAvatar, nameFor } from "@/features/trainer/components/ClientAvatar";
+import { UnassignButton } from "@/features/trainer/components/UnassignButton";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import type { ContentType } from "@/features/trainer/types";
@@ -109,6 +110,13 @@ export default function AdminAssignmentsPage() {
                   {t(r.contentType === "TEMPLATE" ? "typeTemplate" : "typeRecipe")}
                 </p>
               </div>
+              <UnassignButton
+                assignmentId={r.id}
+                clientId={r.client.clientId}
+                contentType={r.contentType}
+                sourceId={r.sourceId}
+                contentName={sourceName(r.contentType, r.sourceId)}
+              />
             </div>
           ))}
         </div>

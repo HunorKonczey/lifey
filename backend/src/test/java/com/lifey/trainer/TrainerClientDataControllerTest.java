@@ -8,6 +8,9 @@ import com.lifey.steps.service.DailyStepCountService;
 import com.lifey.trainer.controller.TrainerClientDataController;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.trainer.service.TrainerAccessService;
+import com.lifey.user.AvatarSource;
+import com.lifey.user.UserAvatar;
+import com.lifey.user.UserAvatarRepository;
 import com.lifey.weight.dto.WeightResponse;
 import com.lifey.weight.service.WeightService;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
@@ -25,12 +28,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,6 +62,9 @@ class TrainerClientDataControllerTest {
 
     @MockitoBean
     WorkoutSessionService workoutSessionService;
+
+    @MockitoBean
+    UserAvatarRepository userAvatarRepository;
 
     @MockitoBean
     CurrentUserProvider currentUserProvider;
@@ -157,6 +165,29 @@ class TrainerClientDataControllerTest {
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/workout-sessions", CLIENT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1));
+    }
+
+    @Test
+    void avatar_returnsClientsProfilePicture() throws Exception {
+        UserAvatar avatar = new UserAvatar();
+        avatar.setImage(new byte[] {1, 2, 3});
+        avatar.setContentType("image/jpeg");
+        avatar.setSource(AvatarSource.UPLOAD);
+        avatar.setUpdatedAt(Instant.now());
+        when(userAvatarRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.of(avatar));
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/avatar", CLIENT_ID))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/jpeg"))
+                .andExpect(content().bytes(new byte[] {1, 2, 3}));
+    }
+
+    @Test
+    void avatar_returns404WhenClientHasNoPicture() throws Exception {
+        when(userAvatarRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/avatar", CLIENT_ID))
+                .andExpect(status().isNotFound());
     }
 
     @Test

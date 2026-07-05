@@ -1,11 +1,14 @@
 package com.lifey.trainer.controller;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.statistics.dto.StatisticsResponse;
 import com.lifey.statistics.service.StatisticsService;
 import com.lifey.steps.dto.DailyStepCountResponse;
 import com.lifey.steps.service.DailyStepCountService;
 import com.lifey.trainer.service.TrainerAccessService;
+import com.lifey.user.UserAvatar;
+import com.lifey.user.UserAvatarRepository;
 import com.lifey.weight.dto.WeightResponse;
 import com.lifey.weight.service.WeightService;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
@@ -19,6 +22,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -44,6 +50,7 @@ public class TrainerClientDataController {
     private final DailyStepCountService dailyStepCountService;
     private final WeightService weightService;
     private final WorkoutSessionService workoutSessionService;
+    private final UserAvatarRepository userAvatarRepository;
     private final CurrentUserProvider currentUserProvider;
 
     @Operation(summary = "Client's stats for today")
@@ -109,6 +116,18 @@ public class TrainerClientDataController {
             @PageableDefault(size = 20, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         requireActiveClient(clientId);
         return workoutSessionService.findPageForUser(clientId, pageable);
+    }
+
+    @Operation(summary = "Client's profile picture", description = "404 if the client has no picture set.")
+    @GetMapping("/avatar")
+    public ResponseEntity<byte[]> avatar(@PathVariable Long clientId) {
+        requireActiveClient(clientId);
+        UserAvatar avatar = userAvatarRepository.findByUserId(clientId)
+                .orElseThrow(() -> new ResourceNotFoundException("No profile picture set"));
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(avatar.getContentType()))
+                .cacheControl(CacheControl.noCache().cachePrivate())
+                .body(avatar.getImage());
     }
 
     private void requireActiveClient(Long clientId) {

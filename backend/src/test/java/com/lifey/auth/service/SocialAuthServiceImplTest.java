@@ -3,7 +3,6 @@ package com.lifey.auth.service;
 import com.lifey.auth.GoogleAvatarCandidateEvent;
 import com.lifey.auth.GoogleIdTokenVerifier;
 import com.lifey.auth.GoogleIdentity;
-import com.lifey.auth.JwtService;
 import com.lifey.auth.UserRegisteredEvent;
 import com.lifey.auth.dto.AuthResponse;
 import com.lifey.auth.entity.Provider;

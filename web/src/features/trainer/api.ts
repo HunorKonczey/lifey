@@ -1,4 +1,4 @@
-import { api, type Page } from "@/lib/api/client";
+import { api, ApiError, type Page } from "@/lib/api/client";
 import type { StatisticsResponse } from "@/features/statistics/types";
 import type { DailyStepCountResponse } from "@/features/steps/types";
 import type { WeightResponse } from "@/features/weight/types";
@@ -7,6 +7,7 @@ import type {
   AssignmentListItemResponse,
   AssignmentRequest,
   AssignmentResponse,
+  ContentType,
   TrainerClientResponse,
   TrainerInviteRequest,
   TrainerInviteResponse,
@@ -25,6 +26,9 @@ export const trainerApi = {
     api.post<AssignmentResponse>("/trainer/assignments", body),
   assignmentsForClient: (clientId: number) =>
     api.get<AssignmentListItemResponse[]>(`/trainer/clients/${clientId}/assignments`),
+  assignedClientIds: (contentType: ContentType, sourceId: number) =>
+    api.get<number[]>(`/trainer/assignments/clients?contentType=${contentType}&sourceId=${sourceId}`),
+  unassign: (assignmentId: number) => api.delete(`/trainer/assignments/${assignmentId}`),
 
   clientStatistics: (clientId: number, period: "daily" | "weekly" | "monthly") =>
     api.get<StatisticsResponse>(`/trainer/clients/${clientId}/statistics/${period}`),
@@ -46,4 +50,13 @@ export const trainerApi = {
     api.get<Page<WorkoutSessionResponse>>(
       `/trainer/clients/${clientId}/workout-sessions?page=${page}&size=${size}`,
     ),
+  /** Returns null (not an error) when the client has no profile picture set. */
+  clientAvatar: async (clientId: number): Promise<Blob | null> => {
+    try {
+      return await api.getBlob(`/trainer/clients/${clientId}/avatar`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
 };

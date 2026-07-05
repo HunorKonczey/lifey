@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.lifey.auth.properties.GoogleOAuthProperties;
 import com.lifey.auth.properties.JwtProperties;
 import com.lifey.auth.service.CustomUserDetailsService;
+import com.lifey.auth.service.JwtService;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -406,8 +406,9 @@ class _SetRowTile extends StatelessWidget {
                 GestureDetector(
                   onTap: onTapPrevious,
                   behavior: HitTestBehavior.opaque,
-                  child: SizedBox(
+                  child: Container(
                     width: _kPreviousColumnWidth,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       previousText,
                       style: TextStyle(
