@@ -4,9 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { formatDistanceToNow } from "date-fns";
+import { enUS, hu } from "date-fns/locale";
 import { Sparkline } from "@/components/data/Sparkline";
+import { useLocale } from "@/lib/hooks/useLocale";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import type { TrainerClientResponse } from "../types";
+
+const DATE_LOCALES = { en: enUS, hu } as const;
 
 interface ClientCardProps {
   client: TrainerClientResponse;
@@ -16,6 +20,7 @@ interface ClientCardProps {
 
 export function ClientCard({ client, onRevoke, revoking }: ClientCardProps) {
   const t = useTranslations("admin.dashboard");
+  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
 
@@ -33,7 +38,9 @@ export function ClientCard({ client, onRevoke, revoking }: ClientCardProps) {
             {nameFor(client.clientEmail)}
           </p>
           <p className="text-[11.5px] mt-0.5 truncate" style={{ color: "var(--on-surface-variant)" }}>
-            {t("clientSince", { time: formatDistanceToNow(new Date(client.activeSince), { addSuffix: true }) })}
+            {t("clientSince", {
+              time: formatDistanceToNow(new Date(client.activeSince), { addSuffix: true, locale: dateLocale }),
+            })}
           </p>
         </div>
         <button

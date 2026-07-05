@@ -1,0 +1,10 @@
+Szia {{name}},
+
+{{trainerName}} meghívott, hogy legyél az ügyfele a Lifey-ban.
+
+Elfogadás: {{acceptUrl}}
+Elutasítás: {{declineUrl}}
+
+A meghívót a Lifey appból is elfogadhatod vagy elutasíthatod. A meghívó 24 óráig érvényes.
+
+— A Lifey csapat

@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { formatDistanceToNow } from "date-fns";
+import { enUS, hu } from "date-fns/locale";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { useLocale } from "@/lib/hooks/useLocale";
 import type { TrainerClientResponse } from "../types";
+
+const DATE_LOCALES = { en: enUS, hu } as const;
 
 interface ClientListModalProps {
   clients: TrainerClientResponse[];
@@ -13,6 +17,7 @@ interface ClientListModalProps {
 
 export function ClientListModal({ clients, onClose }: ClientListModalProps) {
   const t = useTranslations("admin.dashboard");
+  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
 
   return (
     <div
@@ -47,7 +52,7 @@ export function ClientListModal({ clients, onClose }: ClientListModalProps) {
                 {nameFor(c.clientEmail)}
               </span>
               <span className="text-[11.5px]" style={{ color: "var(--muted)" }}>
-                {formatDistanceToNow(new Date(c.activeSince), { addSuffix: true })}
+                {formatDistanceToNow(new Date(c.activeSince), { addSuffix: true, locale: dateLocale })}
               </span>
               <span className="material-symbols-rounded text-xl" style={{ color: "var(--muted)" }}>
                 chevron_right

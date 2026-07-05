@@ -1,0 +1,10 @@
+Hi {{name}},
+
+{{trainerName}} invited you to be their client on Lifey.
+
+Accept: {{acceptUrl}}
+Decline: {{declineUrl}}
+
+You can also accept or decline this invite from the Lifey app. The invite expires in 24 hours.
+
+— The Lifey team

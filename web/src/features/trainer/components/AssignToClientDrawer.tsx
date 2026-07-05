@@ -4,12 +4,16 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { enUS, hu } from "date-fns/locale";
 import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
+import { useLocale } from "@/lib/hooks/useLocale";
 import { ErrorState } from "@/components/status/ErrorState";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import type { ContentType } from "../types";
+
+const DATE_LOCALES = { en: enUS, hu } as const;
 
 export interface AssignSummaryRow {
   label: string;
@@ -29,6 +33,7 @@ export function AssignToClientDrawer({
   contentType, sourceId, title, summary, moreCount = 0, onClose,
 }: AssignToClientDrawerProps) {
   const t = useTranslations("admin.assignDrawer");
+  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [search, setSearch] = useState("");
@@ -149,7 +154,7 @@ export function AssignToClientDrawer({
             <span className="material-symbols-rounded text-lg shrink-0" style={{ color: "var(--tertiary)" }}>history</span>
             <p className="text-xs leading-relaxed" style={{ color: "var(--on-surface)" }}>
               {t("alreadyAssignedPrefix")}{" "}
-              <span style={{ fontWeight: 800 }}>{format(new Date(previousAssignment.assignedAt), "MMM d.")}</span>
+              <span style={{ fontWeight: 800 }}>{format(new Date(previousAssignment.assignedAt), "MMM d.", { locale: dateLocale })}</span>
               {t("alreadyAssignedSuffix")}
             </p>
           </div>

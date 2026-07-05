@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
+import { enUS, hu } from "date-fns/locale";
 import { trainerApi } from "../api";
 import { templateApi } from "@/features/workouts/api";
 import { recipeApi } from "@/features/nutrition/api";
@@ -11,9 +12,11 @@ import { queryKeys } from "@/lib/api/queryKeys";
 import { KpiCard } from "@/components/data/KpiCard";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
+import { useLocale } from "@/lib/hooks/useLocale";
 import type { ContentType } from "../types";
 
 const CONTENT_ICON: Record<ContentType, string> = { TEMPLATE: "fitness_center", RECIPE: "restaurant" };
+const DATE_LOCALES = { en: enUS, hu } as const;
 
 interface ClientOverviewTabProps {
   clientId: number;
@@ -21,6 +24,7 @@ interface ClientOverviewTabProps {
 
 export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
   const t = useTranslations("admin.clientDetail");
+  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
 
   const statsQ = useQuery({
     queryKey: queryKeys.trainerClientData.statistics(clientId, "weekly"),
@@ -150,7 +154,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
                     </p>
                   </div>
                   <span className="text-[11.5px] tabular shrink-0" style={{ color: "var(--muted)" }}>
-                    {format(new Date(a.assignedAt), "MMM d.")}
+                    {format(new Date(a.assignedAt), "MMM d.", { locale: dateLocale })}
                   </span>
                 </div>
               ))}
@@ -174,7 +178,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
                 return (
                   <div key={s.id} className="rounded-[15px] px-3.5 py-3 flex items-center gap-3.5" style={{ background: "var(--surface-container)" }}>
                     <span className="text-xs tabular w-[52px] shrink-0" style={{ color: "var(--on-surface-variant)" }}>
-                      {format(new Date(s.startedAt), "MMM d.")}
+                      {format(new Date(s.startedAt), "MMM d.", { locale: dateLocale })}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>

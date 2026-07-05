@@ -33,6 +33,9 @@ public interface TrainerClientRepository extends JpaRepository<TrainerClient, Lo
 
     Optional<TrainerClient> findByIdAndClientIdAndStatus(Long id, Long clientId, TrainerClientStatus status);
 
+    /** Looks up an invite by its email accept/decline token hash (see {@link TrainerClient#getEmailTokenHash()}). */
+    Optional<TrainerClient> findByEmailTokenHashAndStatus(String emailTokenHash, TrainerClientStatus status);
+
     List<TrainerClient> findByClientIdAndStatusOrderByRespondedAtDesc(Long clientId, TrainerClientStatus status);
 
     @Modifying

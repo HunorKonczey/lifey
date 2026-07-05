@@ -108,3 +108,11 @@ lifey:
     # sending so local dev and tests never require a real Resend account.
     enabled: ${MAIL_ENABLED:false}
     resend-api-key: ${RESEND_API_KEY:}
+  trainer-invite:
+    # Optional email channel for accepting a trainer invite, alongside the
+    # existing mobile polling flow (ClientInviteController). Off by default —
+    # the mobile flow alone is unaffected either way.
+    email-enabled: ${TRAINER_INVITE_EMAIL_ENABLED:false}
+    # Used to build the accept/decline links in the invite email; the links
+    # point back at this backend's own public endpoint, not a frontend route.
+    public-base-url: ${TRAINER_INVITE_PUBLIC_BASE_URL:http://localhost:8080}

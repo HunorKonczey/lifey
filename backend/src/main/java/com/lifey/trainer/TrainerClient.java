@@ -47,4 +47,12 @@ public class TrainerClient extends BaseEntity {
     /** Not mapped as a relation: purely an audit fact, read far less often than written. */
     @Column(name = "revoked_by")
     private Long revokedBy;
+
+    /**
+     * SHA-256 hash of the opaque token embedded in the invite email's accept/decline
+     * links (see {@link com.lifey.trainer.service.TrainerInviteServiceImpl}); only set
+     * while {@code lifey.trainer-invite.email-enabled} is on. Never store the raw token.
+     */
+    @Column(name = "email_token_hash", length = 64)
+    private String emailTokenHash;
 }

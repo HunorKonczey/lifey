@@ -3,12 +3,16 @@
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
+import { enUS, hu } from "date-fns/locale";
 import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { TimeSeriesChart } from "@/components/data/TimeSeriesChartLazy";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
+import { useLocale } from "@/lib/hooks/useLocale";
+
+const DATE_LOCALES = { en: enUS, hu } as const;
 
 interface ClientStepsTabProps {
   clientId: number;
@@ -16,6 +20,7 @@ interface ClientStepsTabProps {
 
 export function ClientStepsTab({ clientId }: ClientStepsTabProps) {
   const t = useTranslations("admin.clientDetail");
+  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
 
   const stepsQ = useQuery({
     queryKey: [...queryKeys.trainerClientData.steps(clientId), "30d"],
@@ -30,7 +35,7 @@ export function ClientStepsTab({ clientId }: ClientStepsTabProps) {
     return <EmptyState icon="directions_walk" title={t("noSteps")} body={t("noStepsBody")} />;
   }
 
-  const chartData = sorted.map((s) => ({ date: format(new Date(s.date), "MMM d"), value: s.steps }));
+  const chartData = sorted.map((s) => ({ date: format(new Date(s.date), "MMM d", { locale: dateLocale }), value: s.steps }));
   const history = sorted.slice().reverse();
 
   return (
@@ -45,7 +50,7 @@ export function ClientStepsTab({ clientId }: ClientStepsTabProps) {
           {history.map((s) => (
             <div key={s.id} className="flex items-center justify-between py-2" style={{ borderBottom: "1px solid var(--outline)" }}>
               <span className="text-sm tabular" style={{ color: "var(--on-surface-variant)" }}>
-                {format(new Date(s.date), "MMM d, yyyy")}
+                {format(new Date(s.date), "MMM d, yyyy", { locale: dateLocale })}
               </span>
               <span className="text-sm font-semibold tabular" style={{ color: "var(--on-surface)" }}>
                 {s.steps.toLocaleString()}
