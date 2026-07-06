@@ -4,11 +4,15 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { enUS, hu } from "date-fns/locale";
 import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
+import { useLocale } from "@/lib/hooks/useLocale";
+
+const DATE_LOCALES = { en: enUS, hu } as const;
 
 interface ClientWorkoutsTabProps {
   clientId: number;
@@ -17,11 +21,12 @@ interface ClientWorkoutsTabProps {
 export function ClientWorkoutsTab({ clientId }: ClientWorkoutsTabProps) {
   const t = useTranslations("admin.clientDetail");
   const common = useTranslations("common");
+  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.trainerClientData.sessions(clientId, page),
+    queryKey: queryKeys.trainerClientData.sessions(clientId, page, 15),
     queryFn: () => trainerApi.clientWorkoutSessions(clientId, page, 15),
   });
 
@@ -51,7 +56,7 @@ export function ClientWorkoutsTab({ clientId }: ClientWorkoutsTabProps) {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold" style={{ color: "var(--on-surface)" }}>
-                    {format(new Date(s.startedAt), "yyyy. MMM d. HH:mm")}
+                    {format(new Date(s.startedAt), "yyyy. MMM d. HH:mm", { locale: dateLocale })}
                   </p>
                   <p className="text-[11.5px] mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
                     {t("sessionMeta", {

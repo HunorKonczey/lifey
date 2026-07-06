@@ -12,12 +12,15 @@ import com.lifey.workout.template.WorkoutTemplateRepository;
 import com.lifey.workout.template.dto.TemplateExerciseEntry;
 import com.lifey.workout.template.dto.WorkoutTemplateRequest;
 import com.lifey.workout.template.dto.WorkoutTemplateResponse;
+import com.lifey.workout.template.WorkoutTemplateUpdatedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,6 +54,9 @@ class WorkoutTemplateServiceImplTest {
 
     @Mock
     CurrentUserProvider currentUserProvider;
+
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     WorkoutTemplateServiceImpl service;
@@ -114,6 +121,22 @@ class WorkoutTemplateServiceImplTest {
             assertThat(e.exerciseId()).isEqualTo(4L);
             assertThat(e.targetSets()).isEqualTo(4);
         });
+    }
+
+    @Test
+    void update_publishesUpdatedEventForLiveSync() {
+        WorkoutTemplate existing = new WorkoutTemplate();
+        existing.setId(9L);
+        existing.setName("Push day");
+        when(templateRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(existing));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+
+        service.update(9L, new WorkoutTemplateRequest("Push day", List.of(new TemplateExerciseEntry(1L, 3))));
+
+        ArgumentCaptor<WorkoutTemplateUpdatedEvent> captor = ArgumentCaptor.forClass(WorkoutTemplateUpdatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().trainerId()).isEqualTo(USER_ID);
+        assertThat(captor.getValue().templateId()).isEqualTo(9L);
     }
 
     @Test

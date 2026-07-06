@@ -16,4 +16,11 @@ public interface SettingsService {
      * Called after a user-details edit changes biometrics/goal inputs.
      */
     SettingsResponse applyGoals(SuggestGoalsResponse goals);
+
+    /**
+     * Read-only lookup of another user's settings — used by the trainer
+     * dashboard to show a client's nutrition goals (docs/personal_trainer/
+     * 03-backend-terv.md).
+     */
+    SettingsResponse forUser(Long userId);
 }

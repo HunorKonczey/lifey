@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
@@ -11,9 +11,19 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { SessionLogger } from "./SessionLogger";
+import { RecommendedWorkoutCard } from "./RecommendedWorkoutCard";
+import { recommendedTemplate } from "../recommendation";
 import type { WorkoutSessionResponse } from "../types";
 
-export function SessionsView() {
+export function SessionsView({
+  autoStartTemplateId,
+  onAutoStartHandled,
+}: {
+  // Set when navigated here from the dashboard's recommended-workout card —
+  // starts this template's session automatically once templates are loaded.
+  autoStartTemplateId?: number | null;
+  onAutoStartHandled?: () => void;
+} = {}) {
   const t = useTranslations("workouts");
   const d = useTranslations("dashboard");
   const common = useTranslations("common");
@@ -58,6 +68,20 @@ export function SessionsView() {
   );
 
   const active = activeId != null ? sessions.find((s) => s.id === activeId) ?? null : null;
+  const recommended = recommendedTemplate(sessions, templates ?? []);
+
+  // Auto-start the template the dashboard's recommended-workout card pointed
+  // at, once templates have loaded — runs at most once per mount.
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStartedRef.current || !autoStartTemplateId || !templates || active) return;
+    const tpl = templates.find((t) => t.id === autoStartTemplateId);
+    if (!tpl) return;
+    autoStartedRef.current = true;
+    startMutation.mutate({ exerciseIds: tpl.exercises.map((e) => e.exerciseId), templateId: tpl.id });
+    onAutoStartHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartTemplateId, templates, active]);
 
   // ─── Active logger mode ───
   if (active) {
@@ -74,6 +98,19 @@ export function SessionsView() {
 
   return (
     <div className="flex flex-col gap-4">
+      {recommended && (
+        <RecommendedWorkoutCard
+          template={recommended}
+          starting={startMutation.isPending}
+          onStart={() =>
+            startMutation.mutate({
+              exerciseIds: recommended.exercises.map((e) => e.exerciseId),
+              templateId: recommended.id,
+            })
+          }
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <p className="text-sm font-bold">{t("history")}</p>
         <button onClick={() => setStarting(true)}

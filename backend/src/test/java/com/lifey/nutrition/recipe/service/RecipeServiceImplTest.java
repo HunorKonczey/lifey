@@ -7,6 +7,7 @@ import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.recipe.Recipe;
 import com.lifey.nutrition.recipe.RecipeIngredient;
 import com.lifey.nutrition.recipe.RecipeRepository;
+import com.lifey.nutrition.recipe.RecipeUpdatedEvent;
 import com.lifey.nutrition.recipe.dto.RecipeIngredientRequest;
 import com.lifey.nutrition.recipe.dto.RecipeRequest;
 import com.lifey.nutrition.recipe.dto.RecipeResponse;
@@ -15,9 +16,11 @@ import com.lifey.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -49,6 +52,9 @@ class RecipeServiceImplTest {
 
     @Mock
     CurrentUserProvider currentUserProvider;
+
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     RecipeServiceImpl service;
@@ -122,6 +128,23 @@ class RecipeServiceImplTest {
         });
         // old ingredient replaced (orphanRemoval handles deletion at flush)
         assertThat(existing.getIngredients()).hasSize(1);
+    }
+
+    @Test
+    void update_publishesUpdatedEventForLiveSync() {
+        Recipe existing = new Recipe();
+        existing.setId(3L);
+        existing.setName("Old");
+        when(recipeRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Chicken")));
+
+        service.update(3L, new RecipeRequest("New", null, false, 1,
+                List.of(new RecipeIngredientRequest(1L, 300.0))));
+
+        ArgumentCaptor<RecipeUpdatedEvent> captor = ArgumentCaptor.forClass(RecipeUpdatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().trainerId()).isEqualTo(USER_ID);
+        assertThat(captor.getValue().recipeId()).isEqualTo(3L);
     }
 
     @Test

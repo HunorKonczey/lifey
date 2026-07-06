@@ -1,10 +1,13 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.auth.TokenHasher;
+import com.lifey.mail.service.MailService;
 import com.lifey.trainer.TrainerClient;
 import com.lifey.trainer.TrainerClientMapper;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
+import com.lifey.trainer.TrainerInviteProperties;
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.RespondToInviteRequest;
 import com.lifey.trainer.dto.TrainerInviteRequest;
@@ -48,6 +51,8 @@ public class TrainerInviteServiceImpl implements TrainerInviteService {
     private final TrainerClientRepository trainerClientRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final MailService mailService;
+    private final TrainerInviteProperties trainerInviteProperties;
 
     @Override
     public TrainerInviteResponse invite(TrainerInviteRequest request) {
@@ -67,7 +72,9 @@ public class TrainerInviteServiceImpl implements TrainerInviteService {
         Instant now = Instant.now();
         Instant windowStart = now.minus(INVITE_WINDOW);
 
-        trainerClientRepository.findFirstByTrainerIdAndClientIdOrderByCreatedAtDesc(trainerId, client.getId())
+        var lastInvite = trainerClientRepository
+                .findFirstByTrainerIdAndClientIdOrderByCreatedAtDesc(trainerId, client.getId());
+        lastInvite
                 .filter(last -> last.getCreatedAt().isAfter(windowStart))
                 .ifPresent(_ -> {
                     throw new InviteRateLimitedException(
@@ -77,13 +84,50 @@ public class TrainerInviteServiceImpl implements TrainerInviteService {
             throw new InviteRateLimitedException("Daily invite limit reached");
         }
 
+        // The nightly cleanup job only flips stale PENDING invites to EXPIRED once a
+        // day, but the "one live row per pair" unique index treats PENDING as live
+        // regardless of expiresAt — so without this, a re-invite fails with a
+        // constraint violation until the job catches up. Self-heal here instead.
+        // The flush is required: the new invite's INSERT below runs immediately
+        // (identity-generated id), before this UPDATE would otherwise be flushed
+        // at commit time, so without it the old row is still PENDING when the
+        // unique constraint is checked.
+        lastInvite
+                .filter(last -> last.getStatus() == TrainerClientStatus.PENDING)
+                .filter(last -> !last.getExpiresAt().isAfter(now))
+                .ifPresent(last -> {
+                    last.setStatus(TrainerClientStatus.EXPIRED);
+                    trainerClientRepository.saveAndFlush(last);
+                });
+
+        User trainer = userRepository.getReferenceById(trainerId);
+
         TrainerClient invite = new TrainerClient();
-        invite.setTrainer(userRepository.getReferenceById(trainerId));
+        invite.setTrainer(trainer);
         invite.setClient(client);
         invite.setStatus(TrainerClientStatus.PENDING);
         invite.setCreatedAt(now);
         invite.setExpiresAt(now.plus(INVITE_WINDOW));
-        return TrainerClientMapper.toInviteResponse(trainerClientRepository.save(invite));
+
+        // The email channel is optional (lifey.trainer-invite.email-enabled) and
+        // additive to the mobile polling flow: the token only exists to let the
+        // client accept/decline from the emailed link without being logged in.
+        String emailToken = null;
+        if (trainerInviteProperties.emailEnabled()) {
+            emailToken = TokenHasher.generateOpaqueToken();
+            invite.setEmailTokenHash(TokenHasher.hash(emailToken));
+        }
+
+        TrainerClient saved = trainerClientRepository.save(invite);
+
+        if (emailToken != null) {
+            String baseUrl = trainerInviteProperties.publicBaseUrl();
+            String acceptUrl = baseUrl + "/api/v1/trainer-invites/email/respond?token=" + emailToken + "&accept=true";
+            String declineUrl = baseUrl + "/api/v1/trainer-invites/email/respond?token=" + emailToken + "&accept=false";
+            mailService.sendTrainerInviteEmail(client, trainer, acceptUrl, declineUrl);
+        }
+
+        return TrainerClientMapper.toInviteResponse(saved);
     }
 
     @Override
@@ -126,6 +170,17 @@ public class TrainerInviteServiceImpl implements TrainerInviteService {
                 .orElseThrow(() -> new InviteNotFoundException("Invite not found: " + inviteId));
 
         invite.setStatus(request.accept() ? TrainerClientStatus.ACTIVE : TrainerClientStatus.DECLINED);
+        invite.setRespondedAt(Instant.now());
+    }
+
+    @Override
+    public void respondViaEmailToken(String token, boolean accept) {
+        TrainerClient invite = trainerClientRepository
+                .findByEmailTokenHashAndStatus(TokenHasher.hash(token), TrainerClientStatus.PENDING)
+                .filter(tc -> tc.getExpiresAt().isAfter(Instant.now()))
+                .orElseThrow(() -> new InviteNotFoundException("Invite not found or already responded to"));
+
+        invite.setStatus(accept ? TrainerClientStatus.ACTIVE : TrainerClientStatus.DECLINED);
         invite.setRespondedAt(Instant.now());
     }
 }

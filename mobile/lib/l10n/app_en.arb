@@ -631,6 +631,12 @@
     "emptyWorkoutSubtitle": "Start without a template",
     "@emptyWorkoutSubtitle": {"description": "Subtitle for the empty workout option on the template picker"},
 
+    "recommendedWorkoutLabel": "Recommended workout",
+    "@recommendedWorkoutLabel": {"description": "Label on the recommended-workout card, above the suggested template's name"},
+
+    "recommendedWorkoutSubtitle": "Based on your routine",
+    "@recommendedWorkoutSubtitle": {"description": "Subtitle on the recommended-workout card explaining where the suggestion comes from"},
+
     "exerciseFabLabel": "Exercise",
     "@exerciseFabLabel": {"description": "FAB label when on the Exercises tab"},
 
@@ -1338,6 +1344,15 @@
 
     "onboardingCompleteMessage": "You're all set!",
     "@onboardingCompleteMessage": {"description": "Onboarding wizard: success message shown after finishing"},
+
+    "onboardingHealthTitle": "Connect Apple Health",
+    "@onboardingHealthTitle": {"description": "Onboarding wizard: Apple Health step title (iOS only)"},
+
+    "onboardingHealthMessage": "Automatically bring in your weight and step count from Apple Health, so you don't have to log them by hand. You can turn this off anytime in Settings.",
+    "@onboardingHealthMessage": {"description": "Onboarding wizard: Apple Health step explanation (iOS only)"},
+
+    "onboardingHealthEnableButton": "Enable Apple Health",
+    "@onboardingHealthEnableButton": {"description": "Onboarding wizard: Apple Health step, button that grants permission and imports existing data"},
 
     "onboardingBannerTitle": "Finish setting up your profile",
     "@onboardingBannerTitle": {"description": "Dashboard banner: title, shown when onboarding hasn't been completed"},

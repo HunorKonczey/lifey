@@ -1,6 +1,14 @@
 package com.lifey.trainer;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.nutrition.meal.MealType;
+import com.lifey.nutrition.meal.dto.MealResponse;
+import com.lifey.nutrition.meal.service.MealService;
+import com.lifey.settings.LanguagePreference;
+import com.lifey.settings.ThemePreference;
+import com.lifey.settings.UnitSystem;
+import com.lifey.settings.dto.SettingsResponse;
+import com.lifey.settings.service.SettingsService;
 import com.lifey.statistics.dto.StatisticsResponse;
 import com.lifey.statistics.service.StatisticsService;
 import com.lifey.steps.dto.DailyStepCountResponse;
@@ -8,6 +16,9 @@ import com.lifey.steps.service.DailyStepCountService;
 import com.lifey.trainer.controller.TrainerClientDataController;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.trainer.service.TrainerAccessService;
+import com.lifey.user.AvatarSource;
+import com.lifey.user.UserAvatar;
+import com.lifey.user.UserAvatarRepository;
 import com.lifey.weight.dto.WeightResponse;
 import com.lifey.weight.service.WeightService;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
@@ -25,12 +36,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,6 +70,15 @@ class TrainerClientDataControllerTest {
 
     @MockitoBean
     WorkoutSessionService workoutSessionService;
+
+    @MockitoBean
+    UserAvatarRepository userAvatarRepository;
+
+    @MockitoBean
+    MealService mealService;
+
+    @MockitoBean
+    SettingsService settingsService;
 
     @MockitoBean
     CurrentUserProvider currentUserProvider;
@@ -157,6 +179,61 @@ class TrainerClientDataControllerTest {
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/workout-sessions", CLIENT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1));
+    }
+
+    @Test
+    void avatar_returnsClientsProfilePicture() throws Exception {
+        UserAvatar avatar = new UserAvatar();
+        avatar.setImage(new byte[] {1, 2, 3});
+        avatar.setContentType("image/jpeg");
+        avatar.setSource(AvatarSource.UPLOAD);
+        avatar.setUpdatedAt(Instant.now());
+        when(userAvatarRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.of(avatar));
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/avatar", CLIENT_ID))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/jpeg"))
+                .andExpect(content().bytes(new byte[] {1, 2, 3}));
+    }
+
+    @Test
+    void avatar_returns404WhenClientHasNoPicture() throws Exception {
+        when(userAvatarRepository.findByUserId(CLIENT_ID)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/avatar", CLIENT_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void meals_returnsClientsLoggedMeals() throws Exception {
+        MealResponse meal = new MealResponse(1L, Instant.parse("2026-06-01T08:00:00Z"),
+                MealType.BREAKFAST, "Breakfast", List.of(), Instant.now(), null);
+        when(mealService.findAllForUserBetween(eq(CLIENT_ID), any(), any())).thenReturn(List.of(meal));
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/meals", CLIENT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].mealType").value("BREAKFAST"));
+    }
+
+    @Test
+    void meals_passesFromAndToThrough() throws Exception {
+        when(mealService.findAllForUserBetween(CLIENT_ID, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/meals", CLIENT_ID)
+                        .param("from", "2026-06-01").param("to", "2026-06-30"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void nutritionGoals_returnsClientsGoals() throws Exception {
+        when(settingsService.forUser(CLIENT_ID)).thenReturn(new SettingsResponse(
+                UnitSystem.METRIC, 2200, 150, 240, 70, 2.5, 10000, ThemePreference.SYSTEM, LanguagePreference.SYSTEM));
+
+        mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/nutrition-goals", CLIENT_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dailyCalorieGoal").value(2200))
+                .andExpect(jsonPath("$.dailyProteinGoal").value(150));
     }
 
     @Test

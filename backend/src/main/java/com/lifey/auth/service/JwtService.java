@@ -1,4 +1,4 @@
-package com.lifey.auth;
+package com.lifey.auth.service;
 
 import com.lifey.auth.entity.RefreshToken;
 import com.lifey.auth.exception.InvalidTokenException;

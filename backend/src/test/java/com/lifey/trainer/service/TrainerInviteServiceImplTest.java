@@ -1,9 +1,11 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.mail.service.MailService;
 import com.lifey.trainer.TrainerClient;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
+import com.lifey.trainer.TrainerInviteProperties;
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.RespondToInviteRequest;
 import com.lifey.trainer.dto.TrainerInviteRequest;
@@ -48,12 +50,19 @@ class TrainerInviteServiceImplTest {
     @Mock
     CurrentUserProvider currentUserProvider;
 
+    @Mock
+    MailService mailService;
+
+    /** Unstubbed: {@code emailEnabled()} defaults to {@code false}, matching the feature's off-by-default setting. */
+    @Mock
+    TrainerInviteProperties trainerInviteProperties;
+
     @InjectMocks
     TrainerInviteServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
+        lenient().when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
     }
 
     @Test
@@ -265,6 +274,70 @@ class TrainerInviteServiceImplTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.respond(99L, new RespondToInviteRequest(true)))
+                .isInstanceOf(InviteNotFoundException.class);
+    }
+
+    @Test
+    void invite_sendsInviteEmailWhenEmailChannelEnabled() {
+        when(trainerInviteProperties.emailEnabled()).thenReturn(true);
+        when(trainerInviteProperties.publicBaseUrl()).thenReturn("http://localhost:8080");
+        User client = client();
+        User trainer = new User();
+        trainer.setId(TRAINER_ID);
+        when(userRepository.findByEmailIgnoreCase("client@example.com")).thenReturn(Optional.of(client));
+        when(userRepository.getReferenceById(TRAINER_ID)).thenReturn(trainer);
+        when(trainerClientRepository.findFirstByTrainerIdAndClientIdOrderByCreatedAtDesc(TRAINER_ID, CLIENT_ID))
+                .thenReturn(Optional.empty());
+        when(trainerClientRepository.save(any(TrainerClient.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.invite(new TrainerInviteRequest("client@example.com"));
+
+        ArgumentCaptor<TrainerClient> captor = ArgumentCaptor.forClass(TrainerClient.class);
+        verify(trainerClientRepository).save(captor.capture());
+        assertThat(captor.getValue().getEmailTokenHash()).isNotBlank();
+
+        ArgumentCaptor<String> acceptUrl = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> declineUrl = ArgumentCaptor.forClass(String.class);
+        verify(mailService).sendTrainerInviteEmail(eq(client), eq(trainer), acceptUrl.capture(), declineUrl.capture());
+        assertThat(acceptUrl.getValue()).startsWith("http://localhost:8080/api/v1/trainer-invites/email/respond?token=")
+                .endsWith("&accept=true");
+        assertThat(declineUrl.getValue()).endsWith("&accept=false");
+    }
+
+    @Test
+    void invite_doesNotSendEmailWhenChannelDisabled() {
+        User client = client();
+        when(userRepository.findByEmailIgnoreCase("client@example.com")).thenReturn(Optional.of(client));
+        when(userRepository.getReferenceById(TRAINER_ID)).thenReturn(new User());
+        when(trainerClientRepository.findFirstByTrainerIdAndClientIdOrderByCreatedAtDesc(TRAINER_ID, CLIENT_ID))
+                .thenReturn(Optional.empty());
+        when(trainerClientRepository.save(any(TrainerClient.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.invite(new TrainerInviteRequest("client@example.com"));
+
+        verify(mailService, never()).sendTrainerInviteEmail(any(), any(), any(), any());
+    }
+
+    @Test
+    void respondViaEmailToken_acceptSetsActive() {
+        TrainerClient invite = new TrainerClient();
+        invite.setStatus(TrainerClientStatus.PENDING);
+        invite.setExpiresAt(Instant.now().plusSeconds(3600));
+        when(trainerClientRepository.findByEmailTokenHashAndStatus(any(), eq(TrainerClientStatus.PENDING)))
+                .thenReturn(Optional.of(invite));
+
+        service.respondViaEmailToken("raw-token", true);
+
+        assertThat(invite.getStatus()).isEqualTo(TrainerClientStatus.ACTIVE);
+        assertThat(invite.getRespondedAt()).isNotNull();
+    }
+
+    @Test
+    void respondViaEmailToken_throwsWhenTokenUnknownOrAlreadyUsed() {
+        when(trainerClientRepository.findByEmailTokenHashAndStatus(any(), eq(TrainerClientStatus.PENDING)))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.respondViaEmailToken("raw-token", true))
                 .isInstanceOf(InviteNotFoundException.class);
     }
 

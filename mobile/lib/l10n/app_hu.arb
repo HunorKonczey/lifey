@@ -213,6 +213,8 @@
     "chooseTemplateTitle": "Válassz sablont",
     "emptyWorkoutLabel": "Üres edzés",
     "emptyWorkoutSubtitle": "Sablon nélkül indulj",
+    "recommendedWorkoutLabel": "Ajánlott edzés",
+    "recommendedWorkoutSubtitle": "A szokásos sorrended alapján",
     "exerciseFabLabel": "Gyakorlat",
 
     "waterAmountLabel": "{current} / {goal} L",
@@ -465,6 +467,9 @@
     "onboardingSavingMessage": "Mentés…",
     "onboardingSuggestFailedMessage": "Nem sikerült kiszámítani a javasolt célokat",
     "onboardingCompleteMessage": "Minden készen áll!",
+    "onboardingHealthTitle": "Apple Health összekapcsolása",
+    "onboardingHealthMessage": "Automatikusan behozzuk a súlyodat és a lépésszámodat az Apple Health-ből, így nem kell kézzel rögzítened őket. Ezt bármikor kikapcsolhatod a Beállításokban.",
+    "onboardingHealthEnableButton": "Apple Health engedélyezése",
     "onboardingBannerTitle": "Fejezd be a profilod beállítását",
     "onboardingBannerBody": "Kapj személyre szabott kalória-, makro- és vízcélokat egy perc alatt.",
     "onboardingBannerCta": "Beállítás folytatása",

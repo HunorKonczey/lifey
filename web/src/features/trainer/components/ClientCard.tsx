@@ -4,9 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { formatDistanceToNow } from "date-fns";
+import { enUS, hu } from "date-fns/locale";
 import { Sparkline } from "@/components/data/Sparkline";
+import { useLocale } from "@/lib/hooks/useLocale";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import type { TrainerClientResponse } from "../types";
+
+const DATE_LOCALES = { en: enUS, hu } as const;
 
 interface ClientCardProps {
   client: TrainerClientResponse;
@@ -16,6 +20,7 @@ interface ClientCardProps {
 
 export function ClientCard({ client, onRevoke, revoking }: ClientCardProps) {
   const t = useTranslations("admin.dashboard");
+  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
 
@@ -27,15 +32,19 @@ export function ClientCard({ client, onRevoke, revoking }: ClientCardProps) {
       data-client-email={client.clientEmail}
     >
       <div className="flex items-center gap-3">
-        <ClientAvatar clientId={client.clientId} email={client.clientEmail} />
-        <div className="flex-1 min-w-0">
-          <p className="text-[15.5px] font-extrabold truncate" style={{ color: "var(--on-surface)" }}>
-            {nameFor(client.clientEmail)}
-          </p>
-          <p className="text-[11.5px] mt-0.5 truncate" style={{ color: "var(--on-surface-variant)" }}>
-            {t("clientSince", { time: formatDistanceToNow(new Date(client.activeSince), { addSuffix: true }) })}
-          </p>
-        </div>
+        <Link href={`/admin/clients/${client.clientId}`} className="flex items-center gap-3 flex-1 min-w-0">
+          <ClientAvatar clientId={client.clientId} email={client.clientEmail} />
+          <div className="flex-1 min-w-0">
+            <p className="text-[15.5px] font-extrabold truncate" style={{ color: "var(--on-surface)" }}>
+              {nameFor(client.clientEmail)}
+            </p>
+            <p className="text-[11.5px] mt-0.5 truncate" style={{ color: "var(--on-surface-variant)" }}>
+              {t("clientSince", {
+                time: formatDistanceToNow(new Date(client.activeSince), { addSuffix: true, locale: dateLocale }),
+              })}
+            </p>
+          </div>
+        </Link>
         <button
           onClick={() => setMenuOpen((o) => !o)}
           className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0 transition-colors hover:bg-surface-high"

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.lifey.auth.properties.GoogleOAuthProperties;
 import com.lifey.auth.properties.JwtProperties;
 import com.lifey.auth.service.CustomUserDetailsService;
+import com.lifey.auth.service.JwtService;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,6 +37,10 @@ public class SecurityConfig {
             "/api/v1/auth/refresh",
             "/api/v1/auth/forgot-password",
             "/api/v1/auth/reset-password",
+            // Public accept/decline links from the trainer invite email (see
+            // TrainerInviteEmailController) — protected by an opaque, single-use,
+            // per-invite token instead of a session.
+            "/api/v1/trainer-invites/email/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",

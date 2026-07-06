@@ -11,10 +11,13 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/exercise_controller.dart';
+import '../application/recommended_template_provider.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/exercise_enums.dart';
 import '../domain/workout_session.dart';
+import '../domain/workout_template.dart';
 import 'log_session_screen.dart';
+import 'widgets/recommended_workout_card.dart';
 
 /// "Sessions" tab: tap to edit/continue; swipe-to-delete with confirm; date filter.
 /// The active [filter] is owned by the parent screen and shown in the AppBar.
@@ -53,6 +56,12 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
     );
   }
 
+  Future<void> _startRecommended(BuildContext context, WorkoutTemplate template) {
+    return Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => LogSessionScreen(template: template)),
+    );
+  }
+
   Future<void> _delete(BuildContext context, WidgetRef ref, WorkoutSession session) async {
     final l10n = AppLocalizations.of(context)!;
     try {
@@ -84,6 +93,7 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(workoutSessionControllerProvider);
+    final recommended = ref.watch(recommendedTemplateProvider);
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
@@ -94,14 +104,20 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
           orElse: () => const <String, String?>{},
         );
 
-    return state.when(
+    // The recommended-workout card is pinned above the scrollable area (not a
+    // list item), so once it's shown the list itself starts right below it
+    // instead of under `widget.topPadding`.
+    final listTopPadding = recommended == null ? widget.topPadding : 4.0;
+    final refreshDisplacement = recommended == null ? widget.topPadding : 40.0;
+
+    final content = state.when(
       data: (sessions) {
         final filtered =
             sessions.where((s) => widget.filter.matches(s.startedAt)).toList();
 
         if (sessions.isEmpty || filtered.isEmpty) {
           return RefreshIndicator(
-            displacement: widget.topPadding,
+            displacement: refreshDisplacement,
             onRefresh: () =>
                 ref.read(workoutSessionControllerProvider.notifier).refresh(),
             child: EmptyView(
@@ -117,11 +133,11 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
         }
 
         return RefreshIndicator(
-          displacement: widget.topPadding,
+          displacement: refreshDisplacement,
           onRefresh: () =>
               ref.read(workoutSessionControllerProvider.notifier).refresh(),
           child: ListView.builder(
-            padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
+            padding: EdgeInsets.fromLTRB(12, listTopPadding, 12, bottomPad + 88),
             itemCount: filtered.length,
             itemBuilder: (context, index) => _SessionCard(
               session: filtered[index],
@@ -139,6 +155,22 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
         onRetry: () =>
             ref.read(workoutSessionControllerProvider.notifier).refresh(),
       ),
+    );
+
+    if (recommended == null) return content;
+
+    return Column(
+      children: [
+        SizedBox(height: widget.topPadding),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: RecommendedWorkoutCard(
+            template: recommended,
+            onTap: () => _startRecommended(context, recommended),
+          ),
+        ),
+        Expanded(child: content),
+      ],
     );
   }
 }

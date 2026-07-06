@@ -1,6 +1,6 @@
 package com.lifey.security;
 
-import com.lifey.auth.JwtService;
+import com.lifey.auth.service.JwtService;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import org.junit.jupiter.api.Test;

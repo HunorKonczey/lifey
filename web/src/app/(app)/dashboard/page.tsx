@@ -12,7 +12,9 @@ import { weightApi } from "@/features/weight/api";
 import { waterApi } from "@/features/water/api";
 import { stepsApi } from "@/features/steps/api";
 import { mealApi } from "@/features/nutrition/api";
-import { workoutSessionApi } from "@/features/workouts/api";
+import { workoutSessionApi, templateApi } from "@/features/workouts/api";
+import { RecommendedWorkoutCard } from "@/features/workouts/components/RecommendedWorkoutCard";
+import { recommendedTemplate } from "@/features/workouts/recommendation";
 import { OnboardingBanner } from "@/components/app/OnboardingBanner";
 import { HeroMetricCard } from "@/components/data/HeroMetricCard";
 import { MacroRing } from "@/components/data/MacroRing";
@@ -88,11 +90,25 @@ export default function DashboardPage() {
         queryKey: queryKeys.workoutSessions.all(),
         queryFn: workoutSessionApi.list,
       },
+      {
+        queryKey: queryKeys.workoutTemplates.all(),
+        queryFn: templateApi.list,
+      },
     ],
   });
 
-  const [statsQ, weeklyStatsQ, settingsQ, weightsQ, waterEntriesQ, waterSourcesQ, stepsQ, mealsQ, sessionsQ] =
-    results;
+  const [
+    statsQ,
+    weeklyStatsQ,
+    settingsQ,
+    weightsQ,
+    waterEntriesQ,
+    waterSourcesQ,
+    stepsQ,
+    mealsQ,
+    sessionsQ,
+    templatesQ,
+  ] = results;
 
   const weeklyStats = weeklyStatsQ.data;
   const settings = settingsQ.data;
@@ -108,7 +124,11 @@ export default function DashboardPage() {
   const latestWeight = weightsQ.data
     ? ([...weightsQ.data].sort((a, b) => a.date.localeCompare(b.date)).at(-1) ?? null)
     : null;
-  const recentSessions = sessionsQ.data?.slice(-5).reverse() ?? [];
+  const sessionsDesc = (sessionsQ.data ?? [])
+    .slice()
+    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+  const recentSessions = sessionsDesc.slice(0, 5);
+  const recommended = recommendedTemplate(sessionsDesc, templatesQ.data ?? []);
 
   const todayEntries = todayMeals.flatMap((m) => m.entries);
   const totalKcal = todayEntries.reduce((s, e) => s + e.calories, 0);
@@ -152,6 +172,12 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      {recommended && (
+        <RecommendedWorkoutCard
+          template={recommended}
+          onStart={() => router.push(`/workouts?start=${recommended.id}`)}
+        />
+      )}
       <OnboardingBanner />
       <div className="flex gap-6">
       {/* Main column */}

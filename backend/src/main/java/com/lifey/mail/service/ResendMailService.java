@@ -56,6 +56,23 @@ class ResendMailService implements MailService {
         send(user, "password_reset", "password-reset", language, subject, placeholders);
     }
 
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendTrainerInviteEmail(User client, User trainer, String acceptUrl, String declineUrl) {
+        MailLanguage language = languageResolver.resolve(client);
+        String trainerName = displayName(trainer);
+        Map<String, String> placeholders = Map.of(
+                "name", displayName(client),
+                "trainerName", trainerName,
+                "acceptUrl", acceptUrl,
+                "declineUrl", declineUrl
+        );
+        String subject = language == MailLanguage.HU
+                ? trainerName + " meghívott, hogy legyél az ügyfele a Lifey-ban"
+                : trainerName + " invited you to be their client on Lifey";
+        send(client, "trainer_invite", "trainer-invite", language, subject, placeholders);
+    }
+
     private void send(User user, String templateName, String mailType, MailLanguage language, String subject,
                       Map<String, String> placeholders) {
         if (!mailProperties.enabled()) {

@@ -1,7 +1,10 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.mail.MailLanguage;
+import com.lifey.mail.MailLanguageResolver;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.recipe.Recipe;
@@ -26,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Deep-copy content assignment (docs/personal_trainer/01-koncepcio-es-folyamatok.md,
@@ -46,6 +51,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
     private final UserRepository userRepository;
     private final TrainerAccessService trainerAccessService;
     private final CurrentUserProvider currentUserProvider;
+    private final MailLanguageResolver mailLanguageResolver;
 
     @Override
     public AssignmentResponse assign(AssignmentRequest request) {
@@ -54,6 +60,10 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
 
         boolean previouslyAssigned = contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
                 trainerId, request.clientId(), request.contentType(), request.sourceId());
+
+        if (previouslyAssigned) {
+            throw new DuplicateResourceException("This content has already been assigned to this client");
+        }
 
         Long copiedId = switch (request.contentType()) {
             case TEMPLATE -> assignTemplate(trainerId, request.clientId(), request.sourceId());
@@ -84,6 +94,32 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> findAssignedClientIds(ContentType contentType, Long sourceId) {
+        Long trainerId = currentUserProvider.getUserId();
+        return contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(trainerId, contentType, sourceId).stream()
+                .map(a -> a.getClient().getId())
+                .toList();
+    }
+
+    @Override
+    public void unassign(Long assignmentId) {
+        Long trainerId = currentUserProvider.getUserId();
+        ContentAssignment assignment = contentAssignmentRepository.findByIdAndTrainerId(assignmentId, trainerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found: " + assignmentId));
+
+        Long clientId = assignment.getClient().getId();
+        switch (assignment.getContentType()) {
+            case TEMPLATE -> workoutTemplateRepository.findByIdAndUserId(assignment.getCopiedId(), clientId)
+                    .ifPresent(t -> t.setDeletedAt(Instant.now()));
+            case RECIPE -> recipeRepository.findByIdAndUserId(assignment.getCopiedId(), clientId)
+                    .ifPresent(r -> r.setDeletedAt(Instant.now()));
+        }
+
+        contentAssignmentRepository.delete(assignment);
+    }
+
     private Long assignTemplate(Long trainerId, Long clientId, Long templateId) {
         WorkoutTemplate source = workoutTemplateRepository.findByIdAndUserId(templateId, trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workout template not found: " + templateId));
@@ -91,20 +127,9 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
         User client = userRepository.getReferenceById(clientId);
         WorkoutTemplate copy = new WorkoutTemplate();
         copy.setUser(client);
-        copy.setName(source.getName());
         copy.setOriginSourceId(source.getId());
         copy.setOriginTrainerId(trainerId);
-
-        for (WorkoutTemplateExercise link : source.getExercises()) {
-            Exercise exerciseCopy = resolveExerciseCopy(trainerId, clientId, client, link.getExercise());
-
-            WorkoutTemplateExercise copyLink = new WorkoutTemplateExercise();
-            copyLink.setWorkoutTemplate(copy);
-            copyLink.setExercise(exerciseCopy);
-            copyLink.setTargetSets(link.getTargetSets());
-            copyLink.setSortOrder(link.getSortOrder());
-            copy.getExercises().add(copyLink);
-        }
+        copyTemplateFields(copy, source, trainerId, clientId, client);
 
         return workoutTemplateRepository.save(copy).getId();
     }
@@ -116,12 +141,83 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
         User client = userRepository.getReferenceById(clientId);
         Recipe copy = new Recipe();
         copy.setUser(client);
+        copy.setOriginSourceId(source.getId());
+        copy.setOriginTrainerId(trainerId);
+        copyRecipeFields(copy, source, trainerId, clientId, client);
+
+        return recipeRepository.save(copy).getId();
+    }
+
+    @Override
+    public void propagateTemplateUpdate(Long trainerId, Long templateId) {
+        WorkoutTemplate source = workoutTemplateRepository.findByIdAndUserId(templateId, trainerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workout template not found: " + templateId));
+
+        // One query per assignment — accepted N+1, trainer client rosters and
+        // per-user template counts are both small by this feature's existing
+        // design assumptions (docs/16-delta-sync-rollout.md).
+        for (ContentAssignment assignment : contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(
+                trainerId, ContentType.TEMPLATE, templateId)) {
+            Long clientId = assignment.getClient().getId();
+            // Skip silently if the client already deleted their copy independently —
+            // matches unassign()'s handling of the same "copy might be gone" case.
+            workoutTemplateRepository.findByIdAndUserId(assignment.getCopiedId(), clientId).ifPresent(copy -> {
+                User client = userRepository.getReferenceById(clientId);
+                copyTemplateFields(copy, source, trainerId, clientId, client);
+                copy.setUpdatedAt(Instant.now());
+            });
+        }
+    }
+
+    @Override
+    public void propagateRecipeUpdate(Long trainerId, Long recipeId) {
+        Recipe source = recipeRepository.findByIdAndUserId(recipeId, trainerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
+
+        for (ContentAssignment assignment : contentAssignmentRepository.findByTrainerIdAndContentTypeAndSourceId(
+                trainerId, ContentType.RECIPE, recipeId)) {
+            Long clientId = assignment.getClient().getId();
+            recipeRepository.findByIdAndUserId(assignment.getCopiedId(), clientId).ifPresent(copy -> {
+                User client = userRepository.getReferenceById(clientId);
+                copyRecipeFields(copy, source, trainerId, clientId, client);
+                copy.setUpdatedAt(Instant.now());
+            });
+        }
+    }
+
+    /**
+     * Overwrites {@code copy}'s name and exercise list to match {@code source} —
+     * shared by the create-new-copy path ({@link #assignTemplate}) and the
+     * refresh-existing-copy path ({@link #propagateTemplateUpdate}). Full
+     * overwrite: any local edit the client made to their copy is replaced by
+     * the trainer's current version (the accepted live-sync tradeoff).
+     */
+    private void copyTemplateFields(WorkoutTemplate copy, WorkoutTemplate source, Long trainerId, Long clientId, User client) {
+        copy.setName(source.getName());
+        copy.getExercises().clear();
+        for (WorkoutTemplateExercise link : source.getExercises()) {
+            Exercise exerciseCopy = resolveExerciseCopy(trainerId, clientId, client, link.getExercise());
+
+            WorkoutTemplateExercise copyLink = new WorkoutTemplateExercise();
+            copyLink.setWorkoutTemplate(copy);
+            copyLink.setExercise(exerciseCopy);
+            copyLink.setTargetSets(link.getTargetSets());
+            copyLink.setSortOrder(link.getSortOrder());
+            copy.getExercises().add(copyLink);
+        }
+    }
+
+    /**
+     * Overwrites {@code copy}'s name/description/servings and ingredient list
+     * to match {@code source} — shared by {@link #assignRecipe} and
+     * {@link #propagateRecipeUpdate}. See {@link #copyTemplateFields} for the
+     * full-overwrite rationale.
+     */
+    private void copyRecipeFields(Recipe copy, Recipe source, Long trainerId, Long clientId, User client) {
         copy.setName(source.getName());
         copy.setDescription(source.getDescription());
         copy.setServings(source.getServings());
-        copy.setOriginSourceId(source.getId());
-        copy.setOriginTrainerId(trainerId);
-
+        copy.getIngredients().clear();
         for (RecipeIngredient ingredient : source.getIngredients()) {
             Food foodCopy = resolveFoodCopy(trainerId, clientId, client, ingredient.getFood());
 
@@ -131,8 +227,6 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
             copyIngredient.setQuantityInGrams(ingredient.getQuantityInGrams());
             copy.getIngredients().add(copyIngredient);
         }
-
-        return recipeRepository.save(copy).getId();
     }
 
     /**
@@ -158,19 +252,49 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
     private Food resolveFoodCopy(Long trainerId, Long clientId, User client, Food source) {
         return foodRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
                         clientId, trainerId, source.getId())
-                .orElseGet(() -> {
-                    Food copy = new Food();
-                    copy.setUser(client);
-                    copy.setName(source.getName());
-                    copy.setCaloriesPer100g(source.getCaloriesPer100g());
-                    copy.setProteinPer100g(source.getProteinPer100g());
-                    copy.setCarbsPer100g(source.getCarbsPer100g());
-                    copy.setFatPer100g(source.getFatPer100g());
-                    copy.setHidden(source.isHidden());
-                    copy.setOriginSourceId(source.getId());
-                    copy.setOriginTrainerId(trainerId);
-                    return foodRepository.save(copy);
-                });
+                .orElseGet(() -> createOrReuseFoodCopy(trainerId, clientId, client, source));
+    }
+
+    /**
+     * The client may already own a visible food with this exact name (their
+     * own entry, or a copy from a different trainer/recipe) — the
+     * {@code foods_name_unique_idx} constraint forbids a second one. If its
+     * macros match the trainer's food, reuse it as-is (same food, no need for
+     * a copy). Otherwise create the copy under a disambiguated name so both
+     * can coexist.
+     */
+    private Food createOrReuseFoodCopy(Long trainerId, Long clientId, User client, Food source) {
+        Optional<Food> conflicting = source.isHidden()
+                ? Optional.empty()
+                : foodRepository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(clientId, source.getName().trim());
+
+        if (conflicting.isPresent() && macrosMatch(conflicting.get(), source)) {
+            return conflicting.get();
+        }
+
+        Food copy = new Food();
+        copy.setUser(client);
+        copy.setName(conflicting.isPresent() ? disambiguatedName(source.getName(), client) : source.getName());
+        copy.setCaloriesPer100g(source.getCaloriesPer100g());
+        copy.setProteinPer100g(source.getProteinPer100g());
+        copy.setCarbsPer100g(source.getCarbsPer100g());
+        copy.setFatPer100g(source.getFatPer100g());
+        copy.setHidden(source.isHidden());
+        copy.setOriginSourceId(source.getId());
+        copy.setOriginTrainerId(trainerId);
+        return foodRepository.save(copy);
+    }
+
+    private boolean macrosMatch(Food a, Food b) {
+        return Double.compare(a.getCaloriesPer100g(), b.getCaloriesPer100g()) == 0
+                && Double.compare(a.getProteinPer100g(), b.getProteinPer100g()) == 0
+                && Objects.equals(a.getCarbsPer100g(), b.getCarbsPer100g())
+                && Objects.equals(a.getFatPer100g(), b.getFatPer100g());
+    }
+
+    private String disambiguatedName(String name, User client) {
+        String suffix = mailLanguageResolver.resolve(client) == MailLanguage.HU ? "Edzőtől" : "From trainer";
+        return name + " (" + suffix + ")";
     }
 
     private static AssignmentResponse toResponse(ContentAssignment a, boolean previouslyAssigned) {

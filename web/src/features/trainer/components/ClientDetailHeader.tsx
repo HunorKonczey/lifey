@@ -3,15 +3,20 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
+import { enUS, hu } from "date-fns/locale";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { useLocale } from "@/lib/hooks/useLocale";
 import type { TrainerClientResponse } from "../types";
 
-export type ClientTab = "overview" | "statistics" | "steps" | "workouts";
+const DATE_LOCALES = { en: enUS, hu } as const;
+
+export type ClientTab = "overview" | "statistics" | "steps" | "nutrition" | "workouts";
 
 const TABS: { key: ClientTab; icon: string }[] = [
   { key: "overview", icon: "dashboard" },
   { key: "statistics", icon: "bar_chart" },
   { key: "steps", icon: "directions_walk" },
+  { key: "nutrition", icon: "restaurant" },
   { key: "workouts", icon: "fitness_center" },
 ];
 
@@ -23,6 +28,7 @@ interface ClientDetailHeaderProps {
 
 export function ClientDetailHeader({ client, tab, onTabChange }: ClientDetailHeaderProps) {
   const t = useTranslations("admin.clientDetail");
+  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -43,7 +49,9 @@ export function ClientDetailHeader({ client, tab, onTabChange }: ClientDetailHea
           </p>
         </div>
         <span className="text-[11.5px] font-semibold whitespace-nowrap" style={{ color: "var(--muted)" }}>
-          {t("relationshipSince", { date: format(new Date(client.activeSince), "yyyy. MMM d.") })}
+          {t("relationshipSince", {
+            date: format(new Date(client.activeSince), "yyyy. MMM d.", { locale: dateLocale }),
+          })}
         </span>
         <span
           className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-xs font-bold px-3.5 py-1.5 whitespace-nowrap"

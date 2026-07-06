@@ -1,7 +1,6 @@
 package com.lifey.auth.service;
 
 import com.lifey.auth.CurrentUserProvider;
-import com.lifey.auth.JwtService;
 import com.lifey.auth.UserPrincipal;
 import com.lifey.auth.UserRegisteredEvent;
 import com.lifey.auth.dto.*;

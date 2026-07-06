@@ -71,6 +71,7 @@
         "overview": "Áttekintés",
         "statistics": "Statisztika",
         "steps": "Lépések",
+        "nutrition": "Étkezések",
         "workouts": "Edzések"
       },
       "kpi": {
@@ -103,6 +104,7 @@
       "history": "Előzmények",
       "noSteps": "Még nincs lépés-adat",
       "noStepsBody": "Az elmúlt 30 napban nincs rögzítve semmi.",
+      "noLoggedMeal": "Nincs naplózott étkezés",
       "sessionMeta": "{duration} perc · {count} gyakorlat · {volume} kg volumen",
       "clientUnavailable": "Ez a kliens már nem elérhető",
       "clientUnavailableBody": "A kapcsolat megszűnt — az adatok nem tölthetők be.",
@@ -116,13 +118,17 @@
       "noClientsFound": "Nincs ilyen kliens",
       "content": "Tartalom",
       "moreItems": "+ {count} további elem",
-      "alreadyAssignedPrefix": "Már kiosztottad",
-      "alreadyAssignedSuffix": ". Új másolat készül — a kliens régi példánya megmarad.",
+      "alreadyAssignedBadge": "Már hozzá van rendelve",
       "cancel": "Mégse",
       "assign": "Hozzárendelés",
+      "assignCount": "Hozzárendelés ({count})",
       "assigning": "Hozzárendelés…",
       "assigned": "Kiosztva {name} részére",
-      "assignFailed": "Nem sikerült hozzárendelni"
+      "assignedMultiple": "Kiosztva {count} kliensnek",
+      "assignedPartial": "Kiosztva {succeeded} kliensnek, {failed} sikertelen",
+      "assignedPartialAlreadyAssigned": "Kiosztva {succeeded} kliensnek, {failed} kliensnek már ki volt osztva",
+      "assignFailed": "Nem sikerült hozzárendelni",
+      "alreadyAssignedFailed": "Ez már ki van osztva a kiválasztott kliens(ek)nek"
     },
     "assignments": {
       "allClients": "Minden kliens",
@@ -131,7 +137,14 @@
       "typeRecipe": "recept",
       "unknownContent": "Törölt tartalom",
       "noAssignments": "Még nincs kiosztott tartalom",
-      "noAssignmentsBody": "Rendelj hozzá egy edzéstervet vagy receptet a saját tartalmaid közül, hogy itt megjelenjen."
+      "noAssignmentsBody": "Rendelj hozzá egy edzéstervet vagy receptet a saját tartalmaid közül, hogy itt megjelenjen.",
+      "unassign": "Eltávolítás",
+      "unassigned": "Eltávolítva a kliens fiókjából",
+      "unassignFailed": "Nem sikerült eltávolítani",
+      "unassignConfirmTitle": "Eltávolítás a kliens fiókjából",
+      "unassignConfirmBody": "\"{name}\" törlődik a kliens fiókjából. Ez nem vonható vissza.",
+      "unassignCancel": "Mégse",
+      "unassignConfirm": "Eltávolítás"
     }
   },
   "superadmin": {
@@ -398,6 +411,7 @@
     "backToHistory": "Vissza az előzményekhez",
     "history": "Előzmények",
     "startWorkout": "Edzés indítása",
+    "recommendedWorkout": "Ajánlott edzés",
     "noWorkoutsYet": "Még nincs edzés",
     "startToBegin": "Indíts egy edzést a rögzítés megkezdéséhez.",
     "emptyWorkout": "Üres edzés",

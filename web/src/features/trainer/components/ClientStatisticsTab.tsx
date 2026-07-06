@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { format, subMonths, subYears } from "date-fns";
+import { enUS, hu } from "date-fns/locale";
 import { trainerApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -11,6 +12,9 @@ import { KpiCard } from "@/components/data/KpiCard";
 import { TimeSeriesChart } from "@/components/data/TimeSeriesChartLazy";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
+import { useLocale } from "@/lib/hooks/useLocale";
+
+const DATE_LOCALES = { en: enUS, hu } as const;
 
 type Period = "daily" | "weekly" | "monthly";
 
@@ -20,6 +24,7 @@ interface ClientStatisticsTabProps {
 
 export function ClientStatisticsTab({ clientId }: ClientStatisticsTabProps) {
   const t = useTranslations("admin.clientDetail");
+  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
   const [period, setPeriod] = useState<Period>("weekly");
 
   const PERIOD_OPTIONS: { value: Period; label: string }[] = [
@@ -56,7 +61,7 @@ export function ClientStatisticsTab({ clientId }: ClientStatisticsTabProps) {
   }
 
   const sortedWeights = (weightsQ.data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date));
-  const chartData = sortedWeights.map((w) => ({ date: format(new Date(w.date), "MMM d"), value: w.weight }));
+  const chartData = sortedWeights.map((w) => ({ date: format(new Date(w.date), "MMM d", { locale: dateLocale }), value: w.weight }));
 
   return (
     <div className="flex flex-col gap-3.5">

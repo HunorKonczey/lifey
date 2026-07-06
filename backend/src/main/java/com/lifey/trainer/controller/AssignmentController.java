@@ -1,5 +1,6 @@
 package com.lifey.trainer.controller;
 
+import com.lifey.trainer.ContentType;
 import com.lifey.trainer.dto.AssignmentListItemResponse;
 import com.lifey.trainer.dto.AssignmentRequest;
 import com.lifey.trainer.dto.AssignmentResponse;
@@ -35,5 +36,20 @@ public class AssignmentController {
     @GetMapping("/api/v1/trainer/clients/{clientId}/assignments")
     public List<AssignmentListItemResponse> findForClient(@PathVariable Long clientId) {
         return contentAssignmentService.findForClient(clientId);
+    }
+
+    @Operation(summary = "List the client ids this trainer has already assigned this content to",
+            description = "Used by the assign dialog to pre-check clients that already have this template/recipe.")
+    @GetMapping("/api/v1/trainer/assignments/clients")
+    public List<Long> findAssignedClientIds(@RequestParam ContentType contentType, @RequestParam Long sourceId) {
+        return contentAssignmentService.findAssignedClientIds(contentType, sourceId);
+    }
+
+    @Operation(summary = "Remove an assignment",
+            description = "Also soft-deletes the client's copy the assignment created.")
+    @DeleteMapping("/api/v1/trainer/assignments/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unassign(@PathVariable Long id) {
+        contentAssignmentService.unassign(id);
     }
 }

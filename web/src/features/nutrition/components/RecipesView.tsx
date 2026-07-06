@@ -117,13 +117,13 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
               </button>
               <div className="flex gap-1.5 mt-1">
                 <button onClick={() => setLogging(r)}
-                  className="flex-1 flex items-center justify-center gap-1 h-8 rounded-[var(--r-input)] text-xs font-semibold transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-[var(--r-input)] text-xs font-semibold transition-colors"
                   style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}>
                   <span className="material-symbols-rounded text-base">restaurant</span> {t("logAsMeal")}
                 </button>
                 {onAssign && (
                   <button onClick={() => onAssign(r)}
-                    className="flex-1 flex items-center justify-center gap-1 h-8 rounded-[var(--r-input)] text-xs font-extrabold transition-colors"
+                    className="flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-[var(--r-input)] text-xs font-extrabold transition-colors"
                     style={{ background: "rgba(110,154,106,.18)", color: "var(--tertiary)" }}>
                     <span className="material-symbols-rounded text-base">person_add</span> {admin("assignAction")}
                   </button>

@@ -2,13 +2,16 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_preferences.dart';
 import '../../../core/local_db/database_provider.dart';
 import '../../../core/network/session_events.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/sync/connectivity_sync_controller.dart';
+import '../../my_trainers/application/my_trainers_controller.dart';
 import '../../settings/application/avatar_controller.dart';
 import '../../settings/data/avatar_repository.dart';
+import '../../trainer_invite/application/trainer_invite_controller.dart';
 import '../data/auth_repository.dart';
 import '../data/google_auth_service.dart';
 import '../domain/auth_user.dart';
@@ -111,6 +114,14 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     await ref.read(appDatabaseProvider).clearAllData();
     await ref.read(healthPreferencesProvider).clear();
     await ref.read(avatarRepositoryProvider).clearCache();
+    // clearCache()/clear() above only wipe on-disk/secure storage; these
+    // controllers (not autoDispose) would otherwise keep serving this
+    // account's data to whichever account signs in next in the same app
+    // session.
+    ref.invalidate(avatarControllerProvider);
+    ref.invalidate(myTrainersControllerProvider);
+    ref.invalidate(trainerInviteControllerProvider);
+    ref.invalidate(appleHealthControllerProvider);
     state = const AsyncValue.data(null);
     if (refreshToken != null) {
       try {
