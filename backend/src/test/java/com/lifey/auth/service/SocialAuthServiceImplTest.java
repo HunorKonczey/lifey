@@ -13,6 +13,7 @@ import com.lifey.auth.repository.UserIdentityRepository;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
+import com.lifey.user.UserUtcOffsetUpdater;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -54,6 +55,9 @@ class SocialAuthServiceImplTest {
     @Mock
     ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    UserUtcOffsetUpdater userUtcOffsetUpdater;
+
     @InjectMocks
     SocialAuthServiceImpl socialAuthService;
 
@@ -69,7 +73,7 @@ class SocialAuthServiceImplTest {
                 .thenReturn(Optional.of(link));
         stubTokenIssuance(user);
 
-        AuthResponse response = socialAuthService.loginWithGoogle(ID_TOKEN);
+        AuthResponse response = socialAuthService.loginWithGoogle(ID_TOKEN, null);
 
         assertThat(response.accessToken()).isEqualTo("access-token");
         verify(userRepository, never()).save(any());
@@ -94,7 +98,7 @@ class SocialAuthServiceImplTest {
         when(userIdentityRepository.save(identityCaptor.capture())).thenAnswer(inv -> inv.getArgument(0));
         stubTokenIssuance(null);
 
-        socialAuthService.loginWithGoogle(ID_TOKEN);
+        socialAuthService.loginWithGoogle(ID_TOKEN, null);
 
         User created = userCaptor.getValue();
         assertThat(created.getEmail()).isEqualTo("new@example.com");
@@ -123,7 +127,7 @@ class SocialAuthServiceImplTest {
                 .thenReturn(Optional.of(link));
         stubTokenIssuance(user);
 
-        socialAuthService.loginWithGoogle(ID_TOKEN);
+        socialAuthService.loginWithGoogle(ID_TOKEN, null);
 
         ArgumentCaptor<GoogleAvatarCandidateEvent> captor = ArgumentCaptor.forClass(GoogleAvatarCandidateEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
@@ -145,7 +149,7 @@ class SocialAuthServiceImplTest {
         when(userIdentityRepository.save(identityCaptor.capture())).thenAnswer(inv -> inv.getArgument(0));
         stubTokenIssuance(existing);
 
-        socialAuthService.loginWithGoogle(ID_TOKEN);
+        socialAuthService.loginWithGoogle(ID_TOKEN, null);
 
         verify(userRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
@@ -162,7 +166,7 @@ class SocialAuthServiceImplTest {
                 .thenReturn(Optional.empty());
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> socialAuthService.loginWithGoogle(ID_TOKEN))
+        assertThatThrownBy(() -> socialAuthService.loginWithGoogle(ID_TOKEN, null))
                 .isInstanceOf(UnverifiedEmailException.class);
 
         verify(userIdentityRepository, never()).save(any());

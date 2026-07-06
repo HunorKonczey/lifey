@@ -48,27 +48,35 @@ public class AuthController {
         this.cookieSameSite = cookieSameSite;
     }
 
+    private static final String UTC_OFFSET_HEADER = "X-Utc-Offset-Minutes";
+
     @Operation(summary = "Register a new account")
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
+    public UserResponse register(
+            @Valid @RequestBody RegisterRequest request,
+            @RequestHeader(value = UTC_OFFSET_HEADER, required = false) Integer utcOffsetMinutes) {
+        return authService.register(request, utcOffsetMinutes);
     }
 
     @Operation(summary = "Log in and receive an access/refresh token pair",
             description = "The refresh token is also set as an httpOnly cookie for browser clients; "
                     + "it remains in the body for mobile/native clients.")
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return withRefreshCookie(authService.login(request));
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            @RequestHeader(value = UTC_OFFSET_HEADER, required = false) Integer utcOffsetMinutes) {
+        return withRefreshCookie(authService.login(request, utcOffsetMinutes));
     }
 
     @Operation(summary = "Log in with a Google ID token",
             description = "Verifies the Google-issued ID token, then finds, links, or creates the "
                     + "matching Lifey user and returns the same token pair as password login.")
     @PostMapping("/social/google")
-    public ResponseEntity<AuthResponse> socialGoogleLogin(@Valid @RequestBody SocialLoginRequest request) {
-        return withRefreshCookie(socialAuthService.loginWithGoogle(request.idToken()));
+    public ResponseEntity<AuthResponse> socialGoogleLogin(
+            @Valid @RequestBody SocialLoginRequest request,
+            @RequestHeader(value = UTC_OFFSET_HEADER, required = false) Integer utcOffsetMinutes) {
+        return withRefreshCookie(socialAuthService.loginWithGoogle(request.idToken(), utcOffsetMinutes));
     }
 
     @Operation(summary = "Exchange a refresh token for a new access/refresh pair (rotation)",
@@ -77,8 +85,9 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
             @CookieValue(name = REFRESH_COOKIE, required = false) String cookieToken,
-            @RequestBody(required = false) RefreshRequest body) {
-        AuthResponse auth = authService.refresh(resolveToken(cookieToken, body));
+            @RequestBody(required = false) RefreshRequest body,
+            @RequestHeader(value = UTC_OFFSET_HEADER, required = false) Integer utcOffsetMinutes) {
+        AuthResponse auth = authService.refresh(resolveToken(cookieToken, body), utcOffsetMinutes);
         return withRefreshCookie(auth);
     }
 

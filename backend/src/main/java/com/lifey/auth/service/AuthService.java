@@ -4,9 +4,17 @@ import com.lifey.auth.dto.*;
 
 public interface AuthService {
 
-    UserResponse register(RegisterRequest request);
+    /**
+     * @param utcOffsetMinutes client-reported UTC offset in minutes (see
+     *                         {@code User#utcOffsetMinutes}), or {@code null} if not sent
+     */
+    UserResponse register(RegisterRequest request, Integer utcOffsetMinutes);
 
-    AuthResponse login(LoginRequest request);
+    /**
+     * @param utcOffsetMinutes client-reported UTC offset in minutes, refreshed on every
+     *                         login so existing users' stored offset stays current
+     */
+    AuthResponse login(LoginRequest request, Integer utcOffsetMinutes);
 
     /**
      * Verifies {@code currentPassword}, sets the new one, and revokes every refresh
@@ -18,8 +26,12 @@ public interface AuthService {
 
     /**
      * Validates {@code refreshToken}, revokes it, and issues a new access/refresh pair.
+     *
+     * @param utcOffsetMinutes client-reported UTC offset in minutes, refreshed on every
+     *                         token refresh — the main mechanism by which existing users'
+     *                         stored offset gets corrected without re-logging in
      */
-    AuthResponse refresh(String refreshToken);
+    AuthResponse refresh(String refreshToken, Integer utcOffsetMinutes);
 
     /**
      * Revokes a single refresh token (logout from the device that holds it). Idempotent.

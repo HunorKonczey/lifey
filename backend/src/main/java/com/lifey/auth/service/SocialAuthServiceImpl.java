@@ -11,6 +11,7 @@ import com.lifey.auth.repository.UserIdentityRepository;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
+import com.lifey.user.UserUtcOffsetUpdater;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -30,9 +31,10 @@ public class SocialAuthServiceImpl implements SocialAuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserUtcOffsetUpdater userUtcOffsetUpdater;
 
     @Override
-    public AuthResponse loginWithGoogle(String idToken) {
+    public AuthResponse loginWithGoogle(String idToken, Integer utcOffsetMinutes) {
         GoogleIdentity identity = googleIdTokenVerifier.verify(idToken);
 
         User user = userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, identity.sub())
@@ -45,6 +47,7 @@ public class SocialAuthServiceImpl implements SocialAuthService {
             eventPublisher.publishEvent(new GoogleAvatarCandidateEvent(user.getId(), identity.picture()));
         }
 
+        userUtcOffsetUpdater.apply(user, utcOffsetMinutes);
         return issueTokenPair(user);
     }
 

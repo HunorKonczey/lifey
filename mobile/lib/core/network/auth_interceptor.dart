@@ -35,6 +35,10 @@ class AuthInterceptor extends Interceptor {
         options.headers['Authorization'] = 'Bearer $token';
       }
     }
+    // Sent on every request (including register/login) so the backend can
+    // keep the user's stored UTC offset current — see the day-boundary bug
+    // where the server's own zone was used instead of the user's.
+    options.headers['X-Utc-Offset-Minutes'] = DateTime.now().timeZoneOffset.inMinutes.toString();
     handler.next(options);
   }
 
@@ -87,9 +91,16 @@ class AuthInterceptor extends Interceptor {
   Future<void> _refresh() async {
     final refreshToken = await _tokenStorage.readRefreshToken();
     if (refreshToken == null) throw StateError('No refresh token stored');
+    // _refreshDio has no interceptors (see dio_client.dart), so the offset
+    // header has to be attached here rather than relying on onRequest above —
+    // this is the main mechanism that keeps existing users' offset current,
+    // since refresh fires far more often than login/register.
     final response = await _refreshDio.post<Map<String, dynamic>>(
       '/auth/refresh',
       data: {'refreshToken': refreshToken},
+      options: Options(headers: {
+        'X-Utc-Offset-Minutes': DateTime.now().timeZoneOffset.inMinutes.toString(),
+      }),
     );
     final data = response.data!;
     await _tokenStorage.save(
