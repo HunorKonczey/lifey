@@ -3,6 +3,8 @@ package com.lifey.statistics.service;
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.statistics.dto.StatisticsResponse;
+import com.lifey.user.User;
+import com.lifey.user.UserRepository;
 import com.lifey.water.WaterEntryRepository;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
@@ -17,7 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,12 +47,19 @@ class StatisticsServiceImplTest {
     @Mock
     CurrentUserProvider currentUserProvider;
 
+    @Mock
+    UserRepository userRepository;
+
     @InjectMocks
     StatisticsServiceImpl service;
 
     @BeforeEach
     void stubCurrentUser() {
         lenient().when(currentUserProvider.getUserId()).thenReturn(USER_ID);
+        User user = new User();
+        user.setId(USER_ID);
+        user.setUtcOffsetMinutes(0);
+        lenient().when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
     }
 
     @Test
@@ -66,7 +75,7 @@ class StatisticsServiceImplTest {
         assertThat(result.workoutCount()).isEqualTo(1);
         assertThat(result.latestWeight()).isEqualTo(78.4);
         assertThat(result.totalWater()).isEqualTo(1.5);
-        assertThat(capturedFrom()).isEqualTo(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant());
+        assertThat(capturedFrom()).isEqualTo(LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant());
     }
 
     @Test
@@ -76,7 +85,7 @@ class StatisticsServiceImplTest {
         service.weekly();
 
         assertThat(capturedFrom())
-                .isEqualTo(LocalDate.now().minusDays(6).atStartOfDay(ZoneId.systemDefault()).toInstant());
+                .isEqualTo(LocalDate.now().minusDays(6).atStartOfDay(ZoneOffset.UTC).toInstant());
     }
 
     @Test
@@ -86,7 +95,7 @@ class StatisticsServiceImplTest {
         service.monthly();
 
         assertThat(capturedFrom())
-                .isEqualTo(LocalDate.now().minusDays(29).atStartOfDay(ZoneId.systemDefault()).toInstant());
+                .isEqualTo(LocalDate.now().minusDays(29).atStartOfDay(ZoneOffset.UTC).toInstant());
     }
 
     @Test

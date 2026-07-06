@@ -9,6 +9,7 @@ import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
+import com.lifey.user.UserUtcOffsetUpdater;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -33,9 +34,10 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final CurrentUserProvider currentUserProvider;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserUtcOffsetUpdater userUtcOffsetUpdater;
 
     @Override
-    public UserResponse register(RegisterRequest request) {
+    public UserResponse register(RegisterRequest request, Integer utcOffsetMinutes) {
         String email = request.email().trim();
         if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new DuplicateResourceException("An account with email '" + email + "' already exists");
@@ -48,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
         user.setLastName(request.lastName().trim());
         user.setCreatedAt(Instant.now());
         user.setRoles(Set.of(Role.ROLE_USER));
+        userUtcOffsetUpdater.apply(user, utcOffsetMinutes);
         userRepository.save(user);
         eventPublisher.publishEvent(new UserRegisteredEvent(user.getId()));
 
@@ -55,7 +58,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, Integer utcOffsetMinutes) {
         UserPrincipal principal;
         try {
             var authentication = authenticationManager.authenticate(
@@ -69,11 +72,12 @@ public class AuthServiceImpl implements AuthService {
 
         User user = userRepository.findById(principal.id())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+        userUtcOffsetUpdater.apply(user, utcOffsetMinutes);
         return issueTokenPair(user);
     }
 
     @Override
-    public AuthResponse refresh(String rawRefreshToken) {
+    public AuthResponse refresh(String rawRefreshToken, Integer utcOffsetMinutes) {
         RefreshToken token = refreshTokenRepository.findByTokenHash(TokenHasher.hash(rawRefreshToken))
                 .orElseThrow(() -> new InvalidTokenException("Invalid refresh token"));
 
@@ -88,6 +92,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         token.setRevoked(true);
+        userUtcOffsetUpdater.apply(token.getUser(), utcOffsetMinutes);
         return issueTokenPair(token.getUser());
     }
 

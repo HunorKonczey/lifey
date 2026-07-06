@@ -12,6 +12,7 @@ import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.nutrition.meal.dto.MealEntryRequest;
 import com.lifey.nutrition.meal.dto.MealRequest;
 import com.lifey.nutrition.meal.dto.MealResponse;
+import com.lifey.user.User;
 import com.lifey.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -49,11 +50,25 @@ public class MealServiceImpl implements MealService {
     public List<MealResponse> findAllForUserBetween(Long userId, LocalDate from, LocalDate to) {
         LocalDate effectiveFrom = from != null ? from : DateRanges.DISTANT_PAST;
         LocalDate effectiveTo = to != null ? to : DateRanges.DISTANT_FUTURE;
-        Instant fromInstant = effectiveFrom.atStartOfDay(ZoneId.systemDefault()).toInstant();
-        Instant toExclusive = effectiveTo.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        ZoneOffset zone = zoneForUser(userId);
+        Instant fromInstant = effectiveFrom.atStartOfDay(zone).toInstant();
+        Instant toExclusive = effectiveTo.plusDays(1).atStartOfDay(zone).toInstant();
         return mealRepository.findAllByUserIdAndDeletedAtIsNullAndDateTimeRange(userId, fromInstant, toExclusive).stream()
                 .map(MealMapper::toResponse)
                 .toList();
+    }
+
+    /**
+     * Day boundaries must use the target user's own local day, not the server's —
+     * otherwise meals logged near local midnight fall outside the "today" window
+     * (see trainer client-meals bug: server zone cut off meals the client and
+     * overview both counted correctly).
+     */
+    private ZoneOffset zoneForUser(Long userId) {
+        return userRepository.findById(userId)
+                .map(User::getUtcOffsetMinutes)
+                .map(minutes -> ZoneOffset.ofTotalSeconds(minutes * 60))
+                .orElse(ZoneOffset.UTC);
     }
 
     @Override

@@ -72,6 +72,10 @@ async function request<T>(
   const isFormData = init.body instanceof FormData;
   const headers: Record<string, string> = {
     ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    // Sent on every request (including register/login/refresh) so the backend
+    // can keep the user's stored UTC offset current — see the day-boundary
+    // bug where the server's own zone was used instead of the user's.
+    "X-Utc-Offset-Minutes": String(-new Date().getTimezoneOffset()),
     ...(init.headers as Record<string, string>),
   };
 

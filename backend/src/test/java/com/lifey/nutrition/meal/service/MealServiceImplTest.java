@@ -15,6 +15,7 @@ import com.lifey.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -132,6 +135,29 @@ class MealServiceImplTest {
         service.update(1L, request);
 
         assertThat(meal.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T08:00:00Z"));
+    }
+
+    @Test
+    void findAllForUserBetween_usesTargetUsersOwnUtcOffsetForDayBoundaries() {
+        User client = new User();
+        client.setId(USER_ID);
+        client.setUtcOffsetMinutes(120); // e.g. Budapest summer time, UTC+2
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(client));
+        when(mealRepository.findAllByUserIdAndDeletedAtIsNullAndDateTimeRange(eq(USER_ID), any(), any()))
+                .thenReturn(List.of());
+
+        service.findAllForUserBetween(USER_ID, LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 6));
+
+        ArgumentCaptor<Instant> fromCaptor = ArgumentCaptor.forClass(Instant.class);
+        ArgumentCaptor<Instant> toCaptor = ArgumentCaptor.forClass(Instant.class);
+        verify(mealRepository).findAllByUserIdAndDeletedAtIsNullAndDateTimeRange(
+                eq(USER_ID), fromCaptor.capture(), toCaptor.capture());
+
+        // Local midnight in UTC+2 is 22:00 UTC the day before — a meal logged at
+        // 00:21 local (22:21 UTC the day before) must fall inside this window,
+        // which the old ZoneId.systemDefault() bug missed for non-UTC servers.
+        assertThat(fromCaptor.getValue()).isEqualTo(Instant.parse("2026-07-05T22:00:00Z"));
+        assertThat(toCaptor.getValue()).isEqualTo(Instant.parse("2026-07-06T22:00:00Z"));
     }
 
     @Test

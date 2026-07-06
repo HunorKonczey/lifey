@@ -34,6 +34,14 @@ public class User extends BaseEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    /**
+     * Minutes east of UTC (e.g. Budapest summer time = 120), refreshed from the
+     * client on every register/login/refresh so day-boundary calculations (meal
+     * lists, statistics) can use the user's own local day instead of the server's.
+     */
+    @Column(name = "utc_offset_minutes", nullable = false)
+    private int utcOffsetMinutes = 0;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)

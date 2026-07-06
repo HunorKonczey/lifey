@@ -11,6 +11,7 @@ import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
+import com.lifey.user.UserUtcOffsetUpdater;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -58,6 +59,9 @@ class AuthServiceImplTest {
     @Mock
     ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    UserUtcOffsetUpdater userUtcOffsetUpdater;
+
     @InjectMocks
     AuthServiceImpl authService;
 
@@ -73,7 +77,7 @@ class AuthServiceImplTest {
             return saved;
         });
 
-        UserResponse response = authService.register(request);
+        UserResponse response = authService.register(request, null);
 
         User saved = captor.getValue();
         assertThat(saved.getEmail()).isEqualTo("new@example.com");
@@ -94,7 +98,7 @@ class AuthServiceImplTest {
         RegisterRequest request = new RegisterRequest("taken@example.com", "password123", "Jane", "Doe");
         when(userRepository.existsByEmailIgnoreCase("taken@example.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.register(request))
+        assertThatThrownBy(() -> authService.register(request, null))
                 .isInstanceOf(DuplicateResourceException.class);
         verify(userRepository, never()).save(any());
     }
@@ -111,7 +115,7 @@ class AuthServiceImplTest {
         when(jwtService.refreshTokenTtl()).thenReturn(Duration.ofDays(30));
         when(jwtService.accessTokenTtlSeconds()).thenReturn(900L);
 
-        AuthResponse response = authService.login(request);
+        AuthResponse response = authService.login(request, null);
 
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.refreshToken()).isNotBlank();
@@ -124,7 +128,7 @@ class AuthServiceImplTest {
         LoginRequest request = new LoginRequest("user@example.com", "wrong-password");
         when(authenticationManager.authenticate(any())).thenThrow(new BadCredentialsException("bad"));
 
-        assertThatThrownBy(() -> authService.login(request))
+        assertThatThrownBy(() -> authService.login(request, null))
                 .isInstanceOf(InvalidCredentialsException.class);
         verify(refreshTokenRepository, never()).save(any());
     }
@@ -138,7 +142,7 @@ class AuthServiceImplTest {
         when(jwtService.refreshTokenTtl()).thenReturn(Duration.ofDays(30));
         when(jwtService.accessTokenTtlSeconds()).thenReturn(900L);
 
-        AuthResponse response = authService.refresh("raw-refresh-token");
+        AuthResponse response = authService.refresh("raw-refresh-token", null);
 
         assertThat(existing.isRevoked()).isTrue();
         assertThat(response.accessToken()).isEqualTo("new-access-token");
@@ -150,7 +154,7 @@ class AuthServiceImplTest {
     void refresh_unknownTokenThrowsInvalidTokenException() {
         when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authService.refresh("unknown-token"))
+        assertThatThrownBy(() -> authService.refresh("unknown-token", null))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
@@ -160,7 +164,7 @@ class AuthServiceImplTest {
         RefreshToken expired = refreshToken(user, false, Instant.now().minus(Duration.ofMinutes(1)));
         when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(expired));
 
-        assertThatThrownBy(() -> authService.refresh("expired-token"))
+        assertThatThrownBy(() -> authService.refresh("expired-token", null))
                 .isInstanceOf(TokenExpiredException.class);
         verify(refreshTokenRepository, never()).save(any());
     }
@@ -171,7 +175,7 @@ class AuthServiceImplTest {
         RefreshToken revoked = refreshToken(user, true, Instant.now().plus(Duration.ofDays(1)));
         when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(revoked));
 
-        assertThatThrownBy(() -> authService.refresh("revoked-token"))
+        assertThatThrownBy(() -> authService.refresh("revoked-token", null))
                 .isInstanceOf(TokenRevokedException.class);
         verify(refreshTokenRepository, never()).save(any());
     }
