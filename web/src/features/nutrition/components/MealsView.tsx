@@ -12,14 +12,8 @@ import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 import { AddMealEntryDialog } from "./AddMealEntryDialog";
+import { MealCard, mealKcal, mealProtein } from "./MealCard";
 import type { MealResponse, MealType } from "../types";
-
-function mealKcal(m: MealResponse) {
-  return m.entries.reduce((s, e) => s + e.calories, 0);
-}
-function mealProtein(m: MealResponse) {
-  return m.entries.reduce((s, e) => s + e.protein, 0);
-}
 
 export function MealsView() {
   const t = useTranslations("nutrition");
@@ -185,78 +179,6 @@ export function MealsView() {
           onClose={() => setEditingMeal(null)}
         />
       )}
-    </div>
-  );
-}
-
-function MealCard({
-  meal,
-  onEdit,
-  onDelete,
-  isDeleting,
-}: {
-  meal: MealResponse;
-  onEdit: () => void;
-  onDelete: () => void;
-  isDeleting: boolean;
-}) {
-  const t = useTranslations("nutrition");
-  const kcal = Math.round(mealKcal(meal));
-  const protein = Math.round(mealProtein(meal));
-  const time = format(new Date(meal.dateTime), "HH:mm");
-  const title = meal.name ?? (meal.entries.length === 1 ? meal.entries[0].foodName : t("meals"));
-
-  return (
-    <div
-      className="rounded-[var(--r-card)] p-4 group"
-      style={{ background: "var(--surface)" }}
-    >
-      {/* Card header */}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm truncate">{title}</p>
-          <p className="text-xs tabular mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
-            {time} · {kcal} kcal · {protein}g P
-          </p>
-        </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={onEdit}
-            className="p-1 rounded-[var(--r-sm)] hover:bg-surface-container"
-            style={{ color: "var(--muted)" }}
-            aria-label={t("editMealAria")}
-          >
-            <span className="material-symbols-rounded text-lg">edit</span>
-          </button>
-          <button
-            onClick={onDelete}
-            disabled={isDeleting}
-            className="p-1 rounded-[var(--r-sm)] hover:bg-surface-container disabled:opacity-30"
-            style={{ color: "var(--muted)" }}
-            aria-label={t("removeMealAria")}
-          >
-            <span className="material-symbols-rounded text-lg">delete</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Ingredient rows */}
-      <div className="flex flex-col">
-        {meal.entries.map((e, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-between py-1.5"
-            style={{ borderTop: "1px solid var(--outline)" }}
-          >
-            <span className="text-sm" style={{ color: "var(--on-surface-variant)" }}>
-              {e.foodName}
-            </span>
-            <span className="text-xs tabular ml-4 shrink-0" style={{ color: "var(--muted)" }}>
-              {Math.round(e.quantityInGrams)}g · {Math.round(e.calories)} kcal · {Math.round(e.protein)}g P
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

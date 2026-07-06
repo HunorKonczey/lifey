@@ -2,6 +2,7 @@ package com.lifey.nutrition.meal.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.common.util.DateRanges;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.meal.Meal;
@@ -21,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -37,6 +40,18 @@ public class MealServiceImpl implements MealService {
     @Transactional(readOnly = true)
     public List<MealResponse> findAll() {
         return mealRepository.findAllByUserIdAndDeletedAtIsNullOrderByDateTimeDesc(currentUserProvider.getUserId()).stream()
+                .map(MealMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MealResponse> findAllForUserBetween(Long userId, LocalDate from, LocalDate to) {
+        LocalDate effectiveFrom = from != null ? from : DateRanges.DISTANT_PAST;
+        LocalDate effectiveTo = to != null ? to : DateRanges.DISTANT_FUTURE;
+        Instant fromInstant = effectiveFrom.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant toExclusive = effectiveTo.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        return mealRepository.findAllByUserIdAndDeletedAtIsNullAndDateTimeRange(userId, fromInstant, toExclusive).stream()
                 .map(MealMapper::toResponse)
                 .toList();
     }
@@ -98,7 +113,7 @@ public class MealServiceImpl implements MealService {
     private void replaceEntries(Meal meal, List<MealEntryRequest> requested) {
         meal.getEntries().clear();
         for (MealEntryRequest item : requested) {
-            Food food = foodRepository.findById(item.foodId())
+            Food food = foodRepository.findByIdAndUserId(item.foodId(), currentUserProvider.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Food not found: " + item.foodId()));
 
             MealEntry entry = new MealEntry();

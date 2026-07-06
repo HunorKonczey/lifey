@@ -16,9 +16,12 @@ import '../../water/presentation/widgets/add_water_sheet.dart';
 import '../../water/presentation/widgets/water_card.dart';
 import '../../weight/application/weight_controller.dart';
 import '../../weight/domain/weight_entry.dart';
+import '../../workouts/application/recommended_template_provider.dart';
 import '../../workouts/application/workout_session_controller.dart';
 import '../../workouts/domain/exercise_enums.dart';
+import '../../workouts/domain/workout_template.dart';
 import '../../workouts/presentation/log_session_screen.dart';
+import '../../workouts/presentation/widgets/recommended_workout_card.dart';
 import '../../nutrition/domain/meal.dart';
 import '../../nutrition/presentation/nutrition_screen.dart';
 import '../../onboarding/presentation/widgets/onboarding_banner.dart';
@@ -56,6 +59,12 @@ Future<void> _openWorkout(BuildContext context, WidgetRef ref, String clientId) 
   }
   await Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => LogSessionScreen(session: session)),
+  );
+}
+
+Future<void> _startRecommendedWorkout(BuildContext context, WorkoutTemplate template) {
+  return Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => LogSessionScreen(template: template)),
   );
 }
 
@@ -101,6 +110,7 @@ class DashboardScreen extends ConsumerWidget {
     final settings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
     final weightDelta = _weightDelta(ref.watch(weightControllerProvider).value ?? const []);
     final todaySteps = ref.watch(todayStepsControllerProvider).value;
+    final recommendedTemplate = ref.watch(recommendedTemplateProvider);
     final l10n = AppLocalizations.of(context)!;
 
     final statusTop = MediaQuery.paddingOf(context).top;
@@ -120,6 +130,9 @@ class DashboardScreen extends ConsumerWidget {
                   settings: settings,
                   weightDelta: weightDelta,
                   todaySteps: todaySteps,
+                  recommendedTemplate: recommendedTemplate,
+                  onStartRecommended: (template) =>
+                      _startRecommendedWorkout(context, template),
                   onWorkoutTap: (clientId) => _openWorkout(context, ref, clientId),
                   onMealsTap: () {
                     ref.read(nutritionPendingTabProvider.notifier).set(0);
@@ -161,16 +174,20 @@ class _DashboardBody extends StatelessWidget {
     required this.settings,
     required this.onWorkoutTap,
     required this.onMealsTap,
+    required this.onStartRecommended,
     this.weightDelta,
     this.todaySteps,
+    this.recommendedTemplate,
   });
 
   final DashboardData data;
   final UserSettings settings;
   final WeightDelta? weightDelta;
   final int? todaySteps;
+  final WorkoutTemplate? recommendedTemplate;
   final ValueChanged<String> onWorkoutTap;
   final VoidCallback onMealsTap;
+  final ValueChanged<WorkoutTemplate> onStartRecommended;
 
   double? _ratio(double actual, int? goal) =>
       (goal == null || goal <= 0) ? null : actual / goal;
@@ -208,6 +225,15 @@ class _DashboardBody extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad),
       children: [
+        // ── Recommended workout — pinned above everything, styled distinct
+        // from the plain cards below so it doesn't read as a list item ─────
+        if (recommendedTemplate != null) ...[
+          RecommendedWorkoutCard(
+            template: recommendedTemplate!,
+            onTap: () => onStartRecommended(recommendedTemplate!),
+          ),
+        ],
+
         // ── Onboarding banner (hidden once onboarded or dismissed) ─────────
         const OnboardingBanner(),
 

@@ -47,19 +47,31 @@ class AuthControllerTest {
     @Test
     void register_returnsCreated() throws Exception {
         when(authService.register(any()))
-                .thenReturn(new UserResponse(1L, "user@example.com", Set.of(Role.ROLE_USER), Instant.now()));
+                .thenReturn(new UserResponse(1L, "user@example.com", "Jane", "Doe", Set.of(Role.ROLE_USER), Instant.now()));
 
         mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"user@example.com\",\"password\":\"password123\"}"))
+                        .content("{\"email\":\"user@example.com\",\"password\":\"password123\",\"firstName\":\"Jane\",\"lastName\":\"Doe\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.email").value("user@example.com"));
+                .andExpect(jsonPath("$.email").value("user@example.com"))
+                .andExpect(jsonPath("$.firstName").value("Jane"))
+                .andExpect(jsonPath("$.lastName").value("Doe"));
     }
 
     @Test
     void register_invalidBodyReturns400() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"not-an-email\",\"password\":\"short\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+
+        verify(authService, never()).register(any());
+    }
+
+    @Test
+    void register_missingNameReturns400() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"user@example.com\",\"password\":\"password123\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
 

@@ -12,4 +12,6 @@ public interface MailService {
     void sendWelcomeEmail(User user);
 
     void sendPasswordResetEmail(User user, String code);
+
+    void sendTrainerInviteEmail(User client, User trainer, String acceptUrl, String declineUrl);
 }

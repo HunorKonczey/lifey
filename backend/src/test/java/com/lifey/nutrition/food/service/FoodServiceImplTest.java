@@ -1,11 +1,15 @@
 package com.lifey.nutrition.food.service;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.food.dto.FoodRequest;
 import com.lifey.nutrition.food.dto.FoodResponse;
+import com.lifey.user.User;
+import com.lifey.user.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,15 +33,29 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class FoodServiceImplTest {
 
+    private static final Long USER_ID = 42L;
+
     @Mock
     FoodRepository repository;
+
+    @Mock
+    UserRepository userRepository;
+
+    @Mock
+    CurrentUserProvider currentUserProvider;
 
     @InjectMocks
     FoodServiceImpl service;
 
+    @BeforeEach
+    void setUp() {
+        when(currentUserProvider.getUserId()).thenReturn(USER_ID);
+    }
+
     @Test
     void findAll_mapsFoods() {
-        when(repository.findAllByHiddenFalseOrderByName()).thenReturn(List.of(food(1L, "Chicken", 165, 31)));
+        when(repository.findAllByUserIdAndHiddenFalseOrderByName(USER_ID))
+                .thenReturn(List.of(food(1L, "Chicken", 165, 31)));
 
         List<FoodResponse> result = service.findAll();
 
@@ -51,7 +69,7 @@ class FoodServiceImplTest {
 
     @Test
     void findAll_excludesHiddenFoods() {
-        when(repository.findAllByHiddenFalseOrderByName()).thenReturn(List.of());
+        when(repository.findAllByUserIdAndHiddenFalseOrderByName(USER_ID)).thenReturn(List.of());
 
         assertThat(service.findAll()).isEmpty();
     }
@@ -60,37 +78,37 @@ class FoodServiceImplTest {
     void findPage_noSearch_usesHiddenFalseQuery() {
         Pageable pageable = PageRequest.of(0, 2);
         Page<Food> page = new PageImpl<>(List.of(food(1L, "Chicken", 165, 31)), pageable, 1);
-        when(repository.findByHiddenFalse(pageable)).thenReturn(page);
+        when(repository.findByUserIdAndHiddenFalse(USER_ID, pageable)).thenReturn(page);
 
         Page<FoodResponse> result = service.findPage(pageable, null, null);
 
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent()).singleElement()
                 .satisfies(r -> assertThat(r.name()).isEqualTo("Chicken"));
-        verify(repository, never()).findByHiddenFalseAndNameContainingIgnoreCase(any(), any());
+        verify(repository, never()).findByUserIdAndHiddenFalseAndNameContainingIgnoreCase(any(), any(), any());
     }
 
     @Test
     void findPage_blankSearch_treatedAsNoSearch() {
         Pageable pageable = PageRequest.of(0, 2);
-        when(repository.findByHiddenFalse(pageable)).thenReturn(Page.empty(pageable));
+        when(repository.findByUserIdAndHiddenFalse(USER_ID, pageable)).thenReturn(Page.empty(pageable));
 
         service.findPage(pageable, "   ", null);
 
-        verify(repository).findByHiddenFalse(pageable);
-        verify(repository, never()).findByHiddenFalseAndNameContainingIgnoreCase(any(), any());
+        verify(repository).findByUserIdAndHiddenFalse(USER_ID, pageable);
+        verify(repository, never()).findByUserIdAndHiddenFalseAndNameContainingIgnoreCase(any(), any(), any());
     }
 
     @Test
     void findPage_sortedByNullableColumn_forcesNullsLast() {
         Pageable requested = PageRequest.of(0, 10, org.springframework.data.domain.Sort.by(
                 org.springframework.data.domain.Sort.Direction.DESC, "fatPer100g"));
-        when(repository.findByHiddenFalse(any())).thenReturn(Page.empty(requested));
+        when(repository.findByUserIdAndHiddenFalse(eq(USER_ID), any())).thenReturn(Page.empty(requested));
 
         service.findPage(requested, null, null);
 
         org.mockito.ArgumentCaptor<Pageable> captor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
-        verify(repository).findByHiddenFalse(captor.capture());
+        verify(repository).findByUserIdAndHiddenFalse(eq(USER_ID), captor.capture());
         org.springframework.data.domain.Sort.Order order = captor.getValue().getSort().getOrderFor("fatPer100g");
         assertThat(order).isNotNull();
         assertThat(order.getDirection()).isEqualTo(org.springframework.data.domain.Sort.Direction.DESC);
@@ -100,25 +118,25 @@ class FoodServiceImplTest {
     @Test
     void findPage_unsorted_leavesPageableUntouched() {
         Pageable unsorted = PageRequest.of(0, 10);
-        when(repository.findByHiddenFalse(unsorted)).thenReturn(Page.empty(unsorted));
+        when(repository.findByUserIdAndHiddenFalse(USER_ID, unsorted)).thenReturn(Page.empty(unsorted));
 
         service.findPage(unsorted, null, null);
 
-        verify(repository).findByHiddenFalse(unsorted);
+        verify(repository).findByUserIdAndHiddenFalse(USER_ID, unsorted);
     }
 
     @Test
     void findPage_withSearch_usesSearchQueryAndTrimsIt() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Food> page = new PageImpl<>(List.of(food(2L, "Rice", 130, 2.7)), pageable, 1);
-        when(repository.findByHiddenFalseAndNameContainingIgnoreCase(eq("rice"), eq(pageable)))
+        when(repository.findByUserIdAndHiddenFalseAndNameContainingIgnoreCase(eq(USER_ID), eq("rice"), eq(pageable)))
                 .thenReturn(page);
 
         Page<FoodResponse> result = service.findPage(pageable, "  rice  ", null);
 
         assertThat(result.getContent()).singleElement()
                 .satisfies(r -> assertThat(r.name()).isEqualTo("Rice"));
-        verify(repository, never()).findByHiddenFalse(any());
+        verify(repository, never()).findByUserIdAndHiddenFalse(any(), any());
     }
 
     @Test
@@ -127,18 +145,18 @@ class FoodServiceImplTest {
         Instant since = Instant.parse("2026-06-01T00:00:00Z");
         Food deleted = food(4L, "Old Rice", 130, 2.7);
         deleted.setDeletedAt(Instant.parse("2026-06-15T00:00:00Z"));
-        when(repository.findByUpdatedAtGreaterThanEqual(eq(since), any()))
+        when(repository.findByUserIdAndUpdatedAtGreaterThanEqual(eq(USER_ID), eq(since), any()))
                 .thenReturn(new PageImpl<>(List.of(deleted), requested, 1));
 
         Page<FoodResponse> result = service.findPage(requested, "should be ignored", since);
 
         assertThat(result.getContent()).singleElement()
                 .satisfies(r -> assertThat(r.deletedAt()).isEqualTo(deleted.getDeletedAt()));
-        verify(repository, never()).findByHiddenFalse(any());
-        verify(repository, never()).findByHiddenFalseAndNameContainingIgnoreCase(any(), any());
+        verify(repository, never()).findByUserIdAndHiddenFalse(any(), any());
+        verify(repository, never()).findByUserIdAndHiddenFalseAndNameContainingIgnoreCase(any(), any(), any());
 
         org.mockito.ArgumentCaptor<Pageable> captor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
-        verify(repository).findByUpdatedAtGreaterThanEqual(eq(since), captor.capture());
+        verify(repository).findByUserIdAndUpdatedAtGreaterThanEqual(eq(USER_ID), eq(since), captor.capture());
         org.springframework.data.domain.Sort sort = captor.getValue().getSort();
         assertThat(sort.getOrderFor("updatedAt").getDirection())
                 .isEqualTo(org.springframework.data.domain.Sort.Direction.ASC);
@@ -148,14 +166,14 @@ class FoodServiceImplTest {
 
     @Test
     void findById_returnsFood() {
-        when(repository.findById(1L)).thenReturn(Optional.of(food(1L, "Chicken", 165, 31)));
+        when(repository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Chicken", 165, 31)));
 
         assertThat(service.findById(1L).name()).isEqualTo("Chicken");
     }
 
     @Test
     void findById_throwsWhenMissing() {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
+        when(repository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.findById(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -164,7 +182,8 @@ class FoodServiceImplTest {
     @Test
     void create_savesAndReturnsResponse() {
         FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, false);
-        when(repository.findByNameIgnoreCase("Rice")).thenReturn(Optional.empty());
+        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.empty());
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
         when(repository.save(any(Food.class))).thenAnswer(inv -> {
             Food f = inv.getArgument(0);
             f.setId(7L);
@@ -181,7 +200,7 @@ class FoodServiceImplTest {
     @Test
     void create_throwsWhenNameAlreadyExists() {
         FoodRequest request = new FoodRequest(" Rice ", 130.0, 2.7, null, null, null, false);
-        when(repository.findByNameIgnoreCase("Rice")).thenReturn(Optional.of(food(1L, "Rice", 130, 2.7)));
+        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.of(food(1L, "Rice", 130, 2.7)));
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(DuplicateResourceException.class);
@@ -191,8 +210,8 @@ class FoodServiceImplTest {
     @Test
     void update_appliesChangesToExistingFood() {
         Food existing = food(3L, "Old", 100, 10);
-        when(repository.findById(3L)).thenReturn(Optional.of(existing));
-        when(repository.findByNameIgnoreCase("New")).thenReturn(Optional.empty());
+        when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "New")).thenReturn(Optional.empty());
         FoodRequest request = new FoodRequest("New", 200.0, 25.0, 5.0, 1.0, null, false);
 
         FoodResponse result = service.update(3L, request);
@@ -206,8 +225,8 @@ class FoodServiceImplTest {
     @Test
     void update_allowsKeepingItsOwnName() {
         Food existing = food(3L, "Rice", 100, 10);
-        when(repository.findById(3L)).thenReturn(Optional.of(existing));
-        when(repository.findByNameIgnoreCase("Rice")).thenReturn(Optional.of(existing));
+        when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.of(existing));
         FoodRequest request = new FoodRequest("Rice", 110.0, 10.0, null, null, null, false);
 
         FoodResponse result = service.update(3L, request);
@@ -218,8 +237,8 @@ class FoodServiceImplTest {
     @Test
     void update_throwsWhenNameTakenByAnotherFood() {
         Food existing = food(3L, "Old", 100, 10);
-        when(repository.findById(3L)).thenReturn(Optional.of(existing));
-        when(repository.findByNameIgnoreCase("Rice")).thenReturn(Optional.of(food(9L, "Rice", 130, 2.7)));
+        when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.of(food(9L, "Rice", 130, 2.7)));
 
         assertThatThrownBy(() -> service.update(3L, new FoodRequest("Rice", 200.0, 25.0, null, null, null, false)))
                 .isInstanceOf(DuplicateResourceException.class);
@@ -227,7 +246,7 @@ class FoodServiceImplTest {
 
     @Test
     void update_throwsWhenMissing() {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
+        when(repository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.update(99L, new FoodRequest("X", 1.0, 1.0, null, null, null, false)))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -236,7 +255,7 @@ class FoodServiceImplTest {
     @Test
     void delete_softDeletesFoodAndSetsTombstone() {
         Food food = food(5L, "Banana", 89, 1.1);
-        when(repository.findById(5L)).thenReturn(Optional.of(food));
+        when(repository.findByIdAndUserId(5L, USER_ID)).thenReturn(Optional.of(food));
 
         service.delete(5L);
 
@@ -247,7 +266,7 @@ class FoodServiceImplTest {
 
     @Test
     void delete_throwsWhenMissing() {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
+        when(repository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -256,6 +275,7 @@ class FoodServiceImplTest {
     @Test
     void create_hiddenFoodSkipsNameCheck() {
         FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, true);
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
         when(repository.save(any(Food.class))).thenAnswer(inv -> {
             Food f = inv.getArgument(0);
             f.setId(8L);
@@ -265,7 +285,7 @@ class FoodServiceImplTest {
         FoodResponse result = service.create(request);
 
         assertThat(result.id()).isEqualTo(8L);
-        verify(repository, never()).findByNameIgnoreCase(any());
+        verify(repository, never()).findByUserIdAndNameIgnoreCase(any(), any());
     }
 
     @Test
@@ -273,7 +293,8 @@ class FoodServiceImplTest {
         FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, false);
         Food hiddenRice = food(1L, "Rice", 130, 2.7);
         hiddenRice.setHidden(true);
-        when(repository.findByNameIgnoreCase("Rice")).thenReturn(Optional.of(hiddenRice));
+        when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.of(hiddenRice));
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
         when(repository.save(any(Food.class))).thenAnswer(inv -> {
             Food f = inv.getArgument(0);
             f.setId(9L);
@@ -288,12 +309,12 @@ class FoodServiceImplTest {
     @Test
     void update_hiddenFoodSkipsNameCheck() {
         Food existing = food(3L, "Old", 100, 10);
-        when(repository.findById(3L)).thenReturn(Optional.of(existing));
+        when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
         FoodRequest request = new FoodRequest("Rice", 200.0, 25.0, null, null, null, true);
 
         service.update(3L, request);
 
-        verify(repository, never()).findByNameIgnoreCase(any());
+        verify(repository, never()).findByUserIdAndNameIgnoreCase(any(), any());
     }
 
     private static Food food(Long id, String name, double cal, double protein) {

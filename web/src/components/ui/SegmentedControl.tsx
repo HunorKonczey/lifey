@@ -11,10 +11,14 @@ interface SegmentedControlProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   size?: "sm" | "md";
+  /** Active-segment background — defaults to the own-view `primary` accent.
+   *  Admin screens pass `var(--tertiary)` to match their accent swap. */
+  activeBackground?: string;
+  activeColor?: string;
 }
 
 export function SegmentedControl<T extends string>({
-  options, value, onChange, size = "md",
+  options, value, onChange, size = "md", activeBackground = "var(--primary)", activeColor = "#1E1F18",
 }: SegmentedControlProps<T>) {
   const pad = size === "sm" ? "px-3 py-1 text-xs" : "px-4 py-1.5 text-sm";
 
@@ -34,8 +38,8 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(opt.value)}
             className={`flex items-center gap-1.5 rounded-[var(--r-pill)] font-semibold transition-colors ${pad}`}
             style={{
-              background: active ? "var(--primary)" : "transparent",
-              color: active ? "#1E1F18" : "var(--on-surface-variant)",
+              background: active ? activeBackground : "transparent",
+              color: active ? activeColor : "var(--on-surface-variant)",
             }}
           >
             {opt.icon && (

@@ -1,12 +1,16 @@
 package com.lifey.workout.exercise.service;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.user.User;
+import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Equipment;
 import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.exercise.MuscleGroup;
 import com.lifey.workout.exercise.dto.ExerciseRequest;
 import com.lifey.workout.exercise.dto.ExerciseResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,15 +34,29 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ExerciseServiceImplTest {
 
+    private static final Long USER_ID = 42L;
+
     @Mock
     ExerciseRepository repository;
+
+    @Mock
+    UserRepository userRepository;
+
+    @Mock
+    CurrentUserProvider currentUserProvider;
 
     @InjectMocks
     ExerciseServiceImpl service;
 
+    @BeforeEach
+    void setUp() {
+        when(currentUserProvider.getUserId()).thenReturn(USER_ID);
+    }
+
     @Test
     void findAll_mapsExercises() {
-        when(repository.findAllByDeletedAtIsNullOrderByNameAsc()).thenReturn(List.of(exercise(1L, "Squat")));
+        when(repository.findAllByUserIdAndDeletedAtIsNullOrderByNameAsc(USER_ID))
+                .thenReturn(List.of(exercise(1L, "Squat")));
 
         List<ExerciseResponse> result = service.findAll();
 
@@ -55,7 +73,7 @@ class ExerciseServiceImplTest {
         Exercise e = exercise(2L, "Bench Press");
         e.setCategory(MuscleGroup.CHEST);
         e.setEquipment(Equipment.BARBELL);
-        when(repository.findAllByDeletedAtIsNullOrderByNameAsc()).thenReturn(List.of(e));
+        when(repository.findAllByUserIdAndDeletedAtIsNullOrderByNameAsc(USER_ID)).thenReturn(List.of(e));
 
         List<ExerciseResponse> result = service.findAll();
 
@@ -67,7 +85,7 @@ class ExerciseServiceImplTest {
 
     @Test
     void findById_throwsWhenMissing() {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
+        when(repository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.findById(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -75,6 +93,7 @@ class ExerciseServiceImplTest {
 
     @Test
     void create_savesAndReturnsResponse() {
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
         when(repository.save(any(Exercise.class))).thenAnswer(inv -> {
             Exercise e = inv.getArgument(0);
             e.setId(5L);
@@ -91,6 +110,7 @@ class ExerciseServiceImplTest {
 
     @Test
     void create_nullCategoryAndEquipmentSavesOk() {
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
         when(repository.save(any(Exercise.class))).thenAnswer(inv -> {
             Exercise e = inv.getArgument(0);
             e.setId(6L);
@@ -106,7 +126,7 @@ class ExerciseServiceImplTest {
     @Test
     void update_appliesChangesToExisting() {
         Exercise existing = exercise(3L, "Old");
-        when(repository.findById(3L)).thenReturn(Optional.of(existing));
+        when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
 
         ExerciseResponse result = service.update(3L, new ExerciseRequest("New", MuscleGroup.BACK, Equipment.BARBELL));
 
@@ -118,7 +138,7 @@ class ExerciseServiceImplTest {
 
     @Test
     void delete_throwsWhenMissing() {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
+        when(repository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -127,7 +147,7 @@ class ExerciseServiceImplTest {
     @Test
     void delete_setsDeletedAtInsteadOfRemovingRow() {
         Exercise existing = exercise(1L, "Squat");
-        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(existing));
 
         service.delete(1L);
 
@@ -135,14 +155,14 @@ class ExerciseServiceImplTest {
     }
 
     @Test
-    void findDelta_includesTombstonesGlobally() {
+    void findDelta_includesTombstonesForUser() {
         Exercise deleted = exercise(2L, "Deleted exercise");
         deleted.setDeletedAt(Instant.parse("2026-06-19T00:00:00Z"));
 
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
         Pageable requested = PageRequest.of(0, 50);
         Page<Exercise> page = new PageImpl<>(List.of(deleted));
-        when(repository.findByUpdatedAtGreaterThanEqual(eq(since), any())).thenReturn(page);
+        when(repository.findByUserIdAndUpdatedAtGreaterThanEqual(eq(USER_ID), eq(since), any())).thenReturn(page);
 
         Page<ExerciseResponse> result = service.findDelta(since, requested);
 

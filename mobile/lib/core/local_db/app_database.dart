@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -153,6 +153,15 @@ class AppDatabase extends _$AppDatabase {
           // full-pull bootstrap path until its first successful delta pull.
           if (from < 18) {
             await m.createTable(syncCursors);
+          }
+          // V19: trainer-assignment provenance (docs/personal_trainer/05-mobil-terv.md
+          // §2) — nullable, existing rows simply have no "Edzőtől" badge until
+          // the next pull re-fetches them with the new field populated.
+          if (from < 19) {
+            await m.addColumn(foods, foods.originTrainerId);
+            await m.addColumn(exercises, exercises.originTrainerId);
+            await m.addColumn(recipes, recipes.originTrainerId);
+            await m.addColumn(workoutTemplates, workoutTemplates.originTrainerId);
           }
         },
       );

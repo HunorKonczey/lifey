@@ -8,11 +8,13 @@ import com.lifey.nutrition.recipe.Recipe;
 import com.lifey.nutrition.recipe.RecipeIngredient;
 import com.lifey.nutrition.recipe.RecipeMapper;
 import com.lifey.nutrition.recipe.RecipeRepository;
+import com.lifey.nutrition.recipe.RecipeUpdatedEvent;
 import com.lifey.nutrition.recipe.dto.RecipeIngredientRequest;
 import com.lifey.nutrition.recipe.dto.RecipeRequest;
 import com.lifey.nutrition.recipe.dto.RecipeResponse;
 import com.lifey.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +34,7 @@ public class RecipeServiceImpl implements RecipeService {
     private final FoodRepository foodRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -96,6 +99,9 @@ public class RecipeServiceImpl implements RecipeService {
         // unchanged) would leave Recipe's own scalar fields untouched, so Hibernate's
         // dirty-checking could skip @PreUpdate. Bump explicitly so it always fires.
         recipe.setUpdatedAt(Instant.now());
+        // Live-sync: push this edit to every client's already-assigned copy
+        // (see AssignedContentSyncListener).
+        eventPublisher.publishEvent(new RecipeUpdatedEvent(currentUserProvider.getUserId(), recipe.getId()));
         return RecipeMapper.toResponse(recipe);
     }
 
@@ -121,7 +127,7 @@ public class RecipeServiceImpl implements RecipeService {
     private void replaceIngredients(Recipe recipe, List<RecipeIngredientRequest> requested) {
         recipe.getIngredients().clear();
         for (RecipeIngredientRequest item : requested) {
-            Food food = foodRepository.findById(item.foodId())
+            Food food = foodRepository.findByIdAndUserId(item.foodId(), currentUserProvider.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Food not found: " + item.foodId()));
 
             RecipeIngredient ingredient = new RecipeIngredient();

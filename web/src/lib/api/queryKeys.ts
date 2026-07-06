@@ -59,6 +59,33 @@ export const queryKeys = {
     all: () => ["steps"] as const,
     byDate: (date: string) => ["steps", "date", date] as const,
   },
+  trainerClients: {
+    all: () => ["trainer-clients"] as const,
+  },
+  trainerInvites: {
+    all: () => ["trainer-invites"] as const,
+  },
+  trainerAssignments: {
+    forClient: (clientId: number) => ["trainer-assignments", "client", clientId] as const,
+    assignedClients: (contentType: string, sourceId: number) =>
+      ["trainer-assignments", "assigned-clients", contentType, sourceId] as const,
+  },
+  trainerClientData: {
+    statistics: (clientId: number, period: "daily" | "weekly" | "monthly") =>
+      ["trainer-client-data", clientId, "statistics", period] as const,
+    steps: (clientId: number) => ["trainer-client-data", clientId, "steps"] as const,
+    weights: (clientId: number) => ["trainer-client-data", clientId, "weights"] as const,
+    sessions: (clientId: number, page: number, size: number) =>
+      ["trainer-client-data", clientId, "sessions", page, size] as const,
+    avatar: (clientId: number) => ["trainer-client-data", clientId, "avatar"] as const,
+    meals: (clientId: number, date: string) => ["trainer-client-data", clientId, "meals", date] as const,
+    nutritionGoals: (clientId: number) => ["trainer-client-data", clientId, "nutrition-goals"] as const,
+  },
+  superAdminUsers: {
+    page: (params: { page: number; size?: number; search?: string }) =>
+      ["superadmin-users", "page", params] as const,
+    roleAudit: (userId: number) => ["superadmin-users", userId, "role-audit"] as const,
+  },
 } as const;
 
 /**

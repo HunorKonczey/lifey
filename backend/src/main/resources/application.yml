@@ -83,6 +83,12 @@ lifey:
     access-token-ttl: ${JWT_ACCESS_TTL:7d}
     refresh-token-ttl: ${JWT_REFRESH_TTL:30d}
     issuer: lifey-api
+  starter-catalog:
+    # Seeds every newly registered user with a starter exercise catalog
+    # (StarterCatalogListener) — handy for local dev/demo accounts, but real
+    # users shouldn't have the same handful of exercises forced onto them.
+    # Off in prod (application-prod.yml).
+    enabled: ${STARTER_CATALOG_ENABLED:true}
   oauth:
     google:
       # Comma-separated list of accepted audiences: Android, iOS, and Web OAuth
@@ -102,3 +108,11 @@ lifey:
     # sending so local dev and tests never require a real Resend account.
     enabled: ${MAIL_ENABLED:false}
     resend-api-key: ${RESEND_API_KEY:}
+  trainer-invite:
+    # Optional email channel for accepting a trainer invite, alongside the
+    # existing mobile polling flow (ClientInviteController). Off by default —
+    # the mobile flow alone is unaffected either way.
+    email-enabled: ${TRAINER_INVITE_EMAIL_ENABLED:false}
+    # Used to build the accept/decline links in the invite email; the links
+    # point back at this backend's own public endpoint, not a frontend route.
+    public-base-url: ${TRAINER_INVITE_PUBLIC_BASE_URL:http://localhost:8080}

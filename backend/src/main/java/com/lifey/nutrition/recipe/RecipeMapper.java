@@ -37,7 +37,8 @@ public final class RecipeMapper {
                 recipe.getServings(),
                 ingredients,
                 recipe.getUpdatedAt(),
-                recipe.getDeletedAt()
+                recipe.getDeletedAt(),
+                recipe.getOriginTrainerId()
         );
     }
 }

@@ -15,6 +15,8 @@ import { onboardingSchema, type OnboardingFormValues } from "@/features/onboardi
 import { GenderBirthDateFields } from "@/features/onboarding/components/GenderBirthDateFields";
 import { HeightField } from "@/features/onboarding/components/HeightField";
 import { LifestyleGoalFields } from "@/features/onboarding/components/LifestyleGoalFields";
+import { ConfirmSaveDetailsDialog } from "@/features/onboarding/components/ConfirmSaveDetailsDialog";
+import type { UserDetailsField } from "@/features/onboarding/types";
 import { weightApi } from "@/features/weight/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { ApiError } from "@/lib/api/client";
@@ -136,9 +138,12 @@ export default function SettingsPage() {
     });
   }
 
-  const saveDetailsMutation = useMutation({
-    mutationFn: (body: OnboardingFormValues) =>
-      userDetailsApi.update({
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  const patchDetailsMutation = useMutation({
+    mutationFn: (body: { fields: UserDetailsField[] } & OnboardingFormValues) =>
+      userDetailsApi.patch({
+        fields: body.fields,
         gender: body.gender,
         birthDate: body.birthDate,
         heightCm: body.heightCm,
@@ -148,6 +153,8 @@ export default function SettingsPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.userDetails.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings.all() });
+      setShowConfirmDialog(false);
       show(t("settingsSaved"), "success");
     },
     onError: () => show(t("saveSettingsFailed"), "error"),
@@ -196,6 +203,11 @@ export default function SettingsPage() {
           <Panel title={t("profile")}>
             <AvatarUploader />
 
+            <Field label={t("name")}>
+              <ReadonlyValue>
+                {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "—"}
+              </ReadonlyValue>
+            </Field>
             <Field label={t("email")}>
               <ReadonlyValue>{user?.email ?? "—"}</ReadonlyValue>
             </Field>
@@ -225,12 +237,20 @@ export default function SettingsPage() {
                 <HeightField register={registerDetails} setValue={setDetailsValue} errors={detailsErrors} unitSystem={form.unitSystem} />
                 <LifestyleGoalFields register={registerDetails} watch={watchDetails} setValue={setDetailsValue} errors={detailsErrors} unitSystem={form.unitSystem} />
                 <button
-                  onClick={() => saveDetailsMutation.mutate(getDetailsValues())}
-                  disabled={saveDetailsMutation.isPending}
+                  onClick={() => setShowConfirmDialog(true)}
                   className="mt-1 h-10 px-6 w-fit rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
                   style={{ background: "var(--primary)", color: "#1E1F18" }}>
-                  {saveDetailsMutation.isPending ? t("saving") : t("saveChanges")}
+                  {t("saveChanges")}
                 </button>
+                <ConfirmSaveDetailsDialog
+                  open={showConfirmDialog}
+                  original={details}
+                  pending={getDetailsValues()}
+                  currentWeightKg={latestWeightKg}
+                  saving={patchDetailsMutation.isPending}
+                  onClose={() => setShowConfirmDialog(false)}
+                  onConfirm={(fields) => patchDetailsMutation.mutate({ fields, ...getDetailsValues() })}
+                />
               </>
             )}
           </Panel>

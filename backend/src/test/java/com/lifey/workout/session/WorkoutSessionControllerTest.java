@@ -143,6 +143,18 @@ class WorkoutSessionControllerTest {
     }
 
     @Test
+    void findPage_returnsPagedSessions() throws Exception {
+        WorkoutSessionResponse session = new WorkoutSessionResponse(2L,
+                Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null);
+        when(workoutSessionService.findPage(any())).thenReturn(new PageImpl<>(List.of(session)));
+
+        mockMvc.perform(get("/api/v1/workout-sessions").param("page", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(2));
+    }
+
+    @Test
     void delta_returnsPageIncludingTombstones() throws Exception {
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
         WorkoutSessionResponse tombstoned = new WorkoutSessionResponse(2L,

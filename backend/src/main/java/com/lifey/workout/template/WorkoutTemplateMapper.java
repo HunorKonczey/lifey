@@ -24,7 +24,8 @@ public final class WorkoutTemplateMapper {
                 template.getName(),
                 exercises,
                 template.getUpdatedAt(),
-                template.getDeletedAt()
+                template.getDeletedAt(),
+                template.getOriginTrainerId()
         );
     }
 }

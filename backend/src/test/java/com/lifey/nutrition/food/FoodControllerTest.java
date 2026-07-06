@@ -42,7 +42,7 @@ class FoodControllerTest {
     @Test
     void list_returnsOkWithJson() throws Exception {
         when(foodService.findAll())
-                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false, Instant.now(), null)));
+                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false, Instant.now(), null, null)));
 
         mockMvc.perform(get("/api/v1/foods"))
                 .andExpect(status().isOk())
@@ -53,7 +53,7 @@ class FoodControllerTest {
     @Test
     void list_withNoParams_neverCallsPagedVariant() throws Exception {
         when(foodService.findAll())
-                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false, Instant.now(), null)));
+                .thenReturn(List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false, Instant.now(), null, null)));
 
         mockMvc.perform(get("/api/v1/foods")).andExpect(status().isOk());
 
@@ -64,7 +64,7 @@ class FoodControllerTest {
     void findPage_firstPage_returnsPageEnvelope() throws Exception {
         Pageable pageable = PageRequest.of(0, 2, org.springframework.data.domain.Sort.by("name", "id"));
         Page<FoodResponse> page = new PageImpl<>(
-                List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false, Instant.now(), null)),
+                List.of(new FoodResponse(1L, "Chicken", 165.0, 31.0, 0.0, 3.6, null, false, Instant.now(), null, null)),
                 pageable, 3);
         when(foodService.findPage(eq(pageable), isNull(), isNull())).thenReturn(page);
 
@@ -80,7 +80,7 @@ class FoodControllerTest {
     void findPage_lastPage_returnsLastTrue() throws Exception {
         Pageable pageable = PageRequest.of(1, 2, org.springframework.data.domain.Sort.by("name", "id"));
         Page<FoodResponse> page = new PageImpl<>(
-                List.of(new FoodResponse(3L, "Rice", 130.0, 2.7, null, null, null, false, Instant.now(), null)),
+                List.of(new FoodResponse(3L, "Rice", 130.0, 2.7, null, null, null, false, Instant.now(), null, null)),
                 pageable, 3);
         when(foodService.findPage(eq(pageable), isNull(), isNull())).thenReturn(page);
 
@@ -94,7 +94,7 @@ class FoodControllerTest {
     void findPage_withSearch_passesSearchThrough() throws Exception {
         Pageable pageable = PageRequest.of(0, 200, org.springframework.data.domain.Sort.by("name", "id"));
         Page<FoodResponse> page = new PageImpl<>(
-                List.of(new FoodResponse(2L, "Rice cake", 380.0, 8.0, null, null, null, false, Instant.now(), null)),
+                List.of(new FoodResponse(2L, "Rice cake", 380.0, 8.0, null, null, null, false, Instant.now(), null, null)),
                 pageable, 1);
         when(foodService.findPage(eq(pageable), eq("rice"), isNull())).thenReturn(page);
 
@@ -109,7 +109,7 @@ class FoodControllerTest {
         Instant since = Instant.parse("2026-06-01T00:00:00Z");
         Page<FoodResponse> page = new PageImpl<>(
                 List.of(new FoodResponse(4L, "Old Rice", 130.0, 2.7, null, null, null, false,
-                        Instant.parse("2026-06-15T00:00:00Z"), Instant.parse("2026-06-15T00:00:00Z"))),
+                        Instant.parse("2026-06-15T00:00:00Z"), Instant.parse("2026-06-15T00:00:00Z"), null)),
                 pageable, 1);
         when(foodService.findPage(eq(pageable), isNull(), eq(since))).thenReturn(page);
 
@@ -122,7 +122,7 @@ class FoodControllerTest {
     @Test
     void create_returnsCreated() throws Exception {
         when(foodService.create(any()))
-                .thenReturn(new FoodResponse(7L, "Rice", 130.0, 2.7, null, null, null, false, Instant.now(), null));
+                .thenReturn(new FoodResponse(7L, "Rice", 130.0, 2.7, null, null, null, false, Instant.now(), null, null));
 
         mockMvc.perform(post("/api/v1/foods").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Rice\",\"caloriesPer100g\":130,\"proteinPer100g\":2.7,\"hidden\":false}"))

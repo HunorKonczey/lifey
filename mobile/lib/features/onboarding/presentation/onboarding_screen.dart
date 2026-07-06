@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/health/health_controller.dart';
 import '../../../core/network/error_message.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/unit_converters.dart';
@@ -16,7 +18,8 @@ import '../data/user_details_repository.dart';
 import '../domain/user_details.dart';
 import 'widgets/option_card.dart';
 
-const int _stepCount = 5; // Welcome, About you, Body, Lifestyle & goal, Suggested plan
+// Welcome, About you, Body, Lifestyle & goal, Suggested plan, [Apple Health — iOS only]
+const int _suggestedPlanIndex = 4;
 
 /// 5-step onboarding wizard: collects biometrics, previews suggested daily
 /// goals, and lets the user apply them or skip. See
@@ -66,6 +69,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _targetKgController.dispose();
     super.dispose();
   }
+
+  // Health step only makes sense on iOS (HealthKit); Android has no
+  // equivalent wired up yet, so the wizard is one step shorter there.
+  int get _stepCount => Platform.isIOS ? 6 : 5;
 
   bool get _isImperial =>
       (ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults())
@@ -130,7 +137,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (_step > 0 && !_validateStep(l10n)) return;
     if (_step >= _stepCount - 1) return;
     await _pageController.nextPage(duration: AppDuration.base, curve: AppCurve.standard);
-    if (_step == _stepCount - 1 && !_suggestRequested) {
+    if (_step == _suggestedPlanIndex && !_suggestRequested) {
       _suggestRequested = true;
       unawaited(_fetchSuggestion());
     }
@@ -219,14 +226,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ref.invalidate(userDetailsProvider);
       ref.invalidate(hasUserDetailsProvider);
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
-      AppSnackbar.showSuccess(context, title: l10n.onboardingCompleteMessage);
-      context.go('/dashboard');
+      if (Platform.isIOS) {
+        // One more step (Apple Health) still needs to run before we're
+        // actually done — it drives its own exit to /dashboard.
+        await _pageController.nextPage(duration: AppDuration.base, curve: AppCurve.standard);
+      } else {
+        _goToDashboard();
+      }
     } catch (e) {
       if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
     } finally {
       if (mounted) setState(() => _finishing = false);
     }
+  }
+
+  void _goToDashboard() {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    AppSnackbar.showSuccess(context, title: l10n.onboardingCompleteMessage);
+    context.go('/dashboard');
   }
 
   @override
@@ -307,6 +325,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     suggesting: _suggesting,
                     suggestion: _suggestion,
                   ),
+                  if (Platform.isIOS)
+                    _AppleHealthStep(l10n: l10n, onFinish: _goToDashboard),
                 ],
               ),
             ),
@@ -322,53 +342,57 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
 
             // ── Nav buttons ──────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Row(
-                children: [
-                  if (_step > 0)
-                    TextButton(onPressed: _back, child: Text(l10n.onboardingBackButton))
-                  else
-                    const SizedBox(width: 8),
-                  const Spacer(),
-                  if (_step < _stepCount - 1)
-                    FilledButton(
-                      onPressed: _next,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(120, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: Text(_step == 0 ? l10n.onboardingGetStartedButton : l10n.onboardingNextButton),
-                    )
-                  else
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: _finishing ? null : () => _finish(applyGoals: false),
-                          child: Text(l10n.onboardingNotNowButton),
+            // Past the suggested-plan step (i.e. the Apple Health step, iOS
+            // only) has its own Enable/Not-now controls in the step body, so
+            // this shared bar hides itself there instead of duplicating them.
+            if (_step <= _suggestedPlanIndex)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                child: Row(
+                  children: [
+                    if (_step > 0)
+                      TextButton(onPressed: _back, child: Text(l10n.onboardingBackButton))
+                    else
+                      const SizedBox(width: 8),
+                    const Spacer(),
+                    if (_step < _suggestedPlanIndex)
+                      FilledButton(
+                        onPressed: _next,
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(120, 48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: (_finishing || _suggestion == null)
-                              ? null
-                              : () => _finish(applyGoals: true),
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(120, 48),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: Text(_step == 0 ? l10n.onboardingGetStartedButton : l10n.onboardingNextButton),
+                      )
+                    else
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: _finishing ? null : () => _finish(applyGoals: false),
+                            child: Text(l10n.onboardingNotNowButton),
                           ),
-                          child: _finishing
-                              ? const SizedBox(
-                                  height: 18,
-                                  width: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : Text(l10n.onboardingApplyGoalsButton),
-                        ),
-                      ],
-                    ),
-                ],
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: (_finishing || _suggestion == null)
+                                ? null
+                                : () => _finish(applyGoals: true),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(120, 48),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: _finishing
+                                ? const SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : Text(l10n.onboardingApplyGoalsButton),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -841,6 +865,86 @@ class _SuggestedPlanStep extends StatelessWidget {
           const SizedBox(height: 12),
           Text(l10n.onboardingChangeLaterMessage, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step 6 — Apple Health (iOS only)
+// ---------------------------------------------------------------------------
+
+class _AppleHealthStep extends ConsumerStatefulWidget {
+  const _AppleHealthStep({required this.l10n, required this.onFinish});
+
+  final AppLocalizations l10n;
+  final VoidCallback onFinish;
+
+  @override
+  ConsumerState<_AppleHealthStep> createState() => _AppleHealthStepState();
+}
+
+class _AppleHealthStepState extends ConsumerState<_AppleHealthStep> {
+  bool _enabling = false;
+
+  Future<void> _enable() async {
+    setState(() => _enabling = true);
+    try {
+      // Requests HealthKit permission and — per AppleHealthController —
+      // immediately kicks off a weight + step-history import in the
+      // background, so the wizard doesn't need to wait for it here.
+      await ref.read(appleHealthControllerProvider.notifier).setEnabled(true);
+    } finally {
+      if (mounted) setState(() => _enabling = false);
+    }
+    widget.onFinish();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = widget.l10n;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.favorite, size: 56, color: scheme.primary),
+            const SizedBox(height: 20),
+            Text(
+              l10n.onboardingHealthTitle,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.onboardingHealthMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 28),
+            FilledButton(
+              onPressed: _enabling ? null : _enable,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: _enabling
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(l10n.onboardingHealthEnableButton),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _enabling ? null : widget.onFinish,
+              child: Text(l10n.onboardingNotNowButton),
+            ),
+          ],
+        ),
       ),
     );
   }

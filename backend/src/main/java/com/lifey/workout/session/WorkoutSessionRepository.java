@@ -12,6 +12,9 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
 
     List<WorkoutSession> findAllByUserIdAndDeletedAtIsNullOrderByStartedAtDesc(Long userId);
 
+    /** Paged history view — backs `GET /workout-sessions?page=` and the trainer client-workout-sessions endpoint. */
+    Page<WorkoutSession> findByUserIdAndDeletedAtIsNull(Long userId, Pageable pageable);
+
     Optional<WorkoutSession> findByIdAndUserId(Long id, Long userId);
 
     /**

@@ -2,6 +2,7 @@ package com.lifey.steps.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.common.util.DateRanges;
 import com.lifey.steps.DailyStepCount;
 import com.lifey.steps.DailyStepCountMapper;
 import com.lifey.steps.DailyStepCountRepository;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -32,6 +34,22 @@ public class DailyStepCountServiceImpl implements DailyStepCountService {
     @Transactional(readOnly = true)
     public List<DailyStepCountResponse> findAll() {
         return repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDesc(currentUserProvider.getUserId()).stream()
+                .map(DailyStepCountMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DailyStepCountResponse> findAll(LocalDate from, LocalDate to) {
+        return findAllForUser(currentUserProvider.getUserId(), from, to);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DailyStepCountResponse> findAllForUser(Long userId, LocalDate from, LocalDate to) {
+        LocalDate effectiveFrom = from != null ? from : DateRanges.DISTANT_PAST;
+        LocalDate effectiveTo = to != null ? to : DateRanges.DISTANT_FUTURE;
+        return repository.findByUserIdAndDeletedAtIsNullAndDateRange(userId, effectiveFrom, effectiveTo).stream()
                 .map(DailyStepCountMapper::toResponse)
                 .toList();
     }

@@ -17,6 +17,20 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
     Optional<Meal> findByIdAndUserId(Long id, Long userId);
 
     /**
+     * {@code from} is inclusive, {@code toExclusive} is exclusive — callers pass
+     * the day after the last day they want included (see
+     * MealServiceImpl#findAllForUserBetween).
+     */
+    @Query("""
+            select m from Meal m
+            where m.user.id = :userId and m.deletedAt is null
+              and m.dateTime >= :from and m.dateTime < :toExclusive
+            order by m.dateTime desc
+            """)
+    List<Meal> findAllByUserIdAndDeletedAtIsNullAndDateTimeRange(
+            @Param("userId") Long userId, @Param("from") Instant from, @Param("toExclusive") Instant toExclusive);
+
+    /**
      * Delta-sync feed (docs/16-delta-sync-rollout.md) — deliberately not
      * deletedAt-filtered: it must surface tombstoned rows (deletedAt set) so
      * the mobile client can remove them locally.

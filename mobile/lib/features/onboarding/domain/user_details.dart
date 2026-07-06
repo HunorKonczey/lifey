@@ -35,6 +35,19 @@ String activityLevelToJson(ActivityLevel value) => switch (value) {
       ActivityLevel.veryActive => 'VERY_ACTIVE',
     };
 
+/// Selects which [UserDetails] fields a partial update (`PATCH /user-details`)
+/// should actually persist — matches the backend's UserDetailsField enum.
+enum UserDetailsField { gender, birthDate, heightCm, activityLevel, primaryGoal, targetWeightKg }
+
+String userDetailsFieldToJson(UserDetailsField value) => switch (value) {
+      UserDetailsField.gender => 'GENDER',
+      UserDetailsField.birthDate => 'BIRTH_DATE',
+      UserDetailsField.heightCm => 'HEIGHT_CM',
+      UserDetailsField.activityLevel => 'ACTIVITY_LEVEL',
+      UserDetailsField.primaryGoal => 'PRIMARY_GOAL',
+      UserDetailsField.targetWeightKg => 'TARGET_WEIGHT_KG',
+    };
+
 enum PrimaryGoal { loseWeight, maintain, gainMuscle }
 
 PrimaryGoal primaryGoalFromJson(String value) => switch (value) {

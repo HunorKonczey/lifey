@@ -20,6 +20,12 @@
   --border:             transparent;
   --error:              #CF6679;
 
+  /* Admin (trainer) container tones — tertiary/error at low opacity, per
+     docs/personal_trainer/06-design.md and the design/ mockup */
+  --tertiary-container:    rgba(110, 154, 106, .18);
+  --on-tertiary-container: #A9CBA5;
+  --error-container:       rgba(207, 102, 121, .16);
+
   /* Metric accent colours */
   --metric-kcal:    #E0915A;
   --metric-protein: #9DAE6B;
@@ -70,6 +76,10 @@
   --border:             #E2E0D2;
   --error:              #CF6679;
 
+  --tertiary-container:    rgba(74, 122, 82, .14);
+  --on-tertiary-container: #2F5B39;
+  --error-container:       rgba(207, 102, 121, .14);
+
   --metric-kcal:    #D27A3E;
   --metric-protein: #586E38;
   --metric-carbs:   #B8902F;
@@ -98,6 +108,9 @@
   --color-muted:              var(--muted);
   --color-outline:            var(--outline);
   --color-error:              var(--error);
+  --color-tertiary-container:    var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+  --color-error-container:       var(--error-container);
 
   --color-metric-kcal:    var(--metric-kcal);
   --color-metric-protein: var(--metric-protein);

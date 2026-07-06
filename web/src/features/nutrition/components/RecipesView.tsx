@@ -16,8 +16,14 @@ import type { RecipeResponse } from "../types";
 const PAGE_SIZE = 200;
 const SEARCH_DEBOUNCE_MS = 300;
 
-export function RecipesView() {
+interface RecipesViewProps {
+  /** When provided, a "Kiosztás" button appears on every card — admin nav only. */
+  onAssign?: (recipe: RecipeResponse) => void;
+}
+
+export function RecipesView({ onAssign }: RecipesViewProps = {}) {
   const t = useTranslations("nutrition.recipesView");
+  const admin = useTranslations("admin.assignDrawer");
   const { date } = useDateStore();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [search, setSearch] = useState("");
@@ -109,11 +115,20 @@ export function RecipesView() {
                   {r.ingredients.length} ingredients · {r.servings} serv.
                 </p>
               </button>
-              <button onClick={() => setLogging(r)}
-                className="mt-1 flex items-center justify-center gap-1 h-8 rounded-[var(--r-input)] text-xs font-semibold transition-colors"
-                style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}>
-                <span className="material-symbols-rounded text-base">restaurant</span> {t("logAsMeal")}
-              </button>
+              <div className="flex gap-1.5 mt-1">
+                <button onClick={() => setLogging(r)}
+                  className="flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-[var(--r-input)] text-xs font-semibold transition-colors"
+                  style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}>
+                  <span className="material-symbols-rounded text-base">restaurant</span> {t("logAsMeal")}
+                </button>
+                {onAssign && (
+                  <button onClick={() => onAssign(r)}
+                    className="flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-[var(--r-input)] text-xs font-extrabold transition-colors"
+                    style={{ background: "rgba(110,154,106,.18)", color: "var(--tertiary)" }}>
+                    <span className="material-symbols-rounded text-base">person_add</span> {admin("assignAction")}
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

@@ -168,6 +168,7 @@ class PullEngine {
       fatPer100g: Value((json['fatPer100g'] as num?)?.toDouble()),
       barcode: Value(json['barcode'] as String?),
       hidden: Value(json['hidden'] as bool? ?? false),
+      originTrainerId: Value(json['originTrainerId'] as int?),
     );
     if (existingClientId != null) {
       await (_db.update(_db.foods)..where((t) => t.clientId.equals(existingClientId)))
@@ -269,6 +270,7 @@ class PullEngine {
       name: Value(json['name'] as String),
       category: Value(json['category'] as String?),
       equipment: Value(json['equipment'] as String?),
+      originTrainerId: Value(json['originTrainerId'] as int?),
     );
     if (existingClientId != null) {
       await (_db.update(_db.exercises)..where((t) => t.clientId.equals(existingClientId)))
@@ -630,7 +632,10 @@ class PullEngine {
     if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
 
     final clientId = existingClientId ?? newClientId();
-    final values = WorkoutTemplatesCompanion(name: Value(json['name'] as String));
+    final values = WorkoutTemplatesCompanion(
+      name: Value(json['name'] as String),
+      originTrainerId: Value(json['originTrainerId'] as int?),
+    );
     // BE returns structured exercises: [{exerciseId, targetSets}, ...]
     final entriesJson =
         (json['exercises'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
@@ -895,6 +900,7 @@ class PullEngine {
       description: Value(json['description'] as String?),
       favorite: Value(json['favorite'] as bool? ?? false),
       servings: Value(json['servings'] as int? ?? 1),
+      originTrainerId: Value(json['originTrainerId'] as int?),
     );
     final ingredientsJson =
         (json['ingredients'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
@@ -1165,6 +1171,7 @@ class PullEngine {
             fatPer100g: Value((json['fatPer100g'] as num?)?.toDouble()),
             barcode: Value(json['barcode'] as String?),
             hidden: Value(json['hidden'] as bool? ?? true),
+            originTrainerId: Value(json['originTrainerId'] as int?),
           ));
       return clientId;
     } catch (_) {

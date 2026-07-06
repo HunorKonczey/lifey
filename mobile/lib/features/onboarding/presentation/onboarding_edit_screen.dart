@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/error_message.dart';
+import '../../../core/sync/pull_engine.dart';
+import '../../../core/sync/sync_engine_provider.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/unit_converters.dart';
 import '../../../l10n/app_localizations.dart';
@@ -10,8 +12,10 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
+import '../../weight/application/weight_controller.dart';
 import '../data/user_details_repository.dart';
 import '../domain/user_details.dart';
+import 'widgets/confirm_save_details_dialog.dart';
 import 'widgets/option_card.dart';
 
 /// Settings > "Body & goals": edits the same `/user-details` fields the
@@ -36,6 +40,10 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
   bool _seeded = false;
   bool _saving = false;
 
+  // The as-loaded snapshot, kept aside so _save() can diff the current form
+  // state against it and only offer the fields that actually changed.
+  UserDetails? _original;
+
   final _heightCmController = TextEditingController();
   final _feetController = TextEditingController();
   final _inchesController = TextEditingController();
@@ -53,6 +61,7 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
   }
 
   void _seedFrom(UserDetails d, bool isImperial) {
+    _original = d;
     _gender = d.gender;
     _birthDate = d.birthDate;
     _heightCm = d.heightCm;
@@ -94,21 +103,47 @@ class _OnboardingEditScreenState extends ConsumerState<OnboardingEditScreen> {
         _birthDate == null ||
         _heightCm == null ||
         _activityLevel == null ||
-        _primaryGoal == null) {
+        _primaryGoal == null ||
+        _original == null) {
       return;
     }
+
+    final pending = UserDetails(
+      gender: _gender!,
+      birthDate: _birthDate!,
+      heightCm: _heightCm!,
+      activityLevel: _activityLevel!,
+      primaryGoal: _primaryGoal!,
+      targetWeightKg: _targetWeightKg,
+    );
+
+    final weights = ref.read(weightControllerProvider).value ?? const [];
+    final currentWeightKg = weights.isEmpty
+        ? 70.0
+        : (weights.toList()..sort((a, b) => a.date.compareTo(b.date))).last.weight;
+
+    final fields = await showConfirmSaveDetailsDialog(
+      context,
+      original: _original!,
+      pending: pending,
+      currentWeightKg: currentWeightKg,
+    );
+    if (fields == null || fields.isEmpty || !mounted) return;
+
     setState(() => _saving = true);
     try {
-      await ref.read(userDetailsRepositoryProvider).upsert(UserDetails(
-            gender: _gender!,
-            birthDate: _birthDate!,
-            heightCm: _heightCm!,
-            activityLevel: _activityLevel!,
-            primaryGoal: _primaryGoal!,
-            targetWeightKg: _targetWeightKg,
-          ));
+      await ref.read(userDetailsRepositoryProvider).patch(pending, fields);
       ref.invalidate(userDetailsProvider);
       ref.invalidate(hasUserDetailsProvider);
+      // The recalculated goals landed in user_settings server-side; settings
+      // are offline-first (Drift + outbox), so pull the fresh row down —
+      // settingsControllerProvider's watch() stream then updates on its own.
+      try {
+        await ref.read(syncEngineProvider).sync();
+        await ref.read(pullEngineProvider).pullAll();
+      } catch (_) {
+        // Best-effort: no connectivity leaves the local cache briefly stale.
+      }
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         AppSnackbar.showSuccess(context, title: l10n.onboardingDetailsSavedMessage);

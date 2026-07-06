@@ -4,6 +4,7 @@ import com.lifey.auth.exception.InvalidTokenException;
 import com.lifey.auth.exception.TokenExpiredException;
 
 import com.lifey.auth.properties.JwtProperties;
+import com.lifey.auth.service.JwtService;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import io.jsonwebtoken.Jwts;
@@ -33,12 +34,16 @@ class JwtServiceTest {
     @Test
     void generateAccessToken_roundTripsClaims() {
         User user = user(7L, "user@example.com", Role.ROLE_USER, Role.ROLE_ADMIN);
+        user.setFirstName("Jane");
+        user.setLastName("Doe");
 
         String token = jwtService.generateAccessToken(user);
         var claims = jwtService.parseAccessToken(token);
 
         assertThat(jwtService.extractUserId(claims)).isEqualTo(7L);
         assertThat(claims.get("email", String.class)).isEqualTo("user@example.com");
+        assertThat(claims.get("firstName", String.class)).isEqualTo("Jane");
+        assertThat(claims.get("lastName", String.class)).isEqualTo("Doe");
         assertThat(jwtService.extractRoles(claims)).containsExactlyInAnyOrder(Role.ROLE_USER, Role.ROLE_ADMIN);
         assertThat(claims.getIssuer()).isEqualTo("lifey-api");
     }

@@ -10,8 +10,18 @@ class AuthRepository {
 
   final Dio _dio;
 
-  Future<void> register({required String email, required String password}) async {
-    await _dio.post('/auth/register', data: {'email': email, 'password': password});
+  Future<void> register({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  }) async {
+    await _dio.post('/auth/register', data: {
+      'email': email,
+      'password': password,
+      'firstName': firstName,
+      'lastName': lastName,
+    });
   }
 
   Future<AuthTokens> login({required String email, required String password}) async {

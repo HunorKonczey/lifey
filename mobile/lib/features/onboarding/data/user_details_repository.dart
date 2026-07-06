@@ -29,6 +29,20 @@ class UserDetailsRepository {
     return UserDetails.fromJson(response.data!);
   }
 
+  /// Persists only [fields] of [details]; the backend keeps the existing
+  /// value for everything else and recalculates + applies the daily
+  /// calorie/macro/water goals to settings.
+  Future<UserDetails> patch(UserDetails details, Set<UserDetailsField> fields) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/user-details',
+      data: {
+        ...details.toJson(),
+        'fields': fields.map(userDetailsFieldToJson).toList(),
+      },
+    );
+    return UserDetails.fromJson(response.data!);
+  }
+
   /// Stateless — nothing is persisted, safe to call repeatedly while the
   /// wizard is open to preview goals before the user commits to anything.
   Future<SuggestGoalsResult> suggestGoals({

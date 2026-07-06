@@ -1,6 +1,8 @@
 package com.lifey.workout.exercise.service;
 
+import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseMapper;
 import com.lifey.workout.exercise.ExerciseRepository;
@@ -23,11 +25,13 @@ import java.util.List;
 public class ExerciseServiceImpl implements ExerciseService {
 
     private final ExerciseRepository repository;
+    private final UserRepository userRepository;
+    private final CurrentUserProvider currentUserProvider;
 
     @Override
     @Transactional(readOnly = true)
     public List<ExerciseResponse> findAll() {
-        return repository.findAllByDeletedAtIsNullOrderByNameAsc().stream()
+        return repository.findAllByUserIdAndDeletedAtIsNullOrderByNameAsc(currentUserProvider.getUserId()).stream()
                 .map(ExerciseMapper::toResponse)
                 .toList();
     }
@@ -36,12 +40,12 @@ public class ExerciseServiceImpl implements ExerciseService {
     @Transactional(readOnly = true)
     public Page<ExerciseResponse> findDelta(Instant updatedSince, Pageable pageable) {
         // Delta-sync feed: fixed ordering, includes tombstoned rows — see
-        // docs/16-delta-sync-rollout.md and ExerciseRepository.findByUpdatedAtGreaterThanEqual.
+        // docs/16-delta-sync-rollout.md and ExerciseRepository.findByUserIdAndUpdatedAtGreaterThanEqual.
         Pageable deltaPageable = PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
                 Sort.by(Sort.Order.asc("updatedAt"), Sort.Order.asc("id")));
-        return repository.findByUpdatedAtGreaterThanEqual(updatedSince, deltaPageable)
+        return repository.findByUserIdAndUpdatedAtGreaterThanEqual(currentUserProvider.getUserId(), updatedSince, deltaPageable)
                 .map(ExerciseMapper::toResponse);
     }
 
@@ -53,7 +57,9 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     public ExerciseResponse create(ExerciseRequest request) {
-        return ExerciseMapper.toResponse(repository.save(ExerciseMapper.toEntity(request)));
+        Exercise exercise = ExerciseMapper.toEntity(request);
+        exercise.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
+        return ExerciseMapper.toResponse(repository.save(exercise));
     }
 
     @Override
@@ -70,7 +76,7 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     private Exercise getOrThrow(Long id) {
-        return repository.findById(id)
+        return repository.findByIdAndUserId(id, currentUserProvider.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + id));
     }
 }

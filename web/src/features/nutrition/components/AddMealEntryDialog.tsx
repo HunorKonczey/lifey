@@ -210,8 +210,9 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
             <button key={f.id} onClick={() => setPicked(f)}
               className="flex items-center justify-between px-3 py-2 rounded-[var(--r-md)] text-left transition-colors hover:bg-surface-container">
               <span className="text-sm font-semibold">{f.name}</span>
-              <span className="text-xs tabular" style={{ color: "var(--metric-kcal)" }}>
-                {Math.round(f.caloriesPer100g)} kcal/100g
+              <span className="flex gap-2 text-xs tabular">
+                <span style={{ color: "var(--metric-kcal)" }}>{Math.round(f.caloriesPer100g)} kcal</span>
+                <span style={{ color: "var(--metric-protein)" }}>{Math.round(f.proteinPer100g)}g P</span>
               </span>
             </button>
           ))}

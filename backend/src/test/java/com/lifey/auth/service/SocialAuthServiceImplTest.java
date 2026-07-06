@@ -3,7 +3,6 @@ package com.lifey.auth.service;
 import com.lifey.auth.GoogleAvatarCandidateEvent;
 import com.lifey.auth.GoogleIdTokenVerifier;
 import com.lifey.auth.GoogleIdentity;
-import com.lifey.auth.JwtService;
 import com.lifey.auth.UserRegisteredEvent;
 import com.lifey.auth.dto.AuthResponse;
 import com.lifey.auth.entity.Provider;
@@ -65,7 +64,7 @@ class SocialAuthServiceImplTest {
         link.setUser(user);
 
         when(googleIdTokenVerifier.verify(ID_TOKEN))
-                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, null));
+                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, null, "Jane", "Doe"));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.of(link));
         stubTokenIssuance(user);
@@ -80,7 +79,7 @@ class SocialAuthServiceImplTest {
     @Test
     void loginWithGoogle_noIdentityNoUser_createsUserAndIdentityAndPublishesEvent() {
         when(googleIdTokenVerifier.verify(ID_TOKEN))
-                .thenReturn(new GoogleIdentity(SUB, "new@example.com", true, null));
+                .thenReturn(new GoogleIdentity(SUB, "new@example.com", true, null, "Jane", "Doe"));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.empty());
         when(userRepository.findByEmailIgnoreCase("new@example.com")).thenReturn(Optional.empty());
@@ -100,6 +99,8 @@ class SocialAuthServiceImplTest {
         User created = userCaptor.getValue();
         assertThat(created.getEmail()).isEqualTo("new@example.com");
         assertThat(created.getPasswordHash()).isNull();
+        assertThat(created.getFirstName()).isEqualTo("Jane");
+        assertThat(created.getLastName()).isEqualTo("Doe");
         assertThat(created.getRoles()).containsExactly(Role.ROLE_USER);
 
         UserIdentity savedLink = identityCaptor.getValue();
@@ -117,7 +118,7 @@ class SocialAuthServiceImplTest {
         link.setUser(user);
 
         when(googleIdTokenVerifier.verify(ID_TOKEN))
-                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, "https://example.com/pic.jpg"));
+                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, "https://example.com/pic.jpg", "Jane", "Doe"));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.of(link));
         stubTokenIssuance(user);
@@ -135,7 +136,7 @@ class SocialAuthServiceImplTest {
         User existing = existingUser(3L, "user@example.com");
 
         when(googleIdTokenVerifier.verify(ID_TOKEN))
-                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, null));
+                .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, null, "Jane", "Doe"));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.empty());
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(existing));
@@ -156,7 +157,7 @@ class SocialAuthServiceImplTest {
         User existing = existingUser(3L, "user@example.com");
 
         when(googleIdTokenVerifier.verify(ID_TOKEN))
-                .thenReturn(new GoogleIdentity(SUB, "user@example.com", false, null));
+                .thenReturn(new GoogleIdentity(SUB, "user@example.com", false, null, "Jane", "Doe"));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.empty());
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(existing));

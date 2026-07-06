@@ -44,6 +44,19 @@ class DailyStepCountControllerTest {
     }
 
     @Test
+    void list_withFromAndTo_usesRangeQuery() throws Exception {
+        when(stepCountService.findAll(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+                .thenReturn(List.of(new DailyStepCountResponse(1L, LocalDate.of(2026, 6, 18), 8200,
+                        Instant.parse("2026-06-18T08:00:00Z"), null)));
+
+        mockMvc.perform(get("/api/v1/steps").param("from", "2026-06-01").param("to", "2026-06-30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].steps").value(8200));
+
+        verify(stepCountService, never()).findAll();
+    }
+
+    @Test
     void delta_returnsPageIncludingTombstones() throws Exception {
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
         DailyStepCountResponse tombstoned = new DailyStepCountResponse(2L, LocalDate.of(2026, 6, 18), 8200,

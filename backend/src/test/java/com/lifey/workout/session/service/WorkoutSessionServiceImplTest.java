@@ -68,9 +68,37 @@ class WorkoutSessionServiceImplTest {
     }
 
     @Test
+    void findPage_delegatesToCurrentUser() {
+        Pageable requested = PageRequest.of(0, 20);
+        WorkoutSession session = new WorkoutSession();
+        session.setId(9L);
+        session.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        when(sessionRepository.findByUserIdAndDeletedAtIsNull(USER_ID, requested))
+                .thenReturn(new PageImpl<>(List.of(session)));
+
+        Page<WorkoutSessionResponse> result = service.findPage(requested);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.id()).isEqualTo(9L));
+    }
+
+    @Test
+    void findPageForUser_scopesToExplicitUser() {
+        Pageable requested = PageRequest.of(0, 20);
+        WorkoutSession session = new WorkoutSession();
+        session.setId(10L);
+        session.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        when(sessionRepository.findByUserIdAndDeletedAtIsNull(99L, requested))
+                .thenReturn(new PageImpl<>(List.of(session)));
+
+        Page<WorkoutSessionResponse> result = service.findPageForUser(99L, requested);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.id()).isEqualTo(10L));
+    }
+
+    @Test
     void create_resolvesPlannedExercisesAndSets() {
-        when(exerciseRepository.findById(1L)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
-        when(exerciseRepository.findById(4L)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> {
             WorkoutSession s = inv.getArgument(0);
             s.setId(2L);
@@ -122,7 +150,7 @@ class WorkoutSessionServiceImplTest {
 
     @Test
     void create_dropsIncompleteSetsInsteadOfPersistingThem() {
-        when(exerciseRepository.findById(1L)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> {
             WorkoutSession s = inv.getArgument(0);
             s.setId(9L);
@@ -150,7 +178,7 @@ class WorkoutSessionServiceImplTest {
 
     @Test
     void create_throwsWhenPlannedExerciseMissing() {
-        when(exerciseRepository.findById(99L)).thenReturn(Optional.empty());
+        when(exerciseRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(99L), List.of(),
                 null, null, null, null);
@@ -162,7 +190,7 @@ class WorkoutSessionServiceImplTest {
 
     @Test
     void create_throwsWhenSetExerciseMissing() {
-        when(exerciseRepository.findById(99L)).thenReturn(Optional.empty());
+        when(exerciseRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(), List.of(new ExerciseSetRequest(99L, 5, 100.0,
@@ -223,7 +251,7 @@ class WorkoutSessionServiceImplTest {
         existing.getSets().add(oldSet);
 
         when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
-        when(exerciseRepository.findById(1L)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
         Instant finished = Instant.parse("2026-06-18T06:00:00Z");
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), finished,
@@ -282,7 +310,7 @@ class WorkoutSessionServiceImplTest {
         existing.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
         existing.setUpdatedAt(Instant.parse("2026-06-18T05:00:00Z"));
         when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
-        when(exerciseRepository.findById(1L)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
 
         // Same startedAt/finishedAt/etc as before — only the sets differ.
         WorkoutSessionRequest request = new WorkoutSessionRequest(

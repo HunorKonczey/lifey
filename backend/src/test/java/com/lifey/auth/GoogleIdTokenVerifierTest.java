@@ -68,6 +68,28 @@ class GoogleIdTokenVerifierTest {
         assertThat(identity.email()).isEqualTo("user@example.com");
         assertThat(identity.emailVerified()).isTrue();
         assertThat(identity.picture()).isNull();
+        assertThat(identity.givenName()).isNull();
+        assertThat(identity.familyName()).isNull();
+    }
+
+    @Test
+    void verify_tokenWithNameClaims_returnsIdentityWithGivenAndFamilyName() throws Exception {
+        JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
+                .subject(SUBJECT)
+                .issuer("https://accounts.google.com")
+                .audience(CLIENT_ID)
+                .expirationTime(Date.from(Instant.now().plusSeconds(300)))
+                .claim("email", "user@example.com")
+                .claim("email_verified", true)
+                .claim("given_name", "Jane")
+                .claim("family_name", "Doe");
+        SignedJWT jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(keyId).build(), claims.build());
+        jwt.sign(new RSASSASigner(privateKey));
+
+        GoogleIdentity identity = verifier.verify(jwt.serialize());
+
+        assertThat(identity.givenName()).isEqualTo("Jane");
+        assertThat(identity.familyName()).isEqualTo("Doe");
     }
 
     @Test

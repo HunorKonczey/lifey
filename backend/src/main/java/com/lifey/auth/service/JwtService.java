@@ -1,4 +1,4 @@
-package com.lifey.auth;
+package com.lifey.auth.service;
 
 import com.lifey.auth.entity.RefreshToken;
 import com.lifey.auth.exception.InvalidTokenException;
@@ -45,6 +45,8 @@ public class JwtService {
         return Jwts.builder()
                 .subject(user.getId().toString())
                 .claim("email", user.getEmail())
+                .claim("firstName", user.getFirstName())
+                .claim("lastName", user.getLastName())
                 .claim("roles", user.getRoles().stream().map(Enum::name).toList())
                 .issuer(properties.issuer())
                 .issuedAt(Date.from(now))
@@ -56,7 +58,7 @@ public class JwtService {
     /**
      * Verifies signature and expiry and returns the decoded claims.
      *
-     * @throws TokenExpiredException if the token's signature is valid but it has expired
+     * @throws TokenExpiredException if the token's signature is valid, but it has expired
      * @throws InvalidTokenException if the token is malformed or its signature doesn't verify
      */
     public Claims parseAccessToken(String token) {

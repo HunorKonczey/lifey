@@ -7,6 +7,7 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/origin_trainer_badge.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
 import '../domain/exercise.dart';
@@ -248,6 +249,17 @@ class _TemplateCard extends StatelessWidget {
                       ),
                     ],
                   ),
+
+                  // "Edzőtől" badge, if this template was trainer-assigned
+                  if (template.originTrainerId != null) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OriginTrainerBadge(
+                        originTrainerId: template.originTrainerId!,
+                      ),
+                    ),
+                  ],
 
                   // Category chips
                   if (categories.isNotEmpty) ...[

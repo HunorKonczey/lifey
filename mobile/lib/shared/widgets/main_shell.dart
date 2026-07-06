@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/trainer_invite/presentation/trainer_invite_card.dart';
 import '../../l10n/app_localizations.dart';
 import 'adaptive_bottom_nav.dart';
 import 'nav_collapse_controller.dart';
@@ -81,6 +82,12 @@ class _MainShellState extends ConsumerState<MainShell> {
                         ),
                 );
               },
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: fabBottom,
+              child: const TrainerInviteCard(),
             ),
           ],
         ),

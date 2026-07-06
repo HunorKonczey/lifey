@@ -7,6 +7,7 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/origin_trainer_badge.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/recipes_controller.dart';
 import '../domain/recipe.dart';
@@ -208,19 +209,33 @@ class _RecipeCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 3),
-                      Text(
-                        recipe.servings > 1
-                            ? l10n.perServingCaloriesProteinLabel(
-                                (recipe.totalCalories / recipe.servings).toStringAsFixed(0),
-                                (recipe.totalProtein / recipe.servings).toStringAsFixed(0),
-                              )
-                            : l10n.totalCaloriesProteinLabel(
-                                recipe.totalCalories.toStringAsFixed(0),
-                                recipe.totalProtein.toStringAsFixed(0),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              recipe.servings > 1
+                                  ? l10n.perServingCaloriesProteinLabel(
+                                      (recipe.totalCalories / recipe.servings)
+                                          .toStringAsFixed(0),
+                                      (recipe.totalProtein / recipe.servings)
+                                          .toStringAsFixed(0),
+                                    )
+                                  : l10n.totalCaloriesProteinLabel(
+                                      recipe.totalCalories.toStringAsFixed(0),
+                                      recipe.totalProtein.toStringAsFixed(0),
+                                    ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: scheme.onSurfaceVariant,
                               ),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+                            ),
+                          ),
+                          if (recipe.originTrainerId != null) ...[
+                            const SizedBox(width: 6),
+                            OriginTrainerBadge(originTrainerId: recipe.originTrainerId!),
+                          ],
+                        ],
                       ),
                     ],
                   ),

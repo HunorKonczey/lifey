@@ -241,6 +241,7 @@ class RecipeRepository {
       description: row.description,
       favorite: row.favorite,
       servings: row.servings,
+      originTrainerId: row.originTrainerId,
       ingredients: ingredients,
     );
   }

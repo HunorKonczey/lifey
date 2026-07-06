@@ -37,7 +37,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse daily(LocalDate today) {
-        return forPeriodSince(today);
+        return dailyForUser(currentUserProvider.getUserId(), today);
     }
 
     @Override
@@ -47,7 +47,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse weekly(LocalDate today) {
-        return forPeriodSince(today.minusDays(6));
+        return weeklyForUser(currentUserProvider.getUserId(), today);
     }
 
     @Override
@@ -57,11 +57,25 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse monthly(LocalDate today) {
-        return forPeriodSince(today.minusDays(29));
+        return monthlyForUser(currentUserProvider.getUserId(), today);
     }
 
-    private StatisticsResponse forPeriodSince(LocalDate fromDate) {
-        Long userId = currentUserProvider.getUserId();
+    @Override
+    public StatisticsResponse dailyForUser(Long userId, LocalDate today) {
+        return forPeriodSinceForUser(userId, today);
+    }
+
+    @Override
+    public StatisticsResponse weeklyForUser(Long userId, LocalDate today) {
+        return forPeriodSinceForUser(userId, today.minusDays(6));
+    }
+
+    @Override
+    public StatisticsResponse monthlyForUser(Long userId, LocalDate today) {
+        return forPeriodSinceForUser(userId, today.minusDays(29));
+    }
+
+    private StatisticsResponse forPeriodSinceForUser(Long userId, LocalDate fromDate) {
         Instant fromInstant = fromDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
 
         double totalCalories = mealRepository.sumCaloriesSince(userId, fromInstant);

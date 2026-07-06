@@ -45,6 +45,19 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<WorkoutSessionResponse> findPage(Pageable pageable) {
+        return findPageForUser(currentUserProvider.getUserId(), pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<WorkoutSessionResponse> findPageForUser(Long userId, Pageable pageable) {
+        return sessionRepository.findByUserIdAndDeletedAtIsNull(userId, pageable)
+                .map(WorkoutSessionMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<WorkoutSessionResponse> findDelta(Instant updatedSince, Pageable pageable) {
         // Delta-sync feed: fixed ordering, includes tombstoned rows — see
         // docs/16-delta-sync-rollout.md and WorkoutSessionRepository.findByUserIdAndUpdatedAtGreaterThanEqual.
@@ -114,7 +127,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     private void replacePlannedExercises(WorkoutSession session, List<Long> exerciseIds) {
         session.getPlannedExercises().clear();
         for (Long exerciseId : exerciseIds) {
-            Exercise exercise = exerciseRepository.findById(exerciseId)
+            Exercise exercise = exerciseRepository.findByIdAndUserId(exerciseId, currentUserProvider.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + exerciseId));
 
             WorkoutSessionExercise link = new WorkoutSessionExercise();
@@ -142,7 +155,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
                         session.getId(), item.exerciseId(), item.reps(), item.weight());
                 continue;
             }
-            Exercise exercise = exerciseRepository.findById(item.exerciseId())
+            Exercise exercise = exerciseRepository.findByIdAndUserId(item.exerciseId(), currentUserProvider.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + item.exerciseId()));
 
             ExerciseSet set = new ExerciseSet();

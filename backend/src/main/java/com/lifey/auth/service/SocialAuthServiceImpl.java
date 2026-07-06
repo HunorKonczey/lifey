@@ -88,6 +88,8 @@ public class SocialAuthServiceImpl implements SocialAuthService {
     private User createUser(GoogleIdentity identity) {
         User user = new User();
         user.setEmail(identity.email());
+        user.setFirstName(identity.givenName());
+        user.setLastName(identity.familyName());
         user.setCreatedAt(Instant.now());
         user.setRoles(Set.of(Role.ROLE_USER));
         userRepository.save(user);

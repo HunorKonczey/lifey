@@ -7,3 +7,5 @@
 - OpenAPI mandatory
 - JUnit 5
 - Testcontainers preferred
+- Controllers must never accept a `userId` as request input — the current user is always resolved from the security context (`@CurrentUser`), never a path/query/body parameter. Bad: `GET /users/{userId}/weights`. Good: `GET /weights` reading the current user from the JWT.
+  - **Exception — trainer/superadmin endpoints:** `{clientId}` in `/api/v1/trainer/clients/{clientId}/**` and `{userId}` in `/api/v1/superadmin/users/{userId}/**` are legitimate, because those endpoints are definitionally about *another* user's data, not the caller's own. This is not a loophole in the rule above — every such call is guarded: trainer reads go through `TrainerAccessService.requireActiveClient(trainerId, clientId)` (403 unless an `ACTIVE` `trainer_clients` row exists), and superadmin role changes go through `RoleManagementService`'s whitelist/self-modification checks. See `docs/personal_trainer/03-backend-terv.md` §"A userId-a-path-ban kivétel" for the full rationale, and `docs/personal_trainer/07-utemterv-es-kockazatok.md` for the associated risk/mitigation.

@@ -7,6 +7,7 @@ import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.recipe.Recipe;
 import com.lifey.nutrition.recipe.RecipeIngredient;
 import com.lifey.nutrition.recipe.RecipeRepository;
+import com.lifey.nutrition.recipe.RecipeUpdatedEvent;
 import com.lifey.nutrition.recipe.dto.RecipeIngredientRequest;
 import com.lifey.nutrition.recipe.dto.RecipeRequest;
 import com.lifey.nutrition.recipe.dto.RecipeResponse;
@@ -15,9 +16,11 @@ import com.lifey.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -50,6 +53,9 @@ class RecipeServiceImplTest {
     @Mock
     CurrentUserProvider currentUserProvider;
 
+    @Mock
+    ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     RecipeServiceImpl service;
 
@@ -61,7 +67,7 @@ class RecipeServiceImplTest {
 
     @Test
     void create_resolvesFoodsAndReturnsResponse() {
-        when(foodRepository.findById(1L)).thenReturn(Optional.of(food(1L, "Chicken")));
+        when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Chicken")));
         when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> {
             Recipe r = inv.getArgument(0);
             r.setId(7L);
@@ -85,7 +91,7 @@ class RecipeServiceImplTest {
 
     @Test
     void create_throwsWhenFoodMissing() {
-        when(foodRepository.findById(99L)).thenReturn(Optional.empty());
+        when(foodRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
         RecipeRequest request = new RecipeRequest("Bad", null, false, null,
                 List.of(new RecipeIngredientRequest(99L, 100.0)));
 
@@ -106,7 +112,7 @@ class RecipeServiceImplTest {
         existing.getIngredients().add(old);
 
         when(recipeRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
-        when(foodRepository.findById(1L)).thenReturn(Optional.of(food(1L, "Chicken")));
+        when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Chicken")));
         RecipeRequest request = new RecipeRequest("New", "desc", true, null,
                 List.of(new RecipeIngredientRequest(1L, 300.0)));
 
@@ -122,6 +128,23 @@ class RecipeServiceImplTest {
         });
         // old ingredient replaced (orphanRemoval handles deletion at flush)
         assertThat(existing.getIngredients()).hasSize(1);
+    }
+
+    @Test
+    void update_publishesUpdatedEventForLiveSync() {
+        Recipe existing = new Recipe();
+        existing.setId(3L);
+        existing.setName("Old");
+        when(recipeRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Chicken")));
+
+        service.update(3L, new RecipeRequest("New", null, false, 1,
+                List.of(new RecipeIngredientRequest(1L, 300.0))));
+
+        ArgumentCaptor<RecipeUpdatedEvent> captor = ArgumentCaptor.forClass(RecipeUpdatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().trainerId()).isEqualTo(USER_ID);
+        assertThat(captor.getValue().recipeId()).isEqualTo(3L);
     }
 
     @Test
@@ -180,7 +203,7 @@ class RecipeServiceImplTest {
         existing.getIngredients().add(old);
 
         when(recipeRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
-        when(foodRepository.findById(2L)).thenReturn(Optional.of(food(2L, "Rice")));
+        when(foodRepository.findByIdAndUserId(2L, USER_ID)).thenReturn(Optional.of(food(2L, "Rice")));
 
         // Same name/description/favorite/servings as before — only the ingredient quantity differs.
         RecipeRequest request = new RecipeRequest("Old", null, false, 1,

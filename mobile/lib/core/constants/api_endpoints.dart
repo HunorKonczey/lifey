@@ -10,4 +10,8 @@ class ApiEndpoints {
   static const workoutSessions = '/workout-sessions';
   static const weights = '/weights';
   static const statistics = '/statistics';
+  static const trainerInvitesPending = '/trainer-invites/pending';
+  static String trainerInviteRespond(int id) => '/trainer-invites/$id/respond';
+  static const myTrainers = '/my-trainers';
+  static String myTrainer(int trainerId) => '/my-trainers/$trainerId';
 }

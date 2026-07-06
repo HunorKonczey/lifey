@@ -127,6 +127,8 @@ export const api = {
     request<T>(path, { method: "POST", body: JSON.stringify(body) }),
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
   delete: <T = void>(path: string) => request<T>(path, { method: "DELETE" }),
   /** Binary GET (e.g. the profile picture) — 404 still throws, callers decide how to treat it. */
   getBlob: (path: string) => request<Blob>(path, { method: "GET" }, { parseAs: "blob" }),
