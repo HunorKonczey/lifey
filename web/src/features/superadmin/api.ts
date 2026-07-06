@@ -1,4 +1,4 @@
-import { api, type Page } from "@/lib/api/client";
+import { api, ApiError, type Page } from "@/lib/api/client";
 import type { RoleAuditLogResponse, SuperAdminUserResponse } from "./types";
 
 export const superAdminApi = {
@@ -16,4 +16,13 @@ export const superAdminApi = {
     api.delete(`/superadmin/users/${userId}/roles/ROLE_TRAINER`),
   roleAudit: (userId: number) =>
     api.get<RoleAuditLogResponse[]>(`/superadmin/users/${userId}/role-audit`),
+  /** Returns null (not an error) when the user has no profile picture set. */
+  userAvatar: async (userId: number): Promise<Blob | null> => {
+    try {
+      return await api.getBlob(`/superadmin/users/${userId}/avatar`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
 };

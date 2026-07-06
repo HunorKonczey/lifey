@@ -7,6 +7,7 @@ public record SuperAdminUserResponse(
         Long id,
         String email,
         Set<String> roles,
-        Instant createdAt
+        Instant createdAt,
+        boolean hasAvatar
 ) {
 }

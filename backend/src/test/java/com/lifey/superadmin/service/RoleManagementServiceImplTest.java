@@ -11,6 +11,8 @@ import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.user.Role;
 import com.lifey.user.User;
+import com.lifey.user.UserAvatar;
+import com.lifey.user.UserAvatarRepository;
 import com.lifey.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,9 @@ class RoleManagementServiceImplTest {
     RoleAuditLogRepository roleAuditLogRepository;
 
     @Mock
+    UserAvatarRepository userAvatarRepository;
+
+    @Mock
     CurrentUserProvider currentUserProvider;
 
     @InjectMocks
@@ -56,6 +61,7 @@ class RoleManagementServiceImplTest {
     @BeforeEach
     void setUp() {
         lenient().when(currentUserProvider.getUserId()).thenReturn(ACTOR_ID);
+        lenient().when(userAvatarRepository.findUserIdsWithAvatar(any())).thenReturn(Set.of());
     }
 
     @Test
@@ -69,6 +75,7 @@ class RoleManagementServiceImplTest {
         assertThat(result.getContent()).singleElement().satisfies(r -> {
             assertThat(r.email()).isEqualTo("client@example.com");
             assertThat(r.roles()).containsExactly("ROLE_USER");
+            assertThat(r.hasAvatar()).isFalse();
         });
         verify(userRepository, never()).findByEmailContainingIgnoreCase(any(), any());
     }
@@ -82,6 +89,33 @@ class RoleManagementServiceImplTest {
         Page<SuperAdminUserResponse> result = service.findUsers("  client  ", pageable);
 
         assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.id()).isEqualTo(TARGET_ID));
+    }
+
+    @Test
+    void findUsers_marksUsersWithAvatar() {
+        Pageable pageable = PageRequest.of(0, 10);
+        User user = user(TARGET_ID, "client@example.com", Role.ROLE_USER);
+        when(userRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(user)));
+        when(userAvatarRepository.findUserIdsWithAvatar(any())).thenReturn(Set.of(TARGET_ID));
+
+        Page<SuperAdminUserResponse> result = service.findUsers(null, pageable);
+
+        assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.hasAvatar()).isTrue());
+    }
+
+    @Test
+    void findAvatar_returnsAvatarWhenPresent() {
+        UserAvatar avatar = new UserAvatar();
+        when(userAvatarRepository.findByUserId(TARGET_ID)).thenReturn(Optional.of(avatar));
+
+        assertThat(service.findAvatar(TARGET_ID)).isSameAs(avatar);
+    }
+
+    @Test
+    void findAvatar_throwsWhenMissing() {
+        when(userAvatarRepository.findByUserId(TARGET_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findAvatar(TARGET_ID)).isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

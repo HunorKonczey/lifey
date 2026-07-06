@@ -5,6 +5,7 @@ import com.lifey.superadmin.dto.RoleAuditLogResponse;
 import com.lifey.superadmin.dto.SuperAdminUserResponse;
 import com.lifey.superadmin.service.RoleManagementService;
 import com.lifey.user.Role;
+import com.lifey.user.UserAvatar;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +15,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -54,5 +57,14 @@ public class SuperAdminUserController {
     @GetMapping("/{userId}/role-audit")
     public List<RoleAuditLogResponse> findAuditLog(@PathVariable Long userId) {
         return roleManagementService.findAuditLog(userId);
+    }
+
+    @Operation(summary = "Get a user's profile picture", description = "404 if no picture is set.")
+    @GetMapping("/{userId}/avatar")
+    public ResponseEntity<byte[]> findAvatar(@PathVariable Long userId) {
+        UserAvatar avatar = roleManagementService.findAvatar(userId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(avatar.getContentType()))
+                .body(avatar.getImage());
     }
 }

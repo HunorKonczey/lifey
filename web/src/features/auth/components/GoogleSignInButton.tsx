@@ -60,6 +60,7 @@ export function GoogleSignInButton({ mode = "login" }: GoogleSignInButtonProps) 
   const applyAccessToken = useSessionStore((s) => s.applyAccessToken);
   const { show } = useToast();
   const locale = useLocale((s) => s.locale);
+  const localeHydrated = useLocale((s) => s.hydrated);
   const themePreference = useTheme((s) => s.preference);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -75,7 +76,7 @@ export function GoogleSignInButton({ mode = "login" }: GoogleSignInButtonProps) 
   });
 
   useEffect(() => {
-    if (!env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) return;
+    if (!env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || !localeHydrated) return;
     let cancelled = false;
 
     loadGsiScript(locale)
@@ -128,7 +129,7 @@ export function GoogleSignInButton({ mode = "login" }: GoogleSignInButtonProps) 
     return () => {
       cancelled = true;
     };
-  }, [locale, isDark]);
+  }, [locale, isDark, localeHydrated]);
 
   if (!env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) return null;
 

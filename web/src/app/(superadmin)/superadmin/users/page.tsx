@@ -10,6 +10,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/features/auth/store";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
+import { UserAvatar } from "@/features/superadmin/components/UserAvatar";
 import type { SuperAdminUserResponse } from "@/features/superadmin/types";
 
 const PAGE_SIZE = 20;
@@ -120,7 +121,7 @@ export default function SuperAdminUsersPage() {
           {t("usersTitle")}
         </p>
         <div
-          className="rounded-2xl h-11 w-80 flex items-center gap-2.5 px-3.5"
+          className="rounded-2xl h-12 w-80 flex items-center gap-2.5 px-4.5"
           style={{ background: "var(--surface)" }}
         >
           <span className="material-symbols-rounded text-xl" style={{ color: "var(--muted)" }}>
@@ -167,12 +168,7 @@ export default function SuperAdminUsersPage() {
                         {expanded ? "expand_more" : "chevron_right"}
                       </span>
                     </button>
-                    <div
-                      className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-extrabold shrink-0"
-                      style={{ background: "var(--secondary)", color: "#161611" }}
-                    >
-                      {u.email.charAt(0).toUpperCase()}
-                    </div>
+                    <UserAvatar userId={u.id} email={u.email} hasAvatar={u.hasAvatar} />
                     <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
                       {u.email}
                       {isSelf && <span className="ml-1.5 text-[11px] font-semibold" style={{ color: "var(--muted)" }}>{t("self")}</span>}

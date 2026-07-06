@@ -85,6 +85,7 @@ export const queryKeys = {
     page: (params: { page: number; size?: number; search?: string }) =>
       ["superadmin-users", "page", params] as const,
     roleAudit: (userId: number) => ["superadmin-users", userId, "role-audit"] as const,
+    avatar: (userId: number) => ["superadmin-users", userId, "avatar"] as const,
   },
 } as const;
 
