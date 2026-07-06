@@ -3,11 +3,12 @@ package com.lifey.trainer.service;
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.trainer.ContentAssignmentRepository;
-import com.lifey.trainer.TrainerClient;
 import com.lifey.trainer.TrainerClientRepository;
+import com.lifey.trainer.TrainerClientRevokedEvent;
 import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.dto.MyTrainerResponse;
 import com.lifey.trainer.dto.TrainerClientResponse;
+import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.user.User;
 import com.lifey.weight.WeightEntryRepository;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,8 +52,23 @@ class TrainerAccessServiceImplTest {
     @Mock
     CurrentUserProvider currentUserProvider;
 
+    @Mock
+    ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     TrainerAccessServiceImpl service;
+
+    private static TrainerClient activeRelationship() {
+        TrainerClient relationship = new TrainerClient();
+        relationship.setStatus(TrainerClientStatus.ACTIVE);
+        User trainer = new User();
+        trainer.setId(TRAINER_ID);
+        relationship.setTrainer(trainer);
+        User client = new User();
+        client.setId(CLIENT_ID);
+        relationship.setClient(client);
+        return relationship;
+    }
 
     @Test
     void requireActiveClient_returnsRelationshipWhenActive() {
@@ -101,8 +119,7 @@ class TrainerAccessServiceImplTest {
     @Test
     void revokeClient_setsRevokedStatus() {
         when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
-        TrainerClient relationship = new TrainerClient();
-        relationship.setStatus(TrainerClientStatus.ACTIVE);
+        TrainerClient relationship = activeRelationship();
         when(trainerClientRepository.findByTrainerIdAndClientIdAndStatus(TRAINER_ID, CLIENT_ID, TrainerClientStatus.ACTIVE))
                 .thenReturn(Optional.of(relationship));
 
@@ -111,6 +128,7 @@ class TrainerAccessServiceImplTest {
         assertThat(relationship.getStatus()).isEqualTo(TrainerClientStatus.REVOKED);
         assertThat(relationship.getRevokedAt()).isNotNull();
         assertThat(relationship.getRevokedBy()).isEqualTo(TRAINER_ID);
+        verify(eventPublisher).publishEvent(new TrainerClientRevokedEvent(TRAINER_ID, CLIENT_ID));
     }
 
     @Test
@@ -145,8 +163,7 @@ class TrainerAccessServiceImplTest {
     @Test
     void leaveTrainer_setsRevokedStatus() {
         when(currentUserProvider.getUserId()).thenReturn(CLIENT_ID);
-        TrainerClient relationship = new TrainerClient();
-        relationship.setStatus(TrainerClientStatus.ACTIVE);
+        TrainerClient relationship = activeRelationship();
         when(trainerClientRepository.findByTrainerIdAndClientIdAndStatus(TRAINER_ID, CLIENT_ID, TrainerClientStatus.ACTIVE))
                 .thenReturn(Optional.of(relationship));
 
@@ -154,6 +171,7 @@ class TrainerAccessServiceImplTest {
 
         assertThat(relationship.getStatus()).isEqualTo(TrainerClientStatus.REVOKED);
         assertThat(relationship.getRevokedBy()).isEqualTo(CLIENT_ID);
+        verify(eventPublisher).publishEvent(new TrainerClientRevokedEvent(TRAINER_ID, CLIENT_ID));
     }
 
     @Test

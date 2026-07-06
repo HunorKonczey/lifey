@@ -172,7 +172,7 @@ class TrainerClientDataControllerTest {
     void workoutSessions_returnsClientsSessionHistory() throws Exception {
         WorkoutSessionResponse session = new WorkoutSessionResponse(1L, Instant.parse("2026-06-01T08:00:00Z"),
                 Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
-                null, null, null, null, null, Instant.now(), null);
+                null, null, null, null, null, null, null, null, Instant.now(), null);
         Page<WorkoutSessionResponse> page = new PageImpl<>(List.of(session), PageRequest.of(0, 20), 1);
         when(workoutSessionService.findPageForUser(eq(CLIENT_ID), any())).thenReturn(page);
 

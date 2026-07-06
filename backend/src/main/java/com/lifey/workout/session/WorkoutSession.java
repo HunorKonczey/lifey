@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,11 +31,32 @@ public class WorkoutSession extends SyncableEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "started_at", nullable = false)
+    /** Null for a trainer-scheduled session that hasn't been started yet (see {@link #scheduledFor}). */
+    @Column(name = "started_at")
     private Instant startedAt;
 
     @Column(name = "finished_at")
     private Instant finishedAt;
+
+    /**
+     * Calendar day the trainer scheduled this session for; null for a normal
+     * (client-started) session. Non-null with {@code startedAt} null means
+     * "upcoming" (or "missed", if the date has passed) — see
+     * docs/personal_trainer/08-utemezett-edzesek-koncepcio.md.
+     */
+    @Column(name = "scheduled_for")
+    private LocalDate scheduledFor;
+
+    /** Optional wall-clock time (copy of the schedule's {@code timeOfDay}); display/ordering only. */
+    @Column(name = "scheduled_time")
+    private LocalTime scheduledTime;
+
+    /**
+     * The originating {@code workout_schedules} row id. Plain {@code Long}, not a JPA
+     * relation — the workout package shouldn't depend on the trainer package.
+     */
+    @Column(name = "schedule_id")
+    private Long scheduleId;
 
     @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("performedAt ASC")

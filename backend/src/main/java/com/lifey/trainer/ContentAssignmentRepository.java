@@ -1,5 +1,6 @@
 package com.lifey.trainer;
 
+import com.lifey.trainer.entity.ContentAssignment;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

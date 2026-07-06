@@ -1,5 +1,6 @@
 package com.lifey.trainer;
 
+import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.dto.MyTrainerResponse;
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.TrainerClientResponse;

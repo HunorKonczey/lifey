@@ -73,7 +73,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSession session = new WorkoutSession();
         session.setId(9L);
         session.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
-        when(sessionRepository.findByUserIdAndDeletedAtIsNull(USER_ID, requested))
+        when(sessionRepository.findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNull(USER_ID, requested))
                 .thenReturn(new PageImpl<>(List.of(session)));
 
         Page<WorkoutSessionResponse> result = service.findPage(requested);
@@ -87,7 +87,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSession session = new WorkoutSession();
         session.setId(10L);
         session.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
-        when(sessionRepository.findByUserIdAndDeletedAtIsNull(99L, requested))
+        when(sessionRepository.findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNull(99L, requested))
                 .thenReturn(new PageImpl<>(List.of(session)));
 
         Page<WorkoutSessionResponse> result = service.findPageForUser(99L, requested);

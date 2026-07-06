@@ -3,17 +3,19 @@ package com.lifey.trainer.service;
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.trainer.ContentAssignmentRepository;
-import com.lifey.trainer.TrainerClient;
 import com.lifey.trainer.TrainerClientMapper;
 import com.lifey.trainer.TrainerClientRepository;
+import com.lifey.trainer.TrainerClientRevokedEvent;
 import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.dto.MyTrainerResponse;
 import com.lifey.trainer.dto.TrainerClientResponse;
 import com.lifey.trainer.dto.WeightTrendPoint;
+import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.weight.WeightEntryRepository;
 import com.lifey.workout.session.WorkoutSessionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +44,7 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
     private final WeightEntryRepository weightEntryRepository;
     private final WorkoutSessionRepository workoutSessionRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -110,5 +113,7 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
         relationship.setStatus(TrainerClientStatus.REVOKED);
         relationship.setRevokedAt(Instant.now());
         relationship.setRevokedBy(currentUserProvider.getUserId());
+        eventPublisher.publishEvent(new TrainerClientRevokedEvent(
+                relationship.getTrainer().getId(), relationship.getClient().getId()));
     }
 }

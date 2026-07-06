@@ -40,6 +40,9 @@ public final class WorkoutSessionMapper {
                 session.getHealthWorkoutId(),
                 session.getTemplate() != null ? session.getTemplate().getId() : null,
                 session.getTemplateName(),
+                session.getScheduledFor(),
+                session.getScheduledTime(),
+                session.getScheduleId(),
                 session.getUpdatedAt(),
                 session.getDeletedAt()
         );

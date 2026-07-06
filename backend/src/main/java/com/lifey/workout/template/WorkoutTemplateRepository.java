@@ -14,6 +14,10 @@ public interface WorkoutTemplateRepository extends JpaRepository<WorkoutTemplate
 
     Optional<WorkoutTemplate> findByIdAndUserId(Long id, Long userId);
 
+    /** The client's existing live copy of a specific trainer template, if a previous assignment created one. */
+    Optional<WorkoutTemplate> findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
+            Long userId, Long originTrainerId, Long originSourceId);
+
     /**
      * Delta-sync feed (docs/16-delta-sync-rollout.md) — deliberately not
      * deletedAt-filtered: it must surface tombstoned rows (deletedAt set) so
