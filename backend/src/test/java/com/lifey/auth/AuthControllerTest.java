@@ -46,7 +46,7 @@ class AuthControllerTest {
 
     @Test
     void register_returnsCreated() throws Exception {
-        when(authService.register(any()))
+        when(authService.register(any(), any()))
                 .thenReturn(new UserResponse(1L, "user@example.com", "Jane", "Doe", Set.of(Role.ROLE_USER), Instant.now()));
 
         mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
@@ -65,7 +65,7 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
 
-        verify(authService, never()).register(any());
+        verify(authService, never()).register(any(), any());
     }
 
     @Test
@@ -75,12 +75,12 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
 
-        verify(authService, never()).register(any());
+        verify(authService, never()).register(any(), any());
     }
 
     @Test
     void login_returnsTokenPair() throws Exception {
-        when(authService.login(any()))
+        when(authService.login(any(), any()))
                 .thenReturn(new AuthResponse("access-token", "refresh-token", 900L));
         when(jwtProperties.refreshTokenTtl()).thenReturn(Duration.ofDays(30));
 
@@ -95,7 +95,7 @@ class AuthControllerTest {
 
     @Test
     void login_invalidCredentialsReturns401() throws Exception {
-        when(authService.login(any())).thenThrow(new InvalidCredentialsException("Invalid email or password"));
+        when(authService.login(any(), any())).thenThrow(new InvalidCredentialsException("Invalid email or password"));
 
         mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"user@example.com\",\"password\":\"wrong-password\"}"))
@@ -104,7 +104,7 @@ class AuthControllerTest {
 
     @Test
     void refresh_returnsNewTokenPair() throws Exception {
-        when(authService.refresh("old-refresh-token"))
+        when(authService.refresh(eq("old-refresh-token"), any()))
                 .thenReturn(new AuthResponse("new-access-token", "new-refresh-token", 900L));
         when(jwtProperties.refreshTokenTtl()).thenReturn(Duration.ofDays(30));
 
@@ -117,7 +117,7 @@ class AuthControllerTest {
 
     @Test
     void refresh_revokedTokenReturns401() throws Exception {
-        when(authService.refresh(eq("stolen-token")))
+        when(authService.refresh(eq("stolen-token"), any()))
                 .thenThrow(new TokenRevokedException("Refresh token has been revoked"));
 
         mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)

@@ -3,6 +3,8 @@ package com.lifey.statistics.service;
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.statistics.dto.StatisticsResponse;
+import com.lifey.user.User;
+import com.lifey.user.UserRepository;
 import com.lifey.water.WaterEntryRepository;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
@@ -13,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 /**
  * Aggregates nutrition, workout and weight data over rolling periods ending now,
@@ -29,6 +31,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final WeightEntryRepository weightEntryRepository;
     private final WaterEntryRepository waterEntryRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final UserRepository userRepository;
 
     @Override
     public StatisticsResponse daily() {
@@ -76,7 +79,8 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     private StatisticsResponse forPeriodSinceForUser(Long userId, LocalDate fromDate) {
-        Instant fromInstant = fromDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        ZoneOffset zone = zoneForUser(userId);
+        Instant fromInstant = fromDate.atStartOfDay(zone).toInstant();
 
         double totalCalories = mealRepository.sumCaloriesSince(userId, fromInstant);
         double totalProtein = mealRepository.sumProteinSince(userId, fromInstant);
@@ -90,5 +94,17 @@ public class StatisticsServiceImpl implements StatisticsService {
 
         return new StatisticsResponse(totalCalories, totalProtein, totalCarbs, totalFat,
                 (int) workoutCount, latestWeight, totalWater);
+    }
+
+    /**
+     * Uses the target user's own local day rather than the server's — same fix as
+     * MealServiceImpl#zoneForUser; this endpoint has no upper bound so the bug was
+     * latent here, but the two must stay consistent.
+     */
+    private ZoneOffset zoneForUser(Long userId) {
+        return userRepository.findById(userId)
+                .map(User::getUtcOffsetMinutes)
+                .map(minutes -> ZoneOffset.ofTotalSeconds(minutes * 60))
+                .orElse(ZoneOffset.UTC);
     }
 }
