@@ -6,6 +6,8 @@ import java.time.Instant;
 public record MyTrainerResponse(
         Long trainerId,
         String trainerEmail,
+        String trainerFirstName,
+        String trainerLastName,
         Instant activeSince
 ) {
 }

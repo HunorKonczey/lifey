@@ -120,7 +120,7 @@ export function AssignToClientDrawer({
           </button>
         </div>
 
-        <div className="rounded-2xl h-12 flex items-center gap-2.5 px-4.5" style={{ background: "var(--surface)" }}>
+        <div className="rounded-2xl h-12 flex items-center gap-2.5 px-4.5" style={{ background: "var(--surface)" }} data-ring-frame>
           <span className="material-symbols-rounded text-lg" style={{ color: "var(--muted)" }}>search</span>
           <input
             value={search}

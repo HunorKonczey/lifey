@@ -123,6 +123,7 @@ export default function SuperAdminUsersPage() {
         <div
           className="rounded-2xl h-12 w-80 flex items-center gap-2.5 px-4.5"
           style={{ background: "var(--surface)" }}
+          data-ring-frame
         >
           <span className="material-symbols-rounded text-xl" style={{ color: "var(--muted)" }}>
             search

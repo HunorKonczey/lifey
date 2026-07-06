@@ -88,6 +88,7 @@ export default function AdminInvitesPage() {
           <div
             className="flex-1 rounded-2xl h-[52px] flex items-center gap-2.5 px-4"
             style={{ background: "var(--bg)", border: `1.5px solid ${error ? "var(--error)" : "var(--outline)"}` }}
+            data-ring-frame
           >
             <span className="material-symbols-rounded text-xl" style={{ color: "var(--muted)" }}>
               mail

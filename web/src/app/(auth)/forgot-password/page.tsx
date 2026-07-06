@@ -162,6 +162,7 @@ export default function ForgotPasswordPage() {
                 <div
                   className="flex items-center gap-2 px-3 rounded-[var(--r-input)] h-11"
                   style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+                  data-ring-frame
                 >
                   <span className="material-symbols-rounded text-base" style={{ color: "var(--muted)" }}>lock</span>
                   <input

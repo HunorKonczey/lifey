@@ -30,7 +30,7 @@ class MyTrainersControllerTest {
     @Test
     void findActiveTrainers_returnsList() throws Exception {
         when(trainerAccessService.findActiveTrainersForClient()).thenReturn(List.of(
-                new MyTrainerResponse(1L, "trainer@example.com", Instant.parse("2026-06-01T00:00:00Z"))));
+                new MyTrainerResponse(1L, "trainer@example.com", "Trainer", "One", Instant.parse("2026-06-01T00:00:00Z"))));
 
         mockMvc.perform(get("/api/v1/my-trainers"))
                 .andExpect(status().isOk())
