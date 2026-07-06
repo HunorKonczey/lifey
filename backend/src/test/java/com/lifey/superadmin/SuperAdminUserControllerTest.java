@@ -7,6 +7,7 @@ import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.superadmin.service.RoleManagementService;
 import com.lifey.user.Role;
+import com.lifey.user.UserAvatar;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -44,7 +46,7 @@ class SuperAdminUserControllerTest {
         Pageable pageable = PageRequest.of(0, 50);
         when(roleManagementService.findUsers(any(), any())).thenReturn(new PageImpl<>(List.of(
                 new SuperAdminUserResponse(2L, "client@example.com", Set.of("ROLE_USER"),
-                        Instant.parse("2026-06-01T00:00:00Z"))), pageable, 1));
+                        Instant.parse("2026-06-01T00:00:00Z"), false)), pageable, 1));
 
         mockMvc.perform(get("/api/v1/superadmin/users"))
                 .andExpect(status().isOk())
@@ -105,5 +107,25 @@ class SuperAdminUserControllerTest {
         mockMvc.perform(get("/api/v1/superadmin/users/2/role-audit"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].action").value("GRANT"));
+    }
+
+    @Test
+    void findAvatar_returnsImageBytes() throws Exception {
+        UserAvatar avatar = new UserAvatar();
+        avatar.setContentType("image/jpeg");
+        avatar.setImage(new byte[]{1, 2, 3});
+        when(roleManagementService.findAvatar(2L)).thenReturn(avatar);
+
+        mockMvc.perform(get("/api/v1/superadmin/users/2/avatar"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "image/jpeg"));
+    }
+
+    @Test
+    void findAvatar_returns404WhenMissing() throws Exception {
+        when(roleManagementService.findAvatar(2L)).thenThrow(new ResourceNotFoundException("nope"));
+
+        mockMvc.perform(get("/api/v1/superadmin/users/2/avatar"))
+                .andExpect(status().isNotFound());
     }
 }

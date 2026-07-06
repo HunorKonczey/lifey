@@ -16,14 +16,21 @@ function resolveLocale(pref: LanguagePreference): Locale {
 
 interface LocaleState {
   locale: Locale;
+  /** False until detectBrowserLocale has run once — lets effects that must
+   *  not run twice (e.g. loading the Google Identity Services script) wait
+   *  for the real locale instead of reacting to the transient "en" default. */
+  hydrated: boolean;
   setLanguage: (pref: LanguagePreference) => void;
+  detectBrowserLocale: () => void;
 }
 
+// Deliberately fixed for the initial render (server and first client pass
+// must match, or React throws away the SSR tree and re-renders client-only —
+// see detectBrowserLocale, which corrects this after mount instead).
 export const useLocale = create<LocaleState>((set) => ({
-  locale:
-    typeof navigator !== "undefined" &&
-    navigator.language.toLowerCase().startsWith("hu")
-      ? "hu"
-      : "en",
+  locale: "en",
+  hydrated: false,
   setLanguage: (pref) => set({ locale: resolveLocale(pref) }),
+  detectBrowserLocale: () =>
+    set({ locale: navigator.language.toLowerCase().startsWith("hu") ? "hu" : "en", hydrated: true }),
 }));

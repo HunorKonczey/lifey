@@ -11,6 +11,8 @@ import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.user.Role;
 import com.lifey.user.User;
+import com.lifey.user.UserAvatar;
+import com.lifey.user.UserAvatarRepository;
 import com.lifey.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -41,6 +43,7 @@ public class RoleManagementServiceImpl implements RoleManagementService {
 
     private final UserRepository userRepository;
     private final RoleAuditLogRepository roleAuditLogRepository;
+    private final UserAvatarRepository userAvatarRepository;
     private final CurrentUserProvider currentUserProvider;
 
     @Override
@@ -49,7 +52,16 @@ public class RoleManagementServiceImpl implements RoleManagementService {
         Page<User> page = (search == null || search.isBlank())
                 ? userRepository.findAll(pageable)
                 : userRepository.findByEmailContainingIgnoreCase(search.trim(), pageable);
-        return page.map(RoleManagementServiceImpl::toUserResponse);
+        Set<Long> userIds = page.getContent().stream().map(User::getId).collect(Collectors.toSet());
+        Set<Long> withAvatar = userAvatarRepository.findUserIdsWithAvatar(userIds);
+        return page.map(user -> toUserResponse(user, withAvatar.contains(user.getId())));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserAvatar findAvatar(Long targetUserId) {
+        return userAvatarRepository.findByUserId(targetUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("No profile picture set"));
     }
 
     @Override
@@ -118,8 +130,8 @@ public class RoleManagementServiceImpl implements RoleManagementService {
         roleAuditLogRepository.save(log);
     }
 
-    private static SuperAdminUserResponse toUserResponse(User user) {
+    private static SuperAdminUserResponse toUserResponse(User user, boolean hasAvatar) {
         Set<String> roleNames = user.getRoles().stream().map(Enum::name).collect(Collectors.toUnmodifiableSet());
-        return new SuperAdminUserResponse(user.getId(), user.getEmail(), roleNames, user.getCreatedAt());
+        return new SuperAdminUserResponse(user.getId(), user.getEmail(), roleNames, user.getCreatedAt(), hasAvatar);
     }
 }

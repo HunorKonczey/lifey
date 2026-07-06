@@ -3,6 +3,7 @@ package com.lifey.superadmin.service;
 import com.lifey.superadmin.dto.RoleAuditLogResponse;
 import com.lifey.superadmin.dto.SuperAdminUserResponse;
 import com.lifey.user.Role;
+import com.lifey.user.UserAvatar;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -17,4 +18,9 @@ public interface RoleManagementService {
     void revoke(Long targetUserId, Role role);
 
     List<RoleAuditLogResponse> findAuditLog(Long targetUserId);
+
+    /**
+     * @throws com.lifey.common.exception.ResourceNotFoundException if the user has no avatar set
+     */
+    UserAvatar findAvatar(Long targetUserId);
 }

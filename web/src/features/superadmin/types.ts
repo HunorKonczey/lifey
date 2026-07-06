@@ -3,6 +3,7 @@ export interface SuperAdminUserResponse {
   email: string;
   roles: string[];
   createdAt: string;
+  hasAvatar: boolean;
 }
 
 export type RoleAuditAction = "GRANT" | "REVOKE";

@@ -1,17 +1,33 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSessionStore } from "@/features/auth/store";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { ErrorBoundary } from "@/components/status/ErrorBoundary";
+import { avatarApi } from "@/features/settings/api";
+import { queryKeys } from "@/lib/api/queryKeys";
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isLoading, initialize } = useSessionStore();
   const superadmin = useTranslations("superadmin");
+
+  const { data: avatarBlob } = useQuery({
+    queryKey: queryKeys.settings.avatar(),
+    queryFn: avatarApi.get,
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+  const avatarUrl = useMemo(() => (avatarBlob ? URL.createObjectURL(avatarBlob) : null), [avatarBlob]);
+  useEffect(() => {
+    return () => {
+      if (avatarUrl) URL.revokeObjectURL(avatarUrl);
+    };
+  }, [avatarUrl]);
 
   useEffect(() => {
     initialize();
@@ -76,10 +92,16 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <div
-            className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-sm font-extrabold"
+            className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-sm font-extrabold overflow-hidden"
             style={{ background: "var(--tertiary)", color: "#161611" }}
           >
-            {user.email.charAt(0).toUpperCase()}
+            {avatarUrl ? (
+              // Blob object URLs aren't compatible with next/image's optimizer.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              user.email.charAt(0).toUpperCase()
+            )}
           </div>
         </div>
       </header>
