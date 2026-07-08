@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -162,6 +162,21 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(exercises, exercises.originTrainerId);
             await m.addColumn(recipes, recipes.originTrainerId);
             await m.addColumn(workoutTemplates, workoutTemplates.originTrainerId);
+          }
+          // V20: trainer-scheduled ("upcoming") workout sessions (docs/personal_trainer/
+          // 09-utemezett-edzesek-domain-backend.md) — scheduledFor/scheduledTime/scheduleId
+          // are new, and startedAt's NOT NULL constraint is dropped (null = not started
+          // yet). Constraint changes aren't ALTER COLUMN-able in SQLite, so the whole
+          // table is recreated from the current (already-updated) schema and refilled.
+          if (from < 20) {
+            await m.alterTable(TableMigration(
+              workoutSessions,
+              newColumns: [
+                workoutSessions.scheduledFor,
+                workoutSessions.scheduledTime,
+                workoutSessions.scheduleId,
+              ],
+            ));
           }
         },
       );

@@ -4,6 +4,7 @@ import com.lifey.trainer.dto.ScheduleRequest;
 import com.lifey.trainer.dto.ScheduleResponse;
 import com.lifey.trainer.dto.ScheduleSummaryResponse;
 import com.lifey.trainer.dto.ScheduledSessionResponse;
+import com.lifey.trainer.dto.TrainerCalendarSessionResponse;
 import com.lifey.trainer.service.WorkoutScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,6 +50,18 @@ public class WorkoutScheduleController {
             @Parameter(description = "Inclusive upper bound (yyyy-MM-dd)")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return workoutScheduleService.findScheduledSessions(clientId, from, to);
+    }
+
+    @Operation(summary = "List every active client's scheduled occurrences in a date range",
+            description = "Aggregated across the trainer's whole client roster, for the trainer calendar "
+                    + "(docs/personal_trainer/12-edzo-naptar-terv.md). The range cannot span more than 62 days.")
+    @GetMapping("/api/v1/trainer/scheduled-sessions")
+    public List<TrainerCalendarSessionResponse> findScheduledSessionsForTrainer(
+            @Parameter(description = "Inclusive lower bound (yyyy-MM-dd)")
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Inclusive upper bound (yyyy-MM-dd)")
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return workoutScheduleService.findScheduledSessionsForTrainer(from, to);
     }
 
     @Operation(summary = "Cancel a schedule",

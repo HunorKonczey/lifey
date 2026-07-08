@@ -9,8 +9,26 @@ class WorkoutSessions extends Table {
 
   TextColumn get clientId => text()();
   IntColumn get serverId => integer().nullable()();
-  DateTimeColumn get startedAt => dateTime()();
+
+  /// Null for a trainer-scheduled session that hasn't been started yet (see
+  /// [scheduledFor]) — docs/personal_trainer/08-utemezett-edzesek-koncepcio.md.
+  DateTimeColumn get startedAt => dateTime().nullable()();
   DateTimeColumn get finishedAt => dateTime().nullable()();
+
+  /// Calendar day the trainer scheduled this session for; null for a normal
+  /// (client-started) session. Non-null with [startedAt] null means
+  /// "upcoming" (or "missed", once the date has passed). Stored as a
+  /// midnight-local `DateTime` (no dedicated date-only column type in Drift).
+  DateTimeColumn get scheduledFor => dateTime().nullable()();
+
+  /// Optional wall-clock time ("HH:mm"), copied from the schedule's time of
+  /// day; display/ordering only, stored as text since it has no time zone.
+  TextColumn get scheduledTime => text().nullable()();
+
+  /// The originating schedule's server id. Not a `.references()` FK — the
+  /// schedule definition itself is never synced to the client, only its
+  /// materialized session rows.
+  IntColumn get scheduleId => integer().nullable()();
 
   /// Active energy burned (kcal), imported from Apple Health.
   RealColumn get activeCalories => real().nullable()();

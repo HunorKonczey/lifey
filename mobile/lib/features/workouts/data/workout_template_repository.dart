@@ -54,6 +54,22 @@ class WorkoutTemplateRepository {
     });
   }
 
+  /// Single-template lookup — used to load a scheduled session's planned
+  /// exercises from its linked template at start time (they're never
+  /// materialized on the server until then; see
+  /// docs/personal_trainer/09-utemezett-edzesek-domain-backend.md).
+  Future<WorkoutTemplate?> findByClientId(String clientId) async {
+    final template = await (_db.select(_db.workoutTemplates)
+          ..where((t) => t.clientId.equals(clientId)))
+        .getSingleOrNull();
+    if (template == null) return null;
+    final links = await (_db.select(_db.workoutTemplateExercises)
+          ..where((t) => t.templateClientId.equals(clientId))
+          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+        .get();
+    return _toDomain(template, links);
+  }
+
   Future<String> create({required String name, required List<TemplateExercise> exercises}) async {
     final clientId = newClientId();
     await _db.transaction(() async {

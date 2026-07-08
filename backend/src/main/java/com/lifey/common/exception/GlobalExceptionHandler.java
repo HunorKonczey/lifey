@@ -4,6 +4,7 @@ import com.lifey.auth.exception.*;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.trainer.exception.AlreadyClientException;
+import com.lifey.trainer.exception.CalendarRangeExceededException;
 import com.lifey.trainer.exception.EmptyRecurrenceException;
 import com.lifey.trainer.exception.InviteNotFoundException;
 import com.lifey.trainer.exception.InviteRateLimitedException;
@@ -132,7 +133,7 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.FORBIDDEN, ex.getMessage(), request, List.of(), ex);
     }
 
-    @ExceptionHandler({ScheduleInPastException.class, EmptyRecurrenceException.class})
+    @ExceptionHandler({ScheduleInPastException.class, EmptyRecurrenceException.class, CalendarRangeExceededException.class})
     public ResponseEntity<ApiError> handleScheduleValidation(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
     }
@@ -144,7 +145,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ScheduleHorizonExceededException.class)
     public ResponseEntity<ApiError> handleScheduleHorizonExceeded(ScheduleHorizonExceededException ex, HttpServletRequest request) {
-        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request, List.of(), ex);
+        return build(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler(OccurrenceNotCancellableException.class)

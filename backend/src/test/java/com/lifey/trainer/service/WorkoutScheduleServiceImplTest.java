@@ -4,12 +4,18 @@ import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.trainer.ContentType;
 import com.lifey.trainer.Recurrence;
+import com.lifey.trainer.TrainerClientRepository;
+import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.WorkoutScheduleRepository;
 import com.lifey.trainer.dto.AssignmentRequest;
 import com.lifey.trainer.dto.AssignmentResponse;
+import com.lifey.trainer.dto.OccurrenceStatus;
 import com.lifey.trainer.dto.ScheduleRequest;
 import com.lifey.trainer.dto.ScheduleResponse;
+import com.lifey.trainer.dto.TrainerCalendarSessionResponse;
+import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.entity.WorkoutSchedule;
+import com.lifey.trainer.exception.CalendarRangeExceededException;
 import com.lifey.trainer.exception.EmptyRecurrenceException;
 import com.lifey.trainer.exception.OccurrenceNotCancellableException;
 import com.lifey.trainer.exception.ScheduleHorizonExceededException;
@@ -29,7 +35,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -63,6 +68,9 @@ class WorkoutScheduleServiceImplTest {
 
     @Mock
     TrainerAccessService trainerAccessService;
+
+    @Mock
+    TrainerClientRepository trainerClientRepository;
 
     @Mock
     UserRepository userRepository;
@@ -271,6 +279,66 @@ class WorkoutScheduleServiceImplTest {
         when(workoutSessionRepository.findById(20L)).thenReturn(Optional.of(occurrence));
 
         assertThatThrownBy(() -> service.cancelOccurrence(20L)).isInstanceOf(ScheduleNotFoundException.class);
+    }
+
+    @Test
+    void findScheduledSessionsForTrainer_aggregatesAcrossActiveClients() {
+        User anna = new User();
+        anna.setId(CLIENT_ID);
+        anna.setEmail("anna@example.com");
+        TrainerClient trainerClient = new TrainerClient();
+        trainerClient.setClient(anna);
+        when(trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(TRAINER_ID, TrainerClientStatus.ACTIVE))
+                .thenReturn(List.of(trainerClient));
+
+        WorkoutSession occurrence = new WorkoutSession();
+        occurrence.setId(30L);
+        occurrence.setUser(anna);
+        occurrence.setScheduledFor(LocalDate.of(2026, 7, 9));
+        occurrence.setTemplateName("Push day");
+        occurrence.setScheduleId(SCHEDULE_ID);
+        when(workoutSessionRepository
+                .findByUserIdInAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(
+                        List.of(CLIENT_ID), LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13)))
+                .thenReturn(List.of(occurrence));
+
+        List<TrainerCalendarSessionResponse> result = service.findScheduledSessionsForTrainer(
+                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13));
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().clientId()).isEqualTo(CLIENT_ID);
+        assertThat(result.getFirst().clientEmail()).isEqualTo("anna@example.com");
+        assertThat(result.getFirst().status()).isEqualTo(OccurrenceStatus.UPCOMING);
+    }
+
+    @Test
+    void findScheduledSessionsForTrainer_noActiveClients_returnsEmpty() {
+        when(trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(TRAINER_ID, TrainerClientStatus.ACTIVE))
+                .thenReturn(List.of());
+
+        List<TrainerCalendarSessionResponse> result = service.findScheduledSessionsForTrainer(
+                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13));
+
+        assertThat(result).isEmpty();
+        verify(workoutSessionRepository, never())
+                .findByUserIdInAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(
+                        any(), any(), any());
+    }
+
+    @Test
+    void findScheduledSessionsForTrainer_rangeBeyond62Days_throws() {
+        LocalDate from = LocalDate.of(2026, 7, 6);
+
+        assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, from.plusDays(63)))
+                .isInstanceOf(CalendarRangeExceededException.class);
+    }
+
+    @Test
+    void findScheduledSessionsForTrainer_toBeforeFrom_throws() {
+        LocalDate from = LocalDate.of(2026, 7, 6);
+
+        assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, from.minusDays(1)))
+                .isInstanceOf(CalendarRangeExceededException.class);
     }
 
     @Test

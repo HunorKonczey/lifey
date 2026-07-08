@@ -96,8 +96,11 @@ Fields:
 Fields:
 
 * id
-* startedAt
+* startedAt (optional) — null for a trainer-scheduled session that hasn't been started yet; a row is always either started or scheduled (see `WorkoutSchedule`)
 * finishedAt
+* scheduledFor (optional) — calendar day the trainer scheduled this session for (docs/personal_trainer/09-utemezett-edzesek-domain-backend.md)
+* scheduledTime (optional) — wall-clock time-of-day copied from the originating `WorkoutSchedule`; display/ordering only
+* scheduleId (optional) — the originating `WorkoutSchedule`, if this session was materialized from one
 
 ## ExerciseSet
 
@@ -145,6 +148,25 @@ Fields:
 * sourceId — the trainer's original entity id (not an FK: may be soft-deleted later)
 * copiedId — the client's new copy
 * assignedAt
+
+## WorkoutSchedule
+
+A trainer-defined recurring or one-off schedule that materializes into a batch of unscheduled-start `WorkoutSession` rows for the client (docs/personal_trainer/09-utemezett-edzesek-domain-backend.md). Session rows are the source of truth for individual occurrences — this row records the series itself, so it can be cancelled as a unit.
+
+Fields:
+
+* id
+* trainerId
+* clientId
+* sourceTemplateId — the trainer's original template id (not an FK: may be soft-deleted later)
+* clientTemplateId — the client's own copy, which sessions are materialized from
+* recurrence: `ONCE` / `DAILY` / `WEEKLY`
+* daysOfWeek (optional) — `WEEKLY` only, CSV of `DayOfWeek` names
+* timeOfDay (optional) — inherited by every occurrence
+* startDate
+* endDate — `= startDate` for `ONCE`; capped at `startDate + 3 months`
+* createdAt
+* cancelledAt (optional)
 
 ## RoleAuditLog
 

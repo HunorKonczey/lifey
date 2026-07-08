@@ -209,7 +209,7 @@ web/
 
 ## F10 — Jövőbeli rész: Személyi edző (csak vázlat)
 
-> Nem az 1. fázis része. Itt csak a fő lépések, hogy a tervbe illeszkedjen. Az auth már szerepkör-alapú, így ez **ráépítés**, nem átépítés.
+> Nem az 1. fázis része volt — időközben elkezdődött és a `docs/personal_trainer/` mappában részletes tervvé és megvalósítássá vált (PT0–PT5 fázisok, köztük az ütemezett edzések, elkészültek; ld. `07-utemterv-es-kockazatok.md`). Az alábbi vázlat az eredeti, kezdeti gondolatmenet — a tényleges lépések a `personal_trainer/` mappában részletesek. Az auth már szerepkör-alapú, így ez **ráépítés**, nem átépítés.
 
 ### Backend
 82. **Új szerepkör** `ROLE_TRAINER` (és opcionálisan `ROLE_CLIENT`); a JWT `roles` claim már támogatja.

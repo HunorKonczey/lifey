@@ -40,6 +40,10 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     List<WorkoutSession> findByUserIdAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(
             Long userId, LocalDate from, LocalDate to);
 
+    /** Same as above, aggregated across every client of a trainer — backs the trainer calendar. */
+    List<WorkoutSession> findByUserIdInAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(
+            List<Long> userIds, LocalDate from, LocalDate to);
+
     /** A schedule's future, not-yet-started occurrences — the set a schedule/occurrence cancellation soft-deletes. */
     List<WorkoutSession> findByScheduleIdAndStartedAtIsNullAndDeletedAtIsNullAndScheduledForGreaterThanEqual(
             Long scheduleId, LocalDate today);

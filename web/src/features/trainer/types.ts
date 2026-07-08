@@ -57,3 +57,77 @@ export interface ClientNutritionGoalsResponse {
   dailyCarbsGoal: number | null;
   dailyFatGoal: number | null;
 }
+
+// ─── Scheduled workouts (docs/personal_trainer/09-11) ───
+
+export type Recurrence = "ONCE" | "DAILY" | "WEEKLY";
+
+export const DAYS_OF_WEEK = [
+  "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY",
+] as const;
+export type DayOfWeek = (typeof DAYS_OF_WEEK)[number];
+
+export interface ScheduleRequest {
+  clientId: number;
+  templateId: number;
+  recurrence: Recurrence;
+  /* WEEKLY only. */
+  daysOfWeek: DayOfWeek[];
+  /* "HH:mm", optional. */
+  timeOfDay?: string | null;
+  startDate: string;
+  /* Ignored by the backend for ONCE (startDate is used for both) but always required on the wire. */
+  endDate: string;
+}
+
+export interface ScheduleResponse {
+  id: number;
+  clientId: number;
+  templateId: number;
+  templateName: string;
+  recurrence: Recurrence;
+  daysOfWeek: DayOfWeek[];
+  timeOfDay: string | null;
+  startDate: string;
+  endDate: string;
+  occurrencesCreated: number;
+}
+
+export interface ScheduleSummaryResponse {
+  id: number;
+  clientId: number;
+  templateId: number;
+  templateName: string;
+  recurrence: Recurrence;
+  daysOfWeek: DayOfWeek[];
+  timeOfDay: string | null;
+  startDate: string;
+  endDate: string;
+  doneCount: number;
+  missedCount: number;
+  remainingCount: number;
+  cancelledAt: string | null;
+}
+
+export type OccurrenceStatus = "UPCOMING" | "DONE" | "MISSED" | "CANCELLED";
+
+export interface ScheduledSessionResponse {
+  sessionId: number;
+  scheduledFor: string;
+  scheduledTime: string | null;
+  templateName: string | null;
+  status: OccurrenceStatus;
+  scheduleId: number;
+}
+
+/** Same as ScheduledSessionResponse but aggregated across every active client — backs the trainer calendar. */
+export interface TrainerCalendarSessionResponse {
+  sessionId: number;
+  clientId: number;
+  clientEmail: string;
+  scheduledFor: string;
+  scheduledTime: string | null;
+  templateName: string | null;
+  status: OccurrenceStatus;
+  scheduleId: number;
+}

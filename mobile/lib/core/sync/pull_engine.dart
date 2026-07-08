@@ -753,19 +753,28 @@ class PullEngine {
     if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
 
     final clientId = existingClientId ?? newClientId();
+    final startedRaw = json['startedAt'] as String?;
     final finishedRaw = json['finishedAt'] as String?;
+    final scheduledForRaw = json['scheduledFor'] as String?;
+    final scheduledTimeRaw = json['scheduledTime'] as String?;
     final templateServerId = json['templateId'] as int?;
     final templateClientId = templateServerId != null
         ? await _localClientId('workout_templates', templateServerId)
         : null;
     final values = WorkoutSessionsCompanion(
-      startedAt: Value(DateTime.parse(json['startedAt'] as String)),
+      // Null for a trainer-scheduled session that hasn't been started yet.
+      startedAt: Value(startedRaw != null ? DateTime.parse(startedRaw) : null),
       finishedAt: Value(finishedRaw != null ? DateTime.parse(finishedRaw) : null),
       activeCalories: Value((json['activeCalories'] as num?)?.toDouble()),
       averageHeartRate: Value((json['averageHeartRate'] as num?)?.toDouble()),
       healthWorkoutId: Value(json['healthWorkoutId'] as String?),
       templateClientId: Value(templateClientId),
       templateName: Value(json['templateName'] as String?),
+      scheduledFor: Value(scheduledForRaw != null ? DateTime.parse(scheduledForRaw) : null),
+      scheduledTime: Value(scheduledTimeRaw != null && scheduledTimeRaw.length >= 5
+          ? scheduledTimeRaw.substring(0, 5)
+          : scheduledTimeRaw),
+      scheduleId: Value(json['scheduleId'] as int?),
     );
     final plannedExerciseIds = await _mapServerIds(
       'exercises',

@@ -5,6 +5,8 @@ import com.lifey.trainer.dto.OccurrenceStatus;
 import com.lifey.trainer.dto.ScheduleResponse;
 import com.lifey.trainer.dto.ScheduleSummaryResponse;
 import com.lifey.trainer.dto.ScheduledSessionResponse;
+import com.lifey.trainer.dto.TrainerCalendarSessionResponse;
+import com.lifey.trainer.exception.CalendarRangeExceededException;
 import com.lifey.trainer.exception.EmptyRecurrenceException;
 import com.lifey.trainer.exception.OccurrenceNotCancellableException;
 import com.lifey.trainer.exception.ScheduleHorizonExceededException;
@@ -85,7 +87,7 @@ class WorkoutScheduleControllerTest {
 
         mockMvc.perform(post("/api/v1/trainer/schedules").contentType(MediaType.APPLICATION_JSON)
                         .content(ONCE_BODY))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -111,6 +113,32 @@ class WorkoutScheduleControllerTest {
                         .param("from", "2026-07-06").param("to", "2026-07-13"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].status").value("UPCOMING"));
+    }
+
+    @Test
+    void findScheduledSessionsForTrainer_returnsOccurrencesAcrossClients() throws Exception {
+        when(workoutScheduleService.findScheduledSessionsForTrainer(
+                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13)))
+                .thenReturn(List.of(new TrainerCalendarSessionResponse(
+                        30L, 2L, "anna@example.com", LocalDate.of(2026, 7, 9), null,
+                        "Push day", OccurrenceStatus.UPCOMING, 9L)));
+
+        mockMvc.perform(get("/api/v1/trainer/scheduled-sessions")
+                        .param("from", "2026-07-06").param("to", "2026-07-13"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].clientId").value(2))
+                .andExpect(jsonPath("$[0].clientEmail").value("anna@example.com"))
+                .andExpect(jsonPath("$[0].status").value("UPCOMING"));
+    }
+
+    @Test
+    void findScheduledSessionsForTrainer_rangeExceededReturns400() throws Exception {
+        when(workoutScheduleService.findScheduledSessionsForTrainer(any(), any()))
+                .thenThrow(new CalendarRangeExceededException("nope"));
+
+        mockMvc.perform(get("/api/v1/trainer/scheduled-sessions")
+                        .param("from", "2026-07-06").param("to", "2026-12-13"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

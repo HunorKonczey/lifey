@@ -4,6 +4,8 @@ import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.trainer.ContentType;
 import com.lifey.trainer.Recurrence;
+import com.lifey.trainer.TrainerClientRepository;
+import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.WorkoutScheduleRepository;
 import com.lifey.trainer.dto.AssignmentRequest;
 import com.lifey.trainer.dto.OccurrenceStatus;
@@ -11,7 +13,10 @@ import com.lifey.trainer.dto.ScheduleRequest;
 import com.lifey.trainer.dto.ScheduleResponse;
 import com.lifey.trainer.dto.ScheduleSummaryResponse;
 import com.lifey.trainer.dto.ScheduledSessionResponse;
+import com.lifey.trainer.dto.TrainerCalendarSessionResponse;
+import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.entity.WorkoutSchedule;
+import com.lifey.trainer.exception.CalendarRangeExceededException;
 import com.lifey.trainer.exception.EmptyRecurrenceException;
 import com.lifey.trainer.exception.OccurrenceNotCancellableException;
 import com.lifey.trainer.exception.ScheduleHorizonExceededException;
@@ -29,7 +34,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Schedule creation/materialization/cancellation (docs/personal_trainer/
@@ -41,11 +49,15 @@ import java.util.List;
 @Transactional
 public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
 
+    /** Trainer calendar guard: the widest range a month-view lapozás can request. */
+    private static final int MAX_CALENDAR_RANGE_DAYS = 62;
+
     private final WorkoutScheduleRepository workoutScheduleRepository;
     private final WorkoutSessionRepository workoutSessionRepository;
     private final WorkoutTemplateRepository workoutTemplateRepository;
     private final ContentAssignmentService contentAssignmentService;
     private final TrainerAccessService trainerAccessService;
+    private final TrainerClientRepository trainerClientRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
 
@@ -164,19 +176,57 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
     }
 
     private ScheduledSessionResponse toOccurrenceResponse(WorkoutSession session) {
-        OccurrenceStatus status;
-        if (session.getDeletedAt() != null) {
-            status = OccurrenceStatus.CANCELLED;
-        } else if (session.getStartedAt() != null) {
-            status = OccurrenceStatus.DONE;
-        } else if (session.getScheduledFor().isBefore(LocalDate.now())) {
-            status = OccurrenceStatus.MISSED;
-        } else {
-            status = OccurrenceStatus.UPCOMING;
-        }
         return new ScheduledSessionResponse(
                 session.getId(), session.getScheduledFor(), session.getScheduledTime(),
-                session.getTemplateName(), status, session.getScheduleId());
+                session.getTemplateName(), occurrenceStatus(session), session.getScheduleId());
+    }
+
+    private OccurrenceStatus occurrenceStatus(WorkoutSession session) {
+        if (session.getDeletedAt() != null) {
+            return OccurrenceStatus.CANCELLED;
+        } else if (session.getStartedAt() != null) {
+            return OccurrenceStatus.DONE;
+        } else if (session.getScheduledFor().isBefore(LocalDate.now())) {
+            return OccurrenceStatus.MISSED;
+        } else {
+            return OccurrenceStatus.UPCOMING;
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TrainerCalendarSessionResponse> findScheduledSessionsForTrainer(LocalDate from, LocalDate to) {
+        if (to.isBefore(from) || ChronoUnit.DAYS.between(from, to) > MAX_CALENDAR_RANGE_DAYS) {
+            throw new CalendarRangeExceededException(
+                    "Calendar range cannot span more than " + MAX_CALENDAR_RANGE_DAYS + " days");
+        }
+
+        Long trainerId = currentUserProvider.getUserId();
+        List<TrainerClient> activeClients = trainerClientRepository
+                .findByTrainerIdAndStatusOrderByRespondedAtDesc(trainerId, TrainerClientStatus.ACTIVE);
+        if (activeClients.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, String> clientEmailsById = new HashMap<>();
+        for (TrainerClient tc : activeClients) {
+            clientEmailsById.put(tc.getClient().getId(), tc.getClient().getEmail());
+        }
+
+        return workoutSessionRepository
+                .findByUserIdInAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(
+                        List.copyOf(clientEmailsById.keySet()), from, to)
+                .stream()
+                .map(session -> toCalendarResponse(session, clientEmailsById))
+                .toList();
+    }
+
+    private TrainerCalendarSessionResponse toCalendarResponse(WorkoutSession session, Map<Long, String> clientEmailsById) {
+        Long clientId = session.getUser().getId();
+        return new TrainerCalendarSessionResponse(
+                session.getId(), clientId, clientEmailsById.get(clientId),
+                session.getScheduledFor(), session.getScheduledTime(),
+                session.getTemplateName(), occurrenceStatus(session), session.getScheduleId());
     }
 
     @Override

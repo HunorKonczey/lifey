@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -16,19 +16,40 @@ const DATE_LOCALES = { en: enUS, hu } as const;
 
 interface ClientWorkoutsTabProps {
   clientId: number;
+  /* Set when arriving from the Schedule tab's "jump to session" — expands and scrolls to it once loaded. */
+  focusSessionId?: number | null;
+  onFocusHandled?: () => void;
 }
 
-export function ClientWorkoutsTab({ clientId }: ClientWorkoutsTabProps) {
+export function ClientWorkoutsTab({ clientId, focusSessionId, onFocusHandled }: ClientWorkoutsTabProps) {
   const t = useTranslations("admin.clientDetail");
   const common = useTranslations("common");
   const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const rowRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.trainerClientData.sessions(clientId, page, 15),
     queryFn: () => trainerApi.clientWorkoutSessions(clientId, page, 15),
   });
+
+  // Adjusted during render (React's blessed pattern, see DatePicker's prevValue)
+  // rather than in an effect, since it's a plain state derivation, not a side effect.
+  const [consumedFocusSessionId, setConsumedFocusSessionId] = useState<number | null | undefined>(undefined);
+  const focusTarget = focusSessionId != null && data?.content.some((s) => s.id === focusSessionId)
+    ? focusSessionId
+    : null;
+  if (focusTarget != null && focusTarget !== consumedFocusSessionId) {
+    setConsumedFocusSessionId(focusTarget);
+    setExpandedId(focusTarget);
+  }
+
+  useEffect(() => {
+    if (focusTarget == null) return;
+    rowRefs.current[focusTarget]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    onFocusHandled?.();
+  }, [focusTarget, onFocusHandled]);
 
   if (isLoading) return <Skeleton variant="table" />;
   if (isError) return <ErrorState onRetry={refetch} />;
@@ -46,7 +67,12 @@ export function ClientWorkoutsTab({ clientId }: ClientWorkoutsTabProps) {
             ? Math.round((new Date(s.finishedAt).getTime() - new Date(s.startedAt).getTime()) / 60000)
             : null;
           return (
-            <div key={s.id} className="rounded-[var(--r-card)]" style={{ background: "var(--surface)" }}>
+            <div
+              key={s.id}
+              ref={(el) => { rowRefs.current[s.id] = el; }}
+              className="rounded-[var(--r-card)]"
+              style={{ background: "var(--surface)", outline: focusSessionId === s.id ? "2px solid var(--tertiary)" : "none" }}
+            >
               <button
                 onClick={() => setExpandedId(expanded ? null : s.id)}
                 className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left"

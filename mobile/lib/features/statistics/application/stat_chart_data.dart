@@ -111,13 +111,17 @@ List<TimeSeriesPoint> _sessionPoints(
   final cutoff = range.cutoff();
   final sumsByDay = <DateTime, double>{};
   for (final session in sessions) {
-    final day = _localDay(session.startedAt);
+    // Upcoming (not-yet-started) sessions aren't "workouts that happened" —
+    // excluded the same way the backend excludes them from statistics.
+    if (session.isUpcoming) continue;
+    final startedAt = session.startedAt!;
+    final day = _localDay(startedAt);
     if (cutoff != null && day.isBefore(cutoff)) continue;
     final finishedAt = session.finishedAt;
     final value = switch (metric) {
       // Skip in-progress sessions: there's no finished duration to sum yet.
       StatMetric.workoutMinutes =>
-        finishedAt?.difference(session.startedAt).inMinutes.toDouble(),
+        finishedAt?.difference(startedAt).inMinutes.toDouble(),
       StatMetric.workoutCount => 1.0,
       StatMetric.activeCalories => session.activeCalories,
       _ => null,

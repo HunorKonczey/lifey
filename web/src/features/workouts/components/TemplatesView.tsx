@@ -48,11 +48,14 @@ function templateCategories(t: WorkoutTemplateResponse, exercisesById: Map<numbe
 interface TemplatesViewProps {
   /** When provided, admin nav renders a "Kiosztás" button on every row — absent in the own view. */
   onAssign?: (template: WorkoutTemplateResponse) => void;
+  /** When provided, admin nav renders a "schedule for a client" button on every row. */
+  onSchedule?: (template: WorkoutTemplateResponse) => void;
 }
 
-export function TemplatesView({ onAssign }: TemplatesViewProps = {}) {
+export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {}) {
   const t = useTranslations("workouts");
   const admin = useTranslations("admin.assignDrawer");
+  const schedule = useTranslations("admin.schedule");
   const tm = useTranslations("workouts.muscleGroups");
   const [selectedId, setSelectedId] = useState<number | "new" | null>(null);
 
@@ -126,6 +129,15 @@ export function TemplatesView({ onAssign }: TemplatesViewProps = {}) {
                     className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold shrink-0 mt-0.5"
                     style={{ background: "rgba(110,154,106,.18)", color: "var(--tertiary)" }}>
                     <span className="material-symbols-rounded text-base">person_add</span> {admin("assignAction")}
+                  </button>
+                )}
+                {onSchedule && (
+                  <button onClick={() => onSchedule(tpl)}
+                    data-testid="schedule-template"
+                    className="flex items-center justify-center rounded-xl w-8 h-8 shrink-0 mt-0.5"
+                    style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
+                    aria-label={schedule("scheduleForClientAria")}>
+                    <span className="material-symbols-rounded text-lg">calendar_month</span>
                   </button>
                 )}
               </div>

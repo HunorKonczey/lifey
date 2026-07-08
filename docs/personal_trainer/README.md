@@ -18,6 +18,8 @@ Cél: a Lifey-be bekerül egy **személyi edző (trainer)** szerepkör. A kliens
 | [`10-utemezett-edzesek-web-mobil.md`](10-utemezett-edzesek-web-mobil.md) | Ütemezett edzések: admin Ütemterv tab + ütemező drawer, mobil "Közelgő" szekció + felugró kártya, PT5 fázis — **frame-térkép az elkészült designhoz** |
 | [`11-utemezett-edzesek-design-prompt.md`](11-utemezett-edzesek-design-prompt.md) | Ütemezett edzések: design prompt (archív) + a funkció **döntés-naplója** |
 | [`design/Lifey Schedule.dc.html`](design/Lifey%20Schedule.dc.html) | **Ütemezett edzések — elkészült design** (5 frame: ütemterv tab, drawer, mobil közelgő, felugró kártya, állapotok) — a megvalósítás ebből dolgozik |
+| [`12-edzo-naptar-terv.md`](12-edzo-naptar-terv.md) | **Edző-naptár** (PT6): új sidebar-menüpont + `/admin/calendar` — az összes kliens ütemezett edzései egy naptárban (hét/hónap nézet, peek, szűrők), aggregált backend-végpont |
+| [`13-edzo-naptar-design-prompt.md`](13-edzo-naptar-design-prompt.md) | Edző-naptár: design prompt (Claude Designnak) + a funkció **döntés-naplója** |
 
 ## A legfontosabb döntések (összefoglaló)
 

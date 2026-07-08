@@ -17,6 +17,7 @@ import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
+import '../data/workout_template_repository.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
@@ -139,10 +140,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       }
     }
 
-    // Only start the ticker immediately when editing an existing in-progress
-    // session. For new sessions the ticker starts lazily in _persist() once
-    // the first set is saved.
-    if (_isEditing && _finishedAt == null) {
+    // Only start the ticker immediately when editing an existing session
+    // that's already started. For a brand-new session the ticker starts
+    // lazily in _persist() once the first set is saved; for a trainer-
+    // scheduled session being started now, _startScheduledSession below
+    // starts it once the stamp lands.
+    if (_isEditing && _finishedAt == null && _startedAt != null) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() => _now = DateTime.now());
       });
@@ -150,7 +153,51 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _pollHeartRate(); // don't wait a full interval for the first read
     }
 
+    if (session != null && session.isUpcoming) {
+      unawaited(_startScheduledSession(session));
+    } else {
+      unawaited(_loadPreviousPerformance(_blocks));
+    }
+  }
+
+  /// "Kezdés" on an upcoming (trainer-scheduled) session: loads its planned
+  /// exercises from the linked template — never materialized on the server
+  /// until start, see docs/personal_trainer/09-utemezett-edzesek-domain-backend.md
+  /// — then stamps startedAt and persists immediately, so the row leaves the
+  /// "Közelgő" section right away even if the trainer never logs a set.
+  Future<void> _startScheduledSession(WorkoutSession session) async {
+    final templateClientId = session.templateClientId;
+    if (templateClientId != null) {
+      final template = await ref
+          .read(workoutTemplateRepositoryProvider)
+          .findByClientId(templateClientId);
+      // The client may have deleted their copy since the trainer scheduled
+      // this — start as an empty session rather than failing (matches the
+      // backend's same fallback for this case).
+      if (template != null && mounted) {
+        setState(() {
+          for (final te in template.exercises) {
+            _blocks.add(ExerciseBlock(
+              exerciseClientId: te.exerciseClientId,
+              exerciseName: '',
+              targetSets: te.targetSets,
+              rows: _generateRows(te.targetSets),
+            ));
+          }
+        });
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _startedAt = DateTime.now();
+      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() => _now = DateTime.now());
+      });
+      _hrTicker = Timer.periodic(_kHrPollInterval, (_) => _pollHeartRate());
+    });
+    _pollHeartRate();
     unawaited(_loadPreviousPerformance(_blocks));
+    await _persist();
   }
 
   @override

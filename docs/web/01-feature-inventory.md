@@ -90,7 +90,7 @@ Szerepkörök ma: `ROLE_USER`, `ROLE_ADMIN`. (Bővíthető — lásd jövőbeli 
 
 ## Jövőbeli rész — Személyi edző (röviden)
 
-> Ez **csak vázlat** a tervbe; az 1. fázisban nem épül meg. Részletes lépések a fejlesztési terv 10. fázisában.
+> Ez **csak vázlat** volt a tervbe; a részletes terv és a megvalósítás időközben elkezdődött, ld. `docs/personal_trainer/` (a `07-utemterv-es-kockazatok.md` tartalmazza a fázisonkénti státuszt — a PT0–PT5 fázisok, köztük az ütemezett edzések, elkészültek). Részletes lépések a fejlesztési terv 10. fázisában.
 
 A backend auth már most is **szerepkör-alapú** (`ROLE_USER`, `ROLE_ADMIN`, bővíthetőre tervezve), ezért a kiterjesztés nem igényel teljes átépítést.
 
