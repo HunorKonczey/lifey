@@ -426,7 +426,9 @@
       "noRecipes": "Még nincs recept",
       "tryDifferentSearch": "Próbálj más keresőszót.",
       "createToLog": "Hozz létre egy receptet, hogy gyorsan rögzíthesd a gyakran evett étkezéseidet.",
-      "logAsMeal": "Rögzítés étkezésként"
+      "logAsMeal": "Rögzítés étkezésként",
+      "perServingCaloriesProtein": "{calories} kcal · {protein}g fehérje / adag",
+      "totalCaloriesProtein": "{calories} kcal · {protein}g fehérje"
     },
     "foodEditor": {
       "editFood": "Étel szerkesztése",
@@ -531,6 +533,7 @@
     "deleteFailed": "Nem sikerült törölni",
     "exercisesCount": "{count} gyakorlat",
     "inProgress": "Folyamatban",
+    "bpmAvg": "{value} bpm átlag",
     "deleteSessionAria": "Edzés törlése",
     "activeWorkout": "Aktív edzés",
     "started": "Kezdés: {time}",

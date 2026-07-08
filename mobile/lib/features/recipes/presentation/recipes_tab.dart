@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/utils/search_normalize.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
@@ -66,7 +67,7 @@ class RecipesTab extends ConsumerWidget {
     final state = ref.watch(recipeControllerProvider);
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
-    final query = searchQuery?.trim().toLowerCase() ?? '';
+    final query = normalizeForSearch(searchQuery?.trim() ?? '');
 
     return RefreshIndicator(
       displacement: topPadding,
@@ -75,7 +76,7 @@ class RecipesTab extends ConsumerWidget {
         data: (recipes) {
           final visible = query.isEmpty
               ? recipes
-              : recipes.where((r) => r.name.toLowerCase().contains(query)).toList();
+              : recipes.where((r) => normalizeForSearch(r.name).contains(query)).toList();
           if (visible.isEmpty) {
             return EmptyView(
               icon: query.isEmpty ? Icons.menu_book_outlined : Icons.search_off,

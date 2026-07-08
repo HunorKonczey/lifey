@@ -16,6 +16,9 @@ import type { RecipeResponse } from "../types";
 const PAGE_SIZE = 200;
 const SEARCH_DEBOUNCE_MS = 300;
 
+const totalCalories = (r: RecipeResponse) => r.ingredients.reduce((sum, i) => sum + i.calories, 0);
+const totalProtein = (r: RecipeResponse) => r.ingredients.reduce((sum, i) => sum + i.protein, 0);
+
 interface RecipesViewProps {
   /** When provided, a "Kiosztás" button appears on every card — admin nav only. */
   onAssign?: (recipe: RecipeResponse) => void;
@@ -46,7 +49,9 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
     queryFn: () => recipeApi.page(pageParams),
   });
 
-  const recipes = (data?.content ?? []).filter((r) => !favoritesOnly || r.favorite);
+  const recipes = (data?.content ?? [])
+    .filter((r) => !favoritesOnly || r.favorite)
+    .sort((a, b) => (a.favorite === b.favorite ? a.name.localeCompare(b.name) : a.favorite ? -1 : 1));
 
   return (
     <div className="flex flex-col gap-4">
@@ -111,8 +116,21 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
                   )}
                 </div>
                 <p className="font-bold text-sm">{r.name}</p>
+                {r.description && (
+                  <p className="text-xs line-clamp-2" style={{ color: "var(--on-surface-variant)" }}>
+                    {r.description}
+                  </p>
+                )}
                 <p className="text-xs" style={{ color: "var(--muted)" }}>
-                  {r.ingredients.length} ingredients · {r.servings} serv.
+                  {r.servings > 1
+                    ? t("perServingCaloriesProtein", {
+                        calories: Math.round(totalCalories(r) / r.servings),
+                        protein: Math.round(totalProtein(r) / r.servings),
+                      })
+                    : t("totalCaloriesProtein", {
+                        calories: Math.round(totalCalories(r)),
+                        protein: Math.round(totalProtein(r)),
+                      })}
                 </p>
               </button>
               <div className="flex gap-1.5 mt-1">

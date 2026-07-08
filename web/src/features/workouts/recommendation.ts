@@ -3,12 +3,15 @@ import type { WorkoutSessionResponse, WorkoutTemplateResponse } from "./types";
 // Looks for a repeating cycle in the templates used across sessionsDesc
 // (newest first) and predicts the id of the template that continues it.
 //
-// Only the most recent 10 sessions are considered, so a routine change a
-// few weeks ago doesn't keep influencing today's suggestion. Returns null
-// when there's too little history or no exact repeating pattern — no
-// recommendation is better than a wrong one.
+// Unfinished sessions (started but not yet completed) are excluded before
+// taking the most recent 10, so a workout still in progress doesn't skew
+// the detected pattern. Only the most recent 10 finished sessions are
+// considered, so a routine change a few weeks ago doesn't keep influencing
+// today's suggestion. Returns null when there's too little history or no
+// exact repeating pattern — no recommendation is better than a wrong one.
 export function predictNextTemplateId(sessionsDesc: WorkoutSessionResponse[]): number | null {
   const seq = sessionsDesc
+    .filter((s) => s.finishedAt != null)
     .slice(0, 10)
     .map((s) => s.templateId)
     .filter((id): id is number => id != null)

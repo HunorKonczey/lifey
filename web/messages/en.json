@@ -426,7 +426,9 @@
       "noRecipes": "No recipes yet",
       "tryDifferentSearch": "Try a different search term.",
       "createToLog": "Create a recipe to quickly log meals you eat often.",
-      "logAsMeal": "Log as meal"
+      "logAsMeal": "Log as meal",
+      "perServingCaloriesProtein": "{calories} kcal · {protein}g protein / serving",
+      "totalCaloriesProtein": "{calories} kcal · {protein}g protein"
     },
     "foodEditor": {
       "editFood": "Edit food",
@@ -531,6 +533,7 @@
     "deleteFailed": "Failed to delete",
     "exercisesCount": "{count} exercises",
     "inProgress": "In progress",
+    "bpmAvg": "{value} bpm avg",
     "deleteSessionAria": "Delete session",
     "activeWorkout": "Active workout",
     "started": "Started {time}",

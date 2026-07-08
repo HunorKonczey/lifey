@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/utils/search_normalize.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -582,7 +583,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
   List<Exercise> get _filtered => _query.isEmpty
       ? widget.exercises
       : widget.exercises
-          .where((e) => e.name.toLowerCase().contains(_query.toLowerCase()))
+          .where((e) => normalizeForSearch(e.name).contains(normalizeForSearch(_query)))
           .toList();
 
   @override

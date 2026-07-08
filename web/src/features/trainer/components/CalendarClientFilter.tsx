@@ -108,7 +108,7 @@ function Checkbox({ checked }: { checked: boolean }) {
       style={{ background: checked ? "var(--tertiary)" : "transparent", border: checked ? "none" : "1.5px solid var(--outline)" }}
     >
       {checked && (
-        <span className="material-symbols-rounded text-[13px]" style={{ color: "#161611" }}>
+        <span className="material-symbols-rounded text-[11px]" style={{ color: "#161611" }}>
           check
         </span>
       )}

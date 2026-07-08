@@ -3,6 +3,8 @@ package com.lifey.nutrition.food;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
@@ -14,7 +16,17 @@ public interface FoodRepository extends JpaRepository<Food, Long> {
 
     Page<Food> findByUserIdAndHiddenFalse(Long userId, Pageable pageable);
 
-    Page<Food> findByUserIdAndHiddenFalseAndNameContainingIgnoreCase(Long userId, String search, Pageable pageable);
+    /**
+     * Accent-insensitive (e.g. "a" matches "á") on top of case-insensitive,
+     * via Postgres' {@code unaccent} extension (see V47__unaccent_search.sql).
+     * Uses Hibernate's generic {@code function()} passthrough so entity
+     * property paths (not raw column names) are preserved for Pageable sorting.
+     */
+    @Query("SELECT f FROM Food f WHERE f.user.id = :userId AND f.hidden = false "
+            + "AND cast(function('unaccent', lower(f.name)) as string) "
+            + "LIKE cast(function('unaccent', lower(concat('%', :search, '%'))) as string)")
+    Page<Food> findByUserIdAndHiddenFalseAndNameContainingIgnoreCase(
+            @Param("userId") Long userId, @Param("search") String search, Pageable pageable);
 
     /**
      * Delta-sync feed (docs/15-delta-sync.md) — deliberately not
