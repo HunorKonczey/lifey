@@ -1,6 +1,7 @@
-package com.lifey.trainer;
+package com.lifey.trainer.entity;
 
 import com.lifey.common.domain.BaseEntity;
+import com.lifey.trainer.ContentType;
 import com.lifey.user.User;
 import jakarta.persistence.*;
 import lombok.Getter;

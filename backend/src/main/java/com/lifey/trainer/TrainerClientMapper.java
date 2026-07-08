@@ -1,5 +1,6 @@
 package com.lifey.trainer;
 
+import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.dto.MyTrainerResponse;
 import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.TrainerClientResponse;
@@ -39,6 +40,11 @@ public final class TrainerClientMapper {
     }
 
     public static MyTrainerResponse toMyTrainerResponse(TrainerClient tc) {
-        return new MyTrainerResponse(tc.getTrainer().getId(), tc.getTrainer().getEmail(), tc.getRespondedAt());
+        return new MyTrainerResponse(
+                tc.getTrainer().getId(),
+                tc.getTrainer().getEmail(),
+                tc.getTrainer().getFirstName(),
+                tc.getTrainer().getLastName(),
+                tc.getRespondedAt());
     }
 }

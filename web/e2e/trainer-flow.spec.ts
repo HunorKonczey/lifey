@@ -181,6 +181,25 @@ test.describe("Personal trainer flow", () => {
       await expect(page.getByText(templateName)).toBeVisible();
     });
 
+    await test.step("trainer schedules a one-off workout for the client", async () => {
+      await page.getByRole("button", { name: "Schedule" }).click();
+      await page.getByRole("button", { name: "Schedule workout" }).first().click();
+
+      const drawer = page.getByTestId("schedule-workout-drawer");
+      await drawer.getByPlaceholder("Search your templates…").fill(templateName);
+      await drawer.getByTestId("schedule-drawer-template-row").filter({ hasText: templateName }).click();
+      await drawer.getByTestId("schedule-drawer-submit").click();
+      await expect(page.getByText(`1 workout scheduled for ${clientDisplayName}`)).toBeVisible();
+    });
+
+    await test.step("the scheduled workout shows up as upcoming in the client's timeline", async () => {
+      // The template name legitimately appears twice: once on the active-series
+      // card, once on its timeline row.
+      await expect(page.getByText(templateName).first()).toBeVisible();
+      await expect(page.getByText("upcoming")).toBeVisible();
+      await expect(page.getByLabel("Cancel this workout")).toBeVisible();
+    });
+
     const mealFoodName = `E2E Oatmeal ${runId}`;
 
     await test.step("client logs a meal for yesterday via the API", async () => {

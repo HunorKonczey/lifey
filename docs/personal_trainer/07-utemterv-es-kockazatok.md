@@ -40,9 +40,12 @@ A sorrend elve: előbb a **fundamentum** (ownership), aztán a **kapcsolat**, az
 **Kész, ha:** kiosztok egy sablont és egy receptet, a kliens mobilján sync után megjelennek "Edzőtől" jelöléssel, offline is használhatók, és az edzései visszakövethetők a kliens-részletek Edzések tabján.
 
 ### PT4 — Csiszolás
-19. E2E (Playwright): meghívás → elfogadás (API-szimulált) → kiosztás → kliens-statisztika.
-20. i18n átnézés (HU/EN, ARB + next-intl), üres/hiba/loading állapotok, dark/light.
-21. Dokumentáció-frissítés: `docs/03-domain-model.md`, `docs/06-development-rules.md` (trainer-kivétel a userId-szabály alól), `docs/web/*` hivatkozások.
+
+✅ **Kész (2026-07-08).** PT0–PT5 mind megvalósultak (migrációk `V40`–`V47`); a csiszolás alábbi három pontja is lezárva:
+
+19. ✅ E2E (Playwright): meghívás → elfogadás (API-szimulált) → kiosztás → kliens-statisztika (`web/e2e/trainer-flow.spec.ts`) — kiegészítve az ütemezés lépésével (drawer → időrendi státusz "upcoming" a kliens idővonalán).
+20. ✅ i18n átnézés (HU/EN, ARB + next-intl): teljes kulcs-egyezés mindkét oldalon (`web/messages/en.json`↔`hu.json`, `mobile/lib/l10n/app_en.arb`↔`app_hu.arb`), valódi (nem placeholder) magyar fordításokkal; üres/hiba/loading állapotok lefedve (`Skeleton`/`EmptyState`/`ErrorState` a web oldalon, a mobil "Közelgő" szekció egyszerűen eltűnik üresen, nincs saját hiba/loading állapota, mert helyi drift-cache-ből olvas); nincs hardkódolt szín, minden CSS-token/`ColorScheme` alapú (dark/light automatikusan követi).
+21. ✅ Dokumentáció-frissítés: `docs/03-domain-model.md` (a `WorkoutSession` bővítése + új `WorkoutSchedule` entitás), `docs/06-development-rules.md` (a trainer-kivétel a userId-szabály alól, kiegészítve az edző-írás és a trainerId-alapú (nem clientId-alapú) tulajdonjog-ellenőrzés eseteivel), `docs/web/01-feature-inventory.md` és `docs/web/02-development-plan.md` (a "csak vázlat" F10-jelzés frissítve a tényleges státuszra).
 
 ## Kockázatok és ellenszerek
 

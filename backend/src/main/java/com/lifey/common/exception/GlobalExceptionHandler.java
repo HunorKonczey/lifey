@@ -4,9 +4,15 @@ import com.lifey.auth.exception.*;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.trainer.exception.AlreadyClientException;
+import com.lifey.trainer.exception.CalendarRangeExceededException;
+import com.lifey.trainer.exception.EmptyRecurrenceException;
 import com.lifey.trainer.exception.InviteNotFoundException;
 import com.lifey.trainer.exception.InviteRateLimitedException;
 import com.lifey.trainer.exception.NotYourClientException;
+import com.lifey.trainer.exception.OccurrenceNotCancellableException;
+import com.lifey.trainer.exception.ScheduleHorizonExceededException;
+import com.lifey.trainer.exception.ScheduleInPastException;
+import com.lifey.trainer.exception.ScheduleNotFoundException;
 import com.lifey.trainer.exception.SelfInviteException;
 import com.lifey.trainer.exception.UserNotFoundForInviteException;
 import com.lifey.user.InvalidImageException;
@@ -125,6 +131,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotYourClientException.class)
     public ResponseEntity<ApiError> handleNotYourClient(NotYourClientException ex, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler({ScheduleInPastException.class, EmptyRecurrenceException.class, CalendarRangeExceededException.class})
+    public ResponseEntity<ApiError> handleScheduleValidation(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(ScheduleNotFoundException.class)
+    public ResponseEntity<ApiError> handleScheduleNotFound(ScheduleNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(ScheduleHorizonExceededException.class)
+    public ResponseEntity<ApiError> handleScheduleHorizonExceeded(ScheduleHorizonExceededException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(OccurrenceNotCancellableException.class)
+    public ResponseEntity<ApiError> handleOccurrenceNotCancellable(OccurrenceNotCancellableException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler({RoleNotManageableException.class, CannotModifySelfException.class})

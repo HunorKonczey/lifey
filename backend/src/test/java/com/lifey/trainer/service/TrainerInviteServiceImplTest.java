@@ -2,7 +2,6 @@ package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.mail.service.MailService;
-import com.lifey.trainer.TrainerClient;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.TrainerInviteProperties;
@@ -10,6 +9,7 @@ import com.lifey.trainer.dto.PendingInviteResponse;
 import com.lifey.trainer.dto.RespondToInviteRequest;
 import com.lifey.trainer.dto.TrainerInviteRequest;
 import com.lifey.trainer.dto.TrainerInviteResponse;
+import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.exception.AlreadyClientException;
 import com.lifey.trainer.exception.InviteNotFoundException;
 import com.lifey.trainer.exception.InviteRateLimitedException;

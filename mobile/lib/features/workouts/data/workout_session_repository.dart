@@ -105,7 +105,13 @@ class WorkoutSessionRepository {
                 setsBySession[row.clientId] ?? const [],
               ))
           .toList()
-        ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+        // Upcoming (not-yet-started) sessions have no startedAt — fall back
+        // to scheduledFor so the comparator never sees a null.
+        ..sort((a, b) {
+          final aKey = a.startedAt ?? a.scheduledFor ?? DateTime(0);
+          final bKey = b.startedAt ?? b.scheduledFor ?? DateTime(0);
+          return bKey.compareTo(aKey);
+        });
       return sessions;
     });
   }
@@ -128,7 +134,7 @@ class WorkoutSessionRepository {
       await _db.into(_db.workoutSessions).insert(
             WorkoutSessionsCompanion.insert(
               clientId: clientId,
-              startedAt: startedAt,
+              startedAt: Value(startedAt),
               finishedAt: Value(finishedAt),
               activeCalories: Value(activeCalories),
               averageHeartRate: Value(averageHeartRate),
@@ -301,6 +307,9 @@ class WorkoutSessionRepository {
       healthWorkoutId: row.healthWorkoutId,
       templateClientId: row.templateClientId,
       templateName: row.templateName,
+      scheduledFor: row.scheduledFor,
+      scheduledTime: row.scheduledTime,
+      scheduleId: row.scheduleId,
     );
   }
 

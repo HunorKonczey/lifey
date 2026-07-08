@@ -9,6 +9,7 @@ import { ExercisesView } from "@/features/workouts/components/ExercisesView";
 import { exerciseApi } from "@/features/workouts/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { AssignToClientDrawer, type AssignSummaryRow } from "@/features/trainer/components/AssignToClientDrawer";
+import { ScheduleWorkoutDrawer } from "@/features/trainer/components/ScheduleWorkoutDrawer";
 import type { WorkoutTemplateResponse } from "@/features/workouts/types";
 
 type Tab = "templates" | "exercises";
@@ -17,6 +18,7 @@ export default function AdminWorkoutsPage() {
   const t = useTranslations("workouts");
   const [tab, setTab] = useState<Tab>("templates");
   const [assignTarget, setAssignTarget] = useState<WorkoutTemplateResponse | null>(null);
+  const [scheduleTarget, setScheduleTarget] = useState<WorkoutTemplateResponse | null>(null);
   const { data: exercises } = useQuery({ queryKey: queryKeys.exercises.all(), queryFn: exerciseApi.list });
 
   const TABS: { value: Tab; label: string; icon: string }[] = [
@@ -35,7 +37,7 @@ export default function AdminWorkoutsPage() {
     <div className="flex flex-col gap-5">
       <SegmentedControl options={TABS} value={tab} onChange={setTab} activeBackground="var(--tertiary)" activeColor="#161611" />
 
-      {tab === "templates" && <TemplatesView onAssign={setAssignTarget} />}
+      {tab === "templates" && <TemplatesView onAssign={setAssignTarget} onSchedule={setScheduleTarget} />}
       {tab === "exercises" && <ExercisesView />}
 
       {assignTarget && (
@@ -46,6 +48,14 @@ export default function AdminWorkoutsPage() {
           summary={summary}
           moreCount={moreCount}
           onClose={() => setAssignTarget(null)}
+        />
+      )}
+
+      {scheduleTarget && (
+        <ScheduleWorkoutDrawer
+          templateId={scheduleTarget.id}
+          templateName={scheduleTarget.name}
+          onClose={() => setScheduleTarget(null)}
         />
       )}
     </div>

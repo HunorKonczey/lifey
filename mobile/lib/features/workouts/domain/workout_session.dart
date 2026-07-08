@@ -34,21 +34,27 @@ class SessionExercise {
 class WorkoutSession {
   const WorkoutSession({
     required this.clientId,
-    required this.startedAt,
     required this.exercises,
     required this.sets,
     this.id,
+    this.startedAt,
     this.finishedAt,
     this.activeCalories,
     this.averageHeartRate,
     this.healthWorkoutId,
     this.templateClientId,
     this.templateName,
+    this.scheduledFor,
+    this.scheduledTime,
+    this.scheduleId,
   });
 
   final String clientId;
   final int? id;
-  final DateTime startedAt;
+
+  /// Null for a trainer-scheduled session that hasn't been started yet — see
+  /// [scheduledFor] and [isUpcoming].
+  final DateTime? startedAt;
   final DateTime? finishedAt;
   final List<SessionExercise> exercises;
   final List<ExerciseSet> sets;
@@ -70,7 +76,23 @@ class WorkoutSession {
   /// null when started as an empty workout (or predates this field).
   final String? templateName;
 
-  bool get inProgress => finishedAt == null;
+  /// Calendar day the trainer scheduled this session for; null for a normal
+  /// (client-started) session — docs/personal_trainer/08-utemezett-edzesek-koncepcio.md.
+  final DateTime? scheduledFor;
+
+  /// Optional wall-clock time ("HH:mm") the trainer scheduled this for;
+  /// display/ordering only.
+  final String? scheduledTime;
+
+  /// The originating schedule's server id, if this session was materialized
+  /// from one.
+  final int? scheduleId;
+
+  bool get inProgress => startedAt != null && finishedAt == null;
+
+  /// Trainer-scheduled and not yet started — shows in the "Közelgő" section
+  /// while [scheduledFor] is within the client's 7-day visibility window.
+  bool get isUpcoming => startedAt == null && scheduledFor != null;
 
   bool get fromAppleHealth => healthWorkoutId != null;
 }

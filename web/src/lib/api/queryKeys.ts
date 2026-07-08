@@ -81,6 +81,14 @@ export const queryKeys = {
     meals: (clientId: number, date: string) => ["trainer-client-data", clientId, "meals", date] as const,
     nutritionGoals: (clientId: number) => ["trainer-client-data", clientId, "nutrition-goals"] as const,
   },
+  trainerSchedules: {
+    forClient: (clientId: number) => ["trainer-schedules", "client", clientId] as const,
+    occurrences: (clientId: number, from: string, to: string) =>
+      ["trainer-schedules", "client", clientId, "occurrences", from, to] as const,
+  },
+  trainerCalendar: {
+    range: (from: string, to: string) => ["trainer-calendar", from, to] as const,
+  },
   superAdminUsers: {
     page: (params: { page: number; size?: number; search?: string }) =>
       ["superadmin-users", "page", params] as const,

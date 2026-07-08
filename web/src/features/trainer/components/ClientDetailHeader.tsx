@@ -10,7 +10,7 @@ import type { TrainerClientResponse } from "../types";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
 
-export type ClientTab = "overview" | "statistics" | "steps" | "nutrition" | "workouts";
+export type ClientTab = "overview" | "statistics" | "steps" | "nutrition" | "workouts" | "schedule";
 
 const TABS: { key: ClientTab; icon: string }[] = [
   { key: "overview", icon: "dashboard" },
@@ -18,15 +18,18 @@ const TABS: { key: ClientTab; icon: string }[] = [
   { key: "steps", icon: "directions_walk" },
   { key: "nutrition", icon: "restaurant" },
   { key: "workouts", icon: "fitness_center" },
+  { key: "schedule", icon: "calendar_month" },
 ];
 
 interface ClientDetailHeaderProps {
   client: TrainerClientResponse;
   tab: ClientTab;
   onTabChange: (tab: ClientTab) => void;
+  /* The Ütemterv tab is the one client-detail tab that isn't read-only — its CTA replaces the badge. */
+  onScheduleWorkout: () => void;
 }
 
-export function ClientDetailHeader({ client, tab, onTabChange }: ClientDetailHeaderProps) {
+export function ClientDetailHeader({ client, tab, onTabChange, onScheduleWorkout }: ClientDetailHeaderProps) {
   const t = useTranslations("admin.clientDetail");
   const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
 
@@ -53,13 +56,24 @@ export function ClientDetailHeader({ client, tab, onTabChange }: ClientDetailHea
             date: format(new Date(client.activeSince), "yyyy. MMM d.", { locale: dateLocale }),
           })}
         </span>
-        <span
-          className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-xs font-bold px-3.5 py-1.5 whitespace-nowrap"
-          style={{ border: "1px solid var(--outline)", color: "var(--on-surface-variant)" }}
-        >
-          <span className="material-symbols-rounded text-base">visibility</span>
-          {t("readOnly")}
-        </span>
+        {tab === "schedule" ? (
+          <button
+            onClick={onScheduleWorkout}
+            className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-xs font-bold px-3.5 py-2 whitespace-nowrap"
+            style={{ background: "var(--tertiary)", color: "#161611" }}
+          >
+            <span className="material-symbols-rounded text-base">add</span>
+            {t("scheduleWorkoutCta")}
+          </button>
+        ) : (
+          <span
+            className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-xs font-bold px-3.5 py-1.5 whitespace-nowrap"
+            style={{ border: "1px solid var(--outline)", color: "var(--on-surface-variant)" }}
+          >
+            <span className="material-symbols-rounded text-base">visibility</span>
+            {t("readOnly")}
+          </span>
+        )}
       </div>
 
       <div className="flex rounded-[var(--r-pill)] p-1 w-fit" style={{ background: "var(--surface)" }}>

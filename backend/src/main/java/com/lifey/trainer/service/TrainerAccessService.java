@@ -1,7 +1,7 @@
 package com.lifey.trainer.service;
 
-import com.lifey.trainer.TrainerClient;
 import com.lifey.trainer.dto.MyTrainerResponse;
+import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.dto.TrainerClientResponse;
 
 import java.util.List;

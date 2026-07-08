@@ -97,9 +97,20 @@ sent — re-check `COOKIE_SECURE=true` and `COOKIE_SAME_SITE=None` on the backen
 ## CI
 
 [`.github/workflows/web-ci.yml`](../.github/workflows/web-ci.yml) runs lint + typecheck +
-unit tests + production build on every push/PR touching `web/**`. Both Vercel and Railway
-deploy on push to `main` independently of CI; treat CI as the gate and protect `main` with
-a required status check if desired.
+unit tests + production build on every push/PR touching `web/**`.
+
+Vercel's own Git integration is left **on** (default): it deploys the `main` branch as
+**Production** and every other branch (e.g. `feature/**`) as a **Preview**, automatically,
+with no extra config. Production is gated on CI by GitHub branch protection instead of by
+a Vercel Deploy Hook: `main` requires the Web CI check to pass and only accepts merges via
+PR, so no commit reaches `main` — and therefore no Vercel production build fires — without
+CI having already gone green. `feature/**` pushes get instant, ungated preview deploys.
+
+> Don't try to gate this with a Vercel `ignoreCommand`/Ignored Build Step keyed on branch
+> name — it can't distinguish a Deploy-Hook-triggered build from a plain git-push build
+> (both see the same branch/commit), so it ends up skipping both or neither.
+
+Railway (if used) still deploys on push to `main` independently of CI.
 
 ---
 

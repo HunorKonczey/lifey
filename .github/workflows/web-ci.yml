@@ -45,12 +45,3 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8080/api/v1
           NEXT_TELEMETRY_DISABLED: "1"
-
-  deploy:
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Vercel deploy hook
-        working-directory: .
-        run: curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"

@@ -39,7 +39,7 @@ class WorkoutSessionControllerTest {
                 List.of(new ExerciseSummary(1L, "Bench Press")),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 10, 60.0,
                         Instant.parse("2026-06-01T05:05:00Z"))),
-                null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
+                null, null, null, null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
 
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","
@@ -62,7 +62,7 @@ class WorkoutSessionControllerTest {
                 List.of(new ExerciseSummary(1L, "Bench Press")),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 10, 60.0,
                         Instant.parse("2026-06-01T05:05:00Z"))),
-                450.0, 132.0, "HK-UUID-1", null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
+                450.0, 132.0, "HK-UUID-1", null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
 
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","
@@ -82,7 +82,7 @@ class WorkoutSessionControllerTest {
     void create_emptyExercisesAndSetsReturnsCreated() throws Exception {
         when(workoutSessionService.create(any())).thenReturn(new WorkoutSessionResponse(5L,
                 Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
-                null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
+                null, null, null, null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
 
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","
@@ -110,7 +110,7 @@ class WorkoutSessionControllerTest {
         // WorkoutSessionServiceImplTest for that behavior.
         when(workoutSessionService.create(any())).thenReturn(new WorkoutSessionResponse(6L,
                 Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
-                null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
+                null, null, null, null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
 
         mockMvc.perform(post("/api/v1/workout-sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\",\"exerciseIds\":[],"
@@ -129,7 +129,7 @@ class WorkoutSessionControllerTest {
                 List.of(new ExerciseSummary(1L, "Bench Press")),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 8, 70.0,
                         Instant.parse("2026-06-01T05:35:00Z"))),
-                null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
+                null, null, null, null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null));
 
         mockMvc.perform(put("/api/v1/workout-sessions/2").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"startedAt\":\"2026-06-01T05:00:00Z\","
@@ -146,7 +146,7 @@ class WorkoutSessionControllerTest {
     void findPage_returnsPagedSessions() throws Exception {
         WorkoutSessionResponse session = new WorkoutSessionResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
-                null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null);
+                null, null, null, null, null, null, null, null, Instant.parse("2026-06-01T05:00:00Z"), null);
         when(workoutSessionService.findPage(any())).thenReturn(new PageImpl<>(List.of(session)));
 
         mockMvc.perform(get("/api/v1/workout-sessions").param("page", "0"))
@@ -159,7 +159,7 @@ class WorkoutSessionControllerTest {
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
         WorkoutSessionResponse tombstoned = new WorkoutSessionResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
-                null, null, null, null, null,
+                null, null, null, null, null, null, null, null,
                 Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"));
         when(workoutSessionService.findDelta(eq(since), any())).thenReturn(new PageImpl<>(List.of(tombstoned)));
 

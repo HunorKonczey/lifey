@@ -18,6 +18,7 @@ import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'log_session_screen.dart';
 import 'widgets/recommended_workout_card.dart';
+import 'widgets/upcoming_sessions_section.dart';
 
 /// "Sessions" tab: tap to edit/continue; swipe-to-delete with confirm; date filter.
 /// The active [filter] is owned by the parent screen and shown in the AppBar.
@@ -112,10 +113,16 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
 
     final content = state.when(
       data: (sessions) {
-        final filtered =
-            sessions.where((s) => widget.filter.matches(s.startedAt)).toList();
+        // Trainer-scheduled, not-yet-started sessions within the 7-day
+        // visibility window get their own pinned section, never mixed into
+        // history — the history filter (today/week/all) never matches them
+        // since they have no startedAt.
+        final upcoming = sessions.where(isWithinUpcomingWindow).toList();
+        final filtered = sessions
+            .where((s) => !s.isUpcoming && widget.filter.matches(s.startedAt!))
+            .toList();
 
-        if (sessions.isEmpty || filtered.isEmpty) {
+        if (sessions.isEmpty || (filtered.isEmpty && upcoming.isEmpty)) {
           return RefreshIndicator(
             displacement: refreshDisplacement,
             onRefresh: () =>
@@ -132,20 +139,31 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
           );
         }
 
+        final hasUpcoming = upcoming.isNotEmpty;
         return RefreshIndicator(
           displacement: refreshDisplacement,
           onRefresh: () =>
               ref.read(workoutSessionControllerProvider.notifier).refresh(),
           child: ListView.builder(
             padding: EdgeInsets.fromLTRB(12, listTopPadding, 12, bottomPad + 88),
-            itemCount: filtered.length,
-            itemBuilder: (context, index) => _SessionCard(
-              session: filtered[index],
-              categoryCode: _dominantCategory(filtered[index], categoryByExercise),
-              dateLabel: _dateLabel,
-              onEdit: () => _edit(context, filtered[index]),
-              onDelete: () => _confirmDelete(context, ref, filtered[index]),
-            ),
+            itemCount: (hasUpcoming ? 1 : 0) + filtered.length,
+            itemBuilder: (context, index) {
+              if (hasUpcoming && index == 0) {
+                return UpcomingSessionsSection(
+                  sessions: upcoming,
+                  onStart: (s) => _edit(context, s),
+                  onDelete: (s) => _confirmDelete(context, ref, s),
+                );
+              }
+              final i = hasUpcoming ? index - 1 : index;
+              return _SessionCard(
+                session: filtered[i],
+                categoryCode: _dominantCategory(filtered[i], categoryByExercise),
+                dateLabel: _dateLabel,
+                onEdit: () => _edit(context, filtered[i]),
+                onDelete: () => _confirmDelete(context, ref, filtered[i]),
+              );
+            },
           ),
         );
       },
@@ -295,7 +313,7 @@ class _SessionCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              dateLabel.format(session.startedAt.toLocal()),
+                              dateLabel.format(session.startedAt!.toLocal()),
                               style: session.templateName != null
                                   ? theme.textTheme.labelMedium
                                       ?.copyWith(color: scheme.onSurfaceVariant)

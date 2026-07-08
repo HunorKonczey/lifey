@@ -2,6 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { trainerApi } from "@/features/trainer/api";
@@ -12,17 +13,40 @@ import { ClientStatisticsTab } from "@/features/trainer/components/ClientStatist
 import { ClientStepsTab } from "@/features/trainer/components/ClientStepsTab";
 import { ClientNutritionTab } from "@/features/trainer/components/ClientNutritionTab";
 import { ClientWorkoutsTab } from "@/features/trainer/components/ClientWorkoutsTab";
+import { ClientScheduleTab } from "@/features/trainer/components/ClientScheduleTab";
+import { ScheduleWorkoutDrawer } from "@/features/trainer/components/ScheduleWorkoutDrawer";
+import { nameFor } from "@/features/trainer/components/ClientAvatar";
 import { Skeleton } from "@/components/status/Skeleton";
 
 interface ClientDetailPageProps {
   params: Promise<{ clientId: string }>;
 }
 
+/* Remembers each client's last-active tab for the lifetime of the tab/session
+ * (not persisted) — so hopping from client A to client B and back to A
+ * restores A's tab instead of resetting to Overview. */
+const lastActiveTabByClient = new Map<number, ClientTab>();
+
 export default function ClientDetailPage({ params }: ClientDetailPageProps) {
   const { clientId: clientIdParam } = use(params);
   const clientId = Number(clientIdParam);
   const t = useTranslations("admin.clientDetail");
-  const [tab, setTab] = useState<ClientTab>("overview");
+  const searchParams = useSearchParams();
+  /* Deep-linked from the trainer calendar's session-peek ("Kliens ütemterve" / "Edzés
+   * megnyitása") — e.g. ?tab=schedule or ?tab=workouts&focusSessionId=123 — takes
+   * priority over the remembered tab; otherwise fall back to what was last active. */
+  const [tab, setTabState] = useState<ClientTab>(
+    () => (searchParams.get("tab") as ClientTab | null) ?? lastActiveTabByClient.get(clientId) ?? "overview",
+  );
+  const setTab = (next: ClientTab) => {
+    lastActiveTabByClient.set(clientId, next);
+    setTabState(next);
+  };
+  const [scheduleDrawerOpen, setScheduleDrawerOpen] = useState(false);
+  const [focusSessionId, setFocusSessionId] = useState<number | null>(() => {
+    const raw = searchParams.get("focusSessionId");
+    return raw ? Number(raw) : null;
+  });
 
   const { data: clients, isLoading } = useQuery({
     queryKey: queryKeys.trainerClients.all(),
@@ -78,12 +102,40 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <ClientDetailHeader client={client} tab={tab} onTabChange={setTab} />
+      <ClientDetailHeader
+        client={client}
+        tab={tab}
+        onTabChange={setTab}
+        onScheduleWorkout={() => setScheduleDrawerOpen(true)}
+      />
       {tab === "overview" && <ClientOverviewTab clientId={clientId} />}
       {tab === "statistics" && <ClientStatisticsTab clientId={clientId} />}
       {tab === "steps" && <ClientStepsTab clientId={clientId} />}
       {tab === "nutrition" && <ClientNutritionTab clientId={clientId} />}
-      {tab === "workouts" && <ClientWorkoutsTab clientId={clientId} />}
+      {tab === "workouts" && (
+        <ClientWorkoutsTab
+          clientId={clientId}
+          focusSessionId={focusSessionId}
+          onFocusHandled={() => setFocusSessionId(null)}
+        />
+      )}
+      {tab === "schedule" && (
+        <ClientScheduleTab
+          clientId={clientId}
+          onOpenDrawer={() => setScheduleDrawerOpen(true)}
+          onViewSession={(sessionId) => {
+            setFocusSessionId(sessionId);
+            setTab("workouts");
+          }}
+        />
+      )}
+      {scheduleDrawerOpen && (
+        <ScheduleWorkoutDrawer
+          clientId={clientId}
+          clientName={nameFor(client.clientEmail)}
+          onClose={() => setScheduleDrawerOpen(false)}
+        />
+      )}
     </div>
   );
 }

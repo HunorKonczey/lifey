@@ -10,6 +10,11 @@ import type {
   AssignmentResponse,
   ClientNutritionGoalsResponse,
   ContentType,
+  ScheduleRequest,
+  ScheduleResponse,
+  ScheduleSummaryResponse,
+  ScheduledSessionResponse,
+  TrainerCalendarSessionResponse,
   TrainerClientResponse,
   TrainerInviteRequest,
   TrainerInviteResponse,
@@ -70,4 +75,16 @@ export const trainerApi = {
       throw e;
     }
   },
+
+  createSchedule: (body: ScheduleRequest) => api.post<ScheduleResponse>("/trainer/schedules", body),
+  schedulesForClient: (clientId: number) =>
+    api.get<ScheduleSummaryResponse[]>(`/trainer/clients/${clientId}/schedules`),
+  scheduledSessions: (clientId: number, from: string, to: string) =>
+    api.get<ScheduledSessionResponse[]>(
+      `/trainer/clients/${clientId}/scheduled-sessions?from=${from}&to=${to}`,
+    ),
+  cancelSchedule: (scheduleId: number) => api.delete(`/trainer/schedules/${scheduleId}`),
+  cancelOccurrence: (sessionId: number) => api.delete(`/trainer/scheduled-sessions/${sessionId}`),
+  calendarSessions: (from: string, to: string) =>
+    api.get<TrainerCalendarSessionResponse[]>(`/trainer/scheduled-sessions?from=${from}&to=${to}`),
 };

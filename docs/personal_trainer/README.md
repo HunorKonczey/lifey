@@ -13,6 +13,13 @@ Cél: a Lifey-be bekerül egy **személyi edző (trainer)** szerepkör. A kliens
 | [`05-mobil-terv.md`](05-mobil-terv.md) | Mobil app változások: lebegő meghívó-kártya, polling, edzőtől kapott tartalom jelölése |
 | [`06-design.md`](06-design.md) | **Design terv**: admin felület layoutja és képernyői, kliens-választó modal, mobil meghívó-kártya — a meglévő brown-green design tokenekre építve |
 | [`07-utemterv-es-kockazatok.md`](07-utemterv-es-kockazatok.md) | Fázisokra bontott ütemterv, mérföldkövek, kockázatok, nyitott kérdések |
+| [`08-utemezett-edzesek-koncepcio.md`](08-utemezett-edzesek-koncepcio.md) | **Ütemezett edzések** (PT5): koncepció, folyamatok, üzleti szabályok (3 hónapos horizont, 7 napos kliens-láthatóság, ismétlődés) |
+| [`09-utemezett-edzesek-domain-backend.md`](09-utemezett-edzesek-domain-backend.md) | Ütemezett edzések: V45 migráció, session-bővítés (`scheduled_for`), `WorkoutScheduleService`, végpontok, sync-hatás, tesztek |
+| [`10-utemezett-edzesek-web-mobil.md`](10-utemezett-edzesek-web-mobil.md) | Ütemezett edzések: admin Ütemterv tab + ütemező drawer, mobil "Közelgő" szekció + felugró kártya, PT5 fázis — **frame-térkép az elkészült designhoz** |
+| [`11-utemezett-edzesek-design-prompt.md`](11-utemezett-edzesek-design-prompt.md) | Ütemezett edzések: design prompt (archív) + a funkció **döntés-naplója** |
+| [`design/Lifey Schedule.dc.html`](design/Lifey%20Schedule.dc.html) | **Ütemezett edzések — elkészült design** (5 frame: ütemterv tab, drawer, mobil közelgő, felugró kártya, állapotok) — a megvalósítás ebből dolgozik |
+| [`12-edzo-naptar-terv.md`](12-edzo-naptar-terv.md) | **Edző-naptár** (PT6): új sidebar-menüpont + `/admin/calendar` — az összes kliens ütemezett edzései egy naptárban (hét/hónap nézet, peek, szűrők), aggregált backend-végpont |
+| [`13-edzo-naptar-design-prompt.md`](13-edzo-naptar-design-prompt.md) | Edző-naptár: design prompt (Claude Designnak) + a funkció **döntés-naplója** |
 
 ## A legfontosabb döntések (összefoglaló)
 

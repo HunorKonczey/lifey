@@ -12,6 +12,7 @@ import { queryKeys } from "@/lib/api/queryKeys";
 
 const NAV_ITEMS = [
   { href: "/admin", icon: "group", key: "clients" },
+  { href: "/admin/calendar", icon: "calendar_month", key: "calendar" },
   { href: "/admin/invites", icon: "mail", key: "invites" },
   { href: "/admin/workouts", icon: "fitness_center", key: "workouts" },
   { href: "/admin/nutrition", icon: "restaurant", key: "nutrition" },

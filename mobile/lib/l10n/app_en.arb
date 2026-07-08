@@ -595,6 +595,36 @@
     "inProgressLabel": "In progress",
     "@inProgressLabel": {"description": "Chip label for a workout session that hasn't finished yet"},
 
+    "freeWorkoutLabel": "Free workout",
+    "@freeWorkoutLabel": {"description": "Fallback name for a workout session with no linked template"},
+
+    "upcomingSessionsTitle": "Upcoming",
+    "@upcomingSessionsTitle": {"description": "Section title above trainer-scheduled upcoming workouts on the Sessions tab"},
+
+    "todayGroupLabel": "Today",
+    "@todayGroupLabel": {"description": "Day-group header for today's upcoming workouts"},
+
+    "tomorrowGroupLabel": "Tomorrow",
+    "@tomorrowGroupLabel": {"description": "Day-group header for tomorrow's upcoming workouts"},
+
+    "startWorkoutButtonLabel": "Start",
+    "@startWorkoutButtonLabel": {"description": "Button to start a trainer-scheduled upcoming workout"},
+
+    "laterButtonLabel": "Later",
+    "@laterButtonLabel": {"description": "Button to dismiss the upcoming-workout pop-up card for today"},
+
+    "upcomingWorkoutCardTitle": "Today: {name}",
+    "@upcomingWorkoutCardTitle": {"description": "Pop-up card title for today's scheduled workout, no time given", "placeholders": {"name": {"type": "String"}}},
+
+    "upcomingWorkoutCardTitleWithTime": "Today {time}: {name}",
+    "@upcomingWorkoutCardTitleWithTime": {"description": "Pop-up card title for today's scheduled workout with a time", "placeholders": {"time": {"type": "String"}, "name": {"type": "String"}}},
+
+    "upcomingWorkoutMoreCount": "+{count} more today",
+    "@upcomingWorkoutMoreCount": {"description": "Indicator that more than one workout is scheduled today", "placeholders": {"count": {"type": "int"}}},
+
+    "upcomingWorkoutDismissTooltip": "Dismiss",
+    "@upcomingWorkoutDismissTooltip": {"description": "Tooltip for the close button on the upcoming-workout pop-up card"},
+
     "setsCountLabel": "{count} sets",
     "@setsCountLabel": {"description": "Number of sets in a workout session", "placeholders": {"count": {"type": "int"}}},
 

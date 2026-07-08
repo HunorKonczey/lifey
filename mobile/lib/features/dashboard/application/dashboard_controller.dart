@@ -52,7 +52,12 @@ bool _isToday(DateTime dateTime) {
 /// device's own already-local data.
 final dashboardControllerProvider = Provider<DashboardData>((ref) {
   final meals = ref.watch(mealControllerProvider).value ?? const [];
-  final sessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+  // Upcoming (trainer-scheduled, not-yet-started) sessions aren't "workouts
+  // that happened" — excluded here the same way the backend excludes them
+  // from statistics/history (docs/personal_trainer/09-utemezett-edzesek-domain-backend.md).
+  final sessions = (ref.watch(workoutSessionControllerProvider).value ?? const [])
+      .where((s) => !s.isUpcoming)
+      .toList();
   final exercises = ref.watch(exerciseControllerProvider).value ?? const [];
   final categoryByExercise = {
     for (final e in exercises) e.clientId: e.category,
@@ -61,7 +66,7 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
   final water = ref.watch(todayWaterTotalProvider).value ?? 0;
 
   final todaysMeals = meals.where((m) => _isToday(m.dateTime)).toList();
-  final todaysSessionCount = sessions.where((s) => _isToday(s.startedAt)).length;
+  final todaysSessionCount = sessions.where((s) => _isToday(s.startedAt!)).length;
 
   final stats = DailyStats(
     calories: todaysMeals.fold(0.0, (sum, m) => sum + m.totalCalories),
@@ -90,7 +95,7 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
     };
     return RecentWorkout(
       clientId: session.clientId,
-      startedAt: session.startedAt,
+      startedAt: session.startedAt!,
       finishedAt: session.finishedAt,
       setCount: session.sets.length,
       exerciseNames: exerciseNames.toList(),

@@ -38,7 +38,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     @Override
     @Transactional(readOnly = true)
     public List<WorkoutSessionResponse> findAll() {
-        return sessionRepository.findAllByUserIdAndDeletedAtIsNullOrderByStartedAtDesc(currentUserProvider.getUserId()).stream()
+        return sessionRepository.findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullOrderByStartedAtDesc(currentUserProvider.getUserId()).stream()
                 .map(WorkoutSessionMapper::toResponse)
                 .toList();
     }
@@ -52,7 +52,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     @Override
     @Transactional(readOnly = true)
     public Page<WorkoutSessionResponse> findPageForUser(Long userId, Pageable pageable) {
-        return sessionRepository.findByUserIdAndDeletedAtIsNull(userId, pageable)
+        return sessionRepository.findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNull(userId, pageable)
                 .map(WorkoutSessionMapper::toResponse);
     }
 
