@@ -112,6 +112,8 @@ export function CalendarWeekView({ weekStart, sessions, onScheduleDay, onSelectS
                   )}
                   <button
                     onClick={(e) => onSelectSession(session, e.currentTarget)}
+                    data-testid="calendar-session-card"
+                    data-client-email={session.clientEmail}
                     className="rounded-2xl px-2.5 py-2.5 flex flex-col gap-1.5 text-left w-full"
                     style={{ background: "var(--surface-container)", opacity: cancelled ? 0.5 : 1 }}
                   >

@@ -217,7 +217,6 @@
       "showHistory": "Előzmények mutatása"
     },
     "calendar": {
-      "title": "Naptár",
       "today": "Ma",
       "previousWeek": "Előző hét",
       "nextWeek": "Következő hét",
@@ -226,12 +225,17 @@
       "week": "Hét",
       "month": "Hónap",
       "restOfDay": "Nap folyamán",
+      "restOfDayShort": "nap f.",
       "scheduleDayAria": "Edzés ütemezése erre: {date}",
       "moreCount": "+{count} további",
       "peekTitle": "Edzés részletei",
       "close": "Bezárás",
       "clientSchedule": "Kliens ütemterve",
-      "openSession": "Edzés megnyitása"
+      "openSession": "Edzés megnyitása",
+      "clientsSelected": "{selected}/{total} kliens",
+      "showCancelled": "Lemondottak",
+      "emptyTitle": "Nincs ütemezett edzés ebben az időszakban",
+      "emptyBody": "Lapozz másik hétre, vagy ütemezz egyet egy kliensnek."
     },
     "assignments": {
       "allClients": "Minden kliens",

@@ -217,7 +217,6 @@
       "showHistory": "Show history"
     },
     "calendar": {
-      "title": "Calendar",
       "today": "Today",
       "previousWeek": "Previous week",
       "nextWeek": "Next week",
@@ -226,12 +225,17 @@
       "week": "Week",
       "month": "Month",
       "restOfDay": "Later that day",
+      "restOfDayShort": "later",
       "scheduleDayAria": "Schedule a workout for {date}",
       "moreCount": "+{count} more",
       "peekTitle": "Workout details",
       "close": "Close",
       "clientSchedule": "Client's schedule",
-      "openSession": "Open workout"
+      "openSession": "Open workout",
+      "clientsSelected": "{selected}/{total} clients",
+      "showCancelled": "Cancelled",
+      "emptyTitle": "No workouts scheduled in this period",
+      "emptyBody": "Page to another week, or schedule one for a client."
     },
     "assignments": {
       "allClients": "All clients",
