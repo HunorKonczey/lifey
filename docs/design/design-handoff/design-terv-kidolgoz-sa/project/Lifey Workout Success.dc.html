@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  a{color:#586E38;} a:hover{color:#9DAE6B;}
+  .mi{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  .fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+  @keyframes cfBurst{0%{transform:translate(0,0) rotate(0deg) scale(.4);opacity:0;}6%{opacity:1;}55%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(1);opacity:0;}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(1);opacity:0;}}
+</style>
+</helmet>
+<div style="min-width:100%;min-height:100vh;width:max-content;box-sizing:border-box;padding:48px;background:#e7e5df;font-family:'Plus Jakarta Sans',sans-serif;">
+
+  <div style="max-width:1100px;margin-bottom:38px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+      <div style="width:46px;height:46px;border-radius:14px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:28px;">celebration</span></div>
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#1c1d18;letter-spacing:-0.5px;">Lifey — Workout Success</div>
+        <div style="font-size:14px;font-weight:500;color:#6a6a60;">Ünneplő dialógus edzés után — mobil (Flutter M3) és web (Next.js), dark + light</div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:500;color:#76766c;line-height:1.6;max-width:880px;">Akkor jelenik meg, ha a felhasználó legalább 2 mérőszámban javult az előző alkalomhoz képest. Konfetti csak belépéskor; a Tweaks panelen nyelv (EN/HU) és animáció kapcsolható — az animáció kikapcsolva a reduced-motion statikus állapotot mutatja.</div>
+  </div>
+
+  <!-- ============ ROW 1 · MOBILE ============ -->
+  <div style="display:flex;gap:44px;align-items:flex-start;">
+
+    <!-- 01 · MOBILE DARK -->
+    <div style="flex:none;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">01 · Mobile — dark <span style="font-weight:500;color:#8a8a7e;">— Flutter M3, 390×844</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div data-screen-label="Mobile dark" style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+
+          <!-- dimmed underlying summary screen -->
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:54px;background:rgba(34,36,27,.5);border-radius:20px;display:flex;align-items:center;padding:0 18px;color:rgba(241,240,228,.5);"><span style="font-size:18px;font-weight:800;">Push day</span></div>
+          <div style="position:absolute;top:130px;left:16px;right:16px;background:#1C1E16;opacity:.45;border-radius:20px;padding:16px;display:flex;gap:12px;">
+            <div style="flex:1;background:#22241B;border-radius:14px;padding:12px;"><div style="font-size:11px;font-weight:600;color:#A8A899;">Duration</div><div style="font-size:19px;font-weight:800;color:#F1F0E4;margin-top:3px;">54:20</div></div>
+            <div style="flex:1;background:#22241B;border-radius:14px;padding:12px;"><div style="font-size:11px;font-weight:600;color:#A8A899;">Volume</div><div style="font-size:19px;font-weight:800;color:#F1F0E4;margin-top:3px;">7,430 kg</div></div>
+          </div>
+
+          <!-- scrim -->
+          <div style="position:absolute;inset:0;background:rgba(8,9,6,.72);backdrop-filter:blur(2px);z-index:40;"></div>
+
+          <!-- dialog -->
+          <div style="position:absolute;left:24px;right:24px;top:50%;transform:translateY(-50%);background:#22241B;border-radius:28px;padding:26px 22px 22px;z-index:50;box-shadow:0 30px 70px rgba(0,0,0,.6);">
+            <div style="position:relative;width:116px;height:116px;margin:0 auto 16px;">
+              <div style="position:absolute;inset:0;border-radius:50%;background:rgba(157,174,107,.16);display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:66px;">celebration</span></div>
+              {{ confettiDark }}
+            </div>
+            <div style="font-size:22px;font-weight:800;color:#F1F0E4;text-align:center;letter-spacing:-0.3px;margin-bottom:7px;">{{ t.title }}</div>
+            <div style="font-size:13.5px;font-weight:500;color:#A8A899;text-align:center;line-height:1.5;margin-bottom:20px;">{{ t.subtitle }}</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;">
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+                <div style="background:#161611;border-radius:14px;padding:11px 13px;display:flex;align-items:center;gap:10px;">
+                  <div style="flex:1;min-width:0;font-size:13.5px;font-weight:700;color:#F1F0E4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+                  <div style="display:flex;gap:6px;flex:none;">
+                    <sc-for list="{{ r.chips }}" as="c" hint-placeholder-count="1">
+                      <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(76,175,80,.15);color:#4CAF50;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;"><span class="mi" style="font-size:14px;">arrow_upward</span>{{ c.v }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="text-align:center;font-size:12.5px;font-weight:700;color:#777264;margin-bottom:18px;">{{ t.more }}</div>
+            <div style="background:#9DAE6B;color:#1E1F18;height:54px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;">{{ t.btn }}</div>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.3);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 · MOBILE LIGHT -->
+    <div style="flex:none;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">02 · Mobile — light <span style="font-weight:500;color:#8a8a7e;">— Flutter M3, 390×844</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div data-screen-label="Mobile light" style="position:relative;width:390px;height:844px;background:#F3F2E8;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#1c1d18;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+
+          <!-- dimmed underlying summary screen -->
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:54px;background:rgba(236,235,222,.6);border-radius:20px;display:flex;align-items:center;padding:0 18px;color:rgba(28,29,24,.5);"><span style="font-size:18px;font-weight:800;">Push day</span></div>
+          <div style="position:absolute;top:130px;left:16px;right:16px;background:#FFFFFF;opacity:.55;border-radius:20px;padding:16px;display:flex;gap:12px;">
+            <div style="flex:1;background:#ECEBDE;border-radius:14px;padding:12px;"><div style="font-size:11px;font-weight:600;color:#6a6a60;">Duration</div><div style="font-size:19px;font-weight:800;color:#1c1d18;margin-top:3px;">54:20</div></div>
+            <div style="flex:1;background:#ECEBDE;border-radius:14px;padding:12px;"><div style="font-size:11px;font-weight:600;color:#6a6a60;">Volume</div><div style="font-size:19px;font-weight:800;color:#1c1d18;margin-top:3px;">7,430 kg</div></div>
+          </div>
+
+          <!-- scrim -->
+          <div style="position:absolute;inset:0;background:rgba(28,29,24,.45);backdrop-filter:blur(2px);z-index:40;"></div>
+
+          <!-- dialog -->
+          <div style="position:absolute;left:24px;right:24px;top:50%;transform:translateY(-50%);background:#FFFFFF;border-radius:28px;padding:26px 22px 22px;z-index:50;box-shadow:0 30px 70px rgba(28,29,24,.35);">
+            <div style="position:relative;width:116px;height:116px;margin:0 auto 16px;">
+              <div style="position:absolute;inset:0;border-radius:50%;background:rgba(88,110,56,.12);display:flex;align-items:center;justify-content:center;color:#586E38;"><span class="mi fill" style="font-size:66px;">celebration</span></div>
+              {{ confettiLight }}
+            </div>
+            <div style="font-size:22px;font-weight:800;color:#1c1d18;text-align:center;letter-spacing:-0.3px;margin-bottom:7px;">{{ t.title }}</div>
+            <div style="font-size:13.5px;font-weight:500;color:#6a6a60;text-align:center;line-height:1.5;margin-bottom:20px;">{{ t.subtitle }}</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;">
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+                <div style="background:#ECEBDE;border-radius:14px;padding:11px 13px;display:flex;align-items:center;gap:10px;">
+                  <div style="flex:1;min-width:0;font-size:13.5px;font-weight:700;color:#1c1d18;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+                  <div style="display:flex;gap:6px;flex:none;">
+                    <sc-for list="{{ r.chips }}" as="c" hint-placeholder-count="1">
+                      <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(76,175,80,.16);color:#388E3C;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;"><span class="mi" style="font-size:14px;">arrow_upward</span>{{ c.v }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="text-align:center;font-size:12.5px;font-weight:700;color:#8a8a7e;margin-bottom:18px;">{{ t.more }}</div>
+            <div style="background:#586E38;color:#FFFFFF;height:54px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;">{{ t.btn }}</div>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(28,29,24,.35);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 · MOTION SPEC -->
+    <div style="flex:none;width:560px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">03 · Motion &amp; behavior <span style="font-weight:500;color:#8a8a7e;">— konfetti kulcsállapot</span></div>
+      <div data-screen-label="Motion spec" style="background:#161611;border-radius:24px;padding:32px;color:#F1F0E4;box-shadow:0 1px 3px rgba(0,0,0,.18);">
+        <div style="display:flex;gap:30px;align-items:center;margin-bottom:26px;">
+          <div style="flex:none;position:relative;width:150px;height:150px;">
+            <div style="position:absolute;inset:0;border-radius:50%;background:rgba(157,174,107,.16);display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:84px;">celebration</span></div>
+            {{ confettiSpec }}
+          </div>
+          <div style="flex:none;position:relative;width:110px;height:110px;">
+            <div style="position:absolute;inset:0;border-radius:50%;background:rgba(157,174,107,.16);display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:60px;">celebration</span></div>
+            {{ confettiStatic }}
+          </div>
+          <div style="flex:1;font-size:11.5px;font-weight:600;color:#A8A899;line-height:1.6;">Bal: belépő burst (egyszeri, itt loopolva a demóhoz).<br>Jobb: <span style="color:#F1F0E4;">prefers-reduced-motion</span> statikus kulcsállapot.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <div style="display:flex;gap:12px;align-items:flex-start;"><span class="mi" style="font-size:19px;color:#9DAE6B;flex:none;margin-top:1px;">animation</span><div style="font-size:13px;font-weight:500;color:#A8A899;line-height:1.55;"><span style="color:#F1F0E4;font-weight:700;">Entrance:</span> scale 0.90 → 1.00 + fade, 250 ms ease-out. Konfetti: 12 részecske, egy burst ~650 ms, 0–240 ms delay-szórással — csak belépéskor.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start;"><span class="mi" style="font-size:19px;color:#9DAE6B;flex:none;margin-top:1px;">blur_on</span><div style="font-size:13px;font-weight:500;color:#A8A899;line-height:1.55;"><span style="color:#F1F0E4;font-weight:700;">Backdrop:</span> dark rgba(8,9,6,.72) / light rgba(28,29,24,.45), blur 2 px. Tap a scrimen = bezárás; nincs másodlagos akció.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start;"><span class="mi" style="font-size:19px;color:#9DAE6B;flex:none;margin-top:1px;">rule</span><div style="font-size:13px;font-weight:500;color:#A8A899;line-height:1.55;"><span style="color:#F1F0E4;font-weight:700;">Trigger:</span> nettó javulás ≥ 2 (zöld fel-nyilak − piros le-nyilak, súly és ismétlés külön számolva). Max 5 sor, utána „+N more / +N további”.</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start;"><span class="mi" style="font-size:19px;color:#9DAE6B;flex:none;margin-top:1px;">palette</span><div style="font-size:13px;font-weight:500;color:#A8A899;line-height:1.55;"><span style="color:#F1F0E4;font-weight:700;">Chip:</span> #4CAF50 15% tint + arrow_upward 14 px. Dialog: dark #22241B r28 (mobil) / r20 420 px (web); light #FFFFFF.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ROW 2 · WEB ============ -->
+  <div style="display:flex;gap:44px;align-items:flex-start;margin-top:44px;">
+
+    <!-- 04 · WEB DARK -->
+    <div style="flex:none;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">04 · Web — dark <span style="font-weight:500;color:#8a8a7e;">— Next.js, modal a workout logger felett</span></div>
+      <div data-screen-label="Web dark" style="position:relative;width:1180px;height:720px;background:#161611;border-radius:24px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.18);">
+        <!-- rail -->
+        <div style="position:absolute;left:14px;top:14px;bottom:14px;width:68px;background:#2A2C20;border-radius:22px;display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:8px;">
+          <div style="width:40px;height:40px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;margin-bottom:12px;"><span class="mi fill" style="font-size:24px;">eco</span></div>
+          <div style="width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#8b8a7c;"><span class="mi" style="font-size:23px;">dashboard</span></div>
+          <div style="width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#8b8a7c;"><span class="mi" style="font-size:23px;">restaurant</span></div>
+          <div style="width:44px;height:44px;border-radius:14px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:23px;">fitness_center</span></div>
+          <div style="width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#8b8a7c;"><span class="mi" style="font-size:23px;">monitor_weight</span></div>
+          <div style="width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#8b8a7c;"><span class="mi" style="font-size:23px;">bar_chart</span></div>
+        </div>
+        <!-- logger content -->
+        <div style="position:absolute;left:110px;top:14px;right:14px;bottom:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 10px 20px;">
+            <div><div style="font-size:23px;font-weight:800;color:#F1F0E4;letter-spacing:-0.4px;">Push day — session log</div><div style="font-size:13px;font-weight:600;color:#A8A899;margin-top:3px;">6 exercises · set 18 / 18</div></div>
+            <div style="display:flex;align-items:center;gap:8px;background:#22241B;border-radius:999px;padding:9px 16px;color:#9DAE6B;font-size:14px;font-weight:800;"><span class="mi" style="font-size:19px;">timer</span>54:20</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 10px;">
+            <div style="background:#1C1E16;border-radius:20px;padding:18px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><div style="width:38px;height:38px;border-radius:12px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">fitness_center</span></div><div style="font-size:15px;font-weight:800;color:#F1F0E4;">Bench press</div></div>
+              <div style="display:flex;flex-direction:column;gap:7px;">
+                <div style="display:flex;align-items:center;gap:10px;background:#22241B;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#F1F0E4;"><span style="color:#777264;font-weight:600;width:36px;">Set 1</span><span>82.5 kg</span><span class="mi" style="font-size:15px;color:#4CAF50;">arrow_upward</span><span style="margin-left:auto;">8 reps</span><span class="mi" style="font-size:15px;color:#4CAF50;">arrow_upward</span></div>
+                <div style="display:flex;align-items:center;gap:10px;background:#22241B;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#F1F0E4;"><span style="color:#777264;font-weight:600;width:36px;">Set 2</span><span>82.5 kg</span><span class="mi" style="font-size:15px;color:#4CAF50;">arrow_upward</span><span style="margin-left:auto;">7 reps</span><span class="mi" style="font-size:15px;color:#777264;">remove</span></div>
+                <div style="display:flex;align-items:center;gap:10px;background:#22241B;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#F1F0E4;"><span style="color:#777264;font-weight:600;width:36px;">Set 3</span><span>80 kg</span><span class="mi" style="font-size:15px;color:#4CAF50;">arrow_upward</span><span style="margin-left:auto;">6 reps</span><span class="mi" style="font-size:15px;color:#D66B5A;">arrow_downward</span></div>
+              </div>
+            </div>
+            <div style="background:#1C1E16;border-radius:20px;padding:18px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><div style="width:38px;height:38px;border-radius:12px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">fitness_center</span></div><div style="font-size:15px;font-weight:800;color:#F1F0E4;">Lat pulldown</div></div>
+              <div style="display:flex;flex-direction:column;gap:7px;">
+                <div style="display:flex;align-items:center;gap:10px;background:#22241B;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#F1F0E4;"><span style="color:#777264;font-weight:600;width:36px;">Set 1</span><span>65 kg</span><span class="mi" style="font-size:15px;color:#4CAF50;">arrow_upward</span><span style="margin-left:auto;">10 reps</span><span class="mi" style="font-size:15px;color:#777264;">remove</span></div>
+                <div style="display:flex;align-items:center;gap:10px;background:#22241B;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#F1F0E4;"><span style="color:#777264;font-weight:600;width:36px;">Set 2</span><span>65 kg</span><span class="mi" style="font-size:15px;color:#4CAF50;">arrow_upward</span><span style="margin-left:auto;">9 reps</span><span class="mi" style="font-size:15px;color:#777264;">remove</span></div>
+                <div style="display:flex;align-items:center;gap:10px;background:#22241B;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#F1F0E4;"><span style="color:#777264;font-weight:600;width:36px;">Set 3</span><span>62.5 kg</span><span class="mi" style="font-size:15px;color:#4CAF50;">arrow_upward</span><span style="margin-left:auto;">8 reps</span><span class="mi" style="font-size:15px;color:#777264;">remove</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- scrim -->
+        <div style="position:absolute;inset:0;background:rgba(8,9,6,.66);backdrop-filter:blur(3px);z-index:40;"></div>
+
+        <!-- modal -->
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:420px;background:#22241B;border-radius:20px;padding:28px 26px 24px;z-index:50;box-shadow:0 30px 70px rgba(0,0,0,.6);">
+          <div style="position:relative;width:108px;height:108px;margin:0 auto 14px;">
+            <div style="position:absolute;inset:0;border-radius:50%;background:rgba(157,174,107,.16);display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:64px;">celebration</span></div>
+            {{ confettiDark2 }}
+          </div>
+          <div style="font-size:21px;font-weight:800;color:#F1F0E4;text-align:center;letter-spacing:-0.3px;margin-bottom:6px;">{{ t.title }}</div>
+          <div style="font-size:13.5px;font-weight:500;color:#A8A899;text-align:center;line-height:1.5;margin-bottom:18px;">{{ t.subtitle }}</div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:8px;">
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+              <div style="background:#161611;border-radius:13px;padding:10px 13px;display:flex;align-items:center;gap:10px;">
+                <div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:#F1F0E4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+                <div style="display:flex;gap:6px;flex:none;">
+                  <sc-for list="{{ r.chips }}" as="c" hint-placeholder-count="1">
+                    <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(76,175,80,.15);color:#4CAF50;border-radius:999px;padding:3px 8px;font-size:11.5px;font-weight:800;"><span class="mi" style="font-size:13px;">arrow_upward</span>{{ c.v }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="text-align:center;font-size:12px;font-weight:700;color:#777264;margin-bottom:16px;">{{ t.more }}</div>
+          <div style="background:#9DAE6B;color:#1E1F18;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:800;">{{ t.btn }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 05 · WEB LIGHT -->
+    <div style="flex:none;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">05 · Web — light <span style="font-weight:500;color:#8a8a7e;">— Next.js, modal a workout logger felett</span></div>
+      <div data-screen-label="Web light" style="position:relative;width:1180px;height:720px;background:#F3F2E8;border-radius:24px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.18);">
+        <!-- rail -->
+        <div style="position:absolute;left:14px;top:14px;bottom:14px;width:68px;background:#FFFFFF;border-radius:22px;display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:8px;">
+          <div style="width:40px;height:40px;border-radius:13px;background:#586E38;display:flex;align-items:center;justify-content:center;color:#FFFFFF;margin-bottom:12px;"><span class="mi fill" style="font-size:24px;">eco</span></div>
+          <div style="width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#8a8a7e;"><span class="mi" style="font-size:23px;">dashboard</span></div>
+          <div style="width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#8a8a7e;"><span class="mi" style="font-size:23px;">restaurant</span></div>
+          <div style="width:44px;height:44px;border-radius:14px;background:#586E38;display:flex;align-items:center;justify-content:center;color:#FFFFFF;"><span class="mi fill" style="font-size:23px;">fitness_center</span></div>
+          <div style="width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#8a8a7e;"><span class="mi" style="font-size:23px;">monitor_weight</span></div>
+          <div style="width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#8a8a7e;"><span class="mi" style="font-size:23px;">bar_chart</span></div>
+        </div>
+        <!-- logger content -->
+        <div style="position:absolute;left:110px;top:14px;right:14px;bottom:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 10px 20px;">
+            <div><div style="font-size:23px;font-weight:800;color:#1c1d18;letter-spacing:-0.4px;">Push day — session log</div><div style="font-size:13px;font-weight:600;color:#6a6a60;margin-top:3px;">6 exercises · set 18 / 18</div></div>
+            <div style="display:flex;align-items:center;gap:8px;background:#FFFFFF;border-radius:999px;padding:9px 16px;color:#586E38;font-size:14px;font-weight:800;"><span class="mi" style="font-size:19px;">timer</span>54:20</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 10px;">
+            <div style="background:#FFFFFF;border-radius:20px;padding:18px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><div style="width:38px;height:38px;border-radius:12px;background:#ECEBDE;display:flex;align-items:center;justify-content:center;color:#586E38;"><span class="mi fill" style="font-size:21px;">fitness_center</span></div><div style="font-size:15px;font-weight:800;color:#1c1d18;">Bench press</div></div>
+              <div style="display:flex;flex-direction:column;gap:7px;">
+                <div style="display:flex;align-items:center;gap:10px;background:#ECEBDE;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#1c1d18;"><span style="color:#8a8a7e;font-weight:600;width:36px;">Set 1</span><span>82.5 kg</span><span class="mi" style="font-size:15px;color:#388E3C;">arrow_upward</span><span style="margin-left:auto;">8 reps</span><span class="mi" style="font-size:15px;color:#388E3C;">arrow_upward</span></div>
+                <div style="display:flex;align-items:center;gap:10px;background:#ECEBDE;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#1c1d18;"><span style="color:#8a8a7e;font-weight:600;width:36px;">Set 2</span><span>82.5 kg</span><span class="mi" style="font-size:15px;color:#388E3C;">arrow_upward</span><span style="margin-left:auto;">7 reps</span><span class="mi" style="font-size:15px;color:#8a8a7e;">remove</span></div>
+                <div style="display:flex;align-items:center;gap:10px;background:#ECEBDE;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#1c1d18;"><span style="color:#8a8a7e;font-weight:600;width:36px;">Set 3</span><span>80 kg</span><span class="mi" style="font-size:15px;color:#388E3C;">arrow_upward</span><span style="margin-left:auto;">6 reps</span><span class="mi" style="font-size:15px;color:#D66B5A;">arrow_downward</span></div>
+              </div>
+            </div>
+            <div style="background:#FFFFFF;border-radius:20px;padding:18px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><div style="width:38px;height:38px;border-radius:12px;background:#ECEBDE;display:flex;align-items:center;justify-content:center;color:#586E38;"><span class="mi fill" style="font-size:21px;">fitness_center</span></div><div style="font-size:15px;font-weight:800;color:#1c1d18;">Lat pulldown</div></div>
+              <div style="display:flex;flex-direction:column;gap:7px;">
+                <div style="display:flex;align-items:center;gap:10px;background:#ECEBDE;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#1c1d18;"><span style="color:#8a8a7e;font-weight:600;width:36px;">Set 1</span><span>65 kg</span><span class="mi" style="font-size:15px;color:#388E3C;">arrow_upward</span><span style="margin-left:auto;">10 reps</span><span class="mi" style="font-size:15px;color:#8a8a7e;">remove</span></div>
+                <div style="display:flex;align-items:center;gap:10px;background:#ECEBDE;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#1c1d18;"><span style="color:#8a8a7e;font-weight:600;width:36px;">Set 2</span><span>65 kg</span><span class="mi" style="font-size:15px;color:#388E3C;">arrow_upward</span><span style="margin-left:auto;">9 reps</span><span class="mi" style="font-size:15px;color:#8a8a7e;">remove</span></div>
+                <div style="display:flex;align-items:center;gap:10px;background:#ECEBDE;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:700;color:#1c1d18;"><span style="color:#8a8a7e;font-weight:600;width:36px;">Set 3</span><span>62.5 kg</span><span class="mi" style="font-size:15px;color:#388E3C;">arrow_upward</span><span style="margin-left:auto;">8 reps</span><span class="mi" style="font-size:15px;color:#8a8a7e;">remove</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- scrim -->
+        <div style="position:absolute;inset:0;background:rgba(28,29,24,.45);backdrop-filter:blur(3px);z-index:40;"></div>
+
+        <!-- modal -->
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:420px;background:#FFFFFF;border-radius:20px;padding:28px 26px 24px;z-index:50;box-shadow:0 30px 70px rgba(28,29,24,.4);">
+          <div style="position:relative;width:108px;height:108px;margin:0 auto 14px;">
+            <div style="position:absolute;inset:0;border-radius:50%;background:rgba(88,110,56,.12);display:flex;align-items:center;justify-content:center;color:#586E38;"><span class="mi fill" style="font-size:64px;">celebration</span></div>
+            {{ confettiLight2 }}
+          </div>
+          <div style="font-size:21px;font-weight:800;color:#1c1d18;text-align:center;letter-spacing:-0.3px;margin-bottom:6px;">{{ t.title }}</div>
+          <div style="font-size:13.5px;font-weight:500;color:#6a6a60;text-align:center;line-height:1.5;margin-bottom:18px;">{{ t.subtitle }}</div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:8px;">
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+              <div style="background:#ECEBDE;border-radius:13px;padding:10px 13px;display:flex;align-items:center;gap:10px;">
+                <div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:#1c1d18;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+                <div style="display:flex;gap:6px;flex:none;">
+                  <sc-for list="{{ r.chips }}" as="c" hint-placeholder-count="1">
+                    <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(76,175,80,.16);color:#388E3C;border-radius:999px;padding:3px 8px;font-size:11.5px;font-weight:800;"><span class="mi" style="font-size:13px;">arrow_upward</span>{{ c.v }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="text-align:center;font-size:12px;font-weight:700;color:#8a8a7e;margin-bottom:16px;">{{ t.more }}</div>
+          <div style="background:#586E38;color:#FFFFFF;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:800;">{{ t.btn }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;language&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;English&quot;, &quot;Magyar&quot;], &quot;default&quot;: &quot;English&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Copy&quot; },
+  &quot;animate&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Motion&quot; }
+}">
+class Component extends DCLogic {
+  renderVals() {
+    const hu = (this.props.language ?? 'English') === 'Magyar';
+    const animate = this.props.animate ?? true;
+
+    const t = hu ? {
+      title: 'Szuper edzés!',
+      subtitle: '8 dologban fejlődtél a múltkorihoz képest',
+      more: '+1 további',
+      btn: 'Tovább'
+    } : {
+      title: 'Great workout!',
+      subtitle: 'You improved in 8 areas since last time',
+      more: '+1 more',
+      btn: 'Continue'
+    };
+
+    const rows = hu ? [
+      { name: 'Fekvenyomás', chips: [{ v: '+2,5 kg' }, { v: '+2 ism.' }] },
+      { name: 'Ferde pados nyomás', chips: [{ v: '+2 ism.' }] },
+      { name: 'Lehúzás', chips: [{ v: '+5 kg' }] },
+      { name: 'Ülő evezés', chips: [{ v: '+2,5 kg' }, { v: '+1 ism.' }] },
+      { name: 'Vállból nyomás', chips: [{ v: '+1 ism.' }] }
+    ] : [
+      { name: 'Bench press', chips: [{ v: '+2.5 kg' }, { v: '+2 reps' }] },
+      { name: 'Incline dumbbell press', chips: [{ v: '+2 reps' }] },
+      { name: 'Lat pulldown', chips: [{ v: '+5 kg' }] },
+      { name: 'Seated cable row', chips: [{ v: '+2.5 kg' }, { v: '+1 rep' }] },
+      { name: 'Overhead press', chips: [{ v: '+1 rep' }] }
+    ];
+
+    const darkC = ['#9DAE6B', '#4CAF50', '#C49A6C', '#D8B35A'];
+    const lightC = ['#586E38', '#4CAF50', '#8A6A42', '#B8933A'];
+
+    return {
+      t, rows,
+      confettiDark: this.confetti(darkC, animate, 1, 'd1'),
+      confettiDark2: this.confetti(darkC, animate, 0.95, 'd2'),
+      confettiLight: this.confetti(lightC, animate, 1, 'l1'),
+      confettiLight2: this.confetti(lightC, animate, 0.95, 'l2'),
+      confettiSpec: this.confetti(darkC, animate, 1.35, 'sp'),
+      confettiStatic: this.confetti(darkC, false, 0.95, 'st')
+    };
+  }
+
+  confetti(colors, animate, scale, keyPrefix) {
+    // [angle°, dist, size, shape(0 dot / 1 square / 2 strip), colorIdx, delay s]
+    const P = [
+      [-90, 96, 9, 0, 0, 0.00],
+      [-55, 110, 7, 1, 1, 0.05],
+      [-120, 104, 8, 1, 2, 0.08],
+      [-20, 88, 6, 0, 3, 0.12],
+      [-160, 92, 7, 0, 1, 0.10],
+      [15, 76, 8, 2, 0, 0.16],
+      [165, 80, 6, 2, 1, 0.14],
+      [-75, 128, 6, 2, 3, 0.04],
+      [-105, 122, 6, 0, 1, 0.18],
+      [40, 66, 7, 1, 2, 0.20],
+      [140, 70, 7, 1, 0, 0.22],
+      [-40, 118, 5, 0, 0, 0.24]
+    ];
+    const kids = P.map((p, i) => {
+      const [ang, dist, size, shape, ci, delay] = p;
+      const rad = ang * Math.PI / 180;
+      const dx = Math.cos(rad) * dist * scale;
+      const dy = Math.sin(rad) * dist * scale;
+      const st = {
+        position: 'absolute', left: '50%', top: '50%',
+        width: (shape === 2 ? size * 0.5 : size) * scale + 'px',
+        height: (shape === 2 ? size * 1.9 : size) * scale + 'px',
+        marginLeft: -(size / 2) * scale + 'px',
+        marginTop: -(size / 2) * scale + 'px',
+        borderRadius: shape === 0 ? '50%' : '2px',
+        background: colors[ci % colors.length]
+      };
+      if (animate) {
+        st['--dx'] = dx.toFixed(1) + 'px';
+        st['--dy'] = dy.toFixed(1) + 'px';
+        st['--rot'] = (ang * 3) + 'deg';
+        st.opacity = 0;
+        st.animation = 'cfBurst 2.8s cubic-bezier(.15,.65,.3,1) ' + delay + 's infinite';
+      } else {
+        st.opacity = 0.9;
+        st.transform = 'translate(' + (dx * 0.62).toFixed(1) + 'px,' + (dy * 0.62).toFixed(1) + 'px) rotate(' + (ang * 2) + 'deg)';
+      }
+      return React.createElement('div', { key: keyPrefix + i + (animate ? 'a' : 's'), style: st });
+    });
+    return React.createElement('div', { style: { position: 'absolute', inset: '0', pointerEvents: 'none', zIndex: 2 } }, kids);
+  }
+}
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@ class Exercise {
     this.id,
     this.category,
     this.equipment,
+    this.description,
   });
 
   final String clientId;
@@ -17,6 +18,9 @@ class Exercise {
 
   /// Equipment enum code from the backend (e.g. "BARBELL"), null if not set.
   final String? equipment;
+
+  /// Free-text notes (e.g. machine setting), null if not set.
+  final String? description;
 
   /// Value equality by [clientId]: `DropdownButtonFormField<Exercise>`
   /// (add_set_sheet.dart) matches its `initialValue` against `items` by

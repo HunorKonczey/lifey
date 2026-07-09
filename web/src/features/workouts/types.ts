@@ -18,12 +18,14 @@ export interface ExerciseResponse {
   name: string;
   category: string | null;
   equipment: string | null;
+  description: string | null;
 }
 
 export interface ExerciseRequest {
   name: string;
   category?: MuscleGroup | null;
   equipment?: Equipment | null;
+  description?: string | null;
 }
 
 // ─── Templates ───

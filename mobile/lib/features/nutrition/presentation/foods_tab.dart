@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/utils/search_normalize.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
@@ -165,12 +166,13 @@ class _FoodsTabState extends ConsumerState<FoodsTab> {
     final foodsState = ref.watch(foodSearchProvider);
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
-    final lowerQuery = query.toLowerCase();
+    final normalizedQuery = normalizeForSearch(query);
 
     return foodsState.when(
       data: (foods) {
-        final matches =
-            foods.where((f) => f.name.toLowerCase().contains(lowerQuery)).toList();
+        final matches = foods
+            .where((f) => normalizeForSearch(f.name).contains(normalizedQuery))
+            .toList();
         if (matches.isEmpty) {
           return EmptyView(
             icon: Icons.search_off,

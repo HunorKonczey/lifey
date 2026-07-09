@@ -26,7 +26,7 @@ class ExerciseRepository {
     });
   }
 
-  Future<void> create(String name, {String? category, String? equipment}) async {
+  Future<void> create(String name, {String? category, String? equipment, String? description}) async {
     final clientId = newClientId();
     await _db.into(_db.exercises).insert(
           ExercisesCompanion.insert(
@@ -34,12 +34,13 @@ class ExerciseRepository {
             name: name,
             category: Value(category),
             equipment: Value(equipment),
+            description: Value(description),
           ),
         );
     await _outbox.enqueueCreate(
       clientId: clientId,
       entityType: 'exercise',
-      payload: {'name': name, 'category': category, 'equipment': equipment},
+      payload: {'name': name, 'category': category, 'equipment': equipment, 'description': description},
     );
   }
 
@@ -48,18 +49,20 @@ class ExerciseRepository {
     required String name,
     String? category,
     String? equipment,
+    String? description,
   }) async {
     await (_db.update(_db.exercises)..where((t) => t.clientId.equals(clientId))).write(
           ExercisesCompanion(
             name: Value(name),
             category: Value(category),
             equipment: Value(equipment),
+            description: Value(description),
           ),
         );
     await _outbox.enqueueUpdate(
       clientId: clientId,
       entityType: 'exercise',
-      payload: {'name': name, 'category': category, 'equipment': equipment},
+      payload: {'name': name, 'category': category, 'equipment': equipment, 'description': description},
     );
   }
 
@@ -81,6 +84,7 @@ class ExerciseRepository {
       name: row.name,
       category: row.category,
       equipment: row.equipment,
+      description: row.description,
     );
   }
 }

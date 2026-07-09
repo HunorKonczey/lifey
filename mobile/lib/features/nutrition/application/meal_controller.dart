@@ -86,6 +86,19 @@ class MealController extends StreamNotifier<List<Meal>> {
 
   Future<void> deleteMeal(String clientId) => _repo.delete(clientId);
 
+  /// Creates a copy of [meal] logged at the current time — the common use
+  /// case is "I ate this again today", not re-logging it on its original date.
+  Future<String> duplicateMeal(Meal meal) {
+    return _repo.create(
+      dateTime: DateTime.now(),
+      mealType: meal.mealType,
+      name: meal.name,
+      entries: meal.entries
+          .map((e) => MealEntryInput(foodClientId: e.foodClientId, grams: e.quantityInGrams))
+          .toList(),
+    );
+  }
+
   /// Drains the outbox, then re-pulls from the server — matching what the
   /// dashboard's pull-to-refresh does. Without the pull half, swiping to
   /// refresh only pushes local edits and never reconciles a stale/corrupted

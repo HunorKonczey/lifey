@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  a{color:#6E9A6A;text-decoration:none;}
+  a:hover{color:#A9CBA5;}
+  .mi{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  .fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+  @keyframes lifeyPulse{0%,100%{opacity:.55;}50%{opacity:.28;}}
+</style>
+</helmet>
+
+<!-- ======================= TITLE BLOCK ======================= -->
+<div style="position:absolute;left:0px;top:-150px;width:1800px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div style="width:54px;height:54px;border-radius:16px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:32px;">calendar_month</span></div>
+    <div>
+      <div style="font-size:34px;font-weight:800;color:#1c1d18;letter-spacing:-0.8px;">Lifey — Edző-naptár · minden kliens, egy nézetben</div>
+      <div style="font-size:16px;font-weight:500;color:#6a6a60;">Hét = kártya-oszlopok (nem óra-rács) · hónap-rács · session-peek popover · állapotok + agenda · nincs új token</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME A · HÉT NÉZET ======================= -->
+<div data-screen-label="A · Hét nézet" style="position:absolute;left:0px;top:0px;width:1720px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">A · Hét nézet (alapértelmezett) — /admin/calendar · „Naptár" a sidebarban · kliens-szűrő nyitva</div>
+  <div style="position:relative;background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:800px;">
+    <!-- sidebar -->
+    <div style="width:248px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:24px;padding:20px 14px;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 22px;">
+        <div style="width:38px;height:38px;border-radius:12px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:23px;">eco</span></div>
+        <span style="font-size:19px;font-weight:800;color:#F1F0E4;letter-spacing:-0.4px;">Lifey</span>
+        <span style="display:flex;align-items:center;gap:5px;background:#6E9A6A;color:#161611;border-radius:999px;padding:4px 10px;font-size:10px;font-weight:800;letter-spacing:.7px;margin-left:2px;"><span class="mi fill" style="font-size:13px;">fitness_center</span>EDZŐ</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">group</span><span style="font-size:14px;font-weight:600;">Klienseim</span></div>
+        <div style="display:flex;align-items:center;gap:13px;background:#6E9A6A;color:#161611;border-radius:14px;padding:11px 14px;"><span class="mi fill" style="font-size:22px;">calendar_month</span><span style="font-size:14px;font-weight:700;">Naptár</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">mail</span><span style="font-size:14px;font-weight:600;">Meghívók</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">fitness_center</span><span style="font-size:14px;font-weight:600;">Edzésterveim</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">restaurant</span><span style="font-size:14px;font-weight:600;">Ételeim</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">assignment</span><span style="font-size:14px;font-weight:600;">Kiosztott</span></div>
+      </div>
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:3px;">
+        <div style="height:1px;background:#3C3E32;margin:0 8px 10px;"></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">undo</span><span style="font-size:14px;font-weight:600;">Saját nézet</span></div>
+        <div style="display:flex;align-items:center;gap:11px;background:#161611;border-radius:14px;padding:10px 12px;margin-top:8px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:14px;font-weight:800;">P</div>
+          <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#F1F0E4;">Kovács Péter</div><div style="font-size:11px;color:#A8A899;">Edző</div></div>
+          <span class="mi" style="font-size:20px;color:#A8A899;">unfold_more</span>
+        </div>
+      </div>
+    </div>
+    <!-- main -->
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px;min-width:0;gap:12px;">
+      <!-- top bar -->
+      <div style="background:#2A2C20;border-radius:20px;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 22px;flex:none;">
+        <div><div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Naptár</div><div style="font-size:11px;font-weight:500;color:#A8A899;">6 kliens · 14 alkalom ezen a héten</div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:42px;height:42px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:21px;">notifications</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:15px;font-weight:800;">P</div>
+        </div>
+      </div>
+      <!-- toolbar -->
+      <div style="background:#2A2C20;border-radius:16px;padding:8px 10px;display:flex;align-items:center;gap:10px;flex:none;">
+        <span style="border:1px solid #3C3E32;color:#F1F0E4;border-radius:11px;padding:8px 15px;font-size:12.5px;font-weight:700;">Ma</span>
+        <div style="display:flex;gap:5px;">
+          <div style="width:34px;height:34px;border-radius:11px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">chevron_left</span></div>
+          <div style="width:34px;height:34px;border-radius:11px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">chevron_right</span></div>
+        </div>
+        <span style="font-size:15.5px;font-weight:800;color:#F1F0E4;letter-spacing:-0.2px;margin-left:4px;">júl. 6–12.</span>
+        <div style="flex:1;"></div>
+        <div style="display:flex;background:#161611;border-radius:999px;padding:3px;">
+          <span style="background:#6E9A6A;color:#161611;font-size:12px;font-weight:700;padding:7px 17px;border-radius:999px;">Hét</span>
+          <span style="color:#A8A899;font-size:12px;font-weight:600;padding:7px 17px;">Hónap</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:#161611;border-radius:11px;padding:6px 10px 6px 8px;">
+          <div style="display:flex;">
+            <span style="width:22px;height:22px;border-radius:50%;background:#C49A6C;color:#161611;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #161611;">KA</span>
+            <span style="width:22px;height:22px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #161611;margin-left:-7px;">NB</span>
+            <span style="width:22px;height:22px;border-radius:50%;background:#B08AC8;color:#161611;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #161611;margin-left:-7px;">SE</span>
+          </div>
+          <span style="font-size:12.5px;font-weight:700;color:#F1F0E4;">Minden kliens</span>
+          <span class="mi" style="font-size:19px;color:#A8A899;">arrow_drop_down</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:0 6px;">
+          <span style="font-size:12px;font-weight:600;color:#A8A899;">Lemondottak</span>
+          <div style="width:36px;height:20px;border-radius:999px;background:#3C3E32;position:relative;"><div style="position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#A8A899;"></div></div>
+        </div>
+      </div>
+      <!-- week grid -->
+      <div style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);gap:8px;min-height:0;">
+        <!-- H 6 (múlt) -->
+        <div style="background:#1C1E16;border:1.5px solid transparent;border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:7px;min-width:0;">
+          <div style="padding:4px 6px 3px;"><div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#777264;">HÉTFŐ</div><div style="font-size:16px;font-weight:800;color:#A8A899;">júl. 6.</div></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:13px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">07:00</span><span style="display:flex;align-items:center;gap:4px;color:#9DAE6B;font-size:10px;font-weight:800;"><span class="mi fill" style="font-size:13px;">check_circle</span>elvégezve</span></div>
+            <div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Nagy Bence</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Leg day</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin:1px 0;"><div style="flex:1;height:1px;background:#2A2C20;"></div><span style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#777264;">Nap folyamán</span><div style="flex:1;height:1px;background:#2A2C20;"></div></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#C49A6C;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Kiss Anna</span></div><span style="display:flex;align-items:center;gap:4px;background:rgba(207,102,121,.16);color:#CF6679;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;flex:none;"><span class="mi" style="font-size:12px;">warning</span>kihagyta</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</div>
+          </div>
+        </div>
+        <!-- K 7 (múlt) -->
+        <div style="background:#1C1E16;border:1.5px solid transparent;border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:7px;min-width:0;">
+          <div style="padding:4px 6px 3px;"><div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#777264;">KEDD</div><div style="font-size:16px;font-weight:800;color:#A8A899;">júl. 7.</div></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:13px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">17:30</span><span style="display:flex;align-items:center;gap:4px;color:#9DAE6B;font-size:10px;font-weight:800;"><span class="mi fill" style="font-size:13px;">check_circle</span>elvégezve</span></div>
+            <div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#B08AC8;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Szabó Emma</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin:1px 0;"><div style="flex:1;height:1px;background:#2A2C20;"></div><span style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#777264;">Nap folyamán</span><div style="flex:1;height:1px;background:#2A2C20;"></div></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#C49A6C;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Kiss Anna</span></div><span style="display:flex;align-items:center;gap:4px;color:#9DAE6B;font-size:10px;font-weight:800;flex:none;"><span class="mi fill" style="font-size:13px;">check_circle</span>elvégezve</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Mobility</div>
+          </div>
+        </div>
+        <!-- Sze 8 (múlt) -->
+        <div style="background:#1C1E16;border:1.5px solid transparent;border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:7px;min-width:0;">
+          <div style="padding:4px 6px 3px;"><div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#777264;">SZERDA</div><div style="font-size:16px;font-weight:800;color:#A8A899;">júl. 8.</div></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:13px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">07:00</span><span style="display:flex;align-items:center;gap:4px;color:#9DAE6B;font-size:10px;font-weight:800;"><span class="mi fill" style="font-size:13px;">check_circle</span>elvégezve</span></div>
+            <div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Nagy Bence</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Core + kardió</div>
+          </div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:13px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">18:00</span><span style="display:flex;align-items:center;gap:4px;background:rgba(207,102,121,.16);color:#CF6679;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;"><span class="mi" style="font-size:12px;">warning</span>kihagyta</span></div>
+            <div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#D8B35A;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">TG</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Tóth Gábor</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Láb nap</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin:1px 0;"><div style="flex:1;height:1px;background:#2A2C20;"></div><span style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#777264;">Nap folyamán</span><div style="flex:1;height:1px;background:#2A2C20;"></div></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#6FA8C4;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">HL</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Horváth Lili</span></div><span style="display:flex;align-items:center;gap:4px;color:#9DAE6B;font-size:10px;font-weight:800;flex:none;"><span class="mi fill" style="font-size:13px;">check_circle</span>elvégezve</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Mobility</div>
+          </div>
+        </div>
+        <!-- Cs 9 (MA) -->
+        <div style="background:#1E2318;border:1.5px solid rgba(110,154,106,.5);border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:7px;min-width:0;">
+          <div style="padding:4px 6px 3px;display:flex;align-items:flex-start;justify-content:space-between;"><div><div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#A9CBA5;">CSÜTÖRTÖK</div><div style="font-size:16px;font-weight:800;color:#F1F0E4;">júl. 9.</div></div><span style="background:#6E9A6A;color:#161611;border-radius:999px;padding:3px 9px;font-size:9.5px;font-weight:800;letter-spacing:.5px;">MA</span></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:13px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">07:00</span><span style="display:flex;align-items:center;gap:4px;color:#9DAE6B;font-size:10px;font-weight:800;"><span class="mi fill" style="font-size:13px;">check_circle</span>elvégezve</span></div>
+            <div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Nagy Bence</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Leg day</div>
+          </div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;box-shadow:0 0 0 2px #1E2318,0 0 0 4px #A9CBA5;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:13px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">18:00</span><span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span></div>
+            <div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#C49A6C;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Kiss Anna</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin:1px 0;"><div style="flex:1;height:1px;background:#2A2C20;"></div><span style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#777264;">Nap folyamán</span><div style="flex:1;height:1px;background:#2A2C20;"></div></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#D8B35A;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">TG</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Tóth Gábor</span></div><span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;flex:none;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Full body</div>
+          </div>
+        </div>
+        <!-- P 10 (hover: +) -->
+        <div style="background:#1C1E16;border:1.5px solid transparent;border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:7px;min-width:0;">
+          <div style="padding:4px 6px 3px;display:flex;align-items:flex-start;justify-content:space-between;"><div><div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#A8A899;">PÉNTEK</div><div style="font-size:16px;font-weight:800;color:#F1F0E4;">júl. 10.</div></div><span style="width:26px;height:26px;border-radius:9px;background:#2A2C20;color:#F1F0E4;display:flex;align-items:center;justify-content:center;"><span class="mi" style="font-size:17px;">add</span></span></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:13px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">18:00</span><span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span></div>
+            <div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#9DAE6B;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">VM</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Varga Máté</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Pull day</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin:1px 0;"><div style="flex:1;height:1px;background:#2A2C20;"></div><span style="font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#777264;">Nap folyamán</span><div style="flex:1;height:1px;background:#2A2C20;"></div></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#6FA8C4;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">HL</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Horváth Lili</span></div><span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;flex:none;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Mobility</div>
+          </div>
+        </div>
+        <!-- Szo 11 -->
+        <div style="background:#1C1E16;border:1.5px solid transparent;border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:7px;min-width:0;">
+          <div style="padding:4px 6px 3px;"><div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#A8A899;">SZOMBAT</div><div style="font-size:16px;font-weight:800;color:#F1F0E4;">júl. 11.</div></div>
+          <div style="background:#22241B;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:13px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">10:00</span><span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span></div>
+            <div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#B08AC8;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Szabó Emma</span></div>
+            <div style="font-size:11px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</div>
+          </div>
+        </div>
+        <!-- V 12 (üres nap) -->
+        <div style="background:#1C1E16;border:1.5px solid transparent;border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:7px;min-width:0;">
+          <div style="padding:4px 6px 3px;"><div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#A8A899;">VASÁRNAP</div><div style="font-size:16px;font-weight:800;color:#F1F0E4;">júl. 12.</div></div>
+        </div>
+      </div>
+      <!-- info bar -->
+      <div style="background:#1C1E16;border-radius:14px;padding:11px 16px;font-size:11.5px;color:#A8A899;display:flex;align-items:center;gap:9px;flex:none;"><span class="mi" style="font-size:16px;color:#6E9A6A;">info</span>Kártya-oszlopok, nem óra-rács — az időpont nélküliek a „Nap folyamán" alatt. Mai oszlop: tertiary keret + MA chip (nem csak szín). Billentyűzet: ← → nap, ↑ ↓ kártya — a mai Push day kártyán fókuszgyűrű. Nap-fejléc hover: „+" → ütemező drawer, a nap előtöltve (múltbeli napon nincs).</div>
+    </div>
+    <!-- client filter dropdown (open) -->
+    <div style="position:absolute;top:172px;right:170px;width:252px;background:#32342A;border-radius:16px;padding:7px;box-shadow:0 18px 44px rgba(0,0,0,.55);z-index:6;">
+      <div style="display:flex;align-items:center;gap:11px;border-radius:11px;padding:9px 11px;background:#3C3E32;">
+        <span style="width:18px;height:18px;border-radius:6px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi" style="font-size:13px;">check</span></span>
+        <span style="flex:1;font-size:13px;font-weight:700;color:#F1F0E4;">Minden kliens</span>
+      </div>
+      <div style="height:1px;background:#3C3E32;margin:6px 8px;"></div>
+      <div style="display:flex;align-items:center;gap:11px;border-radius:11px;padding:7px 11px;">
+        <span style="width:18px;height:18px;border-radius:6px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi" style="font-size:13px;">check</span></span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#C49A6C;color:#161611;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;">KA</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#F1F0E4;">Kiss Anna</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:11px;border-radius:11px;padding:7px 11px;">
+        <span style="width:18px;height:18px;border-radius:6px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi" style="font-size:13px;">check</span></span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;">NB</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#F1F0E4;">Nagy Bence</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:11px;border-radius:11px;padding:7px 11px;">
+        <span style="width:18px;height:18px;border-radius:6px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi" style="font-size:13px;">check</span></span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#B08AC8;color:#161611;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;">SE</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#F1F0E4;">Szabó Emma</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:11px;border-radius:11px;padding:7px 11px;">
+        <span style="width:18px;height:18px;border-radius:6px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi" style="font-size:13px;">check</span></span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#D8B35A;color:#161611;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;">TG</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#F1F0E4;">Tóth Gábor</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:11px;border-radius:11px;padding:7px 11px;">
+        <span style="width:18px;height:18px;border-radius:6px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi" style="font-size:13px;">check</span></span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#6FA8C4;color:#161611;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;">HL</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#F1F0E4;">Horváth Lili</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:11px;border-radius:11px;padding:7px 11px;">
+        <span style="width:18px;height:18px;border-radius:6px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi" style="font-size:13px;">check</span></span>
+        <span style="width:26px;height:26px;border-radius:50%;background:#9DAE6B;color:#161611;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;">VM</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#F1F0E4;">Varga Máté</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME B · HÓNAP NÉZET ======================= -->
+<div data-screen-label="B · Hónap nézet" style="position:absolute;left:1780px;top:0px;width:1500px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">B · Hónap nézet — max 3 chip/cella + „+N" · „Lemondottak mutatása" itt BE</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:800px;">
+    <!-- rail -->
+    <div style="width:74px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:22px;padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;margin-bottom:12px;"><span class="mi fill" style="font-size:22px;">eco</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">group</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:22px;">calendar_month</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">mail</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">fitness_center</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">restaurant</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">assignment</span></div>
+      <div style="margin-top:auto;width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">undo</span></div>
+    </div>
+    <!-- main -->
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px;min-width:0;gap:12px;">
+      <!-- toolbar -->
+      <div style="background:#2A2C20;border-radius:16px;padding:8px 10px;display:flex;align-items:center;gap:10px;flex:none;">
+        <span style="border:1px solid #3C3E32;color:#F1F0E4;border-radius:11px;padding:8px 15px;font-size:12.5px;font-weight:700;">Ma</span>
+        <div style="display:flex;gap:5px;">
+          <div style="width:34px;height:34px;border-radius:11px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">chevron_left</span></div>
+          <div style="width:34px;height:34px;border-radius:11px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:19px;">chevron_right</span></div>
+        </div>
+        <span style="font-size:15.5px;font-weight:800;color:#F1F0E4;letter-spacing:-0.2px;margin-left:4px;">2026. július</span>
+        <div style="flex:1;"></div>
+        <div style="display:flex;background:#161611;border-radius:999px;padding:3px;">
+          <span style="color:#A8A899;font-size:12px;font-weight:600;padding:7px 17px;">Hét</span>
+          <span style="background:#6E9A6A;color:#161611;font-size:12px;font-weight:700;padding:7px 17px;border-radius:999px;">Hónap</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:#161611;border-radius:11px;padding:6px 10px 6px 8px;">
+          <div style="display:flex;">
+            <span style="width:22px;height:22px;border-radius:50%;background:#C49A6C;color:#161611;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #161611;">KA</span>
+            <span style="width:22px;height:22px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #161611;margin-left:-7px;">NB</span>
+            <span style="width:22px;height:22px;border-radius:50%;background:#B08AC8;color:#161611;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #161611;margin-left:-7px;">SE</span>
+          </div>
+          <span style="font-size:12.5px;font-weight:700;color:#F1F0E4;">Minden kliens</span>
+          <span class="mi" style="font-size:19px;color:#A8A899;">arrow_drop_down</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:0 6px;">
+          <span style="font-size:12px;font-weight:600;color:#F1F0E4;">Lemondottak</span>
+          <div style="width:36px;height:20px;border-radius:999px;background:#6E9A6A;position:relative;"><div style="position:absolute;right:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#161611;"></div></div>
+        </div>
+      </div>
+      <!-- weekday header -->
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;flex:none;">
+        <span style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#777264;padding:0 4px;">HÉTFŐ</span><span style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#777264;padding:0 4px;">KEDD</span><span style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#777264;padding:0 4px;">SZERDA</span><span style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#777264;padding:0 4px;">CSÜTÖRTÖK</span><span style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#777264;padding:0 4px;">PÉNTEK</span><span style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#777264;padding:0 4px;">SZOMBAT</span><span style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#777264;padding:0 4px;">VASÁRNAP</span>
+      </div>
+      <!-- month grid -->
+      <div style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;gap:6px;min-height:0;">
+        <!-- w1 -->
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;opacity:.4;">
+          <span style="font-size:11.5px;font-weight:800;color:#A8A899;">jún. 29.</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Leg day</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;opacity:.4;"><span style="font-size:11.5px;font-weight:800;color:#A8A899;">jún. 30.</span></div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#A8A899;">1</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Core + kardió</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#6FA8C4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">HL</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Mobility</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#A8A899;">2</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">17:30</span><span style="width:13px;height:13px;border-radius:50%;background:#B08AC8;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</span><span class="mi" style="font-size:11px;color:#CF6679;flex:none;">warning</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#A8A899;">3</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#9DAE6B;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">VM</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Pull day</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;"><span style="font-size:11.5px;font-weight:800;color:#A8A899;">4</span></div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#A8A899;">5</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#D8B35A;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">TG</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Full body</span><span class="mi" style="font-size:11px;color:#CF6679;flex:none;">warning</span></div>
+        </div>
+        <!-- w2 -->
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#A8A899;">6</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Leg day</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</span><span class="mi" style="font-size:11px;color:#CF6679;flex:none;">warning</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#A8A899;">7</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">17:30</span><span style="width:13px;height:13px;border-radius:50%;background:#B08AC8;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Mobility</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#A8A899;">8</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Core + kardió</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#D8B35A;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">TG</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Láb nap</span><span class="mi" style="font-size:11px;color:#CF6679;flex:none;">warning</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#6FA8C4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">HL</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Mobility</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+        </div>
+        <div style="background:#1E2318;border:1.5px solid rgba(110,154,106,.55);border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <div style="display:flex;align-items:center;gap:5px;"><span style="background:#6E9A6A;color:#161611;border-radius:999px;padding:1px 8px;font-size:10px;font-weight:800;">9 · MA</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Leg day</span><span class="mi fill" style="font-size:11px;color:#9DAE6B;flex:none;">check_circle</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#D8B35A;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">TG</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Full body</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <span style="font-size:9.5px;font-weight:700;color:#A9CBA5;padding-left:2px;">+1 további</span>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">10</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#9DAE6B;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">VM</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Pull day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#6FA8C4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">HL</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Mobility</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;opacity:.45;"><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-decoration:line-through;">Mobility</span><span class="mi" style="font-size:11px;color:#A8A899;flex:none;">block</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">11</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">10:00</span><span style="width:13px;height:13px;border-radius:50%;background:#B08AC8;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;"><span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">12</span></div>
+        <!-- w3 -->
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">13</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Leg day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">14</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">17:30</span><span style="width:13px;height:13px;border-radius:50%;background:#B08AC8;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">15</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Core + kardió</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#6FA8C4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">HL</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Mobility</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">16</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#D8B35A;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">TG</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Full body</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">17</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;opacity:.45;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#9DAE6B;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">VM</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-decoration:line-through;">Pull day</span><span class="mi" style="font-size:11px;color:#A8A899;flex:none;">block</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#6FA8C4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">HL</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Mobility</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">18</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">10:00</span><span style="width:13px;height:13px;border-radius:50%;background:#B08AC8;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;"><span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">19</span></div>
+        <!-- w4 -->
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">20</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Leg day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">21</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">17:30</span><span style="width:13px;height:13px;border-radius:50%;background:#B08AC8;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">22</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Core + kardió</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#6FA8C4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">HL</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Mobility</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">23</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#D8B35A;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">TG</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Full body</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">24</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#9DAE6B;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">VM</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Pull day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">25</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">10:00</span><span style="width:13px;height:13px;border-radius:50%;background:#B08AC8;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;"><span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">26</span></div>
+        <!-- w5 -->
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">27</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Leg day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">28</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">17:30</span><span style="width:13px;height:13px;border-radius:50%;background:#B08AC8;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">29</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">07:00</span><span style="width:13px;height:13px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Core + kardió</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">30</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#C49A6C;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Push day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="width:13px;height:13px;border-radius:50%;background:#D8B35A;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">TG</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Full body</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;">
+          <span style="font-size:11.5px;font-weight:800;color:#F1F0E4;">31</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">18:00</span><span style="width:13px;height:13px;border-radius:50%;background:#9DAE6B;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">VM</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Pull day</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;opacity:.4;">
+          <span style="font-size:11.5px;font-weight:800;color:#A8A899;">aug. 1.</span>
+          <div style="display:flex;align-items:center;gap:4px;background:#22241B;border-radius:7px;padding:3px 6px;min-width:0;"><span style="font-size:9.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;flex:none;">10:00</span><span style="width:13px;height:13px;border-radius:50%;background:#B08AC8;color:#161611;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span><span style="flex:1;font-size:9.5px;font-weight:600;color:#A8A899;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Felsőtest</span><span class="mi" style="font-size:11px;color:#A9CBA5;flex:none;">schedule</span></div>
+        </div>
+        <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:4px;min-width:0;opacity:.4;"><span style="font-size:11.5px;font-weight:800;color:#A8A899;">aug. 2.</span></div>
+      </div>
+      <!-- info bar -->
+      <div style="background:#1C1E16;border-radius:14px;padding:11px 16px;font-size:11.5px;color:#A8A899;display:flex;align-items:center;gap:9px;flex:none;"><span class="mi" style="font-size:16px;color:#6E9A6A;">info</span>Max 3 chip/cella, utána „+N további" · nap-kattintás → Hét nézet az adott héthez · mai cella: tertiary keret + „MA" · szomszéd hónap napjai halványak · a „Lemondottak" kapcsoló itt BE — áthúzott, halvány chipek (júl. 10., 17.).</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME C · SESSION-PEEK ======================= -->
+<div data-screen-label="C · Session-peek popover" style="position:absolute;left:0px;top:940px;width:1720px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">C · Session-peek — horgonyzott popover (nem modal) · közelgő és elvégzett variáns · lemondás-confirm</div>
+  <div style="display:flex;gap:20px;align-items:stretch;">
+    <!-- peek: közelgő -->
+    <div style="flex:1;background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:26px;display:flex;flex-direction:column;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin-bottom:16px;">Közelgő alkalom</div>
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <!-- anchor card -->
+        <div style="width:190px;flex:none;background:#22241B;border:1.5px solid #6E9A6A;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;margin-top:26px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:13px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">18:00</span><span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span></div>
+          <div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#C49A6C;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;">Kiss Anna</span></div>
+          <div style="font-size:11px;font-weight:600;color:#A8A899;">Push day</div>
+        </div>
+        <!-- arrow -->
+        <div style="width:12px;height:12px;background:#32342A;transform:rotate(45deg);margin:60px -20px 0 2px;flex:none;"></div>
+        <!-- popover -->
+        <div style="flex:1;background:#32342A;border-radius:20px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.55);">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#C49A6C;display:flex;align-items:center;justify-content:center;color:#161611;font-size:15px;font-weight:800;">KA</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:800;color:#F1F0E4;">Kiss Anna</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">anna.kiss@gmail.com</div></div>
+            <span class="mi" style="font-size:19px;color:#A8A899;">close</span>
+          </div>
+          <div style="height:1px;background:#3C3E32;margin:14px 0;"></div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;"><span class="mi" style="font-size:17px;color:#9DAE6B;">fitness_center</span><span style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Push day</span></div>
+            <div style="display:flex;align-items:center;gap:10px;"><span class="mi" style="font-size:17px;color:#A8A899;">event</span><span style="font-size:13px;font-weight:600;color:#F1F0E4;">csütörtök, júl. 9. · <span style="font-weight:800;font-variant-numeric:tabular-nums;">18:00</span></span><span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:800;"><span class="mi" style="font-size:13px;">schedule</span>közelgő</span></div>
+            <div style="display:flex;align-items:flex-start;gap:10px;"><span class="mi" style="font-size:17px;color:#A8A899;">event_repeat</span><span style="font-size:12.5px;color:#A8A899;line-height:1.5;">Minden hétfő és csütörtök · 18:00 · júl. 7. – okt. 6.</span></div>
+          </div>
+          <div style="height:1px;background:#3C3E32;margin:14px 0;"></div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <span style="display:flex;align-items:center;gap:9px;color:#A9CBA5;border:1px solid #3C3E32;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;"><span class="mi" style="font-size:17px;">open_in_new</span>Kliens ütemterve</span>
+            <span style="display:flex;align-items:center;gap:9px;background:rgba(207,102,121,.16);color:#CF6679;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:800;"><span class="mi" style="font-size:17px;">event_busy</span>Alkalom lemondása</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:auto;padding-top:16px;font-size:11.5px;color:#777264;line-height:1.6;">Esc és kívülre kattintás zár · fókusz-csapda a popoveren belül · a horgony-kártya tertiary keretet kap, amíg nyitva van.</div>
+    </div>
+    <!-- peek: elvégzett -->
+    <div style="flex:1;background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:26px;display:flex;flex-direction:column;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin-bottom:16px;">Elvégzett alkalom</div>
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:190px;flex:none;background:#22241B;border:1.5px solid #6E9A6A;border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;gap:7px;margin-top:26px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:13px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">07:00</span><span style="display:flex;align-items:center;gap:4px;color:#9DAE6B;font-size:10px;font-weight:800;"><span class="mi fill" style="font-size:13px;">check_circle</span>elvégezve</span></div>
+          <div style="display:flex;align-items:center;gap:7px;min-width:0;"><span style="width:20px;height:20px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span><span style="font-size:12px;font-weight:700;color:#F1F0E4;">Nagy Bence</span></div>
+          <div style="font-size:11px;font-weight:600;color:#A8A899;">Leg day</div>
+        </div>
+        <div style="width:12px;height:12px;background:#32342A;transform:rotate(45deg);margin:60px -20px 0 2px;flex:none;"></div>
+        <div style="flex:1;background:#32342A;border-radius:20px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.55);">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#8AA0B4;display:flex;align-items:center;justify-content:center;color:#161611;font-size:15px;font-weight:800;">NB</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:800;color:#F1F0E4;">Nagy Bence</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">bence.nagy@gmail.com</div></div>
+            <span class="mi" style="font-size:19px;color:#A8A899;">close</span>
+          </div>
+          <div style="height:1px;background:#3C3E32;margin:14px 0;"></div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;"><span class="mi" style="font-size:17px;color:#9DAE6B;">fitness_center</span><span style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Leg day</span></div>
+            <div style="display:flex;align-items:center;gap:10px;"><span class="mi" style="font-size:17px;color:#A8A899;">event</span><span style="font-size:13px;font-weight:600;color:#F1F0E4;">csütörtök, júl. 9. · <span style="font-weight:800;font-variant-numeric:tabular-nums;">07:00</span></span><span style="display:flex;align-items:center;gap:4px;color:#9DAE6B;font-size:10.5px;font-weight:800;"><span class="mi fill" style="font-size:14px;">check_circle</span>elvégezve · 47 perc</span></div>
+            <div style="display:flex;align-items:flex-start;gap:10px;"><span class="mi" style="font-size:17px;color:#A8A899;">event_repeat</span><span style="font-size:12.5px;color:#A8A899;line-height:1.5;">Minden kedd és csütörtök · 07:00 · jún. 1. – aug. 28.</span></div>
+          </div>
+          <div style="height:1px;background:#3C3E32;margin:14px 0;"></div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <span style="display:flex;align-items:center;gap:9px;color:#A9CBA5;border:1px solid #3C3E32;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;"><span class="mi" style="font-size:17px;">open_in_new</span>Kliens ütemterve</span>
+            <span style="display:flex;align-items:center;gap:9px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:800;"><span class="mi" style="font-size:17px;">open_in_new</span>Edzés megnyitása</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:auto;padding-top:16px;font-size:11.5px;color:#777264;line-height:1.6;">Elvégzettnél nincs lemondás — helyette „Edzés megnyitása" (a rögzített edzés részletei). Kihagyott/lemondott: csak a „Kliens ütemterve" link marad.</div>
+    </div>
+    <!-- confirm dialog -->
+    <div style="width:520px;flex:none;position:relative;background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;">
+      <!-- dimmed calendar behind -->
+      <div style="position:absolute;inset:0;opacity:.35;padding:20px;display:flex;flex-direction:column;gap:10px;">
+        <div style="height:48px;background:#2A2C20;border-radius:14px;"></div>
+        <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div style="background:#1C1E16;border-radius:14px;"></div><div style="background:#1C1E16;border-radius:14px;"></div><div style="background:#1C1E16;border-radius:14px;"></div>
+        </div>
+      </div>
+      <div style="position:absolute;inset:0;background:rgba(8,9,6,.6);"></div>
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:400px;background:#22241B;border-radius:24px;padding:26px 24px 22px;box-shadow:0 30px 70px rgba(0,0,0,.6);">
+        <div style="width:56px;height:56px;border-radius:18px;background:rgba(207,102,121,.16);display:flex;align-items:center;justify-content:center;color:#CF6679;margin:0 auto 16px;"><span class="mi" style="font-size:30px;">event_busy</span></div>
+        <div style="font-size:19px;font-weight:800;color:#F1F0E4;text-align:center;letter-spacing:-0.3px;margin-bottom:8px;">Alkalom lemondása?</div>
+        <div style="font-size:13px;font-weight:500;color:#A8A899;text-align:center;line-height:1.55;margin-bottom:22px;">Push day · csütörtök, júl. 9. · 18:00<br>Kiss Anna értesítést kap. A sorozat többi alkalma megmarad.</div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="background:#CF6679;color:#161611;height:48px;border-radius:15px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;"><span class="mi" style="font-size:19px;">event_busy</span>Alkalom lemondása</div>
+          <div style="background:#161611;color:#F1F0E4;height:48px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">Mégse</div>
+        </div>
+      </div>
+      <div style="position:absolute;left:16px;bottom:14px;right:16px;background:rgba(28,30,22,.92);border-radius:12px;padding:10px 14px;font-size:11px;color:#A8A899;display:flex;align-items:center;gap:8px;"><span class="mi" style="font-size:15px;color:#6E9A6A;">info</span>A meglévő confirm-minta · siker → snackbar: „Alkalom lemondva" + Visszavonás.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME D · ÁLLAPOTOK + KESKENY ======================= -->
+<div data-screen-label="D · Állapotok + keskeny nézet" style="position:absolute;left:1780px;top:940px;width:1560px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">D · Állapotok — skeleton · üres · hiba · tablet alatt: agenda + pont-jelzős hónap</div>
+  <div style="display:flex;gap:20px;align-items:stretch;">
+    <!-- states column -->
+    <div style="flex:1;display:flex;flex-direction:column;gap:18px;">
+      <!-- skeleton -->
+      <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9DAE6B;margin-bottom:14px;">Betöltés — naptár-rács skeleton</div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:7px;">
+          <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:6px;"><div style="width:60%;height:9px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;margin:3px 0 4px;"></div><div style="height:52px;border-radius:10px;background:#22241B;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="height:52px;border-radius:10px;background:#22241B;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+          <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:6px;"><div style="width:60%;height:9px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;margin:3px 0 4px;"></div><div style="height:52px;border-radius:10px;background:#22241B;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+          <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:6px;"><div style="width:60%;height:9px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;margin:3px 0 4px;"></div><div style="height:52px;border-radius:10px;background:#22241B;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="height:52px;border-radius:10px;background:#22241B;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="height:52px;border-radius:10px;background:#22241B;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+          <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:6px;"><div style="width:60%;height:9px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;margin:3px 0 4px;"></div><div style="height:52px;border-radius:10px;background:#22241B;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="height:52px;border-radius:10px;background:#22241B;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+          <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:6px;"><div style="width:60%;height:9px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;margin:3px 0 4px;"></div><div style="height:52px;border-radius:10px;background:#22241B;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+          <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:6px;"><div style="width:60%;height:9px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;margin:3px 0 4px;"></div><div style="height:52px;border-radius:10px;background:#22241B;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+          <div style="background:#1C1E16;border-radius:12px;padding:7px;display:flex;flex-direction:column;gap:6px;"><div style="width:60%;height:9px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;margin:3px 0 4px;"></div></div>
+        </div>
+        <div style="font-size:11px;color:#777264;margin-top:10px;">A fejléc-toolbar azonnal él (Ma, lapozás, váltó) — csak a rács skeleton.</div>
+      </div>
+      <!-- empty -->
+      <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:34px 20px;text-align:center;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9DAE6B;margin-bottom:18px;text-align:left;">Üres időszak</div>
+        <div style="width:64px;height:64px;border-radius:20px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#6E9A6A;margin:0 auto 14px;"><span class="mi" style="font-size:34px;">calendar_month</span></div>
+        <div style="font-size:16px;font-weight:800;color:#F1F0E4;">Nincs ütemezett edzés ebben az időszakban</div>
+        <div style="font-size:12.5px;color:#A8A899;margin-top:5px;line-height:1.5;">Lapozz másik hétre, vagy ütemezz egy klienset.</div>
+        <div style="display:inline-flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:13px;padding:11px 18px;font-size:13.5px;font-weight:800;margin-top:16px;"><span class="mi" style="font-size:19px;">add</span>Edzés ütemezése</div>
+      </div>
+      <!-- error -->
+      <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9DAE6B;margin-bottom:14px;">Hiba</div>
+        <div style="background:#1C1E16;border-radius:16px;padding:22px;display:flex;align-items:center;gap:16px;">
+          <div style="width:48px;height:48px;border-radius:15px;background:rgba(207,102,121,.16);display:flex;align-items:center;justify-content:center;color:#CF6679;flex:none;"><span class="mi" style="font-size:26px;">error</span></div>
+          <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Nem sikerült betölteni a naptárat</div><div style="font-size:12px;color:#A8A899;margin-top:3px;line-height:1.5;">Ellenőrizd az internetkapcsolatot, majd próbáld újra.</div></div>
+          <span style="display:flex;align-items:center;gap:7px;color:#F1F0E4;border:1px solid #3C3E32;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;flex:none;"><span class="mi" style="font-size:17px;">refresh</span>Újrapróbálás</span>
+        </div>
+      </div>
+    </div>
+    <!-- agenda narrow -->
+    <div style="width:420px;flex:none;background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;display:flex;flex-direction:column;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9DAE6B;margin-bottom:14px;">Tablet alatt — a hét agenda-listává esik össze</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;"><span style="background:#6E9A6A;color:#161611;border-radius:999px;padding:3px 9px;font-size:9.5px;font-weight:800;letter-spacing:.5px;">MA</span><span style="font-size:12.5px;font-weight:800;color:#F1F0E4;">csütörtök, júl. 9.</span></div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="background:#22241B;border-radius:14px;padding:11px 12px;display:flex;align-items:center;gap:10px;">
+          <span style="width:44px;flex:none;font-size:12.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">07:00</span>
+          <span style="width:24px;height:24px;border-radius:50%;background:#8AA0B4;color:#161611;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">NB</span>
+          <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;color:#F1F0E4;">Nagy Bence</div><div style="font-size:10.5px;color:#A8A899;margin-top:1px;">Leg day</div></div>
+          <span style="display:flex;align-items:center;gap:4px;color:#9DAE6B;font-size:10px;font-weight:800;flex:none;"><span class="mi fill" style="font-size:13px;">check_circle</span>elvégezve</span>
+        </div>
+        <div style="background:#22241B;border-radius:14px;padding:11px 12px;display:flex;align-items:center;gap:10px;">
+          <span style="width:44px;flex:none;font-size:12.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">18:00</span>
+          <span style="width:24px;height:24px;border-radius:50%;background:#C49A6C;color:#161611;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">KA</span>
+          <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;color:#F1F0E4;">Kiss Anna</div><div style="font-size:10.5px;color:#A8A899;margin-top:1px;">Push day</div></div>
+          <span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;flex:none;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span>
+        </div>
+        <div style="background:#22241B;border-radius:14px;padding:11px 12px;display:flex;align-items:center;gap:10px;">
+          <span style="width:44px;flex:none;font-size:11px;font-weight:700;color:#777264;">nap f.</span>
+          <span style="width:24px;height:24px;border-radius:50%;background:#D8B35A;color:#161611;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">TG</span>
+          <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;color:#F1F0E4;">Tóth Gábor</div><div style="font-size:10.5px;color:#A8A899;margin-top:1px;">Full body</div></div>
+          <span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;flex:none;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span>
+        </div>
+      </div>
+      <div style="font-size:12.5px;font-weight:800;color:#A8A899;margin:16px 0 9px;">péntek, júl. 10.</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="background:#22241B;border-radius:14px;padding:11px 12px;display:flex;align-items:center;gap:10px;">
+          <span style="width:44px;flex:none;font-size:12.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">18:00</span>
+          <span style="width:24px;height:24px;border-radius:50%;background:#9DAE6B;color:#161611;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">VM</span>
+          <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;color:#F1F0E4;">Varga Máté</div><div style="font-size:10.5px;color:#A8A899;margin-top:1px;">Pull day</div></div>
+          <span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;flex:none;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span>
+        </div>
+        <div style="background:#22241B;border-radius:14px;padding:11px 12px;display:flex;align-items:center;gap:10px;">
+          <span style="width:44px;flex:none;font-size:11px;font-weight:700;color:#777264;">nap f.</span>
+          <span style="width:24px;height:24px;border-radius:50%;background:#6FA8C4;color:#161611;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">HL</span>
+          <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;color:#F1F0E4;">Horváth Lili</div><div style="font-size:10.5px;color:#A8A899;margin-top:1px;">Mobility</div></div>
+          <span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;flex:none;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span>
+        </div>
+      </div>
+      <div style="font-size:12.5px;font-weight:800;color:#A8A899;margin:16px 0 9px;">szombat, júl. 11.</div>
+      <div style="background:#22241B;border-radius:14px;padding:11px 12px;display:flex;align-items:center;gap:10px;">
+        <span style="width:44px;flex:none;font-size:12.5px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">10:00</span>
+        <span style="width:24px;height:24px;border-radius:50%;background:#B08AC8;color:#161611;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;">SE</span>
+        <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;color:#F1F0E4;">Szabó Emma</div><div style="font-size:10.5px;color:#A8A899;margin-top:1px;">Felsőtest</div></div>
+        <span style="display:flex;align-items:center;gap:4px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800;flex:none;"><span class="mi" style="font-size:12px;">schedule</span>közelgő</span>
+      </div>
+      <div style="margin-top:auto;padding-top:14px;font-size:11.5px;color:#777264;line-height:1.6;">Napok egymás alatt, azonos kártya-anatómia — az időpont nélkülieknél „nap f." jelzés a slotban.</div>
+    </div>
+    <!-- month dots narrow -->
+    <div style="width:420px;flex:none;background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;display:flex;flex-direction:column;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9DAE6B;margin-bottom:14px;">Tablet alatt — hónap pont-jelzőkkel</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:5px;">
+        <span style="font-size:9px;font-weight:800;color:#777264;text-align:center;">H</span><span style="font-size:9px;font-weight:800;color:#777264;text-align:center;">K</span><span style="font-size:9px;font-weight:800;color:#777264;text-align:center;">Sze</span><span style="font-size:9px;font-weight:800;color:#777264;text-align:center;">Cs</span><span style="font-size:9px;font-weight:800;color:#777264;text-align:center;">P</span><span style="font-size:9px;font-weight:800;color:#777264;text-align:center;">Szo</span><span style="font-size:9px;font-weight:800;color:#777264;text-align:center;">V</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;">
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;opacity:.4;"><span style="font-size:11px;font-weight:800;color:#A8A899;">29</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;opacity:.4;"><span style="font-size:11px;font-weight:800;color:#A8A899;">30</span></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#A8A899;">1</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#A8A899;">2</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#CF6679;"></span><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#A8A899;">3</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#A8A899;">4</span></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#A8A899;">5</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#CF6679;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#A8A899;">6</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span><span style="width:5px;height:5px;border-radius:50%;background:#CF6679;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#A8A899;">7</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#A8A899;">8</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span><span style="width:5px;height:5px;border-radius:50%;background:#CF6679;"></span><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span></div></div>
+        <div style="background:#1E2318;border:1.5px solid rgba(110,154,106,.55);border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;"><span style="background:#6E9A6A;color:#161611;border-radius:999px;padding:0 6px;font-size:10px;font-weight:800;">9</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#9DAE6B;"></span><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span></div><span style="font-size:8px;font-weight:700;color:#A9CBA5;">+1</span></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#F1F0E4;">10</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#F1F0E4;">11</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#F1F0E4;">12</span></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#F1F0E4;">13</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#F1F0E4;">14</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#F1F0E4;">15</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#F1F0E4;">16</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#F1F0E4;">17</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#F1F0E4;">18</span><div style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#A9CBA5;"></span></div></div>
+        <div style="background:#1C1E16;border-radius:10px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;"><span style="font-size:11px;font-weight:800;color:#F1F0E4;">19</span></div>
+      </div>
+      <div style="font-size:11px;color:#777264;margin-top:10px;">… (a rács a hónap végéig folytatódik)</div>
+      <div style="margin-top:auto;padding-top:14px;font-size:11.5px;color:#777264;line-height:1.6;">Pont = alkalom (zöld: elvégzett · világos­zöld: közelgő · piros: kihagyott) — a pontok mellett „+N", ha 3-nál több. Nap-kattintás → agenda az adott naphoz; ott a státusz chipben, kiírva.</div>
+    </div>
+  </div>
+  <div style="margin-top:18px;background:#1C1E16;border-radius:14px;padding:12px 16px;font-size:11.5px;color:#A8A899;display:flex;align-items:center;gap:9px;"><span class="mi" style="font-size:16px;color:#6E9A6A;">info</span>Minden felirat HU/EN lokalizációs kulcs · státusz és mai-nap sosem csak szín (ikon + felirat + keret) · AA kontraszt a sötét témán · nincs új design token — minden szín, radius és spacing a meglévő skálából.</div>
+</div>
+
+</x-dc>
+</body>
+</html>

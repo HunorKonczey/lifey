@@ -9,12 +9,15 @@ import 'workout_template_controller.dart';
 /// (newest first, as returned by [WorkoutSessionController]) and predicts
 /// the clientId of the template that continues it.
 ///
-/// Only the most recent 10 sessions are considered, so a routine change a
-/// few weeks ago doesn't keep influencing today's suggestion. Returns null
-/// when there's too little history or no exact repeating pattern — no
-/// recommendation is better than a wrong one.
+/// Unfinished sessions (started but not yet completed) are excluded before
+/// taking the most recent 10, so a workout still in progress doesn't skew
+/// the detected pattern. Only the most recent 10 finished sessions are
+/// considered, so a routine change a few weeks ago doesn't keep influencing
+/// today's suggestion. Returns null when there's too little history or no
+/// exact repeating pattern — no recommendation is better than a wrong one.
 String? predictNextTemplateClientId(List<WorkoutSession> sessionsDesc) {
   final seq = sessionsDesc
+      .where((s) => !s.inProgress)
       .take(10)
       .map((s) => s.templateClientId)
       .whereType<String>()

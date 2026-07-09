@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -177,6 +177,10 @@ class AppDatabase extends _$AppDatabase {
                 workoutSessions.scheduleId,
               ],
             ));
+          }
+          // V21: free-text description/notes (e.g. machine setting) per exercise.
+          if (from < 21) {
+            await m.addColumn(exercises, exercises.description);
           }
         },
       );

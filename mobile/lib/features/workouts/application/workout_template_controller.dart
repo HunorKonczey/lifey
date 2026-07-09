@@ -29,6 +29,14 @@ class WorkoutTemplateController extends StreamNotifier<List<WorkoutTemplate>> {
 
   Future<void> deleteTemplate(String clientId) => _repo.delete(clientId);
 
+  /// Creates an independent copy of [template] named "{name} (Copy)" — the
+  /// caller supplies the already-localized name. Not a trainer-assigned copy
+  /// ([WorkoutTemplateRepository.create] has no `originTrainerId` parameter),
+  /// so the duplicate is always fully owned by the current user.
+  Future<String> duplicateTemplate(WorkoutTemplate template, {required String newName}) {
+    return _repo.create(name: newName, exercises: template.exercises);
+  }
+
   /// Drains the outbox, then re-pulls from the server — matching what the
   /// dashboard's pull-to-refresh does. Without the pull half, swiping to
   /// refresh only pushes local edits and never reconciles a stale/corrupted

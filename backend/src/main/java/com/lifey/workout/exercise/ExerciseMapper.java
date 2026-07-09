@@ -21,6 +21,7 @@ public final class ExerciseMapper {
         exercise.setName(request.name());
         exercise.setCategory(request.category());
         exercise.setEquipment(request.equipment());
+        exercise.setDescription(request.description());
     }
 
     public static ExerciseResponse toResponse(Exercise exercise) {
@@ -29,6 +30,7 @@ public final class ExerciseMapper {
                 exercise.getName(),
                 exercise.getCategory() != null ? exercise.getCategory().name() : null,
                 exercise.getEquipment() != null ? exercise.getEquipment().name() : null,
+                exercise.getDescription(),
                 exercise.getUpdatedAt(),
                 exercise.getDeletedAt(),
                 exercise.getOriginTrainerId()

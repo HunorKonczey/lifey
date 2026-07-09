@@ -11,6 +11,8 @@ public record ExerciseRequest(
 
         MuscleGroup category,
 
-        Equipment equipment
+        Equipment equipment,
+
+        String description
 ) {
 }

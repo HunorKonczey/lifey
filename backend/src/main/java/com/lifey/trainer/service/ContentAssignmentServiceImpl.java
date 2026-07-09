@@ -243,6 +243,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
                     copy.setName(source.getName());
                     copy.setCategory(source.getCategory());
                     copy.setEquipment(source.getEquipment());
+                    copy.setDescription(source.getDescription());
                     copy.setOriginSourceId(source.getId());
                     copy.setOriginTrainerId(trainerId);
                     return exerciseRepository.save(copy);

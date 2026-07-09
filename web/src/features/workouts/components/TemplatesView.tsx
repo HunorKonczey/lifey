@@ -17,6 +17,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MUSCLE_GROUPS } from "../types";
 import type {
   WorkoutTemplateResponse, TemplateExerciseEntry, ExerciseResponse,
@@ -57,7 +58,10 @@ export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {})
   const admin = useTranslations("admin.assignDrawer");
   const schedule = useTranslations("admin.schedule");
   const tm = useTranslations("workouts.muscleGroups");
+  const queryClient = useQueryClient();
+  const { show } = useToast();
   const [selectedId, setSelectedId] = useState<number | "new" | null>(null);
+  const [duplicating, setDuplicating] = useState<WorkoutTemplateResponse | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.workoutTemplates.all(),
@@ -75,6 +79,20 @@ export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {})
     : null;
 
   const exercisesById = new Map((exercises ?? []).map((e) => [e.id, e]));
+
+  const duplicateMutation = useMutation({
+    mutationFn: (tpl: WorkoutTemplateResponse) =>
+      templateApi.create({
+        name: t("copyOf", { name: tpl.name }),
+        exercises: tpl.exercises.map((e) => ({ exerciseId: e.exerciseId, targetSets: e.targetSets })),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workoutTemplates.all() });
+      show(t("templateDuplicated"), "success");
+      setDuplicating(null);
+    },
+    onError: () => show(t("duplicateTemplateFailed"), "error"),
+  });
 
   return (
     <div className="flex gap-6">
@@ -98,13 +116,13 @@ export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {})
             return (
               <div key={tpl.id}
                 data-testid="template-row"
-                className="flex items-start gap-3 px-4 py-3 rounded-[var(--r-card)] transition-colors"
+                className="flex flex-col gap-3 p-4 rounded-[var(--r-card)] transition-colors"
                 style={{
                   background: "var(--surface)",
                   outline: selectedId === tpl.id ? "2px solid var(--primary)" : "none",
                 }}>
-                <button onClick={() => setSelectedId(tpl.id)} className="flex items-start gap-3 flex-1 min-w-0 text-left">
-                  <span className="material-symbols-rounded text-xl mt-0.5" style={{ color: "var(--tertiary)" }}>list_alt</span>
+                <button onClick={() => setSelectedId(tpl.id)} className="flex items-start gap-3 text-left">
+                  <span className="material-symbols-rounded text-2xl mt-0.5" style={{ color: "var(--tertiary)" }}>list_alt</span>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{tpl.name}</p>
                     <p className="text-xs mb-1.5" style={{ color: "var(--muted)" }}>{t("exercisesCount", { count: tpl.exercises.length })}</p>
@@ -123,23 +141,33 @@ export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {})
                     )}
                   </div>
                 </button>
-                {onAssign && (
-                  <button onClick={() => onAssign(tpl)}
-                    data-testid="assign-template"
-                    className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold shrink-0 mt-0.5"
-                    style={{ background: "rgba(110,154,106,.18)", color: "var(--tertiary)" }}>
-                    <span className="material-symbols-rounded text-base">person_add</span> {admin("assignAction")}
-                  </button>
-                )}
-                {onSchedule && (
-                  <button onClick={() => onSchedule(tpl)}
-                    data-testid="schedule-template"
-                    className="flex items-center justify-center rounded-xl w-8 h-8 shrink-0 mt-0.5"
+
+                {/* Compact action row — small icon buttons on the left, Assign pinned to the bottom-right corner */}
+                <div className="flex items-center gap-1.5">
+                  {onSchedule && (
+                    <button onClick={() => onSchedule(tpl)}
+                      data-testid="schedule-template"
+                      className="flex items-center justify-center rounded-lg w-7 h-7 shrink-0"
+                      style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
+                      aria-label={schedule("scheduleForClientAria")}>
+                      <span className="material-symbols-rounded text-base">calendar_month</span>
+                    </button>
+                  )}
+                  <button onClick={() => setDuplicating(tpl)} disabled={duplicateMutation.isPending}
+                    className="flex items-center justify-center rounded-lg w-7 h-7 shrink-0 disabled:opacity-50"
                     style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
-                    aria-label={schedule("scheduleForClientAria")}>
-                    <span className="material-symbols-rounded text-lg">calendar_month</span>
+                    aria-label={t("duplicateTemplateAria")}>
+                    <span className="material-symbols-rounded text-base">content_copy</span>
                   </button>
-                )}
+                  {onAssign && (
+                    <button onClick={() => onAssign(tpl)}
+                      data-testid="assign-template"
+                      className="ml-auto flex items-center gap-1 rounded-lg px-2.5 h-7 text-[11px] font-extrabold shrink-0"
+                      style={{ background: "rgba(110,154,106,.18)", color: "var(--tertiary)" }}>
+                      <span className="material-symbols-rounded text-sm">person_add</span> {admin("assignAction")}
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })
@@ -163,6 +191,16 @@ export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {})
           />
         )}
       </div>
+
+      <ConfirmDialog
+        open={duplicating !== null}
+        title={t("duplicateTemplateConfirmTitle")}
+        body={t("duplicateTemplateConfirmBody")}
+        confirmLabel={t("duplicateTemplateConfirmAction")}
+        confirming={duplicateMutation.isPending}
+        onConfirm={() => duplicating && duplicateMutation.mutate(duplicating)}
+        onCancel={() => setDuplicating(null)}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { ErrorState } from "@/components/status/ErrorState";
+import { normalizeForSearch } from "@/lib/utils/search";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import type { ContentType } from "../types";
 
@@ -52,8 +53,9 @@ export function AssignToClientDrawer({
     }
   }, [assignedClientIdsQ.data]);
 
+  const normalizedSearch = normalizeForSearch(search);
   const filteredClients = (clientsQ.data ?? []).filter((c) =>
-    c.clientEmail.toLowerCase().includes(search.toLowerCase()) || nameFor(c.clientEmail).toLowerCase().includes(search.toLowerCase()),
+    normalizeForSearch(c.clientEmail).includes(normalizedSearch) || normalizeForSearch(nameFor(c.clientEmail)).includes(normalizedSearch),
   );
 
   const toggleClient = (clientId: number) => {

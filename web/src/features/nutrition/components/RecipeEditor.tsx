@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { foodApi, recipeApi } from "../api";
@@ -43,6 +43,7 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
       : [],
   );
   const [search, setSearch] = useState("");
+  const gramsRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const { data: foods } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
 
@@ -53,10 +54,18 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
   const addIngredient = (f: FoodResponse) => {
     setIngredients((prev) => [
       ...prev,
-      { foodId: f.id, quantityInGrams: 100, foodName: f.name, caloriesPer100g: f.caloriesPer100g, proteinPer100g: f.proteinPer100g },
+      { foodId: f.id, quantityInGrams: 0, foodName: f.name, caloriesPer100g: f.caloriesPer100g, proteinPer100g: f.proteinPer100g },
     ]);
     setSearch("");
   };
+
+  useEffect(() => {
+    const last = gramsRefs.current[ingredients.length - 1];
+    if (last) {
+      last.focus();
+      last.select();
+    }
+  }, [ingredients.length]);
 
   const totalKcal = ingredients.reduce(
     (s, i) => s + (i.caloriesPer100g * i.quantityInGrams) / 100, 0,
@@ -91,7 +100,7 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
     onError: () => show(t("deleteFailed"), "error"),
   });
 
-  const canSave = name.trim() && ingredients.length > 0;
+  const canSave = name.trim() && ingredients.length > 0 && ingredients.every((i) => i.quantityInGrams > 0);
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4"
@@ -149,9 +158,13 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
                   </span>
                 </span>
               </div>
-              <input type="number" min={1} value={ing.quantityInGrams}
+              <input type="number" min={1} placeholder="100"
+                value={ing.quantityInGrams === 0 ? "" : ing.quantityInGrams}
+                ref={(el) => { gramsRefs.current[idx] = el; }}
                 onChange={(e) => setIngredients((prev) =>
-                  prev.map((x, i) => i === idx ? { ...x, quantityInGrams: Math.max(1, Number(e.target.value)) } : x))}
+                  prev.map((x, i) => i === idx
+                    ? { ...x, quantityInGrams: e.target.value === "" ? 0 : Math.max(1, Number(e.target.value)) }
+                    : x))}
                 className="w-16 px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
                 style={{ background: "var(--surface)", border: "1px solid var(--outline)" }} />
               <span className="text-xs" style={{ color: "var(--muted)" }}>g</span>

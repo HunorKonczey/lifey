@@ -100,7 +100,7 @@ class ExerciseServiceImplTest {
             return e;
         });
 
-        ExerciseResponse result = service.create(new ExerciseRequest("Lunge", MuscleGroup.QUADS, Equipment.BODYWEIGHT));
+        ExerciseResponse result = service.create(new ExerciseRequest("Lunge", MuscleGroup.QUADS, Equipment.BODYWEIGHT, null));
 
         assertThat(result.id()).isEqualTo(5L);
         assertThat(result.name()).isEqualTo("Lunge");
@@ -117,7 +117,7 @@ class ExerciseServiceImplTest {
             return e;
         });
 
-        ExerciseResponse result = service.create(new ExerciseRequest("Plank", null, null));
+        ExerciseResponse result = service.create(new ExerciseRequest("Plank", null, null, null));
 
         assertThat(result.category()).isNull();
         assertThat(result.equipment()).isNull();
@@ -128,7 +128,7 @@ class ExerciseServiceImplTest {
         Exercise existing = exercise(3L, "Old");
         when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
 
-        ExerciseResponse result = service.update(3L, new ExerciseRequest("New", MuscleGroup.BACK, Equipment.BARBELL));
+        ExerciseResponse result = service.update(3L, new ExerciseRequest("New", MuscleGroup.BACK, Equipment.BARBELL, null));
 
         assertThat(result.name()).isEqualTo("New");
         assertThat(existing.getName()).isEqualTo("New");

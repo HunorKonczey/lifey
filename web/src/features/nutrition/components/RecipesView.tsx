@@ -1,20 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { recipeApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useDateStore } from "@/lib/hooks/useDateStore";
+import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { RecipeEditor } from "./RecipeEditor";
 import { LogRecipeDialog } from "./LogRecipeDialog";
 import type { RecipeResponse } from "../types";
 
 const PAGE_SIZE = 200;
 const SEARCH_DEBOUNCE_MS = 300;
+
+const totalCalories = (r: RecipeResponse) => r.ingredients.reduce((sum, i) => sum + i.calories, 0);
+const totalProtein = (r: RecipeResponse) => r.ingredients.reduce((sum, i) => sum + i.protein, 0);
 
 interface RecipesViewProps {
   /** When provided, a "Kiosztás" button appears on every card — admin nav only. */
@@ -25,12 +30,15 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
   const t = useTranslations("nutrition.recipesView");
   const admin = useTranslations("admin.assignDrawer");
   const { date } = useDateStore();
+  const queryClient = useQueryClient();
+  const { show } = useToast();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [editing, setEditing] = useState<RecipeResponse | null>(null);
   const [creating, setCreating] = useState(false);
   const [logging, setLogging] = useState<RecipeResponse | null>(null);
+  const [duplicating, setDuplicating] = useState<RecipeResponse | null>(null);
 
   // Debounce the search box so typing doesn't refetch on every keystroke —
   // mirrors FoodsView's search (see FoodsView.tsx).
@@ -46,7 +54,26 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
     queryFn: () => recipeApi.page(pageParams),
   });
 
-  const recipes = (data?.content ?? []).filter((r) => !favoritesOnly || r.favorite);
+  const recipes = (data?.content ?? [])
+    .filter((r) => !favoritesOnly || r.favorite)
+    .sort((a, b) => (a.favorite === b.favorite ? a.name.localeCompare(b.name) : a.favorite ? -1 : 1));
+
+  const duplicateMutation = useMutation({
+    mutationFn: (recipe: RecipeResponse) =>
+      recipeApi.create({
+        name: t("copyOf", { name: recipe.name }),
+        description: recipe.description,
+        favorite: recipe.favorite,
+        servings: recipe.servings,
+        ingredients: recipe.ingredients.map((i) => ({ foodId: i.foodId, quantityInGrams: i.quantityInGrams })),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() });
+      show(t("recipeDuplicated"), "success");
+      setDuplicating(null);
+    },
+    onError: () => show(t("duplicateRecipeFailed"), "error"),
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -111,8 +138,21 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
                   )}
                 </div>
                 <p className="font-bold text-sm">{r.name}</p>
+                {r.description && (
+                  <p className="text-xs line-clamp-2" style={{ color: "var(--on-surface-variant)" }}>
+                    {r.description}
+                  </p>
+                )}
                 <p className="text-xs" style={{ color: "var(--muted)" }}>
-                  {r.ingredients.length} ingredients · {r.servings} serv.
+                  {r.servings > 1
+                    ? t("perServingCaloriesProtein", {
+                        calories: Math.round(totalCalories(r) / r.servings),
+                        protein: Math.round(totalProtein(r) / r.servings),
+                      })
+                    : t("totalCaloriesProtein", {
+                        calories: Math.round(totalCalories(r)),
+                        protein: Math.round(totalProtein(r)),
+                      })}
                 </p>
               </button>
               <div className="flex gap-1.5 mt-1">
@@ -120,6 +160,11 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
                   className="flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-[var(--r-input)] text-xs font-semibold transition-colors"
                   style={{ background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)" }}>
                   <span className="material-symbols-rounded text-base">restaurant</span> {t("logAsMeal")}
+                </button>
+                <button onClick={() => setDuplicating(r)} disabled={duplicateMutation.isPending}
+                  className="flex-1 flex items-center justify-center gap-1 h-9 px-3 rounded-[var(--r-input)] text-xs font-semibold transition-colors disabled:opacity-50"
+                  style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}>
+                  <span className="material-symbols-rounded text-base">content_copy</span> {t("duplicate")}
                 </button>
                 {onAssign && (
                   <button onClick={() => onAssign(r)}
@@ -146,6 +191,16 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
       {logging && (
         <LogRecipeDialog recipe={logging} date={date} onClose={() => setLogging(null)} />
       )}
+
+      <ConfirmDialog
+        open={duplicating !== null}
+        title={t("duplicateRecipeConfirmTitle")}
+        body={t("duplicateRecipeConfirmBody")}
+        confirmLabel={t("duplicate")}
+        confirming={duplicateMutation.isPending}
+        onConfirm={() => duplicating && duplicateMutation.mutate(duplicating)}
+        onCancel={() => setDuplicating(null)}
+      />
     </div>
   );
 }

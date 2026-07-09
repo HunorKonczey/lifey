@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/search_normalize.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../application/food_controller.dart';
 import '../../domain/food.dart';
@@ -105,16 +106,17 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                   Autocomplete<Food>(
                     displayStringForOption: (f) => f.name,
                     optionsBuilder: (textEditingValue) {
-                      final query = textEditingValue.text.trim().toLowerCase();
+                      final query = normalizeForSearch(textEditingValue.text.trim());
                       final matches = query.isEmpty
                           ? foods
-                          : foods.where((f) => f.name.toLowerCase().contains(query));
+                          : foods.where((f) => normalizeForSearch(f.name).contains(query));
                       return matches.take(_maxSuggestions);
                     },
                     fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
                       return TextFormField(
                         controller: controller,
                         focusNode: focusNode,
+                        autofocus: true,
                         decoration: InputDecoration(
                           labelText: l10n.foodFieldLabel,
                           border: const OutlineInputBorder(),

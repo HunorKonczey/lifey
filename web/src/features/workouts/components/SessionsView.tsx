@@ -202,6 +202,7 @@ export function SessionsView({
             {format(new Date(session.startedAt), "MMM d, HH:mm")}
             {duration != null && ` · ${duration} ${d("minutes")}`}
             {session.sets.length > 0 && ` · ${session.sets.length} ${t("sets").toLowerCase()}`}
+            {session.averageHeartRate != null && ` · ${t("bpmAvg", { value: Math.round(session.averageHeartRate) })}`}
           </p>
         </button>
         <button onClick={() => deleteMutation.mutate()}
