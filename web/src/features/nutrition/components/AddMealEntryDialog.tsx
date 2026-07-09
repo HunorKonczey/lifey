@@ -168,7 +168,8 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
   const nf = useTranslations("nutrition.foodsView");
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<FoodResponse | null>(null);
-  const [grams, setGrams] = useState(100);
+  const [gramsStr, setGramsStr] = useState("");
+  const grams = gramsStr.trim() ? Math.max(1, Number(gramsStr)) : 0;
 
   const { data: foods } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
 
@@ -179,8 +180,13 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
   const previewKcal = picked ? Math.round((picked.caloriesPer100g * grams) / 100) : 0;
   const previewProtein = picked ? Math.round((picked.proteinPer100g * grams) / 100) : 0;
 
+  const pick = (f: FoodResponse) => {
+    setPicked(f);
+    setGramsStr("");
+  };
+
   const addAndReset = () => {
-    if (!picked) return;
+    if (!picked || grams <= 0) return;
     onAdd({
       foodId: picked.id,
       foodName: picked.name,
@@ -192,7 +198,7 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
     });
     setPicked(null);
     setSearch("");
-    setGrams(100);
+    setGramsStr("");
   };
 
   if (!picked) {
@@ -207,7 +213,7 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
         </div>
         <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
           {matches.map((f) => (
-            <button key={f.id} onClick={() => setPicked(f)}
+            <button key={f.id} onClick={() => pick(f)}
               className="flex items-center justify-between px-3 py-2 rounded-[var(--r-md)] text-left transition-colors hover:bg-surface-container">
               <span className="text-sm font-semibold">{f.name}</span>
               <span className="flex gap-2 text-xs tabular">
@@ -236,8 +242,8 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
 
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("quantityG")}</label>
-        <input type="number" value={grams} min={1}
-          onChange={(e) => setGrams(Math.max(1, Number(e.target.value)))}
+        <input type="number" value={gramsStr} min={1} autoFocus placeholder="100"
+          onChange={(e) => setGramsStr(e.target.value)}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
           style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
       </div>
@@ -247,8 +253,8 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
         <span style={{ color: "var(--metric-protein)" }}>{previewProtein}g protein</span>
       </div>
 
-      <button onClick={addAndReset}
-        className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity"
+      <button onClick={addAndReset} disabled={grams <= 0}
+        className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
         style={{ background: "var(--primary)", color: "#1E1F18" }}>
         {t("addItem")}
       </button>

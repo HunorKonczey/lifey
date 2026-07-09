@@ -58,6 +58,24 @@ class TemplatesTab extends ConsumerWidget {
     }
   }
 
+  Future<void> _duplicate(
+      BuildContext context, WidgetRef ref, WorkoutTemplate template) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      await ref.read(workoutTemplateControllerProvider.notifier).duplicateTemplate(
+            template,
+            newName: l10n.copyOfName(template.name),
+          );
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.templateDuplicatedMessage);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotDuplicateTemplateMessage);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(workoutTemplateControllerProvider);
@@ -94,6 +112,7 @@ class TemplatesTab extends ConsumerWidget {
                 l10n: l10n,
                 onStart: () => _start(context, template),
                 onEdit: () => _edit(context, template),
+                onDuplicate: () => _duplicate(context, ref, template),
                 onDelete: () => _delete(context, ref, template),
               );
             },
@@ -121,6 +140,7 @@ class _TemplateCard extends StatelessWidget {
     required this.l10n,
     required this.onStart,
     required this.onEdit,
+    required this.onDuplicate,
     required this.onDelete,
   });
 
@@ -129,6 +149,7 @@ class _TemplateCard extends StatelessWidget {
   final AppLocalizations l10n;
   final VoidCallback onStart;
   final VoidCallback onEdit;
+  final VoidCallback onDuplicate;
   final VoidCallback onDelete;
 
   /// Distinct muscle-group codes present in this template, ordered by
@@ -234,6 +255,8 @@ class _TemplateCard extends StatelessWidget {
                           switch (value) {
                             case 'edit':
                               onEdit();
+                            case 'duplicate':
+                              onDuplicate();
                             case 'delete':
                               onDelete();
                           }
@@ -243,6 +266,8 @@ class _TemplateCard extends StatelessWidget {
                         padding: EdgeInsets.zero,
                         itemBuilder: (_) => [
                           PopupMenuItem(value: 'edit', child: Text(l10n.editMenuItem)),
+                          PopupMenuItem(
+                              value: 'duplicate', child: Text(l10n.duplicateMenuItem)),
                           PopupMenuItem(
                               value: 'delete', child: Text(l10n.deleteButton)),
                         ],

@@ -11,6 +11,7 @@ import { useDateStore } from "@/lib/hooks/useDateStore";
 import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AddMealEntryDialog } from "./AddMealEntryDialog";
 import { MealCard, mealKcal, mealProtein } from "./MealCard";
 import type { MealResponse, MealType } from "../types";
@@ -24,6 +25,7 @@ export function MealsView() {
   const dateStr = format(date, "yyyy-MM-dd");
   const [addingTo, setAddingTo] = useState<MealType | null>(null);
   const [editingMeal, setEditingMeal] = useState<MealResponse | null>(null);
+  const [duplicatingMeal, setDuplicatingMeal] = useState<MealResponse | null>(null);
 
   const MEAL_GROUPS: { type: MealType; label: string; icon: string }[] = [
     { type: "BREAKFAST", label: t("breakfast"), icon: "bakery_dining" },
@@ -50,6 +52,22 @@ export function MealsView() {
       show(t("mealRemoved"), "success");
     },
     onError: () => show(t("removeFailed"), "error"),
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: (meal: MealResponse) =>
+      mealApi.create({
+        dateTime: new Date().toISOString(),
+        mealType: meal.mealType,
+        name: meal.name,
+        entries: meal.entries.map((e) => ({ foodId: e.foodId, quantityInGrams: e.quantityInGrams })),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
+      show(t("mealDuplicated"), "success");
+      setDuplicatingMeal(null);
+    },
+    onError: () => show(t("duplicateMealFailed"), "error"),
   });
 
   const todayMeals = (data ?? []).filter(
@@ -102,6 +120,7 @@ export function MealsView() {
                   key={meal.id}
                   meal={meal}
                   onEdit={() => setEditingMeal(meal)}
+                  onDuplicate={() => setDuplicatingMeal(meal)}
                   onDelete={() => deleteMutation.mutate(meal.id)}
                   isDeleting={deleteMutation.isPending && deleteMutation.variables === meal.id}
                 />
@@ -179,6 +198,16 @@ export function MealsView() {
           onClose={() => setEditingMeal(null)}
         />
       )}
+
+      <ConfirmDialog
+        open={duplicatingMeal !== null}
+        title={t("duplicateMealConfirmTitle")}
+        body={t("duplicateMealConfirmBody")}
+        confirmLabel={t("duplicateMealConfirmAction")}
+        confirming={duplicateMutation.isPending}
+        onConfirm={() => duplicatingMeal && duplicateMutation.mutate(duplicatingMeal)}
+        onCancel={() => setDuplicatingMeal(null)}
+      />
     </div>
   );
 }

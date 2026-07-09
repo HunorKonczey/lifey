@@ -71,6 +71,20 @@ class _MealsTabState extends ConsumerState<MealsTab> {
     }
   }
 
+  Future<void> _duplicate(BuildContext context, WidgetRef ref, Meal meal) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      await ref.read(mealControllerProvider.notifier).duplicateMeal(meal);
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.mealDuplicatedMessage);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotDuplicateMealMessage);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mealControllerProvider);
@@ -131,6 +145,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                   dateLabel: _dateLabel,
                   onDelete: () => _delete(context, ref, meal),
                   onEdit: () => _edit(context, meal),
+                  onDuplicate: () => _duplicate(context, ref, meal),
                 );
               },
             ),
@@ -156,12 +171,14 @@ class _MealCard extends StatelessWidget {
     required this.dateLabel,
     required this.onDelete,
     required this.onEdit,
+    required this.onDuplicate,
   });
 
   final Meal meal;
   final DateFormat dateLabel;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final VoidCallback onDuplicate;
 
   static ({IconData icon, Color Function(AppMetricColors mc, ColorScheme cs) color}) _mealStyle(
       MealType type) =>
@@ -311,6 +328,13 @@ class _MealCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  color: scheme.onSurfaceVariant,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: l10n.duplicateMealAria,
+                  onPressed: onDuplicate,
+                ),
                 Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
               ],
             ),

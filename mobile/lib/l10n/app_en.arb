@@ -319,6 +319,15 @@
     "couldNotDeleteMealMessage": "Couldn't delete the meal",
     "@couldNotDeleteMealMessage": {"description": "Snackbar shown when deleting a meal fails"},
 
+    "duplicateMealAria": "Duplicate meal",
+    "@duplicateMealAria": {"description": "Icon button tooltip/label to duplicate a meal"},
+
+    "mealDuplicatedMessage": "Meal duplicated",
+    "@mealDuplicatedMessage": {"description": "Snackbar shown after duplicating a meal"},
+
+    "couldNotDuplicateMealMessage": "Couldn't duplicate the meal",
+    "@couldNotDuplicateMealMessage": {"description": "Snackbar shown when duplicating a meal fails"},
+
     "deleteFoodQuestionTitle": "Delete food?",
     "@deleteFoodQuestionTitle": {"description": "Confirmation dialog title for deleting a food"},
 
@@ -558,6 +567,15 @@
 
     "couldNotDeleteTemplateMessage": "Couldn't delete the template",
     "@couldNotDeleteTemplateMessage": {"description": "Snackbar shown when deleting a template fails"},
+
+    "duplicateMenuItem": "Duplicate",
+    "@duplicateMenuItem": {"description": "Generic duplicate menu item"},
+
+    "templateDuplicatedMessage": "Template duplicated",
+    "@templateDuplicatedMessage": {"description": "Snackbar shown after duplicating a template"},
+
+    "couldNotDuplicateTemplateMessage": "Couldn't duplicate the template",
+    "@couldNotDuplicateTemplateMessage": {"description": "Snackbar shown when duplicating a template fails"},
 
     "noTemplatesYetTitle": "No templates yet",
     "@noTemplatesYetTitle": {"description": "Empty state title on the Templates tab"},
@@ -961,6 +979,18 @@
     "logAsMealButton": "Log as meal",
     "@logAsMealButton": {"description": "Button on a recipe card to log it as a meal"},
 
+    "copyOfName": "{name} (Copy)",
+    "@copyOfName": {"description": "Name given to a duplicated recipe/template, derived from the original's name", "placeholders": {"name": {"type": "String"}}},
+
+    "duplicateRecipeAria": "Duplicate recipe",
+    "@duplicateRecipeAria": {"description": "Button/tooltip to duplicate a recipe"},
+
+    "recipeDuplicatedMessage": "Recipe duplicated",
+    "@recipeDuplicatedMessage": {"description": "Snackbar shown after duplicating a recipe"},
+
+    "couldNotDuplicateRecipeMessage": "Couldn't duplicate the recipe",
+    "@couldNotDuplicateRecipeMessage": {"description": "Snackbar shown when duplicating a recipe fails"},
+
     "markFavorite": "Mark as favorite",
     "@markFavorite": {"description": "Tooltip for the star button on a recipe card when it is not yet a favorite"},
 
@@ -1092,6 +1122,9 @@
 
     "equipmentLabel": "Equipment",
     "@equipmentLabel": {"description": "Section label for the equipment chip selector"},
+
+    "exerciseDescriptionLabel": "Description",
+    "@exerciseDescriptionLabel": {"description": "Label for the free-text description/notes field on the add/edit exercise sheet (e.g. machine setting)"},
 
     "allFilterLabel": "All",
     "@allFilterLabel": {"description": "Filter chip label meaning no filter / show everything"},
@@ -1233,6 +1266,21 @@
 
     "previousColumnLabel": "PREV.",
     "@previousColumnLabel": {"description": "Column header for the previous-performance hint column in the exercise card set table"},
+
+    "workoutSuccessTitle": "Great workout!",
+    "@workoutSuccessTitle": {"description": "Title of the celebration dialog shown when a workout finishes with a net improvement in at least 2 metrics"},
+
+    "workoutSuccessSubtitle": "You improved in {count} areas since last time",
+    "@workoutSuccessSubtitle": {"description": "Subtitle of the workout-success celebration dialog", "placeholders": {"count": {"type": "int"}}},
+
+    "workoutSuccessMoreCount": "+{count} more",
+    "@workoutSuccessMoreCount": {"description": "Shown below the improvement list when it was truncated to 5 rows", "placeholders": {"count": {"type": "int"}}},
+
+    "workoutSuccessContinueButton": "Continue",
+    "@workoutSuccessContinueButton": {"description": "Button that dismisses the workout-success celebration dialog"},
+
+    "workoutSuccessRepsAbbrev": "reps",
+    "@workoutSuccessRepsAbbrev": {"description": "Abbreviated unit for a reps-gain chip in the workout-success dialog, e.g. '+2 reps'"},
 
     "onboardingWelcomeTitle": "Let's personalize your plan",
     "@onboardingWelcomeTitle": {"description": "Onboarding wizard: welcome step title"},

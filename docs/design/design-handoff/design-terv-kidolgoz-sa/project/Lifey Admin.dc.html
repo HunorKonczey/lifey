@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  .mi{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  .fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+  @keyframes lifeyPulse{0%,100%{opacity:.55;}50%{opacity:.28;}}
+</style>
+</helmet>
+
+<!-- ======================= TITLE BLOCK ======================= -->
+<div style="position:absolute;left:0px;top:-150px;width:1600px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div style="width:54px;height:54px;border-radius:16px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:32px;">fitness_center</span></div>
+    <div>
+      <div style="font-size:34px;font-weight:800;color:#1c1d18;letter-spacing:-0.8px;">Lifey Admin — Edző (web) + meghívó-kártya (mobil)</div>
+      <div style="font-size:16px;font-weight:500;color:#6a6a60;">Ugyanaz a tokenkészlet · admin-akcent: tertiary · read-only szemantika · super admin dísztelen · 06-design.md</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 1 · ADMIN-IDENTITÁS ======================= -->
+<div style="position:absolute;left:0px;top:0px;width:1180px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">01 · Admin-identitás — chipek · badge-ek · akcent-szabályok</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:36px;color:#F1F0E4;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:34px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin-bottom:14px;">Kontextus-chipek (top bar)</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <span style="display:flex;align-items:center;gap:6px;background:#6E9A6A;color:#161611;border-radius:999px;padding:6px 13px;font-size:11.5px;font-weight:800;letter-spacing:.8px;"><span class="mi fill" style="font-size:15px;">fitness_center</span>EDZŐ</span>
+            <span style="font-size:12.5px;color:#A8A899;">/admin — állandó, a logó mellett; <span style="color:#F1F0E4;font-weight:700;">tertiary</span> tónus</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <span style="display:flex;align-items:center;gap:6px;border:1.5px solid #777264;color:#D8D7CB;border-radius:999px;padding:5px 13px;font-size:11.5px;font-weight:800;letter-spacing:.8px;"><span class="mi" style="font-size:15px;">shield_person</span>RENDSZER</span>
+            <span style="font-size:12.5px;color:#A8A899;">/superadmin — neutrális outline, nem tertiary</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <span style="font-size:12px;color:#777264;font-weight:600;padding:5px 0;">(nincs chip)</span>
+            <span style="font-size:12.5px;color:#A8A899;">saját nézet — a három nézet chip-színről is megkülönböztethető</span>
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin:24px 0 14px;">Read-only szemantika</div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span style="display:flex;align-items:center;gap:7px;border:1px solid #3C3E32;color:#A8A899;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;"><span class="mi" style="font-size:16px;">visibility</span>Csak olvasható</span>
+          <span style="font-size:12.5px;color:#A8A899;line-height:1.5;">A kliens-nézeteken nincs egyetlen create/edit affordance sem — a hiány maga a design-elem (nem disabled: hiányzó).</span>
+        </div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin:24px 0 14px;">Sidebar akcent — saját vs. admin</div>
+        <div style="display:flex;gap:14px;">
+          <div style="flex:1;background:#2A2C20;border-radius:16px;padding:10px;">
+            <div style="display:flex;align-items:center;gap:11px;background:#9DAE6B;color:#161611;border-radius:12px;padding:9px 12px;"><span class="mi fill" style="font-size:19px;">dashboard</span><span style="font-size:12.5px;font-weight:700;">Dashboard</span></div>
+            <div style="font-size:10.5px;color:#A8A899;margin-top:8px;text-align:center;">saját nézet · <span style="color:#9DAE6B;font-weight:700;">primary</span></div>
+          </div>
+          <div style="flex:1;background:#2A2C20;border-radius:16px;padding:10px;">
+            <div style="display:flex;align-items:center;gap:11px;background:#6E9A6A;color:#161611;border-radius:12px;padding:9px 12px;"><span class="mi fill" style="font-size:19px;">group</span><span style="font-size:12.5px;font-weight:700;">Klienseim</span></div>
+            <div style="font-size:10.5px;color:#A8A899;margin-top:8px;text-align:center;">admin nézet · <span style="color:#6E9A6A;font-weight:700;">tertiary</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin-bottom:14px;">Szerepkör-badge-ek (super admin)</div>
+        <div style="display:flex;gap:9px;flex-wrap:wrap;">
+          <span style="border:1px solid #3C3E32;color:#A8A899;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:700;letter-spacing:.6px;">USER</span>
+          <span style="background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:800;letter-spacing:.6px;">TRAINER</span>
+          <span style="border:1.5px solid #A8A899;color:#F1F0E4;border-radius:999px;padding:4.5px 12px;font-size:11px;font-weight:800;letter-spacing:.6px;">SUPER_ADMIN</span>
+        </div>
+        <div style="font-size:11.5px;color:#777264;margin-top:9px;">Nem szín-only: a felirat mindig kiírva.</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin:24px 0 14px;">Lejárati visszaszámláló chip</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span style="display:flex;align-items:center;gap:5px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span class="mi" style="font-size:15px;">schedule</span>még 16 ó</span>
+          <span class="mi" style="font-size:17px;color:#777264;">arrow_right_alt</span>
+          <span style="display:flex;align-items:center;gap:5px;background:rgba(207,102,121,.16);color:#CF6679;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span class="mi" style="font-size:15px;">schedule</span>még 2 ó</span>
+          <span style="font-size:11.5px;color:#777264;">utolsó 3 órában error-ba vált</span>
+        </div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin:24px 0 14px;">Admin-only akció · kliens-oldali jel</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:8px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:13px;padding:10px 17px;font-size:13px;font-weight:800;"><span class="mi" style="font-size:19px;">person_add</span>Kiosztás</span>
+          <span style="font-size:12px;color:#777264;">csak /admin alatt létezik</span>
+          <span style="display:flex;align-items:center;gap:5px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;"><span class="mi fill" style="font-size:14px;">fitness_center</span>Edzőtől</span>
+          <span style="font-size:12px;color:#777264;">a kliens kártyáján, tap → edző neve + dátum</span>
+        </div>
+        <div style="background:#1C1E16;border-radius:16px;padding:16px 18px;margin-top:22px;font-size:12.5px;color:#A8A899;line-height:1.6;"><span style="color:#F1F0E4;font-weight:700;">Elv:</span> a két nézet testvér, nem két külön app — minden más token azonos, csak az akcent (primary→tertiary) és a kontextus-chip vált.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 2 · ADMIN SHELL + KLIENS-RÁCS ======================= -->
+<div style="position:absolute;left:1320px;top:0px;width:1480px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">02 · Admin shell — edző dashboard · kliens-kártya rács</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:880px;">
+    <!-- sidebar -->
+    <div style="width:248px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:24px;padding:20px 14px;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;gap:10px;padding:4px 8px 22px;">
+        <div style="width:38px;height:38px;border-radius:12px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:23px;">eco</span></div>
+        <span style="font-size:19px;font-weight:800;color:#F1F0E4;letter-spacing:-0.4px;">Lifey</span>
+        <span style="display:flex;align-items:center;gap:5px;background:#6E9A6A;color:#161611;border-radius:999px;padding:4px 10px;font-size:10px;font-weight:800;letter-spacing:.7px;margin-left:2px;"><span class="mi fill" style="font-size:13px;">fitness_center</span>EDZŐ</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <div style="display:flex;align-items:center;gap:13px;background:#6E9A6A;color:#161611;border-radius:14px;padding:11px 14px;"><span class="mi fill" style="font-size:22px;">group</span><span style="font-size:14px;font-weight:700;">Klienseim</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">mail</span><span style="font-size:14px;font-weight:600;">Meghívók</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">fitness_center</span><span style="font-size:14px;font-weight:600;">Edzésterveim</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">restaurant</span><span style="font-size:14px;font-weight:600;">Ételeim</span></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">assignment</span><span style="font-size:14px;font-weight:600;">Kiosztott</span></div>
+      </div>
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:3px;">
+        <div style="height:1px;background:#3C3E32;margin:0 8px 10px;"></div>
+        <div style="display:flex;align-items:center;gap:13px;color:#A8A899;border-radius:14px;padding:11px 14px;"><span class="mi" style="font-size:22px;">undo</span><span style="font-size:14px;font-weight:600;">Saját nézet</span></div>
+        <div style="display:flex;align-items:center;gap:11px;background:#161611;border-radius:14px;padding:10px 12px;margin-top:8px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:14px;font-weight:800;">P</div>
+          <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#F1F0E4;">Kovács Péter</div><div style="font-size:11px;color:#A8A899;">Edző</div></div>
+          <span class="mi" style="font-size:20px;color:#A8A899;">unfold_more</span>
+        </div>
+      </div>
+    </div>
+    <!-- main -->
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px;min-width:0;">
+      <div style="background:#2A2C20;border-radius:20px;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 22px;margin-bottom:14px;flex:none;">
+        <div><div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Klienseim</div><div style="font-size:11px;font-weight:500;color:#A8A899;">6 aktív kliens</div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="display:flex;align-items:center;gap:8px;background:#6E9A6A;color:#161611;border-radius:13px;padding:10px 16px;font-size:13px;font-weight:800;"><span class="mi" style="font-size:19px;">person_add</span>Kliens meghívása</div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:21px;">notifications</span></div>
+          <div style="width:42px;height:42px;border-radius:13px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:15px;font-weight:800;">P</div>
+        </div>
+      </div>
+      <!-- grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-content:start;">
+        <!-- card w/ open menu -->
+        <div style="position:relative;background:#22241B;border-radius:24px;padding:20px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#C49A6C;display:flex;align-items:center;justify-content:center;color:#161611;font-size:16px;font-weight:800;">KA</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Kiss Anna</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">Utolsó aktivitás: tegnap</div></div>
+            <div style="width:34px;height:34px;border-radius:11px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#F1F0E4;"><span class="mi" style="font-size:19px;">more_horiz</span></div>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:5px;height:38px;margin:16px 0 4px;">
+            <div style="width:7px;height:30%;background:#6E9A6A;border-radius:3px;opacity:.55;"></div><div style="width:7px;height:45%;background:#6E9A6A;border-radius:3px;opacity:.6;"></div><div style="width:7px;height:60%;background:#6E9A6A;border-radius:3px;opacity:.65;"></div><div style="width:7px;height:48%;background:#6E9A6A;border-radius:3px;opacity:.7;"></div><div style="width:7px;height:72%;background:#6E9A6A;border-radius:3px;opacity:.8;"></div><div style="width:7px;height:88%;background:#6E9A6A;border-radius:3px;opacity:.9;"></div><div style="width:7px;height:76%;background:#6E9A6A;border-radius:3px;"></div>
+            <span style="font-size:10.5px;color:#777264;font-weight:600;margin-left:6px;margin-bottom:2px;">súlytrend</span>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:10px;">
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">assignment</span>2 terv</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">fitness_center</span>3 edzés/hét</span>
+          </div>
+          <!-- context menu -->
+          <div style="position:absolute;top:56px;right:16px;width:210px;background:#32342A;border-radius:16px;padding:7px;box-shadow:0 18px 44px rgba(0,0,0,.55);z-index:5;">
+            <div style="display:flex;align-items:center;gap:10px;color:#F1F0E4;border-radius:11px;padding:10px 12px;background:#3C3E32;"><span class="mi" style="font-size:18px;">open_in_new</span><span style="font-size:13px;font-weight:700;">Megnyitás</span></div>
+            <div style="display:flex;align-items:center;gap:10px;color:#CF6679;border-radius:11px;padding:10px 12px;"><span class="mi" style="font-size:18px;">link_off</span><span style="font-size:13px;font-weight:700;">Kapcsolat bontása</span></div>
+          </div>
+        </div>
+        <div style="background:#22241B;border-radius:24px;padding:20px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#8AA0B4;display:flex;align-items:center;justify-content:center;color:#161611;font-size:16px;font-weight:800;">NB</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Nagy Bence</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">Utolsó aktivitás: 2 órája</div></div>
+            <span class="mi" style="font-size:19px;color:#777264;">more_horiz</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:5px;height:38px;margin:16px 0 4px;">
+            <div style="width:7px;height:80%;background:#6E9A6A;border-radius:3px;opacity:.55;"></div><div style="width:7px;height:72%;background:#6E9A6A;border-radius:3px;opacity:.6;"></div><div style="width:7px;height:66%;background:#6E9A6A;border-radius:3px;opacity:.65;"></div><div style="width:7px;height:58%;background:#6E9A6A;border-radius:3px;opacity:.7;"></div><div style="width:7px;height:52%;background:#6E9A6A;border-radius:3px;opacity:.8;"></div><div style="width:7px;height:44%;background:#6E9A6A;border-radius:3px;opacity:.9;"></div><div style="width:7px;height:40%;background:#6E9A6A;border-radius:3px;"></div>
+            <span style="font-size:10.5px;color:#777264;font-weight:600;margin-left:6px;margin-bottom:2px;">súlytrend</span>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:10px;">
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">assignment</span>1 terv</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">fitness_center</span>4 edzés/hét</span>
+          </div>
+        </div>
+        <div style="background:#22241B;border-radius:24px;padding:20px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#B08AC8;display:flex;align-items:center;justify-content:center;color:#161611;font-size:16px;font-weight:800;">SE</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Szabó Emma</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">Utolsó aktivitás: 3 napja</div></div>
+            <span class="mi" style="font-size:19px;color:#777264;">more_horiz</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:5px;height:38px;margin:16px 0 4px;">
+            <div style="width:7px;height:50%;background:#6E9A6A;border-radius:3px;opacity:.55;"></div><div style="width:7px;height:54%;background:#6E9A6A;border-radius:3px;opacity:.6;"></div><div style="width:7px;height:48%;background:#6E9A6A;border-radius:3px;opacity:.65;"></div><div style="width:7px;height:56%;background:#6E9A6A;border-radius:3px;opacity:.7;"></div><div style="width:7px;height:52%;background:#6E9A6A;border-radius:3px;opacity:.8;"></div><div style="width:7px;height:58%;background:#6E9A6A;border-radius:3px;opacity:.9;"></div><div style="width:7px;height:55%;background:#6E9A6A;border-radius:3px;"></div>
+            <span style="font-size:10.5px;color:#777264;font-weight:600;margin-left:6px;margin-bottom:2px;">súlytrend</span>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:10px;">
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">assignment</span>3 terv</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">fitness_center</span>2 edzés/hét</span>
+          </div>
+        </div>
+        <div style="background:#22241B;border-radius:24px;padding:20px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#D8B35A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:16px;font-weight:800;">TG</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Tóth Gábor</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">Utolsó aktivitás: ma</div></div>
+            <span class="mi" style="font-size:19px;color:#777264;">more_horiz</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:5px;height:38px;margin:16px 0 4px;">
+            <div style="width:7px;height:88%;background:#6E9A6A;border-radius:3px;opacity:.55;"></div><div style="width:7px;height:80%;background:#6E9A6A;border-radius:3px;opacity:.6;"></div><div style="width:7px;height:84%;background:#6E9A6A;border-radius:3px;opacity:.65;"></div><div style="width:7px;height:74%;background:#6E9A6A;border-radius:3px;opacity:.7;"></div><div style="width:7px;height:68%;background:#6E9A6A;border-radius:3px;opacity:.8;"></div><div style="width:7px;height:62%;background:#6E9A6A;border-radius:3px;opacity:.9;"></div><div style="width:7px;height:56%;background:#6E9A6A;border-radius:3px;"></div>
+            <span style="font-size:10.5px;color:#777264;font-weight:600;margin-left:6px;margin-bottom:2px;">súlytrend</span>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:10px;">
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">assignment</span>2 terv</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">fitness_center</span>5 edzés/hét</span>
+          </div>
+        </div>
+        <div style="background:#22241B;border-radius:24px;padding:20px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#6FA8C4;display:flex;align-items:center;justify-content:center;color:#161611;font-size:16px;font-weight:800;">HL</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Horváth Lili</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">Utolsó aktivitás: 5 napja</div></div>
+            <span class="mi" style="font-size:19px;color:#777264;">more_horiz</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:5px;height:38px;margin:16px 0 4px;">
+            <div style="width:7px;height:42%;background:#6E9A6A;border-radius:3px;opacity:.55;"></div><div style="width:7px;height:40%;background:#6E9A6A;border-radius:3px;opacity:.6;"></div><div style="width:7px;height:46%;background:#6E9A6A;border-radius:3px;opacity:.65;"></div><div style="width:7px;height:44%;background:#6E9A6A;border-radius:3px;opacity:.7;"></div><div style="width:7px;height:38%;background:#6E9A6A;border-radius:3px;opacity:.8;"></div><div style="width:7px;height:36%;background:#6E9A6A;border-radius:3px;opacity:.9;"></div><div style="width:7px;height:34%;background:#6E9A6A;border-radius:3px;"></div>
+            <span style="font-size:10.5px;color:#777264;font-weight:600;margin-left:6px;margin-bottom:2px;">súlytrend</span>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:10px;">
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">assignment</span>1 terv</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">fitness_center</span>2 edzés/hét</span>
+          </div>
+        </div>
+        <div style="background:#22241B;border-radius:24px;padding:20px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;font-size:16px;font-weight:800;">VM</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Varga Máté</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">Utolsó aktivitás: tegnap</div></div>
+            <span class="mi" style="font-size:19px;color:#777264;">more_horiz</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:5px;height:38px;margin:16px 0 4px;">
+            <div style="width:7px;height:60%;background:#6E9A6A;border-radius:3px;opacity:.55;"></div><div style="width:7px;height:64%;background:#6E9A6A;border-radius:3px;opacity:.6;"></div><div style="width:7px;height:58%;background:#6E9A6A;border-radius:3px;opacity:.65;"></div><div style="width:7px;height:66%;background:#6E9A6A;border-radius:3px;opacity:.7;"></div><div style="width:7px;height:70%;background:#6E9A6A;border-radius:3px;opacity:.8;"></div><div style="width:7px;height:74%;background:#6E9A6A;border-radius:3px;opacity:.9;"></div><div style="width:7px;height:78%;background:#6E9A6A;border-radius:3px;"></div>
+            <span style="font-size:10.5px;color:#777264;font-weight:600;margin-left:6px;margin-bottom:2px;">súlytrend</span>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:10px;">
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">assignment</span>2 terv</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#F1F0E4;"><span class="mi" style="font-size:17px;color:#A8A899;">fitness_center</span>3 edzés/hét</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:auto;background:#1C1E16;border-radius:16px;padding:13px 18px;font-size:12px;color:#A8A899;display:flex;align-items:center;gap:10px;"><span class="mi" style="font-size:17px;color:#6E9A6A;">info</span>Rács: 3 oszlop desktopon → 2 → 1 · kártya lg radius, surfaceContainer · sparkline tertiary · "⋯" menü: Megnyitás / Kapcsolat bontása (error + confirm)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 3 · KLIENS-LISTA MODAL ======================= -->
+<div style="position:absolute;left:0px;top:1080px;width:940px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">03 · Kliens-lista modal — belépéskor</div>
+  <div style="position:relative;background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;height:780px;">
+    <!-- dimmed dashboard behind -->
+    <div style="position:absolute;inset:0;opacity:.35;padding:14px;display:flex;gap:14px;">
+      <div style="width:74px;flex:none;background:#2A2C20;border-radius:22px;"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:14px;">
+        <div style="height:62px;background:#2A2C20;border-radius:20px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div style="height:170px;background:#22241B;border-radius:24px;"></div>
+          <div style="height:170px;background:#22241B;border-radius:24px;"></div>
+          <div style="height:170px;background:#22241B;border-radius:24px;"></div>
+          <div style="height:170px;background:#22241B;border-radius:24px;"></div>
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;inset:0;background:rgba(8,9,6,.6);"></div>
+    <!-- dialog -->
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;background:#22241B;border-radius:24px;padding:28px 26px 22px;box-shadow:0 30px 70px rgba(0,0,0,.6);">
+      <div style="font-size:21px;font-weight:800;color:#F1F0E4;letter-spacing:-0.4px;">Klienseid</div>
+      <div style="font-size:13px;color:#A8A899;margin-top:3px;margin-bottom:20px;">6 aktív kliens · válassz, kivel folytatod</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;align-items:center;gap:13px;background:#2A2C20;border-radius:16px;padding:11px 14px;box-shadow:0 6px 18px rgba(0,0,0,.3);">
+          <div style="width:36px;height:36px;border-radius:50%;background:#C49A6C;display:flex;align-items:center;justify-content:center;color:#161611;font-size:13px;font-weight:800;">KA</div>
+          <div style="flex:1;min-width:0;"><span style="font-size:14px;font-weight:700;color:#F1F0E4;">Kiss Anna</span></div>
+          <span style="font-size:11.5px;color:#A8A899;">tegnap</span>
+          <span class="mi" style="font-size:20px;color:#A8A899;">chevron_right</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:13px;border-radius:16px;padding:11px 14px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#8AA0B4;display:flex;align-items:center;justify-content:center;color:#161611;font-size:13px;font-weight:800;">NB</div>
+          <div style="flex:1;min-width:0;"><span style="font-size:14px;font-weight:700;color:#F1F0E4;">Nagy Bence</span></div>
+          <span style="font-size:11.5px;color:#777264;">2 órája</span>
+          <span class="mi" style="font-size:20px;color:#777264;">chevron_right</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:13px;border-radius:16px;padding:11px 14px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#B08AC8;display:flex;align-items:center;justify-content:center;color:#161611;font-size:13px;font-weight:800;">SE</div>
+          <div style="flex:1;min-width:0;"><span style="font-size:14px;font-weight:700;color:#F1F0E4;">Szabó Emma</span></div>
+          <span style="font-size:11.5px;color:#777264;">3 napja</span>
+          <span class="mi" style="font-size:20px;color:#777264;">chevron_right</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:13px;border-radius:16px;padding:11px 14px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#D8B35A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:13px;font-weight:800;">TG</div>
+          <div style="flex:1;min-width:0;"><span style="font-size:14px;font-weight:700;color:#F1F0E4;">Tóth Gábor</span></div>
+          <span style="font-size:11.5px;color:#777264;">ma</span>
+          <span class="mi" style="font-size:20px;color:#777264;">chevron_right</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:22px;padding-top:18px;border-top:1px solid #2A2C20;">
+        <span style="font-size:13.5px;font-weight:700;color:#A8A899;padding:10px 16px;">Bezárás</span>
+        <span style="display:flex;align-items:center;gap:8px;background:#6E9A6A;color:#161611;border-radius:13px;padding:11px 18px;font-size:13.5px;font-weight:800;"><span class="mi" style="font-size:19px;">person_add</span>Kliens meghívása</span>
+      </div>
+    </div>
+    <div style="position:absolute;left:20px;bottom:16px;right:20px;background:rgba(28,30,22,.92);border-radius:14px;padding:11px 16px;font-size:11.5px;color:#A8A899;display:flex;align-items:center;gap:9px;"><span class="mi" style="font-size:16px;color:#6E9A6A;">info</span>Első hover-sor kiemelve (surface-emelés). Ha nincs kliens: a modal ki sem nyílik — a dashboard üres állapota jelenik meg (→ <a href="#frame9" style="color:#A9CBA5;font-weight:700;text-decoration:none;">09</a>).</div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 4 · MEGHÍVÓ OLDAL ======================= -->
+<div style="position:absolute;left:1040px;top:1080px;width:1120px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">04 · Meghívó oldal — form · függőben lista · üres állapot</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:26px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div><div style="font-size:19px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Meghívók</div><div style="font-size:12px;color:#A8A899;margin-top:2px;">A meghívó 24 óráig érvényes</div></div>
+      <span style="display:flex;align-items:center;gap:5px;background:#6E9A6A;color:#161611;border-radius:999px;padding:4px 10px;font-size:10px;font-weight:800;letter-spacing:.7px;"><span class="mi fill" style="font-size:13px;">fitness_center</span>EDZŐ</span>
+    </div>
+    <!-- form card -->
+    <div style="background:#22241B;border-radius:20px;padding:18px;">
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1;background:#161611;border:1.5px solid #CF6679;border-radius:16px;height:52px;display:flex;align-items:center;gap:11px;padding:0 16px;"><span class="mi" style="font-size:20px;color:#777264;">mail</span><span style="font-size:14px;color:#F1F0E4;">anna.kiss@gmail.com</span></div>
+        <div style="background:#6E9A6A;color:#161611;border-radius:16px;height:52px;padding:0 24px;display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:800;flex:none;"><span class="mi" style="font-size:20px;">send</span>Meghívás</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;color:#CF6679;font-size:12.5px;font-weight:600;margin-top:9px;padding-left:4px;"><span class="mi" style="font-size:16px;">error</span>Erre a címre 24 órán belül már küldtél meghívót.</div>
+      <div style="font-size:11px;color:#777264;margin-top:7px;padding-left:4px;">További inline hibák: "Nincs ilyen felhasználó" · "Már a kliensed"</div>
+    </div>
+    <!-- pending list -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin:22px 0 12px;">Függőben · 3</div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <div style="background:#1C1E16;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#32342A;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:18px;">hourglass_top</span></div>
+        <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:#F1F0E4;">peter.nagy@gmail.com</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">küldve 2 órája</div></div>
+        <span style="display:flex;align-items:center;gap:5px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span class="mi" style="font-size:15px;">schedule</span>még 22 ó</span>
+        <span style="display:flex;align-items:center;gap:6px;color:#A8A899;border:1px solid #3C3E32;border-radius:12px;padding:8px 14px;font-size:12.5px;font-weight:700;"><span class="mi" style="font-size:16px;">close</span>Visszavonás</span>
+      </div>
+      <div style="background:#1C1E16;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#32342A;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:18px;">hourglass_top</span></div>
+        <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:#F1F0E4;">reka.toth@freemail.hu</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">küldve 8 órája</div></div>
+        <span style="display:flex;align-items:center;gap:5px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span class="mi" style="font-size:15px;">schedule</span>még 16 ó</span>
+        <span style="display:flex;align-items:center;gap:6px;color:#A8A899;border:1px solid #3C3E32;border-radius:12px;padding:8px 14px;font-size:12.5px;font-weight:700;"><span class="mi" style="font-size:16px;">close</span>Visszavonás</span>
+      </div>
+      <div style="background:#1C1E16;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#32342A;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:18px;">hourglass_top</span></div>
+        <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:#F1F0E4;">bela.kovacs@gmail.com</div><div style="font-size:11.5px;color:#A8A899;margin-top:1px;">küldve tegnap</div></div>
+        <span style="display:flex;align-items:center;gap:5px;background:rgba(207,102,121,.16);color:#CF6679;border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;"><span class="mi" style="font-size:15px;">schedule</span>még 2 ó</span>
+        <span style="display:flex;align-items:center;gap:6px;color:#A8A899;border:1px solid #3C3E32;border-radius:12px;padding:8px 14px;font-size:12.5px;font-weight:700;"><span class="mi" style="font-size:16px;">close</span>Visszavonás</span>
+      </div>
+    </div>
+    <!-- empty variant -->
+    <div style="margin-top:18px;background:#1C1E16;border-radius:16px;padding:24px 16px;text-align:center;">
+      <div style="width:48px;height:48px;border-radius:15px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#6E9A6A;margin:0 auto 11px;"><span class="mi" style="font-size:26px;">mark_email_read</span></div>
+      <div style="font-size:14px;font-weight:800;color:#F1F0E4;">Nincs függő meghívó</div>
+      <div style="font-size:12px;color:#A8A899;margin-top:4px;line-height:1.5;">A meghívó 24 óra után automatikusan lejár — a lejártak nem jelennek meg itt.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 5 · KIOSZTÁS DRAWER ======================= -->
+<div style="position:absolute;left:2260px;top:1080px;width:1240px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">05 · "Kiosztás" gomb + hozzárendelő drawer</div>
+  <div style="position:relative;background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:860px;">
+    <!-- left: templates page (dimming under drawer) -->
+    <div style="flex:1;padding:24px;min-width:0;">
+      <div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;margin-bottom:4px;">Edzésterveim</div>
+      <div style="font-size:12px;color:#A8A899;margin-bottom:18px;">Admin nézetben minden kártyán megjelenik a Kiosztás gomb</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="background:#22241B;border-radius:20px;padding:16px;border:1.5px solid rgba(110,154,106,.4);">
+          <div style="display:flex;align-items:center;gap:13px;">
+            <div style="width:46px;height:46px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:24px;">fitness_center</span></div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Push day</div><div style="font-size:11.5px;color:#A8A899;margin-top:2px;">6 gyakorlat · ~52 perc</div></div>
+            <span style="display:flex;align-items:center;gap:7px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:12px;padding:9px 15px;font-size:12.5px;font-weight:800;"><span class="mi" style="font-size:17px;">person_add</span>Kiosztás</span>
+          </div>
+        </div>
+        <div style="background:#22241B;border-radius:20px;padding:16px;opacity:.5;">
+          <div style="display:flex;align-items:center;gap:13px;">
+            <div style="width:46px;height:46px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:24px;">directions_run</span></div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Leg day</div><div style="font-size:11.5px;color:#A8A899;margin-top:2px;">7 gyakorlat · ~64 perc</div></div>
+            <span style="display:flex;align-items:center;gap:7px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:12px;padding:9px 15px;font-size:12.5px;font-weight:800;"><span class="mi" style="font-size:17px;">person_add</span>Kiosztás</span>
+          </div>
+        </div>
+        <div style="background:#22241B;border-radius:20px;padding:16px;opacity:.5;">
+          <div style="display:flex;align-items:center;gap:13px;">
+            <div style="width:46px;height:46px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#C49A6C;"><span class="mi fill" style="font-size:24px;">restaurant</span></div>
+            <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Protein bowl</div><div style="font-size:11.5px;color:#A8A899;margin-top:2px;">recept · 620 kcal / adag</div></div>
+            <span style="display:flex;align-items:center;gap:7px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:12px;padding:9px 15px;font-size:12.5px;font-weight:800;"><span class="mi" style="font-size:17px;">person_add</span>Kiosztás</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:18px;background:#1C1E16;border-radius:14px;padding:12px 15px;font-size:11.5px;color:#A8A899;line-height:1.55;">A saját nézetben ez a gomb <span style="color:#F1F0E4;font-weight:700;">nem létezik</span> — nem disabled, hiányzik. Siker után toast: "Kiosztva Kiss Anna részére".</div>
+    </div>
+    <!-- scrim -->
+    <div style="position:absolute;inset:0;background:rgba(8,9,6,.45);right:420px;"></div>
+    <!-- drawer -->
+    <div style="width:420px;flex:none;background:#22241B;border-radius:24px 0 0 24px;padding:24px 22px;display:flex;flex-direction:column;gap:16px;box-shadow:-20px 0 50px rgba(0,0,0,.45);">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">"Push day" kiosztása</div>
+        <span class="mi" style="font-size:21px;color:#A8A899;">close</span>
+      </div>
+      <div style="background:#161611;border-radius:16px;height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;"><span class="mi" style="font-size:19px;color:#777264;">search</span><span style="font-size:13px;color:#777264;">Kliens keresése…</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:12px;background:rgba(110,154,106,.14);border:1.5px solid #6E9A6A;border-radius:14px;padding:9px 12px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#C49A6C;display:flex;align-items:center;justify-content:center;color:#161611;font-size:12px;font-weight:800;">KA</div>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;">Kiss Anna</span>
+          <span class="mi fill" style="font-size:20px;color:#6E9A6A;">check_circle</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;border-radius:14px;padding:9px 12px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#8AA0B4;display:flex;align-items:center;justify-content:center;color:#161611;font-size:12px;font-weight:800;">NB</div>
+          <span style="flex:1;font-size:13.5px;font-weight:600;color:#F1F0E4;">Nagy Bence</span>
+          <span style="width:18px;height:18px;border-radius:50%;border:1.5px solid #3C3E32;"></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;border-radius:14px;padding:9px 12px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#B08AC8;display:flex;align-items:center;justify-content:center;color:#161611;font-size:12px;font-weight:800;">SE</div>
+          <span style="flex:1;font-size:13.5px;font-weight:600;color:#F1F0E4;">Szabó Emma</span>
+          <span style="width:18px;height:18px;border-radius:50%;border:1.5px solid #3C3E32;"></span>
+        </div>
+      </div>
+      <!-- content summary -->
+      <div style="background:#1C1E16;border-radius:16px;padding:15px 16px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A8A899;margin-bottom:11px;">Tartalom</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:#F1F0E4;font-weight:600;">Fekvenyomás</span><span style="color:#A8A899;font-variant-numeric:tabular-nums;">4 × 8</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:#F1F0E4;font-weight:600;">Ferde pad nyomás</span><span style="color:#A8A899;font-variant-numeric:tabular-nums;">3 × 10</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:#F1F0E4;font-weight:600;">Vállból nyomás</span><span style="color:#A8A899;font-variant-numeric:tabular-nums;">3 × 10</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:#F1F0E4;font-weight:600;">Tricepsz letolás</span><span style="color:#A8A899;font-variant-numeric:tabular-nums;">3 × 12</span></div>
+          <div style="font-size:11px;color:#777264;">+ 2 további gyakorlat</div>
+        </div>
+      </div>
+      <!-- warning -->
+      <div style="background:rgba(110,154,106,.14);border:1px solid rgba(110,154,106,.35);border-radius:14px;padding:12px 14px;display:flex;gap:10px;">
+        <span class="mi" style="font-size:19px;color:#A9CBA5;flex:none;">history</span>
+        <span style="font-size:12px;color:#D5E3D2;line-height:1.55;">Már kiosztottad <span style="font-weight:800;">jún. 12-én</span>. Új másolat készül — a kliens régi példánya megmarad.</span>
+      </div>
+      <!-- footer -->
+      <div style="margin-top:auto;display:flex;gap:10px;">
+        <span style="flex:1;text-align:center;font-size:13.5px;font-weight:700;color:#A8A899;padding:13px 0;border-radius:14px;">Mégse</span>
+        <span style="flex:2;text-align:center;background:#9DAE6B;color:#161611;border-radius:14px;padding:13px 0;font-size:13.5px;font-weight:800;">Hozzárendelés</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 6 · KLIENS-RÉSZLETEK ======================= -->
+<div style="position:absolute;left:0px;top:2260px;width:1480px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">06 · Kliens-részletek — read-only · tabok · KPI-k · sablon-chip a session-ökön</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:940px;">
+    <!-- rail -->
+    <div style="width:74px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:22px;padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;margin-bottom:12px;"><span class="mi fill" style="font-size:22px;">eco</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:22px;">group</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">mail</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">fitness_center</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">restaurant</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">assignment</span></div>
+      <div style="margin-top:auto;width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">undo</span></div>
+    </div>
+    <!-- main -->
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px;min-width:0;gap:14px;">
+      <!-- header band -->
+      <div style="background:#2A2C20;border-radius:20px;padding:16px 20px;display:flex;align-items:center;gap:16px;flex:none;">
+        <span class="mi" style="font-size:22px;color:#A8A899;">arrow_back</span>
+        <div style="width:48px;height:48px;border-radius:50%;background:#C49A6C;display:flex;align-items:center;justify-content:center;color:#161611;font-size:17px;font-weight:800;">KA</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Kiss Anna</div>
+          <div style="font-size:12px;color:#A8A899;margin-top:1px;">anna.kiss@gmail.com</div>
+        </div>
+        <span style="font-size:11.5px;color:#777264;font-weight:600;">Kapcsolat: 2026. márc. 4. óta</span>
+        <span style="display:flex;align-items:center;gap:7px;border:1px solid #3C3E32;color:#A8A899;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;"><span class="mi" style="font-size:16px;">visibility</span>Csak olvasható</span>
+      </div>
+      <!-- tabs -->
+      <div style="display:flex;background:#1C1E16;border-radius:999px;padding:4px;flex:none;width:fit-content;">
+        <span style="display:flex;align-items:center;gap:7px;background:#6E9A6A;color:#161611;font-size:13px;font-weight:700;padding:9px 20px;border-radius:999px;"><span class="mi fill" style="font-size:17px;">dashboard</span>Áttekintés</span>
+        <span style="display:flex;align-items:center;gap:7px;color:#A8A899;font-size:13px;font-weight:600;padding:9px 20px;"><span class="mi" style="font-size:17px;">bar_chart</span>Statisztika</span>
+        <span style="display:flex;align-items:center;gap:7px;color:#A8A899;font-size:13px;font-weight:600;padding:9px 20px;"><span class="mi" style="font-size:17px;">directions_walk</span>Lépések</span>
+        <span style="display:flex;align-items:center;gap:7px;color:#A8A899;font-size:13px;font-weight:600;padding:9px 20px;"><span class="mi" style="font-size:17px;">fitness_center</span>Edzések</span>
+      </div>
+      <!-- KPI row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;flex:none;">
+        <div style="background:#22241B;border-radius:20px;padding:18px;">
+          <div style="display:flex;align-items:center;gap:8px;color:#E0915A;margin-bottom:12px;"><span class="mi fill" style="font-size:19px;">local_fire_department</span><span style="font-size:11.5px;font-weight:600;color:#A8A899;">Heti kcal-átlag</span></div>
+          <div style="font-size:27px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;">1,912 <span style="font-size:13px;color:#A8A899;font-weight:600;">kcal</span></div>
+        </div>
+        <div style="background:#22241B;border-radius:20px;padding:18px;">
+          <div style="display:flex;align-items:center;gap:8px;color:#8AA0B4;margin-bottom:12px;"><span class="mi fill" style="font-size:19px;">monitor_weight</span><span style="font-size:11.5px;font-weight:600;color:#A8A899;">Aktuális súly</span></div>
+          <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:27px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;">64.2 <span style="font-size:13px;color:#A8A899;font-weight:600;">kg</span></span><span style="display:flex;align-items:center;color:#9DAE6B;font-size:12px;font-weight:800;"><span class="mi" style="font-size:16px;">trending_down</span>−0.8</span></div>
+        </div>
+        <div style="background:#22241B;border-radius:20px;padding:18px;">
+          <div style="display:flex;align-items:center;gap:8px;color:#9DAE6B;margin-bottom:12px;"><span class="mi fill" style="font-size:19px;">fitness_center</span><span style="font-size:11.5px;font-weight:600;color:#A8A899;">Edzés / hét</span></div>
+          <div style="font-size:27px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;">3</div>
+        </div>
+        <div style="background:#22241B;border-radius:20px;padding:18px;">
+          <div style="display:flex;align-items:center;gap:8px;color:#B08AC8;margin-bottom:12px;"><span class="mi fill" style="font-size:19px;">directions_walk</span><span style="font-size:11.5px;font-weight:600;color:#A8A899;">Lépés-átlag</span></div>
+          <div style="font-size:27px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-0.5px;">8,430 <span style="font-size:13px;color:#A8A899;font-weight:600;">/nap</span></div>
+        </div>
+      </div>
+      <!-- two columns -->
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1.35fr;gap:14px;min-height:0;">
+        <!-- assigned plans -->
+        <div style="background:#1C1E16;border-radius:20px;padding:20px;">
+          <div style="font-size:16px;font-weight:800;color:#F1F0E4;margin-bottom:14px;">Kiosztott tervek</div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="background:#22241B;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:38px;height:38px;border-radius:12px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Push day</div><div style="font-size:11px;color:#A8A899;margin-top:1px;">edzésterv</div></div>
+              <span style="font-size:11.5px;color:#777264;font-variant-numeric:tabular-nums;">jún. 12.</span>
+            </div>
+            <div style="background:#22241B;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:38px;height:38px;border-radius:12px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">directions_run</span></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Leg day</div><div style="font-size:11px;color:#A8A899;margin-top:1px;">edzésterv</div></div>
+              <span style="font-size:11.5px;color:#777264;font-variant-numeric:tabular-nums;">máj. 28.</span>
+            </div>
+            <div style="background:#22241B;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:38px;height:38px;border-radius:12px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#C49A6C;"><span class="mi fill" style="font-size:20px;">restaurant</span></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Protein bowl</div><div style="font-size:11px;color:#A8A899;margin-top:1px;">recept</div></div>
+              <span style="font-size:11.5px;color:#777264;font-variant-numeric:tabular-nums;">máj. 14.</span>
+            </div>
+          </div>
+          <div style="margin-top:16px;background:#161611;border-radius:13px;padding:11px 14px;font-size:11.5px;color:#A8A899;line-height:1.55;">Nincs create/edit affordance — a lista tisztán olvasható. Grafikonok: elsődleges adatsor <span style="color:#9DAE6B;font-weight:700;">primary</span>, trend <span style="color:#6E9A6A;font-weight:700;">tertiary</span>.</div>
+        </div>
+        <!-- sessions -->
+        <div style="background:#1C1E16;border-radius:20px;padding:20px;display:flex;flex-direction:column;">
+          <div style="font-size:16px;font-weight:800;color:#F1F0E4;margin-bottom:3px;">Edzések</div>
+          <div style="font-size:11.5px;color:#A8A899;margin-bottom:14px;">A sablon-chip az edző fő fejlődés-követő jele</div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="background:#22241B;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:14px;">
+              <span style="font-size:12px;color:#A8A899;font-variant-numeric:tabular-nums;width:52px;flex:none;">jún. 30.</span>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Mell + váll</div><div style="font-size:11px;color:#A8A899;margin-top:1px;">52 perc · 6 gyakorlat · 8,420 kg volumen</div></div>
+              <span style="display:flex;align-items:center;gap:5px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;"><span class="mi" style="font-size:14px;">assignment</span>Push day</span>
+            </div>
+            <div style="background:#22241B;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:14px;">
+              <span style="font-size:12px;color:#A8A899;font-variant-numeric:tabular-nums;width:52px;flex:none;">jún. 27.</span>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Láb</div><div style="font-size:11px;color:#A8A899;margin-top:1px;">64 perc · 7 gyakorlat · 11,050 kg volumen</div></div>
+              <span style="display:flex;align-items:center;gap:5px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;"><span class="mi" style="font-size:14px;">assignment</span>Leg day</span>
+            </div>
+            <div style="background:#22241B;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:14px;">
+              <span style="font-size:12px;color:#A8A899;font-variant-numeric:tabular-nums;width:52px;flex:none;">jún. 25.</span>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Szabad edzés</div><div style="font-size:11px;color:#A8A899;margin-top:1px;">38 perc · 4 gyakorlat · 4,980 kg volumen</div></div>
+            </div>
+            <div style="background:#22241B;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:14px;">
+              <span style="font-size:12px;color:#A8A899;font-variant-numeric:tabular-nums;width:52px;flex:none;">jún. 23.</span>
+              <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#F1F0E4;">Mell + váll</div><div style="font-size:11px;color:#A8A899;margin-top:1px;">49 perc · 6 gyakorlat · 8,120 kg volumen</div></div>
+              <span style="display:flex;align-items:center;gap:5px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;"><span class="mi" style="font-size:14px;">assignment</span>Push day</span>
+            </div>
+          </div>
+          <div style="margin-top:auto;padding-top:14px;font-size:11.5px;color:#777264;">Tab-sor: Áttekintés / Statisztika / Lépések / Edzések — <span style="font-weight:700;color:#A8A899;">nincs Víz tab</span>. A Statisztika a saját nézet komponensei változatlanul.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 7 · SUPER ADMIN ======================= -->
+<div style="position:absolute;left:1580px;top:2260px;width:1300px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">07 · Super admin — /superadmin/users · tudatosan dísztelen</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+    <!-- top bar -->
+    <div style="background:#2A2C20;border-radius:18px;height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 18px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:34px;height:34px;border-radius:11px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:20px;">eco</span></div>
+        <span style="font-size:17px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Lifey</span>
+        <span style="display:flex;align-items:center;gap:5px;border:1.5px solid #777264;color:#D8D7CB;border-radius:999px;padding:4px 10px;font-size:10px;font-weight:800;letter-spacing:.7px;"><span class="mi" style="font-size:13px;">shield_person</span>RENDSZER</span>
+      </div>
+      <div style="width:38px;height:38px;border-radius:12px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:14px;font-weight:800;">P</div>
+    </div>
+    <!-- title + search -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:19px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Felhasználók</div>
+      <div style="background:#1C1E16;border-radius:14px;height:44px;width:320px;display:flex;align-items:center;gap:10px;padding:0 14px;"><span class="mi" style="font-size:19px;color:#777264;">search</span><span style="font-size:13px;color:#777264;">Keresés e-mailre…</span></div>
+    </div>
+    <!-- table -->
+    <div style="background:#1C1E16;border-radius:18px;padding:8px;display:flex;flex-direction:column;gap:4px;">
+      <!-- row: trainer -->
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:13px;">
+        <span class="mi" style="font-size:19px;color:#777264;">chevron_right</span>
+        <div style="width:34px;height:34px;border-radius:50%;background:#C49A6C;display:flex;align-items:center;justify-content:center;color:#161611;font-size:12.5px;font-weight:800;">A</div>
+        <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;min-width:0;">anna.kiss@gmail.com</span>
+        <span style="display:flex;gap:6px;">
+          <span style="border:1px solid #3C3E32;color:#A8A899;border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:700;letter-spacing:.5px;">USER</span>
+          <span style="background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:800;letter-spacing:.5px;">TRAINER</span>
+        </span>
+        <span style="display:flex;align-items:center;gap:6px;border:1.5px solid rgba(207,102,121,.5);color:#CF6679;border-radius:12px;padding:8px 15px;font-size:12.5px;font-weight:800;"><span class="mi" style="font-size:16px;">remove_moderator</span>Edző visszavonása</span>
+      </div>
+      <!-- row: expanded audit -->
+      <div style="background:#22241B;border-radius:13px;">
+        <div style="display:flex;align-items:center;gap:14px;padding:12px 14px;">
+          <span class="mi" style="font-size:19px;color:#A8A899;">expand_more</span>
+          <div style="width:34px;height:34px;border-radius:50%;background:#8AA0B4;display:flex;align-items:center;justify-content:center;color:#161611;font-size:12.5px;font-weight:800;">P</div>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;min-width:0;">peter.nagy@gmail.com</span>
+          <span style="display:flex;gap:6px;">
+            <span style="border:1px solid #3C3E32;color:#A8A899;border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:700;letter-spacing:.5px;">USER</span>
+          </span>
+          <span style="display:flex;align-items:center;gap:6px;background:#9DAE6B;color:#161611;border-radius:12px;padding:8px 15px;font-size:12.5px;font-weight:800;"><span class="mi" style="font-size:16px;">add_moderator</span>Edzővé tétel</span>
+        </div>
+        <div style="padding:2px 14px 14px 62px;display:flex;flex-direction:column;gap:7px;">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;">Audit-történet</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;"><span style="font-family:monospace;color:#A8A899;">2026-05-02 14:11</span><span style="color:#F1F0E4;font-weight:700;">GRANT ROLE_TRAINER</span><span style="color:#777264;">· en@lifey.app</span></div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;"><span style="font-family:monospace;color:#A8A899;">2026-06-18 09:47</span><span style="color:#F1F0E4;font-weight:700;">REVOKE ROLE_TRAINER</span><span style="color:#777264;">· en@lifey.app</span></div>
+        </div>
+      </div>
+      <!-- row: self -->
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:13px;">
+        <span class="mi" style="font-size:19px;color:#777264;">chevron_right</span>
+        <div style="width:34px;height:34px;border-radius:50%;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:12.5px;font-weight:800;">É</div>
+        <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;min-width:0;">en@lifey.app <span style="font-size:11px;color:#777264;font-weight:600;">(te)</span></span>
+        <span style="display:flex;gap:6px;">
+          <span style="border:1px solid #3C3E32;color:#A8A899;border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:700;letter-spacing:.5px;">USER</span>
+          <span style="border:1.5px solid #A8A899;color:#F1F0E4;border-radius:999px;padding:3.5px 10px;font-size:10.5px;font-weight:800;letter-spacing:.5px;">SUPER_ADMIN</span>
+        </span>
+        <span style="width:140px;text-align:center;font-size:14px;color:#777264;font-weight:700;">—</span>
+      </div>
+      <!-- row: plain user -->
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:13px;">
+        <span class="mi" style="font-size:19px;color:#777264;">chevron_right</span>
+        <div style="width:34px;height:34px;border-radius:50%;background:#B08AC8;display:flex;align-items:center;justify-content:center;color:#161611;font-size:12.5px;font-weight:800;">E</div>
+        <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;min-width:0;">emma.szabo@freemail.hu</span>
+        <span style="display:flex;gap:6px;">
+          <span style="border:1px solid #3C3E32;color:#A8A899;border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:700;letter-spacing:.5px;">USER</span>
+        </span>
+        <span style="display:flex;align-items:center;gap:6px;background:#9DAE6B;color:#161611;border-radius:12px;padding:8px 15px;font-size:12.5px;font-weight:800;"><span class="mi" style="font-size:16px;">add_moderator</span>Edzővé tétel</span>
+      </div>
+    </div>
+    <!-- pagination -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 18px;">
+      <span class="mi" style="font-size:19px;color:#777264;padding:6px;">chevron_left</span>
+      <span style="width:32px;height:32px;border-radius:10px;background:#2A2C20;color:#F1F0E4;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;">1</span>
+      <span style="width:32px;height:32px;border-radius:10px;color:#A8A899;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;">2</span>
+      <span style="width:32px;height:32px;border-radius:10px;color:#A8A899;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;">3</span>
+      <span class="mi" style="font-size:19px;color:#A8A899;padding:6px;">chevron_right</span>
+    </div>
+    <!-- confirm dialog -->
+    <div style="display:flex;gap:16px;align-items:flex-start;">
+      <div style="flex:1;background:#22241B;border-radius:20px;padding:22px;box-shadow:0 18px 44px rgba(0,0,0,.4);">
+        <div style="font-size:16px;font-weight:800;color:#F1F0E4;margin-bottom:7px;">Edzővé teszed?</div>
+        <div style="font-size:12.5px;color:#A8A899;line-height:1.6;margin-bottom:18px;"><span style="color:#F1F0E4;font-weight:800;">peter.nagy@gmail.com</span> mostantól klienseket hívhat meg, és láthatja az őt elfogadó felhasználók adatait.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <span style="font-size:13px;font-weight:700;color:#A8A899;padding:10px 16px;">Mégse</span>
+          <span style="background:#9DAE6B;color:#161611;border-radius:12px;padding:10px 18px;font-size:13px;font-weight:800;">Edzővé teszem</span>
+        </div>
+      </div>
+      <div style="flex:1;background:#1C1E16;border-radius:20px;padding:18px;font-size:12px;color:#A8A899;line-height:1.65;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:9px;">Elvek</div>
+        A megerősítő gomb szövege konkrét ("Edzővé teszem"), nem "OK". A saját sorban "—" (a lehetőség nem létezik, nem tiltott). Keresésre nincs találat → "Nincs ilyen felhasználó"; betöltés → táblázat-skeleton.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 8 · MOBIL MEGHÍVÓ-KÁRTYA ======================= -->
+<div style="position:absolute;left:0px;top:3440px;width:960px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">08 · Mobil — meghívó-kártya (lebegő) · "Edzőtől" badge</div>
+  <div style="display:flex;gap:44px;align-items:flex-start;">
+    <!-- PHONE A: invite card -->
+    <div style="flex:none;">
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+          <!-- app content behind (usable, not modal) -->
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:54px;background:rgba(34,36,27,.92);border-radius:20px;display:flex;align-items:center;padding:0 18px;"><span style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Dashboard</span></div>
+          <div style="position:absolute;top:130px;left:16px;right:16px;background:#22241B;border-radius:24px;padding:18px;">
+            <div style="display:flex;align-items:center;gap:9px;color:#E0915A;margin-bottom:12px;"><span class="mi fill" style="font-size:19px;">local_fire_department</span><span style="font-size:12px;font-weight:600;color:#A8A899;">Calories</span></div>
+            <div style="font-size:32px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">1,462 <span style="font-size:14px;color:#A8A899;font-weight:600;">/ 2,200 kcal</span></div>
+            <div style="height:9px;background:#161611;border-radius:5px;margin-top:14px;overflow:hidden;"><div style="width:66%;height:100%;background:#E0915A;border-radius:5px;"></div></div>
+          </div>
+          <div style="position:absolute;top:296px;left:16px;right:16px;display:flex;gap:11px;">
+            <div style="flex:1;background:#1C1E16;border-radius:20px;padding:15px;"><div style="display:flex;align-items:center;gap:7px;color:#9DAE6B;"><span class="mi fill" style="font-size:16px;">egg_alt</span><span style="font-size:11px;font-weight:600;color:#A8A899;">Protein</span></div><div style="font-size:19px;font-weight:800;color:#F1F0E4;margin-top:8px;font-variant-numeric:tabular-nums;">96 g</div></div>
+            <div style="flex:1;background:#1C1E16;border-radius:20px;padding:15px;"><div style="display:flex;align-items:center;gap:7px;color:#D8B35A;"><span class="mi fill" style="font-size:16px;">bakery_dining</span><span style="font-size:11px;font-weight:600;color:#A8A899;">Carbs</span></div><div style="font-size:19px;font-weight:800;color:#F1F0E4;margin-top:8px;font-variant-numeric:tabular-nums;">148 g</div></div>
+            <div style="flex:1;background:#1C1E16;border-radius:20px;padding:15px;"><div style="display:flex;align-items:center;gap:7px;color:#8E8EC4;"><span class="mi fill" style="font-size:16px;">water_drop</span><span style="font-size:11px;font-weight:600;color:#A8A899;">Fat</span></div><div style="font-size:19px;font-weight:800;color:#F1F0E4;margin-top:8px;font-variant-numeric:tabular-nums;">51 g</div></div>
+          </div>
+          <!-- floating invite card above bottom nav -->
+          <div style="position:absolute;bottom:104px;left:16px;right:16px;background:rgba(42,44,32,.96);backdrop-filter:blur(14px);border-radius:24px;padding:18px 18px 16px;z-index:55;box-shadow:0 20px 50px rgba(0,0,0,.6);border:1px solid rgba(110,154,106,.22);">
+            <div style="display:flex;align-items:flex-start;gap:13px;">
+              <div style="width:44px;height:44px;border-radius:50%;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:16px;font-weight:800;flex:none;">KP</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:15px;font-weight:800;color:#F1F0E4;">Kovács Péter</div>
+                <div style="font-size:12.5px;color:#A8A899;line-height:1.5;margin-top:2px;">Meghívott, hogy legyen a személyi edződ. · <span style="color:#A9CBA5;font-weight:700;">Lejár: 18 óra múlva</span></div>
+              </div>
+              <span class="mi" style="font-size:19px;color:#777264;flex:none;">close</span>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:15px;">
+              <span style="flex:1;text-align:center;color:#A8A899;font-size:13.5px;font-weight:700;padding:12px 0;border-radius:14px;">Elutasítom</span>
+              <span style="flex:1;text-align:center;background:#9DAE6B;color:#161611;border-radius:14px;padding:12px 0;font-size:13.5px;font-weight:800;">Elfogadom</span>
+            </div>
+          </div>
+          <!-- bottom nav -->
+          <div style="position:absolute;bottom:26px;left:50%;transform:translateX(-50%);background:#2A2C20;border-radius:999px;padding:12px 18px;display:flex;gap:22px;z-index:45;box-shadow:0 10px 28px rgba(0,0,0,.5);">
+            <span class="mi fill" style="font-size:25px;color:#9DAE6B;">dashboard</span>
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">restaurant</span>
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">fitness_center</span>
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">monitor_weight</span>
+            <span class="mi" style="font-size:25px;color:#8b8a7c;">bar_chart</span>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#76766c;line-height:1.6;margin-top:12px;max-width:414px;">Alulról csúszik be, nem modális — az app használható marad. Elutasítás ghost (nem error). Swipe-dismiss = "később", de az ✕ gomb is elérhető (akadálymentesség). Válasz után kicsúszik + snackbar.</div>
+    </div>
+    <!-- PHONE B: Edzőtől badge -->
+    <div style="flex:none;">
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:54px;background:rgba(34,36,27,.92);border-radius:20px;display:flex;align-items:center;padding:0 18px;"><span style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Workouts</span></div>
+          <div style="position:absolute;top:128px;left:14px;right:14px;display:flex;background:#1C1E16;border-radius:999px;padding:4px;">
+            <div style="flex:1;text-align:center;color:#A8A899;font-size:13px;font-weight:600;padding:8px 0;">History</div>
+            <div style="flex:1;text-align:center;background:#9DAE6B;color:#161611;font-size:13px;font-weight:700;padding:8px 0;border-radius:999px;">Templates</div>
+            <div style="flex:1;text-align:center;color:#A8A899;font-size:13px;font-weight:600;padding:8px 0;">Exercises</div>
+          </div>
+          <div style="position:absolute;top:190px;left:16px;right:16px;display:flex;flex-direction:column;gap:11px;">
+            <!-- card with badge -->
+            <div style="position:relative;background:#1C1E16;border-radius:20px;padding:16px;">
+              <div style="display:flex;align-items:center;gap:13px;">
+                <div style="width:46px;height:46px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:24px;">fitness_center</span></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:800;color:#F1F0E4;">Push day</div><div style="font-size:11.5px;font-weight:600;color:#A8A899;margin-top:2px;">6 exercises · ~52 min</div></div>
+                <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+              </div>
+              <span style="position:absolute;top:-9px;right:14px;display:flex;align-items:center;gap:5px;background:#324536;color:#A9CBA5;border-radius:999px;padding:4px 11px;font-size:10.5px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.4);"><span class="mi fill" style="font-size:13px;">fitness_center</span>Edzőtől</span>
+            </div>
+            <div style="background:#1C1E16;border-radius:20px;padding:16px;">
+              <div style="display:flex;align-items:center;gap:13px;">
+                <div style="width:46px;height:46px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:24px;">directions_run</span></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:800;color:#F1F0E4;">Leg day</div><div style="font-size:11.5px;font-weight:600;color:#A8A899;margin-top:2px;">7 exercises · ~64 min</div></div>
+                <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+              </div>
+            </div>
+            <div style="background:#1C1E16;border-radius:20px;padding:16px;">
+              <div style="display:flex;align-items:center;gap:13px;">
+                <div style="width:46px;height:46px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:24px;">self_improvement</span></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:800;color:#F1F0E4;">Mobility</div><div style="font-size:11.5px;font-weight:600;color:#A8A899;margin-top:2px;">5 exercises · ~25 min</div></div>
+                <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+              </div>
+            </div>
+          </div>
+          <!-- bottom sheet: badge tap -->
+          <div style="position:absolute;bottom:0;left:0;right:0;background:#22241B;border-radius:28px 28px 44px 44px;padding:14px 22px 34px;z-index:55;box-shadow:0 -18px 44px rgba(0,0,0,.55);">
+            <div style="width:44px;height:5px;border-radius:3px;background:#3C3E32;margin:0 auto 16px;"></div>
+            <div style="display:flex;align-items:center;gap:13px;">
+              <div style="width:44px;height:44px;border-radius:50%;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;font-size:16px;font-weight:800;">KP</div>
+              <div>
+                <div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Kovács Péter edzőtől</div>
+                <div style="font-size:12px;color:#A8A899;margin-top:2px;">Kiosztva: 2026. jún. 12. · saját másolatod, szabadon szerkeszthető</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#76766c;line-height:1.6;margin-top:12px;max-width:414px;">"Edzőtől" pill a kártya sarkában (tertiary-container). Tap → bottom sheet az edző nevével és a kiosztás dátumával.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 9 · ADMIN ÁLLAPOTOK ======================= -->
+<div id="frame9" style="position:absolute;left:1040px;top:3440px;width:1100px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">09 · Admin állapotok — skeleton · üres · 403</div>
+  <div style="display:flex;flex-direction:column;gap:18px;">
+    <div style="display:flex;gap:18px;">
+      <!-- skeleton client card -->
+      <div style="flex:1;background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9DAE6B;margin-bottom:14px;">Kliens-kártya skeleton</div>
+        <div style="background:#22241B;border-radius:20px;padding:18px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#32342A;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+            <div style="flex:1;"><div style="width:110px;height:13px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="width:150px;height:10px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;margin-top:8px;"></div></div>
+          </div>
+          <div style="width:100%;height:34px;border-radius:10px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;margin:16px 0 12px;"></div>
+          <div style="display:flex;gap:12px;"><div style="width:70px;height:11px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div><div style="width:90px;height:11px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div></div>
+        </div>
+      </div>
+      <!-- empty: no clients -->
+      <div style="flex:1;background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#C49A6C;margin-bottom:14px;">Üres dashboard — nincs kliens</div>
+        <div style="background:#1C1E16;border-radius:16px;padding:30px 16px;text-align:center;">
+          <div style="width:58px;height:58px;border-radius:18px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#6E9A6A;margin:0 auto 13px;"><span class="mi" style="font-size:32px;">group</span></div>
+          <div style="font-size:15px;font-weight:800;color:#F1F0E4;">Még nincs kliensed</div>
+          <div style="font-size:12px;color:#A8A899;margin-top:5px;">Ilyenkor a kliens-lista modal ki sem nyílik.</div>
+          <div style="display:inline-flex;align-items:center;gap:8px;background:#6E9A6A;color:#161611;border-radius:13px;padding:10px 18px;font-size:13px;font-weight:800;margin-top:16px;"><span class="mi" style="font-size:18px;">person_add</span>Hívd meg az elsőt</div>
+        </div>
+      </div>
+    </div>
+    <!-- 403 -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#CF6679;margin-bottom:14px;">403 — kapcsolat bontva böngészés közben</div>
+      <div style="background:#1C1E16;border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;border:1px solid rgba(207,102,121,.22);">
+        <div style="width:42px;height:42px;border-radius:13px;background:rgba(207,102,121,.14);display:flex;align-items:center;justify-content:center;color:#CF6679;"><span class="mi fill" style="font-size:23px;">link_off</span></div>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Ez a kliens már nem elérhető</div><div style="font-size:12px;color:#A8A899;margin-top:1px;">A kapcsolat megszűnt — az adatok nem tölthetők be.</div></div>
+        <div style="display:flex;align-items:center;gap:7px;background:#2A2C20;color:#F1F0E4;border-radius:12px;padding:9px 15px;font-size:13px;font-weight:700;"><span class="mi" style="font-size:18px;color:#9DAE6B;">arrow_back</span>Vissza a listához</div>
+      </div>
+      <div style="font-size:11.5px;color:#777264;margin-top:12px;">Lejárt meghívó a másik oldalon: frissítéskor egyszerűen kikerül a listából — nincs külön "lejárt" vizuális szemét.</div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

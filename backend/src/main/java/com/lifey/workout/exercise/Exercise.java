@@ -35,6 +35,9 @@ public class Exercise extends SyncableEntity {
     @Column(length = 32)
     private Equipment equipment;
 
+    @Column(columnDefinition = "text")
+    private String description;
+
     /**
      * Provenance for a copy created by the trainer content-assignment feature
      * (docs/personal_trainer/02-domain-es-migraciok.md, "Változás 3") — null for

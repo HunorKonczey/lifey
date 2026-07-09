@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { workoutSessionApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
+import { previousSets, delta, computeWorkoutProgress, isWorkoutSuccess, type WorkoutProgressResult } from "../progress";
+import { WorkoutSuccessDialog } from "./WorkoutSuccessDialog";
 import type {
-  WorkoutSessionResponse, ExerciseSetResponse, ExerciseSummary,
+  WorkoutSessionResponse, ExerciseSummary,
 } from "../types";
 
 interface DraftSet {
@@ -25,48 +27,13 @@ interface SessionLoggerProps {
   onFinished: () => void;
 }
 
-/**
- * The most recent *other* session that logged sets for `exerciseId`,
- * preferring one started from the same `templateId` if given. Falls back to
- * the most recent session with this exercise regardless of template when the
- * template-scoped search comes up empty (or no template was given). Returns
- * that session's sets for this exercise sorted by weight descending, so
- * callers can pair them positionally with the current session's rows.
- */
-function previousSets(
-  history: WorkoutSessionResponse[],
-  currentId: number,
-  exerciseId: number,
-  templateId: number | null,
-): ExerciseSetResponse[] {
-  const others = history.filter((s) => s.id !== currentId);
-
-  const lastSessionWithExercise = (candidates: WorkoutSessionResponse[]) =>
-    candidates
-      .filter((s) => s.sets.some((set) => set.exerciseId === exerciseId))
-      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())[0] ?? null;
-
-  const session =
-    (templateId != null ? lastSessionWithExercise(others.filter((s) => s.templateId === templateId)) : null) ??
-    lastSessionWithExercise(others);
-  if (!session) return [];
-
-  return session.sets
-    .filter((set) => set.exerciseId === exerciseId)
-    .sort((a, b) => b.weight - a.weight);
-}
-
-/** "up" if `current` beat `previous`, "down" if it fell short, null if unchanged/incomparable. */
-function delta(current: number, previous: number | undefined): "up" | "down" | null {
-  if (previous === undefined || current === previous) return null;
-  return current > previous ? "up" : "down";
-}
-
 export function SessionLogger({ session, history, onFinished }: SessionLoggerProps) {
   const t = useTranslations("workouts");
   const common = useTranslations("common");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const { show } = useToast();
+  const [successResult, setSuccessResult] = useState<WorkoutProgressResult | null>(null);
 
   // Seed drafts from existing sets (grouped per exercise)
   const [drafts, setDrafts] = useState<DraftSet[]>(
@@ -96,8 +63,20 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
     mutationFn: (finished: boolean) => workoutSessionApi.update(session.id, buildRequest(finished)),
     onSuccess: (_data, finished) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() });
-      if (finished) { show(t("workoutFinished"), "success"); onFinished(); }
-      else show(t("progressSaved"), "success");
+      if (finished) {
+        show(t("workoutFinished"), "success");
+        const progress = computeWorkoutProgress(
+          session,
+          drafts,
+          history,
+          exercises,
+          (n) => n.toLocaleString(locale, { maximumFractionDigits: 1 }),
+          t("workoutSuccessRepsAbbrev"),
+          t("kg"),
+        );
+        if (isWorkoutSuccess(progress)) setSuccessResult(progress);
+        else onFinished();
+      } else show(t("progressSaved"), "success");
     },
     onError: () => show(t("saveFailed"), "error"),
   });
@@ -108,7 +87,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
       exerciseId,
       weight: last?.weight ?? 0,
       reps: last?.reps ?? 0,
-      done: false,
+      done: true,
     }]);
   };
 
@@ -219,6 +198,12 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
           </div>
         );
       })}
+
+      <WorkoutSuccessDialog
+        open={successResult !== null}
+        result={successResult ?? { score: 0, improvements: [] }}
+        onClose={() => { setSuccessResult(null); onFinished(); }}
+      />
     </div>
   );
 }

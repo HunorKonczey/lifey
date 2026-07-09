@@ -23,6 +23,7 @@ import '../domain/workout_template.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
 import 'widgets/apple_workout_picker_sheet.dart';
 import 'widgets/exercise_session_card.dart';
+import 'widgets/workout_success_dialog.dart';
 
 /// Full-screen form for logging a session, or editing one when [session] is given.
 ///
@@ -503,6 +504,17 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
+  /// Shows the celebration dialog if the just-finished session improved on
+  /// at least 2 metrics net vs. the previous one for each exercise. No-op
+  /// (and returns immediately) otherwise. Awaited so callers navigate away
+  /// only after the user dismisses it.
+  Future<void> _maybeShowWorkoutSuccess() async {
+    final l10n = AppLocalizations.of(context)!;
+    final progress = computeWorkoutProgress(_blocks, l10n);
+    if (!progress.isSuccess) return;
+    await showWorkoutSuccessDialog(context, progress);
+  }
+
   /// Stamps finishedAt = now, stops the ticker, and persists.
   /// Does NOT navigate — the caller decides where to go.
   Future<void> _persistFinished() async {
@@ -529,6 +541,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
       if (!appleEnabled) {
         await _persistFinished();
+        if (!mounted) return;
+        await _maybeShowWorkoutSuccess();
         if (!mounted) return;
         _navigateToDashboard();
         return;
@@ -566,6 +580,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           );
           if (!mounted) return;
         }
+        await _maybeShowWorkoutSuccess();
+        if (!mounted) return;
         _navigateToDashboard();
       } else {
         // No Apple workout found — dialog instead of snackbar.
@@ -580,6 +596,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         );
         if (!mounted || finish != true) return; // Cancel = stay
         await _persistFinished();
+        if (!mounted) return;
+        await _maybeShowWorkoutSuccess();
         if (!mounted) return;
         _navigateToDashboard();
       }

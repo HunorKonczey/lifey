@@ -270,6 +270,7 @@ class PullEngine {
       name: Value(json['name'] as String),
       category: Value(json['category'] as String?),
       equipment: Value(json['equipment'] as String?),
+      description: Value(json['description'] as String?),
       originTrainerId: Value(json['originTrainerId'] as int?),
     );
     if (existingClientId != null) {

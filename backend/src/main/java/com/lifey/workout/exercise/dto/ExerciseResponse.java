@@ -7,6 +7,7 @@ public record ExerciseResponse(
         String name,
         String category,
         String equipment,
+        String description,
         Instant updatedAt,
         Instant deletedAt,
         // Non-null only for a trainer-assigned copy (docs/personal_trainer/05-mobil-terv.md

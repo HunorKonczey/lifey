@@ -20,11 +20,12 @@ export function mealFat(m: MealResponse) {
 interface MealCardProps {
   meal: MealResponse;
   onEdit?: () => void;
+  onDuplicate?: () => void;
   onDelete?: () => void;
   isDeleting?: boolean;
 }
 
-export function MealCard({ meal, onEdit, onDelete, isDeleting }: MealCardProps) {
+export function MealCard({ meal, onEdit, onDuplicate, onDelete, isDeleting }: MealCardProps) {
   const t = useTranslations("nutrition");
   const readOnly = !onEdit && !onDelete;
   const kcal = Math.round(mealKcal(meal));
@@ -58,6 +59,16 @@ export function MealCard({ meal, onEdit, onDelete, isDeleting }: MealCardProps) 
                 aria-label={t("editMealAria")}
               >
                 <span className="material-symbols-rounded text-lg">edit</span>
+              </button>
+            )}
+            {onDuplicate && (
+              <button
+                onClick={onDuplicate}
+                className="p-1 rounded-[var(--r-sm)] hover:bg-surface-container"
+                style={{ color: "var(--muted)" }}
+                aria-label={t("duplicateMealAria")}
+              >
+                <span className="material-symbols-rounded text-lg">content_copy</span>
               </button>
             )}
             {onDelete && (

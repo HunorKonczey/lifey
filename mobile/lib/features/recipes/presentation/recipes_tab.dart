@@ -62,6 +62,24 @@ class RecipesTab extends ConsumerWidget {
     }
   }
 
+  Future<void> _duplicate(
+      BuildContext context, WidgetRef ref, Recipe recipe) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      await ref.read(recipeControllerProvider.notifier).duplicateRecipe(
+            recipe,
+            newName: l10n.copyOfName(recipe.name),
+          );
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.recipeDuplicatedMessage);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotDuplicateRecipeMessage);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(recipeControllerProvider);
@@ -93,6 +111,7 @@ class RecipesTab extends ConsumerWidget {
               recipe: visible[index],
               onDelete: () => _delete(context, ref, visible[index]),
               onLogAsMeal: () => _logAsMeal(context, visible[index]),
+              onDuplicate: () => _duplicate(context, ref, visible[index]),
               onEdit: () => _edit(context, visible[index]),
               onToggleFavorite: () => _toggleFavorite(ref, visible[index]),
             ),
@@ -117,6 +136,7 @@ class _RecipeCard extends StatelessWidget {
     required this.recipe,
     required this.onDelete,
     required this.onLogAsMeal,
+    required this.onDuplicate,
     required this.onEdit,
     required this.onToggleFavorite,
   });
@@ -124,6 +144,7 @@ class _RecipeCard extends StatelessWidget {
   final Recipe recipe;
   final VoidCallback onDelete;
   final VoidCallback onLogAsMeal;
+  final VoidCallback onDuplicate;
   final VoidCallback onEdit;
   final VoidCallback onToggleFavorite;
 
@@ -268,6 +289,23 @@ class _RecipeCard extends StatelessWidget {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Duplicate button — compact rounded square, same treatment as log-as-meal
+                Tooltip(
+                  message: l10n.duplicateRecipeAria,
+                  child: GestureDetector(
+                    onTap: onDuplicate,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.copy_rounded, size: 16, color: scheme.onSurfaceVariant),
                     ),
                   ),
                 ),

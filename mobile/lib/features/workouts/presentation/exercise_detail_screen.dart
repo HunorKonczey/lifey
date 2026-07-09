@@ -208,6 +208,14 @@ class _DetailBody extends StatelessWidget {
             const SizedBox(height: 20),
           ],
 
+          if (exercise.description != null && exercise.description!.trim().isNotEmpty) ...[
+            Text(
+              exercise.description!,
+              style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 20),
+          ],
+
           // PR + 1RM stat row
           if (prSet != null) ...[
             Row(

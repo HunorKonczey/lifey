@@ -179,6 +179,7 @@ function ExerciseEditor({
   const [name, setName] = useState(exercise?.name ?? "");
   const [category, setCategory] = useState<string>(exercise?.category ?? "");
   const [equipment, setEquipment] = useState<string>(exercise?.equipment ?? "");
+  const [description, setDescription] = useState(exercise?.description ?? "");
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -186,6 +187,7 @@ function ExerciseEditor({
         name,
         category: (category || null) as MuscleGroup | null,
         equipment: (equipment || null) as Equipment | null,
+        description: description.trim() || null,
       };
       return exercise ? exerciseApi.update(exercise.id, body) : exerciseApi.create(body);
     },
@@ -233,6 +235,13 @@ function ExerciseEditor({
           <option value="">{common("noneOption")}</option>
           {EQUIPMENT.map((q) => <option key={q} value={q}>{humanizeEnum(q)}</option>)}
         </select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("exerciseDescription")}</label>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
+          className="px-3 py-2 rounded-[var(--r-input)] outline-none text-sm resize-none"
+          style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
       </div>
 
       <div className="flex gap-2">

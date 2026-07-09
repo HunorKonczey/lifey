@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  .mi{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  .fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+  @keyframes lifeyPulse{0%,100%{opacity:.55;}50%{opacity:.28;}}
+</style>
+</helmet>
+
+<!-- ======================= TITLE BLOCK ======================= -->
+<div style="position:absolute;left:0px;top:-150px;width:1700px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div style="width:54px;height:54px;border-radius:16px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:32px;">calendar_month</span></div>
+    <div>
+      <div style="font-size:34px;font-weight:800;color:#1c1d18;letter-spacing:-0.8px;">Lifey — Ütemezett edzések · admin Ütemterv + kliens "Közelgő"</div>
+      <div style="font-size:16px;font-weight:500;color:#6a6a60;">4 állapotú lifecycle (közelgő · elvégzett · kihagyott · lemondott) · max 3 hónap · kliensnél 7 nap · nincs új token</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 1 · ÜTEMTERV TAB ======================= -->
+<div style="position:absolute;left:0px;top:0px;width:1500px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">A · Web admin — "Ütemterv" tab a kliens-részleteken · sorozat-kártyák · heti idővonal</div>
+  <div style="background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:1060px;">
+    <!-- rail -->
+    <div style="width:74px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:22px;padding:18px 0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="width:44px;height:44px;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;margin-bottom:12px;"><span class="mi fill" style="font-size:22px;">eco</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:22px;">group</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">mail</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">fitness_center</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">restaurant</span></div>
+      <div style="width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">assignment</span></div>
+      <div style="margin-top:auto;width:48px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">undo</span></div>
+    </div>
+    <!-- main -->
+    <div style="flex:1;display:flex;flex-direction:column;padding:14px;min-width:0;gap:14px;">
+      <!-- header band: CTA helyett read-only badge -->
+      <div style="background:#2A2C20;border-radius:20px;padding:16px 20px;display:flex;align-items:center;gap:16px;flex:none;">
+        <span class="mi" style="font-size:22px;color:#A8A899;">arrow_back</span>
+        <div style="width:48px;height:48px;border-radius:50%;background:#C49A6C;display:flex;align-items:center;justify-content:center;color:#161611;font-size:17px;font-weight:800;">KA</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Kiss Anna</div>
+          <div style="font-size:12px;color:#A8A899;margin-top:1px;">anna.kiss@gmail.com</div>
+        </div>
+        <span style="display:flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:13px;padding:11px 18px;font-size:13.5px;font-weight:800;"><span class="mi" style="font-size:19px;">add</span>Edzés ütemezése</span>
+      </div>
+      <!-- tabs: 5. tab aktív -->
+      <div style="display:flex;background:#1C1E16;border-radius:999px;padding:4px;flex:none;width:fit-content;">
+        <span style="display:flex;align-items:center;gap:7px;color:#A8A899;font-size:13px;font-weight:600;padding:9px 18px;"><span class="mi" style="font-size:17px;">dashboard</span>Áttekintés</span>
+        <span style="display:flex;align-items:center;gap:7px;color:#A8A899;font-size:13px;font-weight:600;padding:9px 18px;"><span class="mi" style="font-size:17px;">bar_chart</span>Statisztika</span>
+        <span style="display:flex;align-items:center;gap:7px;color:#A8A899;font-size:13px;font-weight:600;padding:9px 18px;"><span class="mi" style="font-size:17px;">directions_walk</span>Lépések</span>
+        <span style="display:flex;align-items:center;gap:7px;color:#A8A899;font-size:13px;font-weight:600;padding:9px 18px;"><span class="mi" style="font-size:17px;">fitness_center</span>Edzések</span>
+        <span style="display:flex;align-items:center;gap:7px;background:#6E9A6A;color:#161611;font-size:13px;font-weight:700;padding:9px 18px;border-radius:999px;"><span class="mi fill" style="font-size:17px;">calendar_month</span>Ütemterv</span>
+      </div>
+      <!-- active series -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:none;">
+        <!-- series card with open menu -->
+        <div style="position:relative;background:#22241B;border-radius:24px;padding:20px;">
+          <div style="display:flex;align-items:center;gap:13px;">
+            <div style="width:44px;height:44px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:23px;">fitness_center</span></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Push day</div>
+              <div style="font-size:12px;color:#A8A899;margin-top:2px;">Minden hétfő és csütörtök · júl. 7. – okt. 6.</div>
+            </div>
+            <div style="width:34px;height:34px;border-radius:11px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#F1F0E4;"><span class="mi" style="font-size:19px;">more_horiz</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;margin-top:15px;flex-wrap:wrap;">
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#9DAE6B;"><span class="mi fill" style="font-size:16px;">check_circle</span>12 elvégzett</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#CF6679;"><span class="mi" style="font-size:16px;">warning</span>3 kihagyott</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#A8A899;"><span class="mi" style="font-size:16px;">schedule</span>21 hátra</span>
+          </div>
+          <div style="height:7px;background:#161611;border-radius:4px;margin-top:12px;overflow:hidden;display:flex;">
+            <div style="width:33%;height:100%;background:#9DAE6B;"></div>
+            <div style="width:8%;height:100%;background:#CF6679;opacity:.7;"></div>
+          </div>
+          <!-- context menu -->
+          <div style="position:absolute;top:58px;right:16px;width:224px;background:#32342A;border-radius:16px;padding:7px;box-shadow:0 18px 44px rgba(0,0,0,.55);z-index:5;">
+            <div style="display:flex;align-items:center;gap:10px;color:#CF6679;border-radius:11px;padding:10px 12px;background:#3C3E32;"><span class="mi" style="font-size:18px;">event_busy</span><span style="font-size:13px;font-weight:700;">Sorozat lemondása</span></div>
+          </div>
+        </div>
+        <!-- series card 2 -->
+        <div style="background:#22241B;border-radius:24px;padding:20px;">
+          <div style="display:flex;align-items:center;gap:13px;">
+            <div style="width:44px;height:44px;border-radius:14px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:23px;">self_improvement</span></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Mobility</div>
+              <div style="font-size:12px;color:#A8A899;margin-top:2px;">Naponta · júl. 10. – aug. 10.</div>
+            </div>
+            <span class="mi" style="font-size:19px;color:#777264;">more_horiz</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;margin-top:15px;flex-wrap:wrap;">
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#9DAE6B;"><span class="mi fill" style="font-size:16px;">check_circle</span>0 elvégzett</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#A8A899;"><span class="mi" style="font-size:16px;">schedule</span>32 hátra</span>
+          </div>
+          <div style="height:7px;background:#161611;border-radius:4px;margin-top:12px;"></div>
+        </div>
+      </div>
+      <!-- timeline -->
+      <div style="flex:1;background:#1C1E16;border-radius:20px;padding:20px;min-height:0;display:flex;flex-direction:column;">
+        <div style="font-size:16px;font-weight:800;color:#F1F0E4;margin-bottom:14px;">Idővonal</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin-bottom:9px;">E hét</div>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <!-- kihagyott -->
+          <div style="background:#22241B;border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:14px;">
+            <span style="font-size:12px;color:#A8A899;font-variant-numeric:tabular-nums;width:88px;flex:none;">hétfő, júl. 6.</span>
+            <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;min-width:0;">Push day</span>
+            <span style="display:flex;align-items:center;gap:5px;background:rgba(207,102,121,.16);color:#CF6679;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;"><span class="mi" style="font-size:14px;">warning</span>kihagyta</span>
+          </div>
+          <!-- elvégzett (klikkelhető) -->
+          <div style="background:#22241B;border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:14px;">
+            <span style="font-size:12px;color:#A8A899;font-variant-numeric:tabular-nums;width:88px;flex:none;">kedd, júl. 7.</span>
+            <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;min-width:0;">Mobility</span>
+            <span style="display:flex;align-items:center;gap:5px;color:#9DAE6B;font-size:11.5px;font-weight:800;"><span class="mi fill" style="font-size:16px;">check_circle</span>elvégezve · 41 perc</span>
+            <span class="mi" style="font-size:19px;color:#777264;">chevron_right</span>
+          </div>
+          <!-- ma, közelgő + lemondás ikon -->
+          <div style="background:#22241B;border:1.5px solid rgba(110,154,106,.4);border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:14px;">
+            <span style="font-size:12px;color:#F1F0E4;font-weight:700;font-variant-numeric:tabular-nums;width:88px;flex:none;">ma, júl. 9.</span>
+            <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;min-width:0;">Push day</span>
+            <span style="display:flex;align-items:center;gap:5px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;"><span class="mi" style="font-size:14px;">schedule</span>közelgő</span>
+            <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#A8A899;background:#2A2C20;"><span class="mi" style="font-size:17px;">event_busy</span></span>
+          </div>
+          <!-- lemondott -->
+          <div style="background:#22241B;border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:14px;opacity:.45;">
+            <span style="font-size:12px;color:#A8A899;font-variant-numeric:tabular-nums;width:88px;flex:none;">péntek, júl. 10.</span>
+            <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;min-width:0;text-decoration:line-through;">Mobility</span>
+            <span style="display:flex;align-items:center;gap:5px;border:1px solid #3C3E32;color:#A8A899;border-radius:999px;padding:4.5px 11px;font-size:11px;font-weight:800;"><span class="mi" style="font-size:14px;">block</span>lemondva</span>
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin:18px 0 9px;">Jövő hét</div>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <div style="background:#22241B;border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:14px;">
+            <span style="font-size:12px;color:#A8A899;font-variant-numeric:tabular-nums;width:88px;flex:none;">hétfő, júl. 13.</span>
+            <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;min-width:0;">Push day</span>
+            <span style="display:flex;align-items:center;gap:5px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;"><span class="mi" style="font-size:14px;">schedule</span>közelgő</span>
+            <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#777264;"><span class="mi" style="font-size:17px;">event_busy</span></span>
+          </div>
+          <div style="background:#22241B;border-radius:15px;padding:12px 14px;display:flex;align-items:center;gap:14px;">
+            <span style="font-size:12px;color:#A8A899;font-variant-numeric:tabular-nums;width:88px;flex:none;">csütörtök, júl. 16.</span>
+            <span style="flex:1;font-size:13.5px;font-weight:700;color:#F1F0E4;min-width:0;">Push day</span>
+            <span style="display:flex;align-items:center;gap:5px;background:rgba(110,154,106,.18);color:#A9CBA5;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;"><span class="mi" style="font-size:14px;">schedule</span>közelgő</span>
+            <span style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#777264;"><span class="mi" style="font-size:17px;">event_busy</span></span>
+          </div>
+        </div>
+        <!-- Előzmények collapsible -->
+        <div style="display:flex;align-items:center;gap:9px;margin-top:18px;padding:11px 14px;background:#22241B;border-radius:14px;width:fit-content;">
+          <span class="mi" style="font-size:19px;color:#A8A899;">expand_more</span>
+          <span style="font-size:13px;font-weight:700;color:#A8A899;">Előzmények · korábbi hetek</span>
+        </div>
+        <div style="margin-top:auto;padding-top:14px;font-size:11.5px;color:#777264;line-height:1.6;">Ez az egyetlen tab, ahol az edző cselekszik — a "Csak olvasható" badge itt nincs, helyette primary CTA. Státusz nem szín-only: minden chipen ikon + felirat. Az idővonal soronként fókuszálható (billentyűzet), a lemondás-ikon külön tab-stop.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 2 · ÜTEMEZŐ DRAWER ======================= -->
+<div style="position:absolute;left:1620px;top:0px;width:1240px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">B · Web admin — ütemező drawer · a kiosztó-drawer testvére</div>
+  <div style="position:relative;background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;height:1060px;">
+    <!-- dimmed page behind -->
+    <div style="flex:1;padding:24px;min-width:0;opacity:.4;">
+      <div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;margin-bottom:18px;">Ütemterv · Kiss Anna</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="height:120px;background:#22241B;border-radius:24px;"></div>
+        <div style="height:56px;background:#22241B;border-radius:15px;"></div>
+        <div style="height:56px;background:#22241B;border-radius:15px;"></div>
+        <div style="height:56px;background:#22241B;border-radius:15px;"></div>
+      </div>
+    </div>
+    <div style="position:absolute;inset:0;background:rgba(8,9,6,.45);right:420px;"></div>
+    <!-- drawer -->
+    <div style="width:420px;flex:none;background:#22241B;border-radius:24px 0 0 24px;padding:24px 22px;display:flex;flex-direction:column;gap:15px;box-shadow:-20px 0 50px rgba(0,0,0,.45);overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Edzés ütemezése</div>
+        <span class="mi" style="font-size:21px;color:#A8A899;">close</span>
+      </div>
+      <!-- 1: sablon -->
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A8A899;margin-bottom:9px;">1 · Sablon</div>
+        <div style="background:#161611;border-radius:14px;height:42px;display:flex;align-items:center;gap:10px;padding:0 14px;margin-bottom:7px;"><span class="mi" style="font-size:18px;color:#777264;">search</span><span style="font-size:13px;color:#777264;">Sablon keresése…</span></div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="display:flex;align-items:center;gap:11px;background:rgba(110,154,106,.14);border:1.5px solid #6E9A6A;border-radius:13px;padding:8px 12px;">
+            <div style="width:32px;height:32px;border-radius:10px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:17px;">fitness_center</span></div>
+            <span style="flex:1;font-size:13px;font-weight:700;color:#F1F0E4;">Push day</span>
+            <span style="font-size:11px;color:#A8A899;">6 gyak. · ~52 p</span>
+            <span class="mi fill" style="font-size:19px;color:#6E9A6A;">check_circle</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:11px;border-radius:13px;padding:8px 12px;">
+            <div style="width:32px;height:32px;border-radius:10px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:17px;">directions_run</span></div>
+            <span style="flex:1;font-size:13px;font-weight:600;color:#F1F0E4;">Leg day</span>
+            <span style="font-size:11px;color:#777264;">7 gyak. · ~64 p</span>
+          </div>
+        </div>
+      </div>
+      <!-- 2: ismétlődés -->
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A8A899;margin-bottom:9px;">2 · Ismétlődés</div>
+        <div style="display:flex;background:#161611;border-radius:999px;padding:4px;">
+          <span style="flex:1;text-align:center;color:#A8A899;font-size:12.5px;font-weight:600;padding:8px 0;">Egyszeri</span>
+          <span style="flex:1;text-align:center;color:#A8A899;font-size:12.5px;font-weight:600;padding:8px 0;">Naponta</span>
+          <span style="flex:1;text-align:center;background:#6E9A6A;color:#161611;font-size:12.5px;font-weight:700;padding:8px 0;border-radius:999px;">Heti napokon</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <span style="width:40px;height:36px;border-radius:999px;background:#6E9A6A;color:#161611;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">H</span>
+          <span style="width:40px;height:36px;border-radius:999px;border:1px solid #3C3E32;color:#A8A899;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">K</span>
+          <span style="width:40px;height:36px;border-radius:999px;border:1px solid #3C3E32;color:#A8A899;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">Sze</span>
+          <span style="width:40px;height:36px;border-radius:999px;background:#6E9A6A;color:#161611;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">Cs</span>
+          <span style="width:40px;height:36px;border-radius:999px;border:1px solid #3C3E32;color:#A8A899;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">P</span>
+          <span style="width:40px;height:36px;border-radius:999px;border:1px solid #3C3E32;color:#A8A899;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">Szo</span>
+          <span style="width:40px;height:36px;border-radius:999px;border:1px solid #3C3E32;color:#A8A899;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">V</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;color:#CF6679;font-size:11.5px;font-weight:600;margin-top:8px;"><span class="mi" style="font-size:15px;">error</span>Válassz legalább egy napot — ha egy chip sincs kiválasztva</div>
+      </div>
+      <!-- 3: dátumok -->
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A8A899;margin-bottom:9px;">3 · Dátumok</div>
+        <div style="display:flex;gap:9px;">
+          <div style="flex:1;background:#161611;border-radius:14px;height:46px;display:flex;align-items:center;gap:9px;padding:0 13px;"><span class="mi" style="font-size:18px;color:#777264;">today</span><div><div style="font-size:9.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#777264;">Kezdés</div><div style="font-size:12.5px;font-weight:700;color:#F1F0E4;">júl. 7., hétfő</div></div></div>
+          <div style="flex:1;background:#161611;border:1.5px solid #CF6679;border-radius:14px;height:46px;display:flex;align-items:center;gap:9px;padding:0 13px;"><span class="mi" style="font-size:18px;color:#777264;">event</span><div><div style="font-size:9.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#777264;">Vége</div><div style="font-size:12.5px;font-weight:700;color:#F1F0E4;">nov. 20.</div></div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;color:#CF6679;font-size:11.5px;font-weight:600;margin-top:8px;"><span class="mi" style="font-size:15px;">error</span>Legfeljebb 3 hónapra előre ütemezhetsz</div>
+        <div style="font-size:11px;color:#777264;margin-top:5px;">A picker eleve csak kezdőnap + 3 hónapig enged — a hiba csak kézi bevitelnél jöhet elő.</div>
+      </div>
+      <!-- 4: élő előnézet -->
+      <div style="background:rgba(110,154,106,.14);border:1px solid rgba(110,154,106,.35);border-radius:14px;padding:13px 15px;display:flex;gap:10px;">
+        <span class="mi" style="font-size:19px;color:#A9CBA5;flex:none;">event_repeat</span>
+        <span style="font-size:12.5px;color:#D5E3D2;line-height:1.55;"><span style="font-weight:800;">18 edzés jön létre</span> — minden hétfő és csütörtök, okt. 6-ig.</span>
+      </div>
+      <div style="background:#1C1E16;border-radius:14px;padding:11px 15px;display:flex;gap:10px;">
+        <span class="mi" style="font-size:18px;color:#A8A899;flex:none;">info</span>
+        <span style="font-size:11.5px;color:#A8A899;line-height:1.55;">A "Push day" sablon másolata létrejön a kliensnél — csak ha még nem volt kiosztva neki.</span>
+      </div>
+      <!-- 5: footer -->
+      <div style="margin-top:auto;display:flex;gap:10px;">
+        <span style="flex:1;text-align:center;font-size:13.5px;font-weight:700;color:#A8A899;padding:13px 0;border-radius:14px;">Mégse</span>
+        <span style="flex:2;text-align:center;background:#9DAE6B;color:#161611;border-radius:14px;padding:13px 0;font-size:13.5px;font-weight:800;">Ütemezés</span>
+      </div>
+    </div>
+    <div style="position:absolute;left:20px;bottom:16px;width:calc(100% - 480px);background:rgba(28,30,22,.92);border-radius:14px;padding:11px 16px;font-size:11.5px;color:#A8A899;display:flex;align-items:center;gap:9px;"><span class="mi" style="font-size:16px;color:#6E9A6A;">info</span>Sablon-kártyáról nyitva: a sablon adott, az 1. lépés kliens-választó. Siker → toast: "18 edzés ütemezve Kiss Anna részére". Az "Ütemezés" gomb csak érvényes állapotban aktív.</div>
+  </div>
+</div>
+
+<!-- ======================= FRAME 3 · MOBIL KÖZELGŐ ======================= -->
+<div style="position:absolute;left:0px;top:1260px;width:500px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">C · Mobil — "Közelgő" szekció (Workouts → Sessions)</div>
+  <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+    <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+      <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+      <div style="position:absolute;top:62px;left:12px;right:12px;height:54px;background:rgba(34,36,27,.92);border-radius:20px;display:flex;align-items:center;padding:0 18px;"><span style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Workouts</span></div>
+      <div style="position:absolute;top:128px;left:14px;right:14px;display:flex;background:#1C1E16;border-radius:999px;padding:4px;">
+        <div style="flex:1;text-align:center;background:#9DAE6B;color:#161611;font-size:13px;font-weight:700;padding:8px 0;border-radius:999px;">Sessions</div>
+        <div style="flex:1;text-align:center;color:#A8A899;font-size:13px;font-weight:600;padding:8px 0;">Templates</div>
+        <div style="flex:1;text-align:center;color:#A8A899;font-size:13px;font-weight:600;padding:8px 0;">Exercises</div>
+      </div>
+      <div style="position:absolute;top:194px;left:16px;right:16px;bottom:110px;overflow:hidden;">
+        <!-- Közelgő szekció -->
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A9CBA5;margin-bottom:9px;display:flex;align-items:center;gap:7px;"><span class="mi" style="font-size:15px;">event_upcoming</span>Közelgő</div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <!-- ma, kiemelt -->
+          <div style="background:#22241B;border:1.5px solid rgba(110,154,106,.45);border-radius:20px;padding:14px 15px;display:flex;align-items:center;gap:12px;">
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:800;color:#F1F0E4;">Push day</span><span style="display:flex;align-items:center;gap:4px;background:#324536;color:#A9CBA5;border-radius:999px;padding:3px 9px;font-size:10px;font-weight:800;"><span class="mi fill" style="font-size:12px;">fitness_center</span>Edzőtől</span></div>
+              <div style="font-size:11.5px;color:#A8A899;margin-top:3px;">Ma</div>
+            </div>
+            <span style="background:#9DAE6B;color:#161611;border-radius:13px;padding:10px 18px;font-size:13px;font-weight:800;">Kezdés</span>
+          </div>
+          <!-- holnap -->
+          <div style="background:#1C1E16;border-radius:20px;padding:14px 15px;display:flex;align-items:center;gap:12px;">
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:800;color:#F1F0E4;">Mobility</span><span style="display:flex;align-items:center;gap:4px;background:#324536;color:#A9CBA5;border-radius:999px;padding:3px 9px;font-size:10px;font-weight:800;"><span class="mi fill" style="font-size:12px;">fitness_center</span>Edzőtől</span></div>
+              <div style="font-size:11.5px;color:#A8A899;margin-top:3px;">Holnap</div>
+            </div>
+            <span class="mi" style="font-size:21px;color:#777264;">chevron_right</span>
+          </div>
+          <!-- csütörtök, swipe alatt törlés -->
+          <div style="position:relative;border-radius:20px;overflow:hidden;">
+            <div style="position:absolute;inset:0;background:rgba(207,102,121,.2);display:flex;align-items:center;justify-content:flex-end;padding-right:20px;"><span class="mi fill" style="font-size:22px;color:#CF6679;">delete</span></div>
+            <div style="position:relative;background:#1C1E16;border-radius:20px;padding:14px 15px;display:flex;align-items:center;gap:12px;transform:translateX(-64px);">
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:800;color:#F1F0E4;">Push day</span><span style="display:flex;align-items:center;gap:4px;background:#324536;color:#A9CBA5;border-radius:999px;padding:3px 9px;font-size:10px;font-weight:800;"><span class="mi fill" style="font-size:12px;">fitness_center</span>Edzőtől</span></div>
+                <div style="font-size:11.5px;color:#A8A899;margin-top:3px;">Csütörtök · júl. 9.</div>
+              </div>
+              <span class="mi" style="font-size:21px;color:#777264;">chevron_right</span>
+            </div>
+          </div>
+        </div>
+        <!-- előzmények -->
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#A8A899;margin:20px 0 9px;">Korábbi</div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="background:#1C1E16;border-radius:20px;padding:14px 15px;display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">check_circle</span></div>
+            <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Mell + váll</div><div style="font-size:11.5px;color:#A8A899;margin-top:2px;">tegnap · 52 perc · 8,420 kg</div></div>
+            <span class="mi" style="font-size:21px;color:#777264;">chevron_right</span>
+          </div>
+          <div style="background:#1C1E16;border-radius:20px;padding:14px 15px;display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">check_circle</span></div>
+            <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Láb</div><div style="font-size:11.5px;color:#A8A899;margin-top:2px;">jún. 27. · 64 perc · 11,050 kg</div></div>
+            <span class="mi" style="font-size:21px;color:#777264;">chevron_right</span>
+          </div>
+        </div>
+      </div>
+      <!-- bottom nav -->
+      <div style="position:absolute;bottom:26px;left:50%;transform:translateX(-50%);background:#2A2C20;border-radius:999px;padding:12px 18px;display:flex;gap:22px;z-index:45;box-shadow:0 10px 28px rgba(0,0,0,.5);">
+        <span class="mi" style="font-size:25px;color:#8b8a7c;">dashboard</span>
+        <span class="mi" style="font-size:25px;color:#8b8a7c;">restaurant</span>
+        <span class="mi fill" style="font-size:25px;color:#9DAE6B;">fitness_center</span>
+        <span class="mi" style="font-size:25px;color:#8b8a7c;">monitor_weight</span>
+        <span class="mi" style="font-size:25px;color:#8b8a7c;">bar_chart</span>
+      </div>
+      <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:#76766c;line-height:1.6;margin-top:12px;max-width:414px;">Max 7 nap látszik előre — a UI nem magyarázza. A mai sor tertiary kerettel + "Kezdés" primary; a többin csak chevron. Swipe → törlés, confirm: "Az edződ látni fogja, hogy törölted." Ha nincs közelgő: a szekció meg sem jelenik.</div>
+</div>
+
+<!-- ======================= FRAME 4 · MOBIL FELUGRÓ KÁRTYA ======================= -->
+<div style="position:absolute;left:560px;top:1260px;width:500px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">D · Mobil — felugró edzés-kártya (a meghívó-kártya testvére)</div>
+  <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+    <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+      <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+      <div style="position:absolute;top:62px;left:12px;right:12px;height:54px;background:rgba(34,36,27,.92);border-radius:20px;display:flex;align-items:center;padding:0 18px;"><span style="font-size:18px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Dashboard</span></div>
+      <!-- dashboard content behind -->
+      <div style="position:absolute;top:130px;left:16px;right:16px;background:#22241B;border-radius:24px;padding:18px;">
+        <div style="display:flex;align-items:center;gap:9px;color:#E0915A;margin-bottom:12px;"><span class="mi fill" style="font-size:19px;">local_fire_department</span><span style="font-size:12px;font-weight:600;color:#A8A899;">Calories</span></div>
+        <div style="font-size:32px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">1,462 <span style="font-size:14px;color:#A8A899;font-weight:600;">/ 2,200 kcal</span></div>
+        <div style="height:9px;background:#161611;border-radius:5px;margin-top:14px;overflow:hidden;"><div style="width:66%;height:100%;background:#E0915A;border-radius:5px;"></div></div>
+      </div>
+      <div style="position:absolute;top:296px;left:16px;right:16px;display:flex;gap:11px;">
+        <div style="flex:1;background:#1C1E16;border-radius:20px;padding:15px;"><div style="display:flex;align-items:center;gap:7px;color:#9DAE6B;"><span class="mi fill" style="font-size:16px;">egg_alt</span><span style="font-size:11px;font-weight:600;color:#A8A899;">Protein</span></div><div style="font-size:19px;font-weight:800;color:#F1F0E4;margin-top:8px;font-variant-numeric:tabular-nums;">96 g</div></div>
+        <div style="flex:1;background:#1C1E16;border-radius:20px;padding:15px;"><div style="display:flex;align-items:center;gap:7px;color:#D8B35A;"><span class="mi fill" style="font-size:16px;">bakery_dining</span><span style="font-size:11px;font-weight:600;color:#A8A899;">Carbs</span></div><div style="font-size:19px;font-weight:800;color:#F1F0E4;margin-top:8px;font-variant-numeric:tabular-nums;">148 g</div></div>
+        <div style="flex:1;background:#1C1E16;border-radius:20px;padding:15px;"><div style="display:flex;align-items:center;gap:7px;color:#8E8EC4;"><span class="mi fill" style="font-size:16px;">water_drop</span><span style="font-size:11px;font-weight:600;color:#A8A899;">Fat</span></div><div style="font-size:19px;font-weight:800;color:#F1F0E4;margin-top:8px;font-variant-numeric:tabular-nums;">51 g</div></div>
+      </div>
+      <!-- floating workout card -->
+      <div style="position:absolute;bottom:104px;left:16px;right:16px;background:rgba(42,44,32,.96);backdrop-filter:blur(14px);border-radius:24px;padding:18px 18px 16px;z-index:55;box-shadow:0 20px 50px rgba(0,0,0,.6);border:1px solid rgba(110,154,106,.22);">
+        <div style="display:flex;align-items:flex-start;gap:13px;">
+          <div style="width:44px;height:44px;border-radius:14px;background:#324536;display:flex;align-items:center;justify-content:center;color:#A9CBA5;flex:none;"><span class="mi fill" style="font-size:23px;">fitness_center</span></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:15px;font-weight:800;color:#F1F0E4;">Ma: Láb nap</div>
+            <div style="font-size:12.5px;color:#A8A899;line-height:1.5;margin-top:2px;">Kovács Péter edződtől · 7 gyakorlat · ~64 perc</div>
+            <div style="font-size:11.5px;color:#777264;margin-top:3px;">és még 1 edzés ma</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:15px;">
+          <span style="flex:1;text-align:center;color:#A8A899;font-size:13.5px;font-weight:700;padding:12px 0;border-radius:14px;">Később</span>
+          <span style="flex:1;text-align:center;background:#9DAE6B;color:#161611;border-radius:14px;padding:12px 0;font-size:13.5px;font-weight:800;">Kezdés</span>
+        </div>
+      </div>
+      <!-- bottom nav -->
+      <div style="position:absolute;bottom:26px;left:50%;transform:translateX(-50%);background:#2A2C20;border-radius:999px;padding:12px 18px;display:flex;gap:22px;z-index:45;box-shadow:0 10px 28px rgba(0,0,0,.5);">
+        <span class="mi fill" style="font-size:25px;color:#9DAE6B;">dashboard</span>
+        <span class="mi" style="font-size:25px;color:#8b8a7c;">restaurant</span>
+        <span class="mi" style="font-size:25px;color:#8b8a7c;">fitness_center</span>
+        <span class="mi" style="font-size:25px;color:#8b8a7c;">monitor_weight</span>
+        <span class="mi" style="font-size:25px;color:#8b8a7c;">bar_chart</span>
+      </div>
+      <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:#76766c;line-height:1.6;margin-top:12px;max-width:414px;">Alulról csúszik be, nem modális. Swipe-dismiss = Később; aznap nem tér vissza, másnap az aznapi edzéshez újra. A meghívó-kártyával nem jelenhet meg egyszerre — a meghívó nyer. Fókusz-sorrend: szöveg → Később → Kezdés.</div>
+</div>
+
+<!-- ======================= FRAME 5 · ÁLLAPOTOK ======================= -->
+<div style="position:absolute;left:1120px;top:1260px;width:1100px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:12px;letter-spacing:0.3px;">E · Állapotok — skeleton · üres Ütemterv · betöltési hiba</div>
+  <div style="display:flex;flex-direction:column;gap:18px;">
+    <div style="display:flex;gap:18px;">
+      <!-- skeleton -->
+      <div style="flex:1;background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9DAE6B;margin-bottom:14px;">Idővonal skeleton</div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="width:70px;height:10px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+          <div style="background:#22241B;border-radius:15px;padding:14px;display:flex;align-items:center;gap:12px;">
+            <div style="width:80px;height:11px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+            <div style="flex:1;height:12px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+            <div style="width:74px;height:22px;border-radius:999px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+          </div>
+          <div style="background:#22241B;border-radius:15px;padding:14px;display:flex;align-items:center;gap:12px;">
+            <div style="width:80px;height:11px;border-radius:5px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+            <div style="flex:1;height:12px;border-radius:6px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+            <div style="width:74px;height:22px;border-radius:999px;background:#2A2C20;animation:lifeyPulse 1.4s ease-in-out infinite;"></div>
+          </div>
+        </div>
+      </div>
+      <!-- empty -->
+      <div style="flex:1;background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#C49A6C;margin-bottom:14px;">Üres Ütemterv</div>
+        <div style="background:#1C1E16;border-radius:16px;padding:30px 16px;text-align:center;">
+          <div style="width:58px;height:58px;border-radius:18px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#6E9A6A;margin:0 auto 13px;"><span class="mi" style="font-size:32px;">calendar_month</span></div>
+          <div style="font-size:15px;font-weight:800;color:#F1F0E4;">Még nincs ütemezett edzés</div>
+          <div style="font-size:12px;color:#A8A899;margin-top:5px;">Ütemezz egy sablont — egyszerit vagy ismétlődőt.</div>
+          <div style="display:inline-flex;align-items:center;gap:8px;background:#9DAE6B;color:#161611;border-radius:13px;padding:10px 18px;font-size:13px;font-weight:800;margin-top:16px;"><span class="mi" style="font-size:18px;">add</span>Edzés ütemezése</div>
+        </div>
+      </div>
+    </div>
+    <!-- error -->
+    <div style="background:#161611;border-radius:22px;box-shadow:0 1px 3px rgba(0,0,0,.18);padding:20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#CF6679;margin-bottom:14px;">Betöltési hiba</div>
+      <div style="background:#1C1E16;border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;border:1px solid rgba(207,102,121,.22);">
+        <div style="width:42px;height:42px;border-radius:13px;background:rgba(207,102,121,.14);display:flex;align-items:center;justify-content:center;color:#CF6679;"><span class="mi fill" style="font-size:23px;">cloud_off</span></div>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:800;color:#F1F0E4;">Az ütemterv nem tölthető be</div><div style="font-size:12px;color:#A8A899;margin-top:1px;">Ellenőrizd a kapcsolatot, majd próbáld újra.</div></div>
+        <div style="display:flex;align-items:center;gap:7px;background:#2A2C20;color:#F1F0E4;border-radius:12px;padding:9px 15px;font-size:13px;font-weight:700;"><span class="mi" style="font-size:18px;color:#9DAE6B;">refresh</span>Újra</div>
+      </div>
+      <div style="font-size:11.5px;color:#777264;margin-top:12px;line-height:1.6;">Mobilon a "Közelgő" szekció hibánál egyszerűen nem jelenik meg (az előzmény-lista cache-ből él) — nincs külön hiba-zaj a kliensnél. Minden szöveg HU/EN kulcs.</div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

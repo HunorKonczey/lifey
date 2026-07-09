@@ -24,6 +24,7 @@ class AddExerciseSheet extends ConsumerStatefulWidget {
 class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
+  late final TextEditingController _description;
   String? _category;
   String? _equipment;
   bool _submitting = false;
@@ -36,10 +37,12 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.exercise?.name ?? '');
+    _description = TextEditingController(text: widget.exercise?.description ?? '');
     _category = widget.exercise?.category;
     _equipment = widget.exercise?.equipment;
     if (_isEdit) {
       _name.addListener(_scheduleAutoSave);
+      _description.addListener(_scheduleAutoSave);
     }
   }
 
@@ -58,6 +61,7 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
         name: name,
         category: _category,
         equipment: _equipment,
+        description: _description.text.trim().isEmpty ? null : _description.text.trim(),
       );
     } catch (_) {
       // Silent fail — the explicit save button surfaces errors.
@@ -68,6 +72,7 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
   void dispose() {
     _autoSaveDebounce?.cancel();
     _name.dispose();
+    _description.dispose();
     super.dispose();
   }
 
@@ -80,18 +85,21 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
     });
     try {
       final notifier = ref.read(exerciseControllerProvider.notifier);
+      final description = _description.text.trim().isEmpty ? null : _description.text.trim();
       if (_isEdit) {
         await notifier.updateExercise(
           widget.exercise!.clientId,
           name: _name.text.trim(),
           category: _category,
           equipment: _equipment,
+          description: description,
         );
       } else {
         await notifier.addExercise(
           _name.text.trim(),
           category: _category,
           equipment: _equipment,
+          description: description,
         );
       }
       if (mounted) Navigator.of(context).pop();
@@ -154,6 +162,17 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
                 setState(() => _equipment = _equipment == code ? null : code);
                 if (_isEdit) _autoSaveInBackground();
               },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _description,
+              minLines: 2,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                labelText: l10n.exerciseDescriptionLabel,
+                border: const OutlineInputBorder(),
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),

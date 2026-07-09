@@ -45,6 +45,22 @@ class RecipeController extends StreamNotifier<List<Recipe>> {
 
   Future<void> deleteRecipe(String clientId) => _repo.delete(clientId);
 
+  /// Creates an independent copy of [recipe] named "{name} (Copy)" — the
+  /// caller supplies the already-localized name. Not a trainer-assigned copy
+  /// ([RecipeRepository.create] has no `originTrainerId` parameter), so the
+  /// duplicate is always fully owned by the current user.
+  Future<String> duplicateRecipe(Recipe recipe, {required String newName}) {
+    return _repo.create(
+      name: newName,
+      description: recipe.description,
+      favorite: recipe.favorite,
+      servings: recipe.servings,
+      ingredients: recipe.ingredients
+          .map((i) => RecipeIngredientInput(foodClientId: i.foodClientId, grams: i.quantityInGrams))
+          .toList(),
+    );
+  }
+
   Future<void> toggleFavorite(String clientId, bool value) =>
       _repo.toggleFavorite(clientId, value);
 

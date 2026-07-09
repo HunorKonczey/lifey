@@ -16,6 +16,9 @@ class Exercises extends Table {
   /// Equipment enum code (e.g. "BARBELL"), null if not set.
   TextColumn get equipment => text().nullable()();
 
+  /// Free-text notes (e.g. machine setting), null if not set.
+  TextColumn get description => text().nullable()();
+
   /// Non-null only for a trainer-assigned copy (docs/personal_trainer/05-mobil-terv.md
   /// §2) — the trainer's server-side user id, drives the "Edzőtől" badge.
   IntColumn get originTrainerId => integer().nullable()();

@@ -116,6 +116,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                       return TextFormField(
                         controller: controller,
                         focusNode: focusNode,
+                        autofocus: true,
                         decoration: InputDecoration(
                           labelText: l10n.foodFieldLabel,
                           border: const OutlineInputBorder(),

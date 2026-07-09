@@ -40,6 +40,12 @@
   --goal-positive: #9DAE6B;
   --goal-negative: #E08A52;
 
+  /* Workout-success celebration dialog */
+  --success-icon-tint: 16%;
+  --success-chip-bg: rgba(76, 175, 80, .15);
+  --success-chip-text: #4CAF50;
+  --scrim-celebration: rgba(8, 9, 6, .66);
+
   /* Radius scale */
   --r-sm:    8px;
   --r-md:    16px;
@@ -91,6 +97,11 @@
 
   --goal-positive: #4A7A52;
   --goal-negative: #E08A52;
+
+  --success-icon-tint: 12%;
+  --success-chip-bg: rgba(76, 175, 80, .16);
+  --success-chip-text: #388E3C;
+  --scrim-celebration: rgba(28, 29, 24, .45);
 }
 
 /* ─── Tailwind theme extension ─── */
@@ -193,6 +204,32 @@ body {
   animation: lifeyPulse 1.4s ease-in-out infinite;
   background: var(--surface-highest);
   border-radius: var(--r-sm);
+}
+
+/* ─── Workout-success celebration dialog entrance ─── */
+@keyframes dialogEnter {
+  from { opacity: 0; transform: scale(.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.workout-success-card {
+  animation: dialogEnter var(--dur-base) var(--ease) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .workout-success-card { animation: none; }
+}
+
+/* ─── Workout-success confetti burst (entrance-only, one-shot) ─── */
+@keyframes cfBurst {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(.4); opacity: 0; }
+  11%  { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); opacity: 0; }
+}
+.confetti-piece {
+  opacity: 0;
+  animation: cfBurst 650ms cubic-bezier(.15, .65, .3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece { animation: none; opacity: 0; }
 }
 
 /* ─── Buttons ─── */
