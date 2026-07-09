@@ -20,6 +20,8 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
     required List<ExerciseSetInput> sets,
     String? templateClientId,
     String? templateName,
+    int? rpe,
+    String? feedbackNote,
   }) {
     return _repo.create(
       startedAt: startedAt,
@@ -28,6 +30,8 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
       sets: sets,
       templateClientId: templateClientId,
       templateName: templateName,
+      rpe: rpe,
+      feedbackNote: feedbackNote,
     );
   }
 
@@ -37,6 +41,8 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
     DateTime? finishedAt,
     required List<PlannedExerciseInput> exercises,
     required List<ExerciseSetInput> sets,
+    int? rpe,
+    String? feedbackNote,
   }) {
     return _repo.update(
       clientId,
@@ -44,7 +50,19 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
       finishedAt: finishedAt,
       exercises: exercises,
       sets: sets,
+      rpe: rpe,
+      feedbackNote: feedbackNote,
     );
+  }
+
+  /// Rates a finished session's difficulty without needing its full editing
+  /// state in memory — see [WorkoutSessionRepository.rate].
+  Future<void> rateSession(
+    String clientId, {
+    required int rpe,
+    String? feedbackNote,
+  }) {
+    return _repo.rate(clientId, rpe: rpe, feedbackNote: feedbackNote);
   }
 
   Future<void> deleteSession(String clientId) => _repo.delete(clientId);

@@ -1285,6 +1285,27 @@
     "workoutSuccessRepsAbbrev": "reps",
     "@workoutSuccessRepsAbbrev": {"description": "Abbreviated unit for a reps-gain chip in the workout-success dialog, e.g. '+2 reps'"},
 
+    "postWorkoutFeedbackTitle": "How hard was this workout?",
+    "@postWorkoutFeedbackTitle": {"description": "Title of the post-workout feedback bottom sheet, shown after finishing a session"},
+
+    "postWorkoutFeedbackAnchorEasy": "Very easy",
+    "@postWorkoutFeedbackAnchorEasy": {"description": "Label under the 1 end of the post-workout difficulty (RPE) scale"},
+
+    "postWorkoutFeedbackAnchorMax": "Maximal effort",
+    "@postWorkoutFeedbackAnchorMax": {"description": "Label under the 10 end of the post-workout difficulty (RPE) scale"},
+
+    "postWorkoutFeedbackNoteHint": "Add a note (optional)",
+    "@postWorkoutFeedbackNoteHint": {"description": "Placeholder for the optional free-text note field on the post-workout feedback sheet"},
+
+    "postWorkoutFeedbackSkipButton": "Skip",
+    "@postWorkoutFeedbackSkipButton": {"description": "Button that dismisses the post-workout feedback sheet without rating"},
+
+    "postWorkoutFeedbackSectionTitle": "How hard was it?",
+    "@postWorkoutFeedbackSectionTitle": {"description": "Header for the inline, editable difficulty rating/note section shown on a finished session"},
+
+    "postWorkoutFeedbackEmptyState": "Rate this workout",
+    "@postWorkoutFeedbackEmptyState": {"description": "Tappable empty-state prompt shown in the inline feedback section when a finished session hasn't been rated yet"},
+
     "onboardingWelcomeTitle": "Let's personalize your plan",
     "@onboardingWelcomeTitle": {"description": "Onboarding wizard: welcome step title"},
 

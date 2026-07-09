@@ -104,6 +104,7 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
         exerciseIds.map((id) => categoryByExercise[id]),
       ),
       templateName: session.templateName,
+      rpe: session.rpe,
     );
   }).toList();
 

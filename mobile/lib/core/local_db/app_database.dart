@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -187,6 +187,13 @@ class AppDatabase extends _$AppDatabase {
           // photo until the next pull or an explicit upload sets it.
           if (from < 22) {
             await m.addColumn(recipes, recipes.imageUpdatedAt);
+          }
+          // V23: post-workout difficulty rating (RPE 1-10) + optional note,
+          // captured after finishing a session — nullable, existing sessions
+          // simply stay unrated.
+          if (from < 23) {
+            await m.addColumn(workoutSessions, workoutSessions.rpe);
+            await m.addColumn(workoutSessions, workoutSessions.feedbackNote);
           }
         },
       );

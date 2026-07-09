@@ -22,6 +22,10 @@ public record WorkoutSessionResponse(
         LocalTime scheduledTime,
         /* The originating workout_schedules row id, if any. */
         Long scheduleId,
+        /* Difficulty rating (1-10, RPE-style), captured after finishing. Null if unrated. */
+        Integer rpe,
+        /* Optional free-text note captured alongside rpe. */
+        String feedbackNote,
         Instant updatedAt,
         Instant deletedAt
 ) {

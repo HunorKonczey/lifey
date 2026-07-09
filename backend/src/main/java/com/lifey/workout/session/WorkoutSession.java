@@ -102,4 +102,16 @@ public class WorkoutSession extends SyncableEntity {
      */
     @Column(name = "template_name")
     private String templateName;
+
+    /**
+     * Difficulty rating (1-10, RPE-style — how hard the workout was, not a
+     * general mood rating), captured after finishing. Null until the user
+     * rates it.
+     */
+    @Column(name = "rpe")
+    private Integer rpe;
+
+    /** Optional free-text note captured alongside {@link #rpe}. */
+    @Column(name = "feedback_note")
+    private String feedbackNote;
 }

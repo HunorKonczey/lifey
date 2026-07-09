@@ -1,6 +1,8 @@
 package com.lifey.workout.session.dto;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -46,6 +48,14 @@ public record WorkoutSessionRequest(
          * The template this session was started from, if any. Only read on
          * create — a session's template link doesn't change once it's started.
          */
-        Long templateId
+        Long templateId,
+
+        /* Difficulty rating (1-10, RPE-style), captured after finishing. Optional. */
+        @Min(1)
+        @Max(10)
+        Integer rpe,
+
+        /* Optional free-text note captured alongside rpe. */
+        String feedbackNote
 ) {
 }

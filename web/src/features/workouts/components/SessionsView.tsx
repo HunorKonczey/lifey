@@ -197,6 +197,12 @@ export function SessionsView({
                 {t("inProgress")}
               </span>
             )}
+            {session.rpe != null && (
+              <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold"
+                style={{ background: "color-mix(in srgb, var(--secondary) 18%, transparent)", color: "var(--secondary)" }}>
+                {t("sessionRpe", { rpe: session.rpe })}
+              </span>
+            )}
           </div>
           <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
             {format(new Date(session.startedAt), "MMM d, HH:mm")}

@@ -78,6 +78,8 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         session.setActiveCalories(request.activeCalories());
         session.setAverageHeartRate(request.averageHeartRate());
         session.setHealthWorkoutId(request.healthWorkoutId());
+        session.setRpe(request.rpe());
+        session.setFeedbackNote(request.feedbackNote());
         if (request.templateId() != null) {
             WorkoutTemplate template = templateRepository.findByIdAndUserId(
                             request.templateId(), currentUserProvider.getUserId())
@@ -99,6 +101,8 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         session.setActiveCalories(request.activeCalories());
         session.setAverageHeartRate(request.averageHeartRate());
         session.setHealthWorkoutId(request.healthWorkoutId());
+        session.setRpe(request.rpe());
+        session.setFeedbackNote(request.feedbackNote());
         replacePlannedExercises(session, request.exerciseIds());
         replaceSets(session, request.sets());
         // Sets/planned exercises are child rows with no delta feed of their own

@@ -448,6 +448,14 @@
     "workoutSuccessContinueButton": "Tovább",
     "workoutSuccessRepsAbbrev": "ism.",
 
+    "postWorkoutFeedbackTitle": "Mennyire volt nehéz ez az edzés?",
+    "postWorkoutFeedbackAnchorEasy": "Nagyon könnyű",
+    "postWorkoutFeedbackAnchorMax": "Maximális erőfeszítés",
+    "postWorkoutFeedbackNoteHint": "Jegyzet hozzáadása (opcionális)",
+    "postWorkoutFeedbackSkipButton": "Kihagyás",
+    "postWorkoutFeedbackSectionTitle": "Mennyire volt nehéz?",
+    "postWorkoutFeedbackEmptyState": "Értékeld ezt az edzést",
+
     "onboardingWelcomeTitle": "Személyre szabjuk a terved",
     "onboardingWelcomeMessage": "Néhány gyors kérdés segít, hogy a megfelelő kalória-, makro- és vízcélokat javasoljuk neked.",
     "onboardingGetStartedButton": "Kezdjük",

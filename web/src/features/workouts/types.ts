@@ -70,6 +70,8 @@ export interface WorkoutSessionResponse {
   healthWorkoutId: string | null;
   templateId: number | null;
   templateName: string | null;
+  rpe: number | null;
+  feedbackNote: string | null;
 }
 
 export interface ExerciseSetRequest {
@@ -88,4 +90,6 @@ export interface WorkoutSessionRequest {
   averageHeartRate?: number | null;
   healthWorkoutId?: string | null;
   templateId?: number | null;
+  rpe?: number | null;
+  feedbackNote?: string | null;
 }
