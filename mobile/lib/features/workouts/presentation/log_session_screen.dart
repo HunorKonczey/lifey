@@ -23,6 +23,7 @@ import '../domain/workout_template.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
 import 'widgets/apple_workout_picker_sheet.dart';
 import 'widgets/exercise_session_card.dart';
+import 'widgets/post_workout_feedback_sheet.dart';
 import 'widgets/workout_success_dialog.dart';
 
 /// Full-screen form for logging a session, or editing one when [session] is given.
@@ -49,6 +50,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   DateTime? _startedAt;
   DateTime? _finishedAt;
+
+  /// Difficulty rating (1-10) + optional note, captured after finishing.
+  /// See [_maybeCollectFeedback] and the inline section built by
+  /// [_buildFeedbackSection].
+  int? _rpe;
+  String? _feedbackNote;
 
   /// The persisted session's clientId. Set when editing an existing session,
   /// or once a brand-new session has been created via the first [_persist].
@@ -98,6 +105,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     // stays null until the first set is persisted — the timer only starts then.
     _startedAt = session?.startedAt;
     _finishedAt = session?.finishedAt;
+    _rpe = session?.rpe;
+    _feedbackNote = session?.feedbackNote;
 
     if (session != null) {
       _sessionClientId = session.clientId;
@@ -492,6 +501,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         sets: _buildSets(),
         templateClientId: widget.template?.clientId,
         templateName: widget.template?.name,
+        rpe: _rpe,
+        feedbackNote: _feedbackNote,
       );
     } else {
       await notifier.updateSession(
@@ -500,8 +511,44 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         finishedAt: _finishedAt,
         exercises: _buildPlanned(),
         sets: _buildSets(),
+        rpe: _rpe,
+        feedbackNote: _feedbackNote,
       );
     }
+  }
+
+  /// Shows the post-workout feedback sheet (skippable) and stores the result
+  /// in state so the next [_persist] call carries it. Called right after a
+  /// session finishes, before any Apple Health pairing dialogs — the rating
+  /// doesn't depend on that flow.
+  Future<void> _maybeCollectFeedback() async {
+    final result = await showPostWorkoutFeedbackSheet(
+      context,
+      initialRpe: _rpe,
+      initialNote: _feedbackNote,
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _rpe = result.rpe;
+      _feedbackNote = result.feedbackNote;
+    });
+  }
+
+  /// Reopens the feedback sheet to edit an already-saved rating (from the
+  /// inline section on a finished session) and autosaves the change like any
+  /// other field edit on this screen.
+  Future<void> _editFeedback() async {
+    final result = await showPostWorkoutFeedbackSheet(
+      context,
+      initialRpe: _rpe,
+      initialNote: _feedbackNote,
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _rpe = result.rpe;
+      _feedbackNote = result.feedbackNote;
+    });
+    unawaited(_autoSave());
   }
 
   /// Shows the celebration dialog if the just-finished session improved on
@@ -536,6 +583,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final importService = ref.read(healthWorkoutImportServiceProvider);
 
     try {
+      // Ask "how hard was this?" first — it doesn't depend on the Apple
+      // Health pairing flow below, and the same _persist() call the pairing
+      // dialogs (or their absence) lead to already carries whatever rating
+      // was collected here.
+      await _maybeCollectFeedback();
+      if (!mounted) return;
+
       final appleEnabled =
           ref.read(appleHealthControllerProvider).value ?? false;
 
@@ -671,6 +725,88 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   // ---------------------------------------------------------------------------
   // Top bar
   // ---------------------------------------------------------------------------
+
+  /// Tappable "how hard was it?" card for a finished session — shows the
+  /// saved rating/note, or an empty-state prompt when unrated. Tapping
+  /// either state reopens [PostWorkoutFeedbackSheet] via [_editFeedback].
+  Widget _buildFeedbackSection(BuildContext context, AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    final rpe = _rpe;
+    final note = _feedbackNote;
+    return InkWell(
+      onTap: _editFeedback,
+      borderRadius: BorderRadius.circular(AppRadius.input),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(AppRadius.input),
+        ),
+        child: Row(
+          children: [
+            if (rpe != null)
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$rpe',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                ),
+              )
+            else
+              Icon(Icons.mood_rounded, size: 21, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    rpe != null
+                        ? l10n.postWorkoutFeedbackSectionTitle
+                        : l10n.postWorkoutFeedbackEmptyState,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  if (note != null && note.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        note,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 11.5,
+                          color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right,
+                size: 20, color: scheme.onSurfaceVariant.withValues(alpha: 0.6)),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildTopBar(BuildContext context, ColorScheme scheme,
       AppLocalizations l10n, String title) {
@@ -880,6 +1016,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 13),
+              ],
+
+              // Post-workout difficulty rating + note — editable any time
+              // after the session is finished, autosaves via _editFeedback.
+              if (_finishedAt != null) ...[
+                _buildFeedbackSection(context, l10n),
                 const SizedBox(height: 13),
               ],
 

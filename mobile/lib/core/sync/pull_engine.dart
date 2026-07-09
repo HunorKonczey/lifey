@@ -776,6 +776,8 @@ class PullEngine {
           ? scheduledTimeRaw.substring(0, 5)
           : scheduledTimeRaw),
       scheduleId: Value(json['scheduleId'] as int?),
+      rpe: Value(json['rpe'] as int?),
+      feedbackNote: Value(json['feedbackNote'] as String?),
     );
     final plannedExerciseIds = await _mapServerIds(
       'exercises',

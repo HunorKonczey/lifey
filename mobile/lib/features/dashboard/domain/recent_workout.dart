@@ -10,6 +10,7 @@ class RecentWorkout {
     this.activeCalories,
     this.categoryCode,
     this.templateName,
+    this.rpe,
   });
 
   final String clientId;
@@ -29,5 +30,20 @@ class RecentWorkout {
   /// Active energy burned (kcal), imported from Apple Health. Null when not paired.
   final double? activeCalories;
 
+  /// Difficulty rating (1-10), null when the session hasn't been rated yet —
+  /// drives the "rate this workout" nudge chip (see [needsRatingNudge]).
+  final int? rpe;
+
   bool get inProgress => finishedAt == null;
+
+  /// Recent (within [_nudgeWindow]), finished, and not yet rated — shows the
+  /// "rate this workout" chip. Scoped to recent sessions so an old unrated
+  /// history (e.g. from before this feature shipped) doesn't clutter the
+  /// dashboard forever.
+  bool get needsRatingNudge =>
+      !inProgress &&
+      rpe == null &&
+      DateTime.now().difference(startedAt) <= _nudgeWindow;
+
+  static const _nudgeWindow = Duration(days: 3);
 }

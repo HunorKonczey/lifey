@@ -199,6 +199,16 @@ class RecipeRepository {
     }
   }
 
+  /// Mirrors the server's `imageUpdatedAt` onto the local row right after a
+  /// successful photo upload/remove (see RecipeImageController) — that REST
+  /// call is online-only and doesn't go through the outbox/delta-sync pull,
+  /// so without this the local row (and thus the UI's "does this recipe have
+  /// a photo" check) would stay stale until the next background sync.
+  Future<void> setImageUpdatedAt(String clientId, DateTime? value) async {
+    await (_db.update(_db.recipes)..where((t) => t.clientId.equals(clientId)))
+        .write(RecipesCompanion(imageUpdatedAt: Value(value)));
+  }
+
   Future<void> _insertIngredients(
     String recipeClientId,
     List<RecipeIngredientInput> ingredients,

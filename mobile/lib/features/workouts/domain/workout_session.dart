@@ -47,6 +47,8 @@ class WorkoutSession {
     this.scheduledFor,
     this.scheduledTime,
     this.scheduleId,
+    this.rpe,
+    this.feedbackNote,
   });
 
   final String clientId;
@@ -88,6 +90,13 @@ class WorkoutSession {
   /// from one.
   final int? scheduleId;
 
+  /// Difficulty rating (1-10, RPE-style — how hard the workout was, not a
+  /// general mood rating), captured after finishing. Null until rated.
+  final int? rpe;
+
+  /// Optional free-text note captured alongside [rpe].
+  final String? feedbackNote;
+
   bool get inProgress => startedAt != null && finishedAt == null;
 
   /// Trainer-scheduled and not yet started — shows in the "Közelgő" section
@@ -95,4 +104,7 @@ class WorkoutSession {
   bool get isUpcoming => startedAt == null && scheduledFor != null;
 
   bool get fromAppleHealth => healthWorkoutId != null;
+
+  /// True once the user has rated this session's difficulty (see [rpe]).
+  bool get isRated => rpe != null;
 }

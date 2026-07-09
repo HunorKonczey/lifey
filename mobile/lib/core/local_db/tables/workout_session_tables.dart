@@ -49,6 +49,13 @@ class WorkoutSessions extends Table {
   /// later renamed or deleted.
   TextColumn get templateName => text().nullable()();
 
+  /// Difficulty rating (1-10, RPE-style — how hard the workout was, not a
+  /// general mood rating), captured after finishing. Null until rated.
+  IntColumn get rpe => integer().nullable()();
+
+  /// Optional free-text note captured alongside [rpe].
+  TextColumn get feedbackNote => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

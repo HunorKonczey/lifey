@@ -21,6 +21,7 @@ import '../../workouts/application/workout_session_controller.dart';
 import '../../workouts/domain/exercise_enums.dart';
 import '../../workouts/domain/workout_template.dart';
 import '../../workouts/presentation/log_session_screen.dart';
+import '../../workouts/presentation/widgets/post_workout_feedback_sheet.dart';
 import '../../workouts/presentation/widgets/recommended_workout_card.dart';
 import '../../nutrition/domain/meal.dart';
 import '../../nutrition/presentation/nutrition_screen.dart';
@@ -66,6 +67,19 @@ Future<void> _startRecommendedWorkout(BuildContext context, WorkoutTemplate temp
   return Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => LogSessionScreen(template: template)),
   );
+}
+
+/// "Rate this workout" nudge chip handler — opens the feedback sheet
+/// directly from the dashboard tile, without navigating into the full
+/// session screen. See [RecentWorkout.needsRatingNudge].
+Future<void> _rateWorkout(BuildContext context, WidgetRef ref, String clientId) async {
+  final result = await showPostWorkoutFeedbackSheet(context);
+  if (result == null) return;
+  await ref.read(workoutSessionControllerProvider.notifier).rateSession(
+        clientId,
+        rpe: result.rpe,
+        feedbackNote: result.feedbackNote,
+      );
 }
 
 enum WeightTrend { up, down }
@@ -134,6 +148,7 @@ class DashboardScreen extends ConsumerWidget {
                   onStartRecommended: (template) =>
                       _startRecommendedWorkout(context, template),
                   onWorkoutTap: (clientId) => _openWorkout(context, ref, clientId),
+                  onRateWorkoutTap: (clientId) => _rateWorkout(context, ref, clientId),
                   onMealsTap: () {
                     ref.read(nutritionPendingTabProvider.notifier).set(0);
                     context.go('/nutrition');
@@ -173,6 +188,7 @@ class _DashboardBody extends StatelessWidget {
     required this.data,
     required this.settings,
     required this.onWorkoutTap,
+    required this.onRateWorkoutTap,
     required this.onMealsTap,
     required this.onStartRecommended,
     this.weightDelta,
@@ -186,6 +202,7 @@ class _DashboardBody extends StatelessWidget {
   final int? todaySteps;
   final WorkoutTemplate? recommendedTemplate;
   final ValueChanged<String> onWorkoutTap;
+  final ValueChanged<String> onRateWorkoutTap;
   final VoidCallback onMealsTap;
   final ValueChanged<WorkoutTemplate> onStartRecommended;
 
@@ -364,7 +381,11 @@ class _DashboardBody extends StatelessWidget {
           _EmptyHint(l10n.noWorkoutsLoggedYetPeriodMessage)
         else
           ...data.recentWorkouts.take(3).map(
-            (w) => _WorkoutTile(workout: w, onTap: () => onWorkoutTap(w.clientId)),
+            (w) => _WorkoutTile(
+              workout: w,
+              onTap: () => onWorkoutTap(w.clientId),
+              onRate: () => onRateWorkoutTap(w.clientId),
+            ),
           ),
       ],
     );
@@ -376,10 +397,14 @@ class _DashboardBody extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _WorkoutTile extends StatelessWidget {
-  const _WorkoutTile({required this.workout, this.onTap});
+  const _WorkoutTile({required this.workout, this.onTap, this.onRate});
 
   final RecentWorkout workout;
   final VoidCallback? onTap;
+
+  /// Tapped from the "rate this workout" nudge chip — see
+  /// [RecentWorkout.needsRatingNudge].
+  final VoidCallback? onRate;
 
   String _statsLine(AppLocalizations l10n) {
     final parts = <String>[];
@@ -497,6 +522,11 @@ class _WorkoutTile extends StatelessWidget {
                 _StatusChip(
                   label: l10n.inProgressLabel,
                   color: theme.colorScheme.tertiary,
+                )
+              else if (workout.needsRatingNudge)
+                _RateWorkoutChip(
+                  label: l10n.postWorkoutFeedbackEmptyState,
+                  onTap: onRate,
                 ),
             ],
           ),
@@ -628,6 +658,43 @@ class _StatusChip extends StatelessWidget {
           fontWeight: FontWeight.w700,
           color: color,
           height: 1.0,
+        ),
+      ),
+    );
+  }
+}
+
+/// Tappable pill nudging the user to rate a recently finished, unrated
+/// workout — see [RecentWorkout.needsRatingNudge]. A separate small
+/// [InkWell] nested inside the tile's own tap area, so tapping the chip
+/// opens the feedback sheet instead of navigating into the session.
+class _RateWorkoutChip extends StatelessWidget {
+  const _RateWorkoutChip({required this.label, this.onTap});
+
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return Material(
+      color: color.withValues(alpha: 0.14),
+      borderRadius: BorderRadius.circular(99),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(99),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+              height: 1.0,
+            ),
+          ),
         ),
       ),
     );

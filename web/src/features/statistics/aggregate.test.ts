@@ -39,7 +39,7 @@ describe("aggregate", () => {
           { exerciseId: 1, exerciseName: "Bench", reps: 8, weight: 70, performedAt: "2026-06-03T10:10:00Z" },
         ],
         activeCalories: null, averageHeartRate: null, healthWorkoutId: null,
-        templateId: null, templateName: null,
+        templateId: null, templateName: null, rpe: null, feedbackNote: null,
       },
     ];
     const r = aggregate({ ...emptyRaw, sessions }, new Date("2026-06-01T00:00:00Z"), new Date("2026-06-07T00:00:00Z"));

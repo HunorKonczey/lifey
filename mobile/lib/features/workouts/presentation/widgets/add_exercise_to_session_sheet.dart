@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/utils/search_normalize.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../application/exercise_controller.dart';
 import '../../domain/exercise.dart';
@@ -31,6 +33,7 @@ class _AddExerciseToSessionSheetState
     extends ConsumerState<AddExerciseToSessionSheet> {
   Exercise? _picked;
   int? _targetSets;
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +46,7 @@ class _AddExerciseToSessionSheetState
 
   Widget _buildPickStep(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final exercisesState = ref.watch(exerciseControllerProvider);
 
     return SafeArea(
@@ -54,6 +58,21 @@ class _AddExerciseToSessionSheetState
           children: [
             Text(l10n.addExerciseTitle, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
+            TextField(
+              decoration: InputDecoration(
+                hintText: l10n.searchExercisesHint,
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: scheme.surfaceContainerHigh,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              onChanged: (q) => setState(() => _query = q),
+            ),
+            const SizedBox(height: 8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 360),
               child: exercisesState.when(
@@ -68,11 +87,14 @@ class _AddExerciseToSessionSheetState
                 data: (exercises) {
                   final available = exercises
                       .where((e) => !widget.excludeIds.contains(e.clientId))
+                      .where((e) => normalizeForSearch(e.name).contains(normalizeForSearch(_query)))
                       .toList();
                   if (available.isEmpty) {
                     return Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Text(l10n.everyExerciseAlreadyInSessionMessage),
+                      child: Text(_query.isEmpty
+                          ? l10n.everyExerciseAlreadyInSessionMessage
+                          : l10n.noSearchResultsTitle),
                     );
                   }
                   return ListView.separated(

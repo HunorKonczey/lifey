@@ -92,6 +92,18 @@ export function ClientWorkoutsTab({ clientId, focusSessionId, onFocusHandled }: 
                     })}
                   </p>
                 </div>
+                {s.rpe != null && (
+                  <span
+                    className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[11px] font-extrabold px-2.5 py-1.5 shrink-0"
+                    style={{
+                      background: "color-mix(in srgb, var(--secondary) 18%, transparent)",
+                      color: "var(--secondary)",
+                    }}
+                  >
+                    <span className="material-symbols-rounded text-sm">speed</span>
+                    {t("sessionRpe", { rpe: s.rpe })}
+                  </span>
+                )}
                 {s.templateName && (
                   <span
                     className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[11px] font-extrabold px-2.5 py-1.5 shrink-0"
@@ -104,6 +116,14 @@ export function ClientWorkoutsTab({ clientId, focusSessionId, onFocusHandled }: 
               </button>
               {expanded && (
                 <div className="px-4 pb-4 flex flex-col gap-2">
+                  {s.feedbackNote && (
+                    <p
+                      className="text-[12.5px] italic px-3 py-2 rounded-2xl"
+                      style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
+                    >
+                      “{s.feedbackNote}”
+                    </p>
+                  )}
                   {s.exercises.map((ex) => {
                     const exerciseSets = s.sets.filter((set) => set.exerciseId === ex.exerciseId);
                     return (

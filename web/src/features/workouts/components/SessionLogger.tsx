@@ -9,6 +9,7 @@ import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { previousSets, delta, computeWorkoutProgress, isWorkoutSuccess, type WorkoutProgressResult } from "../progress";
 import { WorkoutSuccessDialog } from "./WorkoutSuccessDialog";
+import { PostWorkoutFeedbackDialog } from "./PostWorkoutFeedbackDialog";
 import type {
   WorkoutSessionResponse, ExerciseSummary,
 } from "../types";
@@ -35,6 +36,14 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
   const { show } = useToast();
   const [successResult, setSuccessResult] = useState<WorkoutProgressResult | null>(null);
 
+  // "finish": rating captured right before finishing the session. "edit":
+  // reopened from the inline feedback section to change an already-saved
+  // rating. Determines whether the dialog's Save/Skip actually finishes the
+  // session or just updates the rating in place.
+  const [feedbackContext, setFeedbackContext] = useState<"finish" | "edit" | null>(null);
+  const [rpe, setRpe] = useState<number | null>(session.rpe ?? null);
+  const [feedbackNote, setFeedbackNote] = useState<string | null>(session.feedbackNote ?? null);
+
   // Seed drafts from existing sets (grouped per exercise)
   const [drafts, setDrafts] = useState<DraftSet[]>(
     session.sets.map((s) => ({ exerciseId: s.exerciseId, weight: s.weight, reps: s.reps, done: true })),
@@ -42,7 +51,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
 
   const exercises: ExerciseSummary[] = session.exercises;
 
-  const buildRequest = (finished: boolean) => ({
+  const buildRequest = (finished: boolean, rpeValue: number | null, noteValue: string | null) => ({
     startedAt: session.startedAt,
     finishedAt: finished ? new Date().toISOString() : session.finishedAt,
     exerciseIds: exercises.map((e) => e.exerciseId),
@@ -57,13 +66,16 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
     activeCalories: session.activeCalories,
     averageHeartRate: session.averageHeartRate,
     healthWorkoutId: session.healthWorkoutId,
+    rpe: rpeValue,
+    feedbackNote: noteValue,
   });
 
   const saveMutation = useMutation({
-    mutationFn: (finished: boolean) => workoutSessionApi.update(session.id, buildRequest(finished)),
-    onSuccess: (_data, finished) => {
+    mutationFn: (vars: { finished: boolean; rpe: number | null; feedbackNote: string | null }) =>
+      workoutSessionApi.update(session.id, buildRequest(vars.finished, vars.rpe, vars.feedbackNote)),
+    onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workoutSessions.all() });
-      if (finished) {
+      if (vars.finished) {
         show(t("workoutFinished"), "success");
         const progress = computeWorkoutProgress(
           session,
@@ -105,18 +117,54 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => saveMutation.mutate(false)} disabled={saveMutation.isPending}
+          <button onClick={() => saveMutation.mutate({ finished: false, rpe, feedbackNote })} disabled={saveMutation.isPending}
             className="px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
             style={{ background: "var(--surface-highest)", color: "var(--on-surface)" }}>
             {common("save")}
           </button>
-          <button onClick={() => saveMutation.mutate(true)} disabled={saveMutation.isPending}
+          <button onClick={() => setFeedbackContext("finish")} disabled={saveMutation.isPending}
             className="px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
             style={{ background: "var(--primary)", color: "#1E1F18" }}>
             {t("finishShort")}
           </button>
         </div>
       </div>
+
+      {/* Post-workout difficulty rating + note — editable any time after the
+          session is finished (reopened from history). */}
+      {session.finishedAt && (
+        <button
+          onClick={() => setFeedbackContext("edit")}
+          className="flex items-center gap-3 rounded-[var(--r-card)] p-4 text-left"
+          style={{ background: "var(--surface)" }}
+        >
+          {rpe != null ? (
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold flex-none"
+              style={{ background: "var(--primary)", color: "#1E1F18" }}
+            >
+              {rpe}
+            </div>
+          ) : (
+            <span className="material-symbols-rounded text-xl flex-none" style={{ color: "var(--on-surface-variant)" }}>
+              mood
+            </span>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold">
+              {rpe != null ? t("postWorkoutFeedbackSectionTitle") : t("postWorkoutFeedbackEmptyState")}
+            </p>
+            {feedbackNote && (
+              <p className="text-xs truncate" style={{ color: "var(--on-surface-variant)" }}>
+                {feedbackNote}
+              </p>
+            )}
+          </div>
+          <span className="material-symbols-rounded text-lg flex-none" style={{ color: "var(--on-surface-variant)" }}>
+            chevron_right
+          </span>
+        </button>
+      )}
 
       {/* Per-exercise set tables */}
       {exercises.length === 0 ? (
@@ -198,6 +246,24 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
           </div>
         );
       })}
+
+      <PostWorkoutFeedbackDialog
+        open={feedbackContext !== null}
+        initialRpe={rpe}
+        initialNote={feedbackNote}
+        onSkip={() => {
+          const finishing = feedbackContext === "finish";
+          setFeedbackContext(null);
+          if (finishing) saveMutation.mutate({ finished: true, rpe, feedbackNote });
+        }}
+        onSave={(newRpe, newNote) => {
+          const finishing = feedbackContext === "finish";
+          setRpe(newRpe);
+          setFeedbackNote(newNote);
+          setFeedbackContext(null);
+          saveMutation.mutate({ finished: finishing, rpe: newRpe, feedbackNote: newNote });
+        }}
+      />
 
       <WorkoutSuccessDialog
         open={successResult !== null}

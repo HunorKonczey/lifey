@@ -43,6 +43,8 @@ public final class WorkoutSessionMapper {
                 session.getScheduledFor(),
                 session.getScheduledTime(),
                 session.getScheduleId(),
+                session.getRpe(),
+                session.getFeedbackNote(),
                 session.getUpdatedAt(),
                 session.getDeletedAt()
         );

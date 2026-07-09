@@ -128,6 +128,8 @@ class WorkoutSessionRepository {
     String? healthWorkoutId,
     String? templateClientId,
     String? templateName,
+    int? rpe,
+    String? feedbackNote,
   }) async {
     final clientId = newClientId();
     await _db.transaction(() async {
@@ -141,6 +143,8 @@ class WorkoutSessionRepository {
               healthWorkoutId: Value(healthWorkoutId),
               templateClientId: Value(templateClientId),
               templateName: Value(templateName),
+              rpe: Value(rpe),
+              feedbackNote: Value(feedbackNote),
             ),
           );
       await _insertChildren(clientId, exercises, sets);
@@ -157,6 +161,8 @@ class WorkoutSessionRepository {
         averageHeartRate: averageHeartRate,
         healthWorkoutId: healthWorkoutId,
         templateClientId: templateClientId,
+        rpe: rpe,
+        feedbackNote: feedbackNote,
       ),
     );
     return clientId;
@@ -171,6 +177,8 @@ class WorkoutSessionRepository {
     double? activeCalories,
     double? averageHeartRate,
     String? healthWorkoutId,
+    int? rpe,
+    String? feedbackNote,
   }) async {
     await _db.transaction(() async {
       await (_db.update(_db.workoutSessions)
@@ -182,6 +190,8 @@ class WorkoutSessionRepository {
           activeCalories: Value(activeCalories),
           averageHeartRate: Value(averageHeartRate),
           healthWorkoutId: Value(healthWorkoutId),
+          rpe: Value(rpe),
+          feedbackNote: Value(feedbackNote),
         ),
       );
       await (_db.delete(_db.workoutSessionExercises)
@@ -203,7 +213,55 @@ class WorkoutSessionRepository {
         activeCalories: activeCalories,
         averageHeartRate: averageHeartRate,
         healthWorkoutId: healthWorkoutId,
+        rpe: rpe,
+        feedbackNote: feedbackNote,
       ),
+    );
+  }
+
+  /// Rates a finished session's difficulty without the caller needing its
+  /// full editing state in memory (e.g. the dashboard's "rate this workout"
+  /// nudge) — reads the session's current fields/children and resubmits them
+  /// through [update] with the new rating, since sessions are always synced
+  /// as a full replace.
+  Future<void> rate(
+    String clientId, {
+    required int rpe,
+    String? feedbackNote,
+  }) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.clientId.equals(clientId)))
+        .getSingle();
+    final plannedRows = await (_db.select(_db.workoutSessionExercises)
+          ..where((t) => t.sessionClientId.equals(clientId)))
+        .get();
+    final setRows = await (_db.select(_db.exerciseSets)
+          ..where((t) => t.sessionClientId.equals(clientId)))
+        .get();
+
+    await update(
+      clientId,
+      startedAt: row.startedAt!,
+      finishedAt: row.finishedAt,
+      exercises: [
+        for (final p in plannedRows)
+          PlannedExerciseInput(
+              exerciseClientId: p.exerciseClientId, targetSets: p.targetSets),
+      ],
+      sets: [
+        for (final s in setRows)
+          ExerciseSetInput(
+            exerciseClientId: s.exerciseClientId,
+            reps: s.reps,
+            weight: s.weight,
+            performedAt: s.performedAt,
+          ),
+      ],
+      activeCalories: row.activeCalories,
+      averageHeartRate: row.averageHeartRate,
+      healthWorkoutId: row.healthWorkoutId,
+      rpe: rpe,
+      feedbackNote: feedbackNote,
     );
   }
 
@@ -268,6 +326,8 @@ class WorkoutSessionRepository {
     double? averageHeartRate,
     String? healthWorkoutId,
     String? templateClientId,
+    int? rpe,
+    String? feedbackNote,
   }) {
     return {
       'startedAt': startedAt.toUtc().toIso8601String(),
@@ -287,6 +347,8 @@ class WorkoutSessionRepository {
       if (averageHeartRate != null) 'averageHeartRate': averageHeartRate,
       if (healthWorkoutId != null) 'healthWorkoutId': healthWorkoutId,
       if (templateClientId != null) 'templateId': clientRef(templateClientId),
+      if (rpe != null) 'rpe': rpe,
+      if (feedbackNote != null) 'feedbackNote': feedbackNote,
     };
   }
 
@@ -310,6 +372,8 @@ class WorkoutSessionRepository {
       scheduledFor: row.scheduledFor,
       scheduledTime: row.scheduledTime,
       scheduleId: row.scheduleId,
+      rpe: row.rpe,
+      feedbackNote: row.feedbackNote,
     );
   }
 
