@@ -8,6 +8,7 @@ import com.lifey.mail.MailLanguageResolver;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.recipe.Recipe;
+import com.lifey.nutrition.recipe.RecipeImageRepository;
 import com.lifey.nutrition.recipe.RecipeIngredient;
 import com.lifey.nutrition.recipe.RecipeRepository;
 import com.lifey.trainer.ContentAssignmentRepository;
@@ -60,6 +61,9 @@ class ContentAssignmentServiceImplTest {
     RecipeRepository recipeRepository;
 
     @Mock
+    RecipeImageRepository recipeImageRepository;
+
+    @Mock
     ExerciseRepository exerciseRepository;
 
     @Mock
@@ -88,6 +92,9 @@ class ContentAssignmentServiceImplTest {
         lenient().when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
         lenient().when(userRepository.getReferenceById(TRAINER_ID)).thenReturn(user(TRAINER_ID));
         lenient().when(userRepository.getReferenceById(CLIENT_ID)).thenReturn(user(CLIENT_ID));
+        // Recipe tests below don't set up a photo — copyRecipeImage's source lookup
+        // just needs to resolve to "no image" so it can no-op.
+        lenient().when(recipeImageRepository.findByRecipeId(any())).thenReturn(Optional.empty());
     }
 
     @Test
