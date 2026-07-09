@@ -7,7 +7,6 @@ import { exerciseApi } from "../api";
 import { MUSCLE_GROUPS, EQUIPMENT, type MuscleGroup, type Equipment, type ExerciseResponse } from "../types";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
-import { humanizeEnum } from "@/lib/utils/format";
 import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
@@ -37,11 +36,15 @@ function categoryIcon(e: ExerciseResponse): string {
 
 export function ExercisesView() {
   const t = useTranslations("workouts");
+  const tm = useTranslations("workouts.muscleGroups");
+  const te = useTranslations("workouts.equipmentTypes");
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [editing, setEditing] = useState<ExerciseResponse | null>(null);
   const [creating, setCreating] = useState(false);
+
+  const equipmentLabel = (e: string | null) => (e ? te(e) : "—");
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.exercises.all(),
@@ -57,12 +60,12 @@ export function ExercisesView() {
   if (categoryFilter === "ALL") {
     for (const cat of MUSCLE_GROUPS) {
       const items = filtered.filter((e) => e.category === cat);
-      if (items.length > 0) groups.push({ key: cat, label: humanizeEnum(cat), items });
+      if (items.length > 0) groups.push({ key: cat, label: tm(cat), items });
     }
     const uncategorized = filtered.filter((e) => !e.category);
     if (uncategorized.length > 0) groups.push({ key: null, label: t("uncategorized"), items: uncategorized });
   } else {
-    groups.push({ key: categoryFilter, label: humanizeEnum(categoryFilter), items: filtered });
+    groups.push({ key: categoryFilter, label: tm(categoryFilter), items: filtered });
   }
 
   // Only show category chips that exist in the data (plus ALL)
@@ -77,7 +80,7 @@ export function ExercisesView() {
         <div className="flex flex-wrap items-center gap-2">
           <FilterChip label={t("allFilter")} active={categoryFilter === "ALL"} onClick={() => setCategoryFilter("ALL")} />
           {presentCategories.map((c) => (
-            <FilterChip key={c} label={humanizeEnum(c)} active={categoryFilter === c} onClick={() => setCategoryFilter(c)} />
+            <FilterChip key={c} label={tm(c)} active={categoryFilter === c} onClick={() => setCategoryFilter(c)} />
           ))}
           <button onClick={() => { setCreating(true); setEditing(null); }}
             className="ml-auto flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
@@ -122,7 +125,7 @@ export function ExercisesView() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm">{e.name}</p>
                       <p className="text-xs" style={{ color: "var(--muted)" }}>
-                        {humanizeEnum(e.equipment)}
+                        {equipmentLabel(e.equipment)}
                       </p>
                     </div>
                     <span className="material-symbols-rounded text-lg" style={{ color: "var(--muted)" }}>chevron_right</span>
@@ -174,6 +177,8 @@ function ExerciseEditor({
   show: (m: string, v?: "success" | "error" | "warning" | "default") => void;
 }) {
   const t = useTranslations("workouts");
+  const tm = useTranslations("workouts.muscleGroups");
+  const te = useTranslations("workouts.equipmentTypes");
   const common = useTranslations("common");
   const queryClient = useQueryClient();
   const [name, setName] = useState(exercise?.name ?? "");
@@ -223,7 +228,7 @@ function ExerciseEditor({
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm"
           style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}>
           <option value="">{common("noneOption")}</option>
-          {MUSCLE_GROUPS.map((g) => <option key={g} value={g}>{humanizeEnum(g)}</option>)}
+          {MUSCLE_GROUPS.map((g) => <option key={g} value={g}>{tm(g)}</option>)}
         </select>
       </div>
 
@@ -233,7 +238,7 @@ function ExerciseEditor({
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm"
           style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}>
           <option value="">{common("noneOption")}</option>
-          {EQUIPMENT.map((q) => <option key={q} value={q}>{humanizeEnum(q)}</option>)}
+          {EQUIPMENT.map((q) => <option key={q} value={q}>{te(q)}</option>)}
         </select>
       </div>
 

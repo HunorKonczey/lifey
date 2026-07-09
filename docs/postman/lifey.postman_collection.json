@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Lifey API",
-    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*, *Settings*, *Water Tracking*, *Steps*.\n\nAll `/api/v1/**` routes except `/api/v1/auth/register`, `/api/v1/auth/login`, and `/api/v1/auth/refresh` require a JWT access token. The collection is set up to send it automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nExercises are seeded reference data (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank) and can also be managed via the *Exercises* CRUD endpoints. Deleting an exercise still referenced by a template/session returns 409.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall; `totalWater` sums water entries over the same period.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace).\n\nWater Tracking has two parts: *Water Sources* (reusable presets like \"Creatine Shake\" = 0.9L, full CRUD) and *Water Entries* (logged intake, list/create/delete only — like Weight Tracking). An entry's `volumeLiters` is always client-supplied (picking a source just pre-fills it); `sourceId` is optional and purely informational.",
+    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*, *Settings*, *Water Tracking*, *Steps*, *User Details*, *User Avatar*, *Trainer Invites*, *Client Invites*, *My Trainers*, *Trainer Clients*, *Trainer Client Data*, *Trainer Schedules*, *Trainer Assignments*, *Super Admin*.\n\nAll `/api/v1/**` routes require a JWT access token except `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/social/google`, `/api/v1/auth/refresh`, `/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`, and the public `/api/v1/trainer-invites/email/**` invite-response link — note `/api/v1/auth/logout` requires auth too, it is NOT public. `/api/v1/trainer/**` additionally requires `ROLE_TRAINER` and `/api/v1/superadmin/**` requires `ROLE_SUPER_ADMIN`. The collection is set up to send the bearer token automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nFoods and exercises are per-user (see V40__foods_exercises_ownership.sql): the first real user in the database keeps the original seeded exercise rows (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank), every other user gets their own copy with different ids. Both are managed via their CRUD endpoints; deletes are soft (tombstoned) and no longer return 409 when still referenced.\n\nMany list endpoints additionally support a mobile offline delta-sync feed via `?updatedSince=<ISO-8601 instant>` (see docs/16-delta-sync-rollout.md) and/or pagination via `?page=`; see the 'Delta sync ...' / '... (paged...)' requests in each folder.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall; `totalWater` sums water entries over the same period.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace). `unitSystem`, `theme` and `language` are all required.\n\nWater Tracking has two parts: *Water Sources* (reusable presets like \"Creatine Shake\" = 0.9L, full CRUD) and *Water Entries* (logged intake, list/create/delete only — like Weight Tracking). An entry's `volumeLiters` is always client-supplied (picking a source just pre-fills it); `sourceId` is optional and purely informational.\n\nThe *Trainer ...* / *Super Admin* folders are the personal-trainer module (docs/personal_trainer/): a `ROLE_TRAINER` account manages invites/clients/schedules/assignments under `/api/v1/trainer/**`, clients respond to invites and view their trainers under `/api/v1/trainer-invites/**` and `/api/v1/my-trainers`, and a `ROLE_SUPER_ADMIN` account grants/revokes `ROLE_TRAINER` under `/api/v1/superadmin/**`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -24,7 +24,14 @@
     { "key": "exerciseId", "value": "", "type": "string" },
     { "key": "waterSourceId", "value": "", "type": "string" },
     { "key": "waterEntryId", "value": "", "type": "string" },
-    { "key": "stepId", "value": "", "type": "string" }
+    { "key": "stepId", "value": "", "type": "string" },
+    { "key": "clientId", "value": "", "type": "string" },
+    { "key": "trainerId", "value": "", "type": "string" },
+    { "key": "inviteId", "value": "", "type": "string" },
+    { "key": "scheduleId", "value": "", "type": "string" },
+    { "key": "scheduledSessionId", "value": "", "type": "string" },
+    { "key": "assignmentId", "value": "", "type": "string" },
+    { "key": "superAdminUserId", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -41,14 +48,14 @@
             "auth": { "type": "noauth" },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"demo@lifey.app\",\n  \"password\": \"password123\"\n}"
+              "raw": "{\n  \"email\": \"demo@lifey.app\",\n  \"password\": \"password123\",\n  \"firstName\": \"Demo\",\n  \"lastName\": \"User\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/register",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "auth", "register"]
             },
-            "description": "Creates an account. `email` must be unique (case-insensitive); `password` must be 8-100 characters. Every new account gets `ROLE_USER`. Returns 201 with the created user, or 409 if the email is already registered."
+            "description": "Creates an account. `email` must be unique (case-insensitive); `password` must be 8-100 characters; `firstName`/`lastName` are required. Every new account gets `ROLE_USER`. Returns 201 with the created user, or 409 if the email is already registered. Optionally send the `X-Utc-Offset-Minutes` header so day boundaries follow the caller's timezone."
           },
           "response": []
         },
@@ -62,7 +69,7 @@
             "auth": { "type": "noauth" },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"demo@lifey.app\",\n  \"password\": \"password123\"\n}"
+              "raw": "{\n  \"email\": \"demo@lifey.app\",\n  \"password\": \"password123\",\n  \"firstName\": \"Demo\",\n  \"lastName\": \"User\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -171,7 +178,6 @@
             "header": [
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "auth": { "type": "noauth" },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
@@ -181,7 +187,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "auth", "logout"]
             },
-            "description": "Revokes the given refresh token (logs out this device only). Returns 204 regardless of whether the token was already revoked/unknown."
+            "description": "Revokes the given refresh token (logs out this device only). Requires a valid access token (this endpoint is NOT in the public-endpoints list, unlike register/login/refresh). Returns 204 regardless of whether the token was already revoked/unknown."
           },
           "response": []
         },
@@ -196,6 +202,89 @@
               "path": ["api", "v1", "auth", "logout-all"]
             },
             "description": "Revokes every active refresh token belonging to the authenticated user (logs out all devices). Requires a valid access token. Returns 204."
+          },
+          "response": []
+        },
+        {
+          "name": "Login with Google",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"<google-id-token>\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/social/google",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "social", "google"]
+            },
+            "description": "Verifies a Google-issued ID token, then finds, links, or creates the matching Lifey user and returns the same token pair as password login. Public endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@lifey.app\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "forgot-password"]
+            },
+            "description": "Sends a 6-digit reset code by email. Always returns 200 regardless of whether the email is registered, so this endpoint can't be used to enumerate accounts. Public endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@lifey.app\",\n  \"code\": \"123456\",\n  \"newPassword\": \"newPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "reset-password"]
+            },
+            "description": "Resets the password using the 6-digit code emailed by 'Forgot password'. `code` must match `\\d{6}`; `newPassword` must be 8-100 characters. Public endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "change-password"]
+            },
+            "description": "Changes the current (authenticated) user's password. Revokes every refresh token for the user (including the one used for this request) and returns a fresh token pair, so the calling device stays logged in."
           },
           "response": []
         }
@@ -213,9 +302,30 @@
             "url": {
               "raw": "{{baseUrl}}/api/v1/weights",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "weights"]
+              "path": ["api", "v1", "weights"],
+              "query": [
+                { "key": "from", "value": "2026-06-01", "disabled": true, "description": "Inclusive lower bound (yyyy-MM-dd)" },
+                { "key": "to", "value": "2026-06-30", "disabled": true, "description": "Inclusive upper bound (yyyy-MM-dd)" }
+              ]
             },
-            "description": "Returns all weight entries ordered by date descending."
+            "description": "Returns all weight entries ordered by date descending. Optionally bounded to a date range via `from`/`to` (either or both may be omitted)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delta sync weights",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/weights?updatedSince=2026-06-01T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "weights"],
+              "query": [
+                { "key": "updatedSince", "value": "2026-06-01T00:00:00Z", "description": "ISO-8601 instant — required, switches to the delta-sync feed" }
+              ]
+            },
+            "description": "Backs the mobile offline sync pull. `updatedSince` (ISO-8601 instant) is required; ordering is fixed to updatedAt,id ascending, and a non-null `deletedAt` on a returned row is a tombstone. Response is a standard Spring Data page (accepts normal `page`/`size` params too)."
           },
           "response": []
         },
@@ -298,7 +408,27 @@
             "method": "GET",
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/v1/foods", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods"] },
-            "description": "Returns all foods."
+            "description": "Unpaged: always returns the full catalog. Any request carrying a `page` param is routed to the paged/search/delta-sync handler instead (see 'List foods (paged/search/delta sync)')."
+          },
+          "response": []
+        },
+        {
+          "name": "List foods (paged/search/delta sync)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/foods?page=0&size=20&search=chicken",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "foods"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "search", "value": "chicken", "disabled": true, "description": "Case-insensitive name contains-match" },
+                { "key": "updatedSince", "value": "2026-06-01T00:00:00Z", "disabled": true, "description": "ISO-8601 instant — switches to the delta-sync feed (ignores `search`, includes hidden/deleted rows)" }
+              ]
+            },
+            "description": "Backs the web foods table and the mobile offline sync pull. `search` case-insensitively matches on name. `updatedSince` switches to the delta-sync feed: `search` is ignored, hidden/deleted rows are included, ordering is fixed to updatedAt,id ascending, and a non-null `deletedAt` on a returned row is a tombstone. Response is a standard Spring Data page."
           },
           "response": []
         },
@@ -330,9 +460,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken breast\",\n  \"caloriesPer100g\": 165,\n  \"proteinPer100g\": 31,\n  \"carbsPer100g\": 0,\n  \"fatPer100g\": 3.6,\n  \"barcode\": null\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken breast\",\n  \"caloriesPer100g\": 165,\n  \"proteinPer100g\": 31,\n  \"carbsPer100g\": 0,\n  \"fatPer100g\": 3.6,\n  \"barcode\": null,\n  \"hidden\": false\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/foods", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods"] },
-            "description": "Creates a food. `name` is required and must be unique (case-insensitive); `caloriesPer100g` and `proteinPer100g` are required and must be >= 0; `carbsPer100g`/`fatPer100g`/`barcode` are optional. `barcode`, when set, must be unique across the catalog. Returns 201, or 409 if the name (or barcode) is already taken. Stores the new id in the `foodId` variable."
+            "description": "Creates a food. `name` is required and must be unique (case-insensitive); `caloriesPer100g` and `proteinPer100g` are required and must be >= 0; `carbsPer100g`/`fatPer100g`/`barcode`/`hidden` are optional (`hidden` defaults to false). `barcode`, when set, must be unique across the catalog. Returns 201, or 409 if the name (or barcode) is already taken. Stores the new id in the `foodId` variable."
           },
           "response": []
         },
@@ -373,7 +503,7 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken breast (grilled)\",\n  \"caloriesPer100g\": 165,\n  \"proteinPer100g\": 31,\n  \"carbsPer100g\": 0,\n  \"fatPer100g\": 3.6\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken breast (grilled)\",\n  \"caloriesPer100g\": 165,\n  \"proteinPer100g\": 31,\n  \"carbsPer100g\": 0,\n  \"fatPer100g\": 3.6,\n  \"hidden\": false\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/foods/{{foodId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "foods", "{{foodId}}"] },
             "description": "Updates the food with the captured id. Returns 200, or 404 if not found."
           },
@@ -401,6 +531,42 @@
           "response": []
         },
         {
+          "name": "List recipes (paged/search)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/recipes?page=0&size=20&search=chicken",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "recipes"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "search", "value": "chicken", "disabled": true, "description": "Case-insensitive name contains-match" }
+              ]
+            },
+            "description": "Backs the web recipes view. `search` case-insensitively matches on name; omit it to page through everything. Response is a standard Spring Data page."
+          },
+          "response": []
+        },
+        {
+          "name": "Delta sync recipes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/recipes?updatedSince=2026-06-01T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "recipes"],
+              "query": [
+                { "key": "updatedSince", "value": "2026-06-01T00:00:00Z", "description": "ISO-8601 instant — required, switches to the delta-sync feed" }
+              ]
+            },
+            "description": "Backs the mobile offline sync pull. `updatedSince` is required; ordering is fixed to updatedAt,id ascending, and a non-null `deletedAt` is a tombstone. Ingredients are not independently delta-synced — whenever a recipe appears here, replace all of its local ingredients."
+          },
+          "response": []
+        },
+        {
           "name": "Get recipe",
           "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "recipes", "{{recipeId}}"] }, "description": "Returns a single recipe by id, or 404 if not found." },
           "response": []
@@ -423,9 +589,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken & rice\",\n  \"description\": \"Simple meal prep\",\n  \"ingredients\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 200 }\n  ]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken & rice\",\n  \"description\": \"Simple meal prep\",\n  \"favorite\": false,\n  \"servings\": 2,\n  \"ingredients\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 200 }\n  ]\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/recipes", "host": ["{{baseUrl}}"], "path": ["api", "v1", "recipes"] },
-            "description": "Creates a recipe. `name` required, at least one ingredient required, each ingredient needs an existing `foodId` and positive `quantityInGrams`. Returns 201 and stores the new id in `recipeId`. Unknown foodId returns 404."
+            "description": "Creates a recipe. `name` required, at least one ingredient required, each ingredient needs an existing `foodId` and positive `quantityInGrams`. `description` (max 2000 chars), `favorite` and `servings` (positive) are optional — `servings` defaults to 1 if omitted (kept nullable for backward compatibility with older clients). Returns 201 and stores the new id in `recipeId`. Unknown foodId returns 404."
           },
           "response": []
         },
@@ -445,7 +611,7 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken & rice (bigger portion)\",\n  \"description\": \"Updated\",\n  \"ingredients\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 250 }\n  ]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Chicken & rice (bigger portion)\",\n  \"description\": \"Updated\",\n  \"favorite\": true,\n  \"servings\": 3,\n  \"ingredients\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 250 }\n  ]\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/recipes/{{recipeId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "recipes", "{{recipeId}}"] },
             "description": "Replaces the recipe's fields and ingredient list. Returns 200, or 404 if recipe/food not found."
           },
@@ -468,6 +634,23 @@
           "response": []
         },
         {
+          "name": "Delta sync meals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/meals?updatedSince=2026-06-01T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "meals"],
+              "query": [
+                { "key": "updatedSince", "value": "2026-06-01T00:00:00Z", "description": "ISO-8601 instant — required, switches to the delta-sync feed" }
+              ]
+            },
+            "description": "Backs the mobile offline sync pull. `updatedSince` is required; ordering is fixed to updatedAt,id ascending, and a non-null `deletedAt` is a tombstone. Entries are not independently delta-synced — whenever a meal appears here, replace all of its local entries."
+          },
+          "response": []
+        },
+        {
           "name": "Create meal",
           "event": [
             {
@@ -485,9 +668,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"dateTime\": \"2026-06-18T08:00:00\",\n  \"mealType\": \"BREAKFAST\",\n  \"entries\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 150 }\n  ]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"dateTime\": \"2026-06-18T08:00:00\",\n  \"mealType\": \"BREAKFAST\",\n  \"name\": \"Post-workout breakfast\",\n  \"entries\": [\n    { \"foodId\": {{foodId}}, \"quantityInGrams\": 150 }\n  ]\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/meals", "host": ["{{baseUrl}}"], "path": ["api", "v1", "meals"] },
-            "description": "Logs a meal. `dateTime` (today or past) and `mealType` required, at least one entry required, each entry needs an existing `foodId` and positive `quantityInGrams`. Returns 201 and stores the id in `mealId`. Unknown foodId returns 404."
+            "description": "Logs a meal. `dateTime` and `mealType` required, at least one entry required, each entry needs an existing `foodId` and positive `quantityInGrams`. `name` (max 255 chars) is optional. Returns 201 and stores the id in `mealId`. Unknown foodId returns 404."
           },
           "response": []
         },
@@ -496,9 +679,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"dateTime\": \"2030-01-01T08:00:00\",\n  \"mealType\": null,\n  \"entries\": []\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"dateTime\": \"2026-06-18T08:00:00\",\n  \"mealType\": null,\n  \"entries\": []\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/meals", "host": ["{{baseUrl}}"], "path": ["api", "v1", "meals"] },
-            "description": "Demonstrates the 400 validation response (future dateTime, missing mealType, empty entries)."
+            "description": "Demonstrates the 400 validation response (missing mealType, empty entries). Note: unlike Weights/Steps/Water, `dateTime` has no past/future restriction on meals — a future dateTime alone would NOT be rejected."
           },
           "response": []
         },
@@ -522,11 +705,28 @@
     },
     {
       "name": "Exercises",
-      "description": "Implemented feature. CRUD for the exercise master list referenced by workout templates and sessions. Comes pre-seeded with ids 1-8.",
+      "description": "Implemented feature. CRUD for the current user's own exercise list referenced by workout templates and sessions (exercises are per-user, like foods — see V40__foods_exercises_ownership.sql). The very first real user in the database keeps the original seeded rows (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank); every other user gets their own copy with different ids. Deletes are soft (tombstoned via `deletedAt`, surfaced through delta sync) — deleting an exercise still referenced by a template/session no longer returns 409.",
       "item": [
         {
           "name": "List exercises",
           "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/exercises", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exercises"] }, "description": "Returns all exercises ordered by name." },
+          "response": []
+        },
+        {
+          "name": "Delta sync exercises",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/exercises?updatedSince=2026-06-01T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "exercises"],
+              "query": [
+                { "key": "updatedSince", "value": "2026-06-01T00:00:00Z", "description": "ISO-8601 instant — required, switches to the delta-sync feed" }
+              ]
+            },
+            "description": "Backs the mobile offline sync pull. `updatedSince` is required; ordering is fixed to updatedAt,id ascending, and a non-null `deletedAt` is a tombstone (exercises are soft-deleted)."
+          },
           "response": []
         },
         {
@@ -552,9 +752,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Lateral Raise\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Lateral Raise\",\n  \"category\": \"SHOULDERS\",\n  \"equipment\": \"DUMBBELL\",\n  \"description\": \"Raise dumbbells out to the sides to shoulder height.\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/exercises", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exercises"] },
-            "description": "Creates an exercise. `name` required. Returns 201 and stores the id in `exerciseId`."
+            "description": "Creates an exercise. `name` required; `category` (MuscleGroup: CHEST/BACK/SHOULDERS/BICEPS/TRICEPS/FOREARMS/QUADS/HAMSTRINGS/GLUTES/CALVES/ABS/CARDIO/FULL_BODY/OTHER), `equipment` (BARBELL/DUMBBELL/MACHINE/CABLE/BODYWEIGHT/SMITH_MACHINE/OTHER) and `description` are optional. Returns 201 and stores the id in `exerciseId`."
           },
           "response": []
         },
@@ -563,7 +763,7 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Lateral Raise (cable)\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Lateral Raise (cable)\",\n  \"category\": \"SHOULDERS\",\n  \"equipment\": \"CABLE\",\n  \"description\": \"Cable variation of the lateral raise.\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/exercises/{{exerciseId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exercises", "{{exerciseId}}"] },
             "description": "Renames the exercise. Returns 200, or 404 if not found."
           },
@@ -571,18 +771,35 @@
         },
         {
           "name": "Delete exercise",
-          "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/exercises/{{exerciseId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exercises", "{{exerciseId}}"] }, "description": "Deletes the exercise. Returns 204, 404 if not found, or 409 if still referenced by a template/session." },
+          "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/exercises/{{exerciseId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exercises", "{{exerciseId}}"] }, "description": "Soft-deletes the exercise (tombstoned, not removed). Returns 204, or 404 if not found." },
           "response": []
         }
       ]
     },
     {
       "name": "Workouts",
-      "description": "Implemented feature. Workout templates (named lists of exercises) and logged workout sessions. Both reference exercises by id (manage them via the Exercises folder; ids 1-8 are pre-seeded).\n\nA session has two independent lists: `exerciseIds` (planned exercises — e.g. copied client-side from a template's `exerciseIds` when starting from one) and `sets` (sets actually logged, with reps/weight). Both can be empty: a session can be started blank with neither, and exercises/sets are filled in as the workout progresses. Planned exercises are a snapshot only — there's no link back to the template, so editing a session never affects it.",
+      "description": "Implemented feature. Workout templates (named lists of exercises, each with an optional target set count) and logged workout sessions. Both reference exercises by id (manage them via the Exercises folder; each user has their own exercise list).\n\nA workout template's body is `exercises`: a list of `{ exerciseId, targetSets }` (not a flat `exerciseIds` array).\n\nA session has two independent lists: `exerciseIds` (planned exercises — e.g. copied client-side from a template's `exercises[].exerciseId` when starting from one) and `sets` (sets actually logged, with reps/weight/`performedAt`). Both can be empty: a session can be started blank with neither, and exercises/sets are filled in as the workout progresses. Planned exercises are a snapshot only — there's no link back to the template via `exerciseIds`, though the session can optionally record `templateId` for reference. Each set now requires a `performedAt` timestamp; `reps`/`weight` are intentionally unvalidated (an incomplete set is a normal transient client-side state, not a bad request) and rows missing both are silently dropped server-side.",
       "item": [
         {
           "name": "List workout templates",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/workout-templates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-templates"] }, "description": "Returns all workout templates with their exercise ids." },
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/workout-templates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-templates"] }, "description": "Returns all workout templates with their exercises." },
+          "response": []
+        },
+        {
+          "name": "Delta sync workout templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workout-templates?updatedSince=2026-06-01T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workout-templates"],
+              "query": [
+                { "key": "updatedSince", "value": "2026-06-01T00:00:00Z", "description": "ISO-8601 instant — required, switches to the delta-sync feed" }
+              ]
+            },
+            "description": "Backs the mobile offline sync pull. `updatedSince` is required; ordering is fixed to updatedAt,id ascending, and a non-null `deletedAt` is a tombstone. Exercise links are not independently delta-synced — whenever a template appears here, replace all of its local exercise links."
+          },
           "response": []
         },
         {
@@ -603,9 +820,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Push day\",\n  \"exerciseIds\": [1, 4]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Push day\",\n  \"exercises\": [\n    { \"exerciseId\": 1, \"targetSets\": 3 },\n    { \"exerciseId\": 4, \"targetSets\": 4 }\n  ]\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/workout-templates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-templates"] },
-            "description": "Creates a template. `name` required, at least one exerciseId required, each must reference an existing exercise (else 404). Returns 201 and stores the id in `templateId`."
+            "description": "Creates a template. `name` required, at least one entry in `exercises` required. Each entry needs an existing `exerciseId` (else 404); `targetSets` is optional and must be positive if present. Returns 201 and stores the id in `templateId`."
           },
           "response": []
         },
@@ -614,9 +831,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"exerciseIds\": []\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"\",\n  \"exercises\": []\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/workout-templates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-templates"] },
-            "description": "Demonstrates the 400 validation response (blank name, empty exerciseIds)."
+            "description": "Demonstrates the 400 validation response (blank name, empty exercises)."
           },
           "response": []
         },
@@ -630,7 +847,7 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Push day (v2)\",\n  \"exerciseIds\": [1, 4, 5]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Push day (v2)\",\n  \"exercises\": [\n    { \"exerciseId\": 1, \"targetSets\": 3 },\n    { \"exerciseId\": 4, \"targetSets\": 4 },\n    { \"exerciseId\": 5, \"targetSets\": 3 }\n  ]\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/workout-templates/{{templateId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-templates", "{{templateId}}"] },
             "description": "Renames the template and replaces its exercise list. Returns 200, or 404 if the template/exercise is not found."
           },
@@ -652,6 +869,41 @@
           "response": []
         },
         {
+          "name": "List workout sessions (paged)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workout-sessions?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workout-sessions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "An additive alternative to the unpaged list, for callers that want to page through a long history (newest first) instead of pulling everything at once."
+          },
+          "response": []
+        },
+        {
+          "name": "Delta sync workout sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workout-sessions?updatedSince=2026-06-01T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workout-sessions"],
+              "query": [
+                { "key": "updatedSince", "value": "2026-06-01T00:00:00Z", "description": "ISO-8601 instant — required, switches to the delta-sync feed" }
+              ]
+            },
+            "description": "Backs the mobile offline sync pull. `updatedSince` is required; ordering is fixed to updatedAt,id ascending, and a non-null `deletedAt` is a tombstone. Sets and planned exercises are not independently delta-synced — whenever a session appears here, replace all of its local children."
+          },
+          "response": []
+        },
+        {
           "name": "Create workout session",
           "event": [
             {
@@ -669,9 +921,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"finishedAt\": \"2026-06-18T06:00:00Z\",\n  \"exerciseIds\": [1],\n  \"sets\": [\n    { \"exerciseId\": 1, \"reps\": 10, \"weight\": 60 },\n    { \"exerciseId\": 1, \"reps\": 8, \"weight\": 65 }\n  ]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"finishedAt\": \"2026-06-18T06:00:00Z\",\n  \"exerciseIds\": [1],\n  \"sets\": [\n    { \"exerciseId\": 1, \"reps\": 10, \"weight\": 60, \"performedAt\": \"2026-06-18T05:10:00Z\" },\n    { \"exerciseId\": 1, \"reps\": 8, \"weight\": 65, \"performedAt\": \"2026-06-18T05:15:00Z\" }\n  ],\n  \"activeCalories\": 320,\n  \"averageHeartRate\": 128,\n  \"templateId\": null\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] },
-            "description": "Logs a session. `startedAt` required (today or past), `finishedAt` optional. `exerciseIds` and `sets` are both required fields but may be empty arrays. Each entry needs an existing exerciseId (else 404); sets additionally need positive reps and weight >= 0. Returns 201 and stores the id in `sessionId`."
+            "description": "Logs a session. `startedAt` required (today or past), `finishedAt` optional. `exerciseIds` and `sets` are both required fields but may be empty arrays. Each entry needs an existing exerciseId (else 404). Each set needs a required `performedAt` (today or past); `reps`/`weight` are intentionally unvalidated — an incomplete set is a normal transient state, not a bad request, and is silently dropped server-side if both are missing. `activeCalories`, `averageHeartRate`, `healthWorkoutId` (Apple Health import) and `templateId` (only read on create) are all optional. Returns 201 and stores the id in `sessionId`."
           },
           "response": []
         },
@@ -680,9 +932,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"exerciseIds\": [1, 4],\n  \"sets\": []\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"exerciseIds\": [1, 4],\n  \"sets\": [],\n  \"templateId\": {{templateId}}\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] },
-            "description": "Demonstrates starting a session from a template: the client resolves the template's `exerciseIds` (Workouts > Get workout template) and sends them here as the session's planned exercises, with no sets logged yet. The response's `exercises` array lists them; `sets` fills in as the workout progresses via Update workout session."
+            "description": "Demonstrates starting a session from a template: the client resolves the template's `exercises[].exerciseId` (Workouts > Get workout template) and sends them here as the session's planned `exerciseIds`, with no sets logged yet; `templateId` is recorded for reference (read only on create). The response's `exercises` array lists them; `sets` fills in as the workout progresses via Update workout session."
           },
           "response": []
         },
@@ -702,7 +954,7 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"finishedAt\": \"2026-06-18T06:30:00Z\",\n  \"exerciseIds\": [1],\n  \"sets\": [\n    { \"exerciseId\": 1, \"reps\": 12, \"weight\": 62.5 }\n  ]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"finishedAt\": \"2026-06-18T06:30:00Z\",\n  \"exerciseIds\": [1],\n  \"sets\": [\n    { \"exerciseId\": 1, \"reps\": 12, \"weight\": 62.5, \"performedAt\": \"2026-06-18T06:10:00Z\" }\n  ]\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions/{{sessionId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions", "{{sessionId}}"] },
             "description": "Replaces the session's start/finish time, planned-exercise list, and set list (e.g. finish an in-progress workout, or log sets for a session that was started empty/from a template). Returns 200, or 404 if the session/exercise is not found."
           },
@@ -726,24 +978,57 @@
       "item": [
         {
           "name": "Daily statistics",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/statistics/daily", "host": ["{{baseUrl}}"], "path": ["api", "v1", "statistics", "daily"] } },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/statistics/daily",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "statistics", "daily"],
+              "query": [
+                { "key": "date", "value": "2026-06-18", "disabled": true, "description": "Caller's local date (yyyy-MM-dd); defaults to the server's current date" }
+              ]
+            }
+          },
           "response": []
         },
         {
           "name": "Weekly statistics",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/statistics/weekly", "host": ["{{baseUrl}}"], "path": ["api", "v1", "statistics", "weekly"] } },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/statistics/weekly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "statistics", "weekly"],
+              "query": [
+                { "key": "date", "value": "2026-06-18", "disabled": true, "description": "Caller's local date (yyyy-MM-dd); defaults to the server's current date" }
+              ]
+            }
+          },
           "response": []
         },
         {
           "name": "Monthly statistics",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/statistics/monthly", "host": ["{{baseUrl}}"], "path": ["api", "v1", "statistics", "monthly"] } },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/statistics/monthly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "statistics", "monthly"],
+              "query": [
+                { "key": "date", "value": "2026-06-18", "disabled": true, "description": "Caller's local date (yyyy-MM-dd); defaults to the server's current date" }
+              ]
+            }
+          },
           "response": []
         }
       ]
     },
     {
       "name": "Settings",
-      "description": "Implemented feature. Per-user preferences: unit system, optional daily calorie/macro goals, theme. One row per user, created with defaults on first access — there's no separate create endpoint.",
+      "description": "Implemented feature. Per-user preferences: unit system, optional daily calorie/macro/water/step goals, theme, language. One row per user, created with defaults on first access — there's no separate create endpoint.",
       "item": [
         {
           "name": "Get settings",
@@ -751,7 +1036,7 @@
             "method": "GET",
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/v1/settings", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings"] },
-            "description": "Returns the current user's settings, creating the row with defaults (`unitSystem: METRIC`, `theme: SYSTEM`, no goals set) if this is the first access."
+            "description": "Returns the current user's settings, creating the row with defaults (`unitSystem: METRIC`, `theme: SYSTEM`, `language: SYSTEM`, no goals set) if this is the first access."
           },
           "response": []
         },
@@ -760,9 +1045,9 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": \"METRIC\",\n  \"dailyCalorieGoal\": 2200,\n  \"dailyProteinGoal\": 150,\n  \"dailyCarbsGoal\": 220,\n  \"dailyFatGoal\": 70,\n  \"dailyWaterGoalLiters\": 2.5,\n  \"theme\": \"DARK\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": \"METRIC\",\n  \"dailyCalorieGoal\": 2200,\n  \"dailyProteinGoal\": 150,\n  \"dailyCarbsGoal\": 220,\n  \"dailyFatGoal\": 70,\n  \"dailyWaterGoalLiters\": 2.5,\n  \"dailyStepGoal\": 10000,\n  \"theme\": \"DARK\",\n  \"language\": \"ENGLISH\"\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/settings", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings"] },
-            "description": "Replaces the current user's settings. `unitSystem` (METRIC/IMPERIAL) and `theme` (LIGHT/DARK/SYSTEM) are required; the daily goal fields (including `dailyWaterGoalLiters`) are optional (omit/null for no goal) and must be >= 0 if present. Returns 200."
+            "description": "Replaces the current user's settings. `unitSystem` (METRIC/IMPERIAL), `theme` (LIGHT/DARK/SYSTEM) and `language` (SYSTEM/ENGLISH/HUNGARIAN) are required; the daily goal fields (`dailyCalorieGoal`/`dailyProteinGoal`/`dailyCarbsGoal`/`dailyFatGoal`/`dailyWaterGoalLiters`/`dailyStepGoal`) are optional (omit/null for no goal) and must be >= 0 (`dailyStepGoal` must be strictly positive) if present. Returns 200."
           },
           "response": []
         },
@@ -771,9 +1056,9 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": null,\n  \"dailyCalorieGoal\": -100,\n  \"theme\": null\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": null,\n  \"dailyCalorieGoal\": -100,\n  \"theme\": null,\n  \"language\": null\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/settings", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings"] },
-            "description": "Demonstrates the 400 validation response (missing unitSystem/theme, negative calorie goal)."
+            "description": "Demonstrates the 400 validation response (missing unitSystem/theme/language, negative calorie goal)."
           },
           "response": []
         }
@@ -870,6 +1155,23 @@
           "response": []
         },
         {
+          "name": "Delta sync water entries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/water-entries?updatedSince=2026-06-01T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "water-entries"],
+              "query": [
+                { "key": "updatedSince", "value": "2026-06-01T00:00:00Z", "description": "ISO-8601 instant — required, switches to the delta-sync feed" }
+              ]
+            },
+            "description": "Backs the mobile offline sync pull. `updatedSince` is required; ordering is fixed to updatedAt,id ascending, and a non-null `deletedAt` is a tombstone."
+          },
+          "response": []
+        },
+        {
           "name": "Log water entry - manual",
           "event": [
             {
@@ -936,8 +1238,33 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/api/v1/steps", "host": ["{{baseUrl}}"], "path": ["api", "v1", "steps"] },
-            "description": "Returns all of the current user's daily step counts (newest first)."
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/steps",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "steps"],
+              "query": [
+                { "key": "from", "value": "2026-06-01", "disabled": true, "description": "Inclusive lower bound (yyyy-MM-dd)" },
+                { "key": "to", "value": "2026-06-30", "disabled": true, "description": "Inclusive upper bound (yyyy-MM-dd)" }
+              ]
+            },
+            "description": "Returns all of the current user's daily step counts (newest first). Optionally bounded to a date range via `from`/`to` (either or both may be omitted)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delta sync step counts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/steps?updatedSince=2026-06-01T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "steps"],
+              "query": [
+                { "key": "updatedSince", "value": "2026-06-01T00:00:00Z", "description": "ISO-8601 instant — required, switches to the delta-sync feed" }
+              ]
+            },
+            "description": "Backs the mobile offline sync pull. `updatedSince` is required; ordering is fixed to updatedAt,id ascending, and a non-null `deletedAt` is a tombstone."
           },
           "response": []
         },
@@ -961,7 +1288,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"date\": \"2026-06-25\",\n  \"steps\": 8500\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/steps", "host": ["{{baseUrl}}"], "path": ["api", "v1", "steps"] },
-            "description": "Records a step count. `date` must be today or in the past; `steps` must be >= 0. Returns 201 and stores the new id in `stepId`."
+            "description": "Records a step count (upserts on date). `date` is required (no past/future restriction); `steps` must be >= 0. Returns 201 and stores the new id in `stepId`."
           },
           "response": []
         },
@@ -972,7 +1299,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"date\": \"2030-01-01\",\n  \"steps\": -1\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/steps", "host": ["{{baseUrl}}"], "path": ["api", "v1", "steps"] },
-            "description": "Demonstrates the 400 validation response (future date, negative steps)."
+            "description": "Demonstrates the 400 validation response (negative steps). Note: the future date does NOT itself cause a 400 — `date` has no past/future restriction."
           },
           "response": []
         },
@@ -994,6 +1321,630 @@
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/v1/steps/{{stepId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "steps", "{{stepId}}"] },
             "description": "Deletes the step count entry. Returns 204, or 404 if not found."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Details",
+      "description": "Implemented feature. Onboarding biometrics (gender, birth date, height, activity level, primary goal, optional target weight) and the suggested daily calorie/macro/water goals derived from them.",
+      "item": [
+        {
+          "name": "Get user details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/user-details", "host": ["{{baseUrl}}"], "path": ["api", "v1", "user-details"] },
+            "description": "Returns the current user's onboarding details. Returns 404 if the user hasn't completed onboarding yet."
+          },
+          "response": []
+        },
+        {
+          "name": "Upsert user details",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"gender\": \"MALE\",\n  \"birthDate\": \"1995-05-20\",\n  \"heightCm\": 180,\n  \"activityLevel\": \"MODERATE\",\n  \"primaryGoal\": \"MAINTAIN\",\n  \"targetWeightKg\": 80\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/user-details", "host": ["{{baseUrl}}"], "path": ["api", "v1", "user-details"] },
+            "description": "Creates or replaces the current user's onboarding details. `gender` (MALE/FEMALE/UNSPECIFIED), `birthDate`, `heightCm` (80-250), `activityLevel` (SEDENTARY/LIGHT/MODERATE/ACTIVE/VERY_ACTIVE) and `primaryGoal` (LOSE_WEIGHT/MAINTAIN/GAIN_MUSCLE) are required; `targetWeightKg` (30-300) is optional. Used both for the initial onboarding submit and later edits from Settings. Returns 200."
+          },
+          "response": []
+        },
+        {
+          "name": "Partially update user details",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"fields\": [\"HEIGHT_CM\", \"TARGET_WEIGHT_KG\"],\n  \"gender\": \"MALE\",\n  \"birthDate\": \"1995-05-20\",\n  \"heightCm\": 182,\n  \"activityLevel\": \"MODERATE\",\n  \"primaryGoal\": \"MAINTAIN\",\n  \"targetWeightKg\": 78\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/user-details", "host": ["{{baseUrl}}"], "path": ["api", "v1", "user-details"] },
+            "description": "Persists only the fields named in `fields` (GENDER/BIRTH_DATE/HEIGHT_CM/ACTIVITY_LEVEL/PRIMARY_GOAL/TARGET_WEIGHT_KG) — the client always sends its full, already-valid current form state, and everything not listed is ignored/kept as-is. Recalculates and applies the daily calorie/macro/water goals to Settings. Used by the Settings edit confirmation popup. Returns 200."
+          },
+          "response": []
+        },
+        {
+          "name": "Suggest goals",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"gender\": \"MALE\",\n  \"birthDate\": \"1995-05-20\",\n  \"heightCm\": 180,\n  \"weightKg\": 80,\n  \"activityLevel\": \"MODERATE\",\n  \"primaryGoal\": \"MAINTAIN\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/user-details/suggest-goals", "host": ["{{baseUrl}}"], "path": ["api", "v1", "user-details", "suggest-goals"] },
+            "description": "Stateless — computes suggested daily calorie/macro/water goals from the request body (mirrors 'Upsert user details' plus current `weightKg`); nothing is persisted, so the onboarding wizard can preview goals before the user commits to anything. Returns `bmr`/`tdee`/`calories`/`proteinGrams`/`carbsGrams`/`fatGrams`/`waterLiters`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Avatar",
+      "description": "Implemented feature. Profile picture upload/download for the current user.",
+      "item": [
+        {
+          "name": "Get avatar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/users/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "v1", "users", "me", "avatar"] },
+            "description": "Returns the current user's profile picture as binary image data. Supports conditional GET via If-None-Match/ETag (304 Not Modified). Returns 404 if no picture is set."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload avatar",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/users/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "v1", "users", "me", "avatar"] },
+            "description": "Uploads or replaces the current user's profile picture as multipart/form-data with a `file` part. Accepts JPEG/PNG up to 5MB; the server re-encodes it to a center-cropped 512x512 JPEG, stripping metadata. Returns 204."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete avatar",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/users/me/avatar", "host": ["{{baseUrl}}"], "path": ["api", "v1", "users", "me", "avatar"] },
+            "description": "Removes the current user's profile picture. Returns 204."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trainer Invites",
+      "description": "Implemented feature (personal-trainer module). Trainer-side (web admin) invite management — requires ROLE_TRAINER. Client-side counterpart is *Client Invites*; public email-link counterpart is *Trainer Invites (email)*.",
+      "item": [
+        {
+          "name": "Invite a client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('inviteId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"client@lifey.app\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/invites", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "invites"] },
+            "description": "Invites a client by exact email. `email` required. Requires ROLE_TRAINER. Returns 201 and stores the id in `inviteId`."
+          },
+          "response": []
+        },
+        {
+          "name": "List pending invites",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/invites", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "invites"] },
+            "description": "Lists this trainer's pending (non-expired) invites."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel invite",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/invites/{{inviteId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "invites", "{{inviteId}}"] },
+            "description": "Cancels a pending invite. Returns 204."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trainer Invites (email)",
+      "description": "Implemented feature (personal-trainer module). Public, unauthenticated accept/decline link sent in the trainer invite email — protected by an opaque, single-use, per-invite token instead of a session. Gated by `lifey.trainer-invite.email-enabled`; the in-app accept flow (*Client Invites*) is unaffected.",
+      "item": [
+        {
+          "name": "Respond via email link",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer-invites/email/respond?token=<token-from-email>&accept=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer-invites", "email", "respond"],
+              "query": [
+                { "key": "token", "value": "<token-from-email>" },
+                { "key": "accept", "value": "true" }
+              ]
+            },
+            "description": "Accepts or declines a pending invite via its emailed token. `accept=false` declines. Returns an HTML confirmation page (200) even for an expired/already-used token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Client Invites",
+      "description": "Implemented feature (personal-trainer module). Client-side (mobile) view of trainer invites — plain authenticated ROLE_USER, no special role required.",
+      "item": [
+        {
+          "name": "List pending invites (client)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer-invites/pending", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer-invites", "pending"] },
+            "description": "Lists this user's pending (non-expired) trainer invites. Polled on app start/foreground."
+          },
+          "response": []
+        },
+        {
+          "name": "Respond to invite (client)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"accept\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer-invites/{{inviteId}}/respond", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer-invites", "{{inviteId}}", "respond"] },
+            "description": "Accepts or declines a pending invite. `accept` required. Returns 204."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "My Trainers",
+      "description": "Implemented feature (personal-trainer module). Client-side (mobile Settings) view of active trainers — plain authenticated ROLE_USER.",
+      "item": [
+        {
+          "name": "List active trainers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/my-trainers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "my-trainers"] },
+            "description": "Lists this user's active trainers."
+          },
+          "response": []
+        },
+        {
+          "name": "Leave a trainer",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/my-trainers/{{trainerId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "my-trainers", "{{trainerId}}"] },
+            "description": "Ends the relationship with a trainer. Returns 204."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trainer Clients",
+      "description": "Implemented feature (personal-trainer module). Trainer-side (web admin) view of active clients — requires ROLE_TRAINER.",
+      "item": [
+        {
+          "name": "List active clients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/clients", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "clients"] },
+            "description": "Lists this trainer's active clients."
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke a client",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "clients", "{{clientId}}"] },
+            "description": "Ends the relationship with a client. Returns 204."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trainer Client Data",
+      "description": "Implemented feature (personal-trainer module). Read-only view of a specific active client's stats/steps/weight/workouts/meals/avatar for their trainer — requires ROLE_TRAINER and an active trainer-client relationship (403/404 otherwise). Water is deliberately not exposed here (product decision).",
+      "item": [
+        {
+          "name": "Client daily statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/statistics/daily",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "statistics", "daily"],
+              "query": [
+                { "key": "date", "value": "2026-06-18", "disabled": true, "description": "Anchor date; defaults to the server's current date" }
+              ]
+            },
+            "description": "Client's stats for today."
+          },
+          "response": []
+        },
+        {
+          "name": "Client weekly statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/statistics/weekly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "statistics", "weekly"],
+              "query": [
+                { "key": "date", "value": "2026-06-18", "disabled": true, "description": "Anchor date; defaults to the server's current date" }
+              ]
+            },
+            "description": "Client's stats for the last 7 days."
+          },
+          "response": []
+        },
+        {
+          "name": "Client monthly statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/statistics/monthly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "statistics", "monthly"],
+              "query": [
+                { "key": "date", "value": "2026-06-18", "disabled": true, "description": "Anchor date; defaults to the server's current date" }
+              ]
+            },
+            "description": "Client's stats for the last 30 days."
+          },
+          "response": []
+        },
+        {
+          "name": "Client step counts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/steps",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "steps"],
+              "query": [
+                { "key": "from", "value": "2026-06-01", "disabled": true, "description": "Inclusive lower bound (yyyy-MM-dd)" },
+                { "key": "to", "value": "2026-06-30", "disabled": true, "description": "Inclusive upper bound (yyyy-MM-dd)" }
+              ]
+            },
+            "description": "Client's daily step count history, optionally bounded via `from`/`to`."
+          },
+          "response": []
+        },
+        {
+          "name": "Client weights",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/weights",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "weights"],
+              "query": [
+                { "key": "from", "value": "2026-06-01", "disabled": true, "description": "Inclusive lower bound (yyyy-MM-dd)" },
+                { "key": "to", "value": "2026-06-30", "disabled": true, "description": "Inclusive upper bound (yyyy-MM-dd)" }
+              ]
+            },
+            "description": "Client's weight history, optionally bounded via `from`/`to`."
+          },
+          "response": []
+        },
+        {
+          "name": "Client workout sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/workout-sessions?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "workout-sessions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Client's workout session history, paged (newest first), including sets and planned exercises."
+          },
+          "response": []
+        },
+        {
+          "name": "Client meals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/meals",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "meals"],
+              "query": [
+                { "key": "from", "value": "2026-06-01", "disabled": true, "description": "Inclusive lower bound (yyyy-MM-dd)" },
+                { "key": "to", "value": "2026-06-30", "disabled": true, "description": "Inclusive upper bound (yyyy-MM-dd)" }
+              ]
+            },
+            "description": "Client's logged meals, optionally bounded via `from`/`to`."
+          },
+          "response": []
+        },
+        {
+          "name": "Client nutrition goals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/nutrition-goals", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "nutrition-goals"] },
+            "description": "Client's daily calorie/protein/carbs/fat goals (from Settings)."
+          },
+          "response": []
+        },
+        {
+          "name": "Client avatar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/avatar", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "avatar"] },
+            "description": "Client's profile picture as binary image data. Returns 404 if the client has no picture set."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trainer Schedules",
+      "description": "Implemented feature (personal-trainer module). Trainer-scheduled upcoming workout sessions for a client — requires ROLE_TRAINER. Creating a schedule materializes every occurrence immediately as an upcoming workout_sessions row; the client sees them via the normal delta sync.",
+      "item": [
+        {
+          "name": "Create schedule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('scheduleId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"clientId\": {{clientId}},\n  \"templateId\": {{templateId}},\n  \"recurrence\": \"WEEKLY\",\n  \"daysOfWeek\": [\"MONDAY\", \"THURSDAY\"],\n  \"timeOfDay\": \"18:00:00\",\n  \"startDate\": \"2026-06-22\",\n  \"endDate\": \"2026-07-20\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/schedules", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "schedules"] },
+            "description": "Creates a schedule (recurring or one-off) of upcoming sessions for a client. `clientId`, `templateId` (one of the trainer's own workout templates), `recurrence` (ONCE/DAILY/WEEKLY), `startDate` and `endDate` are required (`endDate` is ignored for ONCE but still required on the wire). `daysOfWeek` is required (and only used) for WEEKLY. `timeOfDay` is optional, inherited by every occurrence. Returns 201 and stores the id in `scheduleId`."
+          },
+          "response": []
+        },
+        {
+          "name": "List schedules for client",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/schedules", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "schedules"] },
+            "description": "Lists a client's active schedules, with done/missed/remaining occurrence counts."
+          },
+          "response": []
+        },
+        {
+          "name": "List scheduled sessions for client",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/scheduled-sessions?from=2026-06-01&to=2026-06-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "scheduled-sessions"],
+              "query": [
+                { "key": "from", "value": "2026-06-01", "description": "Inclusive lower bound (yyyy-MM-dd)" },
+                { "key": "to", "value": "2026-06-30", "description": "Inclusive upper bound (yyyy-MM-dd)" }
+              ]
+            },
+            "description": "Lists a client's scheduled occurrences in a date range, for the calendar/timeline view: includes upcoming, missed, done and cancelled occurrences. `from`/`to` are required."
+          },
+          "response": []
+        },
+        {
+          "name": "List scheduled sessions for trainer (calendar)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/scheduled-sessions?from=2026-06-01&to=2026-06-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer", "scheduled-sessions"],
+              "query": [
+                { "key": "from", "value": "2026-06-01", "description": "Inclusive lower bound (yyyy-MM-dd)" },
+                { "key": "to", "value": "2026-06-30", "description": "Inclusive upper bound (yyyy-MM-dd)" }
+              ]
+            },
+            "description": "Lists every active client's scheduled occurrences in a date range, aggregated across the trainer's whole client roster, for the trainer calendar. `from`/`to` are required and the range cannot span more than 62 days."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel schedule",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/schedules/{{scheduleId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "schedules", "{{scheduleId}}"] },
+            "description": "Cancels a schedule: soft-deletes its future, not-yet-started occurrences; past (done/missed) occurrences are untouched. Returns 204."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel a scheduled occurrence",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/scheduled-sessions/{{scheduledSessionId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "scheduled-sessions", "{{scheduledSessionId}}"] },
+            "description": "Cancels a single scheduled occurrence. Returns 204, or 409 if it has already started, is in the past, or is already cancelled."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trainer Assignments",
+      "description": "Implemented feature (personal-trainer module). Deep-copies a trainer's own workout template/recipe (and everything it references) into a client's account — requires ROLE_TRAINER.",
+      "item": [
+        {
+          "name": "Assign content to a client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('assignmentId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"clientId\": {{clientId}},\n  \"contentType\": \"TEMPLATE\",\n  \"sourceId\": {{templateId}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/assignments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "assignments"] },
+            "description": "Assigns a workout template or recipe to a client. `clientId`, `contentType` (TEMPLATE/RECIPE) and `sourceId` (the trainer's own template/recipe id) are required. Re-assigning the same source always creates a fresh copy rather than versioning the previous one — `previouslyAssigned` in the response tells the UI to warn about that. Returns 201 and stores the id in `assignmentId`."
+          },
+          "response": []
+        },
+        {
+          "name": "List assignments for client",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/clients/{{clientId}}/assignments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "clients", "{{clientId}}", "assignments"] },
+            "description": "Lists everything this trainer has assigned to a given client."
+          },
+          "response": []
+        },
+        {
+          "name": "List client ids assigned this content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trainer/assignments/clients?contentType=TEMPLATE&sourceId={{templateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trainer", "assignments", "clients"],
+              "query": [
+                { "key": "contentType", "value": "TEMPLATE" },
+                { "key": "sourceId", "value": "{{templateId}}" }
+              ]
+            },
+            "description": "Lists the client ids this trainer has already assigned this content to. `contentType` and `sourceId` are required. Used by the assign dialog to pre-check clients that already have this template/recipe."
+          },
+          "response": []
+        },
+        {
+          "name": "Unassign",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/trainer/assignments/{{assignmentId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "assignments", "{{assignmentId}}"] },
+            "description": "Removes an assignment. Also soft-deletes the client's copy the assignment created. Returns 204."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Super Admin",
+      "description": "Implemented feature. User list and ROLE_TRAINER grant/revoke — requires ROLE_SUPER_ADMIN. That role is bootstrapped by hand via direct SQL and is never granted/revoked through the API.",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/superadmin/users?page=0&size=50&search=demo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "superadmin", "users"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "50" },
+                { "key": "search", "value": "demo", "disabled": true, "description": "Case-insensitive email contains-match" }
+              ]
+            },
+            "description": "Lists users, paged and optionally searched by email."
+          },
+          "response": []
+        },
+        {
+          "name": "Grant a role",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"ROLE_TRAINER\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/superadmin/users/{{superAdminUserId}}/roles", "host": ["{{baseUrl}}"], "path": ["api", "v1", "superadmin", "users", "{{superAdminUserId}}", "roles"] },
+            "description": "Grants a role to a user. Only ROLE_TRAINER can be granted through this endpoint; any other role is 400. Idempotent: granting a role the user already has is a no-op, still 200."
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke a role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/superadmin/users/{{superAdminUserId}}/roles/ROLE_TRAINER", "host": ["{{baseUrl}}"], "path": ["api", "v1", "superadmin", "users", "{{superAdminUserId}}", "roles", "ROLE_TRAINER"] },
+            "description": "Revokes a role from a user. Returns 204."
+          },
+          "response": []
+        },
+        {
+          "name": "Role audit log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/superadmin/users/{{superAdminUserId}}/role-audit", "host": ["{{baseUrl}}"], "path": ["api", "v1", "superadmin", "users", "{{superAdminUserId}}", "role-audit"] },
+            "description": "Role-change history for a user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get a user's avatar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/superadmin/users/{{superAdminUserId}}/avatar", "host": ["{{baseUrl}}"], "path": ["api", "v1", "superadmin", "users", "{{superAdminUserId}}", "avatar"] },
+            "description": "Gets a user's profile picture as binary image data. Returns 404 if no picture is set."
           },
           "response": []
         }

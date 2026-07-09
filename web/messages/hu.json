@@ -516,7 +516,13 @@
       "deleted": "Recept törölve",
       "deleteFailed": "Nem sikerült törölni",
       "deleteAria": "Recept törlése",
-      "removeIngredientAria": "Hozzávaló eltávolítása"
+      "removeIngredientAria": "Hozzávaló eltávolítása",
+      "changePhoto": "Fénykép módosítása",
+      "removePhoto": "Fénykép eltávolítása",
+      "photoUpdated": "Recept fotója frissítve",
+      "photoUploadFailed": "Nem sikerült frissíteni a recept fotóját",
+      "photoRemoved": "Recept fotója eltávolítva",
+      "photoRemoveFailed": "Nem sikerült eltávolítani a recept fotóját"
     }
   },
   "workouts": {
@@ -615,6 +621,15 @@
       "ABS": "Has",
       "CARDIO": "Kardió",
       "FULL_BODY": "Teljes test",
+      "OTHER": "Egyéb"
+    },
+    "equipmentTypes": {
+      "BARBELL": "Súlyzórúd",
+      "DUMBBELL": "Kézisúlyzó",
+      "MACHINE": "Gép",
+      "CABLE": "Kábel",
+      "BODYWEIGHT": "Testsúly",
+      "SMITH_MACHINE": "Smith gép",
       "OTHER": "Egyéb"
     }
   },

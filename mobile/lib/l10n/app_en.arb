@@ -415,6 +415,9 @@
     "noBarcodeMatchMessage": "No match for that barcode — it's saved, just fill in the details.",
     "@noBarcodeMatchMessage": {"description": "Snackbar shown when a barcode lookup finds no match"},
 
+    "foodAlreadyExistsMessage": "This product is already in your catalog — opening it for editing.",
+    "@foodAlreadyExistsMessage": {"description": "Snackbar shown when a scanned barcode matches a food that already exists locally, right before switching the sheet into edit mode for it"},
+
     "offlineCantLookupMessage": "You're offline — can't look up barcodes right now.",
     "@offlineCantLookupMessage": {"description": "Snackbar shown when a barcode lookup fails due to no connectivity"},
 
@@ -1467,6 +1470,15 @@
 
     "avatarRemovedMessage": "Profile picture removed",
     "@avatarRemovedMessage": {"description": "Snackbar shown after the profile picture is removed"},
+
+    "recipePhotoUpdatedMessage": "Recipe photo updated",
+    "@recipePhotoUpdatedMessage": {"description": "Snackbar shown after a recipe's photo is uploaded successfully"},
+
+    "recipePhotoRemovedMessage": "Recipe photo removed",
+    "@recipePhotoRemovedMessage": {"description": "Snackbar shown after a recipe's photo is removed"},
+
+    "recipePhotoNeedsSyncMessage": "Save the recipe and wait for it to sync before adding a photo",
+    "@recipePhotoNeedsSyncMessage": {"description": "Error shown when tapping the photo area of a recipe that hasn't synced to the server yet"},
 
     "onboardingNotOnboardedMessage": "You haven't completed onboarding yet.",
     "@onboardingNotOnboardedMessage": {"description": "Shown on the edit screen when the user has no user_details row yet"},

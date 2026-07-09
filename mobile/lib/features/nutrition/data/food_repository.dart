@@ -28,6 +28,13 @@ class FoodRepository {
     });
   }
 
+  /// Looks up a locally-cached food by its exact barcode, if one exists.
+  Future<Food?> findByBarcode(String barcode) async {
+    final row = await (_db.select(_db.foods)..where((t) => t.barcode.equals(barcode)))
+        .getSingleOrNull();
+    return row == null ? null : _toDomain(row);
+  }
+
   /// Like [watchAll] but bounded to the first [limit] foods (by name). The
   /// pending-delete filter can drop rows below the SQL LIMIT, so callers that
   /// need to know whether more rows exist beyond [limit] should request

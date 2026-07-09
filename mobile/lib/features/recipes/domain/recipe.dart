@@ -32,6 +32,7 @@ class Recipe {
     this.favorite = false,
     this.servings = 1,
     this.originTrainerId,
+    this.imageUpdatedAt,
   });
 
   final String clientId;
@@ -45,6 +46,10 @@ class Recipe {
   /// Non-null only for a trainer-assigned copy (docs/personal_trainer/05-mobil-terv.md
   /// §2) — the trainer's server-side user id, drives the "Edzőtől" badge.
   final int? originTrainerId;
+
+  /// Null if no photo is set. See RecipeImageRepository for how the app uses
+  /// this to decide when to (re-)download the photo.
+  final DateTime? imageUpdatedAt;
 
   double get totalCalories =>
       ingredients.fold(0, (sum, i) => sum + i.calories);

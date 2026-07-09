@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +12,7 @@ import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/origin_trainer_badge.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
+import '../application/recipe_image_controller.dart';
 import '../application/recipes_controller.dart';
 import '../domain/recipe.dart';
 import 'create_recipe_screen.dart';
@@ -131,7 +134,7 @@ class RecipesTab extends ConsumerWidget {
 // Recipe card
 // ---------------------------------------------------------------------------
 
-class _RecipeCard extends StatelessWidget {
+class _RecipeCard extends ConsumerWidget {
   const _RecipeCard({
     required this.recipe,
     required this.onDelete,
@@ -149,7 +152,7 @@ class _RecipeCard extends StatelessWidget {
   final VoidCallback onToggleFavorite;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
@@ -190,130 +193,184 @@ class _RecipeCard extends StatelessWidget {
           onTap: onEdit,
           borderRadius: BorderRadius.circular(AppRadius.card),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Row(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon badge
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.menu_book,
-                      size: 22,
-                      color: scheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                Row(
+                  children: [
+                    _RecipeThumbnail(recipe: recipe),
+                    const SizedBox(width: 12),
+                    // Content
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              recipe.name,
-                              style: theme.textTheme.bodyLarge,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  recipe.name,
+                                  style: theme.textTheme.bodyLarge,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (recipe.favorite)
+                                Icon(Icons.star, size: 16, color: scheme.primary),
+                              SyncStatusIndicator(clientId: recipe.clientId),
+                            ],
                           ),
-                          if (recipe.favorite)
-                            Icon(Icons.star, size: 16, color: scheme.primary),
-                          SyncStatusIndicator(clientId: recipe.clientId),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              recipe.servings > 1
-                                  ? l10n.perServingCaloriesProteinLabel(
-                                      (recipe.totalCalories / recipe.servings)
-                                          .toStringAsFixed(0),
-                                      (recipe.totalProtein / recipe.servings)
-                                          .toStringAsFixed(0),
-                                    )
-                                  : l10n.totalCaloriesProteinLabel(
-                                      recipe.totalCalories.toStringAsFixed(0),
-                                      recipe.totalProtein.toStringAsFixed(0),
-                                    ),
-                              maxLines: 1,
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  recipe.servings > 1
+                                      ? l10n.perServingCaloriesProteinLabel(
+                                          (recipe.totalCalories / recipe.servings)
+                                              .toStringAsFixed(0),
+                                          (recipe.totalProtein / recipe.servings)
+                                              .toStringAsFixed(0),
+                                        )
+                                      : l10n.totalCaloriesProteinLabel(
+                                          recipe.totalCalories.toStringAsFixed(0),
+                                          recipe.totalProtein.toStringAsFixed(0),
+                                        ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                              if (recipe.originTrainerId != null) ...[
+                                const SizedBox(width: 6),
+                                OriginTrainerBadge(originTrainerId: recipe.originTrainerId!),
+                              ],
+                            ],
+                          ),
+                          if (recipe.description != null &&
+                              recipe.description!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              recipe.description!,
+                              textAlign: TextAlign.left,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelMedium?.copyWith(
+                              style: theme.textTheme.bodySmall?.copyWith(
                                 color: scheme.onSurfaceVariant,
                               ),
                             ),
-                          ),
-                          if (recipe.originTrainerId != null) ...[
-                            const SizedBox(width: 6),
-                            OriginTrainerBadge(originTrainerId: recipe.originTrainerId!),
                           ],
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Log-as-meal button — compact rounded square
-                GestureDetector(
-                  onTap: onLogAsMeal,
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: scheme.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.restaurant, size: 16, color: scheme.primary),
-                        const SizedBox(width: 4),
-                        Text(
-                          l10n.logAsMealButton,
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.primary,
-                            height: 1.0,
-                          ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Actions — own row, bottom-right corner
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Log-as-meal button — compact rounded square
+                    GestureDetector(
+                      onTap: onLogAsMeal,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: scheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Duplicate button — compact rounded square, same treatment as log-as-meal
-                Tooltip(
-                  message: l10n.duplicateRecipeAria,
-                  child: GestureDetector(
-                    onTap: onDuplicate,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.all(9),
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.restaurant, size: 16, color: scheme.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              l10n.logAsMealButton,
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.primary,
+                                height: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Icon(Icons.copy_rounded, size: 16, color: scheme.onSurfaceVariant),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    // Duplicate button — compact rounded square, same treatment as log-as-meal
+                    Tooltip(
+                      message: l10n.duplicateRecipeAria,
+                      child: GestureDetector(
+                        onTap: onDuplicate,
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          padding: const EdgeInsets.all(9),
+                          decoration: BoxDecoration(
+                            color: scheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.copy_rounded, size: 16, color: scheme.onSurfaceVariant),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Recipe card thumbnail (falls back to the book icon while loading, on
+// error, or when the recipe has no photo)
+// ---------------------------------------------------------------------------
+
+class _RecipeThumbnail extends ConsumerWidget {
+  const _RecipeThumbnail({required this.recipe});
+
+  final Recipe recipe;
+
+  static const _size = 96.0;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final recipeId = recipe.id;
+
+    Uint8List? bytes;
+    if (recipeId != null && recipe.imageUpdatedAt != null) {
+      bytes = ref
+          .watch(recipeThumbnailProvider((
+            clientId: recipe.clientId,
+            serverId: recipeId,
+            imageUpdatedAt: recipe.imageUpdatedAt,
+          )))
+          .value;
+    }
+
+    return Container(
+      width: _size,
+      height: _size,
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: bytes != null
+          ? Image.memory(bytes, width: _size, height: _size, fit: BoxFit.cover)
+          : Center(
+              child: Icon(Icons.menu_book, size: 40, color: scheme.onPrimaryContainer),
+            ),
     );
   }
 }

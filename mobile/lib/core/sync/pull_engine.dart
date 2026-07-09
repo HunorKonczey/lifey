@@ -905,12 +905,15 @@ class PullEngine {
     if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
 
     final clientId = existingClientId ?? newClientId();
+    final imageUpdatedAtRaw = json['imageUpdatedAt'] as String?;
     final values = RecipesCompanion(
       name: Value(json['name'] as String),
       description: Value(json['description'] as String?),
       favorite: Value(json['favorite'] as bool? ?? false),
       servings: Value(json['servings'] as int? ?? 1),
       originTrainerId: Value(json['originTrainerId'] as int?),
+      imageUpdatedAt:
+          Value(imageUpdatedAtRaw != null ? DateTime.parse(imageUpdatedAtRaw) : null),
     );
     final ingredientsJson =
         (json['ingredients'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();

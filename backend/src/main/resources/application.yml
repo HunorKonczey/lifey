@@ -26,10 +26,11 @@ spring:
         format_sql: true
   servlet:
     multipart:
-      # Profile picture uploads only (docs/22-profile-picture-plan.md) — well above
-      # a re-encoded 512x512 JPEG but small enough to bound memory per request.
-      max-file-size: 5MB
-      max-request-size: 5MB
+      # Profile picture and recipe photo uploads (docs/22-profile-picture-plan.md)
+      # — well above a re-encoded image but small enough to bound memory per
+      # request, and generous enough for a camera photo before the server resizes it.
+      max-file-size: 10MB
+      max-request-size: 10MB
   flyway:
     enabled: true
     locations: classpath:db/migration

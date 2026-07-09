@@ -18,6 +18,11 @@ class Recipes extends Table {
   /// §2) — the trainer's server-side user id, drives the "Edzőtől" badge.
   IntColumn get originTrainerId => integer().nullable()();
 
+  /// Null if no photo is set. Mirrors the backend's `imageUpdatedAt` — the app
+  /// diffs this against what it last downloaded to know when to re-fetch the
+  /// recipe's photo (see RecipeImageRepository).
+  DateTimeColumn get imageUpdatedAt => dateTime().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

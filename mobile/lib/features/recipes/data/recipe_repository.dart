@@ -242,6 +242,7 @@ class RecipeRepository {
       favorite: row.favorite,
       servings: row.servings,
       originTrainerId: row.originTrainerId,
+      imageUpdatedAt: row.imageUpdatedAt,
       ingredients: ingredients,
     );
   }

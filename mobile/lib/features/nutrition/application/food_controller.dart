@@ -111,6 +111,11 @@ class FoodController extends StreamNotifier<List<Food>> {
     return _repo.delete(clientId);
   }
 
+  /// Looks up a locally-cached food by its exact barcode, if one exists.
+  Future<Food?> findByBarcode(String barcode) {
+    return _repo.findByBarcode(barcode);
+  }
+
   /// Drains the outbox, then re-pulls from the server — matching what the
   /// dashboard's pull-to-refresh does. Without the pull half, swiping to
   /// refresh only pushes local edits and never reconciles a stale/corrupted

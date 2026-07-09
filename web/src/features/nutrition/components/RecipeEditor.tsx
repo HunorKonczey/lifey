@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { foodApi, recipeApi } from "../api";
+import { RecipeImageUploader } from "./RecipeImageUploader";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
+import { normalizeForSearch } from "@/lib/utils/search";
 import type { RecipeResponse, RecipeIngredientRequest, FoodResponse } from "../types";
 
 interface RecipeEditorProps {
@@ -48,7 +50,7 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
   const { data: foods } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
 
   const matches = (foods ?? [])
-    .filter((f) => !f.hidden && f.name.toLowerCase().includes(search.toLowerCase()))
+    .filter((f) => !f.hidden && normalizeForSearch(f.name).includes(normalizeForSearch(search)))
     .slice(0, 6);
 
   const addIngredient = (f: FoodResponse) => {
@@ -113,6 +115,8 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
             <span className="material-symbols-rounded">close</span>
           </button>
         </div>
+
+        {recipe && <RecipeImageUploader recipeId={recipe.id} />}
 
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("namePlaceholder")}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm font-semibold"

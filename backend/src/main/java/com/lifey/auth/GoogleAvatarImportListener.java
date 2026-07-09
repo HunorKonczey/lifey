@@ -1,7 +1,7 @@
 package com.lifey.auth;
 
+import com.lifey.common.image.ImageReencoder;
 import com.lifey.user.AvatarSource;
-import com.lifey.user.ImageReencoder;
 import com.lifey.user.UserAvatar;
 import com.lifey.user.UserAvatarRepository;
 import com.lifey.user.UserRepository;
@@ -44,6 +44,7 @@ class GoogleAvatarImportListener {
     private static final Pattern SIZE_SUFFIX = Pattern.compile("=s\\d+-c$");
     private static final String LARGE_SIZE_SUFFIX = "=s512-c";
     private static final int MAX_BYTES = 5 * 1024 * 1024;
+    private static final int AVATAR_SIZE = 512;
 
     private final UserAvatarRepository userAvatarRepository;
     private final UserRepository userRepository;
@@ -63,7 +64,7 @@ class GoogleAvatarImportListener {
             }
 
             byte[] raw = download(downloadUrl);
-            byte[] jpeg = ImageReencoder.toSquareJpeg(new ByteArrayInputStream(raw));
+            byte[] jpeg = ImageReencoder.toSquareJpeg(new ByteArrayInputStream(raw), AVATAR_SIZE);
 
             UserAvatar avatar = new UserAvatar();
             avatar.setUser(userRepository.getReferenceById(event.userId()));
@@ -96,7 +97,7 @@ class GoogleAvatarImportListener {
     private byte[] download(String url) {
         return googleAvatarRestClient.get()
                 .uri(URI.create(url))
-                .exchange((request, response) -> {
+                .exchange((_, response) -> {
                     if (!response.getStatusCode().is2xxSuccessful()) {
                         throw new IOException("Unexpected status downloading avatar: " + response.getStatusCode());
                     }

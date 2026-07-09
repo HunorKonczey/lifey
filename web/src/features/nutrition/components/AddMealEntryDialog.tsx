@@ -7,6 +7,7 @@ import { foodApi, mealApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { logTimestampFor } from "@/lib/utils/logTime";
+import { normalizeForSearch } from "@/lib/utils/search";
 import type { MealType, FoodResponse, MealResponse } from "../types";
 
 interface AddMealEntryDialogProps {
@@ -174,7 +175,7 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
   const { data: foods } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
 
   const matches = (foods ?? [])
-    .filter((f) => !f.hidden && f.name.toLowerCase().includes(search.toLowerCase()))
+    .filter((f) => !f.hidden && normalizeForSearch(f.name).includes(normalizeForSearch(search)))
     .slice(0, 8);
 
   const previewKcal = picked ? Math.round((picked.caloriesPer100g * grams) / 100) : 0;

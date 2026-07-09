@@ -1,4 +1,4 @@
-package com.lifey.user;
+package com.lifey.common.exception;
 
 public class InvalidImageException extends RuntimeException {
 
