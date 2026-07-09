@@ -1,9 +1,9 @@
 package com.lifey.user.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.exception.InvalidImageException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.AvatarSource;
-import com.lifey.user.InvalidImageException;
 import com.lifey.user.User;
 import com.lifey.user.UserAvatar;
 import com.lifey.user.UserAvatarRepository;

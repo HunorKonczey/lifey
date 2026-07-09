@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -181,6 +181,12 @@ class AppDatabase extends _$AppDatabase {
           // V21: free-text description/notes (e.g. machine setting) per exercise.
           if (from < 21) {
             await m.addColumn(exercises, exercises.description);
+          }
+          // V22: recipe photos (docs/22-profile-picture-plan.md's pattern,
+          // applied to recipes) — nullable, existing recipes simply have no
+          // photo until the next pull or an explicit upload sets it.
+          if (from < 22) {
+            await m.addColumn(recipes, recipes.imageUpdatedAt);
           }
         },
       );

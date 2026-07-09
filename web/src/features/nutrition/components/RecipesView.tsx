@@ -13,6 +13,7 @@ import { ErrorState } from "@/components/status/ErrorState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { RecipeEditor } from "./RecipeEditor";
 import { LogRecipeDialog } from "./LogRecipeDialog";
+import { RecipeThumbnail } from "./RecipeThumbnail";
 import type { RecipeResponse } from "../types";
 
 const PAGE_SIZE = 200;
@@ -129,31 +130,33 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
               className="flex flex-col gap-2 p-4 rounded-[var(--r-card)] text-left"
               style={{ background: "var(--surface)" }}>
               <button onClick={() => { setEditing(r); setCreating(false); }}
-                className="flex flex-col gap-2 text-left flex-1">
-                <div className="flex items-start justify-between">
-                  <span className="material-symbols-rounded text-xl" style={{ color: "var(--secondary)" }}>menu_book</span>
-                  {r.favorite && (
-                    <span className="material-symbols-rounded text-lg"
-                      style={{ color: "var(--metric-carbs)", fontVariationSettings: "'FILL' 1" }}>star</span>
+                className="flex gap-3 text-left flex-1">
+                <RecipeThumbnail recipeId={r.id} hasImage={r.imageUpdatedAt != null} size={80} />
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-bold text-sm min-w-0 truncate">{r.name}</p>
+                    {r.favorite && (
+                      <span className="material-symbols-rounded text-lg shrink-0"
+                        style={{ color: "var(--metric-carbs)", fontVariationSettings: "'FILL' 1" }}>star</span>
+                    )}
+                  </div>
+                  {r.description && (
+                    <p className="text-xs line-clamp-2" style={{ color: "var(--on-surface-variant)" }}>
+                      {r.description}
+                    </p>
                   )}
-                </div>
-                <p className="font-bold text-sm">{r.name}</p>
-                {r.description && (
-                  <p className="text-xs line-clamp-2" style={{ color: "var(--on-surface-variant)" }}>
-                    {r.description}
+                  <p className="text-xs" style={{ color: "var(--muted)" }}>
+                    {r.servings > 1
+                      ? t("perServingCaloriesProtein", {
+                          calories: Math.round(totalCalories(r) / r.servings),
+                          protein: Math.round(totalProtein(r) / r.servings),
+                        })
+                      : t("totalCaloriesProtein", {
+                          calories: Math.round(totalCalories(r)),
+                          protein: Math.round(totalProtein(r)),
+                        })}
                   </p>
-                )}
-                <p className="text-xs" style={{ color: "var(--muted)" }}>
-                  {r.servings > 1
-                    ? t("perServingCaloriesProtein", {
-                        calories: Math.round(totalCalories(r) / r.servings),
-                        protein: Math.round(totalProtein(r) / r.servings),
-                      })
-                    : t("totalCaloriesProtein", {
-                        calories: Math.round(totalCalories(r)),
-                        protein: Math.round(totalProtein(r)),
-                      })}
-                </p>
+                </div>
               </button>
               <div className="flex gap-1.5 mt-1">
                 <button onClick={() => setLogging(r)}

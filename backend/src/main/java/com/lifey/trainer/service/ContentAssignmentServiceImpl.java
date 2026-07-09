@@ -8,6 +8,8 @@ import com.lifey.mail.MailLanguageResolver;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.recipe.Recipe;
+import com.lifey.nutrition.recipe.RecipeImage;
+import com.lifey.nutrition.recipe.RecipeImageRepository;
 import com.lifey.nutrition.recipe.RecipeIngredient;
 import com.lifey.nutrition.recipe.RecipeRepository;
 import com.lifey.trainer.ContentAssignmentRepository;
@@ -46,6 +48,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
     private final ContentAssignmentRepository contentAssignmentRepository;
     private final WorkoutTemplateRepository workoutTemplateRepository;
     private final RecipeRepository recipeRepository;
+    private final RecipeImageRepository recipeImageRepository;
     private final ExerciseRepository exerciseRepository;
     private final FoodRepository foodRepository;
     private final UserRepository userRepository;
@@ -145,7 +148,10 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
         copy.setOriginTrainerId(trainerId);
         copyRecipeFields(copy, source, trainerId, clientId, client);
 
-        return recipeRepository.save(copy).getId();
+        // The image row FKs to the copy's id, so it must be persisted first.
+        Recipe saved = recipeRepository.save(copy);
+        copyRecipeImage(saved, source);
+        return saved.getId();
     }
 
     @Override
@@ -180,6 +186,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
             recipeRepository.findByIdAndUserId(assignment.getCopiedId(), clientId).ifPresent(copy -> {
                 User client = userRepository.getReferenceById(clientId);
                 copyRecipeFields(copy, source, trainerId, clientId, client);
+                copyRecipeImage(copy, source);
                 copy.setUpdatedAt(Instant.now());
             });
         }
@@ -227,6 +234,42 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
             copyIngredient.setQuantityInGrams(ingredient.getQuantityInGrams());
             copy.getIngredients().add(copyIngredient);
         }
+    }
+
+    /**
+     * Mirrors {@code source}'s photo onto {@code copy} — shared by
+     * {@link #assignRecipe} (copy has no image row yet) and
+     * {@link #propagateRecipeUpdate} (copy may already have one from a
+     * previous assignment/propagation). If the source has no photo, removes
+     * the copy's if it has one (e.g. the trainer deleted their photo).
+     * Always re-copies when the source has a photo, even if only unrelated
+     * recipe fields changed — cheap enough at this data size, and avoids
+     * tracking a separate "last synced image version" per assignment.
+     */
+    private void copyRecipeImage(Recipe copy, Recipe source) {
+        Optional<RecipeImage> sourceImage = recipeImageRepository.findByRecipeId(source.getId());
+        if (sourceImage.isEmpty()) {
+            if (copy.getImageUpdatedAt() != null) {
+                recipeImageRepository.deleteByRecipeId(copy.getId());
+                copy.setImageUpdatedAt(null);
+            }
+            return;
+        }
+
+        RecipeImage src = sourceImage.get();
+        RecipeImage copyImage = recipeImageRepository.findByRecipeId(copy.getId())
+                .orElseGet(() -> {
+                    RecipeImage created = new RecipeImage();
+                    created.setRecipe(copy);
+                    return created;
+                });
+        copyImage.setImage(src.getImage());
+        copyImage.setThumbnail(src.getThumbnail());
+        copyImage.setContentType(src.getContentType());
+        Instant now = Instant.now();
+        copyImage.setUpdatedAt(now);
+        recipeImageRepository.save(copyImage);
+        copy.setImageUpdatedAt(now);
     }
 
     /**

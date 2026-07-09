@@ -516,7 +516,13 @@
       "deleted": "Recipe deleted",
       "deleteFailed": "Failed to delete",
       "deleteAria": "Delete recipe",
-      "removeIngredientAria": "Remove ingredient"
+      "removeIngredientAria": "Remove ingredient",
+      "changePhoto": "Change photo",
+      "removePhoto": "Remove photo",
+      "photoUpdated": "Recipe photo updated",
+      "photoUploadFailed": "Failed to update recipe photo",
+      "photoRemoved": "Recipe photo removed",
+      "photoRemoveFailed": "Failed to remove recipe photo"
     }
   },
   "workouts": {
@@ -615,6 +621,15 @@
       "ABS": "Abs",
       "CARDIO": "Cardio",
       "FULL_BODY": "Full Body",
+      "OTHER": "Other"
+    },
+    "equipmentTypes": {
+      "BARBELL": "Barbell",
+      "DUMBBELL": "Dumbbell",
+      "MACHINE": "Machine",
+      "CABLE": "Cable",
+      "BODYWEIGHT": "Bodyweight",
+      "SMITH_MACHINE": "Smith machine",
       "OTHER": "Other"
     }
   },

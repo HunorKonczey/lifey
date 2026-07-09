@@ -15,7 +15,6 @@ import com.lifey.trainer.exception.ScheduleInPastException;
 import com.lifey.trainer.exception.ScheduleNotFoundException;
 import com.lifey.trainer.exception.SelfInviteException;
 import com.lifey.trainer.exception.UserNotFoundForInviteException;
-import com.lifey.user.InvalidImageException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;

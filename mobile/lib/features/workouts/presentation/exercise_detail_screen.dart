@@ -558,24 +558,19 @@ class _DaySetRow extends StatelessWidget {
           color: scheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(AppRadius.card),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          runSpacing: 2,
           children: [
-            SizedBox(
-              width: 68,
-              child: Text(
-                dayLabel,
-                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)
-                    .copyWith(color: scheme.onSurface),
-              ),
+            Text(
+              dayLabel,
+              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)
+                  .copyWith(color: scheme.onSurface),
             ),
-            Expanded(
-              child: Text(
-                summary,
-                textAlign: TextAlign.end,
-                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)
-                    .copyWith(color: scheme.onSurfaceVariant),
-              ),
+            Text(
+              summary,
+              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)
+                  .copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
         ),

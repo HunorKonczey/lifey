@@ -1,16 +1,21 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../core/network/error_message.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../nutrition/domain/food.dart';
 import '../../nutrition/presentation/widgets/add_macros_sheet.dart';
 import '../../nutrition/presentation/widgets/add_meal_entry_sheet.dart';
+import '../application/recipe_image_controller.dart';
 import '../application/recipes_controller.dart';
 import '../data/recipe_repository.dart';
 import '../domain/recipe.dart';
@@ -32,6 +37,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   bool _saving = false;
   bool _pendingSave = false;
   String? _recipeClientId;
+  bool _photoBusy = false;
   Timer? _debounce;
   late bool _favorite;
   late int _servings;
@@ -212,6 +218,101 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     }
   }
 
+  /// The current clientId this screen is editing/creating, or null if
+  /// nothing has been saved yet (brand-new recipe, name still empty).
+  String? get _effectiveClientId => widget.recipe?.clientId ?? _recipeClientId;
+
+  /// The recipe's live state from the watched stream, so the photo section
+  /// picks up a serverId (and thus becomes usable) as soon as a just-created
+  /// recipe finishes its first sync, without the user needing to leave and
+  /// reopen this screen.
+  Recipe? _liveRecipe(List<Recipe> recipes) {
+    final clientId = _effectiveClientId;
+    if (clientId == null) return null;
+    for (final r in recipes) {
+      if (r.clientId == clientId) return r;
+    }
+    return widget.recipe;
+  }
+
+  void _openPhotoSheet(AppLocalizations l10n, RecipeImageKey key, {required bool hasPhoto}) {
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      showDragHandle: true,
+      builder: (sheetCtx) {
+        final scheme = Theme.of(sheetCtx).colorScheme;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.photo_camera_outlined, color: scheme.primary),
+              title: Text(l10n.takePhotoAction),
+              onTap: () {
+                Navigator.of(sheetCtx).pop();
+                _pickAndUploadPhoto(ImageSource.camera, key, l10n);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library_outlined, color: scheme.primary),
+              title: Text(l10n.chooseFromGalleryAction),
+              onTap: () {
+                Navigator.of(sheetCtx).pop();
+                _pickAndUploadPhoto(ImageSource.gallery, key, l10n);
+              },
+            ),
+            if (hasPhoto)
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: scheme.error),
+                title: Text(l10n.removePhotoAction, style: TextStyle(color: scheme.error)),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _removePhoto(key, l10n);
+                },
+              ),
+            SizedBox(height: MediaQuery.paddingOf(context).bottom + 8),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _pickAndUploadPhoto(
+      ImageSource source, RecipeImageKey key, AppLocalizations l10n) async {
+    if (_photoBusy) return;
+    final XFile? picked;
+    try {
+      picked = await ImagePicker().pickImage(source: source, maxWidth: 1600, imageQuality: 90);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+      return;
+    }
+    if (picked == null) return;
+
+    setState(() => _photoBusy = true);
+    try {
+      await ref.read(recipeImageControllerProvider).upload(key, File(picked.path));
+      if (mounted) AppSnackbar.showSuccess(context, title: l10n.recipePhotoUpdatedMessage);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
+  }
+
+  Future<void> _removePhoto(RecipeImageKey key, AppLocalizations l10n) async {
+    if (_photoBusy) return;
+    setState(() => _photoBusy = true);
+    try {
+      await ref.read(recipeImageControllerProvider).remove(key);
+      if (mounted) AppSnackbar.showSuccess(context, title: l10n.recipePhotoRemovedMessage);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -219,6 +320,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     final scheme = Theme.of(context).colorScheme;
     final mc = context.metricColors;
+    final liveRecipe = _liveRecipe(ref.watch(recipeControllerProvider).value ?? const []);
 
     return Scaffold(
       body: Stack(
@@ -232,6 +334,17 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               bottomPad + 24,
             ),
             children: [
+              // ── Photo ───────────────────────────────────────────────────
+              _PhotoSection(
+                recipe: liveRecipe,
+                busy: _photoBusy,
+                l10n: l10n,
+                onTap: (key, hasPhoto) => _openPhotoSheet(l10n, key, hasPhoto: hasPhoto),
+                onTapUnsynced: () =>
+                    AppSnackbar.showError(context, title: l10n.recipePhotoNeedsSyncMessage),
+              ),
+              const SizedBox(height: 20),
+
               // ── Name ────────────────────────────────────────────────────
               _SectionLabel(label: l10n.nameLabel),
               const SizedBox(height: 8),
@@ -512,6 +625,102 @@ class _DetailBar extends StatelessWidget {
                 )
               else
                 const SizedBox(width: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Photo section — tap to take/pick/remove the recipe's photo. Disabled
+// (shows a "save first" hint on tap) until the recipe has a serverId, since
+// the upload endpoint is keyed by it.
+// ---------------------------------------------------------------------------
+
+class _PhotoSection extends ConsumerWidget {
+  const _PhotoSection({
+    required this.recipe,
+    required this.busy,
+    required this.l10n,
+    required this.onTap,
+    required this.onTapUnsynced,
+  });
+
+  final Recipe? recipe;
+  final bool busy;
+  final AppLocalizations l10n;
+  final void Function(RecipeImageKey key, bool hasPhoto) onTap;
+  final VoidCallback onTapUnsynced;
+
+  // Square, so the crop shown here always matches the (also square) thumbnail
+  // shown on the recipes list card — a wide rectangle would force BoxFit.cover
+  // to crop further into the already-cropped thumbnail, zooming in more than
+  // what's shown elsewhere.
+  static const _size = 160.0;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final serverId = recipe?.id;
+    final hasPhoto = recipe?.imageUpdatedAt != null;
+
+    Uint8List? bytes;
+    RecipeImageKey? key;
+    if (serverId != null && recipe != null) {
+      key = (
+        clientId: recipe!.clientId,
+        serverId: serverId,
+        imageUpdatedAt: recipe!.imageUpdatedAt,
+      );
+      if (hasPhoto) {
+        bytes = ref.watch(recipeThumbnailProvider(key)).value;
+      }
+    }
+
+    // Align loosens the width constraint back to 0..viewport before it
+    // reaches the Container below — without it, a ListView item's cross-axis
+    // constraint is tight (forced to exactly the full viewport width), so a
+    // plain Container(width: _size) would just get stretched back out to
+    // full width regardless of the value passed in.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: GestureDetector(
+        onTap: busy
+            ? null
+            : () => key != null ? onTap(key, hasPhoto) : onTapUnsynced(),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          height: _size,
+          width: _size,
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (bytes != null)
+                Image.memory(bytes, fit: BoxFit.cover)
+              else
+                Center(
+                  child: Icon(
+                    Icons.add_photo_alternate_outlined,
+                    size: 40,
+                    color: scheme.onSurfaceVariant.withValues(alpha: serverId != null ? 1.0 : 0.4),
+                  ),
+                ),
+              if (busy)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

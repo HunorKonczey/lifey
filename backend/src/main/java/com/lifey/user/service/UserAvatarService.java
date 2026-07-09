@@ -19,7 +19,7 @@ public interface UserAvatarService {
      * Validates, re-encodes (center-crop + resize + strip metadata) and stores
      * the given file, replacing any existing avatar.
      *
-     * @throws com.lifey.user.InvalidImageException if the file isn't a decodable JPEG/PNG
+     * @throws com.lifey.common.exception.InvalidImageException if the file isn't a decodable JPEG/PNG
      */
     void upload(MultipartFile file);
 

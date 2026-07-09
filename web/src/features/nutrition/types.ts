@@ -81,6 +81,8 @@ export interface RecipeResponse {
   favorite: boolean;
   servings: number;
   ingredients: RecipeIngredientResponse[];
+  // Null if no photo is set. GET /recipes/{id}/image(/thumbnail) serves it.
+  imageUpdatedAt: string | null;
 }
 
 export interface RecipeIngredientRequest {

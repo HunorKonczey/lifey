@@ -1,4 +1,4 @@
-import { api, type Page } from "@/lib/api/client";
+import { api, ApiError, type Page } from "@/lib/api/client";
 import type {
   FoodResponse, FoodRequest, BarcodeLookupResponse,
   MealResponse, MealRequest,
@@ -54,4 +54,22 @@ export const recipeApi = {
   create: (body: RecipeRequest) => api.post<RecipeResponse>("/recipes", body),
   update: (id: number, body: RecipeRequest) => api.put<RecipeResponse>(`/recipes/${id}`, body),
   delete: (id: number) => api.delete(`/recipes/${id}`),
+};
+
+export const recipeImageApi = {
+  /** Returns null (not an error) when the recipe has no photo set. */
+  get: async (id: number): Promise<Blob | null> => {
+    try {
+      return await api.getBlob(`/recipes/${id}/image/thumbnail`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
+  upload: (id: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.putForm(`/recipes/${id}/image`, formData);
+  },
+  remove: (id: number) => api.delete(`/recipes/${id}/image`),
 };

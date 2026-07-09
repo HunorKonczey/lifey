@@ -7,6 +7,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_snackbar.dart';
 import '../../application/barcode_lookup_controller.dart';
 import '../../application/food_controller.dart';
+import '../../domain/barcode_lookup_result.dart';
 import '../../domain/food.dart';
 import '../barcode_scanner_screen.dart';
 
@@ -120,6 +121,24 @@ class _AddFoodSheetState extends ConsumerState<AddFoodSheet> {
       final l10n = AppLocalizations.of(context)!;
       switch (ref.read(barcodeLookupControllerProvider)) {
         case BarcodeLookupFound(result: final result):
+          if (result.source == BarcodeSource.local) {
+            final existing =
+                await ref.read(foodControllerProvider.notifier).findByBarcode(barcode);
+            if (!mounted) return;
+            if (existing != null) {
+              AppSnackbar.showInfo(context, title: l10n.foodAlreadyExistsMessage);
+              final navigator = Navigator.of(context, rootNavigator: true);
+              navigator.pop();
+              showModalBottomSheet<void>(
+                context: navigator.context,
+                useRootNavigator: true,
+                isScrollControlled: true,
+                showDragHandle: true,
+                builder: (_) => AddFoodSheet(food: existing),
+              );
+              return;
+            }
+          }
           setState(() {
             _name.text = result.name;
             _calories.text = _trim(result.caloriesPer100g);

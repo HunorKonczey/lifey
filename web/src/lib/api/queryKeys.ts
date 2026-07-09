@@ -31,6 +31,7 @@ export const queryKeys = {
     page: (params: { page: number; size?: number; search?: string }) =>
       ["recipes", "page", params] as const,
     detail: (id: number) => ["recipes", id] as const,
+    image: (id: number) => ["recipes", id, "image"] as const,
   },
   exercises: {
     all: () => ["exercises"] as const,

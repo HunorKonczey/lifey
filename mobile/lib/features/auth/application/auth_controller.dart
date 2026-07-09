@@ -9,6 +9,7 @@ import '../../../core/network/session_events.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/sync/connectivity_sync_controller.dart';
 import '../../my_trainers/application/my_trainers_controller.dart';
+import '../../recipes/data/recipe_image_repository.dart';
 import '../../settings/application/avatar_controller.dart';
 import '../../settings/data/avatar_repository.dart';
 import '../../trainer_invite/application/trainer_invite_controller.dart';
@@ -114,6 +115,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     await ref.read(appDatabaseProvider).clearAllData();
     await ref.read(healthPreferencesProvider).clear();
     await ref.read(avatarRepositoryProvider).clearCache();
+    await ref.read(recipeImageRepositoryProvider).clearCache();
     // clearCache()/clear() above only wipe on-disk/secure storage; these
     // controllers (not autoDispose) would otherwise keep serving this
     // account's data to whichever account signs in next in the same app

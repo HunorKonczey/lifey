@@ -38,7 +38,8 @@ public final class RecipeMapper {
                 ingredients,
                 recipe.getUpdatedAt(),
                 recipe.getDeletedAt(),
-                recipe.getOriginTrainerId()
+                recipe.getOriginTrainerId(),
+                recipe.getImageUpdatedAt()
         );
     }
 }

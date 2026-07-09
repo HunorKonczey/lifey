@@ -9,6 +9,14 @@
       "cwd": "C:\\Users\\hunor\\Documents\\Project\\lifey\\web"
     },
     {
+      "name": "web-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3100,
+      "autoPort": true,
+      "cwd": "C:\\Users\\hunor\\Documents\\Project\\lifey\\web"
+    },
+    {
       "name": "backend",
       "runtimeExecutable": "cmd.exe",
       "runtimeArgs": ["/c", "set JAVA_HOME=C:\\Users\\hunor\\.jdks\\openjdk-24.0.1&&.\\mvnw.cmd spring-boot:run"],

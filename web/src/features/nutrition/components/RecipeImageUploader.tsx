@@ -3,22 +3,29 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { avatarApi } from "@/features/settings/api";
+import { recipeImageApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
-import { useSessionStore } from "@/features/auth/store";
 
-/** Profile picture upload/remove for the Settings profile panel — see docs/22-profile-picture-plan.md. */
-export function AvatarUploader() {
-  const t = useTranslations("settings");
+interface RecipeImageUploaderProps {
+  recipeId: number;
+}
+
+/**
+ * Recipe photo upload/remove inside the recipe editor — mirrors AvatarUploader,
+ * including relying on the fetched blob (not a parent-supplied flag) to decide
+ * whether a photo exists, so it stays correct across an upload/remove without
+ * needing the editor's `recipe` prop to be refreshed mid-session.
+ */
+export function RecipeImageUploader({ recipeId }: RecipeImageUploaderProps) {
+  const t = useTranslations("nutrition.recipeEditor");
   const { show } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useSessionStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: blob, isLoading } = useQuery({
-    queryKey: queryKeys.settings.avatar(),
-    queryFn: avatarApi.get,
+    queryKey: queryKeys.recipes.image(recipeId),
+    queryFn: () => recipeImageApi.get(recipeId),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -42,21 +49,23 @@ export function AvatarUploader() {
   }, [blob]);
 
   const uploadMutation = useMutation({
-    mutationFn: (file: File) => avatarApi.upload(file),
+    mutationFn: (file: File) => recipeImageApi.upload(recipeId, file),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.settings.avatar() });
-      show(t("avatarUpdated"), "success");
+      queryClient.invalidateQueries({ queryKey: queryKeys.recipes.image(recipeId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() });
+      show(t("photoUpdated"), "success");
     },
-    onError: () => show(t("avatarUploadFailed"), "error"),
+    onError: () => show(t("photoUploadFailed"), "error"),
   });
 
   const removeMutation = useMutation({
-    mutationFn: () => avatarApi.remove(),
+    mutationFn: () => recipeImageApi.remove(recipeId),
     onSuccess: () => {
-      queryClient.setQueryData(queryKeys.settings.avatar(), null);
-      show(t("avatarRemoved"), "success");
+      queryClient.setQueryData(queryKeys.recipes.image(recipeId), null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() });
+      show(t("photoRemoved"), "success");
     },
-    onError: () => show(t("avatarRemoveFailed"), "error"),
+    onError: () => show(t("photoRemoveFailed"), "error"),
   });
 
   const busy = uploadMutation.isPending || removeMutation.isPending;
@@ -67,20 +76,20 @@ export function AvatarUploader() {
     if (file) uploadMutation.mutate(file);
   };
 
-  const initial = user?.email?.charAt(0).toUpperCase() ?? "?";
-
   return (
     <div className="flex items-center gap-4">
       <div
-        className="relative w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold shrink-0 overflow-hidden"
-        style={{ background: "var(--primary)", color: "#1E1F18" }}
+        className="relative w-32 h-32 rounded-[var(--r-md)] flex items-center justify-center shrink-0 overflow-hidden"
+        style={{ background: "var(--surface-container)" }}
       >
         {objectUrl ? (
           // Blob object URLs aren't compatible with next/image's optimizer.
           // eslint-disable-next-line @next/next/no-img-element
           <img src={objectUrl} alt="" className="w-full h-full object-cover" />
         ) : (
-          initial
+          <span className="material-symbols-rounded text-4xl" style={{ color: "var(--secondary)" }}>
+            menu_book
+          </span>
         )}
         {busy && (
           <div
@@ -94,32 +103,27 @@ export function AvatarUploader() {
         )}
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <div className="flex gap-2">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={busy || isLoading}
+          onClick={() => fileInputRef.current?.click()}
+          className="h-9 px-4 rounded-[var(--r-input)] text-sm font-semibold transition-opacity disabled:opacity-60"
+          style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+        >
+          {t("changePhoto")}
+        </button>
+        {blob && (
           <button
             type="button"
-            disabled={busy || isLoading}
-            onClick={() => fileInputRef.current?.click()}
+            disabled={busy}
+            onClick={() => removeMutation.mutate()}
             className="h-9 px-4 rounded-[var(--r-input)] text-sm font-semibold transition-opacity disabled:opacity-60"
-            style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }}
+            style={{ color: "var(--error)" }}
           >
-            {t("changePhoto")}
+            {t("removePhoto")}
           </button>
-          {blob && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => removeMutation.mutate()}
-              className="h-9 px-4 rounded-[var(--r-input)] text-sm font-semibold transition-opacity disabled:opacity-60"
-              style={{ color: "var(--error)" }}
-            >
-              {t("removePhoto")}
-            </button>
-          )}
-        </div>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          {t("avatarHint")}
-        </p>
+        )}
       </div>
 
       <input

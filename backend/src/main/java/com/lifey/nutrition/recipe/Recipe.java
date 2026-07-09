@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,4 +52,14 @@ public class Recipe extends SyncableEntity {
 
     @Column(name = "origin_trainer_id")
     private Long originTrainerId;
+
+    /**
+     * Denormalized from {@code recipe_images.updated_at} (see RecipeImageServiceImpl)
+     * so read paths can expose it without an extra query per recipe. Null if no
+     * photo was ever set. Distinct from {@code updatedAt}, which also bumps on
+     * any other field edit — mobile clients diff this one specifically to know
+     * when to re-download the photo.
+     */
+    @Column(name = "image_updated_at")
+    private Instant imageUpdatedAt;
 }

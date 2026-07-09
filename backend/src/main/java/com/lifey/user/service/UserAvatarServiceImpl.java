@@ -2,8 +2,8 @@ package com.lifey.user.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.common.image.ImageReencoder;
 import com.lifey.user.AvatarSource;
-import com.lifey.user.ImageReencoder;
 import com.lifey.user.UserAvatar;
 import com.lifey.user.UserAvatarRepository;
 import com.lifey.user.UserRepository;
@@ -20,6 +20,8 @@ import java.time.Instant;
 @Transactional
 @RequiredArgsConstructor
 public class UserAvatarServiceImpl implements UserAvatarService {
+
+    private static final int AVATAR_SIZE = 512;
 
     private final UserAvatarRepository repository;
     private final UserRepository userRepository;
@@ -57,7 +59,7 @@ public class UserAvatarServiceImpl implements UserAvatarService {
 
     private byte[] reencode(MultipartFile file) {
         try {
-            return ImageReencoder.toSquareJpeg(file.getInputStream());
+            return ImageReencoder.toSquareJpeg(file.getInputStream(), AVATAR_SIZE);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
