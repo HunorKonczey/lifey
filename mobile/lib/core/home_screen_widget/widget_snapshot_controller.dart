@@ -8,15 +8,15 @@ import '../../features/dashboard/application/today_steps_controller.dart';
 import '../../features/settings/application/settings_controller.dart';
 import 'widget_snapshot_writer.dart';
 
-/// Keeps the iOS home screen widget's snapshot (App Group UserDefaults) in
-/// sync with the dashboard.
+/// Keeps the home screen widget's snapshot (App Group UserDefaults on iOS,
+/// SharedPreferences on Android) in sync with the dashboard.
 ///
 /// Listens to [dashboardControllerProvider] (calories),
 /// [todayStepsControllerProvider] and [settingsControllerProvider] (goals +
 /// language) and writes a debounced snapshot on change, plus once
 /// immediately on [AppLifecycleState.paused] so the very last state before
 /// backgrounding is always captured (a debounced write in flight could
-/// otherwise be cut off by iOS suspending the app).
+/// otherwise be cut off by the OS suspending the app).
 ///
 /// Watched once at app root ([LifeyApp]), same as
 /// [ConnectivitySyncController] — this provider's return value is unused,

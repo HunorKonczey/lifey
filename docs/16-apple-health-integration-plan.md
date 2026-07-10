@@ -13,10 +13,15 @@ Author: planning doc (implement in phases, in order)
 > session. No notifications, no background delivery, no native Swift observer.
 > See **"## Phase 1 (REVISED 2026-06-23)"** below — the old Phase 1 section that
 > follows it is kept for history but is **superseded**.
-Platform: **iOS only** — Apple Health/HealthKit has no Android equivalent. Android
-would need a separate Health Connect track (out of scope here). Everything below
-must be feature-gated to iOS (`Platform.isIOS`) so the app keeps building/running
-on Android with the integration simply absent.
+Platform: originally **iOS only** — Apple Health/HealthKit has no Android
+equivalent, and everything below was feature-gated to iOS (`Platform.isIOS`)
+so the app kept building/running on Android with the integration simply
+absent. **Superseded by this note**: every phase here now also runs on
+Android via Google Health Connect — see
+[26-android-health-connect-integration-plan.md](26-android-health-connect-integration-plan.md).
+The `HealthService` API this doc describes is unchanged; only the platform
+gate widened and a few "Apple Health"-branded names/strings became generic
+"Health" ones (doc 26 has the full rename list).
 
 ## 1. Reality check — read this first
 

@@ -16,14 +16,17 @@ const widgetAppGroupId = 'group.com.khunor.lifey';
 
 const _snapshotKey = 'today_snapshot';
 const _iOSWidgetName = 'TodaySummaryWidget';
+const _androidWidgetName = 'TodaySummaryWidgetProvider';
 
 /// Builds the widget snapshot JSON (see the "Widget snapshot" data contract
-/// in docs/24-ios-widget-live-activity-plan.md) and pushes it to the App
-/// Group + triggers a WidgetKit timeline reload.
+/// in docs/24-ios-widget-live-activity-plan.md, shared by
+/// docs/25-android-widget-ongoing-notification-plan.md) and pushes it to the
+/// platform widget storage (App Group UserDefaults on iOS, SharedPreferences
+/// on Android) + triggers a widget reload.
 ///
-/// No-ops on non-iOS, same pattern as [HealthService]/[NotificationService].
-/// The `home_widget` calls are injectable so tests can assert on what was
-/// written without touching platform channels.
+/// No-ops off iOS/Android, same pattern as [HealthService]/
+/// [NotificationService]. The `home_widget` calls are injectable so tests
+/// can assert on what was written without touching platform channels.
 class WidgetSnapshotWriter {
   WidgetSnapshotWriter({
     Future<bool?> Function(String key, String value)? saveWidgetData,
@@ -31,7 +34,7 @@ class WidgetSnapshotWriter {
     bool? isAvailable,
   })  : _saveWidgetData = saveWidgetData ?? _defaultSaveWidgetData,
         _updateWidget = updateWidget ?? _defaultUpdateWidget,
-        isAvailable = isAvailable ?? Platform.isIOS;
+        isAvailable = isAvailable ?? (Platform.isIOS || Platform.isAndroid);
 
   final Future<bool?> Function(String key, String value) _saveWidgetData;
   final Future<bool?> Function() _updateWidget;
@@ -39,11 +42,13 @@ class WidgetSnapshotWriter {
   static Future<bool?> _defaultSaveWidgetData(String key, String value) =>
       home_widget.HomeWidget.saveWidgetData<String>(key, value, appGroupId: widgetAppGroupId);
 
-  static Future<bool?> _defaultUpdateWidget() =>
-      home_widget.HomeWidget.updateWidget(iOSName: _iOSWidgetName);
+  static Future<bool?> _defaultUpdateWidget() => home_widget.HomeWidget.updateWidget(
+        iOSName: _iOSWidgetName,
+        androidName: _androidWidgetName,
+      );
 
-  /// Defaults to [Platform.isIOS]; overridable in the constructor so tests
-  /// can exercise [write] on non-iOS test hosts.
+  /// Defaults to [Platform.isIOS] || [Platform.isAndroid]; overridable in
+  /// the constructor so tests can exercise [write] on other test hosts.
   final bool isAvailable;
 
   /// Writes the current snapshot. Callers pass already-loaded state

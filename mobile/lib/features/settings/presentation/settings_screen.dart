@@ -627,10 +627,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
-                    // Apple Health (iOS only)
-                    if (Platform.isIOS) ...[
+                    // Health (Apple Health on iOS, Health Connect on Android)
+                    if (Platform.isIOS || Platform.isAndroid) ...[
                       const _RowDivider(),
-                      const _AppleHealthRow(),
+                      const _HealthRow(),
                     ],
                   ],
                 ),
@@ -1141,11 +1141,11 @@ class _GoalEditSheetState extends State<_GoalEditSheet> {
 }
 
 // ---------------------------------------------------------------------------
-// _AppleHealthRow
+// _HealthRow
 // ---------------------------------------------------------------------------
 
-class _AppleHealthRow extends StatelessWidget {
-  const _AppleHealthRow();
+class _HealthRow extends StatelessWidget {
+  const _HealthRow();
 
   static const Color _heartColor = Color(0xFFC46A6A);
 
@@ -1161,7 +1161,7 @@ class _AppleHealthRow extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              l10n.appleHealthLabel,
+              l10n.healthIntegrationLabel,
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 fontSize: 14,
@@ -1170,7 +1170,7 @@ class _AppleHealthRow extends StatelessWidget {
               ),
             ),
           ),
-          const _AppleHealthSwitch(),
+          const _HealthSwitch(),
         ],
       ),
     );
@@ -1178,15 +1178,15 @@ class _AppleHealthRow extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// _AppleHealthSwitch (iOS only)
+// _HealthSwitch — HealthKit on iOS, Health Connect on Android
 // ---------------------------------------------------------------------------
 
-class _AppleHealthSwitch extends ConsumerWidget {
-  const _AppleHealthSwitch();
+class _HealthSwitch extends ConsumerWidget {
+  const _HealthSwitch();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(appleHealthControllerProvider);
+    final state = ref.watch(healthControllerProvider);
     final enabled = state.value ?? false;
     return Switch(
       value: enabled,
@@ -1195,7 +1195,7 @@ class _AppleHealthSwitch extends ConsumerWidget {
               ? null
               : (v) =>
                   ref
-                      .read(appleHealthControllerProvider.notifier)
+                      .read(healthControllerProvider.notifier)
                       .setEnabled(v),
       activeThumbColor: Theme.of(context).colorScheme.primary,
       activeTrackColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),

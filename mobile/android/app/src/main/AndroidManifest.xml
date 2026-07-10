@@ -3,6 +3,20 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Required to scan food barcodes with the device camera. -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Android 13+ runtime permission for the step-goal and ongoing
+         workout-session notifications (requested lazily, see
+         NotificationService / WorkoutSessionNotifierService). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Health Connect (docs/26-android-health-connect-integration-plan.md)
+         — read-only, one permission per HealthDataType HealthService uses.
+         ACTIVITY_RECOGNITION is Health Connect's own prerequisite for
+         reading step data. -->
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
     <application
         android:label="lifey"
         android:name="${applicationName}"
@@ -29,12 +43,41 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Health Connect routes the user here to show its permissions
+                 rationale screen. -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
+            </intent-filter>
         </activity>
+        <!-- Health Connect's "view permission usage" entry point — links back
+             to this app from Health Connect's own settings UI. Required to
+             pass Play review when requesting sensitive health permissions. -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS"/>
+            </intent-filter>
+        </activity-alias>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Today's calories home screen widget (docs/25-android-widget-ongoing-notification-plan.md). -->
+        <receiver
+            android:name=".TodaySummaryWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_summary_widget_info"/>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -45,6 +88,12 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Health Connect: lets the app check whether it's installed and
+             launch its permissions-rationale screen. -->
+        <package android:name="com.google.android.apps.healthdata"/>
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
         </intent>
     </queries>
 </manifest>

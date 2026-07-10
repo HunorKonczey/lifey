@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AppWidgetProviderInfo for TodaySummaryWidgetProvider. 2x1 minimum,
+     horizontally resizable; single layout (no per-size RemoteViews
+     mapping — see docs/25-android-widget-ongoing-notification-plan.md).
+     updatePeriodMillis is the OS-minimum 30 min, so the date-rollover rule
+     (today's snapshot expiring at midnight) gets applied even if the app
+     hasn't been opened; home_widget's broadcast update on snapshot write is
+     the main refresh path otherwise. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:resizeMode="horizontal"
+    android:widgetCategory="home_screen"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_today_summary"
+    android:previewLayout="@layout/widget_today_summary"/>

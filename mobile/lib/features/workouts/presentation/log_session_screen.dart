@@ -6,11 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/health/apple_workout.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_service.dart';
+import '../../../core/health/health_workout.dart';
 import '../../../core/health/health_workout_import_service.dart';
-import '../../../core/live_activity/workout_live_activity_service.dart';
+import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -22,7 +22,7 @@ import '../data/workout_template_repository.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
-import 'widgets/apple_workout_picker_sheet.dart';
+import 'widgets/health_workout_picker_sheet.dart';
 import 'widgets/exercise_session_card.dart';
 import 'widgets/post_workout_feedback_sheet.dart';
 import 'widgets/workout_success_dialog.dart';
@@ -62,12 +62,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   /// or once a brand-new session has been created via the first [_persist].
   String? _sessionClientId;
 
-  /// Whether this screen instance has started (or re-attached to) a Live
-  /// Activity for the current session — see [_persist] and the "Live
-  /// Activity" section below. Distinct from [_sessionClientId] being set:
+  /// Whether this screen instance has started (or re-attached to) the
+  /// session notifier (Live Activity on iOS, ongoing notification on
+  /// Android) for the current session — see [_persist] and the "Session
+  /// notifier" section below. Distinct from [_sessionClientId] being set:
   /// a session can exist in the DB (e.g. a resumed in-progress session)
-  /// before this screen has (re-)started its Live Activity.
-  bool _liveActivityStarted = false;
+  /// before this screen has (re-)started its notifier.
+  bool _sessionNotifierStarted = false;
 
   /// One block per planned exercise. Each block's rows are either done
   /// (doneAt set → will be persisted) or plan (doneAt null → UI only).
@@ -81,9 +82,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   Timer? _ticker;
   DateTime _now = DateTime.now();
 
-  // ── Near-live heart rate (Apple Health, running sessions only) ──
-  // HealthKit doesn't stream live samples to an iPhone app: the Apple Watch
-  // syncs heart-rate samples into the store in batches with a short delay, so
+  // ── Near-live heart rate (Health store, running sessions only) ──
+  // Neither HealthKit nor Health Connect streams live samples to a
+  // third-party app: a paired watch syncs heart-rate samples into the store
+  // in batches with a short delay, so
   // we poll the latest one. We reveal the readout as soon as a *fresh* sample
   // shows up — a sample landing this recently is itself proof the watch is
   // actively feeding live data (a workout), which is a faster and more reliable
@@ -171,13 +173,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _pollHeartRate(); // don't wait a full interval for the first read
 
       // Re-attach to (or start, if the OS killed the app mid-workout and no
-      // activity survived) the Live Activity for this in-progress session.
-      // Deferred a frame, same as WorkoutResumePrompt, since this can run
-      // during initState before ancestor InheritedWidgets are guaranteed
-      // ready for AppLocalizations.of(context).
-      _liveActivityStarted = true;
+      // indicator survived) the session notifier for this in-progress
+      // session. Deferred a frame, same as WorkoutResumePrompt, since this
+      // can run during initState before ancestor InheritedWidgets are
+      // guaranteed ready for AppLocalizations.of(context).
+      _sessionNotifierStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) unawaited(_startLiveActivity());
+        if (mounted) unawaited(_startSessionNotifier());
       });
     }
 
@@ -239,15 +241,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   // Near-live heart rate
   // ---------------------------------------------------------------------------
 
-  /// Polls Apple Health for the latest heart-rate sample. A sample that landed
-  /// within [_kHrFreshWindow] counts as live and is shown immediately; once the
-  /// freshest sample ages past that window the watch has stopped feeding us
-  /// data, so we hide the readout instead of leaving a stale value on screen.
-  /// No-ops on Android, when the session is finished, or when the user hasn't
-  /// enabled the Apple Health connection.
+  /// Polls the platform health store for the latest heart-rate sample. A
+  /// sample that landed within [_kHrFreshWindow] counts as live and is shown
+  /// immediately; once the freshest sample ages past that window the watch
+  /// has stopped feeding us data, so we hide the readout instead of leaving a
+  /// stale value on screen. No-ops when the session is finished, or when the
+  /// user hasn't enabled the health connection.
   Future<void> _pollHeartRate() async {
     if (!mounted || _finishedAt != null) return;
-    final enabled = ref.read(appleHealthControllerProvider).value ?? false;
+    final enabled = ref.read(healthControllerProvider).value ?? false;
     if (!enabled) return;
 
     final sample = await ref
@@ -534,26 +536,27 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       );
     }
 
-    // Live Activity: the first successful persist of a running session
-    // starts it, every one after that updates it. Never touches a finished
-    // session — _persistFinished ends the activity explicitly instead.
+    // Session notifier (Live Activity / ongoing notification): the first
+    // successful persist of a running session starts it, every one after
+    // that updates it. Never touches a finished session — _persistFinished
+    // ends it explicitly instead.
     if (_finishedAt == null && mounted) {
-      if (!_liveActivityStarted) {
-        _liveActivityStarted = true;
-        unawaited(_startLiveActivity());
+      if (!_sessionNotifierStarted) {
+        _sessionNotifierStarted = true;
+        unawaited(_startSessionNotifier());
       } else {
-        unawaited(_updateLiveActivity());
+        unawaited(_updateSessionNotifier());
       }
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Live Activity
+  // Session notifier (Live Activity on iOS, ongoing notification on Android)
   // ---------------------------------------------------------------------------
 
   /// The block whose set was most recently marked done, falling back to the
   /// first block with remaining (not-yet-done) sets — the plan's "current
-  /// exercise" rule for the Live Activity. Null only when there are no
+  /// exercise" rule for the session notifier. Null only when there are no
   /// blocks at all.
   ExerciseBlock? _currentExerciseBlock() {
     if (_blocks.isEmpty) return null;
@@ -575,11 +578,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     );
   }
 
-  LiveActivityContentState _liveActivityState(AppLocalizations l10n) {
+  WorkoutSessionState _sessionState(AppLocalizations l10n) {
     final current = _currentExerciseBlock();
     final totalSetsDone =
         _blocks.fold<int>(0, (sum, b) => sum + b.rows.where((r) => r.isDone).length);
-    return LiveActivityContentState(
+    return WorkoutSessionState(
       exerciseName: (current != null && current.exerciseName.isNotEmpty)
           ? current.exerciseName
           : l10n.liveActivityDefaultExerciseName,
@@ -590,32 +593,34 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     );
   }
 
-  String _liveActivityTitle(AppLocalizations l10n) =>
+  String _sessionTitle(AppLocalizations l10n) =>
       widget.session?.templateName ?? widget.template?.name ?? l10n.liveActivityDefaultTitle;
 
-  Future<void> _startLiveActivity() async {
+  Future<void> _startSessionNotifier() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    await ref.read(workoutLiveActivityServiceProvider).start(
+    await ref.read(workoutSessionNotifierServiceProvider).start(
           sessionClientId: _sessionClientId!,
-          title: _liveActivityTitle(l10n),
+          title: _sessionTitle(l10n),
           startedAt: _startedAt!,
-          state: _liveActivityState(l10n),
+          startedLabel: l10n.startedLabel,
+          state: _sessionState(l10n),
         );
   }
 
-  Future<void> _updateLiveActivity() async {
+  Future<void> _updateSessionNotifier() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    await ref.read(workoutLiveActivityServiceProvider).update(
+    await ref.read(workoutSessionNotifierServiceProvider).update(
           sessionClientId: _sessionClientId!,
-          state: _liveActivityState(l10n),
+          startedLabel: l10n.startedLabel,
+          state: _sessionState(l10n),
         );
   }
 
   /// Shows the post-workout feedback sheet (skippable) and stores the result
   /// in state so the next [_persist] call carries it. Called right after a
-  /// session finishes, before any Apple Health pairing dialogs — the rating
+  /// session finishes, before any health-workout pairing dialogs — the rating
   /// doesn't depend on that flow.
   Future<void> _maybeCollectFeedback() async {
     final result = await showPostWorkoutFeedbackSheet(
@@ -669,13 +674,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _hrTicker?.cancel();
     _hrTicker = null;
     await _persist();
-    if (_liveActivityStarted) {
-      _liveActivityStarted = false;
-      unawaited(ref.read(workoutLiveActivityServiceProvider).end());
+    if (_sessionNotifierStarted) {
+      _sessionNotifierStarted = false;
+      unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
     }
   }
 
-  /// Finish button handler — implements the full 5.6 Apple Health flow.
+  /// Finish button handler — implements the full 5.6 health-import flow.
   Future<void> _finishWorkout() async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -683,17 +688,17 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final importService = ref.read(healthWorkoutImportServiceProvider);
 
     try {
-      // Ask "how hard was this?" first — it doesn't depend on the Apple
-      // Health pairing flow below, and the same _persist() call the pairing
+      // Ask "how hard was this?" first — it doesn't depend on the health
+      // pairing flow below, and the same _persist() call the pairing
       // dialogs (or their absence) lead to already carries whatever rating
       // was collected here.
       await _maybeCollectFeedback();
       if (!mounted) return;
 
-      final appleEnabled =
-          ref.read(appleHealthControllerProvider).value ?? false;
+      final healthEnabled =
+          ref.read(healthControllerProvider).value ?? false;
 
-      if (!appleEnabled) {
+      if (!healthEnabled) {
         await _persistFinished();
         if (!mounted) return;
         await _maybeShowWorkoutSuccess();
@@ -702,16 +707,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         return;
       }
 
-      // Apple Health is enabled — search for an importable workout.
-      final AppleWorkout? workout = await importService.findImportable();
+      // Health is enabled — search for an importable workout.
+      final HealthWorkout? workout = await importService.findImportable();
       if (!mounted) return;
 
       if (workout != null) {
         // Pairing dialog.
         final pair = await showAppConfirmDialog(
           context,
-          title: l10n.pairAppleWorkoutTitle,
-          message: l10n.pairAppleWorkoutMessage(
+          title: l10n.pairHealthWorkoutTitle,
+          message: l10n.pairHealthWorkoutMessage(
             _label.format(workout.startDate.toLocal()),
             workout.activeCalories?.round().toString() ?? '–',
             workout.averageHeartRate?.round().toString() ?? '–',
@@ -738,11 +743,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         if (!mounted) return;
         _navigateToDashboard();
       } else {
-        // No Apple workout found — dialog instead of snackbar.
+        // No health workout found — dialog instead of snackbar.
         final finish = await showAppConfirmDialog(
           context,
-          title: l10n.noAppleWorkoutTitle,
-          message: l10n.noAppleWorkoutMessage,
+          title: l10n.noHealthWorkoutTitle,
+          message: l10n.noHealthWorkoutMessage,
           confirmLabel: l10n.finishAnywayButton,
           cancelLabel: l10n.cancelButton,
           icon: Icons.fitness_center_rounded,
@@ -764,13 +769,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
-  /// Manual "Import from Apple Health" action for a session that's already
-  /// been closed and isn't paired yet — covers finishing the Lifey session
-  /// before the Apple Watch workout itself ended, so [_finishWorkout]'s
-  /// same-moment auto-match found nothing. Opens a picker over the last two
-  /// weeks of unpaired strength workouts rather than re-running the narrow
-  /// auto-match.
-  Future<void> _importFromAppleHealthManually() async {
+  /// Manual "Import from Health" action for a session that's already been
+  /// closed and isn't paired yet — covers finishing the Lifey session before
+  /// the tracked workout itself ended, so [_finishWorkout]'s same-moment
+  /// auto-match found nothing. Opens a picker over the last two weeks of
+  /// unpaired strength workouts rather than re-running the narrow auto-match.
+  Future<void> _importFromHealthManually() async {
     if (_saving || _sessionClientId == null) return;
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context)!;
@@ -780,19 +784,19 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       final candidates = await importService.findImportableCandidates();
       if (!mounted) return;
 
-      final workout = await showModalBottomSheet<AppleWorkout>(
+      final workout = await showModalBottomSheet<HealthWorkout>(
         context: context,
         useRootNavigator: true,
         isScrollControlled: true,
         showDragHandle: true,
-        builder: (_) => AppleWorkoutPickerSheet(candidates: candidates),
+        builder: (_) => HealthWorkoutPickerSheet(candidates: candidates),
       );
       if (workout == null || !mounted) return;
 
       final confirm = await showAppConfirmDialog(
         context,
-        title: l10n.pairAppleWorkoutTitle,
-        message: l10n.pairAppleWorkoutMessage(
+        title: l10n.pairHealthWorkoutTitle,
+        message: l10n.pairHealthWorkoutMessage(
           _label.format(workout.startDate.toLocal()),
           workout.activeCalories?.round().toString() ?? '–',
           workout.averageHeartRate?.round().toString() ?? '–',
@@ -1062,16 +1066,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     // Finish button is only shown for running (not-yet-finished) sessions.
     final showFinishButton = _finishedAt == null;
     // Manual pairing action for a session that's already closed but wasn't
-    // paired with an Apple workout at finish time (e.g. the Apple Watch
-    // workout was still running when Lifey's session was closed).
-    final appleHealthEnabled = ref.watch(appleHealthControllerProvider).value ?? false;
-    final showImportAppleHealthButton = _isEditing &&
+    // paired with a health workout at finish time (e.g. the tracked workout
+    // was still running when Lifey's session was closed).
+    final healthEnabled = ref.watch(healthControllerProvider).value ?? false;
+    final showImportHealthButton = _isEditing &&
         _finishedAt != null &&
         !(widget.session?.fromAppleHealth ?? false) &&
-        appleHealthEnabled &&
+        healthEnabled &&
         ref.read(healthServiceProvider).isAvailable;
     // ListView needs extra bottom room so content isn't hidden behind the sticky button.
-    final listBottomPad = (showFinishButton || showImportAppleHealthButton)
+    final listBottomPad = (showFinishButton || showImportHealthButton)
         ? (safeBottom + 24 + 54 + 16)
         : (safeBottom + 16);
 
@@ -1086,7 +1090,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           ListView(
             padding: EdgeInsets.fromLTRB(16, contentTop, 16, listBottomPad),
             children: [
-              // Health stat cards (Apple-imported finished sessions only).
+              // Health stat cards (health-imported finished sessions only).
               if (widget.session?.finishedAt != null &&
                   widget.session!.fromAppleHealth) ...[
                 Row(
@@ -1206,8 +1210,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               ),
             ),
 
-          // ── Sticky "Import from Apple Health" button (closed, unpaired session) ──
-          if (showImportAppleHealthButton)
+          // ── Sticky "Import from Health" button (closed, unpaired session) ──
+          if (showImportHealthButton)
             Positioned(
               bottom: safeBottom + 24,
               left: 16,
@@ -1215,7 +1219,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               child: SizedBox(
                 height: 54,
                 child: FilledButton.icon(
-                  onPressed: _saving ? null : _importFromAppleHealthManually,
+                  onPressed: _saving ? null : _importFromHealthManually,
                   style: FilledButton.styleFrom(
                     backgroundColor: scheme.primary,
                     foregroundColor: scheme.onPrimary,
@@ -1242,7 +1246,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                           ),
                         )
                       : const Icon(Icons.link_rounded, size: 20),
-                  label: Text(l10n.importFromAppleHealthButton),
+                  label: Text(l10n.importFromHealthButton),
                 ),
               ),
             ),

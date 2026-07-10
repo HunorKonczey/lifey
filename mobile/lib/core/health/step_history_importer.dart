@@ -51,7 +51,7 @@ final stepHistoryImporterProvider = Provider<StepHistoryImporter>((ref) {
 
 /// Fires [StepHistoryImporter.import] once at startup and on every app resume,
 /// mirroring the weight import lifecycle. The "right after permission grant"
-/// trigger lives in [AppleHealthController.setEnabled].
+/// trigger lives in [HealthController.setEnabled].
 class StepImportLifecycle with WidgetsBindingObserver {
   StepImportLifecycle(this._importer) {
     WidgetsBinding.instance.addObserver(this);

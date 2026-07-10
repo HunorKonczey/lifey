@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/live_activity/workout_live_activity_service.dart';
+import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/workout_session_repository.dart';
@@ -35,11 +35,12 @@ class WorkoutResumePrompt {
         await _ref.read(workoutSessionRepositoryProvider).watchAll().first;
     final active = sessions.where((s) => s.inProgress).firstOrNull;
     if (active == null) {
-      // Safety sweep: no in-progress session survived, so any Live Activity
-      // still showing (e.g. the OS killed the app without ever delivering a
-      // termination callback) is an orphan — end it (see
-      // docs/24-ios-widget-live-activity-plan.md, orphan handling).
-      unawaited(_ref.read(workoutLiveActivityServiceProvider).endAll());
+      // Safety sweep: no in-progress session survived, so any Live Activity /
+      // ongoing notification still showing (e.g. the OS killed the app
+      // without ever delivering a termination callback) is an orphan — end
+      // it (see docs/24-ios-widget-live-activity-plan.md and
+      // docs/25-android-widget-ongoing-notification-plan.md, orphan handling).
+      unawaited(_ref.read(workoutSessionNotifierServiceProvider).endAll());
       return;
     }
 

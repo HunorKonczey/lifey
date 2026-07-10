@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/health/apple_workout.dart';
+import '../../../../core/health/health_workout.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Bottom sheet listing recent, not-yet-paired Apple Health strength workouts
-/// so the user can manually pick one to import into an already-closed session
-/// (the automatic same-session match at Finish time only looks at the last
-/// day and requires the Apple workout to have already ended).
+/// Bottom sheet listing recent, not-yet-paired Health workouts so the user
+/// can manually pick one to import into an already-closed session (the
+/// automatic same-session match at Finish time only looks at the last day
+/// and requires the workout to have already ended).
 ///
-/// Pops with the picked [AppleWorkout], or null if dismissed.
-class AppleWorkoutPickerSheet extends StatelessWidget {
-  const AppleWorkoutPickerSheet({super.key, required this.candidates});
+/// Pops with the picked [HealthWorkout], or null if dismissed.
+class HealthWorkoutPickerSheet extends StatelessWidget {
+  const HealthWorkoutPickerSheet({super.key, required this.candidates});
 
-  final List<AppleWorkout> candidates;
+  final List<HealthWorkout> candidates;
 
   static final _label = DateFormat('EEE, MMM d · HH:mm');
 
@@ -30,7 +30,7 @@ class AppleWorkoutPickerSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              l10n.pickAppleWorkoutTitle,
+              l10n.pickHealthWorkoutTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
@@ -38,7 +38,7 @@ class AppleWorkoutPickerSheet extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Text(
-                  l10n.noRecentAppleWorkoutMessage,
+                  l10n.noRecentHealthWorkoutMessage,
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
               )
@@ -55,7 +55,7 @@ class AppleWorkoutPickerSheet extends StatelessWidget {
                       leading: Icon(Icons.fitness_center_rounded,
                           color: scheme.primary),
                       title: Text(_label.format(workout.startDate.toLocal())),
-                      subtitle: Text(l10n.appleHealthStatsLine(
+                      subtitle: Text(l10n.healthStatsLine(
                         workout.activeCalories?.round().toString() ?? '–',
                         workout.averageHeartRate?.round().toString() ?? '–',
                       )),
