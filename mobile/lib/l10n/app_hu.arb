@@ -68,6 +68,7 @@
     "passwordChangedSuccessMessage": "Jelszó megváltoztatva",
 
     "addFoodToMealTitle": "Étel hozzáadása az étkezéshez",
+    "recentFoodsLabel": "Legutóbbiak",
     "editFoodEntryTitle": "Étel szerkesztése",
     "foodFieldLabel": "Étel",
     "pickAFoodError": "Válassz egy ételt",
@@ -107,8 +108,18 @@
     "mealDeletedMessage": "Étkezés törölve",
     "couldNotDeleteMealMessage": "Nem sikerült törölni az étkezést",
     "duplicateMealAria": "Étkezés duplikálása",
+    "duplicateMealQuestionTitle": "Duplikálod ezt az étkezést?",
+    "duplicateMealConfirmMessage": "Válaszd ki, mikorra kerüljön a másolat.",
     "mealDuplicatedMessage": "Étkezés duplikálva",
     "couldNotDuplicateMealMessage": "Nem sikerült duplikálni az étkezést",
+    "copyYesterdayButton": "Tegnap másolása",
+    "copyPreviousDayAria": "Korábbi nap másolása",
+    "copyPreviousDayTitle": "Korábbi nap másolása",
+    "copyDaySheetMealsKcal": "{count, plural, one{1 étkezés} other{{count} étkezés}} · {kcal} kcal",
+    "copyDayAppendsNote": "Hozzáadva a mai meglévő étkezésekhez",
+    "noMealsToCopyMessage": "Nincs étkezés az elmúlt egy hétben",
+    "mealsCopiedMessage": "{count, plural, one{1 étkezés átmásolva} other{{count} étkezés átmásolva}}",
+    "couldNotCopyDayMessage": "Nem sikerült átmásolni azt a napot",
     "deleteFoodQuestionTitle": "Törlöd az ételt?",
     "deleteFoodConfirmMessage": "A(z) \"{name}\" eltávolításra kerül.",
     "deleteMealQuestionTitle": "Törlöd az étkezést?",
@@ -192,6 +203,8 @@
     "templateDeletedMessage": "Sablon törölve",
     "couldNotDeleteTemplateMessage": "Nem sikerült törölni a sablont",
     "duplicateMenuItem": "Duplikálás",
+    "duplicateTemplateQuestionTitle": "Duplikálod ezt a sablont?",
+    "duplicateTemplateConfirmMessage": "A másolat bekerül a sablonjaid közé.",
     "templateDuplicatedMessage": "Sablon duplikálva",
     "couldNotDuplicateTemplateMessage": "Nem sikerült duplikálni a sablont",
     "noTemplatesYetTitle": "Még nincsenek sablonok",
@@ -335,6 +348,8 @@
     "logAsMealButton": "Naplózás mint étkezés",
     "copyOfName": "{name} (Másolat)",
     "duplicateRecipeAria": "Recept duplikálása",
+    "duplicateRecipeQuestionTitle": "Duplikálod ezt a receptet?",
+    "duplicateRecipeConfirmMessage": "A másolat bekerül a receptjeid közé.",
     "recipeDuplicatedMessage": "Recept duplikálva",
     "couldNotDuplicateRecipeMessage": "Nem sikerült duplikálni a receptet",
     "markFavorite": "Kedvencnek jelölés",
@@ -547,5 +562,14 @@
     "widgetNoDataLabel": "Nyisd meg az appot",
 
     "liveActivityDefaultTitle": "Edzés",
-    "liveActivityDefaultExerciseName": "Gyakorlat"
+    "liveActivityDefaultExerciseName": "Gyakorlat",
+
+    "mealEntryImpactPreview": "+{kcal} kcal · {protein} g fehérje",
+    "mealEntryBudgetLeft": "→ {count} kcal marad",
+    "mealEntryBudgetOver": "→ {count} kcal túl",
+
+    "macrosTodayKcalLeft": "{count} kcal maradt",
+    "macrosTodayKcalOver": "{count} kcal túl",
+    "macrosTodayProteinLeft": "{count} g fehérje maradt",
+    "macrosTodayProteinOver": "{count} g fehérje túl"
 }

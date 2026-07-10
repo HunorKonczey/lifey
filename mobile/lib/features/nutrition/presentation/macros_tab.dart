@@ -7,6 +7,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../settings/application/settings_controller.dart';
 import '../application/daily_macros_controller.dart';
 import '../application/meal_controller.dart';
 import '../domain/daily_macros.dart';
@@ -35,6 +36,7 @@ class _MacrosTabState extends ConsumerState<MacrosTab> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(dailyMacrosProvider);
+    final settings = ref.watch(settingsControllerProvider).value;
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
@@ -68,7 +70,11 @@ class _MacrosTabState extends ConsumerState<MacrosTab> {
               final now = DateTime.now();
               final today = DateTime(now.year, now.month, now.day);
               if (day.day == today) {
-                return _FeaturedDayCard(day: day);
+                return _FeaturedDayCard(
+                  day: day,
+                  calorieGoal: settings?.dailyCalorieGoal,
+                  proteinGoal: settings?.dailyProteinGoal,
+                );
               }
               return _DailyMacroCard(day: day);
             },
@@ -89,11 +95,37 @@ class _MacrosTabState extends ConsumerState<MacrosTab> {
 // ---------------------------------------------------------------------------
 
 class _FeaturedDayCard extends StatelessWidget {
-  const _FeaturedDayCard({required this.day});
+  const _FeaturedDayCard({required this.day, this.calorieGoal, this.proteinGoal});
 
   final DailyMacros day;
+  final int? calorieGoal;
+  final int? proteinGoal;
 
   static final _dateFmt = DateFormat('EEE, MMM d');
+
+  /// "740 kcal left · 52 g protein left" (or "over" once a metric's goal is
+  /// exceeded) — omits a fragment whose goal isn't set, and the whole line
+  /// when neither is.
+  String? _remainingLine(AppLocalizations l10n) {
+    final fragments = <String>[];
+    if (calorieGoal != null) {
+      final remaining = calorieGoal! - day.calories;
+      fragments.add(remaining >= 0
+          ? l10n.macrosTodayKcalLeft(remaining.round())
+          : l10n.macrosTodayKcalOver(remaining.abs().round()));
+    }
+    if (proteinGoal != null) {
+      final remaining = proteinGoal! - day.protein;
+      fragments.add(remaining >= 0
+          ? l10n.macrosTodayProteinLeft(remaining.round())
+          : l10n.macrosTodayProteinOver(remaining.abs().round()));
+    }
+    return fragments.isEmpty ? null : fragments.join(' · ');
+  }
+
+  bool get _isOverAnyGoal =>
+      (calorieGoal != null && day.calories > calorieGoal!) ||
+      (proteinGoal != null && day.protein > proteinGoal!);
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +180,18 @@ class _FeaturedDayCard extends StatelessWidget {
                     letterSpacing: -1,
                   ),
                 ),
+                if (calorieGoal != null) ...[
+                  const SizedBox(width: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '/ ${_kcalFmt.format(calorieGoal)}',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(width: 4),
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
@@ -172,6 +216,17 @@ class _FeaturedDayCard extends StatelessWidget {
               carbsColor: mc.carbs,
               fatColor: mc.fat,
             ),
+
+            if (_remainingLine(l10n) case final line?) ...[
+              const SizedBox(height: 8),
+              Text(
+                line,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: _isOverAnyGoal ? mc.negative : scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
 
             const SizedBox(height: 13),
 

@@ -8,9 +8,14 @@ import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/outbox_writer.dart';
 import '../../../core/sync/pending_delete_filter.dart';
 import '../../../core/utils/combine_latest.dart';
+import '../domain/food_usage.dart';
 import '../domain/meal.dart';
 
 typedef _JoinedMealRow = TypedResult;
+
+/// How far back meal history counts toward [MealRepository.watchFoodUsage],
+/// so long-abandoned eating habits stop influencing suggestion ranking.
+const _usageWindow = Duration(days: 90);
 
 /// One food + quantity to include when logging a meal (request side).
 class MealEntryInput {
@@ -125,6 +130,54 @@ class MealRepository {
         .toList()
       ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
     return meals;
+  }
+
+  /// Per-food usage stats over the last [_usageWindow] of meal history,
+  /// keyed by `foodClientId`. Pending deletes are not filtered out here —
+  /// the stats are a ranking heuristic, and a meal awaiting delete
+  /// confirmation still describes what the user actually ate.
+  Stream<Map<String, FoodUsage>> watchFoodUsage() {
+    final cutoff = DateTime.now().subtract(_usageWindow);
+    final joined$ = (_db.select(_db.mealEntries).join([
+      innerJoin(_db.meals, _db.meals.clientId.equalsExp(_db.mealEntries.mealClientId)),
+    ])..where(_db.meals.mealDateTime.isBiggerOrEqualValue(cutoff)))
+        .watch();
+
+    return joined$.map((rows) {
+      final usage = <String, FoodUsage>{};
+      for (final row in rows) {
+        final entry = row.readTable(_db.mealEntries);
+        final meal = row.readTable(_db.meals);
+        final prev = usage[entry.foodClientId];
+        final isNewest = prev == null || meal.mealDateTime.isAfter(prev.lastUsedAt);
+        usage[entry.foodClientId] = FoodUsage(
+          lastUsedAt: isNewest ? meal.mealDateTime : prev.lastUsedAt,
+          useCount: (prev?.useCount ?? 0) + 1,
+          lastGrams: isNewest ? entry.quantityInGrams : prev.lastGrams,
+        );
+      }
+      return usage;
+    });
+  }
+
+  /// One-shot fetch of meals logged in the last [days] calendar days,
+  /// today inclusive — used by "copy a previous day" to build per-day
+  /// summaries without holding a live subscription. Bounding by a lower time
+  /// cutoff (rather than by row count, like [watchPaged]) guarantees every
+  /// recent day is fully represented regardless of how many meals were
+  /// logged on any single day.
+  Future<List<Meal>> recentMeals({required int days}) async {
+    final now = DateTime.now();
+    final cutoff = DateTime(now.year, now.month, now.day).subtract(Duration(days: days - 1));
+    final joinedRows = await (_db.select(_db.meals)
+          ..where((t) => t.mealDateTime.isBiggerOrEqualValue(cutoff)))
+        .join([
+          leftOuterJoin(_db.mealEntries, _db.mealEntries.mealClientId.equalsExp(_db.meals.clientId)),
+          leftOuterJoin(_db.foods, _db.foods.clientId.equalsExp(_db.mealEntries.foodClientId)),
+        ])
+        .get();
+    final ops = await _db.select(_db.pendingOperations).get();
+    return _processJoined(joinedRows, ops);
   }
 
   Future<String> create({

@@ -3,18 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../shared/widgets/pill_tab_bar.dart';
 import '../../../shared/widgets/shell_fab.dart';
 import '../../recipes/presentation/create_recipe_screen.dart';
 import '../../recipes/presentation/recipes_tab.dart';
+import '../application/meal_controller.dart';
+import '../domain/day_meals_summary.dart';
 import 'barcode_scanner_screen.dart';
 import 'foods_tab.dart';
 import 'log_meal_screen.dart';
 import 'macros_tab.dart';
 import 'meals_tab.dart';
 import 'widgets/add_food_sheet.dart';
+import 'widgets/copy_day_sheet.dart';
 
 class _NutritionPendingTabNotifier extends Notifier<int?> {
   @override
@@ -162,6 +166,27 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
     );
   }
 
+  Future<void> _openCopyDaySheet() async {
+    final meals = ref.read(mealControllerProvider).value ?? const [];
+    final hasMealsToday = meals.any((m) => DateRangeFilter.today.matches(m.dateTime));
+    final picked = await showModalBottomSheet<DayMealsSummary>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => CopyDaySheet(hasMealsToday: hasMealsToday),
+    );
+    if (picked == null || !mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final copied =
+          await ref.read(mealControllerProvider.notifier).copyMeals(picked.meals, DateTime.now());
+      if (mounted) AppSnackbar.showSuccess(context, title: l10n.mealsCopiedMessage(copied));
+    } catch (_) {
+      if (mounted) AppSnackbar.showError(context, title: l10n.couldNotCopyDayMessage);
+    }
+  }
+
   ({IconData icon, String label, VoidCallback onPressed})? _fab(AppLocalizations l10n) {
     switch (_tabController.index) {
       case 0:
@@ -250,6 +275,12 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                           AdaptiveAppBarAction(
                             icon: Icons.search,
                             onPressed: _openSearch,
+                          ),
+                        if (_tabController.index == 0)
+                          AdaptiveAppBarAction(
+                            icon: Icons.content_copy_rounded,
+                            onPressed: _openCopyDaySheet,
+                            tooltip: l10n.copyPreviousDayAria,
                           ),
                         AdaptiveAppBarAction(
                           icon: Icons.qr_code_scanner,

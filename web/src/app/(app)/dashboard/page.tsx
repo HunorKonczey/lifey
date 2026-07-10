@@ -2,6 +2,7 @@
 
 import { useQueries } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { useDateStore } from "@/lib/hooks/useDateStore";
@@ -184,10 +185,17 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4 flex-1 min-w-0">
 
         {/* Hero calorie card */}
-        <HeroMetricCard
-          value={totalKcal}
-          goal={settings?.dailyCalorieGoal ?? 2000}
-        />
+        <HeroMetricCard value={totalKcal} goal={settings?.dailyCalorieGoal} />
+
+        {!settings?.dailyCalorieGoal && !settings?.dailyProteinGoal && (
+          <Link
+            href="/settings"
+            className="text-sm font-semibold -mt-2 hover:underline"
+            style={{ color: "var(--primary)" }}
+          >
+            {t("setGoalsHint")}
+          </Link>
+        )}
 
         {/* Macro row */}
         <div className="grid grid-cols-3 gap-4">
@@ -195,7 +203,7 @@ export default function DashboardPage() {
             <MacroRing
               label={t("protein")}
               value={totalProtein}
-              goal={settings?.dailyProteinGoal ?? 150}
+              goal={settings?.dailyProteinGoal}
               color="var(--metric-protein)"
             />
           </div>
@@ -203,7 +211,7 @@ export default function DashboardPage() {
             <MacroRing
               label={t("carbs")}
               value={totalCarbs}
-              goal={settings?.dailyCarbsGoal ?? 250}
+              goal={settings?.dailyCarbsGoal}
               color="var(--metric-carbs)"
             />
           </div>
@@ -211,7 +219,7 @@ export default function DashboardPage() {
             <MacroRing
               label={t("fat")}
               value={totalFat}
-              goal={settings?.dailyFatGoal ?? 65}
+              goal={settings?.dailyFatGoal}
               color="var(--metric-fat)"
             />
           </div>

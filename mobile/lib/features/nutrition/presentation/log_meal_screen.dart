@@ -9,9 +9,11 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../application/meal_controller.dart';
+import '../application/remaining_budget_provider.dart';
 import '../data/meal_repository.dart';
 import '../domain/food.dart';
 import '../domain/meal.dart';
+import '../domain/remaining_budget.dart';
 import 'widgets/add_macros_sheet.dart';
 import 'widgets/add_meal_entry_sheet.dart';
 
@@ -47,6 +49,8 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       _entries.fold(0, (s, e) => s + (e.food.fatPer100g ?? 0) * e.grams / 100);
 
   bool get _hasMacroData => _entries.any((e) => e.food.caloriesPer100g > 0);
+
+  bool get _isToday => DateUtils.isSameDay(_dateTime, DateTime.now());
 
   static MealType _mealTypeForHour(int hour) {
     if (hour >= 5 && hour < 11) return MealType.breakfast;
@@ -108,7 +112,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => const AddMealEntrySheet(),
+      builder: (_) => AddMealEntrySheet(mealDateTime: _dateTime),
     );
     if (draft != null) {
       setState(() => _entries.add((food: draft.food, grams: draft.grams)));
@@ -140,6 +144,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
       builder: (_) => AddMealEntrySheet(
         initialFood: current.food,
         initialGrams: current.grams,
+        mealDateTime: _dateTime,
       ),
     );
     if (draft != null) {
@@ -203,6 +208,7 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     final scheme = Theme.of(context).colorScheme;
     final mc = context.metricColors;
+    final RemainingBudget? dayBudget = ref.watch(remainingBudgetProvider).value;
 
     return Scaffold(
       body: Stack(
@@ -297,6 +303,21 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
                   carbsLabel: l10n.carbsLabel,
                   fatLabel: l10n.fatLabel,
                   mc: mc,
+                ),
+              ],
+
+              // ── Day budget — only meaningful while logging for today ────
+              if (_isToday && dayBudget != null && dayBudget.hasAnyGoal) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _DayBudgetBar(
+                    todayLabel: l10n.weightHistoryTodayLabel,
+                    leftText: l10n.kcalLeftBadge,
+                    overText: l10n.kcalOverBadge,
+                    proteinLabel: l10n.proteinLabel,
+                    budget: dayBudget,
+                    mc: mc,
+                  ),
                 ),
               ],
             ],
@@ -877,6 +898,154 @@ class _MacroMiniPill extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Day budget bar — "what's left today" while logging a meal for today.
+// Reflects entries already autosaved to this meal, since remainingBudgetProvider
+// derives from the same Drift-backed meal stream.
+// ---------------------------------------------------------------------------
+
+class _DayBudgetBar extends StatelessWidget {
+  const _DayBudgetBar({
+    required this.todayLabel,
+    required this.leftText,
+    required this.overText,
+    required this.proteinLabel,
+    required this.budget,
+    required this.mc,
+  });
+
+  final String todayLabel;
+  final String Function(int) leftText;
+  final String Function(int) overText;
+  final String proteinLabel;
+  final RemainingBudget budget;
+  final AppMetricColors mc;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            todayLabel,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (budget.calories.hasGoal) ...[
+            const SizedBox(height: 10),
+            _BudgetMetricRow(
+              icon: Icons.local_fire_department,
+              accent: mc.calories,
+              consumed: budget.calories.consumed,
+              goal: budget.calories.goal!,
+              unit: 'kcal',
+              isOver: budget.calories.isOver,
+              remainingText: budget.calories.isOver
+                  ? overText(budget.calories.remaining!.abs().round())
+                  : leftText(budget.calories.remaining!.round()),
+              negative: mc.negative,
+            ),
+          ],
+          if (budget.protein.hasGoal) ...[
+            const SizedBox(height: 10),
+            _BudgetMetricRow(
+              icon: Icons.egg_alt,
+              accent: mc.protein,
+              consumed: budget.protein.consumed,
+              goal: budget.protein.goal!,
+              unit: 'g',
+              isOver: budget.protein.isOver,
+              remainingText: budget.protein.isOver
+                  ? overText(budget.protein.remaining!.abs().round())
+                  : leftText(budget.protein.remaining!.round()),
+              negative: mc.negative,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BudgetMetricRow extends StatelessWidget {
+  const _BudgetMetricRow({
+    required this.icon,
+    required this.accent,
+    required this.consumed,
+    required this.goal,
+    required this.unit,
+    required this.isOver,
+    required this.remainingText,
+    required this.negative,
+  });
+
+  final IconData icon;
+  final Color accent;
+  final double consumed;
+  final int goal;
+  final String unit;
+  final bool isOver;
+  final String remainingText;
+  final Color negative;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final barColor = isOver ? negative : accent;
+    final ratio = goal > 0 ? (consumed / goal).clamp(0.0, 1.0) : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: accent),
+            const SizedBox(width: 6),
+            Text(
+              '${consumed.round()} / $goal $unit',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const Spacer(),
+            Text(
+              remainingText,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: barColor,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: ratio,
+            minHeight: 5,
+            backgroundColor: barColor.withValues(alpha: 0.12),
+            valueColor: AlwaysStoppedAnimation<Color>(barColor),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -3,11 +3,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { format } from "date-fns";
 import { foodApi, mealApi } from "../api";
+import { settingsApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { logTimestampFor } from "@/lib/utils/logTime";
 import { normalizeForSearch } from "@/lib/utils/search";
+import { computeFoodUsage, rankFoodsByUsage, recentFoodsByUsage, type FoodUsage } from "../usage";
+import { isOver, remainingOf, type BudgetMetric } from "../budget";
 import type { MealType, FoodResponse, MealResponse } from "../types";
 
 interface AddMealEntryDialogProps {
@@ -51,6 +55,32 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
   const isEditing = meal != null;
   const [mode, setMode] = useState<Mode>("search");
   const [items, setItems] = useState<DraftItem[]>(() => (meal ? draftItemsFromMeal(meal) : []));
+
+  const { data: recentMeals } = useQuery({ queryKey: queryKeys.meals.all(), queryFn: mealApi.list });
+  const usage = computeFoodUsage(recentMeals ?? []);
+
+  const { data: settings } = useQuery({
+    queryKey: queryKeys.settings.all(),
+    queryFn: settingsApi.get,
+    staleTime: 5 * 60_000,
+  });
+
+  // "What's left" outcome preview (W3): today's already-saved consumption
+  // (excluding this meal's own pre-edit entries, since `items` supersedes
+  // them) plus whatever's staged in this dialog so far — only meaningful
+  // when logging for today and a calorie goal is set.
+  const dateStr = format(date, "yyyy-MM-dd");
+  const isTodayDate = dateStr === format(new Date(), "yyyy-MM-dd");
+  const otherTodayMeals = (recentMeals ?? []).filter(
+    (m) => format(new Date(m.dateTime), "yyyy-MM-dd") === dateStr && m.id !== meal?.id,
+  );
+  const stagedKcal = items.reduce((s, i) => s + (i.caloriesPer100g * i.quantityInGrams) / 100, 0);
+  const currentTodayKcal =
+    otherTodayMeals.reduce((s, m) => s + m.entries.reduce((es, e) => es + e.calories, 0), 0) + stagedKcal;
+  const budgetContext =
+    isTodayDate && settings?.dailyCalorieGoal != null
+      ? { calorieGoal: settings.dailyCalorieGoal, currentTodayKcal }
+      : null;
 
   const addItem = (item: DraftItem) => setItems((prev) => [...prev, item]);
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
@@ -116,7 +146,11 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
           ))}
         </div>
 
-        {mode === "search" ? <SearchMode onAdd={addItem} /> : <MacrosMode onAdd={addItem} />}
+        {mode === "search" ? (
+          <SearchMode onAdd={addItem} usage={usage} budgetContext={budgetContext} />
+        ) : (
+          <MacrosMode onAdd={addItem} />
+        )}
 
         {/* Items added so far */}
         {items.length > 0 && (
@@ -164,9 +198,22 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
   );
 }
 
-function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
+function SearchMode({
+  onAdd,
+  usage,
+  budgetContext,
+}: {
+  onAdd: (item: DraftItem) => void;
+  usage: Map<number, FoodUsage>;
+  /** Today's calorie goal + consumption so far (already-saved meals plus
+   * whatever's staged in this dialog), so the quantity preview can show
+   * "→ 420 kcal remaining" once a food + quantity are picked. Null when
+   * logging for a non-today date or no calorie goal is set. */
+  budgetContext: { calorieGoal: number; currentTodayKcal: number } | null;
+}) {
   const t = useTranslations("nutrition.addMealDialog");
   const nf = useTranslations("nutrition.foodsView");
+  const d = useTranslations("dashboard");
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<FoodResponse | null>(null);
   const [gramsStr, setGramsStr] = useState("");
@@ -174,16 +221,26 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
 
   const { data: foods } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
 
-  const matches = (foods ?? [])
-    .filter((f) => !f.hidden && normalizeForSearch(f.name).includes(normalizeForSearch(search)))
-    .slice(0, 8);
+  const nonHidden = (foods ?? []).filter((f) => !f.hidden);
+  // Empty search with usage history: lead with a dedicated "Recent" section
+  // (last-used quantity shown) instead of an arbitrary catalog slice. Empty
+  // search with no history yet, or a non-empty query, falls back to the
+  // usage-ranked (or plain, if no history) catalog — unchanged browsing
+  // behavior for new users.
+  const recents = search ? [] : recentFoodsByUsage(nonHidden, usage);
+  const showingRecents = recents.length > 0;
+  const filtered = search
+    ? nonHidden.filter((f) => normalizeForSearch(f.name).includes(normalizeForSearch(search)))
+    : nonHidden;
+  const matches = (showingRecents ? [] : rankFoodsByUsage(filtered, usage)).slice(0, 8);
 
   const previewKcal = picked ? Math.round((picked.caloriesPer100g * grams) / 100) : 0;
   const previewProtein = picked ? Math.round((picked.proteinPer100g * grams) / 100) : 0;
 
   const pick = (f: FoodResponse) => {
     setPicked(f);
-    setGramsStr("");
+    const lastGrams = usage.get(f.id)?.lastGrams;
+    setGramsStr(lastGrams ? String(Math.round(lastGrams)) : "");
   };
 
   const addAndReset = () => {
@@ -213,14 +270,25 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
             placeholder={nf("searchPlaceholder")} className="flex-1 min-w-0 bg-transparent outline-none text-sm" />
         </div>
         <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
-          {matches.map((f) => (
+          {showingRecents && (
+            <p className="text-xs font-semibold px-3 pt-1 pb-0.5" style={{ color: "var(--on-surface-variant)" }}>
+              {t("recent")}
+            </p>
+          )}
+          {(showingRecents ? recents : matches).map((f) => (
             <button key={f.id} onClick={() => pick(f)}
               className="flex items-center justify-between px-3 py-2 rounded-[var(--r-md)] text-left transition-colors hover:bg-surface-container">
               <span className="text-sm font-semibold">{f.name}</span>
-              <span className="flex gap-2 text-xs tabular">
-                <span style={{ color: "var(--metric-kcal)" }}>{Math.round(f.caloriesPer100g)} kcal</span>
-                <span style={{ color: "var(--metric-protein)" }}>{Math.round(f.proteinPer100g)}g P</span>
-              </span>
+              {showingRecents ? (
+                <span className="text-xs tabular" style={{ color: "var(--muted)" }}>
+                  {t("lastGramsHint", { grams: Math.round(usage.get(f.id)!.lastGrams) })}
+                </span>
+              ) : (
+                <span className="flex gap-2 text-xs tabular">
+                  <span style={{ color: "var(--metric-kcal)" }}>{Math.round(f.caloriesPer100g)} kcal</span>
+                  <span style={{ color: "var(--metric-protein)" }}>{Math.round(f.proteinPer100g)}g P</span>
+                </span>
+              )}
             </button>
           ))}
           {search && matches.length === 0 && (
@@ -245,6 +313,7 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
         <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("quantityG")}</label>
         <input type="number" value={gramsStr} min={1} autoFocus placeholder="100"
           onChange={(e) => setGramsStr(e.target.value)}
+          onFocus={(e) => e.target.select()}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"
           style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
       </div>
@@ -253,6 +322,25 @@ function SearchMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
         <span style={{ color: "var(--metric-kcal)" }}>{previewKcal} kcal</span>
         <span style={{ color: "var(--metric-protein)" }}>{previewProtein}g protein</span>
       </div>
+
+      {budgetContext && grams > 0 && (() => {
+        const metric: BudgetMetric = {
+          consumed: budgetContext.currentTodayKcal + previewKcal,
+          goal: budgetContext.calorieGoal,
+        };
+        const remaining = remainingOf(metric)!;
+        return (
+          <p
+            className="text-xs tabular"
+            style={{ color: isOver(metric) ? "var(--goal-negative)" : "var(--on-surface-variant)" }}
+          >
+            {"→ "}
+            {isOver(metric)
+              ? d("over", { diff: Math.abs(Math.round(remaining)), unit: "kcal" })
+              : d("remaining", { diff: Math.round(remaining), unit: "kcal" })}
+          </p>
+        );
+      })()}
 
       <button onClick={addAndReset} disabled={grams <= 0}
         className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"

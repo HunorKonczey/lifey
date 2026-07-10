@@ -382,7 +382,8 @@
     "noEntryYet": "Még nincs bejegyzés",
     "goal": "Cél: {value}",
     "workoutFallback": "Edzés",
-    "minutes": "perc"
+    "minutes": "perc",
+    "setGoalsHint": "Állítsd be a napi céljaidat a haladás követéséhez"
   },
   "nutrition": {
     "meals": "Étkezések",
@@ -404,9 +405,12 @@
     "removeMealAria": "Étkezés eltávolítása",
     "mealDuplicated": "Étkezés duplikálva",
     "duplicateMealFailed": "Nem sikerült duplikálni az étkezést",
-    "duplicateMealConfirmTitle": "Étkezés duplikálása",
-    "duplicateMealConfirmBody": "Biztosan duplikálni szeretnéd ezt az étkezést?",
-    "duplicateMealConfirmAction": "Duplikálás",
+    "copyPreviousDay": "Korábbi nap másolása",
+    "copyPreviousDayGhost": "Tegnapi {meal} másolása · {kcal} kcal",
+    "copyPreviousDayConfirmTitle": "Korábbi nap másolása",
+    "copyPreviousDayConfirmBody": "Átmásolod a {count} {count, plural, one {étkezést} other {étkezést}} ({kcal} kcal) erről a napról: {date}?",
+    "mealsCopied": "{count} {count, plural, one {étkezés} other {étkezés}} átmásolva",
+    "copyDayFailed": "Nem sikerült átmásolni azt a napot",
     "foodsView": {
       "searchPlaceholder": "Ételek keresése…",
       "barcodePlaceholder": "Vonalkód…",
@@ -469,6 +473,8 @@
       "removeItemAria": "Tétel eltávolítása",
       "quantityG": "Mennyiség (g)",
       "noMatches": "Nincs találat",
+      "recent": "Legutóbbiak",
+      "lastGramsHint": "utóbbi: {grams} g",
       "change": "Csere",
       "addItem": "Tétel hozzáadása",
       "adding": "Hozzáadás…",

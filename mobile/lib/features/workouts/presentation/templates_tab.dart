@@ -61,6 +61,15 @@ class TemplatesTab extends ConsumerWidget {
   Future<void> _duplicate(
       BuildContext context, WidgetRef ref, WorkoutTemplate template) async {
     final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showAppConfirmDialog(
+      context,
+      icon: Icons.copy_rounded,
+      title: l10n.duplicateTemplateQuestionTitle,
+      message: l10n.duplicateTemplateConfirmMessage,
+      confirmLabel: l10n.duplicateMenuItem,
+      cancelLabel: l10n.cancelButton,
+    );
+    if (confirmed != true || !context.mounted) return;
     try {
       await ref.read(workoutTemplateControllerProvider.notifier).duplicateTemplate(
             template,

@@ -128,6 +128,7 @@ class StatCard extends StatelessWidget {
                   toneColor: toneColor,
                   barColor: barColor,
                   ratio: ratio,
+                  subtitle: subtitle,
                   badgeText: badgeText,
                   badgeColor: badgeColor ?? accent,
                 )
@@ -302,6 +303,7 @@ class _CompactLayout extends StatelessWidget {
     required this.toneColor,
     required this.barColor,
     required this.ratio,
+    this.subtitle,
     this.badgeText,
     required this.badgeColor,
   });
@@ -316,6 +318,7 @@ class _CompactLayout extends StatelessWidget {
   final Color toneColor;
   final Color barColor;
   final double? ratio;
+  final String? subtitle;
   final String? badgeText;
   final Color badgeColor;
 
@@ -366,6 +369,16 @@ class _CompactLayout extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 1),
+          Text(
+            subtitle!,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              fontSize: 10.5,
+            ),
+          ),
+        ],
         // Badge slot is always rendered (even when invisible) so all compact
         // cards in a row stay the same height.
         const SizedBox(height: 5),

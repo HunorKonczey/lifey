@@ -382,7 +382,8 @@
     "noEntryYet": "No entry yet",
     "goal": "Goal: {value}",
     "workoutFallback": "Workout",
-    "minutes": "min"
+    "minutes": "min",
+    "setGoalsHint": "Set your daily goals to track progress"
   },
   "nutrition": {
     "meals": "Meals",
@@ -404,9 +405,12 @@
     "removeMealAria": "Remove meal",
     "mealDuplicated": "Meal duplicated",
     "duplicateMealFailed": "Failed to duplicate meal",
-    "duplicateMealConfirmTitle": "Duplicate meal",
-    "duplicateMealConfirmBody": "Are you sure you want to duplicate this meal?",
-    "duplicateMealConfirmAction": "Duplicate",
+    "copyPreviousDay": "Copy previous day",
+    "copyPreviousDayGhost": "Copy yesterday's {meal} · {kcal} kcal",
+    "copyPreviousDayConfirmTitle": "Copy previous day",
+    "copyPreviousDayConfirmBody": "Copy {count} {count, plural, one {meal} other {meals}} ({kcal} kcal) from {date}?",
+    "mealsCopied": "{count} {count, plural, one {meal} other {meals}} copied",
+    "copyDayFailed": "Failed to copy that day",
     "foodsView": {
       "searchPlaceholder": "Search foods…",
       "barcodePlaceholder": "Barcode…",
@@ -469,6 +473,8 @@
       "removeItemAria": "Remove item",
       "quantityG": "Quantity (g)",
       "noMatches": "No matches",
+      "recent": "Recent",
+      "lastGramsHint": "last: {grams} g",
       "change": "Change",
       "addItem": "Add item",
       "adding": "Adding…",
