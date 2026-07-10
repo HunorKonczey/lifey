@@ -11,26 +11,19 @@ import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
 import '../presentation/log_session_screen.dart';
 
-String _logSessionRouteName(String sessionClientId) => 'log_session/$sessionClientId';
-
 Future<WorkoutSession?> _findActiveSession(Ref ref) async {
   final sessions = await ref.read(workoutSessionRepositoryProvider).watchAll().first;
   return sessions.where((s) => s.inProgress).firstOrNull;
 }
 
-/// Pushes [LogSessionScreen] for [active] via the root navigator, unless it's
-/// already the top route (tapping the Live Activity/notification twice, or
-/// tapping it right after opening the same session by hand, shouldn't stack
-/// a duplicate screen).
+/// Pushes [LogSessionScreen] for [active] via the root navigator, unless a
+/// live one is already mounted (see [isLogSessionScreenOpen] — reconstructing
+/// a second instance from persisted DB state would clobber any not-yet-saved
+/// edits the live one is holding).
 Future<void> _pushSessionScreen(NavigatorState navigator, WorkoutSession active) async {
-  final routeName = _logSessionRouteName(active.clientId);
-  if (topRouteName == routeName) return;
-
+  if (isLogSessionScreenOpen) return;
   await navigator.push(
-    MaterialPageRoute(
-      settings: RouteSettings(name: routeName),
-      builder: (_) => LogSessionScreen(session: active),
-    ),
+    MaterialPageRoute(builder: (_) => LogSessionScreen(session: active)),
   );
 }
 
@@ -39,14 +32,18 @@ Future<void> _pushSessionScreen(NavigatorState navigator, WorkoutSession active)
 /// exception handling in `app_router.dart`) and the Android ongoing
 /// notification tap (see [NotificationService.setWorkoutSessionTapHandler]),
 /// both of which should reopen the running workout regardless of what screen
-/// the app happens to be showing. Does nothing if there's no active session
-/// or the root navigator isn't mounted yet.
-Future<void> openActiveWorkoutSession(Ref ref) async {
+/// the app happens to be showing. Returns whether a session is active (and
+/// thus already showing or just opened) — the router falls back to the
+/// dashboard when this is false. Does nothing beyond that check if a live
+/// [LogSessionScreen] is already mounted (see [isLogSessionScreenOpen]).
+Future<bool> openActiveWorkoutSession(Ref ref) async {
+  if (isLogSessionScreenOpen) return true;
   final navigator = rootNavigatorKey.currentState;
-  if (navigator == null) return;
+  if (navigator == null) return false;
   final active = await _findActiveSession(ref);
-  if (active == null) return;
+  if (active == null) return false;
   await _pushSessionScreen(navigator, active);
+  return true;
 }
 
 /// On cold start, if the local cache still holds a session with no

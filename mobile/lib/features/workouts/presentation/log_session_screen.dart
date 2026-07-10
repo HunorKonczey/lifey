@@ -35,6 +35,18 @@ import 'widgets/workout_success_dialog.dart';
 /// a session close. The *count* of rows (done + blank) is persisted as each
 /// exercise's targetSets (see [_buildPlanned]), so a blank row added ad-hoc
 /// still regenerates the next time the session is opened.
+/// True while a [LogSessionScreen] showing an in-progress (unfinished)
+/// session is mounted anywhere in the nav stack. Read by
+/// `workout_resume_prompt.dart`'s Live Activity/Dynamic Island/Android
+/// notification tap handling: it must NOT push a second `LogSessionScreen`
+/// on top of an already-live one, since a fresh instance is reconstructed
+/// from the last *persisted* DB state only — any not-yet-flushed in-memory
+/// edits (e.g. blank "Add set" rows added just before the OS suspended the
+/// app in the background) would be silently dropped, and the duplicate's
+/// stale set count would overwrite the correct Live Activity/notification
+/// content.
+bool isLogSessionScreenOpen = false;
+
 class LogSessionScreen extends ConsumerStatefulWidget {
   const LogSessionScreen({super.key, this.session, this.template});
 
@@ -117,6 +129,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _finishedAt = session?.finishedAt;
     _rpe = session?.rpe;
     _feedbackNote = session?.feedbackNote;
+
+    if (_finishedAt == null) isLogSessionScreenOpen = true;
 
     if (session != null) {
       _sessionClientId = session.clientId;
@@ -232,6 +246,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   @override
   void dispose() {
+    isLogSessionScreenOpen = false;
     _ticker?.cancel();
     _hrTicker?.cancel();
     super.dispose();
