@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome status-bar notification icon (dumbbell silhouette). Android
+     tints this to white/theme color automatically — fillColor here is
+     nominal. Used as the default icon for all local notifications (step
+     goal + ongoing workout session), see NotificationService.init(). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4,7 L8,7 L8,17 L4,17 Z
+                           M16,7 L20,7 L20,17 L16,17 Z
+                           M8,10 L9,10 L9,14 L8,14 Z
+                           M15,10 L16,10 L16,14 L15,14 Z
+                           M9,11 L15,11 L15,13 L9,13 Z"/>
+</vector>

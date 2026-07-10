@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/live_activity/workout_live_activity_service.dart';
+import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
@@ -70,10 +70,11 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
     final l10n = AppLocalizations.of(context)!;
     try {
       // Nothing prevents swiping to delete a still-running session — end its
-      // Live Activity so it doesn't linger as an orphan (see
-      // docs/24-ios-widget-live-activity-plan.md, orphan handling).
+      // Live Activity / ongoing notification so it doesn't linger as an
+      // orphan (see docs/24-ios-widget-live-activity-plan.md and
+      // docs/25-android-widget-ongoing-notification-plan.md, orphan handling).
       if (session.inProgress) {
-        unawaited(ref.read(workoutLiveActivityServiceProvider).end());
+        unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
       }
       await ref.read(workoutSessionControllerProvider.notifier).deleteSession(session.clientId);
       if (context.mounted) {
@@ -317,7 +318,7 @@ class _SessionCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 1),
                       ],
-                      // Date + Apple Health badge + status chip
+                      // Date + Health badge + status chip
                       Row(
                         children: [
                           Expanded(
@@ -335,13 +336,13 @@ class _SessionCard extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.only(left: 4),
                               child: Tooltip(
-                                message: l10n.importedFromAppleHealthTooltip,
+                                message: l10n.importedFromHealthTooltip,
                                 child: Icon(
-                                  Icons.apple,
+                                  Icons.favorite,
                                   size: 15,
                                   color: scheme.onSurfaceVariant,
                                   semanticLabel:
-                                      l10n.importedFromAppleHealthTooltip,
+                                      l10n.importedFromHealthTooltip,
                                 ),
                               ),
                             ),
@@ -359,12 +360,12 @@ class _SessionCard extends StatelessWidget {
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
-                      // Apple Health stats
+                      // Health stats
                       if (session.activeCalories != null ||
                           session.averageHeartRate != null) ...[
                         const SizedBox(height: 3),
                         Text(
-                          l10n.appleHealthStatsLine(
+                          l10n.healthStatsLine(
                             session.activeCalories?.round().toString() ?? '–',
                             session.averageHeartRate?.round().toString() ?? '–',
                           ),

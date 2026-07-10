@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Light theme widget palette — transcribed from lib/core/theme/app_theme.dart
+     (_LightColors) and app_tokens.dart (AppMetricColors.light.calories).
+     See values-night/widget_colors.xml for the dark variant. -->
+<resources>
+    <color name="widget_surface">#FFFFFFFF</color>
+    <color name="widget_container">#FFECEBDE</color>
+    <color name="widget_on_surface">#FF1E1F18</color>
+    <color name="widget_on_surface_variant">#FF5C5C50</color>
+    <color name="widget_calories">#FFD27A3E</color>
+    <color name="widget_progress_track">#FFE6E5DC</color>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark theme widget palette — transcribed from lib/core/theme/app_theme.dart
+     (_DarkColors) and app_tokens.dart (AppMetricColors.dark.calories). Dark
+     is the app's hero theme (see app_theme.dart doc comment). -->
+<resources>
+    <color name="widget_surface">#FF1C1E16</color>
+    <color name="widget_container">#FF22241B</color>
+    <color name="widget_on_surface">#FFF1F0E4</color>
+    <color name="widget_on_surface_variant">#FFA8A899</color>
+    <color name="widget_calories">#FFE0915A</color>
+    <color name="widget_progress_track">#FF2A2C20</color>
+</resources>

@@ -41,7 +41,7 @@ class LifeyApp extends ConsumerWidget {
     ref.watch(stepGoalNotifierProvider);
     // Resumes an in-progress workout after the OS kills the app mid-session.
     ref.watch(workoutResumePromptProvider);
-    // Keeps the iOS home screen widget snapshot in sync (iOS only).
+    // Keeps the home screen widget snapshot in sync (iOS + Android).
     ref.watch(widgetSnapshotControllerProvider);
 
     final router = ref.watch(appRouterProvider);

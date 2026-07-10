@@ -13,13 +13,14 @@ import 'health_service.dart';
 
 /// Fires a local notification when the user hits their daily step goal.
 ///
-/// Runs on app startup and every time the app resumes from the background
-/// (iOS only). At most one notification is sent per calendar day — the date
-/// is persisted in [HealthPreferences] to survive app restarts.
+/// Runs on app startup and every time the app resumes from the background.
+/// At most one notification is sent per calendar day — the date is
+/// persisted in [HealthPreferences] to survive app restarts.
 ///
 /// This is a foreground / resume check, not a background observer. True
-/// background delivery (HKObserverQuery + background entitlement) is out of
-/// scope and was explicitly removed in Prompt 1.6.
+/// background delivery (HKObserverQuery + background entitlement on iOS, or
+/// an equivalent on Android) is out of scope and was explicitly removed in
+/// Prompt 1.6.
 class StepGoalNotifier with WidgetsBindingObserver {
   StepGoalNotifier(this._ref);
 
@@ -45,7 +46,7 @@ class StepGoalNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _check() async {
-    if (!Platform.isIOS) return;
+    if (!Platform.isIOS && !Platform.isAndroid) return;
 
     final prefs = _ref.read(healthPreferencesProvider);
     if (!await prefs.isEnabled()) return;

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Card background — corner radius matches AppRadius.card (20dp) in
+     lib/core/theme/app_tokens.dart. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_container"/>
+    <corners android:radius="20dp"/>
+</shape>
