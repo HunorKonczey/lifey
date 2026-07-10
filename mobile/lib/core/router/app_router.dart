@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,7 @@ import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/statistics/presentation/statistics_screen.dart';
 import '../../features/weight/presentation/weight_screen.dart';
+import '../../features/workouts/application/workout_resume_prompt.dart';
 import '../../features/workouts/presentation/workouts_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 
@@ -37,6 +40,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/dashboard',
     refreshListenable: authRefresh,
+    // The iOS widget/Live Activity deep links are `lifey://today` and
+    // `lifey://workout`. When the app is warm in the background, iOS
+    // delivers that raw URL to Flutter as-is (scheme included) instead of
+    // just its path, so it never matches a GoRoute — fall back to the
+    // dashboard rather than showing the "Page Not Found" error screen, and
+    // for `workout` additionally jump to the running session if one exists
+    // (mirrors the Android ongoing-notification tap in workout_resume_prompt.dart).
+    // Only falls back to the dashboard once `openActiveWorkoutSession`
+    // confirms there's nothing to reopen — it must not run unconditionally,
+    // since a live LogSessionScreen may already be showing the correct state.
+    onException: (context, state, router) {
+      if (state.uri.scheme == 'lifey' && state.uri.host == 'workout') {
+        unawaited(() async {
+          final opened = await openActiveWorkoutSession(ref);
+          if (!opened) router.go('/dashboard');
+        }());
+        return;
+      }
+      router.go('/dashboard');
+    },
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       if (auth.isLoading) return null;

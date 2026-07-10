@@ -37,6 +37,9 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<!-- Live Activities (docs/24-ios-widget-live-activity-plan.md) -->
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<!-- Google Sign-In: the reversed form of the iOS OAuth client ID
 	     (Google Cloud Console → Credentials → Lifey iOS). -->
 	<key>CFBundleURLTypes</key>
@@ -47,6 +50,15 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.1086901320421-qfnu12ba4k4uhf6pl2aanra5pk1rp2la</string>
+			</array>
+		</dict>
+		<!-- Widget / Live Activity deep link (docs/24-ios-widget-live-activity-plan.md) -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>lifey</string>
 			</array>
 		</dict>
 	</array>

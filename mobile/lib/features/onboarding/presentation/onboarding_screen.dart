@@ -70,9 +70,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  // Health step only makes sense on iOS (HealthKit); Android has no
-  // equivalent wired up yet, so the wizard is one step shorter there.
-  int get _stepCount => Platform.isIOS ? 6 : 5;
+  // Health step needs a platform health store to connect to — HealthKit on
+  // iOS, Health Connect on Android (docs/26-android-health-connect-integration-plan.md).
+  int get _stepCount => (Platform.isIOS || Platform.isAndroid) ? 6 : 5;
 
   bool get _isImperial =>
       (ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults())
@@ -226,9 +226,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ref.invalidate(userDetailsProvider);
       ref.invalidate(hasUserDetailsProvider);
       if (!mounted) return;
-      if (Platform.isIOS) {
-        // One more step (Apple Health) still needs to run before we're
-        // actually done — it drives its own exit to /dashboard.
+      if (Platform.isIOS || Platform.isAndroid) {
+        // One more step (Health) still needs to run before we're actually
+        // done — it drives its own exit to /dashboard.
         await _pageController.nextPage(duration: AppDuration.base, curve: AppCurve.standard);
       } else {
         _goToDashboard();
@@ -325,8 +325,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     suggesting: _suggesting,
                     suggestion: _suggestion,
                   ),
-                  if (Platform.isIOS)
-                    _AppleHealthStep(l10n: l10n, onFinish: _goToDashboard),
+                  if (Platform.isIOS || Platform.isAndroid)
+                    _HealthStep(l10n: l10n, onFinish: _goToDashboard),
                 ],
               ),
             ),
@@ -871,29 +871,32 @@ class _SuggestedPlanStep extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Step 6 — Apple Health (iOS only)
+// Step 6 — Health (iOS: Apple Health, Android: Health Connect)
 // ---------------------------------------------------------------------------
 
-class _AppleHealthStep extends ConsumerStatefulWidget {
-  const _AppleHealthStep({required this.l10n, required this.onFinish});
+class _HealthStep extends ConsumerStatefulWidget {
+  const _HealthStep({required this.l10n, required this.onFinish});
 
   final AppLocalizations l10n;
   final VoidCallback onFinish;
 
   @override
-  ConsumerState<_AppleHealthStep> createState() => _AppleHealthStepState();
+  ConsumerState<_HealthStep> createState() => _HealthStepState();
 }
 
-class _AppleHealthStepState extends ConsumerState<_AppleHealthStep> {
+class _HealthStepState extends ConsumerState<_HealthStep> {
   bool _enabling = false;
 
   Future<void> _enable() async {
     setState(() => _enabling = true);
     try {
-      // Requests HealthKit permission and — per AppleHealthController —
+      // Requests platform health permission and — per HealthController —
       // immediately kicks off a weight + step-history import in the
-      // background, so the wizard doesn't need to wait for it here.
-      await ref.read(appleHealthControllerProvider.notifier).setEnabled(true);
+      // background, so the wizard doesn't need to wait for it here. On
+      // Android, if Health Connect isn't installed yet, this instead opens
+      // the Play Store and leaves the toggle off; the user can retry from
+      // Settings once it's installed.
+      await ref.read(healthControllerProvider.notifier).setEnabled(true);
     } finally {
       if (mounted) setState(() => _enabling = false);
     }

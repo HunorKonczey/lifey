@@ -123,7 +123,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     ref.invalidate(avatarControllerProvider);
     ref.invalidate(myTrainersControllerProvider);
     ref.invalidate(trainerInviteControllerProvider);
-    ref.invalidate(appleHealthControllerProvider);
+    ref.invalidate(healthControllerProvider);
     state = const AsyncValue.data(null);
     if (refreshToken != null) {
       try {

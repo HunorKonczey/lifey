@@ -11,14 +11,19 @@ import 'sync_engine_provider.dart';
 
 /// Keeps the local cache in sync without the user having to pull-to-refresh.
 ///
-/// Two distinct things happen, on different triggers (per doc sections 6
-/// and 7):
-/// - Draining the outbox ([SyncEngine.sync]) — on startup, connectivity
-///   restore, app foreground, and a lightweight periodic timer while the
-///   app stays open.
-/// - Refreshing from the server ([PullEngine.pullAll]) — on startup,
-///   connectivity restore, and app foreground, always *after* a drain so a
-///   just-created row already carries its serverId before the pull runs.
+/// Both halves of sync run on every trigger — startup, connectivity restore,
+/// app foreground, and a lightweight periodic timer while the app stays
+/// open:
+/// - Draining the outbox ([SyncEngine.sync]).
+/// - Refreshing from the server ([PullEngine.pullAll]), always *after* a
+///   drain so a just-created row already carries its serverId before the
+///   pull runs.
+///
+/// The periodic timer must also pull, not just push: after the first pull,
+/// [PullEngine.pullAll] is a cheap delta query per entity (cursor-based), so
+/// the cost is small — and without it, a change made on another client (e.g.
+/// the web app) while this device stays foregrounded the whole time would
+/// never show up until the app backgrounds/resumes or connectivity drops.
 ///
 /// True background sync (while the app is fully closed) is out of scope
 /// for this phase.
@@ -31,7 +36,7 @@ class ConnectivitySyncController with WidgetsBindingObserver {
   ]) : _connectivity = connectivity ?? Connectivity() {
     WidgetsBinding.instance.addObserver(this);
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(_onConnectivityChanged);
-    _timer = Timer.periodic(_pollInterval, (_) => _guardedSync());
+    _timer = Timer.periodic(_pollInterval, (_) => _refresh());
     unawaited(_refresh());
   }
 
@@ -55,11 +60,6 @@ class ConnectivitySyncController with WidgetsBindingObserver {
   /// fresh login can race the session — see AuthInterceptor). Skip outright
   /// while signed out.
   Future<bool> get _isSignedIn async => await _tokenStorage.readAccessToken() != null;
-
-  Future<void> _guardedSync() async {
-    if (!await _isSignedIn) return;
-    await _syncEngine.sync();
-  }
 
   Future<void> _refresh() async {
     if (!await _isSignedIn) return;

@@ -72,7 +72,7 @@ final weightHealthImporterProvider = Provider<WeightHealthImporter>((ref) {
 /// Fires [WeightHealthImporter.import] on app resume (plus once at startup,
 /// since the very first "resumed" transition happens before this observer is
 /// registered). The "right after permission grant" trigger lives in
-/// [AppleHealthController.setEnabled] instead, since that's a one-shot event
+/// [HealthController.setEnabled] instead, since that's a one-shot event
 /// rather than a lifecycle transition. No background polling — see the plan
 /// doc's Phase 3 design.
 class WeightHealthImportLifecycle with WidgetsBindingObserver {

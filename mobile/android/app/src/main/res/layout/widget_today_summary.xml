@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Today's calories home screen widget. Single responsive layout (no
+     per-size RemoteViews mapping — see docs/25-android-widget-ongoing-notification-plan.md
+     "Widget behavior"). Bound by TodaySummaryWidgetProvider.kt. All strings
+     rendered here (labels, placeholder) are pre-localized values coming from
+     the snapshot payload written by widget_snapshot_writer.dart — this
+     layout never picks its own translations. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:padding="16dp">
+
+    <!-- Fresh install / never-opened placeholder. -->
+    <TextView
+        android:id="@+id/widget_no_data"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:textColor="@color/widget_on_surface_variant"
+        android:textSize="13sp"
+        android:visibility="gone"
+        tools:text="Open the app"/>
+
+    <LinearLayout
+        android:id="@+id/widget_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widget_calories_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_on_surface_variant"
+            android:textSize="12sp"
+            tools:text="Calories"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal"
+            android:gravity="bottom">
+
+            <TextView
+                android:id="@+id/widget_calories_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/widget_on_surface"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                tools:text="1430"/>
+
+            <TextView
+                android:id="@+id/widget_calories_goal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="3dp"
+                android:textColor="@color/widget_on_surface_variant"
+                android:textSize="12sp"
+                tools:text="/ 2200"/>
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/widget_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="8dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_progress_bar"
+            android:visibility="gone"/>
+
+        <LinearLayout
+            android:id="@+id/widget_steps_row"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/widget_steps_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/widget_on_surface_variant"
+                android:textSize="11sp"
+                tools:text="Steps"/>
+
+            <TextView
+                android:id="@+id/widget_steps_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:textColor="@color/widget_on_surface"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="6412"/>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

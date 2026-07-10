@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only used before the app has ever written a snapshot (fresh install,
+     never opened) — no in-app language preference exists yet at that point,
+     so this falls back to the device locale rather than the in-app
+     LanguagePreference the snapshot payload otherwise carries pre-localized
+     (see widgetNoDataLabel in lib/l10n/app_en.arb / app_hu.arb). -->
+<resources>
+    <string name="widget_no_data_fallback">Open the app</string>
+</resources>

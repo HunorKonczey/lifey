@@ -8,7 +8,7 @@
     "@preferencesLabel": {"description": "Settings group heading for units, theme and language"},
 
     "integrationsLabel": "Integrations",
-    "@integrationsLabel": {"description": "Settings group heading for water sources and Apple Health"},
+    "@integrationsLabel": {"description": "Settings group heading for water sources and Health"},
 
     "accountLabel": "Account",
     "@accountLabel": {"description": "Settings group heading for account/security actions"},
@@ -91,14 +91,8 @@
     "manageWaterSourcesButton": "Manage water sources",
     "@manageWaterSourcesButton": {"description": "Button that opens the water sources management screen"},
 
-    "appleHealthLabel": "Apple Health",
-    "@appleHealthLabel": {"description": "Section heading for the Apple Health integration (iOS only)"},
-
-    "connectAppleHealthLabel": "Connect Apple Health",
-    "@connectAppleHealthLabel": {"description": "Toggle that connects the app to Apple Health"},
-
-    "connectAppleHealthDescription": "Let Lifey read workouts, steps and weight from Apple Health.",
-    "@connectAppleHealthDescription": {"description": "Explains what enabling the Apple Health toggle does"},
+    "healthIntegrationLabel": "Health",
+    "@healthIntegrationLabel": {"description": "Section heading for the Health integration (Apple Health on iOS, Health Connect on Android)"},
 
     "signInSubtitle": "Sign in to continue",
     "@signInSubtitle": {"description": "Subtitle on the login screen"},
@@ -800,7 +794,7 @@
     "@statMetricWorkoutCountLabel": {"description": "Statistics metric label: number of workouts per day"},
 
     "statMetricActiveCaloriesLabel": "Active calories",
-    "@statMetricActiveCaloriesLabel": {"description": "Statistics metric label: calories burned during workouts (Apple Health)"},
+    "@statMetricActiveCaloriesLabel": {"description": "Statistics metric label: calories burned during workouts (Health)"},
 
     "statisticsTitle": "Statistics",
     "@statisticsTitle": {"description": "Title of the statistics screen"},
@@ -1057,41 +1051,41 @@
     "noWorkoutsLoggedYetPeriodMessage": "No workouts logged yet.",
     "@noWorkoutsLoggedYetPeriodMessage": {"description": "Shown on the dashboard when there are no recent workouts"},
 
-    "pairAppleWorkoutTitle": "Pair with Apple Health workout?",
-    "@pairAppleWorkoutTitle": {"description": "Confirmation dialog title shown when tapping the Apple Health workout-detected notification"},
+    "pairHealthWorkoutTitle": "Pair with Health workout?",
+    "@pairHealthWorkoutTitle": {"description": "Confirmation dialog title shown when tapping the workout-detected notification"},
 
-    "pairAppleWorkoutMessage": "Started {startTime} · {calories} kcal · {heartRate} bpm avg. Pair this with your active session?",
-    "@pairAppleWorkoutMessage": {"description": "Confirmation dialog body summarizing the matched Apple Health workout", "placeholders": {"startTime": {"type": "String"}, "calories": {"type": "String"}, "heartRate": {"type": "String"}}},
+    "pairHealthWorkoutMessage": "Started {startTime} · {calories} kcal · {heartRate} bpm avg. Pair this with your active session?",
+    "@pairHealthWorkoutMessage": {"description": "Confirmation dialog body summarizing the matched health workout", "placeholders": {"startTime": {"type": "String"}, "calories": {"type": "String"}, "heartRate": {"type": "String"}}},
 
     "pairButton": "Pair",
-    "@pairButton": {"description": "Confirm button for pairing an Apple Health workout with an active session"},
+    "@pairButton": {"description": "Confirm button for pairing a health workout with an active session"},
 
     "noMatchingActiveWorkoutMessage": "No matching active workout found",
-    "@noMatchingActiveWorkoutMessage": {"description": "Shown when an Apple Health workout notification is tapped but no in-progress session matches"},
+    "@noMatchingActiveWorkoutMessage": {"description": "Shown when a health workout notification is tapped but no in-progress session matches"},
 
-    "importedFromAppleHealthTooltip": "Imported from Apple Health",
-    "@importedFromAppleHealthTooltip": {"description": "Tooltip/semantics label for the Apple Health badge on a paired workout session card"},
+    "importedFromHealthTooltip": "Imported from Health",
+    "@importedFromHealthTooltip": {"description": "Tooltip/semantics label for the health badge on a paired workout session card"},
 
-    "appleHealthStatsLine": "{calories} kcal · {heartRate} bpm avg (Apple Health)",
-    "@appleHealthStatsLine": {"description": "Line showing active calories and average heart rate imported from Apple Health on a session card", "placeholders": {"calories": {"type": "String"}, "heartRate": {"type": "String"}}},
+    "healthStatsLine": "{calories} kcal · {heartRate} bpm avg (Health)",
+    "@healthStatsLine": {"description": "Line showing active calories and average heart rate imported from Health on a session card", "placeholders": {"calories": {"type": "String"}, "heartRate": {"type": "String"}}},
 
-    "importFromAppleHealthButton": "Import from Apple Health",
-    "@importFromAppleHealthButton": {"description": "Button on the active workout that imports a just-finished Apple Health strength workout"},
+    "importFromHealthButton": "Import from Health",
+    "@importFromHealthButton": {"description": "Button on the active workout that imports a just-finished health-store strength workout"},
 
-    "noRecentAppleWorkoutMessage": "No recent Apple Health workout found",
-    "@noRecentAppleWorkoutMessage": {"description": "Shown when the import button finds no strength workout finished in the last day"},
+    "noRecentHealthWorkoutMessage": "No recent health workout found",
+    "@noRecentHealthWorkoutMessage": {"description": "Shown when the import button finds no strength workout finished in the last day"},
 
-    "pickAppleWorkoutTitle": "Pick an Apple Health workout",
-    "@pickAppleWorkoutTitle": {"description": "Title of the sheet listing recent Apple Health strength workouts to pair with an already-closed session"},
+    "pickHealthWorkoutTitle": "Pick a health workout",
+    "@pickHealthWorkoutTitle": {"description": "Title of the sheet listing recent health-store strength workouts to pair with an already-closed session"},
 
-    "workoutPairedWithHealthMessage": "Workout paired with Apple Health",
-    "@workoutPairedWithHealthMessage": {"description": "Snackbar shown after manually pairing an already-closed session with an Apple Health workout"},
+    "workoutPairedWithHealthMessage": "Workout paired with Health",
+    "@workoutPairedWithHealthMessage": {"description": "Snackbar shown after manually pairing an already-closed session with a health workout"},
 
     "weightImportedFromHealth": "{count, plural, one{{count} entry imported} other{{count} entries imported}}",
-    "@weightImportedFromHealth": {"description": "Snackbar after the weight screen's Apple Health import, reporting how many days were backfilled", "placeholders": {"count": {"type": "int"}}},
+    "@weightImportedFromHealth": {"description": "Snackbar after the weight screen's Health import, reporting how many days were backfilled", "placeholders": {"count": {"type": "int"}}},
 
     "noNewWeightFromHealth": "No new weight to import",
-    "@noNewWeightFromHealth": {"description": "Snackbar when the weight screen's Apple Health import finds nothing new to add"},
+    "@noNewWeightFromHealth": {"description": "Snackbar when the weight screen's Health import finds nothing new to add"},
 
     "workoutDurationMin": "{count} min",
     "@workoutDurationMin": {"description": "Workout duration in minutes on the recent workout tile", "placeholders": {"count": {"type": "int"}}},
@@ -1100,7 +1094,7 @@
     "@workoutExerciseCount": {"description": "Number of distinct exercises on the recent workout tile", "placeholders": {"count": {"type": "int"}}},
 
     "workoutKcal": "{count} kcal",
-    "@workoutKcal": {"description": "Active calories on the recent workout tile (shown only when Apple Health data exists)", "placeholders": {"count": {"type": "int"}}},
+    "@workoutKcal": {"description": "Active calories on the recent workout tile (shown only when health data exists)", "placeholders": {"count": {"type": "int"}}},
 
     "todaysStepsLabel": "Today's steps",
     "@todaysStepsLabel": {"description": "Dashboard stat card label for today's HealthKit step count"},
@@ -1225,20 +1219,20 @@
     "finishWorkoutButton": "Finish workout",
     "@finishWorkoutButton": {"description": "Label for the sticky button that finishes the active workout session"},
 
-    "noAppleWorkoutTitle": "No Apple workout",
-    "@noAppleWorkoutTitle": {"description": "Dialog title shown when no matching Apple Health workout is found at session finish"},
+    "noHealthWorkoutTitle": "No health workout",
+    "@noHealthWorkoutTitle": {"description": "Dialog title shown when no matching health workout is found at session finish"},
 
-    "noAppleWorkoutMessage": "No recent Apple Health workout was found near this session.",
-    "@noAppleWorkoutMessage": {"description": "Dialog body when no matching Apple Health workout is found at session finish"},
+    "noHealthWorkoutMessage": "No recent health workout was found near this session.",
+    "@noHealthWorkoutMessage": {"description": "Dialog body when no matching health workout is found at session finish"},
 
     "finishAnywayButton": "Finish anyway",
-    "@finishAnywayButton": {"description": "Dialog action: finish the session without pairing an Apple Health workout"},
+    "@finishAnywayButton": {"description": "Dialog action: finish the session without pairing a health workout"},
 
     "finishWithoutPairingButton": "Finish without",
-    "@finishWithoutPairingButton": {"description": "Dialog action: finish the session without pairing the found Apple Health workout"},
+    "@finishWithoutPairingButton": {"description": "Dialog action: finish the session without pairing the found health workout"},
 
     "pairAndFinishButton": "Pair & finish",
-    "@pairAndFinishButton": {"description": "Dialog action: pair the found Apple Health workout and finish the session"},
+    "@pairAndFinishButton": {"description": "Dialog action: pair the found health workout and finish the session"},
 
     "removeExerciseMenuItem": "Remove exercise",
     "@removeExerciseMenuItem": {"description": "Overflow menu item on an exercise card to remove the exercise from the session"},
@@ -1253,10 +1247,10 @@
     "@removeButton": {"description": "Generic remove action button"},
 
     "activeKcalLabel": "active kcal",
-    "@activeKcalLabel": {"description": "Label under the active-calorie stat card on an Apple Health–imported session"},
+    "@activeKcalLabel": {"description": "Label under the active-calorie stat card on a health-imported session"},
 
     "avgBpmLabel": "avg bpm",
-    "@avgBpmLabel": {"description": "Label under the average heart rate stat card on an Apple Health–imported session"},
+    "@avgBpmLabel": {"description": "Label under the average heart rate stat card on a health-imported session"},
 
     "setColumnLabel": "SET",
     "@setColumnLabel": {"description": "Column header for the set-number column in the exercise card set table"},
@@ -1447,14 +1441,14 @@
     "onboardingCompleteMessage": "You're all set!",
     "@onboardingCompleteMessage": {"description": "Onboarding wizard: success message shown after finishing"},
 
-    "onboardingHealthTitle": "Connect Apple Health",
-    "@onboardingHealthTitle": {"description": "Onboarding wizard: Apple Health step title (iOS only)"},
+    "onboardingHealthTitle": "Connect Health",
+    "@onboardingHealthTitle": {"description": "Onboarding wizard: Health step title (Apple Health on iOS, Health Connect on Android)"},
 
-    "onboardingHealthMessage": "Automatically bring in your weight and step count from Apple Health, so you don't have to log them by hand. You can turn this off anytime in Settings.",
-    "@onboardingHealthMessage": {"description": "Onboarding wizard: Apple Health step explanation (iOS only)"},
+    "onboardingHealthMessage": "Automatically bring in your weight and step count from Health, so you don't have to log them by hand. You can turn this off anytime in Settings.",
+    "@onboardingHealthMessage": {"description": "Onboarding wizard: Health step explanation"},
 
-    "onboardingHealthEnableButton": "Enable Apple Health",
-    "@onboardingHealthEnableButton": {"description": "Onboarding wizard: Apple Health step, button that grants permission and imports existing data"},
+    "onboardingHealthEnableButton": "Enable Health",
+    "@onboardingHealthEnableButton": {"description": "Onboarding wizard: Health step, button that grants permission and imports existing data"},
 
     "onboardingBannerTitle": "Finish setting up your profile",
     "@onboardingBannerTitle": {"description": "Dashboard banner: title, shown when onboarding hasn't been completed"},
@@ -1571,5 +1565,14 @@
     "@originTrainerSheetBody": {"description": "Body of the origin-trainer bottom sheet, naming the trainer", "placeholders": {"trainerEmail": {"type": "String"}}},
 
     "originTrainerUnknown": "This was assigned by a trainer you're no longer connected with.",
-    "@originTrainerUnknown": {"description": "Shown in the origin-trainer bottom sheet when the trainer relationship has since ended"}
+    "@originTrainerUnknown": {"description": "Shown in the origin-trainer bottom sheet when the trainer relationship has since ended"},
+
+    "widgetNoDataLabel": "Open the app",
+    "@widgetNoDataLabel": {"description": "Home screen widget placeholder shown before the app has ever written a snapshot (fresh install, never opened)"},
+
+    "liveActivityDefaultTitle": "Workout",
+    "@liveActivityDefaultTitle": {"description": "Live Activity title when the session has no template name (ad-hoc workout)"},
+
+    "liveActivityDefaultExerciseName": "Exercise",
+    "@liveActivityDefaultExerciseName": {"description": "Live Activity exercise name fallback before any exercise has a resolved name"}
 }

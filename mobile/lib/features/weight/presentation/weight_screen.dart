@@ -453,13 +453,13 @@ class _DeltaLabel extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Apple Health import button
+// Health import button
 // ---------------------------------------------------------------------------
 
-/// Manual "Import from Apple Health" action: backfills the last 30 days of
+/// Manual "Import from Health" action: backfills the last 30 days of
 /// body-mass samples (one entry per day, skipping days already logged). Only
-/// rendered on iOS once the user has connected Apple Health; otherwise it
-/// collapses to nothing.
+/// rendered once the user has connected Health (Apple Health on iOS, Health
+/// Connect on Android); otherwise it collapses to nothing.
 class _ImportFromHealthButton extends ConsumerStatefulWidget {
   const _ImportFromHealthButton();
 
@@ -496,7 +496,7 @@ class _ImportFromHealthButtonState
   @override
   Widget build(BuildContext context) {
     final available = ref.watch(healthServiceProvider).isAvailable;
-    final connected = ref.watch(appleHealthControllerProvider).value ?? false;
+    final connected = ref.watch(healthControllerProvider).value ?? false;
     if (!available || !connected) return const SizedBox.shrink();
 
     final l10n = AppLocalizations.of(context)!;
@@ -514,8 +514,8 @@ class _ImportFromHealthButtonState
               height: 18,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.apple, size: 20),
-      label: Text(l10n.importFromAppleHealthButton),
+          : const Icon(Icons.favorite, size: 20),
+      label: Text(l10n.importFromHealthButton),
     );
   }
 }
