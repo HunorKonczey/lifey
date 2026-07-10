@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/live_activity/workout_live_activity_service.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/workout_session_repository.dart';
@@ -33,7 +34,14 @@ class WorkoutResumePrompt {
     final sessions =
         await _ref.read(workoutSessionRepositoryProvider).watchAll().first;
     final active = sessions.where((s) => s.inProgress).firstOrNull;
-    if (active == null) return;
+    if (active == null) {
+      // Safety sweep: no in-progress session survived, so any Live Activity
+      // still showing (e.g. the OS killed the app without ever delivering a
+      // termination callback) is an orphan — end it (see
+      // docs/24-ios-widget-live-activity-plan.md, orphan handling).
+      unawaited(_ref.read(workoutLiveActivityServiceProvider).endAll());
+      return;
+    }
 
     await navigator.push(
       MaterialPageRoute(builder: (_) => LogSessionScreen(session: active)),

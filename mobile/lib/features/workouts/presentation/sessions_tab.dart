@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/live_activity/workout_live_activity_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
@@ -66,6 +69,12 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
   Future<void> _delete(BuildContext context, WidgetRef ref, WorkoutSession session) async {
     final l10n = AppLocalizations.of(context)!;
     try {
+      // Nothing prevents swiping to delete a still-running session — end its
+      // Live Activity so it doesn't linger as an orphan (see
+      // docs/24-ios-widget-live-activity-plan.md, orphan handling).
+      if (session.inProgress) {
+        unawaited(ref.read(workoutLiveActivityServiceProvider).end());
+      }
       await ref.read(workoutSessionControllerProvider.notifier).deleteSession(session.clientId);
       if (context.mounted) {
         AppSnackbar.showSuccess(context, title: l10n.workoutDeletedMessage);

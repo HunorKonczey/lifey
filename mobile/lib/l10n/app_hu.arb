@@ -544,5 +544,10 @@
     "originTrainerBadgeLabel": "Edzőtől",
     "originTrainerSheetTitle": "Ki adta ezt neked?",
     "originTrainerSheetBody": "{trainerEmail} osztotta ki neked ezt.",
-    "originTrainerUnknown": "Ezt egy edző osztotta ki, akivel már nem állsz kapcsolatban."
+    "originTrainerUnknown": "Ezt egy edző osztotta ki, akivel már nem állsz kapcsolatban.",
+
+    "widgetNoDataLabel": "Nyisd meg az appot",
+
+    "liveActivityDefaultTitle": "Edzés",
+    "liveActivityDefaultExerciseName": "Gyakorlat"
 }

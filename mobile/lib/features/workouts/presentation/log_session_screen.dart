@@ -10,6 +10,7 @@ import '../../../core/health/apple_workout.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_service.dart';
 import '../../../core/health/health_workout_import_service.dart';
+import '../../../core/live_activity/workout_live_activity_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -60,6 +61,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   /// The persisted session's clientId. Set when editing an existing session,
   /// or once a brand-new session has been created via the first [_persist].
   String? _sessionClientId;
+
+  /// Whether this screen instance has started (or re-attached to) a Live
+  /// Activity for the current session — see [_persist] and the "Live
+  /// Activity" section below. Distinct from [_sessionClientId] being set:
+  /// a session can exist in the DB (e.g. a resumed in-progress session)
+  /// before this screen has (re-)started its Live Activity.
+  bool _liveActivityStarted = false;
 
   /// One block per planned exercise. Each block's rows are either done
   /// (doneAt set → will be persisted) or plan (doneAt null → UI only).
@@ -161,6 +169,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       });
       _hrTicker = Timer.periodic(_kHrPollInterval, (_) => _pollHeartRate());
       _pollHeartRate(); // don't wait a full interval for the first read
+
+      // Re-attach to (or start, if the OS killed the app mid-workout and no
+      // activity survived) the Live Activity for this in-progress session.
+      // Deferred a frame, same as WorkoutResumePrompt, since this can run
+      // during initState before ancestor InheritedWidgets are guaranteed
+      // ready for AppLocalizations.of(context).
+      _liveActivityStarted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_startLiveActivity());
+      });
     }
 
     if (session != null && session.isUpcoming) {
@@ -515,6 +533,84 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         feedbackNote: _feedbackNote,
       );
     }
+
+    // Live Activity: the first successful persist of a running session
+    // starts it, every one after that updates it. Never touches a finished
+    // session — _persistFinished ends the activity explicitly instead.
+    if (_finishedAt == null && mounted) {
+      if (!_liveActivityStarted) {
+        _liveActivityStarted = true;
+        unawaited(_startLiveActivity());
+      } else {
+        unawaited(_updateLiveActivity());
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Live Activity
+  // ---------------------------------------------------------------------------
+
+  /// The block whose set was most recently marked done, falling back to the
+  /// first block with remaining (not-yet-done) sets — the plan's "current
+  /// exercise" rule for the Live Activity. Null only when there are no
+  /// blocks at all.
+  ExerciseBlock? _currentExerciseBlock() {
+    if (_blocks.isEmpty) return null;
+    ExerciseBlock? mostRecent;
+    DateTime? mostRecentAt;
+    for (final block in _blocks) {
+      for (final row in block.rows) {
+        final doneAt = row.doneAt;
+        if (doneAt != null && (mostRecentAt == null || doneAt.isAfter(mostRecentAt))) {
+          mostRecentAt = doneAt;
+          mostRecent = block;
+        }
+      }
+    }
+    if (mostRecent != null) return mostRecent;
+    return _blocks.firstWhere(
+      (b) => b.rows.any((r) => !r.isDone),
+      orElse: () => _blocks.first,
+    );
+  }
+
+  LiveActivityContentState _liveActivityState(AppLocalizations l10n) {
+    final current = _currentExerciseBlock();
+    final totalSetsDone =
+        _blocks.fold<int>(0, (sum, b) => sum + b.rows.where((r) => r.isDone).length);
+    return LiveActivityContentState(
+      exerciseName: (current != null && current.exerciseName.isNotEmpty)
+          ? current.exerciseName
+          : l10n.liveActivityDefaultExerciseName,
+      setsDone: current?.rows.where((r) => r.isDone).length ?? 0,
+      setsTotal: current?.targetSets,
+      totalSetsDone: totalSetsDone,
+      lastSetAtEpochMs: _lastDoneAt()?.millisecondsSinceEpoch,
+    );
+  }
+
+  String _liveActivityTitle(AppLocalizations l10n) =>
+      widget.session?.templateName ?? widget.template?.name ?? l10n.liveActivityDefaultTitle;
+
+  Future<void> _startLiveActivity() async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    await ref.read(workoutLiveActivityServiceProvider).start(
+          sessionClientId: _sessionClientId!,
+          title: _liveActivityTitle(l10n),
+          startedAt: _startedAt!,
+          state: _liveActivityState(l10n),
+        );
+  }
+
+  Future<void> _updateLiveActivity() async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    await ref.read(workoutLiveActivityServiceProvider).update(
+          sessionClientId: _sessionClientId!,
+          state: _liveActivityState(l10n),
+        );
   }
 
   /// Shows the post-workout feedback sheet (skippable) and stores the result
@@ -573,6 +669,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _hrTicker?.cancel();
     _hrTicker = null;
     await _persist();
+    if (_liveActivityStarted) {
+      _liveActivityStarted = false;
+      unawaited(ref.read(workoutLiveActivityServiceProvider).end());
+    }
   }
 
   /// Finish button handler — implements the full 5.6 Apple Health flow.

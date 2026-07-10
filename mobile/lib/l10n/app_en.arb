@@ -1571,5 +1571,14 @@
     "@originTrainerSheetBody": {"description": "Body of the origin-trainer bottom sheet, naming the trainer", "placeholders": {"trainerEmail": {"type": "String"}}},
 
     "originTrainerUnknown": "This was assigned by a trainer you're no longer connected with.",
-    "@originTrainerUnknown": {"description": "Shown in the origin-trainer bottom sheet when the trainer relationship has since ended"}
+    "@originTrainerUnknown": {"description": "Shown in the origin-trainer bottom sheet when the trainer relationship has since ended"},
+
+    "widgetNoDataLabel": "Open the app",
+    "@widgetNoDataLabel": {"description": "Home screen widget placeholder shown before the app has ever written a snapshot (fresh install, never opened)"},
+
+    "liveActivityDefaultTitle": "Workout",
+    "@liveActivityDefaultTitle": {"description": "Live Activity title when the session has no template name (ad-hoc workout)"},
+
+    "liveActivityDefaultExerciseName": "Exercise",
+    "@liveActivityDefaultExerciseName": {"description": "Live Activity exercise name fallback before any exercise has a resolved name"}
 }

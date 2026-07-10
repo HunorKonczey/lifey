@@ -46,6 +46,10 @@ dependencies:
   # Dashboard onboarding-banner dismissal only (see lib/features/onboarding/) —
   # a plain non-sensitive per-device flag, not worth flutter_secure_storage.
   shared_preferences: ^2.5.3
+  # iOS home screen widget bridge (App Group UserDefaults + WidgetKit reload)
+  # — see lib/core/home_screen_widget/ and docs/24-ios-widget-live-activity-plan.md.
+  # No-ops on non-iOS; also gives an Android bridge for free if that's ever added.
+  home_widget: ^0.9.3
 
 dev_dependencies:
   flutter_test:
