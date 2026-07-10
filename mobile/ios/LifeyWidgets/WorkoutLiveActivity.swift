@@ -14,6 +14,12 @@ struct WorkoutLiveActivity: Widget {
         .padding(16)
         .activityBackgroundTint(Color(red: 0x16 / 255, green: 0x16 / 255, blue: 0x11 / 255))
         .activitySystemActionForegroundColor(.white)
+        // Own widgetURL for the lock screen presentation — it does NOT
+        // inherit the one set below on the Dynamic Island. Distinct from
+        // TodaySummaryWidget's `lifey://today` since tapping a running
+        // workout should reopen that workout, not the dashboard (see
+        // app_router.dart's onException handling of the `workout` host).
+        .widgetURL(URL(string: "lifey://workout"))
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
@@ -38,7 +44,7 @@ struct WorkoutLiveActivity: Widget {
       } minimal: {
         Image(systemName: "dumbbell.fill")
       }
-      .widgetURL(URL(string: "lifey://today"))
+      .widgetURL(URL(string: "lifey://workout"))
     }
   }
 }

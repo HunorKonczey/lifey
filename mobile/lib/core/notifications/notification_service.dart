@@ -17,6 +17,24 @@ class NotificationService {
   static const _stepGoalNotificationId = 1;
   static const _workoutSessionNotificationId = 2;
 
+  // Distinguishes a tap on the workout-session notification from a tap on
+  // the step-goal one in [onDidReceiveNotificationResponse] below.
+  static const _workoutSessionPayload = 'workout_session_tap';
+
+  // Set by `WorkoutResumePrompt` (read at tap time, not at [init] time, so
+  // it doesn't matter which of the two runs first).
+  static void Function()? _onWorkoutSessionTapped;
+
+  /// Registers the callback fired when the user taps the ongoing
+  /// workout-session notification while the app process is alive (Android's
+  /// stand-in for the iOS Live Activity/Dynamic Island tap — see
+  /// docs/25-android-widget-ongoing-notification-plan.md). Cold-start taps
+  /// aren't covered here; `WorkoutResumePrompt`'s launch check already
+  /// reopens an active session unconditionally on cold start.
+  static void setWorkoutSessionTapHandler(void Function()? handler) {
+    _onWorkoutSessionTapped = handler;
+  }
+
   static const _workoutSessionChannel = AndroidNotificationChannel(
     workoutSessionChannelId,
     'Workout session',
@@ -50,7 +68,12 @@ class NotificationService {
         requestSoundPermission: true,
       ),
     );
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (details) {
+        if (details.payload == _workoutSessionPayload) _onWorkoutSessionTapped?.call();
+      },
+    );
   }
 
   /// Creates [channel] if needed and requests Android 13+
@@ -130,6 +153,7 @@ class NotificationService {
           category: AndroidNotificationCategory.workout,
         ),
       ),
+      payload: _workoutSessionPayload,
     );
   }
 
