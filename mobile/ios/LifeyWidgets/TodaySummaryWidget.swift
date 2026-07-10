@@ -12,13 +12,13 @@ private let snapshotKey = "today_snapshot"
 
 // MARK: - Data contract
 
-private struct WidgetLabels: Codable {
+struct WidgetLabels: Codable {
   let calories: String
   let steps: String
   let noData: String
 }
 
-private struct TodaySnapshot: Codable {
+struct TodaySnapshot: Codable {
   let date: String
   let updatedAtEpochMs: Int64
   let calories: Int

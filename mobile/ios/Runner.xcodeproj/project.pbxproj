@@ -7,17 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		056127ACDC2D6C06538EC411 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F3E1B2D6084DD2CF55DBF111 /* Foundation.framework */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+		211362E920CA478773747268 /* LifeyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 23A1073CDB2DBB6581FCF4F6 /* LifeyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2675BFA5059C5368D62BED3C /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		33A8773BDE826AB7008236B1 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CFF035215C8B3D9E96C6BB53 /* Pods_RunnerTests.framework */; };
+		39871BBBAB9589F3BD6A0E62 /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E93BE46D4190EF727DF5AEC2 /* WorkoutLiveActivity.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		56E72C8003929A92311B886F /* LiveActivityChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDB98529ABD178C01B5DCBF9 /* LiveActivityChannel.swift */; };
+		5A350FF24DF1393842091E5D /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
+		7750AD4460BE463E1B6B760A /* TodaySummaryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABDF281739DB260B7315FE49 /* TodaySummaryWidget.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		D97F898928CF63CA3FE80A18 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 47901D32BBEDE3C033E2A26B /* Pods_Runner.framework */; };
+		F6BF3582FE4D9C352AFA2F05 /* LifeyWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4611017037CF0707C0EB5D /* LifeyWidgetsBundle.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,9 +36,27 @@
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
 		};
+		5E2C38E86C298AEF2D5B7851 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C3511CA21C85BF73904A2A85;
+			remoteInfo = LifeyWidgets;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		65BED242684E47E5E8D36D43 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				211362E920CA478773747268 /* LifeyWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9705A1C41CF9048500538489 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -44,14 +70,17 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0B4611017037CF0707C0EB5D /* LifeyWidgetsBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyWidgetsBundle.swift; sourceTree = "<group>"; };
 		1159C45BCB44E0233E8BCDE7 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		148A1AA914A63A70988F7FF8 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+		23A1073CDB2DBB6581FCF4F6 /* LifeyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LifeyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		241E2499ED7993F93985D060 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		43AB4664221E9AB4947CC695 /* LifeyWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = LifeyWidgets.entitlements; sourceTree = "<group>"; };
 		47901D32BBEDE3C033E2A26B /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		70BEDFEC892401DB1C8D9BAA /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -67,11 +96,25 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9D91B8274CCBA82E8687CB39 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
+		ABDF281739DB260B7315FE49 /* TodaySummaryWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TodaySummaryWidget.swift; sourceTree = "<group>"; };
 		CFF035215C8B3D9E96C6BB53 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D7B6D3E9C246452BD2D969C9 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
+		E93BE46D4190EF727DF5AEC2 /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
+		EA3BF88F253170342B80ADE0 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		EDB98529ABD178C01B5DCBF9 /* LiveActivityChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityChannel.swift; sourceTree = "<group>"; };
+		F3E1B2D6084DD2CF55DBF111 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		954F05BA4EFB311516E6EE39 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				056127ACDC2D6C06538EC411 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EB1CF9000F007C117D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -92,6 +135,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		15F0EFEC83B35D528C52E42E /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */,
+			);
+			name = Shared;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -105,6 +157,7 @@
 			children = (
 				47901D32BBEDE3C033E2A26B /* Pods_Runner.framework */,
 				CFF035215C8B3D9E96C6BB53 /* Pods_RunnerTests.framework */,
+				E21415697836E35885C00AE8 /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -130,6 +183,8 @@
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				FF7C648557FC8F0630BF66DE /* Pods */,
 				54BB9F5C39DD0C9161307C2B /* Frameworks */,
+				15F0EFEC83B35D528C52E42E /* Shared */,
+				E437822E58ACC28205756580 /* LifeyWidgets */,
 			);
 			sourceTree = "<group>";
 		};
@@ -138,6 +193,7 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				23A1073CDB2DBB6581FCF4F6 /* LifeyWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -154,8 +210,30 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				EDB98529ABD178C01B5DCBF9 /* LiveActivityChannel.swift */,
 			);
 			path = Runner;
+			sourceTree = "<group>";
+		};
+		E21415697836E35885C00AE8 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				F3E1B2D6084DD2CF55DBF111 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		E437822E58ACC28205756580 /* LifeyWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				0B4611017037CF0707C0EB5D /* LifeyWidgetsBundle.swift */,
+				ABDF281739DB260B7315FE49 /* TodaySummaryWidget.swift */,
+				E93BE46D4190EF727DF5AEC2 /* WorkoutLiveActivity.swift */,
+				EA3BF88F253170342B80ADE0 /* Info.plist */,
+				43AB4664221E9AB4947CC695 /* LifeyWidgets.entitlements */,
+			);
+			name = LifeyWidgets;
+			path = LifeyWidgets;
 			sourceTree = "<group>";
 		};
 		FF7C648557FC8F0630BF66DE /* Pods */ = {
@@ -168,7 +246,6 @@
 				9D91B8274CCBA82E8687CB39 /* Pods-RunnerTests.release.xcconfig */,
 				70BEDFEC892401DB1C8D9BAA /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -204,12 +281,14 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				65BED242684E47E5E8D36D43 /* Embed Foundation Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				A8E83F6908EA00531114154C /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				802A19B7DB968F631B9202A4 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -218,6 +297,23 @@
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
+		};
+		C3511CA21C85BF73904A2A85 /* LifeyWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9C3C46C8143680BACA499FC9 /* Build configuration list for PBXNativeTarget "LifeyWidgets" */;
+			buildPhases = (
+				AF1C94D1BA1C152288F6E108 /* Sources */,
+				954F05BA4EFB311516E6EE39 /* Frameworks */,
+				ACA625405B39B7EA357F706B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LifeyWidgets;
+			productName = LifeyWidgets;
+			productReference = 23A1073CDB2DBB6581FCF4F6 /* LifeyWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -257,6 +353,7 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
+				C3511CA21C85BF73904A2A85 /* LifeyWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -277,6 +374,13 @@
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ACA625405B39B7EA357F706B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -393,6 +497,19 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
+				56E72C8003929A92311B886F /* LiveActivityChannel.swift in Sources */,
+				5A350FF24DF1393842091E5D /* WorkoutActivityAttributes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AF1C94D1BA1C152288F6E108 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F6BF3582FE4D9C352AFA2F05 /* LifeyWidgetsBundle.swift in Sources */,
+				7750AD4460BE463E1B6B760A /* TodaySummaryWidget.swift in Sources */,
+				39871BBBAB9589F3BD6A0E62 /* WorkoutLiveActivity.swift in Sources */,
+				2675BFA5059C5368D62BED3C /* WorkoutActivityAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -403,6 +520,12 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		802A19B7DB968F631B9202A4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = LifeyWidgets;
+			target = C3511CA21C85BF73904A2A85 /* LifeyWidgets */;
+			targetProxy = 5E2C38E86C298AEF2D5B7851 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -548,6 +671,51 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
+			};
+			name = Profile;
+		};
+		75F8A53C4BAA0421D884511C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = LifeyWidgets/LifeyWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG2764XCGR;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LifeyWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.khunor.lifey.LifeyWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		93E2F4BEB882BA0392A5D683 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = LifeyWidgets/LifeyWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG2764XCGR;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LifeyWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.khunor.lifey.LifeyWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Profile;
 		};
@@ -709,6 +877,29 @@
 			};
 			name = Release;
 		};
+		DEB40E0C738AC508AC89E2DE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = LifeyWidgets/LifeyWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HG2764XCGR;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LifeyWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.khunor.lifey.LifeyWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -738,6 +929,16 @@
 				97C147061CF9000F007C117D /* Debug */,
 				97C147071CF9000F007C117D /* Release */,
 				249021D4217E4FDB00AE95B9 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9C3C46C8143680BACA499FC9 /* Build configuration list for PBXNativeTarget "LifeyWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DEB40E0C738AC508AC89E2DE /* Release */,
+				75F8A53C4BAA0421D884511C /* Debug */,
+				93E2F4BEB882BA0392A5D683 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
