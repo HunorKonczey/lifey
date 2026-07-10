@@ -68,6 +68,15 @@ class RecipesTab extends ConsumerWidget {
   Future<void> _duplicate(
       BuildContext context, WidgetRef ref, Recipe recipe) async {
     final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showAppConfirmDialog(
+      context,
+      icon: Icons.copy_rounded,
+      title: l10n.duplicateRecipeQuestionTitle,
+      message: l10n.duplicateRecipeConfirmMessage,
+      confirmLabel: l10n.duplicateMenuItem,
+      cancelLabel: l10n.cancelButton,
+    );
+    if (confirmed != true || !context.mounted) return;
     try {
       await ref.read(recipeControllerProvider.notifier).duplicateRecipe(
             recipe,

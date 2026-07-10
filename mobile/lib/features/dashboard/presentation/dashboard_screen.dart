@@ -39,6 +39,8 @@ const double _kBarTopGap = 8.0;   // status-bar-bottom → bar top
 const double _kBarHeight = 58.0;  // expanded AdaptiveAppBar height
 const double _kBarBotGap = 12.0;  // bar bottom → first content item
 
+final _intFmt = NumberFormat.decimalPattern();
+
 Future<void> _openAddWaterSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -277,6 +279,7 @@ class _DashboardBody extends StatelessWidget {
           goalReached: (calorieRatio ?? 0) >= 1,
           goalTone: GoalTone.negative,
           onTap: () => context.go('/nutrition'),
+          subtitle: calGoal == null ? null : '/ ${_intFmt.format(calGoal)}',
           badgeText: calorieBadge,
           badgeColor: calorieBadgeColor,
         ),
@@ -296,6 +299,7 @@ class _DashboardBody extends StatelessWidget {
                 goalReached: (proteinRatio ?? 0) >= 1,
                 goalTone: GoalTone.positive,
                 compact: true,
+                subtitle: protGoal == null ? null : '/ ${_intFmt.format(protGoal)}',
                 badgeText: proteinBadge,
               ),
             ),

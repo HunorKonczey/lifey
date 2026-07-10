@@ -13,6 +13,18 @@ import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/meal_controller.dart';
 import '../domain/meal.dart';
 import 'log_meal_screen.dart';
+import 'widgets/duplicate_meal_dialog.dart';
+
+/// Whether [dateTime] (any zone) falls on the calendar day immediately
+/// before today, evaluated in local time.
+bool _isYesterday(DateTime dateTime) {
+  final local = dateTime.toLocal();
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+  final day = DateTime(local.year, local.month, local.day);
+  return day == yesterday;
+}
 
 /// "Meals" tab: tap to edit, swipe-to-delete, filter by date range, and
 /// scroll-triggered pagination over the local cache (see
@@ -73,14 +85,39 @@ class _MealsTabState extends ConsumerState<MealsTab> {
 
   Future<void> _duplicate(BuildContext context, WidgetRef ref, Meal meal) async {
     final l10n = AppLocalizations.of(context)!;
+    final dateTime = await showDuplicateMealDialog(context);
+    if (dateTime == null || !context.mounted) return;
     try {
-      await ref.read(mealControllerProvider.notifier).duplicateMeal(meal);
+      final duplicated = await ref
+          .read(mealControllerProvider.notifier)
+          .duplicateMeal(meal, dateTime: dateTime);
       if (context.mounted) {
-        AppSnackbar.showSuccess(context, title: l10n.mealDuplicatedMessage);
+        AppSnackbar.showSuccess(
+          context,
+          title: l10n.mealDuplicatedMessage,
+          actionLabel: l10n.editMenuItem,
+          onAction: () => _edit(context, duplicated),
+        );
       }
     } catch (_) {
       if (context.mounted) {
         AppSnackbar.showError(context, title: l10n.couldNotDuplicateMealMessage);
+      }
+    }
+  }
+
+  Future<void> _copyYesterday(BuildContext context, WidgetRef ref, List<Meal> meals) async {
+    final l10n = AppLocalizations.of(context)!;
+    final yesterdaysMeals = meals.where((m) => _isYesterday(m.dateTime)).toList();
+    try {
+      final copied =
+          await ref.read(mealControllerProvider.notifier).copyMeals(yesterdaysMeals, DateTime.now());
+      if (context.mounted) {
+        AppSnackbar.showSuccess(context, title: l10n.mealsCopiedMessage(copied));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotCopyDayMessage);
       }
     }
   }
@@ -98,6 +135,11 @@ class _MealsTabState extends ConsumerState<MealsTab> {
             meals.where((m) => widget.filter.matches(m.dateTime)).toList();
 
         if (meals.isEmpty || filtered.isEmpty) {
+          // Only today's empty view offers "copy yesterday" — a widened
+          // week/all filter already surfaces yesterday's meals directly.
+          final canCopyYesterday = widget.filter == DateRangeFilter.today &&
+              filtered.isEmpty &&
+              meals.any((m) => _isYesterday(m.dateTime));
           return RefreshIndicator(
             displacement: widget.topPadding,
             onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
@@ -109,6 +151,13 @@ class _MealsTabState extends ConsumerState<MealsTab> {
               subtitle: meals.isEmpty
                   ? l10n.tapPlusToLogOneMessage
                   : l10n.tryWiderDateFilterMessage,
+              action: canCopyYesterday
+                  ? FilledButton.tonalIcon(
+                      onPressed: () => _copyYesterday(context, ref, meals),
+                      icon: const Icon(Icons.content_copy_rounded, size: 18),
+                      label: Text(l10n.copyYesterdayButton),
+                    )
+                  : null,
             ),
           );
         }

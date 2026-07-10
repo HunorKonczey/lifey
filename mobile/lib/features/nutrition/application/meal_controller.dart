@@ -86,17 +86,56 @@ class MealController extends StreamNotifier<List<Meal>> {
 
   Future<void> deleteMeal(String clientId) => _repo.delete(clientId);
 
-  /// Creates a copy of [meal] logged at the current time — the common use
-  /// case is "I ate this again today", not re-logging it on its original date.
-  Future<String> duplicateMeal(Meal meal) {
-    return _repo.create(
-      dateTime: DateTime.now(),
+  /// Creates a copy of [meal] logged at [dateTime] (defaults to now — the
+  /// common use case is "I ate this again today", not re-logging it on its
+  /// original date). Returns the created [Meal] (rather than just its id) so
+  /// the caller can offer an immediate "Edit" action without a second lookup.
+  Future<Meal> duplicateMeal(Meal meal, {DateTime? dateTime}) async {
+    final loggedAt = dateTime ?? DateTime.now();
+    final entries = meal.entries
+        .map((e) => MealEntryInput(foodClientId: e.foodClientId, grams: e.quantityInGrams))
+        .toList();
+    final clientId = await _repo.create(
+      dateTime: loggedAt,
       mealType: meal.mealType,
       name: meal.name,
-      entries: meal.entries
-          .map((e) => MealEntryInput(foodClientId: e.foodClientId, grams: e.quantityInGrams))
-          .toList(),
+      entries: entries,
     );
+    return Meal(
+      clientId: clientId,
+      dateTime: loggedAt,
+      mealType: meal.mealType,
+      name: meal.name,
+      entries: meal.entries,
+    );
+  }
+
+  /// Meals logged in the last [days] calendar days (today inclusive) — feeds
+  /// the "copy a previous day" picker.
+  Future<List<Meal>> recentMeals({int days = 8}) => _repo.recentMeals(days: days);
+
+  /// Re-creates each of [meals] on [targetDay], preserving time-of-day, meal
+  /// type and name. Always appends to whatever [targetDay] already has —
+  /// never replaces. Returns how many meals were copied.
+  Future<int> copyMeals(List<Meal> meals, DateTime targetDay) async {
+    var copied = 0;
+    for (final meal in meals) {
+      if (meal.entries.isEmpty) continue;
+      final time = meal.dateTime.toLocal();
+      final entries = meal.entries
+          .map((e) => MealEntryInput(foodClientId: e.foodClientId, grams: e.quantityInGrams))
+          .toList();
+      await _repo.create(
+        dateTime: DateTime(
+          targetDay.year, targetDay.month, targetDay.day, time.hour, time.minute, time.second,
+        ),
+        mealType: meal.mealType,
+        name: meal.name,
+        entries: entries,
+      );
+      copied++;
+    }
+    return copied;
   }
 
   /// Drains the outbox, then re-pulls from the server — matching what the

@@ -1,13 +1,17 @@
 interface MacroRingProps {
   label: string;
   value: number;
-  goal: number;
+  /** Daily goal for this metric. Omit/null when the user hasn't set one —
+   * the ring then shows an empty track and no "/ goal" caption (no invented
+   * default goal). */
+  goal?: number | null;
   color: string;
   unit?: string;
 }
 
 export function MacroRing({ label, value, goal, color, unit = "g" }: MacroRingProps) {
-  const ratio = goal > 0 ? Math.min(value / goal, 1) : 0;
+  const hasGoal = goal != null && goal > 0;
+  const ratio = hasGoal ? Math.min(value / goal, 1) : 0;
   const size = 52;
   const stroke = 5;
   const r = (size - stroke) / 2;
@@ -47,7 +51,7 @@ export function MacroRing({ label, value, goal, color, unit = "g" }: MacroRingPr
           {label}
         </p>
         <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
-          / {goal}{unit}
+          {hasGoal ? `/ ${goal}${unit}` : " "}
         </p>
       </div>
     </div>

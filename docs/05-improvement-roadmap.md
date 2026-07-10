@@ -19,7 +19,7 @@ clients, assignments, schedules, calendar) on the web admin.
 * Local notification when the timer ends (NotificationService already exists)
 * Visible countdown in the session screen
 
-#### 2. "Last Time" Data While Logging
+#### 2. "Last Time" Data While Logging (DONE)
 
 * When adding a set, show the previous session's sets for the same exercise
   (weight × reps)
@@ -33,20 +33,20 @@ clients, assignments, schedules, calendar) on the web admin.
 * Celebrate with the existing success pop-up pattern
 * PR history listed on the exercise detail screen
 
-#### 4. Post-Workout Feedback (RPE)
+#### 4. Post-Workout Feedback (RPE) (DONE)
 
 * After finishing a session: difficulty rating (1–10) + optional note
 * Stored on the session; visible to the trainer (see Trainer section)
 
 ### Nutrition
 
-#### 5. Faster Meal Logging
+#### 5. Faster Meal Logging (DONE, plan: 27-faster-meal-logging-plan.md)
 
 * Favorites / most frequently logged foods surfaced first
 * "Copy yesterday's meal" / copy a whole previous day
 * Recent items list in the add-entry sheet
 
-#### 6. Remaining Budget View
+#### 6. Remaining Budget View (DONE, plan: 28-remaining-budget-view-plan.md)
 
 * "What's left today" — remaining calories and protein, prominent on the
   dashboard and in the meal logging flow
@@ -65,7 +65,7 @@ clients, assignments, schedules, calendar) on the web admin.
 * Reminder on the day of a trainer-scheduled workout
 * Morning weigh-in reminder (local, opt-in)
 
-#### 9. iOS Widget / Live Activity
+#### 9. iOS Widget / Live Activity (DONE)
 
 * Home screen widget: today's calories, steps
 * Live Activity during an active workout session (current exercise, rest

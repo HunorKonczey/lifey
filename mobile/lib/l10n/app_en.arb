@@ -199,6 +199,9 @@
     "addFoodToMealTitle": "Add food to meal",
     "@addFoodToMealTitle": {"description": "Title of the add-meal-entry bottom sheet"},
 
+    "recentFoodsLabel": "Recent",
+    "@recentFoodsLabel": {"description": "Label above the recent-foods quick-pick chips in the add-meal-entry sheet"},
+
     "editFoodEntryTitle": "Edit food",
     "@editFoodEntryTitle": {"description": "Title of the meal-entry edit bottom sheet"},
 
@@ -316,11 +319,41 @@
     "duplicateMealAria": "Duplicate meal",
     "@duplicateMealAria": {"description": "Icon button tooltip/label to duplicate a meal"},
 
+    "duplicateMealQuestionTitle": "Duplicate this meal?",
+    "@duplicateMealQuestionTitle": {"description": "Title of the confirm dialog shown before duplicating a meal"},
+
+    "duplicateMealConfirmMessage": "Pick when the copy should be logged.",
+    "@duplicateMealConfirmMessage": {"description": "Message of the confirm dialog shown before duplicating a meal, above the date/time picker"},
+
     "mealDuplicatedMessage": "Meal duplicated",
     "@mealDuplicatedMessage": {"description": "Snackbar shown after duplicating a meal"},
 
     "couldNotDuplicateMealMessage": "Couldn't duplicate the meal",
     "@couldNotDuplicateMealMessage": {"description": "Snackbar shown when duplicating a meal fails"},
+
+    "copyYesterdayButton": "Copy yesterday",
+    "@copyYesterdayButton": {"description": "Empty-state action button that copies yesterday's meals to today"},
+
+    "copyPreviousDayAria": "Copy a previous day",
+    "@copyPreviousDayAria": {"description": "Icon button tooltip that opens the copy-a-previous-day sheet"},
+
+    "copyPreviousDayTitle": "Copy a previous day",
+    "@copyPreviousDayTitle": {"description": "Title of the copy-a-previous-day bottom sheet"},
+
+    "copyDaySheetMealsKcal": "{count, plural, one{1 meal} other{{count} meals}} · {kcal} kcal",
+    "@copyDaySheetMealsKcal": {"description": "Meal count + calories subtitle on a day row in the copy-a-previous-day sheet", "placeholders": {"count": {"type": "int"}, "kcal": {"type": "int"}}},
+
+    "copyDayAppendsNote": "Adds to today's existing meals",
+    "@copyDayAppendsNote": {"description": "Note shown on each day row in the copy-a-previous-day sheet when today already has meals logged"},
+
+    "noMealsToCopyMessage": "No meals in the last week",
+    "@noMealsToCopyMessage": {"description": "Empty state in the copy-a-previous-day sheet when no recent day has meals"},
+
+    "mealsCopiedMessage": "{count, plural, one{1 meal copied} other{{count} meals copied}}",
+    "@mealsCopiedMessage": {"description": "Snackbar shown after copying a day's meals", "placeholders": {"count": {"type": "int"}}},
+
+    "couldNotCopyDayMessage": "Couldn't copy that day",
+    "@couldNotCopyDayMessage": {"description": "Snackbar shown when copying a day's meals fails"},
 
     "deleteFoodQuestionTitle": "Delete food?",
     "@deleteFoodQuestionTitle": {"description": "Confirmation dialog title for deleting a food"},
@@ -567,6 +600,12 @@
 
     "duplicateMenuItem": "Duplicate",
     "@duplicateMenuItem": {"description": "Generic duplicate menu item"},
+
+    "duplicateTemplateQuestionTitle": "Duplicate this template?",
+    "@duplicateTemplateQuestionTitle": {"description": "Title of the confirm dialog shown before duplicating a workout template"},
+
+    "duplicateTemplateConfirmMessage": "A copy will be added to your templates.",
+    "@duplicateTemplateConfirmMessage": {"description": "Message of the confirm dialog shown before duplicating a workout template"},
 
     "templateDuplicatedMessage": "Template duplicated",
     "@templateDuplicatedMessage": {"description": "Snackbar shown after duplicating a template"},
@@ -981,6 +1020,12 @@
 
     "duplicateRecipeAria": "Duplicate recipe",
     "@duplicateRecipeAria": {"description": "Button/tooltip to duplicate a recipe"},
+
+    "duplicateRecipeQuestionTitle": "Duplicate this recipe?",
+    "@duplicateRecipeQuestionTitle": {"description": "Title of the confirm dialog shown before duplicating a recipe"},
+
+    "duplicateRecipeConfirmMessage": "A copy will be added to your recipes.",
+    "@duplicateRecipeConfirmMessage": {"description": "Message of the confirm dialog shown before duplicating a recipe"},
 
     "recipeDuplicatedMessage": "Recipe duplicated",
     "@recipeDuplicatedMessage": {"description": "Snackbar shown after duplicating a recipe"},
@@ -1574,5 +1619,47 @@
     "@liveActivityDefaultTitle": {"description": "Live Activity title when the session has no template name (ad-hoc workout)"},
 
     "liveActivityDefaultExerciseName": "Exercise",
-    "@liveActivityDefaultExerciseName": {"description": "Live Activity exercise name fallback before any exercise has a resolved name"}
+    "@liveActivityDefaultExerciseName": {"description": "Live Activity exercise name fallback before any exercise has a resolved name"},
+
+    "mealEntryImpactPreview": "+{kcal} kcal · {protein} g protein",
+    "@mealEntryImpactPreview": {
+        "description": "Live preview in the add-entry sheet showing the macro impact of the selected food + quantity",
+        "placeholders": { "kcal": { "type": "int" }, "protein": { "type": "int" } }
+    },
+
+    "mealEntryBudgetLeft": "→ {count} kcal left",
+    "@mealEntryBudgetLeft": {
+        "description": "Appended to the add-entry sheet impact preview: remaining daily calories after adding this entry",
+        "placeholders": { "count": { "type": "int" } }
+    },
+
+    "mealEntryBudgetOver": "→ {count} kcal over",
+    "@mealEntryBudgetOver": {
+        "description": "Appended to the add-entry sheet impact preview: daily calories exceeded after adding this entry",
+        "placeholders": { "count": { "type": "int" } }
+    },
+
+    "macrosTodayKcalLeft": "{count} kcal left",
+    "@macrosTodayKcalLeft": {
+        "description": "Fragment of the remaining-budget line on today's featured macros card: calories still under goal",
+        "placeholders": { "count": { "type": "int" } }
+    },
+
+    "macrosTodayKcalOver": "{count} kcal over",
+    "@macrosTodayKcalOver": {
+        "description": "Fragment of the remaining-budget line on today's featured macros card: calorie goal exceeded",
+        "placeholders": { "count": { "type": "int" } }
+    },
+
+    "macrosTodayProteinLeft": "{count} g protein left",
+    "@macrosTodayProteinLeft": {
+        "description": "Fragment of the remaining-budget line on today's featured macros card: protein still under goal",
+        "placeholders": { "count": { "type": "int" } }
+    },
+
+    "macrosTodayProteinOver": "{count} g protein over",
+    "@macrosTodayProteinOver": {
+        "description": "Fragment of the remaining-budget line on today's featured macros card: protein goal exceeded",
+        "placeholders": { "count": { "type": "int" } }
+    }
 }
