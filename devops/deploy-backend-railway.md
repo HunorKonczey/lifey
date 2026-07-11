@@ -82,9 +82,56 @@ Build config lives in the repo:
 ## Secret files (APNs `.p8`, Firebase JSON)
 
 Push needs credential **files** on disk (`PUSH_APNS_KEY_PATH`,
-`PUSH_FCM_CREDENTIALS_PATH`). Provide them as **Railway mounted config files**
-(recommended), not committed to git. See the respective push docs for the exact
-paths and values.
+`PUSH_FCM_CREDENTIALS_PATH`). **Railway has no secret-file / config-file upload**
+— it only has environment **Variables** and persistent **Volumes** (neither is a
+"paste a file, mount it at a path" feature). So the file has to be *materialized*
+on the container at startup. The approach used here: store the credential
+**base64-encoded in a Variable**, and let the Docker `ENTRYPOINT` decode it to a
+file before launching the app.
+
+**1. Base64-encode the credential locally** (PowerShell):
+```powershell
+# Firebase service-account JSON
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\secrets\firebase.json"))
+# APNs .p8 key
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\secrets\apns.p8"))
+```
+
+**2. Set Variables on the backend service** (mark the `*_B64` ones **Sealed** —
+Railway then never shows them in the UI or API):
+```
+# Android / FCM
+PUSH_FCM_ENABLED=true
+PUSH_FCM_CREDENTIALS_B64=<base64 of firebase.json>   # sealed
+PUSH_FCM_CREDENTIALS_PATH=/tmp/firebase.json
+
+# iOS / APNs
+PUSH_APNS_ENABLED=true
+PUSH_APNS_KEY_B64=<base64 of the .p8>                # sealed
+PUSH_APNS_KEY_PATH=/tmp/apns.p8
+# (+ PUSH_APNS_KEY_ID / TEAM_ID / BUNDLE_ID / SANDBOX — see the iOS doc)
+```
+
+**3. Decode at startup in [`backend/Dockerfile`](../backend/Dockerfile)** — the
+`ENTRYPOINT` writes each file only when its `*_B64` var is set, so a service
+with push disabled (no vars) still boots unchanged:
+```dockerfile
+ENTRYPOINT ["sh", "-c", "\
+  if [ -n \"$PUSH_FCM_CREDENTIALS_B64\" ]; then echo \"$PUSH_FCM_CREDENTIALS_B64\" | base64 -d > \"${PUSH_FCM_CREDENTIALS_PATH:-/tmp/firebase.json}\"; fi; \
+  if [ -n \"$PUSH_APNS_KEY_B64\" ]; then echo \"$PUSH_APNS_KEY_B64\" | base64 -d > \"${PUSH_APNS_KEY_PATH:-/tmp/apns.p8}\"; fi; \
+  java $JAVA_OPTS -jar app.jar"]
+```
+
+`/tmp` is fine — the file is regenerated from the Variable on every deploy/
+restart, so it doesn't need to survive on a Volume. The base64 wrapper (vs.
+pasting raw JSON/PEM into a Variable) avoids newline- and quote-mangling in
+multi-line credentials.
+
+> **Alternative — Railway Volume:** attach a persistent Volume and place the
+> real file on it once. Rejected here as more awkward: populating a Volume needs
+> a one-off shell/deploy step, and the file then lives outside version-tracked
+> config. The base64-Variable approach keeps the credential in Railway's own
+> (sealed) secret store and needs no manual file placement.
 
 ## Deployments & CI
 

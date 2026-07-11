@@ -33,12 +33,16 @@ class PushTokenRegistrar {
   /// Call after login and once at cold start while already authenticated.
   /// Idempotent — re-running just re-`PUT`s (the backend upserts by token).
   Future<void> register() async {
-    _rotationSubscription ??= _tokenSource.onTokenRefreshed.listen(
-      (token) => unawaited(_put(token)),
-    );
     try {
       final token = await _tokenSource.getToken();
       if (token != null) await _put(token);
+      // Subscribe only after getToken(): on Android that call is what
+      // initializes Firebase, and onTokenRefreshed touches
+      // FirebaseMessaging.instance, which throws [core/no-app] otherwise.
+      // Idempotent across repeat calls via the `??=` guard.
+      _rotationSubscription ??= _tokenSource.onTokenRefreshed.listen(
+        (token) => unawaited(_put(token)),
+      );
     } catch (_) {
       // Best-effort — see class doc.
     }

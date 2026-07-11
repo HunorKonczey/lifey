@@ -57,12 +57,16 @@ and release Android builds within the same Firebase project.
 2. **Generate new private key** → downloads a JSON file. ⚠️ **Treat as a secret**
    — it can send push on your behalf and access other project resources. Store in
    the vault; never commit.
-3. Put it on Railway the same way as the APNs key — a **mounted config file**
-   (recommended), e.g. `/secrets/firebase.json`.
-4. Set:
+3. Get it onto Railway the same way as the APNs key. **Railway has no file-mount**
+   — store the JSON **base64-encoded in a (sealed) Variable** and let the Docker
+   `ENTRYPOINT` decode it to a file on startup. Full mechanism (encode command +
+   `ENTRYPOINT` snippet) in
+   [deploy-backend-railway.md → Secret files](deploy-backend-railway.md#secret-files-apns-p8-firebase-json).
+4. Set on the backend service:
    ```
    PUSH_FCM_ENABLED=true
-   PUSH_FCM_CREDENTIALS_PATH=/secrets/firebase.json
+   PUSH_FCM_CREDENTIALS_B64=<base64 of firebase.json>   # sealed Variable
+   PUSH_FCM_CREDENTIALS_PATH=/tmp/firebase.json
    ```
    Redeploy the backend.
 
@@ -89,8 +93,9 @@ physical device isn't strictly required.
 ## Routine operations
 
 - **Rotating the service-account key:** Firebase → Service accounts → generate a
-  new key, replace the mounted file, redeploy, then delete the old key in the
-  Google Cloud IAM console (Service Accounts → Keys).
+  new key, update the `PUSH_FCM_CREDENTIALS_B64` Variable (re-encode), redeploy,
+  then delete the old key in the Google Cloud IAM console (Service Accounts →
+  Keys).
 - **Invalid-token cleanup is automatic:** FCM `UNREGISTERED` soft-deletes the
   device row.
 - **Turning Android push off:** set `PUSH_FCM_ENABLED=false` and redeploy.

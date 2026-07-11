@@ -75,18 +75,19 @@ both at once — match it to the build you're testing.
 ### Getting the key onto Railway
 
 The backend reads a **file path** (`PUSH_APNS_KEY_PATH`), so the `.p8` has to
-exist in the container's filesystem — but it must **never be committed**. Options:
-
-- **Railway config-file mount (recommended):** add the `.p8` as a mounted file
-  in the service, e.g. at `/secrets/apns.p8`, and set
-  `PUSH_APNS_KEY_PATH=/secrets/apns.p8`.
-- **Base64 env var + entrypoint decode:** store the key base64-encoded in a var
-  and write it to disk on startup. Heavier; only if file mounts aren't available.
+exist in the container's filesystem — but it must **never be committed**.
+**Railway has no secret-file / config-file upload** (only Variables and
+Volumes), so the file is materialized at startup: store the key **base64-encoded
+in a (sealed) Variable** and let the Docker `ENTRYPOINT` decode it to a file.
+Full mechanism (encode command + `ENTRYPOINT` snippet, shared with the Firebase
+JSON) in
+[deploy-backend-railway.md → Secret files](deploy-backend-railway.md#secret-files-apns-p8-firebase-json).
 
 Then set:
 ```
 PUSH_APNS_ENABLED=true
-PUSH_APNS_KEY_PATH=/secrets/apns.p8
+PUSH_APNS_KEY_B64=<base64 of the .p8>   # sealed Variable
+PUSH_APNS_KEY_PATH=/tmp/apns.p8
 PUSH_APNS_KEY_ID=XXXXXXXXXX
 PUSH_APNS_TEAM_ID=YYYYYYYYYY
 PUSH_APNS_BUNDLE_ID=com.khunor.lifey
@@ -117,7 +118,8 @@ APNs cannot be tested on the iOS Simulator — **use a physical device.**
 ## Routine operations
 
 - **Rotating the `.p8` key:** create a new key in the portal, download it, update
-  the mounted file + `PUSH_APNS_KEY_ID`, redeploy, then revoke the old key. A
+  the `PUSH_APNS_KEY_B64` Variable (re-encode) + `PUSH_APNS_KEY_ID`, redeploy,
+  then revoke the old key. A
   token-auth key doesn't expire, so rotate only on suspected compromise or team
   changes.
 - **Going from TestFlight to App Store:** no key change — both are the production
