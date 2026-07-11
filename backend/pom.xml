@@ -94,6 +94,22 @@
             <version>0.4.20</version>
         </dependency>
 
+        <!-- APNs client for push notifications (docs/30-push-notifications-plan.md, B2).
+             Token-based auth (.p8 key) — no cert renewal. -->
+        <dependency>
+            <groupId>com.eatthepath</groupId>
+            <artifactId>pushy</artifactId>
+            <version>0.15.4</version>
+        </dependency>
+
+        <!-- FCM client for Android push notifications (docs/30-push-notifications-plan.md,
+             B2 Android follow-up). Service-account (JSON key) auth. -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.4.1</version>
+        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

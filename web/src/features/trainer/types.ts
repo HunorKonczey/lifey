@@ -21,6 +21,10 @@ export interface TrainerClientResponse {
   weightTrend: WeightTrendPoint[];
   assignedPlanCount: number;
   workoutsPerWeek: number;
+  /** Compliance overview (docs/29) — raw facts; thresholds/flags live in features/trainer/compliance.ts. */
+  lastActivityAt: string | null;
+  lastWeightAt: string | null;
+  missedWorkoutCount: number;
 }
 
 export type ContentType = "TEMPLATE" | "RECIPE";

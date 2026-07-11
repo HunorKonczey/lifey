@@ -291,19 +291,21 @@ class WorkoutScheduleServiceImplTest {
         when(trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(TRAINER_ID, TrainerClientStatus.ACTIVE))
                 .thenReturn(List.of(trainerClient));
 
+        LocalDate from = LocalDate.now();
+        LocalDate to = from.plusDays(7);
+        LocalDate scheduledFor = from.plusDays(2);
         WorkoutSession occurrence = new WorkoutSession();
         occurrence.setId(30L);
         occurrence.setUser(anna);
-        occurrence.setScheduledFor(LocalDate.of(2026, 7, 9));
+        occurrence.setScheduledFor(scheduledFor);
         occurrence.setTemplateName("Push day");
         occurrence.setScheduleId(SCHEDULE_ID);
         when(workoutSessionRepository
                 .findByUserIdInAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(
-                        List.of(CLIENT_ID), LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13)))
+                        List.of(CLIENT_ID), from, to))
                 .thenReturn(List.of(occurrence));
 
-        List<TrainerCalendarSessionResponse> result = service.findScheduledSessionsForTrainer(
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13));
+        List<TrainerCalendarSessionResponse> result = service.findScheduledSessionsForTrainer(from, to);
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().clientId()).isEqualTo(CLIENT_ID);

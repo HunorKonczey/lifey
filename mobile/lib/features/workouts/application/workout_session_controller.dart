@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/sync/pull_engine.dart';
@@ -44,14 +45,18 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
     int? rpe,
     String? feedbackNote,
   }) {
+    // Health enrichment fields (activeCalories/averageHeartRate/
+    // healthWorkoutId) are deliberately left absent: the session editor
+    // doesn't hold them, and the repository preserves absent fields, so an
+    // edit can't disconnect an already-paired Apple Health workout.
     return _repo.update(
       clientId,
       startedAt: startedAt,
       finishedAt: finishedAt,
       exercises: exercises,
       sets: sets,
-      rpe: rpe,
-      feedbackNote: feedbackNote,
+      rpe: Value(rpe),
+      feedbackNote: Value(feedbackNote),
     );
   }
 

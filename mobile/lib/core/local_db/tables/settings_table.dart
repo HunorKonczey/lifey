@@ -20,6 +20,9 @@ class UserSettingsTable extends Table {
   TextColumn get language => text().withDefault(const Constant('SYSTEM'))(); // SYSTEM / ENGLISH / HUNGARIAN
   // Added in schema v9.
   IntColumn get dailyStepGoal => integer().nullable()();
+  // Added in schema v24 (docs/30-push-notifications-plan.md) — needs a
+  // DEFAULT for the same reason as `language` above.
+  BoolColumn get workoutReminderEnabled => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column> get primaryKey => {clientId};

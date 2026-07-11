@@ -17,6 +17,11 @@
     <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+    <!-- Morning weigh-in reminder (docs/30-push-notifications-plan.md, M4) —
+         lets flutter_local_notifications reschedule its repeating alarm after
+         a reboot; without it, the daily reminder silently stops firing until
+         the app is next opened. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="lifey"
         android:name="${applicationName}"
@@ -77,6 +82,21 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/today_summary_widget_info"/>
+        </receiver>
+        <!-- Required by flutter_local_notifications' zonedSchedule (morning
+             weigh-in reminder, docs/30-push-notifications-plan.md, M4) — the
+             first fires the notification itself, the second reschedules the
+             repeating alarm after a reboot or app update. -->
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
         </receiver>
     </application>
     <!-- Required to query activities that can process text, see:

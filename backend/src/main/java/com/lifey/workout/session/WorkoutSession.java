@@ -114,4 +114,12 @@ public class WorkoutSession extends SyncableEntity {
     /** Optional free-text note captured alongside {@link #rpe}. */
     @Column(name = "feedback_note")
     private String feedbackNote;
+
+    /**
+     * When the trainer-scheduled-workout push reminder was sent for this
+     * occurrence (docs/30-push-notifications-plan.md, B3) — null means not
+     * sent yet, and the reminder job never re-sends once set.
+     */
+    @Column(name = "reminder_sent_at")
+    private Instant reminderSentAt;
 }

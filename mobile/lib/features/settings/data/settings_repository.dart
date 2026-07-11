@@ -40,6 +40,7 @@ class SettingsRepository {
       dailyFatGoal: Value(settings.dailyFatGoal),
       dailyWaterGoalLiters: Value(settings.dailyWaterGoalLiters),
       dailyStepGoal: Value(settings.dailyStepGoal),
+      workoutReminderEnabled: Value(settings.workoutReminderEnabled),
     );
 
     if (existing == null) {
@@ -62,6 +63,7 @@ class SettingsRepository {
       dailyFatGoal: row.dailyFatGoal,
       dailyWaterGoalLiters: row.dailyWaterGoalLiters,
       dailyStepGoal: row.dailyStepGoal,
+      workoutReminderEnabled: row.workoutReminderEnabled,
     );
   }
 }

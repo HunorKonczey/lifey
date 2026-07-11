@@ -34,6 +34,9 @@ public record SettingsRequest(
         ThemePreference theme,
 
         @NotNull
-        LanguagePreference language
+        LanguagePreference language,
+
+        @NotNull
+        Boolean workoutReminderEnabled
 ) {
 }

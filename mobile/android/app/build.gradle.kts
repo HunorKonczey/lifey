@@ -2,6 +2,17 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services") apply false
+}
+
+// Android push (docs/30-push-notifications-plan.md, M1b): the google-services
+// plugin hard-fails the build if google-services.json is missing, so it's only
+// applied once that file exists — a real one, downloaded from the Firebase
+// console for the com.khunor.lifey Android app, dropped in next to this file
+// (git-ignored; see devops/push-notifications-android.md). Until then, builds
+// work exactly as before and Android push is simply not wired up.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 android {

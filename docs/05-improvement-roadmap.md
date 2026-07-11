@@ -73,7 +73,7 @@ clients, assignments, schedules, calendar) on the web admin.
 
 ### Progress Tracking
 
-#### 10. Progress Photos and Body Measurements
+#### 10. Progress Photos and Body Measurements 
 
 * Photo timeline with side-by-side compare
 * Measurements: waist, chest, arms, thighs — history + charts
@@ -86,7 +86,7 @@ clients, assignments, schedules, calendar) on the web admin.
 
 ## Trainer (Web Admin)
 
-#### 12. Compliance Overview
+#### 12. Compliance Overview (DONE)
 
 * Client list sortable/flagged by: days since last log, missed scheduled
   workouts, weight not logged

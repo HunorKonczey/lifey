@@ -24,6 +24,7 @@ import '../../water/presentation/water_sources_screen.dart';
 import '../application/avatar_controller.dart';
 import '../application/settings_controller.dart';
 import '../domain/user_settings.dart';
+import 'notification_settings_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -632,6 +633,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const _RowDivider(),
                       const _HealthRow(),
                     ],
+                    const _RowDivider(),
+                    // Notifications (docs/30-push-notifications-plan.md, M5)
+                    _SettingRow(
+                      icon: Icons.notifications_outlined,
+                      iconColor: scheme.primary,
+                      label: l10n.notificationsSettingsTileLabel,
+                      onTap:
+                          () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationSettingsScreen(),
+                            ),
+                          ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        size: 22,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),

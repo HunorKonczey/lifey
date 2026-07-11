@@ -7,3 +7,7 @@ build/
 lib/l10n/app_localizations*.dart
 .idea/
 ios/Pods/
+
+# Firebase config (docs/30-push-notifications-plan.md, M1b) — real values are
+# tied to a specific Firebase project; see devops/push-notifications-android.md.
+android/app/google-services.json

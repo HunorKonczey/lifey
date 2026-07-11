@@ -33,7 +33,7 @@ class TrainerClientControllerTest {
     void findActiveClients_returnsList() throws Exception {
         when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
                 new TrainerClientResponse(2L, "client@example.com", Instant.parse("2026-06-01T00:00:00Z"),
-                        List.of(), 0, 0)));
+                        List.of(), 0, 0, null, null, 0)));
 
         mockMvc.perform(get("/api/v1/trainer/clients"))
                 .andExpect(status().isOk())

@@ -1156,6 +1156,45 @@
     "stepGoalNotificationBody": "You hit {steps} steps today. Great work!",
     "@stepGoalNotificationBody": {"description": "Body of the local notification fired when the user hits their daily step goal", "placeholders": {"steps": {"type": "int", "format": "decimalPattern"}}},
 
+    "weighInReminderNotificationTitle": "Time to weigh in",
+    "@weighInReminderNotificationTitle": {"description": "Title of the daily local notification reminding the user to log their weight"},
+
+    "weighInReminderNotificationBody": "Log today's weight to keep your trend accurate",
+    "@weighInReminderNotificationBody": {"description": "Body of the daily local notification reminding the user to log their weight"},
+
+    "notificationsSettingsTileLabel": "Notifications",
+    "@notificationsSettingsTileLabel": {"description": "Settings screen row that opens the notification settings screen"},
+
+    "notificationSettingsTitle": "Notifications",
+    "@notificationSettingsTitle": {"description": "Title of the notification settings screen"},
+
+    "allNotificationsLabel": "All notifications",
+    "@allNotificationsLabel": {"description": "Master switch label on the notification settings screen"},
+
+    "workoutReminderToggleLabel": "Workout reminder",
+    "@workoutReminderToggleLabel": {"description": "Label for the trainer-scheduled-workout push reminder toggle"},
+
+    "workoutReminderToggleSubtitle": "The morning of a trainer-scheduled workout",
+    "@workoutReminderToggleSubtitle": {"description": "Subtitle for the workout reminder toggle"},
+
+    "weighInReminderToggleLabel": "Morning weigh-in reminder",
+    "@weighInReminderToggleLabel": {"description": "Label for the daily weigh-in reminder toggle"},
+
+    "weighInReminderToggleSubtitle": "A daily nudge to log your weight",
+    "@weighInReminderToggleSubtitle": {"description": "Subtitle for the weigh-in reminder toggle"},
+
+    "stepGoalNotificationToggleLabel": "Step goal reached",
+    "@stepGoalNotificationToggleLabel": {"description": "Label for the step-goal-reached notification toggle"},
+
+    "stepGoalNotificationToggleSubtitle": "When you hit your daily step goal",
+    "@stepGoalNotificationToggleSubtitle": {"description": "Subtitle for the step-goal notification toggle"},
+
+    "reminderTimeLabel": "Time",
+    "@reminderTimeLabel": {"description": "Label for the weigh-in reminder's time-of-day row"},
+
+    "notificationPermissionDeniedHint": "Notifications are turned off for Lifey in system settings. Enable them in Settings to receive this reminder.",
+    "@notificationPermissionDeniedHint": {"description": "Footer hint shown when the OS denied the notification permission"},
+
     "editExerciseTitle": "Edit exercise",
     "@editExerciseTitle": {"description": "Title of the add/edit exercise sheet when editing an existing exercise"},
 

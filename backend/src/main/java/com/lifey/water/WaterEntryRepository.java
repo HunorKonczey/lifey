@@ -29,4 +29,8 @@ public interface WaterEntryRepository extends JpaRepository<WaterEntry, Long> {
             where e.user.id = :userId and e.consumedAt >= :from and e.deletedAt is null
             """)
     double sumVolumeLitersSince(@Param("userId") Long userId, @Param("from") Instant from);
+
+    /** Latest non-deleted water log timestamp for a user — trainer compliance overview (docs/29). */
+    @Query("select max(e.consumedAt) from WaterEntry e where e.user.id = :userId and e.deletedAt is null")
+    Optional<Instant> findMaxConsumedAtByUserId(@Param("userId") Long userId);
 }

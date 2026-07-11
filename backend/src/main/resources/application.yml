@@ -109,6 +109,27 @@ lifey:
     # sending so local dev and tests never require a real Resend account.
     enabled: ${MAIL_ENABLED:false}
     resend-api-key: ${RESEND_API_KEY:}
+  push:
+    apns:
+      # Off by default — no bean is created (see ApnsPushSender's
+      # @ConditionalOnProperty), so local dev/CI never need a real APNs key.
+      enabled: ${PUSH_APNS_ENABLED:false}
+      # Path to the .p8 token-auth signing key downloaded from the Apple
+      # Developer portal (Keys > Push Notifications).
+      key-path: ${PUSH_APNS_KEY_PATH:}
+      key-id: ${PUSH_APNS_KEY_ID:}
+      team-id: ${PUSH_APNS_TEAM_ID:}
+      bundle-id: ${PUSH_APNS_BUNDLE_ID:com.khunor.lifey}
+      # True for development-signed builds (Xcode debug); false in production.
+      sandbox: ${PUSH_APNS_SANDBOX:true}
+    fcm:
+      # Off by default — no Firebase beans are created (see FcmConfig's
+      # @ConditionalOnProperty), so local dev/CI never need real Firebase
+      # credentials.
+      enabled: ${PUSH_FCM_ENABLED:false}
+      # Path to the Firebase service-account JSON key (Firebase console >
+      # Project settings > Service accounts > Generate new private key).
+      credentials-path: ${PUSH_FCM_CREDENTIALS_PATH:}
   trainer-invite:
     # Optional email channel for accepting a trainer invite, alongside the
     # existing mobile polling flow (ClientInviteController). Off by default —

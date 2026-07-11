@@ -44,7 +44,16 @@
       "modalSubtitle": "{count} active {count, plural, one {client} other {clients}} · pick who to continue with",
       "close": "Close",
       "assignedPlansCount": "{count, plural, one {# plan} other {# plans}}",
-      "workoutsPerWeekCount": "{count, plural, one {# workout/week} other {# workouts/week}}"
+      "workoutsPerWeekCount": "{count, plural, one {# workout/week} other {# workouts/week}}",
+      "inactiveBadge": "{count, plural, one {# day inactive} other {# days inactive}}",
+      "missedWorkoutsBadge": "{count, plural, one {# missed workout} other {# missed workouts}}",
+      "weightStaleBadge": "no weight for {count, plural, one {# day} other {# days}}",
+      "needsAttentionTitle": "Needs attention · {count}",
+      "sortAria": "Sort clients",
+      "sortRecent": "Recent",
+      "sortLeastActive": "Least active first",
+      "sortMostMissed": "Most missed workouts",
+      "sortWeightOverdue": "Weight overdue"
     },
     "invites": {
       "title": "Invites",

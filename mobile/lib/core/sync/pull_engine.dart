@@ -565,6 +565,7 @@ class PullEngine {
             dailyFatGoal: Value(json['dailyFatGoal'] as int?),
             dailyWaterGoalLiters: Value((json['dailyWaterGoalLiters'] as num?)?.toDouble()),
             dailyStepGoal: Value(json['dailyStepGoal'] as int?),
+            workoutReminderEnabled: Value(json['workoutReminderEnabled'] as bool? ?? true),
           ),
         );
   }

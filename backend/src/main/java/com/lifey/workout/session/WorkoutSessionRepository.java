@@ -3,6 +3,8 @@ package com.lifey.workout.session;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -53,4 +55,44 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     long countByScheduleIdAndStartedAtIsNullAndDeletedAtIsNullAndScheduledForBefore(Long scheduleId, LocalDate today);
 
     long countByScheduleIdAndStartedAtIsNullAndDeletedAtIsNullAndScheduledForGreaterThanEqual(Long scheduleId, LocalDate today);
+
+    /** Latest non-deleted, actually-started session timestamp for a user — trainer compliance overview (docs/29). */
+    @Query("select max(s.startedAt) from WorkoutSession s where s.user.id = :userId and s.deletedAt is null and s.startedAt is not null")
+    Optional<Instant> findMaxStartedAtByUserId(@Param("userId") Long userId);
+
+    /**
+     * Missed trainer-scheduled occurrences for this client under this trainer, within a
+     * trailing window — must stay in sync with the MISSED branch of
+     * WorkoutScheduleServiceImpl#occurrenceStatus() (trainer compliance overview, docs/29).
+     */
+    @Query("""
+            select count(s) from WorkoutSession s, WorkoutSchedule ws
+            where s.scheduleId = ws.id
+              and ws.trainer.id = :trainerId
+              and s.user.id = :clientId
+              and s.startedAt is null
+              and s.deletedAt is null
+              and s.scheduledFor >= :windowStart
+              and s.scheduledFor < :today
+            """)
+    long countMissedOccurrences(@Param("trainerId") Long trainerId, @Param("clientId") Long clientId,
+            @Param("windowStart") LocalDate windowStart, @Param("today") LocalDate today);
+
+    /**
+     * Candidate trainer-scheduled occurrences for the workout-reminder push job
+     * (docs/30-push-notifications-plan.md, B3) — not yet started, not cancelled,
+     * never reminded, and within a UTC-date window wide enough to cover every
+     * user timezone offset. {@code WorkoutReminderJob} narrows this down to
+     * "is it actually the user's local today, at/after send hour" in Java,
+     * since that needs each user's {@code utcOffsetMinutes}.
+     */
+    @Query("""
+            select s from WorkoutSession s
+            join fetch s.user
+            where s.startedAt is null
+              and s.deletedAt is null
+              and s.reminderSentAt is null
+              and s.scheduledFor between :from and :to
+            """)
+    List<WorkoutSession> findReminderCandidates(@Param("from") LocalDate from, @Param("to") LocalDate to);
 }

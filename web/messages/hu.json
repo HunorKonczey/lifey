@@ -44,7 +44,16 @@
       "modalSubtitle": "{count} aktív kliens · válassz, kivel folytatod",
       "close": "Bezárás",
       "assignedPlansCount": "{count} terv",
-      "workoutsPerWeekCount": "{count} edzés/hét"
+      "workoutsPerWeekCount": "{count} edzés/hét",
+      "inactiveBadge": "{count} napja inaktív",
+      "missedWorkoutsBadge": "{count} kihagyott edzés",
+      "weightStaleBadge": "{count} napja nincs testsúly",
+      "needsAttentionTitle": "Figyelmet igényel · {count}",
+      "sortAria": "Kliensek rendezése",
+      "sortRecent": "Legutóbbi",
+      "sortLeastActive": "Legkevésbé aktív elöl",
+      "sortMostMissed": "Legtöbb kihagyott edzés",
+      "sortWeightOverdue": "Testsúly elmaradás"
     },
     "invites": {
       "title": "Meghívók",

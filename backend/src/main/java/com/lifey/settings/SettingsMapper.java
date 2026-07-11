@@ -21,6 +21,7 @@ public final class SettingsMapper {
         settings.setDailyStepGoal(request.dailyStepGoal());
         settings.setTheme(request.theme());
         settings.setLanguage(request.language());
+        settings.setWorkoutReminderEnabled(request.workoutReminderEnabled());
     }
 
     public static SettingsResponse toResponse(UserSettings settings) {
@@ -33,7 +34,8 @@ public final class SettingsMapper {
                 settings.getDailyWaterGoalLiters(),
                 settings.getDailyStepGoal(),
                 settings.getTheme(),
-                settings.getLanguage()
+                settings.getLanguage(),
+                settings.isWorkoutReminderEnabled()
         );
     }
 }

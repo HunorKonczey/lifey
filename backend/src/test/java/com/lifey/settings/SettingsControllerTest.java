@@ -29,7 +29,7 @@ class SettingsControllerTest {
     void get_returnsLanguageDefaultingToSystem() throws Exception {
         when(settingsService.get())
                 .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, null,
-                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM));
+                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true));
 
         mockMvc.perform(get("/api/v1/settings"))
                 .andExpect(status().isOk())
@@ -40,11 +40,11 @@ class SettingsControllerTest {
     void update_withHungarianReturnsIt() throws Exception {
         when(settingsService.update(any()))
                 .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, null,
-                        ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN));
+                        ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true));
 
         mockMvc.perform(put("/api/v1/settings").contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"unitSystem":"METRIC","theme":"SYSTEM","language":"HUNGARIAN"}
+                                {"unitSystem":"METRIC","theme":"SYSTEM","language":"HUNGARIAN","workoutReminderEnabled":true}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.language").value("HUNGARIAN"));
@@ -63,11 +63,11 @@ class SettingsControllerTest {
     void update_withDailyStepGoalReturnsIt() throws Exception {
         when(settingsService.update(any()))
                 .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, 10000,
-                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM));
+                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true));
 
         mockMvc.perform(put("/api/v1/settings").contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"unitSystem":"METRIC","theme":"SYSTEM","language":"SYSTEM","dailyStepGoal":10000}
+                                {"unitSystem":"METRIC","theme":"SYSTEM","language":"SYSTEM","dailyStepGoal":10000,"workoutReminderEnabled":true}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dailyStepGoal").value(10000));

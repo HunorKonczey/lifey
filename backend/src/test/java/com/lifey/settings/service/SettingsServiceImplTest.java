@@ -62,7 +62,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN);
+                ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true);
 
         SettingsResponse result = service.update(request);
 
@@ -77,7 +77,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, 10000,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true);
 
         SettingsResponse result = service.update(request);
 
@@ -93,10 +93,35 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true);
 
         SettingsResponse result = service.update(request);
 
         assertThat(result.dailyStepGoal()).isNull();
+    }
+
+    @Test
+    void get_createsDefaultRowWithWorkoutReminderEnabledWhenNoneExists() {
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsResponse result = service.get();
+
+        assertThat(result.workoutReminderEnabled()).isTrue();
+    }
+
+    @Test
+    void update_canDisableWorkoutReminder() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, false);
+
+        SettingsResponse result = service.update(request);
+
+        assertThat(result.workoutReminderEnabled()).isFalse();
     }
 }

@@ -49,4 +49,12 @@ public class UserSettings extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "language", nullable = false, length = 20)
     private LanguagePreference language = LanguagePreference.SYSTEM;
+
+    /**
+     * Opt-out for the trainer-scheduled-workout push reminder
+     * (docs/30-push-notifications-plan.md). Default true — a trainer-scheduled
+     * workout is something the client signed up for.
+     */
+    @Column(name = "workout_reminder_enabled", nullable = false)
+    private boolean workoutReminderEnabled = true;
 }

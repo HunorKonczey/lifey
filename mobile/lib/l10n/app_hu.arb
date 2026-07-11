@@ -400,6 +400,21 @@
     "stepGoalNotificationTitle": "Napi lépéscél elérve!",
     "stepGoalNotificationBody": "Ma {steps} lépést tettél meg. Szép munka!",
 
+    "weighInReminderNotificationTitle": "Ideje mérlegre állni",
+    "weighInReminderNotificationBody": "Mérd meg magad ma is, hogy pontos maradjon a trended",
+
+    "notificationsSettingsTileLabel": "Értesítések",
+    "notificationSettingsTitle": "Értesítések",
+    "allNotificationsLabel": "Összes értesítés",
+    "workoutReminderToggleLabel": "Edzés-emlékeztető",
+    "workoutReminderToggleSubtitle": "Az edzővel ütemezett edzés reggelén",
+    "weighInReminderToggleLabel": "Reggeli súlymérés-emlékeztető",
+    "weighInReminderToggleSubtitle": "Napi emlékeztető a testsúly rögzítésére",
+    "stepGoalNotificationToggleLabel": "Lépéscél elérve",
+    "stepGoalNotificationToggleSubtitle": "Amikor eléred a napi lépéscélod",
+    "reminderTimeLabel": "Időpont",
+    "notificationPermissionDeniedHint": "Az értesítések ki vannak kapcsolva a Lifey számára a rendszerbeállításokban. Kapcsold be őket a Beállításokban, hogy megkapd ezt az emlékeztetőt.",
+
     "editExerciseTitle": "Gyakorlat szerkesztése",
     "categoryLabel": "Kategória",
     "equipmentLabel": "Eszköz",

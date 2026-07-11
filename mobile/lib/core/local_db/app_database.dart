@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -194,6 +194,11 @@ class AppDatabase extends _$AppDatabase {
           if (from < 23) {
             await m.addColumn(workoutSessions, workoutSessions.rpe);
             await m.addColumn(workoutSessions, workoutSessions.feedbackNote);
+          }
+          // V24: workout-reminder push opt-out (docs/30-push-notifications-plan.md)
+          // — defaults true (the column default), matching the backend.
+          if (from < 24) {
+            await m.addColumn(userSettingsTable, userSettingsTable.workoutReminderEnabled);
           }
         },
       );

@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/data/latest_all.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 /// Thin wrapper around [FlutterLocalNotificationsPlugin], shared by the
 /// step-goal notification and the Android ongoing workout-session
@@ -16,14 +20,25 @@ class NotificationService {
 
   static const _stepGoalNotificationId = 1;
   static const _workoutSessionNotificationId = 2;
+  static const _weighInReminderNotificationId = 3;
 
   // Distinguishes a tap on the workout-session notification from a tap on
   // the step-goal one in [onDidReceiveNotificationResponse] below.
   static const _workoutSessionPayload = 'workout_session_tap';
 
+  // Prefix distinguishing a push-bridge notification's payload (see
+  // [showPush]) from the other two fixed payload strings above — the
+  // remainder is the push's JSON-encoded `data` map.
+  static const _pushPayloadPrefix = 'push:';
+
   // Set by `WorkoutResumePrompt` (read at tap time, not at [init] time, so
   // it doesn't matter which of the two runs first).
   static void Function()? _onWorkoutSessionTapped;
+
+  // Set by the push tap handler (docs/30-push-notifications-plan.md, M3) —
+  // fires when the user taps a notification shown via [showPush], i.e. an
+  // Android FCM message that arrived while the app was foregrounded.
+  static void Function(Map<String, dynamic> data)? _onPushTapped;
 
   /// Registers the callback fired when the user taps the ongoing
   /// workout-session notification while the app process is alive (Android's
@@ -33,6 +48,12 @@ class NotificationService {
   /// reopens an active session unconditionally on cold start.
   static void setWorkoutSessionTapHandler(void Function()? handler) {
     _onWorkoutSessionTapped = handler;
+  }
+
+  /// Registers the callback fired when the user taps a [showPush]
+  /// notification (docs/30-push-notifications-plan.md, M3).
+  static void setPushTapHandler(void Function(Map<String, dynamic> data)? handler) {
+    _onPushTapped = handler;
   }
 
   static const _workoutSessionChannel = AndroidNotificationChannel(
@@ -50,6 +71,40 @@ class NotificationService {
     'Step goal',
     description: 'Notified once when you reach your daily step goal',
   );
+
+  static const _pushChannelId = 'push';
+  static const _pushChannel = AndroidNotificationChannel(
+    _pushChannelId,
+    'Push notifications',
+    description: 'Notifications sent by the server (workout reminders, etc.)',
+  );
+
+  static const weighInReminderChannelId = 'weigh_in_reminder';
+  static const _weighInReminderChannel = AndroidNotificationChannel(
+    weighInReminderChannelId,
+    'Weigh-in reminder',
+    description: 'Daily reminder to log today\'s weight',
+  );
+
+  static bool _tzInitialized = false;
+
+  /// Sets up the `timezone` package's local location so
+  /// [scheduleWeighInReminder]'s `zonedSchedule` calls fire at the device's
+  /// actual wall-clock time (and follow DST) rather than a fixed offset.
+  /// Best-effort: if the device's IANA name isn't in the bundled tz database
+  /// (shouldn't happen in practice), `tz.local` just stays at its UTC
+  /// default — the reminder would then fire at the wrong wall-clock time
+  /// rather than not at all, an acceptable degradation for a morning nudge.
+  static Future<void> _ensureTimezoneInitialized() async {
+    if (_tzInitialized) return;
+    tzdata.initializeTimeZones();
+    try {
+      tz.setLocalLocation(tz.getLocation(await FlutterTimezone.getLocalTimezone()));
+    } catch (_) {
+      // See doc comment above.
+    }
+    _tzInitialized = true;
+  }
 
   /// Must be called once before any other call on this class. Safe to call
   /// multiple times — subsequent calls are no-ops.
@@ -71,7 +126,13 @@ class NotificationService {
     await _plugin.initialize(
       settings,
       onDidReceiveNotificationResponse: (details) {
-        if (details.payload == _workoutSessionPayload) _onWorkoutSessionTapped?.call();
+        final payload = details.payload;
+        if (payload == _workoutSessionPayload) {
+          _onWorkoutSessionTapped?.call();
+        } else if (payload != null && payload.startsWith(_pushPayloadPrefix)) {
+          final data = jsonDecode(payload.substring(_pushPayloadPrefix.length));
+          _onPushTapped?.call((data as Map).cast<String, dynamic>());
+        }
       },
     );
   }
@@ -161,5 +222,95 @@ class NotificationService {
   static Future<void> cancelWorkoutSession() async {
     if (!Platform.isAndroid) return;
     await _plugin.cancel(_workoutSessionNotificationId);
+  }
+
+  /// Surfaces a remote push as a local notification banner — Android only.
+  /// FCM's own "notification" payload is auto-displayed by the OS while the
+  /// app is backgrounded/terminated, but never while it's foregrounded, so a
+  /// foreground FCM message needs this bridge to be seen at all (see
+  /// docs/30-push-notifications-plan.md, M3; iOS shows the push natively via
+  /// its own `willPresent` handling instead — no bridge needed there).
+  /// [data] is the push's deep-link payload, round-tripped through the
+  /// notification's payload so a tap on it still routes correctly.
+  static Future<void> showPush({
+    required String title,
+    required String body,
+    required Map<String, dynamic> data,
+  }) async {
+    if (!Platform.isAndroid) return;
+    if (!await _ensureAndroidChannel(_pushChannel)) return;
+
+    await _plugin.show(
+      // Distinct ID per push (unlike the fixed step-goal/workout-session
+      // ones) so multiple pushes don't replace each other in the tray.
+      DateTime.now().millisecondsSinceEpoch.remainder(1 << 31),
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _pushChannelId,
+          'Push notifications',
+          channelDescription: 'Notifications sent by the server (workout reminders, etc.)',
+        ),
+      ),
+      payload: '$_pushPayloadPrefix${jsonEncode(data)}',
+    );
+  }
+
+  /// Schedules (or reschedules, if already active) the daily morning
+  /// weigh-in reminder at [hour]:[minute] local time
+  /// (docs/30-push-notifications-plan.md, M4). Fires every day regardless of
+  /// whether weight was already logged — deliberately simple, see the plan.
+  /// Returns whether it was actually scheduled (false on permission denial).
+  static Future<bool> scheduleWeighInReminder({
+    required int hour,
+    required int minute,
+    required String title,
+    required String body,
+  }) async {
+    if (!Platform.isIOS && !Platform.isAndroid) return false;
+    if (Platform.isAndroid && !await _ensureAndroidChannel(_weighInReminderChannel)) {
+      return false;
+    }
+    await _ensureTimezoneInitialized();
+
+    await _plugin.zonedSchedule(
+      _weighInReminderNotificationId,
+      title,
+      body,
+      _nextInstanceOf(hour: hour, minute: minute),
+      NotificationDetails(
+        android: Platform.isAndroid
+            ? const AndroidNotificationDetails(
+                weighInReminderChannelId,
+                'Weigh-in reminder',
+                channelDescription: 'Daily reminder to log today\'s weight',
+              )
+            : null,
+        iOS: Platform.isIOS ? const DarwinNotificationDetails() : null,
+      ),
+      // No exact-alarm permission required (unlike alarmClock/exact*) — a
+      // morning nudge landing a few minutes late is fine.
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+    return true;
+  }
+
+  /// Cancels the daily weigh-in reminder.
+  static Future<void> cancelWeighInReminder() async {
+    await _plugin.cancel(_weighInReminderNotificationId);
+  }
+
+  /// The next occurrence of [hour]:[minute] in `tz.local` — today if that
+  /// time hasn't passed yet, otherwise tomorrow. `zonedSchedule` then repeats
+  /// it daily via `matchDateTimeComponents: DateTimeComponents.time`.
+  static tz.TZDateTime _nextInstanceOf({required int hour, required int minute}) {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
   }
 }

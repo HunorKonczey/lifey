@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/workouts/application/workout_session_controller.dart';
@@ -81,15 +82,18 @@ class HealthWorkoutImportService {
     required List<ExerciseSetInput> sets,
     required HealthWorkout workout,
   }) {
+    // rpe/feedbackNote are deliberately left absent: this flow doesn't own
+    // the rating, and the repository preserves absent fields, so pairing a
+    // Health workout can't wipe a rating saved earlier.
     return _ref.read(workoutSessionRepositoryProvider).update(
           sessionClientId,
           startedAt: startedAt,
           finishedAt: workout.endDate,
           exercises: exercises,
           sets: sets,
-          activeCalories: workout.activeCalories,
-          averageHeartRate: workout.averageHeartRate,
-          healthWorkoutId: workout.uuid,
+          activeCalories: Value(workout.activeCalories),
+          averageHeartRate: Value(workout.averageHeartRate),
+          healthWorkoutId: Value(workout.uuid),
         );
   }
 }
