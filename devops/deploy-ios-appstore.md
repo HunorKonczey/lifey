@@ -31,7 +31,7 @@ where it's already reflected in the repo:
 | App Groups `group.com.khunor.lifey.LifeyWidgets` | ✅ (profile builds) | — | `RunnerProfile.entitlements` |
 | **HealthKit** | ✅ | — | `Runner.entitlements` (`com.apple.developer.healthkit`) |
 | **Live Activities** | ✅ | ✅ | `Info.plist` → `NSSupportsLiveActivities = true`; the `WorkoutLiveActivity` widget |
-| **Push Notifications** | ⚠️ *not yet* | — | to be added when push lands — see [push-notifications-ios.md](push-notifications-ios.md) |
+| **Push Notifications** | ✅ | — | `Runner.entitlements`/`RunnerProfile.entitlements` (`aps-environment`) — see [push-notifications-ios.md](push-notifications-ios.md) |
 
 > The App Group is the widget's lifeline: the app writes "today's calories /
 > steps / active workout" into the shared container, the widget reads it. If the

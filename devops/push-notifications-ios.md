@@ -14,21 +14,19 @@ Design and use cases: [docs/30-push-notifications-plan.md](../docs/30-push-notif
 
 ## Current state / prerequisites
 
-The **backend sender is built and ready.** Before end-to-end push works, three
-things still have to be done (tracked as mobile work M1–M3 in the plan):
+**Everything in the repo is done** — backend `ApnsPushSender`, the
+`aps-environment` entitlement (already in `Runner.entitlements`/
+`RunnerProfile.entitlements`), and the app-side device-token registration +
+tap handling (M1–M3, docs/30-push-notifications-plan.md). What's left is
+**account-side, manual, one-time setup** that can't live in the repo:
 
-1. ⚠️ **`aps-environment` entitlement** is **not yet** in `Runner.entitlements`.
-   It must be added (`development` for debug builds, Xcode rewrites it to
-   `production` for distribution). Adding the **Push Notifications** capability
-   in Xcode does this for you.
-2. ⚠️ **Push Notifications capability** must be enabled on the App ID
-   (`com.khunor.lifey`) in the Apple Developer portal.
-3. ⚠️ **Device-token registration** in the Flutter app (platform channel +
-   `PUT /api/v1/push/devices`) — not yet implemented. Until it is, no device
-   token reaches the backend, so there is nobody to send to.
+1. ⚠️ **Push Notifications capability** must be enabled on the App ID
+   (`com.khunor.lifey`) in the Apple Developer portal (below).
+2. ⚠️ **The `.p8` signing key** must be generated in the portal and put on the
+   backend (below) — without it `PUSH_APNS_ENABLED` has nothing to auth with.
 
 This doc covers the **APNs credential + backend** side, which is what "configure
-Pushy" means. The app-side items above are called out but implemented separately.
+Pushy" means, plus a manual on-device verification pass (M6).
 
 ## Backend configuration
 

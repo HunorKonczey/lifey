@@ -26,6 +26,10 @@ class NotificationService {
   // the step-goal one in [onDidReceiveNotificationResponse] below.
   static const _workoutSessionPayload = 'workout_session_tap';
 
+  // Distinguishes a tap on the weigh-in reminder notification from the other
+  // fixed payload strings below.
+  static const _weighInReminderPayload = 'weigh_in_reminder_tap';
+
   // Prefix distinguishing a push-bridge notification's payload (see
   // [showPush]) from the other two fixed payload strings above — the
   // remainder is the push's JSON-encoded `data` map.
@@ -34,6 +38,10 @@ class NotificationService {
   // Set by `WorkoutResumePrompt` (read at tap time, not at [init] time, so
   // it doesn't matter which of the two runs first).
   static void Function()? _onWorkoutSessionTapped;
+
+  // Set by the weigh-in reminder tap handler — fires when the user taps the
+  // daily weigh-in reminder, so it can route to the weight tab.
+  static void Function()? _onWeighInReminderTapped;
 
   // Set by the push tap handler (docs/30-push-notifications-plan.md, M3) —
   // fires when the user taps a notification shown via [showPush], i.e. an
@@ -48,6 +56,12 @@ class NotificationService {
   /// reopens an active session unconditionally on cold start.
   static void setWorkoutSessionTapHandler(void Function()? handler) {
     _onWorkoutSessionTapped = handler;
+  }
+
+  /// Registers the callback fired when the user taps the daily weigh-in
+  /// reminder notification.
+  static void setWeighInReminderTapHandler(void Function()? handler) {
+    _onWeighInReminderTapped = handler;
   }
 
   /// Registers the callback fired when the user taps a [showPush]
@@ -129,6 +143,8 @@ class NotificationService {
         final payload = details.payload;
         if (payload == _workoutSessionPayload) {
           _onWorkoutSessionTapped?.call();
+        } else if (payload == _weighInReminderPayload) {
+          _onWeighInReminderTapped?.call();
         } else if (payload != null && payload.startsWith(_pushPayloadPrefix)) {
           final data = jsonDecode(payload.substring(_pushPayloadPrefix.length));
           _onPushTapped?.call((data as Map).cast<String, dynamic>());
@@ -259,14 +275,18 @@ class NotificationService {
 
   /// Schedules (or reschedules, if already active) the daily morning
   /// weigh-in reminder at [hour]:[minute] local time
-  /// (docs/30-push-notifications-plan.md, M4). Fires every day regardless of
-  /// whether weight was already logged — deliberately simple, see the plan.
-  /// Returns whether it was actually scheduled (false on permission denial).
+  /// (docs/30-push-notifications-plan.md, M4). Recurs daily via
+  /// `matchDateTimeComponents`, but each call re-targets the *next*
+  /// occurrence, so callers re-invoke this (see `WeighInReminderController
+  /// .refreshForToday`) whenever they need to skip today's — e.g. weight was
+  /// already logged today ([skipToday]). Returns whether it was actually
+  /// scheduled (false on permission denial).
   static Future<bool> scheduleWeighInReminder({
     required int hour,
     required int minute,
     required String title,
     required String body,
+    bool skipToday = false,
   }) async {
     if (!Platform.isIOS && !Platform.isAndroid) return false;
     if (Platform.isAndroid && !await _ensureAndroidChannel(_weighInReminderChannel)) {
@@ -278,7 +298,7 @@ class NotificationService {
       _weighInReminderNotificationId,
       title,
       body,
-      _nextInstanceOf(hour: hour, minute: minute),
+      _nextInstanceOf(hour: hour, minute: minute, skipToday: skipToday),
       NotificationDetails(
         android: Platform.isAndroid
             ? const AndroidNotificationDetails(
@@ -293,6 +313,7 @@ class NotificationService {
       // morning nudge landing a few minutes late is fine.
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
+      payload: _weighInReminderPayload,
     );
     return true;
   }
@@ -303,12 +324,18 @@ class NotificationService {
   }
 
   /// The next occurrence of [hour]:[minute] in `tz.local` — today if that
-  /// time hasn't passed yet, otherwise tomorrow. `zonedSchedule` then repeats
-  /// it daily via `matchDateTimeComponents: DateTimeComponents.time`.
-  static tz.TZDateTime _nextInstanceOf({required int hour, required int minute}) {
+  /// time hasn't passed yet, otherwise tomorrow. Forced to tomorrow
+  /// regardless of the time if [skipToday] is set (weight already logged
+  /// today). `zonedSchedule` then repeats it daily via
+  /// `matchDateTimeComponents: DateTimeComponents.time`.
+  static tz.TZDateTime _nextInstanceOf({
+    required int hour,
+    required int minute,
+    bool skipToday = false,
+  }) {
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    if (scheduled.isBefore(now)) {
+    if (skipToday || scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
     return scheduled;

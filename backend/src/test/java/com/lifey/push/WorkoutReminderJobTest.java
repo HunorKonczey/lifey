@@ -162,6 +162,24 @@ class WorkoutReminderJobTest {
     }
 
     @Test
+    void doesNotSend_andDoesNotMarkReminderSentAt_whenUserAlreadyStartedAWorkoutToday() {
+        // Not necessarily this same scheduled occurrence — any session started
+        // that local day is enough to suppress the "workout today" nudge.
+        user.setUtcOffsetMinutes(0);
+        Instant now = SCHEDULED_FOR.atTime(LocalTime.of(9, 0)).toInstant(ZoneOffset.UTC);
+        stubCandidates(now);
+        when(userSettingsRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(workoutSessionRepository.existsByUserIdAndDeletedAtIsNullAndStartedAtBetween(
+                eq(USER_ID), any(Instant.class), any(Instant.class)))
+                .thenReturn(true);
+
+        jobAt(now).sendDueReminders();
+
+        verify(pushService, never()).sendToUser(any(), any());
+        assertThat(session.getReminderSentAt()).isNull();
+    }
+
+    @Test
     void usesHungarianCopy_whenUsersLanguageIsHungarian() {
         user.setUtcOffsetMinutes(0);
         Instant now = SCHEDULED_FOR.atTime(LocalTime.of(9, 0)).toInstant(ZoneOffset.UTC);

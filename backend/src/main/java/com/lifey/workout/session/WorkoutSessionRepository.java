@@ -79,6 +79,15 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
             @Param("windowStart") LocalDate windowStart, @Param("today") LocalDate today);
 
     /**
+     * Whether the user already started (any) workout session within a local-day
+     * window — used by {@code WorkoutReminderJob} to suppress the "workout
+     * today" reminder once they've already worked out that morning, even if
+     * the reminder's own scheduled occurrence is a different, still-unstarted
+     * row.
+     */
+    boolean existsByUserIdAndDeletedAtIsNullAndStartedAtBetween(Long userId, Instant from, Instant to);
+
+    /**
      * Candidate trainer-scheduled occurrences for the workout-reminder push job
      * (docs/30-push-notifications-plan.md, B3) — not yet started, not cancelled,
      * never reminded, and within a UTC-date window wide enough to cover every

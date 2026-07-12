@@ -50,6 +50,24 @@ class WeightRepository {
     );
   }
 
+  /// Whether a weight entry already exists for today's calendar date — used
+  /// by the weigh-in reminder to skip today's notification once it's no
+  /// longer needed. Compares by day only, since [create]'s [date] can carry
+  /// a same-day time-of-day component (the add-entry sheet defaults to
+  /// `DateTime.now()` before the user picks a different day).
+  Future<bool> hasEntryForToday() async {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+    final rows = await (_db.select(_db.weightEntries)
+          ..where((t) => t.date.isBiggerOrEqualValue(startOfDay) & t.date.isSmallerThanValue(endOfDay)))
+        .get();
+    if (rows.isEmpty) return false;
+    final ops = await _db.select(_db.pendingOperations).get();
+    final blocked = blockedByActiveDelete(ops);
+    return rows.any((r) => !blocked.contains(r.clientId));
+  }
+
   Future<void> delete(String clientId) async {
     // Must enqueue before the local row is gone — enqueueDelete needs to
     // read its serverId while the row still exists. If it queued a server

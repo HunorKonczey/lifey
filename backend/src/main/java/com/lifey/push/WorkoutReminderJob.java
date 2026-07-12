@@ -80,6 +80,16 @@ class WorkoutReminderJob {
             return;
         }
 
+        OffsetDateTime localDayStart = OffsetDateTime.of(userLocalNow.toLocalDate().atStartOfDay(), offset);
+        boolean alreadyWorkedOutToday = workoutSessionRepository.existsByUserIdAndDeletedAtIsNullAndStartedAtBetween(
+                user.getId(), localDayStart.toInstant(), localDayStart.plusDays(1).toInstant());
+        if (alreadyWorkedOutToday) {
+            // Same reasoning as the disabled-toggle branch above: don't mark
+            // reminderSentAt, since a session's startedAt never gets unset —
+            // this occurrence just stays suppressed for the rest of the day.
+            return;
+        }
+
         boolean hungarian = settings.map(s -> s.getLanguage() == LanguagePreference.HUNGARIAN).orElse(false);
         session.setReminderSentAt(now);
         pushService.sendToUser(user.getId(), buildMessage(session, hungarian));
