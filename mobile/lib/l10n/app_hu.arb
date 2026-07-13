@@ -416,6 +416,8 @@
     "trainerCommentPushToggleSubtitle": "Amikor az edződ megjegyzést fűz egy edzéshez",
     "trainerGoalsPushToggleLabel": "Táplálkozási célok változása",
     "trainerGoalsPushToggleSubtitle": "Amikor az edződ frissíti a táplálkozási céljaidat",
+    "programAssignedPushToggleLabel": "Új programok",
+    "programAssignedPushToggleSubtitle": "Amikor az edződ programot indít neked",
     "reminderTimeLabel": "Időpont",
     "notificationPermissionDeniedHint": "Az értesítések ki vannak kapcsolva a Lifey számára a rendszerbeállításokban. Kapcsold be őket a Beállításokban, hogy megkapd ezt az emlékeztetőt.",
 

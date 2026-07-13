@@ -16,6 +16,7 @@ public record SettingsResponse(
         LanguagePreference language,
         Boolean workoutReminderEnabled,
         Boolean trainerCommentPushEnabled,
-        Boolean trainerGoalsPushEnabled
+        Boolean trainerGoalsPushEnabled,
+        Boolean programAssignedPushEnabled
 ) {
 }

@@ -67,24 +67,48 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
 
     long countByScheduleIdAndStartedAtIsNullAndDeletedAtIsNullAndScheduledForGreaterThanEqual(Long scheduleId, LocalDate today);
 
+    /** A program assignment's future, not-yet-started occurrences — the set an assignment cancellation soft-deletes. */
+    List<WorkoutSession> findByProgramAssignmentIdAndStartedAtIsNullAndDeletedAtIsNullAndScheduledForGreaterThanEqual(
+            Long programAssignmentId, LocalDate today);
+
+    long countByProgramAssignmentIdAndStartedAtIsNotNull(Long programAssignmentId);
+
+    long countByProgramAssignmentIdAndStartedAtIsNullAndDeletedAtIsNullAndScheduledForBefore(Long programAssignmentId, LocalDate today);
+
+    long countByProgramAssignmentIdAndStartedAtIsNullAndDeletedAtIsNullAndScheduledForGreaterThanEqual(Long programAssignmentId, LocalDate today);
+
     /** Latest non-deleted, actually-started session timestamp for a user — trainer compliance overview (docs/29). */
     @Query("select max(s.startedAt) from WorkoutSession s where s.user.id = :userId and s.deletedAt is null and s.startedAt is not null")
     Optional<Instant> findMaxStartedAtByUserId(@Param("userId") Long userId);
 
     /**
      * Missed trainer-scheduled occurrences for this client under this trainer, within a
-     * trailing window — must stay in sync with the MISSED branch of
+     * trailing window — covers both plain-schedule and program-assignment origins (see
+     * docs/34-multi-week-program-plan.md). Must stay in sync with the MISSED branch of
      * WorkoutScheduleServiceImpl#occurrenceStatus() (trainer compliance overview, docs/29).
+     * Native/union rather than JPQL: a JPQL query can't cleanly express "join whichever
+     * of two possible parent tables applies to this row".
      */
-    @Query("""
-            select count(s) from WorkoutSession s, WorkoutSchedule ws
-            where s.scheduleId = ws.id
-              and ws.trainer.id = :trainerId
-              and s.user.id = :clientId
-              and s.startedAt is null
-              and s.deletedAt is null
-              and s.scheduledFor >= :windowStart
-              and s.scheduledFor < :today
+    @Query(nativeQuery = true, value = """
+            select count(*) from (
+                select s.id from workout_sessions s
+                join workout_schedules ws on s.schedule_id = ws.id
+                where ws.trainer_id = :trainerId
+                  and s.user_id = :clientId
+                  and s.started_at is null
+                  and s.deleted_at is null
+                  and s.scheduled_for >= :windowStart
+                  and s.scheduled_for < :today
+                union all
+                select s.id from workout_sessions s
+                join program_assignments pa on s.program_assignment_id = pa.id
+                where pa.trainer_id = :trainerId
+                  and s.user_id = :clientId
+                  and s.started_at is null
+                  and s.deleted_at is null
+                  and s.scheduled_for >= :windowStart
+                  and s.scheduled_for < :today
+            ) missed
             """)
     long countMissedOccurrences(@Param("trainerId") Long trainerId, @Param("clientId") Long clientId,
             @Param("windowStart") LocalDate windowStart, @Param("today") LocalDate today);

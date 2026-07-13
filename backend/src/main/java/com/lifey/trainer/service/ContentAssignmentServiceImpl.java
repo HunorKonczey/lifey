@@ -16,7 +16,7 @@ import com.lifey.trainer.ContentAssignmentRepository;
 import com.lifey.trainer.ContentType;
 import com.lifey.trainer.dto.AssignmentListItemResponse;
 import com.lifey.trainer.dto.AssignmentRequest;
-import com.lifey.trainer.dto.AssignmentResponse;
+import com.lifey.trainer.dto.BulkAssignmentResponse;
 import com.lifey.trainer.entity.ContentAssignment;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -57,32 +58,83 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
     private final MailLanguageResolver mailLanguageResolver;
 
     @Override
-    public AssignmentResponse assign(AssignmentRequest request) {
+    public BulkAssignmentResponse assign(AssignmentRequest request) {
         Long trainerId = currentUserProvider.getUserId();
-        trainerAccessService.requireActiveClient(trainerId, request.clientId());
+        List<Long> clientIds = request.clientIds().stream().distinct().toList();
 
-        boolean previouslyAssigned = contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
-                trainerId, request.clientId(), request.contentType(), request.sourceId());
+        // Guard the whole batch before any copying: one revoked client fails
+        // the request with zero writes rather than a half-assigned batch
+        // (belt and suspenders — the transaction would roll back anyway).
+        clientIds.forEach(clientId -> trainerAccessService.requireActiveClient(trainerId, clientId));
 
-        if (previouslyAssigned) {
+        WorkoutTemplate sourceTemplate = request.contentType() == ContentType.TEMPLATE
+                ? requireOwnedTemplate(trainerId, request.sourceId()) : null;
+        Recipe sourceRecipe = request.contentType() == ContentType.RECIPE
+                ? requireOwnedRecipe(trainerId, request.sourceId()) : null;
+
+        List<BulkAssignmentResponse.BulkAssignmentItem> assignments = new ArrayList<>();
+        List<Long> skippedClientIds = new ArrayList<>();
+        for (Long clientId : clientIds) {
+            // A duplicate is a skip here, not an error: the drawer locks
+            // already-assigned rows, so one can only appear through a race or
+            // a double submit — idempotent skip makes retries safe.
+            if (contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
+                    trainerId, clientId, request.contentType(), request.sourceId())) {
+                skippedClientIds.add(clientId);
+                continue;
+            }
+            Long copiedId = switch (request.contentType()) {
+                case TEMPLATE -> copyTemplateForClient(trainerId, clientId, sourceTemplate);
+                case RECIPE -> copyRecipeForClient(trainerId, clientId, sourceRecipe);
+            };
+            ContentAssignment saved = saveFactRow(trainerId, clientId, request.contentType(), request.sourceId(), copiedId);
+            assignments.add(new BulkAssignmentResponse.BulkAssignmentItem(
+                    clientId, saved.getId(), saved.getCopiedId(), saved.getAssignedAt()));
+        }
+        return new BulkAssignmentResponse(assignments, skippedClientIds);
+    }
+
+    @Override
+    public WorkoutTemplate resolveClientCopy(Long trainerId, Long clientId, WorkoutTemplate sourceTemplate) {
+        return workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
+                        clientId, trainerId, sourceTemplate.getId())
+                .orElseGet(() -> {
+                    Long copiedId = assignOne(trainerId, clientId, ContentType.TEMPLATE, sourceTemplate.getId()).getCopiedId();
+                    return workoutTemplateRepository.getReferenceById(copiedId);
+                });
+    }
+
+    /**
+     * Single-client assignment for the implicit paths ({@link #resolveClientCopy},
+     * i.e. schedules and program assignments). Unlike the bulk endpoint's skip
+     * semantics, an existing fact row here throws: reaching this with a fact
+     * row but no live copy means the client deleted their copy, and silently
+     * re-copying would resurrect it behind their back.
+     */
+    private ContentAssignment assignOne(Long trainerId, Long clientId, ContentType contentType, Long sourceId) {
+        trainerAccessService.requireActiveClient(trainerId, clientId);
+
+        if (contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
+                trainerId, clientId, contentType, sourceId)) {
             throw new DuplicateResourceException("This content has already been assigned to this client");
         }
 
-        Long copiedId = switch (request.contentType()) {
-            case TEMPLATE -> assignTemplate(trainerId, request.clientId(), request.sourceId());
-            case RECIPE -> assignRecipe(trainerId, request.clientId(), request.sourceId());
+        Long copiedId = switch (contentType) {
+            case TEMPLATE -> copyTemplateForClient(trainerId, clientId, requireOwnedTemplate(trainerId, sourceId));
+            case RECIPE -> copyRecipeForClient(trainerId, clientId, requireOwnedRecipe(trainerId, sourceId));
         };
+        return saveFactRow(trainerId, clientId, contentType, sourceId, copiedId);
+    }
 
+    private ContentAssignment saveFactRow(Long trainerId, Long clientId, ContentType contentType, Long sourceId, Long copiedId) {
         ContentAssignment assignment = new ContentAssignment();
         assignment.setTrainer(userRepository.getReferenceById(trainerId));
-        assignment.setClient(userRepository.getReferenceById(request.clientId()));
-        assignment.setContentType(request.contentType());
-        assignment.setSourceId(request.sourceId());
+        assignment.setClient(userRepository.getReferenceById(clientId));
+        assignment.setContentType(contentType);
+        assignment.setSourceId(sourceId);
         assignment.setCopiedId(copiedId);
         assignment.setAssignedAt(Instant.now());
-        ContentAssignment saved = contentAssignmentRepository.save(assignment);
-
-        return toResponse(saved, previouslyAssigned);
+        return contentAssignmentRepository.save(assignment);
     }
 
     @Override
@@ -123,10 +175,17 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
         contentAssignmentRepository.delete(assignment);
     }
 
-    private Long assignTemplate(Long trainerId, Long clientId, Long templateId) {
-        WorkoutTemplate source = workoutTemplateRepository.findByIdAndUserId(templateId, trainerId)
+    private WorkoutTemplate requireOwnedTemplate(Long trainerId, Long templateId) {
+        return workoutTemplateRepository.findByIdAndUserId(templateId, trainerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workout template not found: " + templateId));
+    }
 
+    private Recipe requireOwnedRecipe(Long trainerId, Long recipeId) {
+        return recipeRepository.findByIdAndUserId(recipeId, trainerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
+    }
+
+    private Long copyTemplateForClient(Long trainerId, Long clientId, WorkoutTemplate source) {
         User client = userRepository.getReferenceById(clientId);
         WorkoutTemplate copy = new WorkoutTemplate();
         copy.setUser(client);
@@ -137,10 +196,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
         return workoutTemplateRepository.save(copy).getId();
     }
 
-    private Long assignRecipe(Long trainerId, Long clientId, Long recipeId) {
-        Recipe source = recipeRepository.findByIdAndUserId(recipeId, trainerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
-
+    private Long copyRecipeForClient(Long trainerId, Long clientId, Recipe source) {
         User client = userRepository.getReferenceById(clientId);
         Recipe copy = new Recipe();
         copy.setUser(client);
@@ -194,7 +250,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
 
     /**
      * Overwrites {@code copy}'s name and exercise list to match {@code source} —
-     * shared by the create-new-copy path ({@link #assignTemplate}) and the
+     * shared by the create-new-copy path ({@link #copyTemplateForClient}) and the
      * refresh-existing-copy path ({@link #propagateTemplateUpdate}). Full
      * overwrite: any local edit the client made to their copy is replaced by
      * the trainer's current version (the accepted live-sync tradeoff).
@@ -216,7 +272,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
 
     /**
      * Overwrites {@code copy}'s name/description/servings and ingredient list
-     * to match {@code source} — shared by {@link #assignRecipe} and
+     * to match {@code source} — shared by {@link #copyRecipeForClient} and
      * {@link #propagateRecipeUpdate}. See {@link #copyTemplateFields} for the
      * full-overwrite rationale.
      */
@@ -238,7 +294,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
 
     /**
      * Mirrors {@code source}'s photo onto {@code copy} — shared by
-     * {@link #assignRecipe} (copy has no image row yet) and
+     * {@link #copyRecipeForClient} (copy has no image row yet) and
      * {@link #propagateRecipeUpdate} (copy may already have one from a
      * previous assignment/propagation). If the source has no photo, removes
      * the copy's if it has one (e.g. the trainer deleted their photo).
@@ -339,10 +395,5 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
     private String disambiguatedName(String name, User client) {
         String suffix = mailLanguageResolver.resolve(client) == MailLanguage.HU ? "Edzőtől" : "From trainer";
         return name + " (" + suffix + ")";
-    }
-
-    private static AssignmentResponse toResponse(ContentAssignment a, boolean previouslyAssigned) {
-        return new AssignmentResponse(
-                a.getId(), a.getContentType(), a.getSourceId(), a.getCopiedId(), a.getAssignedAt(), previouslyAssigned);
     }
 }

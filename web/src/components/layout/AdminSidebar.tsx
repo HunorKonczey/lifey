@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: "/admin/calendar", icon: "calendar_month", key: "calendar" },
   { href: "/admin/invites", icon: "mail", key: "invites" },
   { href: "/admin/workouts", icon: "fitness_center", key: "workouts" },
+  { href: "/admin/programs", icon: "event_repeat", key: "programs" },
   { href: "/admin/nutrition", icon: "restaurant", key: "nutrition" },
   { href: "/admin/assignments", icon: "assignment", key: "assignments" },
 ] as const;

@@ -20,6 +20,7 @@ import java.util.List;
 
 @Tag(name = "Trainer Schedules", description = "Trainer-scheduled upcoming workout sessions for a client")
 @RestController
+@RequestMapping("/api/v1/trainer")
 @RequiredArgsConstructor
 public class WorkoutScheduleController {
 
@@ -28,21 +29,21 @@ public class WorkoutScheduleController {
     @Operation(summary = "Create a schedule (recurring or one-off) of upcoming sessions for a client",
             description = "Materializes every occurrence immediately as an upcoming workout_sessions row "
                     + "(scheduledFor set, startedAt null) — the client sees them via the normal delta sync.")
-    @PostMapping("/api/v1/trainer/schedules")
+    @PostMapping("/schedules")
     @ResponseStatus(HttpStatus.CREATED)
     public ScheduleResponse create(@Valid @RequestBody ScheduleRequest request) {
         return workoutScheduleService.create(request);
     }
 
     @Operation(summary = "List a client's active schedules, with done/missed/remaining occurrence counts")
-    @GetMapping("/api/v1/trainer/clients/{clientId}/schedules")
+    @GetMapping("/clients/{clientId}/schedules")
     public List<ScheduleSummaryResponse> findForClient(@PathVariable Long clientId) {
         return workoutScheduleService.findForClient(clientId);
     }
 
     @Operation(summary = "List a client's scheduled occurrences in a date range",
             description = "Includes upcoming, missed, done and cancelled occurrences, for the calendar/timeline view.")
-    @GetMapping("/api/v1/trainer/clients/{clientId}/scheduled-sessions")
+    @GetMapping("/clients/{clientId}/scheduled-sessions")
     public List<ScheduledSessionResponse> findScheduledSessions(
             @PathVariable Long clientId,
             @Parameter(description = "Inclusive lower bound (yyyy-MM-dd)")
@@ -55,7 +56,7 @@ public class WorkoutScheduleController {
     @Operation(summary = "List every active client's scheduled occurrences in a date range",
             description = "Aggregated across the trainer's whole client roster, for the trainer calendar "
                     + "(docs/personal_trainer/12-edzo-naptar-terv.md). The range cannot span more than 62 days.")
-    @GetMapping("/api/v1/trainer/scheduled-sessions")
+    @GetMapping("/scheduled-sessions")
     public List<TrainerCalendarSessionResponse> findScheduledSessionsForTrainer(
             @Parameter(description = "Inclusive lower bound (yyyy-MM-dd)")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -66,7 +67,7 @@ public class WorkoutScheduleController {
 
     @Operation(summary = "Cancel a schedule",
             description = "Soft-deletes its future, not-yet-started occurrences; past (done/missed) occurrences are untouched.")
-    @DeleteMapping("/api/v1/trainer/schedules/{scheduleId}")
+    @DeleteMapping("/schedules/{scheduleId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancelSchedule(@PathVariable Long scheduleId) {
         workoutScheduleService.cancelSchedule(scheduleId);
@@ -74,7 +75,7 @@ public class WorkoutScheduleController {
 
     @Operation(summary = "Cancel a single scheduled occurrence",
             description = "409 if it has already started, is in the past, or is already cancelled.")
-    @DeleteMapping("/api/v1/trainer/scheduled-sessions/{sessionId}")
+    @DeleteMapping("/scheduled-sessions/{sessionId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancelOccurrence(@PathVariable Long sessionId) {
         workoutScheduleService.cancelOccurrence(sessionId);

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { trainerApi } from "../api";
-import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { ErrorState } from "@/components/status/ErrorState";
@@ -68,42 +67,32 @@ export function AssignToClientDrawer({
   const newClientIds = selectedClientIds.filter((id) => !assignedClientIds.has(id));
 
   const assignMutation = useMutation({
-    mutationFn: async (clientIds: number[]) => {
-      const results = await Promise.allSettled(
-        clientIds.map((clientId) => trainerApi.assign({ clientId, contentType, sourceId })),
-      );
-      return { clientIds, results };
-    },
-    onSuccess: ({ clientIds, results }) => {
+    mutationFn: (clientIds: number[]) => trainerApi.assign({ clientIds, contentType, sourceId }),
+    onSuccess: (response, clientIds) => {
       clientIds.forEach((clientId) => {
         queryClient.invalidateQueries({ queryKey: queryKeys.trainerAssignments.forClient(clientId) });
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.trainerAssignments.assignedClients(contentType, sourceId) });
-      const failed = results.filter((r) => r.status === "rejected");
-      const failedCount = failed.length;
-      const succeededCount = clientIds.length - failedCount;
-      const allFailedWereDuplicates =
-        failedCount > 0 && failed.every((r) => r.reason instanceof ApiError && r.reason.status === 409);
-      if (failedCount === 0) {
-        if (clientIds.length === 1) {
-          const client = clientsQ.data?.find((c) => c.clientId === clientIds[0]);
+
+      const assignedCount = response.assignments.length;
+      const skippedCount = response.skippedClientIds.length;
+      if (skippedCount === 0) {
+        if (assignedCount === 1) {
+          const client = clientsQ.data?.find((c) => c.clientId === response.assignments[0].clientId);
           show(t("assigned", { name: client ? nameFor(client.clientEmail) : "" }), "success");
         } else {
-          show(t("assignedMultiple", { count: succeededCount }), "success");
+          show(t("assignedMultiple", { count: assignedCount }), "success");
         }
-        onClose();
-      } else if (succeededCount === 0) {
-        show(allFailedWereDuplicates ? t("alreadyAssignedFailed") : t("assignFailed"), "error");
       } else {
-        show(
-          allFailedWereDuplicates
-            ? t("assignedPartialAlreadyAssigned", { succeeded: succeededCount, failed: failedCount })
-            : t("assignedPartial", { succeeded: succeededCount, failed: failedCount }),
-          "error",
-        );
+        show(t("assignedWithSkipped", { assigned: assignedCount, skipped: skippedCount }), "success");
       }
+      onClose();
     },
-    onError: () => show(t("assignFailed"), "error"),
+    onError: () => {
+      // A stale roster (revoked client) fails the whole batch — refresh the client list.
+      queryClient.invalidateQueries({ queryKey: queryKeys.trainerClients.all() });
+      show(t("assignFailed"), "error");
+    },
   });
 
   return (

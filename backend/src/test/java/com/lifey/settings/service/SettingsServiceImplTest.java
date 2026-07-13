@@ -62,7 +62,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true);
+                ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true, true);
 
         SettingsResponse result = service.update(request);
 
@@ -77,7 +77,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, 10000,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true);
 
         SettingsResponse result = service.update(request);
 
@@ -93,7 +93,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true);
 
         SettingsResponse result = service.update(request);
 
@@ -118,7 +118,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, false, true, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, false, true, true, true);
 
         SettingsResponse result = service.update(request);
 
@@ -143,7 +143,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, false, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, false, true, true);
 
         SettingsResponse result = service.update(request);
 
@@ -168,11 +168,36 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, false);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, false, true);
 
         SettingsResponse result = service.update(request);
 
         assertThat(result.trainerGoalsPushEnabled()).isFalse();
+    }
+
+    @Test
+    void get_createsDefaultRowWithProgramAssignedPushEnabledWhenNoneExists() {
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsResponse result = service.get();
+
+        assertThat(result.programAssignedPushEnabled()).isTrue();
+    }
+
+    @Test
+    void update_canDisableProgramAssignedPush() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, false);
+
+        SettingsResponse result = service.update(request);
+
+        assertThat(result.programAssignedPushEnabled()).isFalse();
     }
 
     @Test

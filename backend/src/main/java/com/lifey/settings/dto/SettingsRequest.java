@@ -43,6 +43,9 @@ public record SettingsRequest(
         Boolean trainerCommentPushEnabled,
 
         @NotNull
-        Boolean trainerGoalsPushEnabled
+        Boolean trainerGoalsPushEnabled,
+
+        @NotNull
+        Boolean programAssignedPushEnabled
 ) {
 }

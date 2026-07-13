@@ -7,6 +7,7 @@ NotificationSettingsState _state({
   bool stepGoalNotificationEnabled = false,
   bool trainerCommentPushEnabled = false,
   bool trainerGoalsPushEnabled = false,
+  bool programAssignedPushEnabled = false,
 }) {
   return NotificationSettingsState(
     workoutReminderEnabled: workoutReminderEnabled,
@@ -16,6 +17,7 @@ NotificationSettingsState _state({
     stepGoalNotificationEnabled: stepGoalNotificationEnabled,
     trainerCommentPushEnabled: trainerCommentPushEnabled,
     trainerGoalsPushEnabled: trainerGoalsPushEnabled,
+    programAssignedPushEnabled: programAssignedPushEnabled,
   );
 }
 
@@ -45,6 +47,10 @@ void main() {
       expect(_state(trainerGoalsPushEnabled: true).anyEnabled, isTrue);
     });
 
+    test('is true when only program-assigned is on', () {
+      expect(_state(programAssignedPushEnabled: true).anyEnabled, isTrue);
+    });
+
     test('is true when every type is on', () {
       expect(
         _state(
@@ -53,6 +59,7 @@ void main() {
           stepGoalNotificationEnabled: true,
           trainerCommentPushEnabled: true,
           trainerGoalsPushEnabled: true,
+          programAssignedPushEnabled: true,
         ).anyEnabled,
         isTrue,
       );
@@ -72,6 +79,7 @@ void main() {
       expect(updated.stepGoalNotificationEnabled, isFalse);
       expect(updated.trainerCommentPushEnabled, isFalse);
       expect(updated.trainerGoalsPushEnabled, isFalse);
+      expect(updated.programAssignedPushEnabled, isFalse);
     });
 
     test('with no arguments returns an equivalent state', () {
@@ -86,6 +94,7 @@ void main() {
       expect(updated.stepGoalNotificationEnabled, original.stepGoalNotificationEnabled);
       expect(updated.trainerCommentPushEnabled, original.trainerCommentPushEnabled);
       expect(updated.trainerGoalsPushEnabled, original.trainerGoalsPushEnabled);
+      expect(updated.programAssignedPushEnabled, original.programAssignedPushEnabled);
     });
   });
 }

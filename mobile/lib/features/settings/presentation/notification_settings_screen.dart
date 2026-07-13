@@ -56,6 +56,14 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
     }
   }
 
+  Future<void> _setProgramAssignedPush(bool value) async {
+    try {
+      await _controller.setProgramAssignedPushEnabled(value);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    }
+  }
+
   Future<void> _setAll(bool value) async {
     final scheduled = await _controller.setAllEnabled(value);
     if (mounted) setState(() => _permissionDenied = value && !scheduled);
@@ -142,6 +150,12 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
           subtitle: Text(l10n.trainerGoalsPushToggleSubtitle),
           value: state.trainerGoalsPushEnabled,
           onChanged: _setTrainerGoalsPush,
+        ),
+        SwitchListTile(
+          title: Text(l10n.programAssignedPushToggleLabel),
+          subtitle: Text(l10n.programAssignedPushToggleSubtitle),
+          value: state.programAssignedPushEnabled,
+          onChanged: _setProgramAssignedPush,
         ),
         if (_permissionDenied)
           Padding(

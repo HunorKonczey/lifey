@@ -8,6 +8,7 @@ import com.lifey.mail.MailLanguageResolver;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
 import com.lifey.nutrition.recipe.Recipe;
+import com.lifey.nutrition.recipe.RecipeImage;
 import com.lifey.nutrition.recipe.RecipeImageRepository;
 import com.lifey.nutrition.recipe.RecipeIngredient;
 import com.lifey.nutrition.recipe.RecipeRepository;
@@ -15,7 +16,7 @@ import com.lifey.trainer.ContentAssignmentRepository;
 import com.lifey.trainer.ContentType;
 import com.lifey.trainer.dto.AssignmentListItemResponse;
 import com.lifey.trainer.dto.AssignmentRequest;
-import com.lifey.trainer.dto.AssignmentResponse;
+import com.lifey.trainer.dto.BulkAssignmentResponse;
 import com.lifey.trainer.entity.ContentAssignment;
 import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.exception.NotYourClientException;
@@ -50,6 +51,7 @@ class ContentAssignmentServiceImplTest {
 
     private static final Long TRAINER_ID = 1L;
     private static final Long CLIENT_ID = 2L;
+    private static final Long OTHER_CLIENT_ID = 3L;
 
     @Mock
     ContentAssignmentRepository contentAssignmentRepository;
@@ -92,6 +94,7 @@ class ContentAssignmentServiceImplTest {
         lenient().when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
         lenient().when(userRepository.getReferenceById(TRAINER_ID)).thenReturn(user(TRAINER_ID));
         lenient().when(userRepository.getReferenceById(CLIENT_ID)).thenReturn(user(CLIENT_ID));
+        lenient().when(userRepository.getReferenceById(OTHER_CLIENT_ID)).thenReturn(user(OTHER_CLIENT_ID));
         // Recipe tests below don't set up a photo — copyRecipeImage's source lookup
         // just needs to resolve to "no image" so it can no-op.
         lenient().when(recipeImageRepository.findByRecipeId(any())).thenReturn(Optional.empty());
@@ -102,7 +105,7 @@ class ContentAssignmentServiceImplTest {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID))
                 .thenThrow(new NotYourClientException("nope"));
 
-        assertThatThrownBy(() -> service.assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, 7L)))
+        assertThatThrownBy(() -> service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.TEMPLATE, 7L)))
                 .isInstanceOf(NotYourClientException.class);
         verify(contentAssignmentRepository, never()).save(any());
     }
@@ -112,7 +115,7 @@ class ContentAssignmentServiceImplTest {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
         when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, 7L)))
+        assertThatThrownBy(() -> service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.TEMPLATE, 7L)))
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(contentAssignmentRepository, never()).save(any());
     }
@@ -152,11 +155,13 @@ class ContentAssignmentServiceImplTest {
                 TRAINER_ID, CLIENT_ID, ContentType.TEMPLATE, 7L)).thenReturn(false);
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        AssignmentResponse result = service.assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, 7L));
+        BulkAssignmentResponse result = service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.TEMPLATE, 7L));
 
-        assertThat(result.copiedId()).isEqualTo(88L);
-        assertThat(result.sourceId()).isEqualTo(7L);
-        assertThat(result.previouslyAssigned()).isFalse();
+        assertThat(result.assignments()).singleElement().satisfies(item -> {
+            assertThat(item.clientId()).isEqualTo(CLIENT_ID);
+            assertThat(item.copiedId()).isEqualTo(88L);
+        });
+        assertThat(result.skippedClientIds()).isEmpty();
 
         ArgumentCaptor<WorkoutTemplate> templateCaptor = ArgumentCaptor.forClass(WorkoutTemplate.class);
         verify(workoutTemplateRepository).save(templateCaptor.capture());
@@ -201,13 +206,76 @@ class ContentAssignmentServiceImplTest {
         when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> inv.getArgument(0));
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, 7L));
+        service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.TEMPLATE, 7L));
 
         verify(exerciseRepository, never()).save(any());
         ArgumentCaptor<WorkoutTemplate> captor = ArgumentCaptor.forClass(WorkoutTemplate.class);
         verify(workoutTemplateRepository).save(captor.capture());
         assertThat(captor.getValue().getExercises()).singleElement()
                 .satisfies(l -> assertThat(l.getExercise()).isSameAs(existingCopy));
+    }
+
+    @Test
+    void resolveClientCopy_reusesLiveClientCopy_whenOneExists() {
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        WorkoutTemplate existingCopy = new WorkoutTemplate();
+        existingCopy.setId(55L);
+        when(workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
+                CLIENT_ID, TRAINER_ID, 7L)).thenReturn(Optional.of(existingCopy));
+
+        WorkoutTemplate result = service.resolveClientCopy(TRAINER_ID, CLIENT_ID, source);
+
+        assertThat(result).isSameAs(existingCopy);
+        verify(contentAssignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void resolveClientCopy_deepCopies_whenNoLiveCopyExists() {
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        source.setName("Push day");
+        when(workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
+                CLIENT_ID, TRAINER_ID, 7L)).thenReturn(Optional.empty());
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
+        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
+            WorkoutTemplate t = inv.getArgument(0);
+            t.setId(88L);
+            return t;
+        });
+        when(contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
+                TRAINER_ID, CLIENT_ID, ContentType.TEMPLATE, 7L)).thenReturn(false);
+        when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(workoutTemplateRepository.getReferenceById(88L)).thenAnswer(_ -> {
+            WorkoutTemplate t = new WorkoutTemplate();
+            t.setId(88L);
+            return t;
+        });
+
+        WorkoutTemplate result = service.resolveClientCopy(TRAINER_ID, CLIENT_ID, source);
+
+        assertThat(result.getId()).isEqualTo(88L);
+        verify(contentAssignmentRepository).save(any(ContentAssignment.class));
+    }
+
+    @Test
+    void resolveClientCopy_throwsWhenFactRowExistsButClientDeletedTheirCopy() {
+        // The client deleted their copy after the assignment: the live-copy
+        // lookup misses but the fact row remains — silently re-copying would
+        // resurrect the deleted content, so this must keep throwing (unlike
+        // the bulk endpoint's skip semantics).
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        when(workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
+                CLIENT_ID, TRAINER_ID, 7L)).thenReturn(Optional.empty());
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+        when(contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
+                TRAINER_ID, CLIENT_ID, ContentType.TEMPLATE, 7L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.resolveClientCopy(TRAINER_ID, CLIENT_ID, source))
+                .isInstanceOf(DuplicateResourceException.class);
+        verify(contentAssignmentRepository, never()).save(any());
     }
 
     @Test
@@ -451,9 +519,10 @@ class ContentAssignmentServiceImplTest {
         });
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        AssignmentResponse result = service.assign(new AssignmentRequest(CLIENT_ID, ContentType.RECIPE, 12L));
+        BulkAssignmentResponse result = service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.RECIPE, 12L));
 
-        assertThat(result.copiedId()).isEqualTo(66L);
+        assertThat(result.assignments()).singleElement()
+                .satisfies(item -> assertThat(item.copiedId()).isEqualTo(66L));
 
         ArgumentCaptor<Recipe> recipeCaptor = ArgumentCaptor.forClass(Recipe.class);
         verify(recipeRepository).save(recipeCaptor.capture());
@@ -498,7 +567,7 @@ class ContentAssignmentServiceImplTest {
         when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> inv.getArgument(0));
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.assign(new AssignmentRequest(CLIENT_ID, ContentType.RECIPE, 12L));
+        service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.RECIPE, 12L));
 
         verify(foodRepository, never()).save(any());
         ArgumentCaptor<Recipe> recipeCaptor = ArgumentCaptor.forClass(Recipe.class);
@@ -545,7 +614,7 @@ class ContentAssignmentServiceImplTest {
         when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> inv.getArgument(0));
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.assign(new AssignmentRequest(CLIENT_ID, ContentType.RECIPE, 12L));
+        service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.RECIPE, 12L));
 
         ArgumentCaptor<Food> foodCaptor = ArgumentCaptor.forClass(Food.class);
         verify(foodRepository).save(foodCaptor.capture());
@@ -553,15 +622,20 @@ class ContentAssignmentServiceImplTest {
     }
 
     @Test
-    void assign_recipe_throwsWhenAlreadyAssignedToThisClient() {
+    void assign_allClientsAlreadyAssigned_returnsAllSkippedWithoutCopying() {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+        Recipe source = new Recipe();
+        source.setId(12L);
+        source.setName("Protein shake");
+        when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.of(source));
         when(contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
                 TRAINER_ID, CLIENT_ID, ContentType.RECIPE, 12L)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.assign(new AssignmentRequest(CLIENT_ID, ContentType.RECIPE, 12L)))
-                .isInstanceOf(DuplicateResourceException.class);
+        BulkAssignmentResponse result = service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.RECIPE, 12L));
 
-        verify(recipeRepository, never()).findByIdAndUserId(any(), any());
+        assertThat(result.assignments()).isEmpty();
+        assertThat(result.skippedClientIds()).containsExactly(CLIENT_ID);
+        verify(recipeRepository, never()).save(any());
         verify(contentAssignmentRepository, never()).save(any());
     }
 
@@ -570,22 +644,158 @@ class ContentAssignmentServiceImplTest {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
         when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.assign(new AssignmentRequest(CLIENT_ID, ContentType.RECIPE, 12L)))
+        assertThatThrownBy(() -> service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.RECIPE, 12L)))
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(contentAssignmentRepository, never()).save(any());
     }
 
     @Test
-    void assign_template_throwsWhenAlreadyAssignedToThisClient() {
+    void assign_skipsAlreadyAssignedClient_andCopiesForTheRestOfTheBatch() {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, OTHER_CLIENT_ID)).thenReturn(new TrainerClient());
+
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        source.setName("Push day");
+        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
         when(contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
                 TRAINER_ID, CLIENT_ID, ContentType.TEMPLATE, 7L)).thenReturn(true);
+        when(contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
+                TRAINER_ID, OTHER_CLIENT_ID, ContentType.TEMPLATE, 7L)).thenReturn(false);
+        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
+            WorkoutTemplate t = inv.getArgument(0);
+            t.setId(88L);
+            return t;
+        });
+        when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertThatThrownBy(() -> service.assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, 7L)))
-                .isInstanceOf(DuplicateResourceException.class);
+        BulkAssignmentResponse result = service.assign(
+                new AssignmentRequest(List.of(CLIENT_ID, OTHER_CLIENT_ID), ContentType.TEMPLATE, 7L));
+
+        assertThat(result.skippedClientIds()).containsExactly(CLIENT_ID);
+        assertThat(result.assignments()).singleElement().satisfies(item -> {
+            assertThat(item.clientId()).isEqualTo(OTHER_CLIENT_ID);
+            assertThat(item.copiedId()).isEqualTo(88L);
+        });
+        verify(workoutTemplateRepository, times(1)).save(any());
+        verify(contentAssignmentRepository, times(1)).save(any());
+    }
+
+    @Test
+    void assign_bulk_copiesForEveryClient_reusingEachClientsOwnExerciseCopies() {
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, OTHER_CLIENT_ID)).thenReturn(new TrainerClient());
+
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        source.setName("Push day");
+        Exercise sourceExercise = new Exercise();
+        sourceExercise.setId(30L);
+        sourceExercise.setName("Bench Press");
+        WorkoutTemplateExercise link = new WorkoutTemplateExercise();
+        link.setExercise(sourceExercise);
+        source.getExercises().add(link);
+        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
+
+        // CLIENT_ID already owns a copy of the exercise (earlier assignment); OTHER_CLIENT_ID doesn't.
+        Exercise existingCopy = new Exercise();
+        existingCopy.setId(55L);
+        when(exerciseRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 30L))
+                .thenReturn(Optional.of(existingCopy));
+        when(exerciseRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(OTHER_CLIENT_ID, TRAINER_ID, 30L))
+                .thenReturn(Optional.empty());
+        when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> {
+            Exercise e = inv.getArgument(0);
+            e.setId(99L);
+            return e;
+        });
+        long[] nextTemplateId = {88L};
+        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
+            WorkoutTemplate t = inv.getArgument(0);
+            t.setId(nextTemplateId[0]++);
+            return t;
+        });
+        when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        BulkAssignmentResponse result = service.assign(
+                new AssignmentRequest(List.of(CLIENT_ID, OTHER_CLIENT_ID), ContentType.TEMPLATE, 7L));
+
+        assertThat(result.assignments()).hasSize(2);
+        assertThat(result.assignments()).extracting(BulkAssignmentResponse.BulkAssignmentItem::clientId)
+                .containsExactly(CLIENT_ID, OTHER_CLIENT_ID);
+        assertThat(result.skippedClientIds()).isEmpty();
+        // Only OTHER_CLIENT_ID needed a fresh exercise copy.
+        verify(exerciseRepository, times(1)).save(any());
+        verify(workoutTemplateRepository, times(2)).save(any());
+        verify(contentAssignmentRepository, times(2)).save(any());
+        // The source is loaded once for the whole batch.
+        verify(workoutTemplateRepository, times(1)).findByIdAndUserId(7L, TRAINER_ID);
+    }
+
+    @Test
+    void assign_dedupesRepeatedClientIds() {
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+
+        WorkoutTemplate source = new WorkoutTemplate();
+        source.setId(7L);
+        source.setName("Push day");
+        when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
+        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
+            WorkoutTemplate t = inv.getArgument(0);
+            t.setId(88L);
+            return t;
+        });
+        when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        BulkAssignmentResponse result = service.assign(
+                new AssignmentRequest(List.of(CLIENT_ID, CLIENT_ID), ContentType.TEMPLATE, 7L));
+
+        assertThat(result.assignments()).hasSize(1);
+        verify(workoutTemplateRepository, times(1)).save(any());
+        verify(contentAssignmentRepository, times(1)).save(any());
+    }
+
+    @Test
+    void assign_revokedClientInBatch_failsBeforeAnyCopying() {
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, OTHER_CLIENT_ID))
+                .thenThrow(new NotYourClientException("nope"));
+
+        assertThatThrownBy(() -> service.assign(
+                new AssignmentRequest(List.of(CLIENT_ID, OTHER_CLIENT_ID), ContentType.TEMPLATE, 7L)))
+                .isInstanceOf(NotYourClientException.class);
 
         verify(workoutTemplateRepository, never()).findByIdAndUserId(any(), any());
+        verify(workoutTemplateRepository, never()).save(any());
         verify(contentAssignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void assign_bulk_copiesRecipeImageForEveryClient() {
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
+        when(trainerAccessService.requireActiveClient(TRAINER_ID, OTHER_CLIENT_ID)).thenReturn(new TrainerClient());
+
+        Recipe source = new Recipe();
+        source.setId(12L);
+        source.setName("Protein shake");
+        source.setServings(2);
+        when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.of(source));
+        long[] nextRecipeId = {66L};
+        when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> {
+            Recipe r = inv.getArgument(0);
+            r.setId(nextRecipeId[0]++);
+            return r;
+        });
+        when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        RecipeImage sourceImage = new RecipeImage();
+        sourceImage.setRecipe(source);
+        when(recipeImageRepository.findByRecipeId(12L)).thenReturn(Optional.of(sourceImage));
+        // Fresh copies (66, 67) have no image row yet — the lenient any() stub in setUp covers them.
+
+        service.assign(new AssignmentRequest(List.of(CLIENT_ID, OTHER_CLIENT_ID), ContentType.RECIPE, 12L));
+
+        verify(recipeImageRepository, times(2)).save(any(RecipeImage.class));
     }
 
     @Test

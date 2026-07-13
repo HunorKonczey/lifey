@@ -7,10 +7,16 @@ import type { MealResponse } from "@/features/nutrition/types";
 import type {
   AssignmentListItemResponse,
   AssignmentRequest,
-  AssignmentResponse,
+  BulkAssignmentResponse,
   ClientNutritionGoalsRequest,
   ClientNutritionGoalsResponse,
   ContentType,
+  ProgramAssignmentRequest,
+  ProgramAssignmentResponse,
+  ProgramAssignmentSummaryResponse,
+  ProgramRequest,
+  ProgramResponse,
+  ProgramSummaryResponse,
   ScheduleRequest,
   ScheduleResponse,
   ScheduleSummaryResponse,
@@ -33,7 +39,7 @@ export const trainerApi = {
   revokeClient: (clientId: number) => api.delete(`/trainer/clients/${clientId}`),
 
   assign: (body: AssignmentRequest) =>
-    api.post<AssignmentResponse>("/trainer/assignments", body),
+    api.post<BulkAssignmentResponse>("/trainer/assignments", body),
   assignmentsForClient: (clientId: number) =>
     api.get<AssignmentListItemResponse[]>(`/trainer/clients/${clientId}/assignments`),
   assignedClientIds: (contentType: ContentType, sourceId: number) =>
@@ -105,4 +111,18 @@ export const trainerApi = {
   preferences: () => api.get<TrainerPreferencesResponse>("/trainer/preferences"),
   updatePreferences: (body: TrainerPreferencesRequest) =>
     api.put<TrainerPreferencesResponse>("/trainer/preferences", body),
+
+  createProgram: (body: ProgramRequest) => api.post<ProgramResponse>("/trainer/programs", body),
+  programs: () => api.get<ProgramSummaryResponse[]>("/trainer/programs"),
+  program: (programId: number) => api.get<ProgramResponse>(`/trainer/programs/${programId}`),
+  updateProgram: (programId: number, body: ProgramRequest) =>
+    api.put<ProgramResponse>(`/trainer/programs/${programId}`, body),
+  deleteProgram: (programId: number) => api.delete(`/trainer/programs/${programId}`),
+
+  assignProgram: (programId: number, body: ProgramAssignmentRequest) =>
+    api.post<ProgramAssignmentResponse>(`/trainer/programs/${programId}/assignments`, body),
+  programAssignmentsForClient: (clientId: number) =>
+    api.get<ProgramAssignmentSummaryResponse[]>(`/trainer/clients/${clientId}/program-assignments`),
+  cancelProgramAssignment: (assignmentId: number) =>
+    api.delete(`/trainer/program-assignments/${assignmentId}`),
 };

@@ -25,6 +25,9 @@ import 'firebase_bootstrap.dart';
 /// `type == nutrition_goals` navigates to the nutrition tab — tab-level like
 /// `scheduled_workout`, the next sync (already in flight by the time the tap
 /// is handled) fills in the updated goals (docs/32-trainer-nutrition-goals-plan.md).
+/// `type == program_assigned` navigates to the workouts tab — tab-level like
+/// `scheduled_workout`, no deep link to the specific program assignment
+/// (docs/34-multi-week-program-plan.md, M6).
 ///
 /// Singleton for the app's lifetime (like `WorkoutResumePrompt`) — wired up
 /// once via `ref.watch(pushTapHandlerProvider)` in `app.dart`.
@@ -106,6 +109,9 @@ class PushTapHandler {
     }
     if (data['type'] == 'nutrition_goals') {
       _ref.read(appRouterProvider).go('/nutrition');
+    }
+    if (data['type'] == 'program_assigned') {
+      _ref.read(appRouterProvider).go('/workouts');
     }
   }
 

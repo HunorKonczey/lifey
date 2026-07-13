@@ -105,7 +105,7 @@ clients, assignments, schedules, calendar) on the web admin.
 * Assigning a program generates the scheduled sessions automatically
 * Extends the existing schedule/assignment model
 
-#### 15. Bulk Assignment
+#### 15. Bulk Assignment (plan: 35-bulk-assignment-plan.md)
 
 * Assign a template or recipe to multiple clients at once
 * Extension of the existing AssignmentController

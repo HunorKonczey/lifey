@@ -20,6 +20,7 @@ class UserSettings {
     this.workoutReminderEnabled = true,
     this.trainerCommentPushEnabled = true,
     this.trainerGoalsPushEnabled = true,
+    this.programAssignedPushEnabled = true,
   });
 
   const UserSettings.defaults()
@@ -34,7 +35,8 @@ class UserSettings {
         dailyStepGoal = null,
         workoutReminderEnabled = true,
         trainerCommentPushEnabled = true,
-        trainerGoalsPushEnabled = true;
+        trainerGoalsPushEnabled = true,
+        programAssignedPushEnabled = true;
 
   final UnitSystem unitSystem;
   final ThemePreference theme;
@@ -57,6 +59,10 @@ class UserSettings {
   // (docs/32-trainer-nutrition-goals-plan.md) — same shape as
   // [workoutReminderEnabled] above.
   final bool trainerGoalsPushEnabled;
+  // Opt-out for the program-assigned push notification
+  // (docs/34-multi-week-program-plan.md, M6) — same shape as
+  // [workoutReminderEnabled] above.
+  final bool programAssignedPushEnabled;
 
   UserSettings copyWith({
     UnitSystem? unitSystem,
@@ -71,6 +77,7 @@ class UserSettings {
     bool? workoutReminderEnabled,
     bool? trainerCommentPushEnabled,
     bool? trainerGoalsPushEnabled,
+    bool? programAssignedPushEnabled,
   }) {
     return UserSettings(
       unitSystem: unitSystem ?? this.unitSystem,
@@ -85,6 +92,7 @@ class UserSettings {
       workoutReminderEnabled: workoutReminderEnabled ?? this.workoutReminderEnabled,
       trainerCommentPushEnabled: trainerCommentPushEnabled ?? this.trainerCommentPushEnabled,
       trainerGoalsPushEnabled: trainerGoalsPushEnabled ?? this.trainerGoalsPushEnabled,
+      programAssignedPushEnabled: programAssignedPushEnabled ?? this.programAssignedPushEnabled,
     );
   }
 
@@ -102,6 +110,7 @@ class UserSettings {
       workoutReminderEnabled: json['workoutReminderEnabled'] as bool? ?? true,
       trainerCommentPushEnabled: json['trainerCommentPushEnabled'] as bool? ?? true,
       trainerGoalsPushEnabled: json['trainerGoalsPushEnabled'] as bool? ?? true,
+      programAssignedPushEnabled: json['programAssignedPushEnabled'] as bool? ?? true,
     );
   }
 
@@ -118,5 +127,6 @@ class UserSettings {
         'workoutReminderEnabled': workoutReminderEnabled,
         'trainerCommentPushEnabled': trainerCommentPushEnabled,
         'trainerGoalsPushEnabled': trainerGoalsPushEnabled,
+        'programAssignedPushEnabled': programAssignedPushEnabled,
       };
 }

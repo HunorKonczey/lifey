@@ -568,6 +568,7 @@ class PullEngine {
             workoutReminderEnabled: Value(json['workoutReminderEnabled'] as bool? ?? true),
             trainerCommentPushEnabled: Value(json['trainerCommentPushEnabled'] as bool? ?? true),
             trainerGoalsPushEnabled: Value(json['trainerGoalsPushEnabled'] as bool? ?? true),
+            programAssignedPushEnabled: Value(json['programAssignedPushEnabled'] as bool? ?? true),
           ),
         );
   }

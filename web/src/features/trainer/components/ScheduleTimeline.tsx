@@ -20,9 +20,11 @@ interface ScheduleTimelineProps {
   occurrences: ScheduledSessionResponse[];
   /* Jumps to the session's detail in the Workouts tab (DONE occurrences only). */
   onViewSession?: (sessionId: number) => void;
+  /* Resolves a program-origin occurrence's programAssignmentId to its program name, for the badge. */
+  programNamesById?: Record<number, string>;
 }
 
-export function ScheduleTimeline({ clientId, occurrences, onViewSession }: ScheduleTimelineProps) {
+export function ScheduleTimeline({ clientId, occurrences, onViewSession, programNamesById }: ScheduleTimelineProps) {
   const t = useTranslations("admin.schedule");
   const tc = useTranslations("common");
   const queryClient = useQueryClient();
@@ -131,11 +133,19 @@ export function ScheduleTimeline({ clientId, occurrences, onViewSession }: Sched
                       {format(new Date(`${occ.scheduledFor}T00:00:00`), "EEE, MMM d.", { locale: dateLocale })}
                       {occ.scheduledTime && ` · ${occ.scheduledTime.slice(0, 5)}`}
                     </span>
-                    <span
-                      className="flex-1 min-w-0 text-[13.5px] font-bold truncate"
-                      style={{ color: "var(--on-surface)", textDecoration: cancelled ? "line-through" : "none" }}
-                    >
-                      {occ.templateName ?? t("unnamedTemplate")}
+                    <span className="flex-1 min-w-0">
+                      <span
+                        className="block text-[13.5px] font-bold truncate"
+                        style={{ color: "var(--on-surface)", textDecoration: cancelled ? "line-through" : "none" }}
+                      >
+                        {occ.templateName ?? t("unnamedTemplate")}
+                      </span>
+                      {occ.programAssignmentId != null && programNamesById?.[occ.programAssignmentId] && (
+                        <span className="flex items-center gap-1 text-[10.5px] mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
+                          <span className="material-symbols-rounded text-xs">event_repeat</span>
+                          {programNamesById[occ.programAssignmentId]}
+                        </span>
+                      )}
                     </span>
                     <span
                       className="flex items-center gap-1.5 rounded-full text-[11px] font-extrabold px-2.5 py-1 shrink-0"

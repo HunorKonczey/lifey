@@ -29,6 +29,9 @@ class UserSettingsTable extends Table {
   // Added in schema v26 (docs/32-trainer-nutrition-goals-plan.md) — needs a
   // DEFAULT for the same reason as `language` above.
   BoolColumn get trainerGoalsPushEnabled => boolean().withDefault(const Constant(true))();
+  // Added in schema v27 (docs/34-multi-week-program-plan.md, M6) — needs a
+  // DEFAULT for the same reason as `language` above.
+  BoolColumn get programAssignedPushEnabled => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column> get primaryKey => {clientId};

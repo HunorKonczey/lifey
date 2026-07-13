@@ -107,7 +107,7 @@ class WorkoutScheduleControllerTest {
     void findScheduledSessions_returnsOccurrences() throws Exception {
         when(workoutScheduleService.findScheduledSessions(2L, LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13)))
                 .thenReturn(List.of(new ScheduledSessionResponse(
-                        30L, LocalDate.of(2026, 7, 9), null, "Push day", OccurrenceStatus.UPCOMING, 9L)));
+                        30L, LocalDate.of(2026, 7, 9), null, "Push day", OccurrenceStatus.UPCOMING, 9L, null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients/2/scheduled-sessions")
                         .param("from", "2026-07-06").param("to", "2026-07-13"))
@@ -121,7 +121,7 @@ class WorkoutScheduleControllerTest {
                 LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13)))
                 .thenReturn(List.of(new TrainerCalendarSessionResponse(
                         30L, 2L, "anna@example.com", LocalDate.of(2026, 7, 9), null,
-                        "Push day", OccurrenceStatus.UPCOMING, 9L)));
+                        "Push day", OccurrenceStatus.UPCOMING, 9L, null, null)));
 
         mockMvc.perform(get("/api/v1/trainer/scheduled-sessions")
                         .param("from", "2026-07-06").param("to", "2026-07-13"))

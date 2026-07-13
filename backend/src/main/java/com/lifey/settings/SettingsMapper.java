@@ -24,6 +24,7 @@ public final class SettingsMapper {
         settings.setWorkoutReminderEnabled(request.workoutReminderEnabled());
         settings.setTrainerCommentPushEnabled(request.trainerCommentPushEnabled());
         settings.setTrainerGoalsPushEnabled(request.trainerGoalsPushEnabled());
+        settings.setProgramAssignedPushEnabled(request.programAssignedPushEnabled());
     }
 
     public static SettingsResponse toResponse(UserSettings settings) {
@@ -39,7 +40,8 @@ public final class SettingsMapper {
                 settings.getLanguage(),
                 settings.isWorkoutReminderEnabled(),
                 settings.isTrainerCommentPushEnabled(),
-                settings.isTrainerGoalsPushEnabled()
+                settings.isTrainerGoalsPushEnabled(),
+                settings.isProgramAssignedPushEnabled()
         );
     }
 }

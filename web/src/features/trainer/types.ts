@@ -30,18 +30,22 @@ export interface TrainerClientResponse {
 export type ContentType = "TEMPLATE" | "RECIPE";
 
 export interface AssignmentRequest {
-  clientId: number;
+  clientIds: number[];
   contentType: ContentType;
   sourceId: number;
 }
 
-export interface AssignmentResponse {
-  id: number;
-  contentType: ContentType;
-  sourceId: number;
+export interface BulkAssignmentItem {
+  clientId: number;
+  assignmentId: number;
   copiedId: number;
   assignedAt: string;
-  previouslyAssigned: boolean;
+}
+
+/** Clients in skippedClientIds already had this content — not a failure, just a no-op. */
+export interface BulkAssignmentResponse {
+  assignments: BulkAssignmentItem[];
+  skippedClientIds: number[];
 }
 
 /** One row of "kiosztott tervek" for a given client — no source name/client
@@ -129,7 +133,9 @@ export interface ScheduledSessionResponse {
   scheduledTime: string | null;
   templateName: string | null;
   status: OccurrenceStatus;
-  scheduleId: number;
+  scheduleId: number | null;
+  /* Set instead of scheduleId when this occurrence came from a multi-week program assignment. */
+  programAssignmentId: number | null;
 }
 
 /** Same as ScheduledSessionResponse but aggregated across every active client — backs the trainer calendar. */
@@ -141,7 +147,11 @@ export interface TrainerCalendarSessionResponse {
   scheduledTime: string | null;
   templateName: string | null;
   status: OccurrenceStatus;
-  scheduleId: number;
+  scheduleId: number | null;
+  /* Set instead of scheduleId when this occurrence came from a multi-week program assignment. */
+  programAssignmentId: number | null;
+  /* Snapshot name of the program, for the calendar peek — null unless programAssignmentId is set. */
+  programName: string | null;
 }
 
 /** The trainer's own preferences (docs/33) — not client data, separate from /settings. */
@@ -151,4 +161,78 @@ export interface TrainerPreferencesResponse {
 
 export interface TrainerPreferencesRequest {
   weeklyReportEmailEnabled: boolean;
+}
+
+// ─── Multi-week programs (docs/34-multi-week-program-plan.md) ───
+
+export interface ProgramWorkoutRequest {
+  weekNumber: number;
+  dayOfWeek: DayOfWeek;
+  templateId: number;
+  /* "HH:mm", optional. */
+  timeOfDay?: string | null;
+  note?: string | null;
+}
+
+export interface ProgramRequest {
+  name: string;
+  weeksCount: number;
+  workouts: ProgramWorkoutRequest[];
+}
+
+export interface ProgramWorkoutResponse {
+  id: number;
+  weekNumber: number;
+  dayOfWeek: DayOfWeek;
+  templateId: number;
+  /* Resolved live — reflects the template's current name, even if renamed since. */
+  templateName: string;
+  timeOfDay: string | null;
+  note: string | null;
+}
+
+export interface ProgramResponse {
+  id: number;
+  name: string;
+  weeksCount: number;
+  workouts: ProgramWorkoutResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProgramSummaryResponse {
+  id: number;
+  name: string;
+  weeksCount: number;
+  /* Distinct days of week used across the grid. */
+  slotsPerWeek: number;
+  activeAssignmentCount: number;
+}
+
+export interface ProgramAssignmentRequest {
+  clientId: number;
+  /* Must be a Monday, not in the past. */
+  startDate: string;
+}
+
+export interface ProgramAssignmentResponse {
+  assignmentId: number;
+  programName: string;
+  startDate: string;
+  endDate: string;
+  occurrenceCount: number;
+}
+
+export interface ProgramAssignmentSummaryResponse {
+  id: number;
+  clientId: number;
+  programId: number;
+  /* Snapshot at assignment time — survives the program being renamed or deleted since. */
+  programName: string;
+  startDate: string;
+  endDate: string;
+  doneCount: number;
+  missedCount: number;
+  remainingCount: number;
+  cancelledAt: string | null;
 }

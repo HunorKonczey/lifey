@@ -66,11 +66,12 @@ final class OccurrenceGenerator {
                 .toList();
     }
 
-    private static String toCode(DayOfWeek day) {
+    /** Package-visible for single-day conversions elsewhere in this package (e.g. program builder slots). */
+    static String toCode(DayOfWeek day) {
         return day.name().substring(0, 3);
     }
 
-    private static DayOfWeek fromCode(String code) {
+    static DayOfWeek fromCode(String code) {
         String trimmed = code.trim();
         return Arrays.stream(DayOfWeek.values())
                 .filter(day -> toCode(day).equals(trimmed))

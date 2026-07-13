@@ -75,6 +75,14 @@ public class UserSettings extends BaseEntity {
     private boolean trainerGoalsPushEnabled = true;
 
     /**
+     * Opt-out for the program-assigned push notification
+     * (docs/34-multi-week-program-plan.md, M6). Default true — the trainer
+     * relationship is something the client already accepted.
+     */
+    @Column(name = "program_assigned_push_enabled", nullable = false)
+    private boolean programAssignedPushEnabled = true;
+
+    /**
      * Opt-out for the weekly trainer report email
      * (docs/33-weekly-trainer-report-plan.md). Trainer-facing only —
      * deliberately excluded from {@code SettingsRequest}/{@code

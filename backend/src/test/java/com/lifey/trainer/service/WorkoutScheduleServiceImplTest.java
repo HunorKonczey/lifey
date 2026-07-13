@@ -2,13 +2,11 @@ package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
-import com.lifey.trainer.ContentType;
+import com.lifey.trainer.ProgramAssignmentRepository;
 import com.lifey.trainer.Recurrence;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.WorkoutScheduleRepository;
-import com.lifey.trainer.dto.AssignmentRequest;
-import com.lifey.trainer.dto.AssignmentResponse;
 import com.lifey.trainer.dto.OccurrenceStatus;
 import com.lifey.trainer.dto.ScheduleRequest;
 import com.lifey.trainer.dto.ScheduleResponse;
@@ -78,6 +76,9 @@ class WorkoutScheduleServiceImplTest {
     @Mock
     CurrentUserProvider currentUserProvider;
 
+    @Mock
+    ProgramAssignmentRepository programAssignmentRepository;
+
     @InjectMocks
     WorkoutScheduleServiceImpl service;
 
@@ -116,8 +117,7 @@ class WorkoutScheduleServiceImplTest {
         WorkoutTemplate clientCopy = new WorkoutTemplate();
         clientCopy.setId(55L);
         clientCopy.setName("Push day");
-        when(workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
-                CLIENT_ID, TRAINER_ID, TEMPLATE_ID)).thenReturn(Optional.of(clientCopy));
+        when(contentAssignmentService.resolveClientCopy(TRAINER_ID, CLIENT_ID, sourceTemplate)).thenReturn(clientCopy);
 
         ScheduleResponse response = service.create(onceRequest(LocalDate.now().plusDays(1)));
 
@@ -129,24 +129,19 @@ class WorkoutScheduleServiceImplTest {
 
     @Test
     void create_assignsFreshCopy_whenNoLiveCopyExists() {
-        when(workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
-                CLIENT_ID, TRAINER_ID, TEMPLATE_ID)).thenReturn(Optional.empty());
-        when(contentAssignmentService.assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, TEMPLATE_ID)))
-                .thenReturn(new AssignmentResponse(1L, ContentType.TEMPLATE, TEMPLATE_ID, 55L, Instant.now(), false));
         WorkoutTemplate clientCopy = new WorkoutTemplate();
         clientCopy.setId(55L);
         clientCopy.setName("Push day");
-        when(workoutTemplateRepository.getReferenceById(55L)).thenReturn(clientCopy);
+        when(contentAssignmentService.resolveClientCopy(TRAINER_ID, CLIENT_ID, sourceTemplate)).thenReturn(clientCopy);
 
         service.create(onceRequest(LocalDate.now().plusDays(1)));
 
-        verify(contentAssignmentService).assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, TEMPLATE_ID));
+        verify(contentAssignmentService).resolveClientCopy(TRAINER_ID, CLIENT_ID, sourceTemplate);
     }
 
     @Test
     void create_materializesOneSessionPerOccurrence() {
-        when(workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
-                CLIENT_ID, TRAINER_ID, TEMPLATE_ID)).thenReturn(Optional.of(sourceTemplate));
+        when(contentAssignmentService.resolveClientCopy(TRAINER_ID, CLIENT_ID, sourceTemplate)).thenReturn(sourceTemplate);
 
         LocalDate start = LocalDate.now().plusDays(1);
         ScheduleRequest request = new ScheduleRequest(

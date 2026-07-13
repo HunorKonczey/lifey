@@ -291,6 +291,45 @@ first session Mon 14 Jul"), new `UserSettings` opt-out boolean + settings
 toggle row + `PushTapHandler` route to the workouts tab. Independent of
 M1–M5; ship if time allows.
 
+**Design — follows the trainer-nutrition-goals push (docs/32) call-for-call:**
+that feature is the closest precedent (opt-out on `UserSettings`, inline
+localized copy, `data.type` string, tab-level `PushTapHandler` route) and
+`ClientNutritionGoalsServiceImpl`/`SessionCommentServiceImpl` are the two
+existing implementations this mirrors exactly — no new shared abstraction.
+
+* **Migration V60** — `user_settings.program_assigned_push_enabled boolean
+  not null default true` (one line, same shape as V56/V57).
+* **`UserSettings`** gains `programAssignedPushEnabled` (default `true`);
+  `SettingsRequest`/`SettingsResponse`/`SettingsMapper` round-trip it like
+  the other two push booleans (mobile-only surface — the web settings DTOs
+  intentionally don't carry any push preference, confirmed unchanged).
+* **`ProgramAssignmentServiceImpl.assign()`** gains `UserSettingsRepository`
+  + `PushService` as constructor-injected dependencies (both already exist,
+  neither currently wired into this class) and sends the push right after
+  the occurrence-materialization loop, before building the response. Opt-out
+  check: `settings.map(UserSettings::isProgramAssignedPushEnabled).orElse(true)`
+  (missing row = enabled, same as every other type). Body copy states the
+  program name and the first occurrence's actual date — computed from
+  `program.getWorkouts()`'s earliest (weekNumber, dayOfWeek) rather than
+  `request.startDate()`, since the first *slot* isn't necessarily on the
+  Monday itself. `data`: `{"type": "program_assigned", "programAssignmentId":
+  "<id>"}` — the id is carried for parity with `trainer_comment`'s
+  `sessionId`, even though the mobile handler doesn't deep-link on it (v1
+  is tab-level only, matching `nutrition_goals`/`scheduled_workout`).
+* **Mobile**: Drift schema v27 adds the column (`addColumn`, defaulted
+  `true`, same one-liner as v24/v25/v26); `UserSettings` domain model,
+  `SettingsRepository`, and `PullEngine._pullSettings` each get the field
+  threaded through exactly like `trainerGoalsPushEnabled`.
+  `NotificationSettingsController`/`NotificationSettingsState` gain the
+  field + a `setProgramAssignedPushEnabled` optimistic-flip setter, chained
+  into `setAllEnabled`; the settings screen gets one more `SwitchListTile`.
+  `PushTapHandler._route` adds `if (data['type'] == 'program_assigned') {
+  ...go('/workouts'); }` — tab-level, no deep link, matching the two other
+  tab-level types. New ARB strings (`programAssignedPushToggleLabel`/
+  `Subtitle`) in both `app_en.arb`/`app_hu.arb`, regenerated via
+  `flutter gen-l10n`.
+* **Web**: no changes — confirmed no push-preference surface exists there.
+
 ## Edge cases
 
 * **Template soft-deleted after program creation** — assignment fails

@@ -211,6 +211,19 @@ export function CalendarSessionPeek({ session, anchorEl, onClose }: CalendarSess
                 </span>
               </div>
             )}
+            {session.programAssignmentId != null && session.programName && (
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-rounded text-[17px]" style={{ color: "var(--on-surface-variant)" }}>
+                  event_repeat
+                </span>
+                <span
+                  className="flex items-center gap-1 rounded-full text-[11px] font-extrabold px-2.5 py-1"
+                  style={{ background: "rgba(110,154,106,.14)", color: "var(--tertiary)" }}
+                >
+                  {session.programName}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="h-px my-3.5" style={{ background: "var(--outline)" }} />

@@ -1201,6 +1201,12 @@
     "trainerGoalsPushToggleSubtitle": "When your trainer updates your nutrition goals",
     "@trainerGoalsPushToggleSubtitle": {"description": "Subtitle for the trainer-nutrition-goals-changed push notification toggle"},
 
+    "programAssignedPushToggleLabel": "New programs",
+    "@programAssignedPushToggleLabel": {"description": "Label for the program-assigned push notification toggle"},
+
+    "programAssignedPushToggleSubtitle": "When your trainer starts you on a program",
+    "@programAssignedPushToggleSubtitle": {"description": "Subtitle for the program-assigned push notification toggle"},
+
     "reminderTimeLabel": "Time",
     "@reminderTimeLabel": {"description": "Label for the weigh-in reminder's time-of-day row"},
 

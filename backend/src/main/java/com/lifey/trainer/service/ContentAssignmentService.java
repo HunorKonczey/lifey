@@ -3,13 +3,30 @@ package com.lifey.trainer.service;
 import com.lifey.trainer.ContentType;
 import com.lifey.trainer.dto.AssignmentListItemResponse;
 import com.lifey.trainer.dto.AssignmentRequest;
-import com.lifey.trainer.dto.AssignmentResponse;
+import com.lifey.trainer.dto.BulkAssignmentResponse;
+import com.lifey.workout.template.WorkoutTemplate;
 
 import java.util.List;
 
 public interface ContentAssignmentService {
 
-    AssignmentResponse assign(AssignmentRequest request);
+    /**
+     * Deep-copies the trainer's template/recipe to every requested client in
+     * one transaction. Clients who already hold this content are skipped and
+     * reported; a revoked client (403) or missing source (404) fails the
+     * whole batch with zero writes.
+     */
+    BulkAssignmentResponse assign(AssignmentRequest request);
+
+    /**
+     * Reuses the client's existing live copy of this exact trainer template if
+     * one already exists (from an earlier assignment, schedule or program
+     * assignment); otherwise deep-copies it (recording the same
+     * {@code content_assignments} fact row as {@link #assign}). Shared by
+     * {@code WorkoutScheduleService} and {@code ProgramAssignmentService} —
+     * scheduling/assigning a program is thus an implicit assignment.
+     */
+    WorkoutTemplate resolveClientCopy(Long trainerId, Long clientId, WorkoutTemplate sourceTemplate);
 
     List<AssignmentListItemResponse> findForClient(Long clientId);
 

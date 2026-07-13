@@ -43,6 +43,7 @@ class SettingsRepository {
       workoutReminderEnabled: Value(settings.workoutReminderEnabled),
       trainerCommentPushEnabled: Value(settings.trainerCommentPushEnabled),
       trainerGoalsPushEnabled: Value(settings.trainerGoalsPushEnabled),
+      programAssignedPushEnabled: Value(settings.programAssignedPushEnabled),
     );
 
     if (existing == null) {
@@ -68,6 +69,7 @@ class SettingsRepository {
       workoutReminderEnabled: row.workoutReminderEnabled,
       trainerCommentPushEnabled: row.trainerCommentPushEnabled,
       trainerGoalsPushEnabled: row.trainerGoalsPushEnabled,
+      programAssignedPushEnabled: row.programAssignedPushEnabled,
     );
   }
 }

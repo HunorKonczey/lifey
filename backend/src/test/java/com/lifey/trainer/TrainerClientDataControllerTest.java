@@ -322,7 +322,7 @@ class TrainerClientDataControllerTest {
     @Test
     void nutritionGoals_returnsClientsGoals() throws Exception {
         when(settingsService.forUser(CLIENT_ID)).thenReturn(new SettingsResponse(
-                UnitSystem.METRIC, 2200, 150, 240, 70, 2.5, 10000, ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true));
+                UnitSystem.METRIC, 2200, 150, 240, 70, 2.5, 10000, ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/nutrition-goals", CLIENT_ID))
                 .andExpect(status().isOk())
