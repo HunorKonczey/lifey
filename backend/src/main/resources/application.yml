@@ -138,3 +138,16 @@ lifey:
     # Used to build the accept/decline links in the invite email; the links
     # point back at this backend's own public endpoint, not a frontend route.
     public-base-url: ${TRAINER_INVITE_PUBLIC_BASE_URL:http://localhost:8080}
+  jobs:
+    password-reset-cleanup:
+      # Daily sweep removing expired/used password reset tokens (PasswordResetTokenCleanupJob).
+      cron: ${JOB_PASSWORD_RESET_CLEANUP_CRON:0 0 3 * * *}
+    trainer-weekly-report:
+      # Weekly trainer report email, every Monday (TrainerWeeklyReportJob).
+      cron: ${JOB_TRAINER_WEEKLY_REPORT_CRON:0 0 5 * * MON}
+    trainer-client-cleanup:
+      # Daily sweep expiring stale PENDING trainer invites (TrainerClientCleanupJob).
+      cron: ${JOB_TRAINER_CLIENT_CLEANUP_CRON:0 30 3 * * *}
+    workout-reminder:
+      # Per-user-local-time workout reminder tick, every 15 minutes (WorkoutReminderJob).
+      cron: ${JOB_WORKOUT_REMINDER_CRON:0 */15 * * * *}

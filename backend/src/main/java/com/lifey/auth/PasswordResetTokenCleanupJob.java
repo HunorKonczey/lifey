@@ -21,7 +21,7 @@ class PasswordResetTokenCleanupJob {
 
     private final PasswordResetTokenRepository tokenRepository;
 
-    @Scheduled(cron = "0 0 3 * * *")
+    @Scheduled(cron = "${lifey.jobs.password-reset-cleanup.cron}")
     @Transactional
     void cleanUpStaleTokens() {
         tokenRepository.deleteStaleTokens(Instant.now().minus(RETENTION));

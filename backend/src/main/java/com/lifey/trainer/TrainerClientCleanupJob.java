@@ -21,7 +21,7 @@ class TrainerClientCleanupJob {
 
     private final TrainerClientRepository trainerClientRepository;
 
-    @Scheduled(cron = "0 30 3 * * *")
+    @Scheduled(cron = "${lifey.jobs.trainer-client-cleanup.cron}")
     @Transactional
     void expireStaleInvites() {
         trainerClientRepository.expireStalePendingInvites(Instant.now());

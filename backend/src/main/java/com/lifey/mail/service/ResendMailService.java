@@ -33,13 +33,18 @@ class ResendMailService implements MailService {
     private final MailProperties mailProperties;
     private final MailTemplateRenderer templateRenderer;
     private final MailLanguageResolver languageResolver;
+    private final MailMessages messages;
+    private final WeeklyReportFormatting weeklyReportFormatting;
 
     ResendMailService(MailProperties mailProperties, MailTemplateRenderer templateRenderer,
-                      MailLanguageResolver languageResolver) {
+                      MailLanguageResolver languageResolver, MailMessages messages,
+                      WeeklyReportFormatting weeklyReportFormatting) {
         this.restClient = RestClient.create();
         this.mailProperties = mailProperties;
         this.templateRenderer = templateRenderer;
         this.languageResolver = languageResolver;
+        this.messages = messages;
+        this.weeklyReportFormatting = weeklyReportFormatting;
     }
 
     @Override
@@ -47,7 +52,7 @@ class ResendMailService implements MailService {
     public void sendWelcomeEmail(User user) {
         MailLanguage language = languageResolver.resolve(user);
         Map<String, String> placeholders = Map.of("name", displayName(user));
-        String subject = language == MailLanguage.HU ? "Üdvözlünk a Lifey-ban 🎉" : "Welcome to Lifey 🎉";
+        String subject = messages.get("mail.welcome.subject", language);
         send(user, "welcome", "welcome", language, subject, placeholders);
     }
 
@@ -56,7 +61,7 @@ class ResendMailService implements MailService {
     public void sendPasswordResetEmail(User user, String code) {
         MailLanguage language = languageResolver.resolve(user);
         Map<String, String> placeholders = Map.of("name", displayName(user), "code", code);
-        String subject = language == MailLanguage.HU ? "Lifey jelszó-visszaállító kódod" : "Your Lifey password reset code";
+        String subject = messages.get("mail.password-reset.subject", language);
         send(user, "password_reset", "password-reset", language, subject, placeholders);
     }
 
@@ -71,9 +76,7 @@ class ResendMailService implements MailService {
                 "acceptUrl", acceptUrl,
                 "declineUrl", declineUrl
         );
-        String subject = language == MailLanguage.HU
-                ? trainerName + " meghívott, hogy legyél az ügyfele a Lifey-ban"
-                : trainerName + " invited you to be their client on Lifey";
+        String subject = messages.get("mail.trainer-invite.subject", language, trainerName);
         send(client, "trainer_invite", "trainer-invite", language, subject, placeholders);
     }
 
@@ -81,7 +84,6 @@ class ResendMailService implements MailService {
     @Async("mailTaskExecutor")
     public void sendWeeklyTrainerReport(User trainer, WeeklyTrainerReport report) {
         MailLanguage language = languageResolver.resolve(trainer);
-        boolean hungarian = language == MailLanguage.HU;
 
         String clientRowsHtml = report.clients().stream()
                 .map(c -> renderRow(c, language, true))
@@ -92,9 +94,7 @@ class ResendMailService implements MailService {
 
         String weekStart = DATE_FORMAT.format(report.weekStart());
         String weekEnd = DATE_FORMAT.format(report.weekEnd());
-        String subject = hungarian
-                ? "Heti ügyfélriport (" + weekStart + " – " + weekEnd + ")"
-                : "Your weekly client report (" + weekStart + " – " + weekEnd + ")";
+        String subject = messages.get("mail.weekly-report.subject", language, weekStart, weekEnd);
 
         Map<String, String> htmlPlaceholders = Map.of("weekStart", weekStart, "weekEnd", weekEnd, "clientRows", clientRowsHtml);
         Map<String, String> textPlaceholders = Map.of("weekStart", weekStart, "weekEnd", weekEnd, "clientRows", clientRowsText);
@@ -102,7 +102,7 @@ class ResendMailService implements MailService {
     }
 
     private String renderRow(WeeklyTrainerReport.ClientWeekSummary client, MailLanguage language, boolean html) {
-        String summary = WeeklyReportFormatting.summarize(client, language == MailLanguage.HU, html);
+        String summary = weeklyReportFormatting.summarize(client, language, html);
         String clientName = html ? WeeklyReportFormatting.escapeHtml(client.clientName()) : client.clientName();
         Map<String, String> placeholders = Map.of("clientName", clientName, "summary", summary);
         return html

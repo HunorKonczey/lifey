@@ -99,7 +99,7 @@ clients, assignments, schedules, calendar) on the web admin.
 * Trainer can comment on a session; client receives a push (depends on #8)
 * Minimal viable communication feature — no full chat needed
 
-#### 14. Multi-Week Program Builder
+#### 14. Multi-Week Program Builder (plan: 34-multi-week-program-plan.md)
 
 * Build 4–12 week programs: weekly structure, progression between weeks
 * Assigning a program generates the scheduled sessions automatically

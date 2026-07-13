@@ -44,7 +44,7 @@ class WorkoutReminderJob {
     private final PushService pushService;
     private final Clock clock;
 
-    @Scheduled(cron = "0 */15 * * * *")
+    @Scheduled(cron = "${lifey.jobs.workout-reminder.cron}")
     @Transactional
     void sendDueReminders() {
         Instant now = clock.instant();

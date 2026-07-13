@@ -26,7 +26,7 @@ class TrainerWeeklyReportJob {
     private final WeeklyReportService weeklyReportService;
     private final Clock clock;
 
-    @Scheduled(cron = "0 0 5 * * MON")
+    @Scheduled(cron = "${lifey.jobs.trainer-weekly-report.cron}")
     @Transactional(readOnly = true)
     void sendWeeklyReports() {
         LocalDate weekStart = LocalDate.now(clock).minusDays(7);
