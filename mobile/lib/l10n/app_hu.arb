@@ -412,6 +412,10 @@
     "weighInReminderToggleSubtitle": "Napi emlékeztető a testsúly rögzítésére",
     "stepGoalNotificationToggleLabel": "Lépéscél elérve",
     "stepGoalNotificationToggleSubtitle": "Amikor eléred a napi lépéscélod",
+    "trainerCommentPushToggleLabel": "Edzői megjegyzések",
+    "trainerCommentPushToggleSubtitle": "Amikor az edződ megjegyzést fűz egy edzéshez",
+    "trainerGoalsPushToggleLabel": "Táplálkozási célok változása",
+    "trainerGoalsPushToggleSubtitle": "Amikor az edződ frissíti a táplálkozási céljaidat",
     "reminderTimeLabel": "Időpont",
     "notificationPermissionDeniedHint": "Az értesítések ki vannak kapcsolva a Lifey számára a rendszerbeállításokban. Kapcsold be őket a Beállításokban, hogy megkapd ezt az emlékeztetőt.",
 
@@ -483,6 +487,8 @@
     "postWorkoutFeedbackSkipButton": "Kihagyás",
     "postWorkoutFeedbackSectionTitle": "Mennyire volt nehéz?",
     "postWorkoutFeedbackEmptyState": "Értékeld ezt az edzést",
+
+    "trainerCommentLabel": "Edzői megjegyzés",
 
     "onboardingWelcomeTitle": "Személyre szabjuk a terved",
     "onboardingWelcomeMessage": "Néhány gyors kérdés segít, hogy a megfelelő kalória-, makro- és vízcélokat javasoljuk neked.",

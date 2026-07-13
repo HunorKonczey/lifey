@@ -56,6 +56,14 @@ class WorkoutSessions extends Table {
   /// Optional free-text note captured alongside [rpe].
   TextColumn get feedbackNote => text().nullable()();
 
+  /// The trainer's single editable comment on this session; null when
+  /// uncommented. Server-owned — this app's create/update payload never
+  /// sends it (see `WorkoutSessionRepository._payload`).
+  TextColumn get trainerComment => text().nullable()();
+
+  /// When [trainerComment] was last written; null when uncommented.
+  DateTimeColumn get trainerCommentAt => dateTime().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

@@ -136,6 +136,29 @@ void main() {
     expect(payload['rpe'], 6);
     expect(payload.containsKey('feedbackNote'), isFalse);
   });
+
+  test('findByServerId returns the matching session with its exercises and sets', () async {
+    final startedAt = DateTime.utc(2026, 7, 10, 17);
+    final clientId = await repo.create(
+      startedAt: startedAt,
+      finishedAt: startedAt.add(const Duration(hours: 1)),
+      exercises: const [],
+      sets: const [],
+    );
+    await (db.update(db.workoutSessions)..where((t) => t.clientId.equals(clientId)))
+        .write(const WorkoutSessionsCompanion(serverId: Value(42)));
+
+    final found = await repo.findByServerId(42);
+
+    expect(found, isNotNull);
+    expect(found!.clientId, clientId);
+  });
+
+  test('findByServerId returns null when the session has not synced locally', () async {
+    final found = await repo.findByServerId(999);
+
+    expect(found, isNull);
+  });
 }
 
 /// Prevents OutboxWriter's fire-and-forget kick from touching the network —

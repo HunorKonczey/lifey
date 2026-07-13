@@ -93,7 +93,7 @@ clients, assignments, schedules, calendar) on the web admin.
 * "Needs attention" section on the trainer dashboard
 * All required data already exists — aggregation only
 
-#### 13. Session Feedback Loop
+#### 13. Session Feedback Loop (DONE)
 
 * Trainer sees client RPE + notes per session (depends on #4)
 * Trainer can comment on a session; client receives a push (depends on #8)
@@ -110,13 +110,13 @@ clients, assignments, schedules, calendar) on the web admin.
 * Assign a template or recipe to multiple clients at once
 * Extension of the existing AssignmentController
 
-#### 16. Weekly Trainer Report Email
+#### 16. Weekly Trainer Report Email (DONE, plan: 33-weekly-trainer-report-plan.md)
 
 * Automatic weekly summary per client: completed workouts, calorie goal
   adherence, weight change
 * Mail module already exists
 
-#### 17. Trainer-Set Nutrition Goals
+#### 17. Trainer-Set Nutrition Goals (DONE, plan: 32-trainer-nutrition-goals-plan.md)
 
 * Trainer can edit (not just view) a client's nutrition goals
 * Client is notified of changes
@@ -147,5 +147,5 @@ Phase 4 — bigger bets:
 11. Multi-week program builder (#14)
 12. Widget / Live Activity (#9)
 
-Remaining items (#11, #15, #16, #17) are independent quick-to-medium wins
+Remaining items (#11, #15) are independent quick-to-medium wins
 that can be slotted in wherever convenient.

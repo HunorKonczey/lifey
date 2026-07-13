@@ -116,6 +116,27 @@ public class WorkoutSession extends SyncableEntity {
     private String feedbackNote;
 
     /**
+     * The trainer's single, editable comment on this session — the reply
+     * direction of the session feedback loop
+     * (docs/31-session-feedback-loop-plan.md). Written only by the trainer
+     * endpoint; the client-facing create/update path must never touch it.
+     */
+    @Column(name = "trainer_comment")
+    private String trainerComment;
+
+    /** When {@link #trainerComment} was last written. */
+    @Column(name = "trainer_comment_at")
+    private Instant trainerCommentAt;
+
+    /**
+     * User id of the trainer who wrote {@link #trainerComment}. Plain
+     * {@code Long}, not a JPA relation — same reasoning as {@link #scheduleId}:
+     * the workout package shouldn't depend on the trainer package.
+     */
+    @Column(name = "trainer_comment_by")
+    private Long trainerCommentBy;
+
+    /**
      * When the trainer-scheduled-workout push reminder was sent for this
      * occurrence (docs/30-push-notifications-plan.md, B3) — null means not
      * sent yet, and the reminder job never re-sends once set.

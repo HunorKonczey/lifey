@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSessionStore } from "@/features/auth/store";
 import { useUiStore } from "@/lib/hooks/useUiStore";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { avatarApi } from "@/features/settings/api";
+import { trainerApi } from "@/features/trainer/api";
 import { queryKeys } from "@/lib/api/queryKeys";
+import { useToast } from "@/lib/hooks/useToast";
+import { Switch } from "@/components/ui/Switch";
 
 const NAV_ITEMS = [
   { href: "/admin", icon: "group", key: "clients" },
@@ -22,11 +25,31 @@ const NAV_ITEMS = [
 export function AdminSidebar() {
   const admin = useTranslations("admin");
   const t = useTranslations("admin.nav");
+  const prefs = useTranslations("admin.preferences");
   const common = useTranslations("common");
   const pathname = usePathname();
   const { user, logout } = useSessionStore();
   const { drawerOpen, closeDrawer } = useUiStore();
   const [collapsed, setCollapsed] = useState(false);
+  const queryClient = useQueryClient();
+  const { show } = useToast();
+
+  const { data: preferences } = useQuery({
+    queryKey: queryKeys.trainerPreferences.all(),
+    queryFn: trainerApi.preferences,
+    staleTime: 5 * 60 * 1000,
+    enabled: !!user,
+  });
+
+  const updatePreferences = useMutation({
+    mutationFn: (weeklyReportEmailEnabled: boolean) =>
+      trainerApi.updatePreferences({ weeklyReportEmailEnabled }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.trainerPreferences.all(), data);
+      show(prefs("updated"), "success");
+    },
+    onError: () => show(prefs("updateFailed"), "error"),
+  });
 
   const { data: avatarBlob } = useQuery({
     queryKey: queryKeys.settings.avatar(),
@@ -34,12 +57,22 @@ export function AdminSidebar() {
     staleTime: 5 * 60 * 1000,
     enabled: !!user,
   });
-  const avatarUrl = useMemo(() => (avatarBlob ? URL.createObjectURL(avatarBlob) : null), [avatarBlob]);
+  // Create and revoke the object URL together in one effect (not a useMemo
+  // paired with a separate revoke-on-cleanup effect) — under React StrictMode
+  // in dev, effects run mount→cleanup→mount, and a cleanup that isn't paired
+  // with its own re-creation revokes the URL a still-mounted <img> is using,
+  // breaking it with net::ERR_FILE_NOT_FOUND.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   useEffect(() => {
-    return () => {
-      if (avatarUrl) URL.revokeObjectURL(avatarUrl);
-    };
-  }, [avatarUrl]);
+    if (!avatarBlob) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAvatarUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(avatarBlob);
+    setAvatarUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [avatarBlob]);
 
   const width = collapsed ? 78 : 248;
 
@@ -146,6 +179,16 @@ export function AdminSidebar() {
             <span className="material-symbols-rounded text-[22px] shrink-0">undo</span>
             {!collapsed && <span className="text-sm font-semibold">{t("backToOwnView")}</span>}
           </Link>
+
+          {!collapsed && user && preferences && (
+            <div className="px-3 py-1.5">
+              <Switch
+                checked={preferences.weeklyReportEmailEnabled}
+                onChange={(checked) => updatePreferences.mutate(checked)}
+                label={prefs("weeklyReportEmailLabel")}
+              />
+            </div>
+          )}
 
           {!collapsed && user && (
             <div

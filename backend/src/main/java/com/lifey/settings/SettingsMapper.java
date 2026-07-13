@@ -22,6 +22,8 @@ public final class SettingsMapper {
         settings.setTheme(request.theme());
         settings.setLanguage(request.language());
         settings.setWorkoutReminderEnabled(request.workoutReminderEnabled());
+        settings.setTrainerCommentPushEnabled(request.trainerCommentPushEnabled());
+        settings.setTrainerGoalsPushEnabled(request.trainerGoalsPushEnabled());
     }
 
     public static SettingsResponse toResponse(UserSettings settings) {
@@ -35,7 +37,9 @@ public final class SettingsMapper {
                 settings.getDailyStepGoal(),
                 settings.getTheme(),
                 settings.getLanguage(),
-                settings.isWorkoutReminderEnabled()
+                settings.isWorkoutReminderEnabled(),
+                settings.isTrainerCommentPushEnabled(),
+                settings.isTrainerGoalsPushEnabled()
         );
     }
 }

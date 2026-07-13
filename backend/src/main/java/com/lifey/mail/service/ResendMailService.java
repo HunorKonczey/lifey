@@ -8,7 +8,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Sends mail through the Resend HTTPS API (https://api.resend.com/emails), or
@@ -24,6 +27,7 @@ class ResendMailService implements MailService {
 
     private static final Logger log = LoggerFactory.getLogger(ResendMailService.class);
     private static final String RESEND_API_URL = "https://api.resend.com/emails";
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd MMM", Locale.ENGLISH);
 
     private final RestClient restClient;
     private final MailProperties mailProperties;
@@ -73,15 +77,53 @@ class ResendMailService implements MailService {
         send(client, "trainer_invite", "trainer-invite", language, subject, placeholders);
     }
 
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendWeeklyTrainerReport(User trainer, WeeklyTrainerReport report) {
+        MailLanguage language = languageResolver.resolve(trainer);
+        boolean hungarian = language == MailLanguage.HU;
+
+        String clientRowsHtml = report.clients().stream()
+                .map(c -> renderRow(c, language, true))
+                .collect(Collectors.joining());
+        String clientRowsText = report.clients().stream()
+                .map(c -> renderRow(c, language, false))
+                .collect(Collectors.joining());
+
+        String weekStart = DATE_FORMAT.format(report.weekStart());
+        String weekEnd = DATE_FORMAT.format(report.weekEnd());
+        String subject = hungarian
+                ? "Heti ügyfélriport (" + weekStart + " – " + weekEnd + ")"
+                : "Your weekly client report (" + weekStart + " – " + weekEnd + ")";
+
+        Map<String, String> htmlPlaceholders = Map.of("weekStart", weekStart, "weekEnd", weekEnd, "clientRows", clientRowsHtml);
+        Map<String, String> textPlaceholders = Map.of("weekStart", weekStart, "weekEnd", weekEnd, "clientRows", clientRowsText);
+        send(trainer, "weekly_report", "weekly_report", language, subject, htmlPlaceholders, textPlaceholders);
+    }
+
+    private String renderRow(WeeklyTrainerReport.ClientWeekSummary client, MailLanguage language, boolean html) {
+        String summary = WeeklyReportFormatting.summarize(client, language == MailLanguage.HU, html);
+        String clientName = html ? WeeklyReportFormatting.escapeHtml(client.clientName()) : client.clientName();
+        Map<String, String> placeholders = Map.of("clientName", clientName, "summary", summary);
+        return html
+                ? templateRenderer.renderHtml("weekly_report_row", language, placeholders)
+                : templateRenderer.renderText("weekly_report_row", language, placeholders);
+    }
+
     private void send(User user, String templateName, String mailType, MailLanguage language, String subject,
                       Map<String, String> placeholders) {
+        send(user, templateName, mailType, language, subject, placeholders, placeholders);
+    }
+
+    private void send(User user, String templateName, String mailType, MailLanguage language, String subject,
+                      Map<String, String> htmlPlaceholders, Map<String, String> textPlaceholders) {
         if (!mailProperties.enabled()) {
             log.info("Mail disabled, would have sent '{}' email to {} ({})", mailType, user.getEmail(), language);
             return;
         }
         try {
-            String html = templateRenderer.renderHtml(templateName, language, placeholders);
-            String text = templateRenderer.renderText(templateName, language, placeholders);
+            String html = templateRenderer.renderHtml(templateName, language, htmlPlaceholders);
+            String text = templateRenderer.renderText(templateName, language, textPlaceholders);
 
             Map<String, Object> body = Map.of(
                     "from", mailProperties.from(),

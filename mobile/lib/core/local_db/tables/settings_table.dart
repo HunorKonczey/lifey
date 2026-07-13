@@ -23,6 +23,12 @@ class UserSettingsTable extends Table {
   // Added in schema v24 (docs/30-push-notifications-plan.md) — needs a
   // DEFAULT for the same reason as `language` above.
   BoolColumn get workoutReminderEnabled => boolean().withDefault(const Constant(true))();
+  // Added in schema v25 (docs/31-session-feedback-loop-plan.md) — needs a
+  // DEFAULT for the same reason as `language` above.
+  BoolColumn get trainerCommentPushEnabled => boolean().withDefault(const Constant(true))();
+  // Added in schema v26 (docs/32-trainer-nutrition-goals-plan.md) — needs a
+  // DEFAULT for the same reason as `language` above.
+  BoolColumn get trainerGoalsPushEnabled => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column> get primaryKey => {clientId};

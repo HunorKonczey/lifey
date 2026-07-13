@@ -1,6 +1,7 @@
 package com.lifey.trainer;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.meal.MealType;
 import com.lifey.nutrition.meal.dto.MealResponse;
 import com.lifey.nutrition.meal.service.MealService;
@@ -14,7 +15,11 @@ import com.lifey.statistics.service.StatisticsService;
 import com.lifey.steps.dto.DailyStepCountResponse;
 import com.lifey.steps.service.DailyStepCountService;
 import com.lifey.trainer.controller.TrainerClientDataController;
+import com.lifey.trainer.dto.ClientNutritionGoalsRequest;
+import com.lifey.trainer.dto.ClientNutritionGoalsResponse;
 import com.lifey.trainer.exception.NotYourClientException;
+import com.lifey.trainer.service.ClientNutritionGoalsService;
+import com.lifey.trainer.service.SessionCommentService;
 import com.lifey.trainer.service.TrainerAccessService;
 import com.lifey.user.AvatarSource;
 import com.lifey.user.UserAvatar;
@@ -42,7 +47,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -70,6 +78,12 @@ class TrainerClientDataControllerTest {
 
     @MockitoBean
     WorkoutSessionService workoutSessionService;
+
+    @MockitoBean
+    SessionCommentService sessionCommentService;
+
+    @MockitoBean
+    ClientNutritionGoalsService clientNutritionGoalsService;
 
     @MockitoBean
     UserAvatarRepository userAvatarRepository;
@@ -172,13 +186,93 @@ class TrainerClientDataControllerTest {
     void workoutSessions_returnsClientsSessionHistory() throws Exception {
         WorkoutSessionResponse session = new WorkoutSessionResponse(1L, Instant.parse("2026-06-01T08:00:00Z"),
                 Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
-                null, null, null, null, null, null, null, null, null, null, Instant.now(), null);
+                null, null, null, null, null, null, null, null, null, null, null, null, Instant.now(), null);
         Page<WorkoutSessionResponse> page = new PageImpl<>(List.of(session), PageRequest.of(0, 20), 1);
         when(workoutSessionService.findPageForUser(eq(CLIENT_ID), any())).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/workout-sessions", CLIENT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1));
+    }
+
+    @Test
+    void putSessionComment_upsertsAndReturnsUpdatedSession() throws Exception {
+        Long sessionId = 5L;
+        WorkoutSessionResponse updated = new WorkoutSessionResponse(sessionId, Instant.parse("2026-06-01T08:00:00Z"),
+                Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
+                null, null, null, null, null, null, null, null, null, null,
+                "Nice pace, add weight next time", Instant.parse("2026-06-18T07:00:00Z"), Instant.now(), null);
+        when(sessionCommentService.upsertComment(eq(TRAINER_ID), eq(CLIENT_ID), eq(sessionId), eq("Nice pace, add weight next time")))
+                .thenReturn(updated);
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}/comment", CLIENT_ID, sessionId)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"comment\":\"Nice pace, add weight next time\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trainerComment").value("Nice pace, add weight next time"));
+    }
+
+    @Test
+    void putSessionComment_blankCommentReturns400() throws Exception {
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}/comment", CLIENT_ID, 5L)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"comment\":\"\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void putSessionComment_tooLongCommentReturns400() throws Exception {
+        String tooLong = "a".repeat(2001);
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}/comment", CLIENT_ID, 5L)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"comment\":\"" + tooLong + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void putSessionComment_sessionNotFoundReturns404() throws Exception {
+        when(sessionCommentService.upsertComment(eq(TRAINER_ID), eq(CLIENT_ID), eq(99L), any()))
+                .thenThrow(new ResourceNotFoundException("Workout session not found: 99"));
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}/comment", CLIENT_ID, 99L)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"comment\":\"hi\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void putSessionComment_notYourClientReturns403() throws Exception {
+        when(sessionCommentService.upsertComment(eq(TRAINER_ID), eq(CLIENT_ID), eq(5L), any()))
+                .thenThrow(new NotYourClientException("nope"));
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}/comment", CLIENT_ID, 5L)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"comment\":\"hi\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deleteSessionComment_notYourClientReturns403() throws Exception {
+        when(sessionCommentService.deleteComment(TRAINER_ID, CLIENT_ID, 5L))
+                .thenThrow(new NotYourClientException("nope"));
+
+        mockMvc.perform(delete("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}/comment", CLIENT_ID, 5L))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deleteSessionComment_clearsTheComment() throws Exception {
+        Long sessionId = 5L;
+        WorkoutSessionResponse cleared = new WorkoutSessionResponse(sessionId, Instant.parse("2026-06-01T08:00:00Z"),
+                Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, Instant.now(), null);
+        when(sessionCommentService.deleteComment(TRAINER_ID, CLIENT_ID, sessionId)).thenReturn(cleared);
+
+        mockMvc.perform(delete("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}/comment", CLIENT_ID, sessionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trainerComment").doesNotExist());
     }
 
     @Test
@@ -228,12 +322,45 @@ class TrainerClientDataControllerTest {
     @Test
     void nutritionGoals_returnsClientsGoals() throws Exception {
         when(settingsService.forUser(CLIENT_ID)).thenReturn(new SettingsResponse(
-                UnitSystem.METRIC, 2200, 150, 240, 70, 2.5, 10000, ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true));
+                UnitSystem.METRIC, 2200, 150, 240, 70, 2.5, 10000, ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/nutrition-goals", CLIENT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dailyCalorieGoal").value(2200))
                 .andExpect(jsonPath("$.dailyProteinGoal").value(150));
+    }
+
+    @Test
+    void updateNutritionGoals_updatesAndReturnsGoals() throws Exception {
+        when(clientNutritionGoalsService.updateGoals(eq(TRAINER_ID), eq(CLIENT_ID),
+                eq(new ClientNutritionGoalsRequest(2200, 150, 240, 70))))
+                .thenReturn(new ClientNutritionGoalsResponse(2200, 150, 240, 70));
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/nutrition-goals", CLIENT_ID)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"dailyCalorieGoal\":2200,\"dailyProteinGoal\":150,\"dailyCarbsGoal\":240,\"dailyFatGoal\":70}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dailyCalorieGoal").value(2200))
+                .andExpect(jsonPath("$.dailyProteinGoal").value(150));
+    }
+
+    @Test
+    void updateNutritionGoals_negativeValueReturns400() throws Exception {
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/nutrition-goals", CLIENT_ID)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"dailyCalorieGoal\":-100}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateNutritionGoals_notYourClientReturns403() throws Exception {
+        when(clientNutritionGoalsService.updateGoals(eq(TRAINER_ID), eq(CLIENT_ID), any()))
+                .thenThrow(new NotYourClientException("nope"));
+
+        mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/nutrition-goals", CLIENT_ID)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"dailyCalorieGoal\":2200}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

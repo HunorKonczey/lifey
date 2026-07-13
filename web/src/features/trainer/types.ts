@@ -62,6 +62,14 @@ export interface ClientNutritionGoalsResponse {
   dailyFatGoal: number | null;
 }
 
+/** A missing/null field clears that goal — same shape as the response. */
+export interface ClientNutritionGoalsRequest {
+  dailyCalorieGoal: number | null;
+  dailyProteinGoal: number | null;
+  dailyCarbsGoal: number | null;
+  dailyFatGoal: number | null;
+}
+
 // ─── Scheduled workouts (docs/personal_trainer/09-11) ───
 
 export type Recurrence = "ONCE" | "DAILY" | "WEEKLY";
@@ -134,4 +142,13 @@ export interface TrainerCalendarSessionResponse {
   templateName: string | null;
   status: OccurrenceStatus;
   scheduleId: number;
+}
+
+/** The trainer's own preferences (docs/33) — not client data, separate from /settings. */
+export interface TrainerPreferencesResponse {
+  weeklyReportEmailEnabled: boolean;
+}
+
+export interface TrainerPreferencesRequest {
+  weeklyReportEmailEnabled: boolean;
 }

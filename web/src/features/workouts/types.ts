@@ -72,6 +72,8 @@ export interface WorkoutSessionResponse {
   templateName: string | null;
   rpe: number | null;
   feedbackNote: string | null;
+  trainerComment: string | null;
+  trainerCommentAt: string | null; // Instant
 }
 
 export interface ExerciseSetRequest {

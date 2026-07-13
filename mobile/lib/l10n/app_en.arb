@@ -1189,6 +1189,18 @@
     "stepGoalNotificationToggleSubtitle": "When you hit your daily step goal",
     "@stepGoalNotificationToggleSubtitle": {"description": "Subtitle for the step-goal notification toggle"},
 
+    "trainerCommentPushToggleLabel": "Trainer comments",
+    "@trainerCommentPushToggleLabel": {"description": "Label for the trainer-comment push notification toggle"},
+
+    "trainerCommentPushToggleSubtitle": "When your trainer comments on a session",
+    "@trainerCommentPushToggleSubtitle": {"description": "Subtitle for the trainer-comment push notification toggle"},
+
+    "trainerGoalsPushToggleLabel": "Nutrition goal changes",
+    "@trainerGoalsPushToggleLabel": {"description": "Label for the trainer-nutrition-goals-changed push notification toggle"},
+
+    "trainerGoalsPushToggleSubtitle": "When your trainer updates your nutrition goals",
+    "@trainerGoalsPushToggleSubtitle": {"description": "Subtitle for the trainer-nutrition-goals-changed push notification toggle"},
+
     "reminderTimeLabel": "Time",
     "@reminderTimeLabel": {"description": "Label for the weigh-in reminder's time-of-day row"},
 
@@ -1383,6 +1395,9 @@
 
     "postWorkoutFeedbackEmptyState": "Rate this workout",
     "@postWorkoutFeedbackEmptyState": {"description": "Tappable empty-state prompt shown in the inline feedback section when a finished session hasn't been rated yet"},
+
+    "trainerCommentLabel": "Trainer comment",
+    "@trainerCommentLabel": {"description": "Label for the trainer's comment block shown on a session, when present"},
 
     "onboardingWelcomeTitle": "Let's personalize your plan",
     "@onboardingWelcomeTitle": {"description": "Onboarding wizard: welcome step title"},

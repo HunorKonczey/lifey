@@ -37,6 +37,12 @@ public record SettingsRequest(
         LanguagePreference language,
 
         @NotNull
-        Boolean workoutReminderEnabled
+        Boolean workoutReminderEnabled,
+
+        @NotNull
+        Boolean trainerCommentPushEnabled,
+
+        @NotNull
+        Boolean trainerGoalsPushEnabled
 ) {
 }

@@ -927,6 +927,71 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     );
   }
 
+  /// Non-tappable "Trainer comment" block — shown only when present, no
+  /// reply affordance (the push notification is the only attention
+  /// mechanism; this block is just the persistent record). See
+  /// docs/31-session-feedback-loop-plan.md, M2.
+  Widget _buildTrainerCommentSection(BuildContext context, AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    final comment = widget.session!.trainerComment!;
+    final commentAt = widget.session!.trainerCommentAt;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadius.input),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.chat_bubble_outline_rounded, size: 21, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.trainerCommentLabel,
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    comment,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 11.5,
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+                if (commentAt != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _label.format(commentAt),
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 10.5,
+                        color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTopBar(BuildContext context, ColorScheme scheme,
       AppLocalizations l10n, String title) {
     return Container(
@@ -1142,6 +1207,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               // after the session is finished, autosaves via _editFeedback.
               if (_finishedAt != null) ...[
                 _buildFeedbackSection(context, l10n),
+                const SizedBox(height: 13),
+              ],
+
+              // Trainer's comment on this session, if any — persistent
+              // record only, no reply affordance (docs/31-session-feedback-loop-plan.md, M2).
+              if (widget.session?.trainerComment != null) ...[
+                _buildTrainerCommentSection(context, l10n),
                 const SizedBox(height: 13),
               ],
 

@@ -5,6 +5,8 @@ NotificationSettingsState _state({
   bool workoutReminderEnabled = false,
   bool weighInReminderEnabled = false,
   bool stepGoalNotificationEnabled = false,
+  bool trainerCommentPushEnabled = false,
+  bool trainerGoalsPushEnabled = false,
 }) {
   return NotificationSettingsState(
     workoutReminderEnabled: workoutReminderEnabled,
@@ -12,6 +14,8 @@ NotificationSettingsState _state({
     weighInReminderHour: 8,
     weighInReminderMinute: 0,
     stepGoalNotificationEnabled: stepGoalNotificationEnabled,
+    trainerCommentPushEnabled: trainerCommentPushEnabled,
+    trainerGoalsPushEnabled: trainerGoalsPushEnabled,
   );
 }
 
@@ -33,12 +37,22 @@ void main() {
       expect(_state(stepGoalNotificationEnabled: true).anyEnabled, isTrue);
     });
 
+    test('is true when only trainer comments are on', () {
+      expect(_state(trainerCommentPushEnabled: true).anyEnabled, isTrue);
+    });
+
+    test('is true when only trainer nutrition goal changes are on', () {
+      expect(_state(trainerGoalsPushEnabled: true).anyEnabled, isTrue);
+    });
+
     test('is true when every type is on', () {
       expect(
         _state(
           workoutReminderEnabled: true,
           weighInReminderEnabled: true,
           stepGoalNotificationEnabled: true,
+          trainerCommentPushEnabled: true,
+          trainerGoalsPushEnabled: true,
         ).anyEnabled,
         isTrue,
       );
@@ -56,6 +70,8 @@ void main() {
       expect(updated.weighInReminderHour, 19);
       expect(updated.weighInReminderMinute, 0);
       expect(updated.stepGoalNotificationEnabled, isFalse);
+      expect(updated.trainerCommentPushEnabled, isFalse);
+      expect(updated.trainerGoalsPushEnabled, isFalse);
     });
 
     test('with no arguments returns an equivalent state', () {
@@ -68,6 +84,8 @@ void main() {
       expect(updated.weighInReminderHour, original.weighInReminderHour);
       expect(updated.weighInReminderMinute, original.weighInReminderMinute);
       expect(updated.stepGoalNotificationEnabled, original.stepGoalNotificationEnabled);
+      expect(updated.trainerCommentPushEnabled, original.trainerCommentPushEnabled);
+      expect(updated.trainerGoalsPushEnabled, original.trainerGoalsPushEnabled);
     });
   });
 }

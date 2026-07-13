@@ -26,6 +26,10 @@ public record WorkoutSessionResponse(
         Integer rpe,
         /* Optional free-text note captured alongside rpe. */
         String feedbackNote,
+        /* The trainer's single editable comment on this session; null when uncommented. */
+        String trainerComment,
+        /* When trainerComment was last written; null when uncommented. */
+        Instant trainerCommentAt,
         Instant updatedAt,
         Instant deletedAt
 ) {

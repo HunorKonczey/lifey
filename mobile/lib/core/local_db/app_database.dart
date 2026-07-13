@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 26;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -199,6 +199,20 @@ class AppDatabase extends _$AppDatabase {
           // — defaults true (the column default), matching the backend.
           if (from < 24) {
             await m.addColumn(userSettingsTable, userSettingsTable.workoutReminderEnabled);
+          }
+          // V25: trainer comment on a session (docs/31-session-feedback-loop-plan.md)
+          // — nullable, existing sessions simply stay uncommented — plus its
+          // push opt-out, defaulting true like every other push preference.
+          if (from < 25) {
+            await m.addColumn(workoutSessions, workoutSessions.trainerComment);
+            await m.addColumn(workoutSessions, workoutSessions.trainerCommentAt);
+            await m.addColumn(userSettingsTable, userSettingsTable.trainerCommentPushEnabled);
+          }
+          // V26: trainer-nutrition-goals-changed push opt-out
+          // (docs/32-trainer-nutrition-goals-plan.md) — defaults true, same
+          // shape as every other push preference here.
+          if (from < 26) {
+            await m.addColumn(userSettingsTable, userSettingsTable.trainerGoalsPushEnabled);
           }
         },
       );

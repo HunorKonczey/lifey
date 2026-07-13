@@ -116,6 +116,48 @@ class WorkoutSessionRepository {
     });
   }
 
+  /// Looks up a single session by its backend id — used by the trainer-comment
+  /// push tap to open the exact commented session (docs/31-session-feedback-loop-plan.md,
+  /// M3). Returns null if it hasn't synced to this device yet (e.g. the push
+  /// beat the next pull); the caller falls back to the workouts tab.
+  Future<WorkoutSession?> findByServerId(int serverId) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.serverId.equals(serverId)))
+        .getSingleOrNull();
+    if (row == null) return null;
+
+    final exerciseNames = {
+      for (final e in await _db.select(_db.exercises).get()) e.clientId: e.name,
+    };
+    final plannedRows = await (_db.select(_db.workoutSessionExercises)
+          ..where((t) => t.sessionClientId.equals(row.clientId)))
+        .get();
+    final setRows = await (_db.select(_db.exerciseSets)
+          ..where((t) => t.sessionClientId.equals(row.clientId)))
+        .get();
+
+    final exercises = [
+      for (final p in plannedRows)
+        SessionExercise(
+          exerciseClientId: p.exerciseClientId,
+          exerciseName: exerciseNames[p.exerciseClientId] ?? 'Unknown',
+          targetSets: p.targetSets,
+        ),
+    ];
+    final sets = [
+      for (final s in setRows)
+        ExerciseSet(
+          exerciseClientId: s.exerciseClientId,
+          exerciseName: exerciseNames[s.exerciseClientId] ?? 'Unknown',
+          reps: s.reps,
+          weight: s.weight,
+          performedAt: s.performedAt,
+        ),
+    ]..sort((a, b) => a.performedAt.compareTo(b.performedAt));
+
+    return _toDomain(row, exercises, sets);
+  }
+
   /// Returns the newly generated [WorkoutSession.clientId] so callers can keep
   /// editing the same session (e.g. auto-saving each set without re-creating).
   Future<String> create({
@@ -401,6 +443,8 @@ class WorkoutSessionRepository {
       scheduleId: row.scheduleId,
       rpe: row.rpe,
       feedbackNote: row.feedbackNote,
+      trainerComment: row.trainerComment,
+      trainerCommentAt: row.trainerCommentAt,
     );
   }
 

@@ -14,6 +14,8 @@ public record SettingsResponse(
         Integer dailyStepGoal,
         ThemePreference theme,
         LanguagePreference language,
-        Boolean workoutReminderEnabled
+        Boolean workoutReminderEnabled,
+        Boolean trainerCommentPushEnabled,
+        Boolean trainerGoalsPushEnabled
 ) {
 }

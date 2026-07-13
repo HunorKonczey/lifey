@@ -36,4 +36,42 @@ class MailTemplateRendererTest {
         assertThat(text).contains("654321");
         assertThat(text).doesNotContain("<");
     }
+
+    @Test
+    void renderHtml_weeklyReportOuter_bothLanguages_noLeftoverPlaceholders() {
+        Map<String, String> placeholders = Map.of(
+                "weekStart", "01 Jun", "weekEnd", "07 Jun", "clientRows", "<tr><td>Jane</td></tr>");
+
+        String en = renderer.renderHtml("weekly_report", MailLanguage.EN, placeholders);
+        String hu = renderer.renderHtml("weekly_report", MailLanguage.HU, placeholders);
+
+        assertThat(en).contains("01 Jun").contains("<tr><td>Jane</td></tr>").doesNotContain("{{");
+        assertThat(hu).contains("01 Jun").contains("<tr><td>Jane</td></tr>").doesNotContain("{{");
+    }
+
+    @Test
+    void renderText_weeklyReportOuter_bothLanguages_noLeftoverPlaceholders() {
+        Map<String, String> placeholders = Map.of(
+                "weekStart", "01 Jun", "weekEnd", "07 Jun", "clientRows", "Jane\nNo activity this week\n");
+
+        String en = renderer.renderText("weekly_report", MailLanguage.EN, placeholders);
+        String hu = renderer.renderText("weekly_report", MailLanguage.HU, placeholders);
+
+        assertThat(en).contains("Jane").doesNotContain("{{");
+        assertThat(hu).contains("Jane").doesNotContain("{{");
+    }
+
+    @Test
+    void render_weeklyReportRow_bothFormatsAndLanguages_noLeftoverPlaceholders() {
+        Map<String, String> placeholders = Map.of("clientName", "Jane", "summary", "3 completed workouts");
+
+        assertThat(renderer.renderHtml("weekly_report_row", MailLanguage.EN, placeholders))
+                .contains("Jane").contains("3 completed workouts").doesNotContain("{{");
+        assertThat(renderer.renderHtml("weekly_report_row", MailLanguage.HU, placeholders))
+                .contains("Jane").doesNotContain("{{");
+        assertThat(renderer.renderText("weekly_report_row", MailLanguage.EN, placeholders))
+                .contains("Jane").doesNotContain("{{");
+        assertThat(renderer.renderText("weekly_report_row", MailLanguage.HU, placeholders))
+                .contains("Jane").doesNotContain("{{");
+    }
 }

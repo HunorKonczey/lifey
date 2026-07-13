@@ -62,7 +62,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true);
+                ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true);
 
         SettingsResponse result = service.update(request);
 
@@ -77,7 +77,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, 10000,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true);
 
         SettingsResponse result = service.update(request);
 
@@ -93,7 +93,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true);
 
         SettingsResponse result = service.update(request);
 
@@ -118,10 +118,109 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, false);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, false, true, true);
 
         SettingsResponse result = service.update(request);
 
         assertThat(result.workoutReminderEnabled()).isFalse();
+    }
+
+    @Test
+    void get_createsDefaultRowWithTrainerCommentPushEnabledWhenNoneExists() {
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsResponse result = service.get();
+
+        assertThat(result.trainerCommentPushEnabled()).isTrue();
+    }
+
+    @Test
+    void update_canDisableTrainerCommentPush() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, false, true);
+
+        SettingsResponse result = service.update(request);
+
+        assertThat(result.trainerCommentPushEnabled()).isFalse();
+    }
+
+    @Test
+    void get_createsDefaultRowWithTrainerGoalsPushEnabledWhenNoneExists() {
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsResponse result = service.get();
+
+        assertThat(result.trainerGoalsPushEnabled()).isTrue();
+    }
+
+    @Test
+    void update_canDisableTrainerGoalsPush() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, false);
+
+        SettingsResponse result = service.update(request);
+
+        assertThat(result.trainerGoalsPushEnabled()).isFalse();
+    }
+
+    @Test
+    void isWeeklyReportEmailEnabled_createsDefaultRowAndReturnsTrueWhenNoneExists() {
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(service.isWeeklyReportEmailEnabled()).isTrue();
+    }
+
+    @Test
+    void setWeeklyReportEmailEnabled_persistsAndReturnsNewValue() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        boolean result = service.setWeeklyReportEmailEnabled(false);
+
+        assertThat(result).isFalse();
+        assertThat(existing.isWeeklyReportEmailEnabled()).isFalse();
+    }
+
+    @Test
+    void updateNutritionGoalsForUser_createsRowWhenNoneExistsAndPersistsGoals() {
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsResponse result = service.updateNutritionGoalsForUser(USER_ID, 2200, 150, 240, 70);
+
+        assertThat(result.dailyCalorieGoal()).isEqualTo(2200);
+        assertThat(result.dailyProteinGoal()).isEqualTo(150);
+        assertThat(result.dailyCarbsGoal()).isEqualTo(240);
+        assertThat(result.dailyFatGoal()).isEqualTo(70);
+    }
+
+    @Test
+    void updateNutritionGoalsForUser_nullsClearExistingGoals() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        existing.setDailyCalorieGoal(2200);
+        existing.setDailyProteinGoal(150);
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsResponse result = service.updateNutritionGoalsForUser(USER_ID, null, null, null, null);
+
+        assertThat(result.dailyCalorieGoal()).isNull();
+        assertThat(result.dailyProteinGoal()).isNull();
     }
 }

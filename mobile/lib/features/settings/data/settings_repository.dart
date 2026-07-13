@@ -41,6 +41,8 @@ class SettingsRepository {
       dailyWaterGoalLiters: Value(settings.dailyWaterGoalLiters),
       dailyStepGoal: Value(settings.dailyStepGoal),
       workoutReminderEnabled: Value(settings.workoutReminderEnabled),
+      trainerCommentPushEnabled: Value(settings.trainerCommentPushEnabled),
+      trainerGoalsPushEnabled: Value(settings.trainerGoalsPushEnabled),
     );
 
     if (existing == null) {
@@ -64,6 +66,8 @@ class SettingsRepository {
       dailyWaterGoalLiters: row.dailyWaterGoalLiters,
       dailyStepGoal: row.dailyStepGoal,
       workoutReminderEnabled: row.workoutReminderEnabled,
+      trainerCommentPushEnabled: row.trainerCommentPushEnabled,
+      trainerGoalsPushEnabled: row.trainerGoalsPushEnabled,
     );
   }
 }

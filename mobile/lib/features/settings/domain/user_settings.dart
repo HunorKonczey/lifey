@@ -18,6 +18,8 @@ class UserSettings {
     this.dailyWaterGoalLiters,
     this.dailyStepGoal,
     this.workoutReminderEnabled = true,
+    this.trainerCommentPushEnabled = true,
+    this.trainerGoalsPushEnabled = true,
   });
 
   const UserSettings.defaults()
@@ -30,7 +32,9 @@ class UserSettings {
         dailyFatGoal = null,
         dailyWaterGoalLiters = null,
         dailyStepGoal = null,
-        workoutReminderEnabled = true;
+        workoutReminderEnabled = true,
+        trainerCommentPushEnabled = true,
+        trainerGoalsPushEnabled = true;
 
   final UnitSystem unitSystem;
   final ThemePreference theme;
@@ -45,6 +49,14 @@ class UserSettings {
   // (docs/30-push-notifications-plan.md) — server-enforced (the backend job
   // checks it), synced like every other field here rather than a local pref.
   final bool workoutReminderEnabled;
+  // Opt-out for the trainer-comment push notification
+  // (docs/31-session-feedback-loop-plan.md) — same shape as
+  // [workoutReminderEnabled] above.
+  final bool trainerCommentPushEnabled;
+  // Opt-out for the trainer-nutrition-goals-changed push notification
+  // (docs/32-trainer-nutrition-goals-plan.md) — same shape as
+  // [workoutReminderEnabled] above.
+  final bool trainerGoalsPushEnabled;
 
   UserSettings copyWith({
     UnitSystem? unitSystem,
@@ -57,6 +69,8 @@ class UserSettings {
     double? dailyWaterGoalLiters,
     int? dailyStepGoal,
     bool? workoutReminderEnabled,
+    bool? trainerCommentPushEnabled,
+    bool? trainerGoalsPushEnabled,
   }) {
     return UserSettings(
       unitSystem: unitSystem ?? this.unitSystem,
@@ -69,6 +83,8 @@ class UserSettings {
       dailyWaterGoalLiters: dailyWaterGoalLiters ?? this.dailyWaterGoalLiters,
       dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
       workoutReminderEnabled: workoutReminderEnabled ?? this.workoutReminderEnabled,
+      trainerCommentPushEnabled: trainerCommentPushEnabled ?? this.trainerCommentPushEnabled,
+      trainerGoalsPushEnabled: trainerGoalsPushEnabled ?? this.trainerGoalsPushEnabled,
     );
   }
 
@@ -84,6 +100,8 @@ class UserSettings {
       dailyWaterGoalLiters: (json['dailyWaterGoalLiters'] as num?)?.toDouble(),
       dailyStepGoal: json['dailyStepGoal'] as int?,
       workoutReminderEnabled: json['workoutReminderEnabled'] as bool? ?? true,
+      trainerCommentPushEnabled: json['trainerCommentPushEnabled'] as bool? ?? true,
+      trainerGoalsPushEnabled: json['trainerGoalsPushEnabled'] as bool? ?? true,
     );
   }
 
@@ -98,5 +116,7 @@ class UserSettings {
         'theme': theme.name.toUpperCase(),
         'language': language.name.toUpperCase(),
         'workoutReminderEnabled': workoutReminderEnabled,
+        'trainerCommentPushEnabled': trainerCommentPushEnabled,
+        'trainerGoalsPushEnabled': trainerGoalsPushEnabled,
       };
 }

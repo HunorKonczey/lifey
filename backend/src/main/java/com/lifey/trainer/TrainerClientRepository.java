@@ -43,4 +43,8 @@ public interface TrainerClientRepository extends JpaRepository<TrainerClient, Lo
     @Query("update TrainerClient tc set tc.status = com.lifey.trainer.TrainerClientStatus.EXPIRED "
             + "where tc.status = com.lifey.trainer.TrainerClientStatus.PENDING and tc.expiresAt < :now")
     void expireStalePendingInvites(@Param("now") Instant now);
+
+    /** Every trainer with at least one active client — the weekly trainer report job's (docs/33) fan-out list. */
+    @Query("select distinct tc.trainer.id from TrainerClient tc where tc.status = com.lifey.trainer.TrainerClientStatus.ACTIVE")
+    List<Long> findTrainerIdsWithActiveClients();
 }

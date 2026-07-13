@@ -8,6 +8,7 @@ import type {
   AssignmentListItemResponse,
   AssignmentRequest,
   AssignmentResponse,
+  ClientNutritionGoalsRequest,
   ClientNutritionGoalsResponse,
   ContentType,
   ScheduleRequest,
@@ -18,6 +19,8 @@ import type {
   TrainerClientResponse,
   TrainerInviteRequest,
   TrainerInviteResponse,
+  TrainerPreferencesRequest,
+  TrainerPreferencesResponse,
 } from "./types";
 
 export const trainerApi = {
@@ -57,6 +60,15 @@ export const trainerApi = {
     api.get<Page<WorkoutSessionResponse>>(
       `/trainer/clients/${clientId}/workout-sessions?page=${page}&size=${size}`,
     ),
+  putSessionComment: (clientId: number, sessionId: number, comment: string) =>
+    api.put<WorkoutSessionResponse>(
+      `/trainer/clients/${clientId}/workout-sessions/${sessionId}/comment`,
+      { comment },
+    ),
+  deleteSessionComment: (clientId: number, sessionId: number) =>
+    api.delete<WorkoutSessionResponse>(
+      `/trainer/clients/${clientId}/workout-sessions/${sessionId}/comment`,
+    ),
   clientMeals: (clientId: number, from?: string, to?: string) => {
     const params = new URLSearchParams();
     if (from) params.set("from", from);
@@ -66,6 +78,8 @@ export const trainerApi = {
   },
   clientNutritionGoals: (clientId: number) =>
     api.get<ClientNutritionGoalsResponse>(`/trainer/clients/${clientId}/nutrition-goals`),
+  updateClientNutritionGoals: (clientId: number, goals: ClientNutritionGoalsRequest) =>
+    api.put<ClientNutritionGoalsResponse>(`/trainer/clients/${clientId}/nutrition-goals`, goals),
   /** Returns null (not an error) when the client has no profile picture set. */
   clientAvatar: async (clientId: number): Promise<Blob | null> => {
     try {
@@ -87,4 +101,8 @@ export const trainerApi = {
   cancelOccurrence: (sessionId: number) => api.delete(`/trainer/scheduled-sessions/${sessionId}`),
   calendarSessions: (from: string, to: string) =>
     api.get<TrainerCalendarSessionResponse[]>(`/trainer/scheduled-sessions?from=${from}&to=${to}`),
+
+  preferences: () => api.get<TrainerPreferencesResponse>("/trainer/preferences"),
+  updatePreferences: (body: TrainerPreferencesRequest) =>
+    api.put<TrainerPreferencesResponse>("/trainer/preferences", body),
 };

@@ -1,0 +1,7 @@
+Heti ügyfélriportod ({{weekStart}} - {{weekEnd}})
+
+{{clientRows}}
+
+Azért kapod ezt az e-mailt, mert aktív ügyfeleid vannak a Lifey-ban. Ezt az admin felületeden kikapcsolhatod.
+
+— A Lifey csapata

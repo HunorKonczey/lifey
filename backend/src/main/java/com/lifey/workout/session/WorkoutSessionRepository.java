@@ -29,6 +29,9 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
 
     Optional<WorkoutSession> findByIdAndUserId(Long id, Long userId);
 
+    /** Same as {@link #findByIdAndUserId}, additionally excluding soft-deleted rows — used by the trainer comment endpoint. */
+    Optional<WorkoutSession> findByIdAndUserIdAndDeletedAtIsNull(Long id, Long userId);
+
     /**
      * Delta-sync feed (docs/16-delta-sync-rollout.md) — deliberately not
      * deletedAt-filtered: it must surface tombstoned rows (deletedAt set) so
@@ -37,6 +40,14 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     Page<WorkoutSession> findByUserIdAndUpdatedAtGreaterThanEqual(Long userId, Instant since, Pageable pageable);
 
     long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(Long userId, Instant from);
+
+    /**
+     * Completed (not just started) sessions in a range — weekly trainer report
+     * (docs/33): an achievement metric, unlike {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual}
+     * which counts starts for a pace metric. {@code from} inclusive, {@code toExclusive} exclusive.
+     */
+    long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNull(
+            Long userId, Instant from, Instant toExclusive);
 
     /** Every trainer-scheduled occurrence for a client in a date range — upcoming, missed, done and cancelled alike. */
     List<WorkoutSession> findByUserIdAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(

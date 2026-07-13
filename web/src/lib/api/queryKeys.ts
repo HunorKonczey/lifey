@@ -90,6 +90,9 @@ export const queryKeys = {
   trainerCalendar: {
     range: (from: string, to: string) => ["trainer-calendar", from, to] as const,
   },
+  trainerPreferences: {
+    all: () => ["trainer-preferences"] as const,
+  },
   superAdminUsers: {
     page: (params: { page: number; size?: number; search?: string }) =>
       ["superadmin-users", "page", params] as const,

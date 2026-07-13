@@ -10,7 +10,11 @@ import com.lifey.statistics.dto.StatisticsResponse;
 import com.lifey.statistics.service.StatisticsService;
 import com.lifey.steps.dto.DailyStepCountResponse;
 import com.lifey.steps.service.DailyStepCountService;
+import com.lifey.trainer.dto.ClientNutritionGoalsRequest;
 import com.lifey.trainer.dto.ClientNutritionGoalsResponse;
+import com.lifey.trainer.dto.SessionCommentRequest;
+import com.lifey.trainer.service.ClientNutritionGoalsService;
+import com.lifey.trainer.service.SessionCommentService;
 import com.lifey.trainer.service.TrainerAccessService;
 import com.lifey.user.UserAvatar;
 import com.lifey.user.UserAvatarRepository;
@@ -21,6 +25,7 @@ import com.lifey.workout.session.service.WorkoutSessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -55,6 +60,8 @@ public class TrainerClientDataController {
     private final DailyStepCountService dailyStepCountService;
     private final WeightService weightService;
     private final WorkoutSessionService workoutSessionService;
+    private final SessionCommentService sessionCommentService;
+    private final ClientNutritionGoalsService clientNutritionGoalsService;
     private final UserAvatarRepository userAvatarRepository;
     private final MealService mealService;
     private final SettingsService settingsService;
@@ -125,6 +132,24 @@ public class TrainerClientDataController {
         return workoutSessionService.findPageForUser(clientId, pageable);
     }
 
+    @Operation(summary = "Create or edit the trainer's comment on a client's session",
+            description = "Upsert semantics: writes the comment whether one already exists or not, "
+                    + "stamping the timestamp and this trainer as the author.")
+    @PutMapping("/workout-sessions/{sessionId}/comment")
+    public WorkoutSessionResponse putSessionComment(
+            @PathVariable Long clientId, @PathVariable Long sessionId,
+            @Valid @RequestBody SessionCommentRequest request) {
+        return sessionCommentService.upsertComment(
+                currentUserProvider.getUserId(), clientId, sessionId, request.comment());
+    }
+
+    @Operation(summary = "Remove the trainer's comment from a client's session")
+    @DeleteMapping("/workout-sessions/{sessionId}/comment")
+    public WorkoutSessionResponse deleteSessionComment(
+            @PathVariable Long clientId, @PathVariable Long sessionId) {
+        return sessionCommentService.deleteComment(currentUserProvider.getUserId(), clientId, sessionId);
+    }
+
     @Operation(summary = "Client's logged meals",
             description = "Optionally bounded to a date range via `from`/`to` (either or both may be omitted).")
     @GetMapping("/meals")
@@ -146,6 +171,14 @@ public class TrainerClientDataController {
         return new ClientNutritionGoalsResponse(
                 settings.dailyCalorieGoal(), settings.dailyProteinGoal(),
                 settings.dailyCarbsGoal(), settings.dailyFatGoal());
+    }
+
+    @Operation(summary = "Set a client's daily nutrition goals",
+            description = "Full replace of the four goal fields; a null field clears that goal.")
+    @PutMapping("/nutrition-goals")
+    public ClientNutritionGoalsResponse updateNutritionGoals(
+            @PathVariable Long clientId, @Valid @RequestBody ClientNutritionGoalsRequest request) {
+        return clientNutritionGoalsService.updateGoals(currentUserProvider.getUserId(), clientId, request);
     }
 
     @Operation(summary = "Client's profile picture", description = "404 if the client has no picture set.")

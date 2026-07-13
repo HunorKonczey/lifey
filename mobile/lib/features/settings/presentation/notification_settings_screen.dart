@@ -40,6 +40,22 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
 
   Future<void> _setStepGoal(bool value) => _controller.setStepGoalNotificationEnabled(value);
 
+  Future<void> _setTrainerCommentPush(bool value) async {
+    try {
+      await _controller.setTrainerCommentPushEnabled(value);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    }
+  }
+
+  Future<void> _setTrainerGoalsPush(bool value) async {
+    try {
+      await _controller.setTrainerGoalsPushEnabled(value);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    }
+  }
+
   Future<void> _setAll(bool value) async {
     final scheduled = await _controller.setAllEnabled(value);
     if (mounted) setState(() => _permissionDenied = value && !scheduled);
@@ -114,6 +130,18 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
           subtitle: Text(l10n.stepGoalNotificationToggleSubtitle),
           value: state.stepGoalNotificationEnabled,
           onChanged: _setStepGoal,
+        ),
+        SwitchListTile(
+          title: Text(l10n.trainerCommentPushToggleLabel),
+          subtitle: Text(l10n.trainerCommentPushToggleSubtitle),
+          value: state.trainerCommentPushEnabled,
+          onChanged: _setTrainerCommentPush,
+        ),
+        SwitchListTile(
+          title: Text(l10n.trainerGoalsPushToggleLabel),
+          subtitle: Text(l10n.trainerGoalsPushToggleSubtitle),
+          value: state.trainerGoalsPushEnabled,
+          onChanged: _setTrainerGoalsPush,
         ),
         if (_permissionDenied)
           Padding(

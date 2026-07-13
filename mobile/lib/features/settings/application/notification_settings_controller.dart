@@ -16,6 +16,8 @@ class NotificationSettingsState {
     required this.weighInReminderHour,
     required this.weighInReminderMinute,
     required this.stepGoalNotificationEnabled,
+    required this.trainerCommentPushEnabled,
+    required this.trainerGoalsPushEnabled,
   });
 
   final bool workoutReminderEnabled;
@@ -23,12 +25,18 @@ class NotificationSettingsState {
   final int weighInReminderHour;
   final int weighInReminderMinute;
   final bool stepGoalNotificationEnabled;
+  final bool trainerCommentPushEnabled;
+  final bool trainerGoalsPushEnabled;
 
   /// The master switch reflects this — "on" the moment any one type is,
   /// no separate stored flag (see `WeighInReminderController` / the plan's
   /// M5 section for the "what you see is what's stored" rationale).
   bool get anyEnabled =>
-      workoutReminderEnabled || weighInReminderEnabled || stepGoalNotificationEnabled;
+      workoutReminderEnabled ||
+      weighInReminderEnabled ||
+      stepGoalNotificationEnabled ||
+      trainerCommentPushEnabled ||
+      trainerGoalsPushEnabled;
 
   NotificationSettingsState copyWith({
     bool? workoutReminderEnabled,
@@ -36,6 +44,8 @@ class NotificationSettingsState {
     int? weighInReminderHour,
     int? weighInReminderMinute,
     bool? stepGoalNotificationEnabled,
+    bool? trainerCommentPushEnabled,
+    bool? trainerGoalsPushEnabled,
   }) {
     return NotificationSettingsState(
       workoutReminderEnabled: workoutReminderEnabled ?? this.workoutReminderEnabled,
@@ -43,6 +53,8 @@ class NotificationSettingsState {
       weighInReminderHour: weighInReminderHour ?? this.weighInReminderHour,
       weighInReminderMinute: weighInReminderMinute ?? this.weighInReminderMinute,
       stepGoalNotificationEnabled: stepGoalNotificationEnabled ?? this.stepGoalNotificationEnabled,
+      trainerCommentPushEnabled: trainerCommentPushEnabled ?? this.trainerCommentPushEnabled,
+      trainerGoalsPushEnabled: trainerGoalsPushEnabled ?? this.trainerGoalsPushEnabled,
     );
   }
 }
@@ -68,6 +80,8 @@ class NotificationSettingsController extends AsyncNotifier<NotificationSettingsS
       weighInReminderHour: weighInTime.hour,
       weighInReminderMinute: weighInTime.minute,
       stepGoalNotificationEnabled: stepGoalEnabled,
+      trainerCommentPushEnabled: settings.trainerCommentPushEnabled,
+      trainerGoalsPushEnabled: settings.trainerGoalsPushEnabled,
     );
   }
 
@@ -128,6 +142,40 @@ class NotificationSettingsController extends AsyncNotifier<NotificationSettingsS
     state = AsyncValue.data(current.copyWith(stepGoalNotificationEnabled: enabled));
   }
 
+  /// Same optimistic-flip-with-rollback shape as [setWorkoutReminderEnabled]
+  /// — see docs/31-session-feedback-loop-plan.md, M3.
+  Future<void> setTrainerCommentPushEnabled(bool enabled) async {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(current.copyWith(trainerCommentPushEnabled: enabled));
+    try {
+      final settings = await ref.read(settingsControllerProvider.future);
+      await ref
+          .read(settingsControllerProvider.notifier)
+          .save(settings.copyWith(trainerCommentPushEnabled: enabled));
+    } catch (_) {
+      state = AsyncValue.data(current);
+      rethrow;
+    }
+  }
+
+  /// Same optimistic-flip-with-rollback shape as [setWorkoutReminderEnabled]
+  /// — see docs/32-trainer-nutrition-goals-plan.md, M1.
+  Future<void> setTrainerGoalsPushEnabled(bool enabled) async {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(current.copyWith(trainerGoalsPushEnabled: enabled));
+    try {
+      final settings = await ref.read(settingsControllerProvider.future);
+      await ref
+          .read(settingsControllerProvider.notifier)
+          .save(settings.copyWith(trainerGoalsPushEnabled: enabled));
+    } catch (_) {
+      state = AsyncValue.data(current);
+      rethrow;
+    }
+  }
+
   /// Master switch: bulk action, not a separate stored gate — flips every
   /// type to [enabled]. Returns whether the weigh-in reminder actually got
   /// scheduled when turning everything on (irrelevant, and always `true`,
@@ -136,6 +184,8 @@ class NotificationSettingsController extends AsyncNotifier<NotificationSettingsS
     await setWorkoutReminderEnabled(enabled);
     final weighInScheduled = await setWeighInReminderEnabled(enabled);
     await setStepGoalNotificationEnabled(enabled);
+    await setTrainerCommentPushEnabled(enabled);
+    await setTrainerGoalsPushEnabled(enabled);
     return weighInScheduled;
   }
 }

@@ -325,6 +325,33 @@ class WorkoutSessionServiceImplTest {
     }
 
     @Test
+    void update_leavesTrainerCommentUntouched() {
+        // Pins the session-feedback-loop invariant (docs/31, B1): the trainer
+        // comment is trainer-owned — the client-facing update path must never
+        // touch it, so an offline client edit pushed later can't clobber a
+        // comment written in the meantime.
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        existing.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        existing.setTrainerComment("Nice pace, add weight next time");
+        existing.setTrainerCommentAt(Instant.parse("2026-06-18T07:00:00Z"));
+        existing.setTrainerCommentBy(42L);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), Instant.parse("2026-06-18T06:00:00Z"),
+                List.of(), List.of(), null, null, null, null, 8, "felt strong");
+
+        WorkoutSessionResponse result = service.update(3L, request);
+
+        assertThat(existing.getTrainerComment()).isEqualTo("Nice pace, add weight next time");
+        assertThat(existing.getTrainerCommentAt()).isEqualTo(Instant.parse("2026-06-18T07:00:00Z"));
+        assertThat(existing.getTrainerCommentBy()).isEqualTo(42L);
+        assertThat(result.trainerComment()).isEqualTo("Nice pace, add weight next time");
+        assertThat(result.trainerCommentAt()).isEqualTo(Instant.parse("2026-06-18T07:00:00Z"));
+    }
+
+    @Test
     void findDelta_isUserScopedAndIncludesTombstones() {
         WorkoutSession deleted = new WorkoutSession();
         deleted.setId(2L);

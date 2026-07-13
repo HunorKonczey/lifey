@@ -57,4 +57,33 @@ public class UserSettings extends BaseEntity {
      */
     @Column(name = "workout_reminder_enabled", nullable = false)
     private boolean workoutReminderEnabled = true;
+
+    /**
+     * Opt-out for the trainer-comment push notification
+     * (docs/31-session-feedback-loop-plan.md). Default true — the trainer
+     * relationship is something the client already accepted.
+     */
+    @Column(name = "trainer_comment_push_enabled", nullable = false)
+    private boolean trainerCommentPushEnabled = true;
+
+    /**
+     * Opt-out for the trainer-nutrition-goals-changed push notification
+     * (docs/32-trainer-nutrition-goals-plan.md). Default true — the trainer
+     * relationship is something the client already accepted.
+     */
+    @Column(name = "trainer_goals_push_enabled", nullable = false)
+    private boolean trainerGoalsPushEnabled = true;
+
+    /**
+     * Opt-out for the weekly trainer report email
+     * (docs/33-weekly-trainer-report-plan.md). Trainer-facing only —
+     * deliberately excluded from {@code SettingsRequest}/{@code
+     * SettingsResponse}/{@code SettingsMapper} (the mobile settings
+     * round-trip is a client surface); read/written via a small
+     * trainer-scoped preferences endpoint instead. Default true — the
+     * trainer chose to have clients, a weekly summary of them is core
+     * value.
+     */
+    @Column(name = "weekly_report_email_enabled", nullable = false)
+    private boolean weeklyReportEmailEnabled = true;
 }
