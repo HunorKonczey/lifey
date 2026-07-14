@@ -10,8 +10,6 @@
 	     "production". See devops/push-notifications-ios.md. The Push
 	     Notifications capability must also be enabled on the App ID on the
 	     Apple Developer portal. -->
-	<key>aps-environment</key>
-	<string>development</string>
 	<key>com.apple.developer.healthkit</key>
 	<true/>
 	<key>com.apple.developer.healthkit.access</key>
