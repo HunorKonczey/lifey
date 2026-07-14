@@ -69,7 +69,7 @@ class WaterSourceControllerTest {
 
     @Test
     void delete_notFoundReturns404() throws Exception {
-        org.mockito.Mockito.doThrow(new ResourceNotFoundException("Water source not found: 99"))
+        doThrow(new ResourceNotFoundException("Water source not found: 99"))
                 .when(waterSourceService).delete(99L);
 
         mockMvc.perform(delete("/api/v1/water-sources/99"))

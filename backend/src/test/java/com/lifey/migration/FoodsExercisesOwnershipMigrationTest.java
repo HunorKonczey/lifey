@@ -4,7 +4,7 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.sql.Connection;
@@ -34,8 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 class FoodsExercisesOwnershipMigrationTest {
 
-    static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16").withDatabaseName("lifey").withUsername("lifey").withPassword("lifey");
+    static final PostgreSQLContainer POSTGRES =
+            new PostgreSQLContainer("postgres:16").withDatabaseName("lifey").withUsername("lifey").withPassword("lifey");
 
     static Connection connection;
 
@@ -210,7 +210,14 @@ class FoodsExercisesOwnershipMigrationTest {
             ps.setLong(1, userBId);
             ps.executeUpdate();
         }
-        // No exception means the unique indexes are (user_id, ...) rather than global.
+        // Both rows exist (no unique-constraint violation) means the unique
+        // indexes are (user_id, ...) rather than global.
+        try (Statement st = connection.createStatement();
+             ResultSet rs = st.executeQuery(
+                     "select count(*) from foods where name = 'Duplicate Name' and barcode = 'dup-barcode'")) {
+            rs.next();
+            assertThat(rs.getLong(1)).isEqualTo(2);
+        }
     }
 
     private static long insertUser(Statement st, String email) throws Exception {

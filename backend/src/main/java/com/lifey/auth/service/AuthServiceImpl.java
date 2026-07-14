@@ -64,7 +64,7 @@ public class AuthServiceImpl implements AuthService {
             var authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.email().trim(), request.password()));
             principal = (UserPrincipal) authentication.getPrincipal();
-        } catch (BadCredentialsException ex) {
+        } catch (BadCredentialsException _) {
             // Same message regardless of whether the email exists, so login can't be
             // used to enumerate registered accounts.
             throw new InvalidCredentialsException("Invalid email or password");

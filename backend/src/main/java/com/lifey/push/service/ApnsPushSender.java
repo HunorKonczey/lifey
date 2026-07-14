@@ -87,7 +87,7 @@ class ApnsPushSender implements PushSender {
             }
             log.warn("APNs rejected notification to device {}: {}", device.getId(), reason);
             return PushSendResult.FAILED;
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return PushSendResult.FAILED;
         } catch (ExecutionException | TimeoutException e) {

@@ -10,6 +10,7 @@ import com.lifey.auth.entity.UserIdentity;
 import com.lifey.auth.exception.UnverifiedEmailException;
 import com.lifey.auth.repository.RefreshTokenRepository;
 import com.lifey.auth.repository.UserIdentityRepository;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.user.Role;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
@@ -89,11 +90,7 @@ class SocialAuthServiceImplTest {
         when(userRepository.findByEmailIgnoreCase("new@example.com")).thenReturn(Optional.empty());
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        when(userRepository.save(userCaptor.capture())).thenAnswer(inv -> {
-            User saved = inv.getArgument(0);
-            saved.setId(9L);
-            return saved;
-        });
+        when(userRepository.save(userCaptor.capture())).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
         ArgumentCaptor<UserIdentity> identityCaptor = ArgumentCaptor.forClass(UserIdentity.class);
         when(userIdentityRepository.save(identityCaptor.capture())).thenAnswer(inv -> inv.getArgument(0));
         stubTokenIssuance(null);
@@ -185,5 +182,10 @@ class SocialAuthServiceImplTest {
         when(jwtService.generateAccessToken(any())).thenReturn("access-token");
         when(jwtService.refreshTokenTtl()).thenReturn(Duration.ofDays(30));
         when(jwtService.accessTokenTtlSeconds()).thenReturn(900L);
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

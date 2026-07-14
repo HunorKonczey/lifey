@@ -1,6 +1,7 @@
 package com.lifey.nutrition.food.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
@@ -184,11 +185,7 @@ class FoodServiceImplTest {
         FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, false);
         when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.empty());
         when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
-        when(repository.save(any(Food.class))).thenAnswer(inv -> {
-            Food f = inv.getArgument(0);
-            f.setId(7L);
-            return f;
-        });
+        when(repository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 7L));
 
         FoodResponse result = service.create(request);
 
@@ -276,11 +273,7 @@ class FoodServiceImplTest {
     void create_hiddenFoodSkipsNameCheck() {
         FoodRequest request = new FoodRequest("Rice", 130.0, 2.7, null, null, null, true);
         when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
-        when(repository.save(any(Food.class))).thenAnswer(inv -> {
-            Food f = inv.getArgument(0);
-            f.setId(8L);
-            return f;
-        });
+        when(repository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 8L));
 
         FoodResponse result = service.create(request);
 
@@ -295,11 +288,7 @@ class FoodServiceImplTest {
         hiddenRice.setHidden(true);
         when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.of(hiddenRice));
         when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
-        when(repository.save(any(Food.class))).thenAnswer(inv -> {
-            Food f = inv.getArgument(0);
-            f.setId(9L);
-            return f;
-        });
+        when(repository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
 
         FoodResponse result = service.create(request);
 
@@ -324,5 +313,10 @@ class FoodServiceImplTest {
         f.setCaloriesPer100g(cal);
         f.setProteinPer100g(protein);
         return f;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

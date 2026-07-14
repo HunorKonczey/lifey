@@ -26,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -96,7 +97,7 @@ class UserAvatarServiceImplTest {
         service.upload(pngUpload(64, 64));
 
         assertThat(existing.getSource()).isEqualTo(AvatarSource.UPLOAD);
-        verify(userRepository, org.mockito.Mockito.never()).getReferenceById(org.mockito.ArgumentMatchers.any());
+        verify(userRepository, never()).getReferenceById(org.mockito.ArgumentMatchers.any());
     }
 
     @Test

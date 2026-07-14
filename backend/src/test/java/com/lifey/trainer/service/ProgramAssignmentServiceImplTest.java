@@ -1,6 +1,7 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.push.service.PushMessage;
 import com.lifey.push.service.PushService;
@@ -35,14 +36,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.Month;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -125,11 +132,8 @@ class ProgramAssignmentServiceImplTest {
         lenient().when(trainingProgramRepository.findByIdAndUserIdAndDeletedAtIsNull(PROGRAM_ID, TRAINER_ID))
                 .thenReturn(Optional.of(program));
 
-        lenient().when(programAssignmentRepository.save(any(ProgramAssignment.class))).thenAnswer(inv -> {
-            ProgramAssignment a = inv.getArgument(0);
-            a.setId(ASSIGNMENT_ID);
-            return a;
-        });
+        lenient().when(programAssignmentRepository.save(any(ProgramAssignment.class)))
+                .thenAnswer(inv -> withId(inv.getArgument(0), ASSIGNMENT_ID));
     }
 
     private ProgramWorkout slot(int week, String day) {
@@ -141,8 +145,12 @@ class ProgramAssignmentServiceImplTest {
         return workout;
     }
 
-    /** 2026-07-13 is a Monday. */
-    private static final LocalDate A_MONDAY = LocalDate.of(2026, 7, 13);
+    /** Always a Monday that's not in the past, regardless of when the suite runs. */
+    private static final LocalDate A_MONDAY = LocalDate.now()
+            .with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY))
+            .plusWeeks(1);
+
+    private static final DateTimeFormatter PUSH_DATE_FORMAT = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.ENGLISH);
 
     @Test
     void assign_materializesOneOccurrencePerSlotOnCorrectDates() {
@@ -154,7 +162,7 @@ class ProgramAssignmentServiceImplTest {
         assertThat(response.endDate()).isEqualTo(A_MONDAY.plusWeeks(2).minusDays(1));
 
         ArgumentCaptor<WorkoutSession> captor = ArgumentCaptor.forClass(WorkoutSession.class);
-        verify(workoutSessionRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        verify(workoutSessionRepository, times(2)).save(captor.capture());
         List<WorkoutSession> saved = captor.getAllValues();
         assertThat(saved).allSatisfy(s -> {
             assertThat(s.getProgramAssignmentId()).isEqualTo(ASSIGNMENT_ID);
@@ -174,7 +182,7 @@ class ProgramAssignmentServiceImplTest {
         PushMessage message = captor.getValue();
         assertThat(message.title()).isEqualTo("Your trainer started you on a program");
         // earliest slot is week 1 MON = A_MONDAY itself
-        assertThat(message.body()).contains("Hypertrophy Block").contains("Mon, Jul 13");
+        assertThat(message.body()).contains("Hypertrophy Block").contains(A_MONDAY.format(PUSH_DATE_FORMAT));
         assertThat(message.data()).containsEntry("type", "program_assigned")
                 .containsEntry("programAssignmentId", String.valueOf(ASSIGNMENT_ID));
     }
@@ -215,7 +223,7 @@ class ProgramAssignmentServiceImplTest {
 
         ArgumentCaptor<PushMessage> captor = ArgumentCaptor.forClass(PushMessage.class);
         verify(pushService).sendToUser(eq(CLIENT_ID), captor.capture());
-        assertThat(captor.getValue().body()).contains("Wed, Jul 15");
+        assertThat(captor.getValue().body()).contains(A_MONDAY.plusDays(2).format(PUSH_DATE_FORMAT));
     }
 
     @Test
@@ -226,7 +234,7 @@ class ProgramAssignmentServiceImplTest {
 
     @Test
     void assign_pastStart_throws() {
-        assertThatThrownBy(() -> service.assign(PROGRAM_ID, new ProgramAssignmentRequest(CLIENT_ID, LocalDate.of(2020, 1, 6))))
+        assertThatThrownBy(() -> service.assign(PROGRAM_ID, new ProgramAssignmentRequest(CLIENT_ID, LocalDate.of(2020, Month.JANUARY, 6))))
                 .isInstanceOf(ProgramStartDateInvalidException.class);
     }
 
@@ -301,7 +309,8 @@ class ProgramAssignmentServiceImplTest {
         assertThat(a2.getCancelledAt()).isNotNull();
     }
 
-    private static Long eq(Long value) {
-        return org.mockito.ArgumentMatchers.eq(value);
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

@@ -45,7 +45,7 @@ public class GoogleIdTokenVerifier {
         Jwt jwt;
         try {
             jwt = jwtDecoder.decode(idToken);
-        } catch (JwtException ex) {
+        } catch (JwtException _) {
             throw new InvalidSocialTokenException("Invalid Google ID token");
         }
 

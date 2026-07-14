@@ -30,8 +30,7 @@ public class WeeklyReportFormattingTest {
 
         String text = formatting.summarize(summary, MailLanguage.EN, false);
 
-        assertThat(text).contains("5/7 days logged").contains("avg 2150 kcal");
-        assertThat(text).doesNotContain("within goal");
+        assertThat(text).contains("5/7 days logged").contains("avg 2150 kcal").doesNotContain("within goal");
     }
 
     @Test
@@ -56,8 +55,7 @@ public class WeeklyReportFormattingTest {
 
         String text = formatting.summarize(summary, MailLanguage.EN, false);
 
-        assertThat(text).contains("82.4 kg");
-        assertThat(text).doesNotContain("(");
+        assertThat(text).contains("82.4 kg").doesNotContain("(");
     }
 
     @Test

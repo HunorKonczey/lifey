@@ -40,6 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -114,7 +115,7 @@ class TrainerClientDataControllerTest {
 
     @Test
     void dailyStatistics_passesExplicitDateThrough() throws Exception {
-        when(statisticsService.dailyForUser(eq(CLIENT_ID), eq(LocalDate.of(2026, 6, 1))))
+        when(statisticsService.dailyForUser(eq(CLIENT_ID), eq(LocalDate.of(2026, Month.JUNE, 1))))
                 .thenReturn(new StatisticsResponse(1.0, 1.0, 1.0, 1.0, 0, null, 0.0));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/statistics/daily", CLIENT_ID)
@@ -145,7 +146,7 @@ class TrainerClientDataControllerTest {
     @Test
     void steps_returnsClientsStepHistory() throws Exception {
         when(dailyStepCountService.findAllForUser(eq(CLIENT_ID), any(), any())).thenReturn(List.of(
-                new DailyStepCountResponse(1L, LocalDate.of(2026, 6, 1), 8000, Instant.now(), null)));
+                new DailyStepCountResponse(1L, LocalDate.of(2026, Month.JUNE, 1), 8000, Instant.now(), null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/steps", CLIENT_ID))
                 .andExpect(status().isOk())
@@ -154,7 +155,7 @@ class TrainerClientDataControllerTest {
 
     @Test
     void steps_passesFromAndToThrough() throws Exception {
-        when(dailyStepCountService.findAllForUser(CLIENT_ID, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+        when(dailyStepCountService.findAllForUser(CLIENT_ID, LocalDate.of(2026, Month.JUNE, 1), LocalDate.of(2026, Month.JUNE, 30)))
                 .thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/steps", CLIENT_ID)
@@ -165,7 +166,7 @@ class TrainerClientDataControllerTest {
     @Test
     void weights_returnsClientsWeightHistory() throws Exception {
         when(weightService.findAllForUser(eq(CLIENT_ID), any(), any())).thenReturn(List.of(
-                new WeightResponse(1L, LocalDate.of(2026, 6, 1), 80.5, Instant.now(), null)));
+                new WeightResponse(1L, LocalDate.of(2026, Month.JUNE, 1), 80.5, Instant.now(), null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/weights", CLIENT_ID))
                 .andExpect(status().isOk())
@@ -174,7 +175,7 @@ class TrainerClientDataControllerTest {
 
     @Test
     void weights_passesFromAndToThrough() throws Exception {
-        when(weightService.findAllForUser(CLIENT_ID, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+        when(weightService.findAllForUser(CLIENT_ID, LocalDate.of(2026, Month.JUNE, 1), LocalDate.of(2026, Month.JUNE, 30)))
                 .thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/weights", CLIENT_ID)
@@ -311,7 +312,7 @@ class TrainerClientDataControllerTest {
 
     @Test
     void meals_passesFromAndToThrough() throws Exception {
-        when(mealService.findAllForUserBetween(CLIENT_ID, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+        when(mealService.findAllForUserBetween(CLIENT_ID, LocalDate.of(2026, Month.JUNE, 1), LocalDate.of(2026, Month.JUNE, 30)))
                 .thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/meals", CLIENT_ID)

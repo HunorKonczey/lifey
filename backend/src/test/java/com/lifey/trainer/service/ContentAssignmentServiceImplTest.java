@@ -1,6 +1,7 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.mail.MailLanguage;
@@ -141,16 +142,8 @@ class ContentAssignmentServiceImplTest {
         when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
         when(exerciseRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 30L))
                 .thenReturn(Optional.empty());
-        when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> {
-            Exercise e = inv.getArgument(0);
-            e.setId(99L);
-            return e;
-        });
-        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
-            WorkoutTemplate t = inv.getArgument(0);
-            t.setId(88L);
-            return t;
-        });
+        when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> withId(inv.getArgument(0), 99L));
+        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> withId(inv.getArgument(0), 88L));
         when(contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
                 TRAINER_ID, CLIENT_ID, ContentType.TEMPLATE, 7L)).thenReturn(false);
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -239,11 +232,7 @@ class ContentAssignmentServiceImplTest {
                 CLIENT_ID, TRAINER_ID, 7L)).thenReturn(Optional.empty());
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
         when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
-        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
-            WorkoutTemplate t = inv.getArgument(0);
-            t.setId(88L);
-            return t;
-        });
+        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> withId(inv.getArgument(0), 88L));
         when(contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
                 TRAINER_ID, CLIENT_ID, ContentType.TEMPLATE, 7L)).thenReturn(false);
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -305,11 +294,7 @@ class ContentAssignmentServiceImplTest {
         when(workoutTemplateRepository.findByIdAndUserId(88L, CLIENT_ID)).thenReturn(Optional.of(copy));
         when(exerciseRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 30L))
                 .thenReturn(Optional.empty());
-        when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> {
-            Exercise e = inv.getArgument(0);
-            e.setId(99L);
-            return e;
-        });
+        when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> withId(inv.getArgument(0), 99L));
 
         service.propagateTemplateUpdate(TRAINER_ID, 7L);
 
@@ -441,11 +426,7 @@ class ContentAssignmentServiceImplTest {
         when(recipeRepository.findByIdAndUserId(66L, CLIENT_ID)).thenReturn(Optional.of(copy));
         when(foodRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 40L))
                 .thenReturn(Optional.empty());
-        when(foodRepository.save(any(Food.class))).thenAnswer(inv -> {
-            Food f = inv.getArgument(0);
-            f.setId(77L);
-            return f;
-        });
+        when(foodRepository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 77L));
 
         service.propagateRecipeUpdate(TRAINER_ID, 12L);
 
@@ -507,16 +488,8 @@ class ContentAssignmentServiceImplTest {
         when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.of(source));
         when(foodRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(CLIENT_ID, TRAINER_ID, 40L))
                 .thenReturn(Optional.empty());
-        when(foodRepository.save(any(Food.class))).thenAnswer(inv -> {
-            Food f = inv.getArgument(0);
-            f.setId(77L);
-            return f;
-        });
-        when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> {
-            Recipe r = inv.getArgument(0);
-            r.setId(66L);
-            return r;
-        });
+        when(foodRepository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 77L));
+        when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> withId(inv.getArgument(0), 66L));
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         BulkAssignmentResponse result = service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.RECIPE, 12L));
@@ -606,11 +579,7 @@ class ContentAssignmentServiceImplTest {
                 .thenReturn(Optional.empty());
         when(foodRepository.findByUserIdAndNameIgnoreCaseAndHiddenFalse(CLIENT_ID, "Whey"))
                 .thenReturn(Optional.of(clientsExistingFood));
-        when(foodRepository.save(any(Food.class))).thenAnswer(inv -> {
-            Food f = inv.getArgument(0);
-            f.setId(77L);
-            return f;
-        });
+        when(foodRepository.save(any(Food.class))).thenAnswer(inv -> withId(inv.getArgument(0), 77L));
         when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> inv.getArgument(0));
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -662,11 +631,7 @@ class ContentAssignmentServiceImplTest {
                 TRAINER_ID, CLIENT_ID, ContentType.TEMPLATE, 7L)).thenReturn(true);
         when(contentAssignmentRepository.existsByTrainerIdAndClientIdAndContentTypeAndSourceId(
                 TRAINER_ID, OTHER_CLIENT_ID, ContentType.TEMPLATE, 7L)).thenReturn(false);
-        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
-            WorkoutTemplate t = inv.getArgument(0);
-            t.setId(88L);
-            return t;
-        });
+        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> withId(inv.getArgument(0), 88L));
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         BulkAssignmentResponse result = service.assign(
@@ -704,24 +669,16 @@ class ContentAssignmentServiceImplTest {
                 .thenReturn(Optional.of(existingCopy));
         when(exerciseRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(OTHER_CLIENT_ID, TRAINER_ID, 30L))
                 .thenReturn(Optional.empty());
-        when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> {
-            Exercise e = inv.getArgument(0);
-            e.setId(99L);
-            return e;
-        });
+        when(exerciseRepository.save(any(Exercise.class))).thenAnswer(inv -> withId(inv.getArgument(0), 99L));
         long[] nextTemplateId = {88L};
-        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
-            WorkoutTemplate t = inv.getArgument(0);
-            t.setId(nextTemplateId[0]++);
-            return t;
-        });
+        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> withId(inv.getArgument(0), nextTemplateId[0]++));
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         BulkAssignmentResponse result = service.assign(
                 new AssignmentRequest(List.of(CLIENT_ID, OTHER_CLIENT_ID), ContentType.TEMPLATE, 7L));
 
-        assertThat(result.assignments()).hasSize(2);
-        assertThat(result.assignments()).extracting(BulkAssignmentResponse.BulkAssignmentItem::clientId)
+        assertThat(result.assignments()).hasSize(2)
+                .extracting(BulkAssignmentResponse.BulkAssignmentItem::clientId)
                 .containsExactly(CLIENT_ID, OTHER_CLIENT_ID);
         assertThat(result.skippedClientIds()).isEmpty();
         // Only OTHER_CLIENT_ID needed a fresh exercise copy.
@@ -740,11 +697,7 @@ class ContentAssignmentServiceImplTest {
         source.setId(7L);
         source.setName("Push day");
         when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.of(source));
-        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
-            WorkoutTemplate t = inv.getArgument(0);
-            t.setId(88L);
-            return t;
-        });
+        when(workoutTemplateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> withId(inv.getArgument(0), 88L));
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         BulkAssignmentResponse result = service.assign(
@@ -781,11 +734,7 @@ class ContentAssignmentServiceImplTest {
         source.setServings(2);
         when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.of(source));
         long[] nextRecipeId = {66L};
-        when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> {
-            Recipe r = inv.getArgument(0);
-            r.setId(nextRecipeId[0]++);
-            return r;
-        });
+        when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> withId(inv.getArgument(0), nextRecipeId[0]++));
         when(contentAssignmentRepository.save(any(ContentAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         RecipeImage sourceImage = new RecipeImage();
@@ -868,5 +817,10 @@ class ContentAssignmentServiceImplTest {
         User u = new User();
         u.setId(id);
         return u;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

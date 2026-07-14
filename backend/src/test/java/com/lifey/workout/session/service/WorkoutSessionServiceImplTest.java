@@ -1,6 +1,7 @@
 package com.lifey.workout.session.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
@@ -99,11 +100,7 @@ class WorkoutSessionServiceImplTest {
     void create_resolvesPlannedExercisesAndSets() {
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
         when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
-        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> {
-            WorkoutSession s = inv.getArgument(0);
-            s.setId(2L);
-            return s;
-        });
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 2L));
         Instant started = Instant.parse("2026-06-18T05:00:00Z");
         Instant performedAt = Instant.parse("2026-06-18T05:05:00Z");
         WorkoutSessionRequest request = new WorkoutSessionRequest(started, null,
@@ -129,11 +126,7 @@ class WorkoutSessionServiceImplTest {
 
     @Test
     void create_allowsAnEmptySessionWithNoPlannedExercisesOrSets() {
-        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> {
-            WorkoutSession s = inv.getArgument(0);
-            s.setId(5L);
-            return s;
-        });
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null);
@@ -151,11 +144,7 @@ class WorkoutSessionServiceImplTest {
     @Test
     void create_dropsIncompleteSetsInsteadOfPersistingThem() {
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
-        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> {
-            WorkoutSession s = inv.getArgument(0);
-            s.setId(9L);
-            return s;
-        });
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
         Instant performedAt = Instant.parse("2026-06-18T05:05:00Z");
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(),
@@ -206,11 +195,7 @@ class WorkoutSessionServiceImplTest {
     void create_resolvesTemplateAndSnapshotsItsName() {
         when(templateRepository.findByIdAndUserId(7L, USER_ID))
                 .thenReturn(Optional.of(template(7L, "Push Day")));
-        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> {
-            WorkoutSession s = inv.getArgument(0);
-            s.setId(6L);
-            return s;
-        });
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 6L));
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, 7L, null, null);
@@ -383,5 +368,10 @@ class WorkoutSessionServiceImplTest {
         t.setId(id);
         t.setName(name);
         return t;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

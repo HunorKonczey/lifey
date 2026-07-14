@@ -1,6 +1,7 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.mail.service.MailService;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
@@ -72,11 +73,7 @@ class TrainerInviteServiceImplTest {
         when(userRepository.getReferenceById(TRAINER_ID)).thenReturn(new User());
         when(trainerClientRepository.findFirstByTrainerIdAndClientIdOrderByCreatedAtDesc(TRAINER_ID, CLIENT_ID))
                 .thenReturn(Optional.empty());
-        when(trainerClientRepository.save(any(TrainerClient.class))).thenAnswer(inv -> {
-            TrainerClient tc = inv.getArgument(0);
-            tc.setId(10L);
-            return tc;
-        });
+        when(trainerClientRepository.save(any(TrainerClient.class))).thenAnswer(inv -> withId(inv.getArgument(0), 10L));
 
         TrainerInviteResponse result = service.invite(new TrainerInviteRequest("client@example.com"));
 
@@ -346,5 +343,10 @@ class TrainerInviteServiceImplTest {
         client.setId(CLIENT_ID);
         client.setEmail("client@example.com");
         return client;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

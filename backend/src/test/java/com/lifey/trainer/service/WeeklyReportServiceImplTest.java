@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,7 +39,7 @@ class WeeklyReportServiceImplTest {
 
     private static final Long TRAINER_ID = 1L;
     private static final Long CLIENT_ID = 2L;
-    private static final LocalDate WEEK_START = LocalDate.of(2026, 6, 1); // a Monday
+    private static final LocalDate WEEK_START = LocalDate.of(2026, Month.JUNE, 1); // a Monday
     private static final LocalDate WEEK_END = WEEK_START.plusDays(6);
 
     @Mock

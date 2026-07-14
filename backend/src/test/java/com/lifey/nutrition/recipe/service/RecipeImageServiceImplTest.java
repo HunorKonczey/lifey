@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -113,7 +114,7 @@ class RecipeImageServiceImplTest {
 
         assertThatThrownBy(() -> service.upload(RECIPE_ID, pngUpload(10, 10)))
                 .isInstanceOf(ResourceNotFoundException.class);
-        verify(repository, org.mockito.Mockito.never()).save(any());
+        verify(repository, never()).save(any());
     }
 
     @Test

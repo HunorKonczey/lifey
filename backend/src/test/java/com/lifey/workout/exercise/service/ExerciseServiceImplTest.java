@@ -1,6 +1,7 @@
 package com.lifey.workout.exercise.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
@@ -94,11 +95,7 @@ class ExerciseServiceImplTest {
     @Test
     void create_savesAndReturnsResponse() {
         when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
-        when(repository.save(any(Exercise.class))).thenAnswer(inv -> {
-            Exercise e = inv.getArgument(0);
-            e.setId(5L);
-            return e;
-        });
+        when(repository.save(any(Exercise.class))).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
 
         ExerciseResponse result = service.create(new ExerciseRequest("Lunge", MuscleGroup.QUADS, Equipment.BODYWEIGHT, null));
 
@@ -111,11 +108,7 @@ class ExerciseServiceImplTest {
     @Test
     void create_nullCategoryAndEquipmentSavesOk() {
         when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
-        when(repository.save(any(Exercise.class))).thenAnswer(inv -> {
-            Exercise e = inv.getArgument(0);
-            e.setId(6L);
-            return e;
-        });
+        when(repository.save(any(Exercise.class))).thenAnswer(inv -> withId(inv.getArgument(0), 6L));
 
         ExerciseResponse result = service.create(new ExerciseRequest("Plank", null, null, null));
 
@@ -177,5 +170,10 @@ class ExerciseServiceImplTest {
         e.setId(id);
         e.setName(name);
         return e;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

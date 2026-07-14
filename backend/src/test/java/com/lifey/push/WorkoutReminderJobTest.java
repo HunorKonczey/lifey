@@ -19,6 +19,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.*;
 class WorkoutReminderJobTest {
 
     private static final Long USER_ID = 1L;
-    private static final LocalDate SCHEDULED_FOR = LocalDate.of(2026, 7, 11);
+    private static final LocalDate SCHEDULED_FOR = LocalDate.of(2026, Month.JULY, 11);
 
     @Mock
     WorkoutSessionRepository workoutSessionRepository;

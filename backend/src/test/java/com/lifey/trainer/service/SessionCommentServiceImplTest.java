@@ -134,8 +134,8 @@ class SessionCommentServiceImplTest {
         PushMessage message = captor.getValue();
         assertThat(message.title()).isEqualTo("New comment from your trainer");
         assertThat(message.body()).isEqualTo("Push day: Nice pace, add weight next time");
-        assertThat(message.data()).containsEntry("type", "trainer_comment");
-        assertThat(message.data()).containsEntry("sessionId", SESSION_ID.toString());
+        assertThat(message.data()).containsEntry("type", "trainer_comment")
+                .containsEntry("sessionId", SESSION_ID.toString());
     }
 
     @Test

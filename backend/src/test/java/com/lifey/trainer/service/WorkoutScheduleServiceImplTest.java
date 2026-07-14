@@ -36,6 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -314,7 +315,7 @@ class WorkoutScheduleServiceImplTest {
                 .thenReturn(List.of());
 
         List<TrainerCalendarSessionResponse> result = service.findScheduledSessionsForTrainer(
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13));
+                LocalDate.of(2026, Month.JULY, 6), LocalDate.of(2026, Month.JULY, 13));
 
         assertThat(result).isEmpty();
         verify(workoutSessionRepository, never())
@@ -324,7 +325,7 @@ class WorkoutScheduleServiceImplTest {
 
     @Test
     void findScheduledSessionsForTrainer_rangeBeyond62Days_throws() {
-        LocalDate from = LocalDate.of(2026, 7, 6);
+        LocalDate from = LocalDate.of(2026, Month.JULY, 6);
 
         assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, from.plusDays(63)))
                 .isInstanceOf(CalendarRangeExceededException.class);
@@ -332,7 +333,7 @@ class WorkoutScheduleServiceImplTest {
 
     @Test
     void findScheduledSessionsForTrainer_toBeforeFrom_throws() {
-        LocalDate from = LocalDate.of(2026, 7, 6);
+        LocalDate from = LocalDate.of(2026, Month.JULY, 6);
 
         assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, from.minusDays(1)))
                 .isInstanceOf(CalendarRangeExceededException.class);

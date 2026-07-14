@@ -1,6 +1,7 @@
 package com.lifey.common.util;
 
 import java.time.LocalDate;
+import java.time.Month;
 
 /**
  * Sentinel bounds for optional {@code from}/{@code to} date-range filters
@@ -15,6 +16,6 @@ public final class DateRanges {
     private DateRanges() {
     }
 
-    public static final LocalDate DISTANT_PAST = LocalDate.of(1900, 1, 1);
-    public static final LocalDate DISTANT_FUTURE = LocalDate.of(2999, 12, 31);
+    public static final LocalDate DISTANT_PAST = LocalDate.of(1900, Month.JANUARY, 1);
+    public static final LocalDate DISTANT_FUTURE = LocalDate.of(2999, Month.DECEMBER, 31);
 }

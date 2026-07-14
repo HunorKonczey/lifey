@@ -11,8 +11,7 @@ class TokenHasherTest {
         String first = TokenHasher.generateOpaqueToken();
         String second = TokenHasher.generateOpaqueToken();
 
-        assertThat(first).isNotEqualTo(second);
-        assertThat(first).isNotBlank();
+        assertThat(first).isNotEqualTo(second).isNotBlank();
     }
 
     @Test

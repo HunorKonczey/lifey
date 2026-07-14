@@ -1,6 +1,7 @@
 package com.lifey.steps.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.common.util.DateRanges;
 import com.lifey.steps.DailyStepCount;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,23 +60,23 @@ class DailyStepCountServiceImplTest {
     @Test
     void findAll_mapsEntriesToResponses() {
         when(repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDesc(USER_ID))
-                .thenReturn(List.of(entry(1L, LocalDate.of(2026, 6, 18), 8200)));
+                .thenReturn(List.of(entry(1L, LocalDate.of(2026, Month.JUNE, 18), 8200)));
 
         List<DailyStepCountResponse> result = service.findAll();
 
         assertThat(result).singleElement().satisfies(r -> {
             assertThat(r.id()).isEqualTo(1L);
-            assertThat(r.date()).isEqualTo(LocalDate.of(2026, 6, 18));
+            assertThat(r.date()).isEqualTo(LocalDate.of(2026, Month.JUNE, 18));
             assertThat(r.steps()).isEqualTo(8200);
         });
     }
 
     @Test
     void findAll_withRange_delegatesToRangeQuery() {
-        LocalDate from = LocalDate.of(2026, 6, 1);
-        LocalDate to = LocalDate.of(2026, 6, 30);
+        LocalDate from = LocalDate.of(2026, Month.JUNE, 1);
+        LocalDate to = LocalDate.of(2026, Month.JUNE, 30);
         when(repository.findByUserIdAndDeletedAtIsNullAndDateRange(USER_ID, from, to))
-                .thenReturn(List.of(entry(1L, LocalDate.of(2026, 6, 18), 8200)));
+                .thenReturn(List.of(entry(1L, LocalDate.of(2026, Month.JUNE, 18), 8200)));
 
         List<DailyStepCountResponse> result = service.findAll(from, to);
 
@@ -88,7 +90,7 @@ class DailyStepCountServiceImplTest {
         // bound must be resolved to a sentinel before reaching it, not passed
         // through as null.
         when(repository.findByUserIdAndDeletedAtIsNullAndDateRange(99L, DateRanges.DISTANT_PAST, DateRanges.DISTANT_FUTURE))
-                .thenReturn(List.of(entry(2L, LocalDate.of(2026, 6, 18), 500)));
+                .thenReturn(List.of(entry(2L, LocalDate.of(2026, Month.JUNE, 18), 500)));
 
         List<DailyStepCountResponse> result = service.findAllForUser(99L, null, null);
 
@@ -97,13 +99,9 @@ class DailyStepCountServiceImplTest {
 
     @Test
     void create_insertsWhenNoRowForDate() {
-        LocalDate date = LocalDate.of(2026, 6, 18);
+        LocalDate date = LocalDate.of(2026, Month.JUNE, 18);
         when(repository.findByUserIdAndDate(USER_ID, date)).thenReturn(Optional.empty());
-        when(repository.save(any())).thenAnswer(inv -> {
-            DailyStepCount e = inv.getArgument(0);
-            e.setId(5L);
-            return e;
-        });
+        when(repository.save(any())).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
 
         DailyStepCountResponse result = service.create(new DailyStepCountRequest(date, 8200));
 
@@ -114,7 +112,7 @@ class DailyStepCountServiceImplTest {
 
     @Test
     void create_upsertsExistingRowForSameDate() {
-        LocalDate date = LocalDate.of(2026, 6, 18);
+        LocalDate date = LocalDate.of(2026, Month.JUNE, 18);
         DailyStepCount existing = entry(7L, date, 8200);
         when(repository.findByUserIdAndDate(USER_ID, date)).thenReturn(Optional.of(existing));
         ArgumentCaptor<DailyStepCount> captor = ArgumentCaptor.forClass(DailyStepCount.class);
@@ -133,7 +131,7 @@ class DailyStepCountServiceImplTest {
 
     @Test
     void create_revivesSoftDeletedRowForSameDate() {
-        LocalDate date = LocalDate.of(2026, 6, 18);
+        LocalDate date = LocalDate.of(2026, Month.JUNE, 18);
         DailyStepCount existing = entry(7L, date, 8200);
         existing.setDeletedAt(Instant.parse("2026-06-19T00:00:00Z"));
         when(repository.findByUserIdAndDate(USER_ID, date)).thenReturn(Optional.of(existing));
@@ -154,7 +152,7 @@ class DailyStepCountServiceImplTest {
 
     @Test
     void delete_setsDeletedAtInsteadOfRemovingRow() {
-        DailyStepCount existing = entry(1L, LocalDate.of(2026, 6, 18), 8200);
+        DailyStepCount existing = entry(1L, LocalDate.of(2026, Month.JUNE, 18), 8200);
         when(repository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(existing));
 
         service.delete(1L);
@@ -164,7 +162,7 @@ class DailyStepCountServiceImplTest {
 
     @Test
     void findDelta_isUserScopedAndIncludesTombstones() {
-        DailyStepCount deleted = entry(2L, LocalDate.of(2026, 6, 18), 8200);
+        DailyStepCount deleted = entry(2L, LocalDate.of(2026, Month.JUNE, 18), 8200);
         deleted.setDeletedAt(Instant.parse("2026-06-19T00:00:00Z"));
 
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
@@ -187,5 +185,10 @@ class DailyStepCountServiceImplTest {
         e.setDate(date);
         e.setSteps(steps);
         return e;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

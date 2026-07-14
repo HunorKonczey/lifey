@@ -27,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Optional;
 import java.util.Set;
 
@@ -92,7 +93,7 @@ class UserDetailsServiceImplTest {
         when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
         UserDetailsRequest request = new UserDetailsRequest(
-                Gender.FEMALE, LocalDate.of(1995, 5, 1), 165.0, ActivityLevel.LIGHT, PrimaryGoal.MAINTAIN, null);
+                Gender.FEMALE, LocalDate.of(1995, Month.MAY, 1), 165.0, ActivityLevel.LIGHT, PrimaryGoal.MAINTAIN, null);
 
         UserDetailsResponse result = service.upsert(request);
 
@@ -108,7 +109,7 @@ class UserDetailsServiceImplTest {
         when(repository.save(existing)).thenReturn(existing);
 
         UserDetailsRequest request = new UserDetailsRequest(
-                Gender.FEMALE, LocalDate.of(1990, 1, 1), 170.0, ActivityLevel.ACTIVE, PrimaryGoal.GAIN_MUSCLE, 65.0);
+                Gender.FEMALE, LocalDate.of(1990, Month.JANUARY, 1), 170.0, ActivityLevel.ACTIVE, PrimaryGoal.GAIN_MUSCLE, 65.0);
 
         UserDetailsResponse result = service.upsert(request);
 
@@ -122,7 +123,7 @@ class UserDetailsServiceImplTest {
         when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
 
         UserDetailsPatchRequest request = new UserDetailsPatchRequest(
-                Set.of(UserDetailsField.HEIGHT_CM), Gender.MALE, LocalDate.of(1990, 1, 1), 182.0,
+                Set.of(UserDetailsField.HEIGHT_CM), Gender.MALE, LocalDate.of(1990, Month.JANUARY, 1), 182.0,
                 ActivityLevel.MODERATE, PrimaryGoal.MAINTAIN, null);
 
         assertThatThrownBy(() -> service.partialUpdate(request))
@@ -140,7 +141,7 @@ class UserDetailsServiceImplTest {
         // Only HEIGHT_CM is selected — gender/activityLevel/primaryGoal in the
         // payload must be ignored even though they differ from the existing row.
         UserDetailsPatchRequest request = new UserDetailsPatchRequest(
-                Set.of(UserDetailsField.HEIGHT_CM), Gender.FEMALE, LocalDate.of(1990, 1, 1), 182.0,
+                Set.of(UserDetailsField.HEIGHT_CM), Gender.FEMALE, LocalDate.of(1990, Month.JANUARY, 1), 182.0,
                 ActivityLevel.ACTIVE, PrimaryGoal.GAIN_MUSCLE, null);
 
         UserDetailsResponse result = service.partialUpdate(request);
@@ -160,7 +161,7 @@ class UserDetailsServiceImplTest {
                 .thenReturn(Optional.empty());
 
         UserDetailsPatchRequest request = new UserDetailsPatchRequest(
-                Set.of(UserDetailsField.HEIGHT_CM), Gender.MALE, LocalDate.of(1990, 1, 1), 182.0,
+                Set.of(UserDetailsField.HEIGHT_CM), Gender.MALE, LocalDate.of(1990, Month.JANUARY, 1), 182.0,
                 ActivityLevel.MODERATE, PrimaryGoal.MAINTAIN, null);
 
         service.partialUpdate(request);
@@ -180,7 +181,7 @@ class UserDetailsServiceImplTest {
                 .thenReturn(Optional.of(weightEntry));
 
         UserDetailsPatchRequest request = new UserDetailsPatchRequest(
-                Set.of(UserDetailsField.HEIGHT_CM), Gender.MALE, LocalDate.of(1990, 1, 1), 182.0,
+                Set.of(UserDetailsField.HEIGHT_CM), Gender.MALE, LocalDate.of(1990, Month.JANUARY, 1), 182.0,
                 ActivityLevel.MODERATE, PrimaryGoal.MAINTAIN, null);
 
         service.partialUpdate(request);
@@ -206,7 +207,7 @@ class UserDetailsServiceImplTest {
         UserDetails e = new UserDetails();
         e.setId(1L);
         e.setGender(Gender.MALE);
-        e.setBirthDate(LocalDate.of(1990, 1, 1));
+        e.setBirthDate(LocalDate.of(1990, Month.JANUARY, 1));
         e.setHeightCm(180.0);
         e.setActivityLevel(ActivityLevel.MODERATE);
         e.setPrimaryGoal(PrimaryGoal.MAINTAIN);

@@ -33,7 +33,7 @@ public final class ImageReencoder {
         BufferedImage source;
         try {
             source = ImageIO.read(input);
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new InvalidImageException("Could not read the image");
         }
         if (source == null) {
@@ -65,7 +65,7 @@ public final class ImageReencoder {
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             builder.outputFormat("jpg").outputQuality(JPEG_QUALITY).toOutputStream(output);
             return output.toByteArray();
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new InvalidImageException("Could not process the image");
         }
     }

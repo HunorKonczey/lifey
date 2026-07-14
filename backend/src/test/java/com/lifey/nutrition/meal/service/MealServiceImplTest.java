@@ -1,6 +1,7 @@
 package com.lifey.nutrition.meal.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
@@ -26,6 +27,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -66,11 +68,7 @@ class MealServiceImplTest {
     @Test
     void create_resolvesFoodsAndReturnsResponse() {
         when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Oats")));
-        when(mealRepository.save(any(Meal.class))).thenAnswer(inv -> {
-            Meal m = inv.getArgument(0);
-            m.setId(4L);
-            return m;
-        });
+        when(mealRepository.save(any(Meal.class))).thenAnswer(inv -> withId(inv.getArgument(0), 4L));
         MealRequest request = new MealRequest(
                 Instant.parse("2026-06-18T08:00:00Z"), MealType.BREAKFAST, null,
                 List.of(new MealEntryRequest(1L, 80.0)));
@@ -146,7 +144,7 @@ class MealServiceImplTest {
         when(mealRepository.findAllByUserIdAndDeletedAtIsNullAndDateTimeRange(eq(USER_ID), any(), any()))
                 .thenReturn(List.of());
 
-        service.findAllForUserBetween(USER_ID, LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 6));
+        service.findAllForUserBetween(USER_ID, LocalDate.of(2026, Month.JULY, 6), LocalDate.of(2026, Month.JULY, 6));
 
         ArgumentCaptor<Instant> fromCaptor = ArgumentCaptor.forClass(Instant.class);
         ArgumentCaptor<Instant> toCaptor = ArgumentCaptor.forClass(Instant.class);
@@ -187,5 +185,10 @@ class MealServiceImplTest {
         f.setCaloriesPer100g(389);
         f.setProteinPer100g(17);
         return f;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

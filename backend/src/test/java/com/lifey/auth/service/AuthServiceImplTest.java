@@ -7,6 +7,7 @@ import com.lifey.auth.dto.*;
 import com.lifey.auth.entity.RefreshToken;
 import com.lifey.auth.exception.*;
 import com.lifey.auth.repository.RefreshTokenRepository;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.user.Role;
 import com.lifey.user.User;
@@ -31,6 +32,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -71,11 +73,7 @@ class AuthServiceImplTest {
         when(userRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-        when(userRepository.save(captor.capture())).thenAnswer(inv -> {
-            User saved = inv.getArgument(0);
-            saved.setId(1L);
-            return saved;
-        });
+        when(userRepository.save(captor.capture())).thenAnswer(inv -> withId(inv.getArgument(0), 1L));
 
         UserResponse response = authService.register(request, null);
 
@@ -195,7 +193,7 @@ class AuthServiceImplTest {
     void logout_unknownTokenIsANoOp() {
         when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
 
-        authService.logout("unknown-token");
+        assertThatCode(() -> authService.logout("unknown-token")).doesNotThrowAnyException();
     }
 
     @Test
@@ -281,5 +279,10 @@ class AuthServiceImplTest {
         token.setExpiresAt(expiresAt);
         token.setCreatedAt(Instant.now());
         return token;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

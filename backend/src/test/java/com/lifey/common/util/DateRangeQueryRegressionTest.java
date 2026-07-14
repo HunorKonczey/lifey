@@ -12,12 +12,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.HashSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +44,7 @@ class DateRangeQueryRegressionTest {
 
     @Container
     @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16");
 
     @Autowired
     UserRepository userRepository;
@@ -67,14 +68,14 @@ class DateRangeQueryRegressionTest {
 
         WeightEntry weight = new WeightEntry();
         weight.setUser(user);
-        weight.setDate(LocalDate.of(2026, 6, 15));
+        weight.setDate(LocalDate.of(2026, Month.JUNE, 15));
         weight.setRecordedAt(Instant.now());
         weight.setWeight(80.0);
         weightEntryRepository.save(weight);
 
         DailyStepCount steps = new DailyStepCount();
         steps.setUser(user);
-        steps.setDate(LocalDate.of(2026, 6, 15));
+        steps.setDate(LocalDate.of(2026, Month.JUNE, 15));
         steps.setSteps(5000);
         dailyStepCountRepository.save(steps);
     }
@@ -82,36 +83,36 @@ class DateRangeQueryRegressionTest {
     @Test
     void weightDateRange_fromOnly_doesNotThrow() {
         assertThatCode(() -> weightEntryRepository.findByUserIdAndDeletedAtIsNullAndDateRange(
-                userId, LocalDate.of(2026, 6, 1), DateRanges.DISTANT_FUTURE))
+                userId, LocalDate.of(2026, Month.JUNE, 1), DateRanges.DISTANT_FUTURE))
                 .doesNotThrowAnyException();
 
         var result = weightEntryRepository.findByUserIdAndDeletedAtIsNullAndDateRange(
-                userId, LocalDate.of(2026, 6, 1), DateRanges.DISTANT_FUTURE);
+                userId, LocalDate.of(2026, Month.JUNE, 1), DateRanges.DISTANT_FUTURE);
         assertThat(result).hasSize(1);
     }
 
     @Test
     void weightDateRange_toOnly_doesNotThrow() {
         assertThatCode(() -> weightEntryRepository.findByUserIdAndDeletedAtIsNullAndDateRange(
-                userId, DateRanges.DISTANT_PAST, LocalDate.of(2026, 12, 31)))
+                userId, DateRanges.DISTANT_PAST, LocalDate.of(2026, Month.DECEMBER, 31)))
                 .doesNotThrowAnyException();
     }
 
     @Test
     void stepsDateRange_fromOnly_doesNotThrow() {
         assertThatCode(() -> dailyStepCountRepository.findByUserIdAndDeletedAtIsNullAndDateRange(
-                userId, LocalDate.of(2026, 6, 1), DateRanges.DISTANT_FUTURE))
+                userId, LocalDate.of(2026, Month.JUNE, 1), DateRanges.DISTANT_FUTURE))
                 .doesNotThrowAnyException();
 
         var result = dailyStepCountRepository.findByUserIdAndDeletedAtIsNullAndDateRange(
-                userId, LocalDate.of(2026, 6, 1), DateRanges.DISTANT_FUTURE);
+                userId, LocalDate.of(2026, Month.JUNE, 1), DateRanges.DISTANT_FUTURE);
         assertThat(result).hasSize(1);
     }
 
     @Test
     void stepsDateRange_toOnly_doesNotThrow() {
         assertThatCode(() -> dailyStepCountRepository.findByUserIdAndDeletedAtIsNullAndDateRange(
-                userId, DateRanges.DISTANT_PAST, LocalDate.of(2026, 12, 31)))
+                userId, DateRanges.DISTANT_PAST, LocalDate.of(2026, Month.DECEMBER, 31)))
                 .doesNotThrowAnyException();
     }
 }

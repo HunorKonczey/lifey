@@ -1,6 +1,7 @@
 package com.lifey.weight.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.common.util.DateRanges;
 import com.lifey.user.User;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,23 +61,23 @@ class WeightServiceImplTest {
     @Test
     void findAll_mapsEntriesToResponses() {
         when(repository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(USER_ID))
-                .thenReturn(List.of(entry(1L, LocalDate.of(2026, 6, 18), 80.0)));
+                .thenReturn(List.of(entry(1L, LocalDate.of(2026, Month.JUNE, 18), 80.0)));
 
         List<WeightResponse> result = service.findAll();
 
         assertThat(result).singleElement().satisfies(r -> {
             assertThat(r.id()).isEqualTo(1L);
-            assertThat(r.date()).isEqualTo(LocalDate.of(2026, 6, 18));
+            assertThat(r.date()).isEqualTo(LocalDate.of(2026, Month.JUNE, 18));
             assertThat(r.weight()).isEqualTo(80.0);
         });
     }
 
     @Test
     void findAll_withRange_delegatesToRangeQuery() {
-        LocalDate from = LocalDate.of(2026, 6, 1);
-        LocalDate to = LocalDate.of(2026, 6, 30);
+        LocalDate from = LocalDate.of(2026, Month.JUNE, 1);
+        LocalDate to = LocalDate.of(2026, Month.JUNE, 30);
         when(repository.findByUserIdAndDeletedAtIsNullAndDateRange(USER_ID, from, to))
-                .thenReturn(List.of(entry(1L, LocalDate.of(2026, 6, 18), 80.0)));
+                .thenReturn(List.of(entry(1L, LocalDate.of(2026, Month.JUNE, 18), 80.0)));
 
         List<WeightResponse> result = service.findAll(from, to);
 
@@ -89,7 +91,7 @@ class WeightServiceImplTest {
         // bound must be resolved to a sentinel before reaching it, not passed
         // through as null.
         when(repository.findByUserIdAndDeletedAtIsNullAndDateRange(99L, DateRanges.DISTANT_PAST, DateRanges.DISTANT_FUTURE))
-                .thenReturn(List.of(entry(2L, LocalDate.of(2026, 6, 18), 60.0)));
+                .thenReturn(List.of(entry(2L, LocalDate.of(2026, Month.JUNE, 18), 60.0)));
 
         List<WeightResponse> result = service.findAllForUser(99L, null, null);
 
@@ -98,18 +100,14 @@ class WeightServiceImplTest {
 
     @Test
     void create_savesWithServerStampedRecordedAt() {
-        WeightRequest request = new WeightRequest(LocalDate.of(2026, 6, 18), 80.0);
+        WeightRequest request = new WeightRequest(LocalDate.of(2026, Month.JUNE, 18), 80.0);
         ArgumentCaptor<WeightEntry> captor = ArgumentCaptor.forClass(WeightEntry.class);
-        when(repository.save(captor.capture())).thenAnswer(inv -> {
-            WeightEntry e = inv.getArgument(0);
-            e.setId(5L);
-            return e;
-        });
+        when(repository.save(captor.capture())).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
 
         WeightResponse result = service.create(request);
 
         assertThat(result.id()).isEqualTo(5L);
-        assertThat(result.date()).isEqualTo(LocalDate.of(2026, 6, 18));
+        assertThat(result.date()).isEqualTo(LocalDate.of(2026, Month.JUNE, 18));
         assertThat(result.weight()).isEqualTo(80.0);
         // The recording instant is stamped server-side so same-day entries stay ordered.
         assertThat(captor.getValue().getRecordedAt()).isNotNull();
@@ -125,7 +123,7 @@ class WeightServiceImplTest {
 
     @Test
     void delete_setsDeletedAtInsteadOfRemovingRow() {
-        WeightEntry e = entry(1L, LocalDate.of(2026, 6, 18), 80.0);
+        WeightEntry e = entry(1L, LocalDate.of(2026, Month.JUNE, 18), 80.0);
         when(repository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(e));
 
         service.delete(1L);
@@ -135,7 +133,7 @@ class WeightServiceImplTest {
 
     @Test
     void findDelta_isUserScopedAndIncludesTombstones() {
-        WeightEntry deleted = entry(2L, LocalDate.of(2026, 6, 18), 80.0);
+        WeightEntry deleted = entry(2L, LocalDate.of(2026, Month.JUNE, 18), 80.0);
         deleted.setDeletedAt(Instant.parse("2026-06-19T00:00:00Z"));
 
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
@@ -158,5 +156,10 @@ class WeightServiceImplTest {
         e.setDate(date);
         e.setWeight(weight);
         return e;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

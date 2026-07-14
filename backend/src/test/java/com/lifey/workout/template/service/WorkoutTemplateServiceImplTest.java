@@ -1,6 +1,7 @@
 package com.lifey.workout.template.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
@@ -9,10 +10,10 @@ import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.template.WorkoutTemplate;
 import com.lifey.workout.template.WorkoutTemplateExercise;
 import com.lifey.workout.template.WorkoutTemplateRepository;
+import com.lifey.workout.template.WorkoutTemplateUpdatedEvent;
 import com.lifey.workout.template.dto.TemplateExerciseEntry;
 import com.lifey.workout.template.dto.WorkoutTemplateRequest;
 import com.lifey.workout.template.dto.WorkoutTemplateResponse;
-import com.lifey.workout.template.WorkoutTemplateUpdatedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -71,11 +72,7 @@ class WorkoutTemplateServiceImplTest {
     void create_resolvesExercisesAndReturnsResponse() {
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
         when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
-        when(templateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> {
-            WorkoutTemplate t = inv.getArgument(0);
-            t.setId(9L);
-            return t;
-        });
+        when(templateRepository.save(any(WorkoutTemplate.class))).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
         WorkoutTemplateRequest request = new WorkoutTemplateRequest("Push day",
                 List.of(new TemplateExerciseEntry(1L, 3), new TemplateExerciseEntry(4L, null)));
 
@@ -210,5 +207,10 @@ class WorkoutTemplateServiceImplTest {
         e.setId(id);
         e.setName(name);
         return e;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }
