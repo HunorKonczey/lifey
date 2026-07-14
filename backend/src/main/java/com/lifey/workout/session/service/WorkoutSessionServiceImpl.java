@@ -46,12 +46,22 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     @Override
     @Transactional(readOnly = true)
     public Page<WorkoutSessionResponse> findPage(Pageable pageable) {
-        return findPageForUser(currentUserProvider.getUserId(), pageable);
+        return findPageForUserInternal(currentUserProvider.getUserId(), pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<WorkoutSessionResponse> findPageForUser(Long userId, Pageable pageable) {
+        return findPageForUserInternal(userId, pageable);
+    }
+
+    /**
+     * Shared body for {@link #findPage} and {@link #findPageForUser}, kept
+     * un-annotated so calling it from either public method never bypasses
+     * the proxy's transaction demarcation (self-invoking an
+     * {@code @Transactional} method directly would).
+     */
+    private Page<WorkoutSessionResponse> findPageForUserInternal(Long userId, Pageable pageable) {
         return sessionRepository.findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNull(userId, pageable)
                 .map(WorkoutSessionMapper::toResponse);
     }

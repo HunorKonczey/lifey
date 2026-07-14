@@ -130,7 +130,7 @@ class FoodServiceImplTest {
     void findPage_withSearch_usesSearchQueryAndTrimsIt() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Food> page = new PageImpl<>(List.of(food(2L, "Rice", 130, 2.7)), pageable, 1);
-        when(repository.findByUserIdAndHiddenFalseAndNameContainingIgnoreCase(eq(USER_ID), eq("rice"), eq(pageable)))
+        when(repository.findByUserIdAndHiddenFalseAndNameContainingIgnoreCase(USER_ID, "rice", pageable))
                 .thenReturn(page);
 
         Page<FoodResponse> result = service.findPage(pageable, "  rice  ", null);

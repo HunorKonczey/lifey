@@ -119,6 +119,10 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
 
     @Override
     public void revokeClient(Long clientId) {
+        // Self-invocation bypasses the proxy, so requireActiveClient's own
+        // @Transactional(readOnly = true) never applies on this call path —
+        // harmless here since this method already opens a (default,
+        // read-write) transaction that the guard's read runs inside anyway.
         TrainerClient relationship = requireActiveClient(currentUserProvider.getUserId(), clientId);
         revoke(relationship);
     }

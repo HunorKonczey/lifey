@@ -15,7 +15,9 @@ RUN ./mvnw clean package -DskipTests -B
 # Runtime stage
 FROM eclipse-temurin:24-jre
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+RUN groupadd --system app && useradd --system --gid app app
+COPY --from=build --chown=app:app /app/target/*.jar app.jar
+USER app
 EXPOSE 8080
 # Without an explicit cap, the JVM sizes its default heap off the host's
 # *full* visible memory when the platform doesn't enforce a hard cgroup

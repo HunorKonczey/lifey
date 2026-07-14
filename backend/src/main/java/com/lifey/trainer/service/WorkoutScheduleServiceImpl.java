@@ -263,14 +263,14 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
         Long trainerId = currentUserProvider.getUserId();
         WorkoutSession occurrence = workoutSessionRepository.findById(sessionId)
                 .filter(session -> session.getScheduleId() != null || session.getProgramAssignmentId() != null)
-                .orElseThrow(() -> new ScheduleNotFoundException("Scheduled session not found: " + sessionId));
+                .orElseThrow(() -> sessionNotFound(sessionId));
 
         if (occurrence.getScheduleId() != null) {
             workoutScheduleRepository.findByIdAndTrainerId(occurrence.getScheduleId(), trainerId)
-                    .orElseThrow(() -> new ScheduleNotFoundException("Scheduled session not found: " + sessionId));
+                    .orElseThrow(() -> sessionNotFound(sessionId));
         } else {
             programAssignmentRepository.findByIdAndTrainerId(occurrence.getProgramAssignmentId(), trainerId)
-                    .orElseThrow(() -> new ScheduleNotFoundException("Scheduled session not found: " + sessionId));
+                    .orElseThrow(() -> sessionNotFound(sessionId));
         }
 
         if (occurrence.getStartedAt() != null || occurrence.getDeletedAt() != null
@@ -287,5 +287,9 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
                 .findByTrainerIdAndClientIdAndCancelledAtIsNull(trainerId, clientId)) {
             cancel(schedule);
         }
+    }
+
+    private static ScheduleNotFoundException sessionNotFound(Long sessionId) {
+        return new ScheduleNotFoundException("Scheduled session not found: " + sessionId);
     }
 }

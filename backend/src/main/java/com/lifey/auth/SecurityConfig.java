@@ -84,6 +84,9 @@ public class SecurityConfig {
                                            CorsConfigurationSource corsConfigurationSource) {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                // Safe: auth is a bearer token in the Authorization header (see
+                // JwtAuthenticationFilter), never a cookie — nothing here rides
+                // along automatically on a cross-site request for CSRF to forge.
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth

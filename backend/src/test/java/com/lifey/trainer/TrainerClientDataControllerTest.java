@@ -115,7 +115,7 @@ class TrainerClientDataControllerTest {
 
     @Test
     void dailyStatistics_passesExplicitDateThrough() throws Exception {
-        when(statisticsService.dailyForUser(eq(CLIENT_ID), eq(LocalDate.of(2026, Month.JUNE, 1))))
+        when(statisticsService.dailyForUser(CLIENT_ID, LocalDate.of(2026, Month.JUNE, 1)))
                 .thenReturn(new StatisticsResponse(1.0, 1.0, 1.0, 1.0, 0, null, 0.0));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/statistics/daily", CLIENT_ID)
@@ -203,7 +203,7 @@ class TrainerClientDataControllerTest {
                 Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null,
                 "Nice pace, add weight next time", Instant.parse("2026-06-18T07:00:00Z"), Instant.now(), null);
-        when(sessionCommentService.upsertComment(eq(TRAINER_ID), eq(CLIENT_ID), eq(sessionId), eq("Nice pace, add weight next time")))
+        when(sessionCommentService.upsertComment(TRAINER_ID, CLIENT_ID, sessionId, "Nice pace, add weight next time"))
                 .thenReturn(updated);
 
         mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}/comment", CLIENT_ID, sessionId)
@@ -333,8 +333,8 @@ class TrainerClientDataControllerTest {
 
     @Test
     void updateNutritionGoals_updatesAndReturnsGoals() throws Exception {
-        when(clientNutritionGoalsService.updateGoals(eq(TRAINER_ID), eq(CLIENT_ID),
-                eq(new ClientNutritionGoalsRequest(2200, 150, 240, 70))))
+        when(clientNutritionGoalsService.updateGoals(TRAINER_ID, CLIENT_ID,
+                new ClientNutritionGoalsRequest(2200, 150, 240, 70)))
                 .thenReturn(new ClientNutritionGoalsResponse(2200, 150, 240, 70));
 
         mockMvc.perform(put("/api/v1/trainer/clients/{clientId}/nutrition-goals", CLIENT_ID)

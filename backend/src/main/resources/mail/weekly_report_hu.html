@@ -2,12 +2,20 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
+    <title>Heti ügyfélriport — Lifey</title>
 </head>
 <body style="font-family: sans-serif; color: #222;">
 <h2 style="margin-bottom:4px;">Heti ügyfélriportod</h2>
 <p style="color:#666; margin-top:0;">{{weekStart}} – {{weekEnd}}</p>
 <table style="width:100%; border-collapse: collapse;">
+    <thead>
+    <tr>
+        <th scope="col" style="text-align:left; padding:6px 0; border-bottom:2px solid #ddd; font-size:13px; color:#666;">Ügyfél összefoglaló</th>
+    </tr>
+    </thead>
+    <tbody>
 {{clientRows}}
+    </tbody>
 </table>
 <p style="color:#999; font-size:12px; margin-top:24px;">Azért kapod ezt az e-mailt, mert aktív ügyfeleid vannak a Lifey-ban. Ezt az admin felületeden kikapcsolhatod.</p>
 <p>— A Lifey csapata</p>

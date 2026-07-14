@@ -22,7 +22,6 @@ import java.util.Set;
 @Service
 public class GoogleIdTokenVerifier {
 
-    private static final String JWKS_URI = "https://www.googleapis.com/oauth2/v3/certs";
     private static final Set<String> VALID_ISSUERS = Set.of("https://accounts.google.com", "accounts.google.com");
 
     private final JwtDecoder jwtDecoder;
@@ -30,7 +29,7 @@ public class GoogleIdTokenVerifier {
 
     @Autowired
     GoogleIdTokenVerifier(GoogleOAuthProperties properties) {
-        this(properties, NimbusJwtDecoder.withJwkSetUri(JWKS_URI).build());
+        this(properties, NimbusJwtDecoder.withJwkSetUri(properties.jwksUri()).build());
     }
 
     /**

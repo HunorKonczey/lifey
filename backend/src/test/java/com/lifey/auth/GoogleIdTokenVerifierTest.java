@@ -54,7 +54,10 @@ class GoogleIdTokenVerifierTest {
                 .build();
         JwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSource(new ImmutableJWKSet<>(new JWKSet(jwk))).build();
 
-        verifier = new GoogleIdTokenVerifier(new GoogleOAuthProperties(List.of(CLIENT_ID)), jwtDecoder);
+        // jwksUri is irrelevant here: jwtDecoder is injected pre-built against the
+        // in-memory JWK set above, so GoogleIdTokenVerifier never reads it.
+        verifier = new GoogleIdTokenVerifier(
+                new GoogleOAuthProperties(List.of(CLIENT_ID), "https://unused.invalid/certs"), jwtDecoder);
     }
 
     @Test

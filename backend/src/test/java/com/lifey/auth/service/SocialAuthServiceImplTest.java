@@ -72,7 +72,7 @@ class SocialAuthServiceImplTest {
                 .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, null, "Jane", "Doe"));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.of(link));
-        stubTokenIssuance(user);
+        stubTokenIssuance();
 
         AuthResponse response = socialAuthService.loginWithGoogle(ID_TOKEN, null);
 
@@ -93,7 +93,7 @@ class SocialAuthServiceImplTest {
         when(userRepository.save(userCaptor.capture())).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
         ArgumentCaptor<UserIdentity> identityCaptor = ArgumentCaptor.forClass(UserIdentity.class);
         when(userIdentityRepository.save(identityCaptor.capture())).thenAnswer(inv -> inv.getArgument(0));
-        stubTokenIssuance(null);
+        stubTokenIssuance();
 
         socialAuthService.loginWithGoogle(ID_TOKEN, null);
 
@@ -122,7 +122,7 @@ class SocialAuthServiceImplTest {
                 .thenReturn(new GoogleIdentity(SUB, "user@example.com", true, "https://example.com/pic.jpg", "Jane", "Doe"));
         when(userIdentityRepository.findByProviderAndProviderUserId(Provider.GOOGLE, SUB))
                 .thenReturn(Optional.of(link));
-        stubTokenIssuance(user);
+        stubTokenIssuance();
 
         socialAuthService.loginWithGoogle(ID_TOKEN, null);
 
@@ -144,7 +144,7 @@ class SocialAuthServiceImplTest {
 
         ArgumentCaptor<UserIdentity> identityCaptor = ArgumentCaptor.forClass(UserIdentity.class);
         when(userIdentityRepository.save(identityCaptor.capture())).thenAnswer(inv -> inv.getArgument(0));
-        stubTokenIssuance(existing);
+        stubTokenIssuance();
 
         socialAuthService.loginWithGoogle(ID_TOKEN, null);
 
@@ -178,7 +178,7 @@ class SocialAuthServiceImplTest {
         return user;
     }
 
-    private void stubTokenIssuance(User ignoredUser) {
+    private void stubTokenIssuance() {
         when(jwtService.generateAccessToken(any())).thenReturn("access-token");
         when(jwtService.refreshTokenTtl()).thenReturn(Duration.ofDays(30));
         when(jwtService.accessTokenTtlSeconds()).thenReturn(900L);

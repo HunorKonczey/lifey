@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * Deep-copy content assignment (docs/personal_trainer/01-koncepcio-es-folyamatok.md,
@@ -67,10 +68,21 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
         // (belt and suspenders — the transaction would roll back anyway).
         clientIds.forEach(clientId -> trainerAccessService.requireActiveClient(trainerId, clientId));
 
-        WorkoutTemplate sourceTemplate = request.contentType() == ContentType.TEMPLATE
-                ? requireOwnedTemplate(trainerId, request.sourceId()) : null;
-        Recipe sourceRecipe = request.contentType() == ContentType.RECIPE
-                ? requireOwnedRecipe(trainerId, request.sourceId()) : null;
+        // Bound once per batch (not per client): each case branch resolves its
+        // own non-nullable `source` local and closes over it, rather than
+        // stashing it in an outer variable that's only non-null for one of the
+        // two content types — keeps the "load once, copy N times" behavior
+        // without a nullable field a later case branch could misuse.
+        Function<Long, Long> copyForClient = switch (request.contentType()) {
+            case TEMPLATE -> {
+                WorkoutTemplate source = requireOwnedTemplate(trainerId, request.sourceId());
+                yield clientId -> copyTemplateForClient(trainerId, clientId, source);
+            }
+            case RECIPE -> {
+                Recipe source = requireOwnedRecipe(trainerId, request.sourceId());
+                yield clientId -> copyRecipeForClient(trainerId, clientId, source);
+            }
+        };
 
         List<BulkAssignmentResponse.BulkAssignmentItem> assignments = new ArrayList<>();
         List<Long> skippedClientIds = new ArrayList<>();
@@ -83,10 +95,7 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
                 skippedClientIds.add(clientId);
                 continue;
             }
-            Long copiedId = switch (request.contentType()) {
-                case TEMPLATE -> copyTemplateForClient(trainerId, clientId, sourceTemplate);
-                case RECIPE -> copyRecipeForClient(trainerId, clientId, sourceRecipe);
-            };
+            Long copiedId = copyForClient.apply(clientId);
             ContentAssignment saved = saveFactRow(trainerId, clientId, request.contentType(), request.sourceId(), copiedId);
             assignments.add(new BulkAssignmentResponse.BulkAssignmentItem(
                     clientId, saved.getId(), saved.getCopiedId(), saved.getAssignedAt()));

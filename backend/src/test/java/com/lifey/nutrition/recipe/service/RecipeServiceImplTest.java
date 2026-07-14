@@ -241,7 +241,7 @@ class RecipeServiceImplTest {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Recipe> page = new PageImpl<>(List.of(recipe(2L, "Banana bread", false)), pageable, 1);
         when(recipeRepository.findByUserIdAndDeletedAtIsNullAndNameContainingIgnoreCase(
-                eq(USER_ID), eq("banana"), eq(pageable))).thenReturn(page);
+                USER_ID, "banana", pageable)).thenReturn(page);
 
         Page<RecipeResponse> result = service.findPage(pageable, "  banana  ");
 

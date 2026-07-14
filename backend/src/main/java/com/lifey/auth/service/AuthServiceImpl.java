@@ -69,6 +69,12 @@ public class AuthServiceImpl implements AuthService {
             // used to enumerate registered accounts.
             throw new InvalidCredentialsException("Invalid email or password");
         }
+        if (principal == null) {
+            // Authentication#getPrincipal() is nullable per its contract, though a
+            // successful authenticate() call never actually returns one here in
+            // practice — guard explicitly rather than let a raw NPE surface.
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
 
         User user = userRepository.findById(principal.id())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));

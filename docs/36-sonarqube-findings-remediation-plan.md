@@ -179,7 +179,63 @@ Completed. Result: 636/636 backend tests green.
   two chained `.thenAnswer`/`.thenReturn` calls so each lambda has one
   throwing call.
 
-## Phase 3 — Real correctness risk (main code, needs careful review)
+## Phase 3 — Real correctness risk (main code, needs careful review) — DONE
+
+Completed. Result: 636/636 backend tests green.
+
+* **S6809** — found 4 real self-invocations (not the ~3 first estimated —
+  two files share the identical line number, which accounts for the
+  report's apparent duplicate). Fixed 3 by extracting the shared body into
+  an un-annotated private helper so neither public entry point risks
+  bypassing the other's `@Transactional` via self-invocation:
+  * `DailyStepCountServiceImpl.findAll(from, to)` /
+    `findAllForUser` → shared `findAllForUserInternal`.
+  * `WeightServiceImpl.findAll(from, to)` / `findAllForUser` → shared
+    `findAllForUserInternal`.
+  * `WorkoutSessionServiceImpl.findPage` / `findPageForUser` → shared
+    `findPageForUserInternal`.
+
+  The 4th (`TrainerAccessServiceImpl.revokeClient` calling
+  `requireActiveClient`) couldn't use the same fix: `requireActiveClient`
+  is a real public guard called from many other places and must stay
+  `@Transactional(readOnly = true)` for those call paths. Since
+  `revokeClient` already opens a (default, read-write) transaction that the
+  guard's read runs inside regardless, losing the `readOnly` hint on this
+  one call path is harmless — documented with a comment rather than
+  restructured, per the plan's "won't fix, explain why" option.
+
+* **S2259** — 2 distinct issues, both fixed:
+  * `AuthServiceImpl.login` — `Authentication#getPrincipal()` is
+    `@Nullable` per its contract even though a successful `authenticate()`
+    call never actually returns a null principal in practice here; added
+    an explicit null check right after the cast that throws the same
+    `InvalidCredentialsException` the catch block already uses, so a
+    theoretical null is handled the same way as bad credentials instead of
+    surfacing a raw NPE.
+  * `ContentAssignmentServiceImpl.assign` — the real bug behind the
+    warning: `sourceTemplate`/`sourceRecipe` were two outer nullable
+    variables (only one non-null depending on `contentType`), and the
+    per-client loop's `switch (request.contentType())` couldn't be proven
+    by the compiler/analyzer to correlate with *which* outer variable was
+    non-null — they're two independently-evaluated conditions that happen
+    to test the same thing. Restructured so a single `switch` resolves the
+    source **once, into a non-nullable local**, and closes over it in a
+    `Function<Long, Long> copyForClient` bound before the loop — preserves
+    the "load the source once per batch" behavior (still covered by the
+    existing "source loaded once" test) while making the non-null
+    invariant a matter of variable scope rather than convention.
+
+* **S1192** — `WorkoutScheduleServiceImpl.cancelOccurrence` had
+  `"Scheduled session not found: " + sessionId` duplicated 3 times;
+  extracted a private `sessionNotFound(sessionId)` helper returning the
+  built `ScheduleNotFoundException`, used at all 3 throw sites.
+
+* **S1172** — `SocialAuthServiceImplTest.stubTokenIssuance(User
+  ignoredUser)` never read its parameter (one call site even passed
+  `null`, confirming it was vestigial); removed the parameter and updated
+  all 4 call sites.
+
+---
 
 These are not style — each is a genuine bug or bug-shaped risk.
 
@@ -223,7 +279,48 @@ These are not style — each is a genuine bug or bug-shaped risk.
   underscore convention isn't idiomatic Java — better to check whether the
   interface method actually needs that parameter at all.
 
-## Phase 4 — Security/config judgment calls
+## Phase 4 — Security/config judgment calls — DONE
+
+Completed. Result: 636/636 backend tests green; Docker image built and run
+manually to verify the non-root change doesn't break startup.
+
+* **S4502** — confirmed safe and left disabled: verified
+  `JwtAuthenticationFilter` reads the token from the `Authorization` header
+  (`request.getHeader("Authorization")`), never a cookie, and
+  `SecurityConfig` already sets `SessionCreationPolicy.STATELESS`. Added a
+  short inline comment right at the `.csrf(...)` line (the class-level
+  Javadoc already explained the reasoning, but not at the flagged line
+  itself) — a "won't fix, here's why" resolution rather than a code change.
+* **S6471** — `backend/Dockerfile`'s runtime stage now creates and switches
+  to a non-root `app` user (`groupadd`/`useradd --system`, `COPY
+  --chown=app:app`, `USER app` before `EXPOSE`). Verified end-to-end: built
+  the image, ran it against the local Postgres, confirmed `whoami` → `app`
+  (uid 999, not root), confirmed `/tmp` is still writable as that user (the
+  entrypoint's push-credential-decoding step writes there by default), and
+  confirmed the Spring Boot app actually started successfully in the
+  container before cleaning up the test image. `web/Dockerfile` was
+  already hardened (`USER nextjs`) — confirmed, no change needed there.
+* **S5693** — reviewed and accepted, not changed: there's no second
+  in-code size limit to align with (the only gate is
+  `spring.servlet.multipart.max-file-size`/`max-request-size`, both
+  10MB) — the finding is Sonar's generic 8MB DoS-prevention default being
+  exceeded, not an actual mismatch. Both upload endpoints require
+  authentication, accept one file per request, and re-encode/resize the
+  image server-side immediately after upload (`ImageReencoder`), so 10MB
+  buys real camera-photo headroom without a meaningfully larger abuse
+  surface than 8MB. Documented the review inline in `application.yml`
+  rather than shrinking the limit.
+* **S1075** — `GoogleIdTokenVerifier`'s hardcoded `JWKS_URI` constant moved
+  to `GoogleOAuthProperties.jwksUri()` (bound from
+  `lifey.oauth.google.jwks-uri`, env override `OAUTH_GOOGLE_JWKS_URI`,
+  `@DefaultValue` of the real Google endpoint so no existing deployment
+  needs a config change). Updated `application.yml` and the one test that
+  constructs `GoogleOAuthProperties` directly
+  (`GoogleIdTokenVerifierTest` — that test injects its own `JwtDecoder`
+  bound to an in-memory JWK set, so the URI value is unused there but the
+  record now requires it).
+
+---
 
 Not pure fixes — each needs a decision, and some may end up as documented
 "won't fix" rather than a code change.
@@ -256,7 +353,41 @@ Not pure fixes — each needs a decision, and some may end up as documented
   class in the same package to extend), so it's overridable per environment
   without a code change (useful for pointing at a mock/test JWKS endpoint).
 
-## Phase 5 — `.now()` time-zone determinism (isolated due to size)
+## Phase 5 — `.now()` time-zone determinism (isolated due to size) — DONE (Option B)
+
+Completed per the Option B recommendation below — no `Clock` bean
+introduced. Audited the test suite for the fragility pattern that broke
+`ProgramAssignmentServiceImplTest` (a hardcoded absolute date fed into
+production code that validates it against `LocalDate.now()`, which
+eventually becomes "the past" as real time moves on) and found **no other
+occurrences**:
+
+* Only two production classes validate a "not in the past" rule at all:
+  `WorkoutScheduleServiceImpl` and `ProgramAssignmentServiceImpl`.
+  `WorkoutScheduleServiceImplTest` already computes its dates as
+  `LocalDate.now().plusDays(1)`/`.minusDays(1)` — safe by construction,
+  never breaks. `ProgramAssignmentServiceImplTest` was the one that broke
+  and was already fixed (in the session before this remediation plan
+  existed) by computing `A_MONDAY` from `LocalDate.now()` instead of a
+  hardcoded date.
+* Every other hardcoded `LocalDate.of(...)` in the test suite
+  (`OccurrenceGeneratorTest`, and the many test files touched in Phase 1's
+  Month-enum sweep) feeds **pure date-math functions** that never compare
+  against "today" — `OccurrenceGenerator.generate(recurrence, days, from,
+  to)` takes `from`/`to` as plain inputs with no internal `now()` check, so
+  these dates can never become invalid regardless of how much time passes.
+* The two "future date rejected" tests
+  (`WeightControllerTest`/`DailyStepCountControllerTest`) hardcode
+  `2999-01-01` — matching `DateRanges.DISTANT_FUTURE`'s convention, ~976
+  years of headroom, not a fragile pattern.
+
+No main-source `.now()` calls were touched — per Option B, that's a
+deliberate non-fix (see rationale below), and there's no separate
+SonarQube server in this environment to formally record a "won't fix"
+resolution against; this plan document is the durable record of that
+decision.
+
+---
 
 * **`java:S8688`** — "Explicitly specify the time zone by passing a `ZoneId`
   or a `Clock` to the `.now()` method." This is the single largest finding
@@ -291,7 +422,67 @@ Not pure fixes — each needs a decision, and some may end up as documented
   pattern that just broke `ProgramAssignmentServiceImplTest`, fixing any
   found the same way.
 
-## Phase 6 — Web/frontend findings (separate stack, independent PR)
+## Phase 6 — Web/frontend findings — DONE
+
+Completed on the same branch (per explicit instruction, not a separate PR).
+Result: `tsc --noEmit` clean, 99/99 vitest green, 636/636 backend tests still
+green (mail-template edits are backend-owned resources).
+
+**Discovery correction: none of these findings were in `web/src/app/`.**
+The raw report had no file names, and my Phase-6-writing assumption (Next.js
+pages missing `<title>`, a web admin `<table>` missing `<th>`) turned out
+wrong on inspection — every `web/src/app/**/page.tsx` inherits the root
+layout's `title: "Lifey"` metadata, and the admin assignments page (the
+only "table-like" admin UI) is div-based, not a real `<table>`. Searched the
+whole repo for actual standalone `.html`/`.css` files instead and found the
+real targets: the backend's own email templates
+(`backend/src/main/resources/mail/*.html`) and its one global stylesheet
+(`web/src/app/globals.css`) — both are still "web" content the Sonar Web/CSS
+plugins would scan, just not React pages.
+
+* **`Web:PageWithoutTitleCheck`** — 8 real standalone HTML documents were
+  missing a `<title>`: `welcome_en/hu`, `password_reset_en/hu`,
+  `trainer_invite_en/hu`, `weekly_report_en/hu` (the report said 7; the
+  8th was presumably a near-miss in whatever partial scan produced the
+  list). Added a short, content-appropriate `<title>` to each. The
+  `weekly_report_row_en/hu.html` files are `<tr>` fragments with no
+  `<html>`/`<head>` at all (spliced into the parent template) — correctly
+  not flagged, left alone.
+* **`Web:S5256`** — `weekly_report_en.html` and `weekly_report_hu.html`
+  both render a single-column `<table>` of per-client rows with zero
+  header cells. Added a `<thead><tr><th scope="col">…</th></tr></thead>`
+  and wrapped the templated `{{clientRows}}` in `<tbody>`. Verified
+  against `MailTemplateRendererTest` (placeholder substitution still
+  works — the tests check for substituted content, not exact table
+  markup) and `ResendMailServiceTest`/`WeeklyReportServiceImplTest`, all
+  green.
+* **`css:S7924`** — first pass guessed wrong (see below); the user later
+  shared the actual SonarQube for IDE panel with real file/line info,
+  which pinpointed the true findings precisely:
+  * **The real findings**: `trainer_invite_en.html:12` and
+    `trainer_invite_hu.html:12`, both the "Decline" button/link's inline
+    `background:#888; color:#fff`. Computed exactly: 3.54:1 — fails WCAG
+    AA (4.5:1 for normal-size text). Fixed by darkening the background to
+    `#757575` (Material Design's standard "Grey 600", not an arbitrary
+    value) → 4.61:1, passing with a small margin. Verified against
+    `MailTemplateRendererTest`/`ResendMailServiceTest`/
+    `TrainerInviteServiceImplTest`, all green. The "Accept invite" button
+    (`#2e7d32`/white, 5.13:1) was already fine — untouched.
+  * **My first-pass guess** (kept, not reverted — see rationale): before
+    getting the real panel output, I assumed the 2 occurrences were
+    `web/src/app/globals.css`'s `--muted` token, since `css:S7924` sounds
+    stylesheet-scoped and I hadn't yet learned Sonar's Web/CSS rules also
+    scan inline `style=""` attributes in HTML. That guess was **wrong**
+    about *which* 2 findings these were, but the contrast problem I found
+    while chasing it is real and independently verified: `--muted` fails
+    WCAG AA against every surface tone it's paired with in both themes
+    (dark `#777264`: 3.27–3.78:1; light `#9A9A8C`: 2.37–2.85:1). Adjusted
+    to dark `#918B7A` (4.62–5.34:1) / light `#696960` (4.62–5.54:1) —
+    same hue, minimal lightness change, confirmed in-browser via
+    `getComputedStyle`. Left in place as a legitimate a11y fix on top of,
+    not instead of, the real reported findings above.
+
+---
 
 * **`Web:PageWithoutTitleCheck`** — "Add a `<title>` tag to this page" (7
   occurrences) — Next.js App Router pages missing a `metadata`/`title`

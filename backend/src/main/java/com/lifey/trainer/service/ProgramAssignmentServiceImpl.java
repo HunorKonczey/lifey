@@ -73,7 +73,7 @@ public class ProgramAssignmentServiceImpl implements ProgramAssignmentService {
             throw new InvalidProgramStructureException("Program has no workouts to assign: " + programId);
         }
 
-        if (request.startDate().getDayOfWeek() != DayOfWeek.MONDAY) {
+        if (!DayOfWeek.MONDAY.equals(request.startDate().getDayOfWeek())) {
             throw new ProgramStartDateInvalidException("Program start date must be a Monday");
         }
         if (request.startDate().isBefore(LocalDate.now())) {
