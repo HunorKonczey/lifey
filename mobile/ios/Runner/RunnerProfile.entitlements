@@ -4,8 +4,6 @@
 <dict>
 	<!-- Remote push (docs/30-push-notifications-plan.md, M1) — see the note in
 	     Runner.entitlements. "development" for profile/dev-signed builds. -->
-	<key>aps-environment</key>
-	<string>development</string>
 	<key>com.apple.developer.healthkit</key>
 	<true/>
 	<key>com.apple.developer.healthkit.access</key>

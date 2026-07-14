@@ -16,7 +16,6 @@
 		39871BBBAB9589F3BD6A0E62 /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E93BE46D4190EF727DF5AEC2 /* WorkoutLiveActivity.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		56E72C8003929A92311B886F /* LiveActivityChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDB98529ABD178C01B5DCBF9 /* LiveActivityChannel.swift */; };
-		A1B2C3D4E5F60718293A4B5C /* PushChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5B4A3928170F6E5D4C3B2A1 /* PushChannel.swift */; };
 		5A350FF24DF1393842091E5D /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7750AD4460BE463E1B6B760A /* TodaySummaryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABDF281739DB260B7315FE49 /* TodaySummaryWidget.swift */; };
@@ -25,6 +24,7 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		A1B2C3D4E5F60718293A4B5C /* PushChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5B4A3928170F6E5D4C3B2A1 /* PushChannel.swift */; };
 		D97F898928CF63CA3FE80A18 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 47901D32BBEDE3C033E2A26B /* Pods_Runner.framework */; };
 		F6BF3582FE4D9C352AFA2F05 /* LifeyWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4611017037CF0707C0EB5D /* LifeyWidgetsBundle.swift */; };
 /* End PBXBuildFile section */
@@ -100,12 +100,12 @@
 		9D91B8274CCBA82E8687CB39 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
 		ABDF281739DB260B7315FE49 /* TodaySummaryWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TodaySummaryWidget.swift; sourceTree = "<group>"; };
+		C5B4A3928170F6E5D4C3B2A1 /* PushChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PushChannel.swift; sourceTree = "<group>"; };
 		CFF035215C8B3D9E96C6BB53 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D7B6D3E9C246452BD2D969C9 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		E93BE46D4190EF727DF5AEC2 /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
 		EA3BF88F253170342B80ADE0 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		EDB98529ABD178C01B5DCBF9 /* LiveActivityChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityChannel.swift; sourceTree = "<group>"; };
-		C5B4A3928170F6E5D4C3B2A1 /* PushChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PushChannel.swift; sourceTree = "<group>"; };
 		F3E1B2D6084DD2CF55DBF111 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
@@ -616,6 +616,7 @@
 				DEVELOPMENT_TEAM = HG2764XCGR;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -845,6 +846,7 @@
 				DEVELOPMENT_TEAM = HG2764XCGR;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -869,6 +871,7 @@
 				DEVELOPMENT_TEAM = HG2764XCGR;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
