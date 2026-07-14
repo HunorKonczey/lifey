@@ -5,6 +5,9 @@ import 'core/health/step_goal_notifier.dart';
 import 'core/health/step_history_importer.dart';
 import 'core/health/weight_health_importer.dart';
 import 'core/home_screen_widget/widget_snapshot_controller.dart';
+import 'core/push/push_tap_handler.dart';
+import 'core/push/weigh_in_reminder_controller.dart';
+import 'core/push/weigh_in_reminder_tap_handler.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/connectivity_sync_controller.dart';
 import 'core/theme/app_theme.dart';
@@ -41,6 +44,12 @@ class LifeyApp extends ConsumerWidget {
     ref.watch(stepGoalNotifierProvider);
     // Resumes an in-progress workout after the OS kills the app mid-session.
     ref.watch(workoutResumePromptProvider);
+    // Routes a push notification tap to the right tab (warm and cold-start).
+    ref.watch(pushTapHandlerProvider);
+    // Routes a weigh-in reminder notification tap to the weight tab.
+    ref.watch(weighInReminderTapHandlerProvider);
+    // Skips today's weigh-in reminder on app start/resume if already logged.
+    ref.watch(weighInReminderRefresherProvider);
     // Keeps the home screen widget snapshot in sync (iOS + Android).
     ref.watch(widgetSnapshotControllerProvider);
 

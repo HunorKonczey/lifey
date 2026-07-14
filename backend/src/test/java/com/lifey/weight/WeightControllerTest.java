@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -34,7 +35,7 @@ class WeightControllerTest {
     @Test
     void list_returnsOk() throws Exception {
         when(weightService.findAll())
-                .thenReturn(List.of(new WeightResponse(1L, LocalDate.of(2026, 6, 18), 80.0,
+                .thenReturn(List.of(new WeightResponse(1L, LocalDate.of(2026, Month.JUNE, 18), 80.0,
                         Instant.parse("2026-06-18T08:00:00Z"), null)));
 
         mockMvc.perform(get("/api/v1/weights"))
@@ -45,8 +46,8 @@ class WeightControllerTest {
 
     @Test
     void list_withFromAndTo_usesRangeQuery() throws Exception {
-        when(weightService.findAll(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
-                .thenReturn(List.of(new WeightResponse(1L, LocalDate.of(2026, 6, 18), 80.0,
+        when(weightService.findAll(LocalDate.of(2026, Month.JUNE, 1), LocalDate.of(2026, Month.JUNE, 30)))
+                .thenReturn(List.of(new WeightResponse(1L, LocalDate.of(2026, Month.JUNE, 18), 80.0,
                         Instant.parse("2026-06-18T08:00:00Z"), null)));
 
         mockMvc.perform(get("/api/v1/weights").param("from", "2026-06-01").param("to", "2026-06-30"))
@@ -59,7 +60,7 @@ class WeightControllerTest {
     @Test
     void delta_returnsPageIncludingTombstones() throws Exception {
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
-        WeightResponse tombstoned = new WeightResponse(2L, LocalDate.of(2026, 6, 18), 80.0,
+        WeightResponse tombstoned = new WeightResponse(2L, LocalDate.of(2026, Month.JUNE, 18), 80.0,
                 Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"));
         when(weightService.findDelta(eq(since), any())).thenReturn(new PageImpl<>(List.of(tombstoned)));
 
@@ -72,7 +73,7 @@ class WeightControllerTest {
     @Test
     void create_returnsCreated() throws Exception {
         when(weightService.create(any()))
-                .thenReturn(new WeightResponse(5L, LocalDate.of(2026, 6, 1), 78.4,
+                .thenReturn(new WeightResponse(5L, LocalDate.of(2026, Month.JUNE, 1), 78.4,
                         Instant.parse("2026-06-01T00:00:00Z"), null));
 
         mockMvc.perform(post("/api/v1/weights").contentType(MediaType.APPLICATION_JSON)

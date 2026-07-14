@@ -10,7 +10,10 @@ import com.lifey.trainer.dto.MyTrainerResponse;
 import com.lifey.trainer.dto.TrainerClientResponse;
 import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.exception.NotYourClientException;
+import com.lifey.nutrition.meal.MealRepository;
 import com.lifey.user.User;
+import com.lifey.water.WaterEntryRepository;
+import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
 import com.lifey.workout.session.WorkoutSessionRepository;
 import org.junit.jupiter.api.Test;
@@ -21,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,6 +52,12 @@ class TrainerAccessServiceImplTest {
 
     @Mock
     WorkoutSessionRepository workoutSessionRepository;
+
+    @Mock
+    MealRepository mealRepository;
+
+    @Mock
+    WaterEntryRepository waterEntryRepository;
 
     @Mock
     CurrentUserProvider currentUserProvider;
@@ -104,6 +114,11 @@ class TrainerAccessServiceImplTest {
         when(contentAssignmentRepository.countByTrainerIdAndClientId(TRAINER_ID, CLIENT_ID)).thenReturn(2L);
         when(workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(eq(CLIENT_ID), any()))
                 .thenReturn(8L);
+        when(mealRepository.findMaxDateTimeByUserId(CLIENT_ID)).thenReturn(Optional.empty());
+        when(waterEntryRepository.findMaxConsumedAtByUserId(CLIENT_ID)).thenReturn(Optional.empty());
+        when(workoutSessionRepository.findMaxStartedAtByUserId(CLIENT_ID)).thenReturn(Optional.empty());
+        when(workoutSessionRepository.countMissedOccurrences(eq(TRAINER_ID), eq(CLIENT_ID), any(), any()))
+                .thenReturn(0L);
 
         List<TrainerClientResponse> result = service.findActiveClientsForTrainer();
 
@@ -113,6 +128,51 @@ class TrainerAccessServiceImplTest {
             assertThat(r.weightTrend()).isEmpty();
             assertThat(r.assignedPlanCount()).isEqualTo(2);
             assertThat(r.workoutsPerWeek()).isEqualTo(2);
+            assertThat(r.lastActivityAt()).isNull();
+            assertThat(r.lastWeightAt()).isNull();
+            assertThat(r.missedWorkoutCount()).isZero();
+        });
+    }
+
+    @Test
+    void findActiveClientsForTrainer_computesLastActivityAsMaxAcrossSources() {
+        when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
+        TrainerClient tc = new TrainerClient();
+        User client = new User();
+        client.setId(CLIENT_ID);
+        client.setEmail("client@example.com");
+        tc.setClient(client);
+        tc.setRespondedAt(Instant.parse("2026-06-01T00:00:00Z"));
+        when(trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(TRAINER_ID, TrainerClientStatus.ACTIVE))
+                .thenReturn(List.of(tc));
+
+        Instant mealTime = Instant.parse("2026-07-01T10:00:00Z");
+        Instant waterTime = Instant.parse("2026-07-05T10:00:00Z"); // the latest of the four
+        Instant workoutTime = Instant.parse("2026-07-03T10:00:00Z");
+        Instant weightRecordedAt = Instant.parse("2026-07-02T10:00:00Z");
+        LocalDate weightDate = LocalDate.parse("2026-07-02");
+
+        WeightEntry newestWeight = new WeightEntry();
+        newestWeight.setDate(weightDate);
+        newestWeight.setRecordedAt(weightRecordedAt);
+        newestWeight.setWeight(80.0);
+        when(weightEntryRepository.findAllByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(eq(CLIENT_ID), any()))
+                .thenReturn(List.of(newestWeight));
+        when(contentAssignmentRepository.countByTrainerIdAndClientId(TRAINER_ID, CLIENT_ID)).thenReturn(0L);
+        when(workoutSessionRepository.countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(eq(CLIENT_ID), any()))
+                .thenReturn(0L);
+        when(mealRepository.findMaxDateTimeByUserId(CLIENT_ID)).thenReturn(Optional.of(mealTime));
+        when(waterEntryRepository.findMaxConsumedAtByUserId(CLIENT_ID)).thenReturn(Optional.of(waterTime));
+        when(workoutSessionRepository.findMaxStartedAtByUserId(CLIENT_ID)).thenReturn(Optional.of(workoutTime));
+        when(workoutSessionRepository.countMissedOccurrences(eq(TRAINER_ID), eq(CLIENT_ID), any(), any()))
+                .thenReturn(3L);
+
+        List<TrainerClientResponse> result = service.findActiveClientsForTrainer();
+
+        assertThat(result).singleElement().satisfies(r -> {
+            assertThat(r.lastActivityAt()).isEqualTo(waterTime);
+            assertThat(r.lastWeightAt()).isEqualTo(weightDate);
+            assertThat(r.missedWorkoutCount()).isEqualTo(3);
         });
     }
 

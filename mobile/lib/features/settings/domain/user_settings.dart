@@ -17,6 +17,10 @@ class UserSettings {
     this.dailyFatGoal,
     this.dailyWaterGoalLiters,
     this.dailyStepGoal,
+    this.workoutReminderEnabled = true,
+    this.trainerCommentPushEnabled = true,
+    this.trainerGoalsPushEnabled = true,
+    this.programAssignedPushEnabled = true,
   });
 
   const UserSettings.defaults()
@@ -28,7 +32,11 @@ class UserSettings {
         dailyCarbsGoal = null,
         dailyFatGoal = null,
         dailyWaterGoalLiters = null,
-        dailyStepGoal = null;
+        dailyStepGoal = null,
+        workoutReminderEnabled = true,
+        trainerCommentPushEnabled = true,
+        trainerGoalsPushEnabled = true,
+        programAssignedPushEnabled = true;
 
   final UnitSystem unitSystem;
   final ThemePreference theme;
@@ -39,6 +47,54 @@ class UserSettings {
   final int? dailyFatGoal;
   final double? dailyWaterGoalLiters;
   final int? dailyStepGoal;
+  // Opt-out for the trainer-scheduled-workout push reminder
+  // (docs/30-push-notifications-plan.md) — server-enforced (the backend job
+  // checks it), synced like every other field here rather than a local pref.
+  final bool workoutReminderEnabled;
+  // Opt-out for the trainer-comment push notification
+  // (docs/31-session-feedback-loop-plan.md) — same shape as
+  // [workoutReminderEnabled] above.
+  final bool trainerCommentPushEnabled;
+  // Opt-out for the trainer-nutrition-goals-changed push notification
+  // (docs/32-trainer-nutrition-goals-plan.md) — same shape as
+  // [workoutReminderEnabled] above.
+  final bool trainerGoalsPushEnabled;
+  // Opt-out for the program-assigned push notification
+  // (docs/34-multi-week-program-plan.md, M6) — same shape as
+  // [workoutReminderEnabled] above.
+  final bool programAssignedPushEnabled;
+
+  UserSettings copyWith({
+    UnitSystem? unitSystem,
+    ThemePreference? theme,
+    LanguagePreference? language,
+    int? dailyCalorieGoal,
+    int? dailyProteinGoal,
+    int? dailyCarbsGoal,
+    int? dailyFatGoal,
+    double? dailyWaterGoalLiters,
+    int? dailyStepGoal,
+    bool? workoutReminderEnabled,
+    bool? trainerCommentPushEnabled,
+    bool? trainerGoalsPushEnabled,
+    bool? programAssignedPushEnabled,
+  }) {
+    return UserSettings(
+      unitSystem: unitSystem ?? this.unitSystem,
+      theme: theme ?? this.theme,
+      language: language ?? this.language,
+      dailyCalorieGoal: dailyCalorieGoal ?? this.dailyCalorieGoal,
+      dailyProteinGoal: dailyProteinGoal ?? this.dailyProteinGoal,
+      dailyCarbsGoal: dailyCarbsGoal ?? this.dailyCarbsGoal,
+      dailyFatGoal: dailyFatGoal ?? this.dailyFatGoal,
+      dailyWaterGoalLiters: dailyWaterGoalLiters ?? this.dailyWaterGoalLiters,
+      dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
+      workoutReminderEnabled: workoutReminderEnabled ?? this.workoutReminderEnabled,
+      trainerCommentPushEnabled: trainerCommentPushEnabled ?? this.trainerCommentPushEnabled,
+      trainerGoalsPushEnabled: trainerGoalsPushEnabled ?? this.trainerGoalsPushEnabled,
+      programAssignedPushEnabled: programAssignedPushEnabled ?? this.programAssignedPushEnabled,
+    );
+  }
 
   factory UserSettings.fromJson(Map<String, dynamic> json) {
     return UserSettings(
@@ -51,6 +107,10 @@ class UserSettings {
       dailyFatGoal: json['dailyFatGoal'] as int?,
       dailyWaterGoalLiters: (json['dailyWaterGoalLiters'] as num?)?.toDouble(),
       dailyStepGoal: json['dailyStepGoal'] as int?,
+      workoutReminderEnabled: json['workoutReminderEnabled'] as bool? ?? true,
+      trainerCommentPushEnabled: json['trainerCommentPushEnabled'] as bool? ?? true,
+      trainerGoalsPushEnabled: json['trainerGoalsPushEnabled'] as bool? ?? true,
+      programAssignedPushEnabled: json['programAssignedPushEnabled'] as bool? ?? true,
     );
   }
 
@@ -64,5 +124,9 @@ class UserSettings {
         'dailyStepGoal': dailyStepGoal,
         'theme': theme.name.toUpperCase(),
         'language': language.name.toUpperCase(),
+        'workoutReminderEnabled': workoutReminderEnabled,
+        'trainerCommentPushEnabled': trainerCommentPushEnabled,
+        'trainerGoalsPushEnabled': trainerGoalsPushEnabled,
+        'programAssignedPushEnabled': programAssignedPushEnabled,
       };
 }

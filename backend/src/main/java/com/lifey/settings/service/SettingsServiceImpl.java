@@ -49,6 +49,30 @@ public class SettingsServiceImpl implements SettingsService {
         return SettingsMapper.toResponse(getOrCreate(userId));
     }
 
+    @Override
+    public SettingsResponse updateNutritionGoalsForUser(
+            Long userId, Integer dailyCalorieGoal, Integer dailyProteinGoal,
+            Integer dailyCarbsGoal, Integer dailyFatGoal) {
+        UserSettings settings = getOrCreate(userId);
+        settings.setDailyCalorieGoal(dailyCalorieGoal);
+        settings.setDailyProteinGoal(dailyProteinGoal);
+        settings.setDailyCarbsGoal(dailyCarbsGoal);
+        settings.setDailyFatGoal(dailyFatGoal);
+        return SettingsMapper.toResponse(repository.save(settings));
+    }
+
+    @Override
+    public boolean isWeeklyReportEmailEnabled() {
+        return getOrCreate().isWeeklyReportEmailEnabled();
+    }
+
+    @Override
+    public boolean setWeeklyReportEmailEnabled(boolean enabled) {
+        UserSettings settings = getOrCreate();
+        settings.setWeeklyReportEmailEnabled(enabled);
+        return repository.save(settings).isWeeklyReportEmailEnabled();
+    }
+
     /**
      * Settings rows aren't created at registration (the auth module doesn't know
      * about this feature), so the first read or write for a user creates the

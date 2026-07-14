@@ -34,7 +34,7 @@ public class TrainerInviteEmailController {
             return accept
                     ? page("Invite accepted", "You're now connected with your trainer. You can close this page and open the Lifey app.")
                     : page("Invite declined", "You declined the invite. You can close this page.");
-        } catch (InviteNotFoundException e) {
+        } catch (InviteNotFoundException _) {
             return page("Link no longer valid", "This invite link has expired or was already used.");
         }
     }

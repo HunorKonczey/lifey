@@ -13,6 +13,10 @@ public record SettingsResponse(
         Double dailyWaterGoalLiters,
         Integer dailyStepGoal,
         ThemePreference theme,
-        LanguagePreference language
+        LanguagePreference language,
+        Boolean workoutReminderEnabled,
+        Boolean trainerCommentPushEnabled,
+        Boolean trainerGoalsPushEnabled,
+        Boolean programAssignedPushEnabled
 ) {
 }

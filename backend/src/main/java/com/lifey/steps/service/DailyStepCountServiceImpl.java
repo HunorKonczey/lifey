@@ -41,12 +41,22 @@ public class DailyStepCountServiceImpl implements DailyStepCountService {
     @Override
     @Transactional(readOnly = true)
     public List<DailyStepCountResponse> findAll(LocalDate from, LocalDate to) {
-        return findAllForUser(currentUserProvider.getUserId(), from, to);
+        return findAllForUserInternal(currentUserProvider.getUserId(), from, to);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<DailyStepCountResponse> findAllForUser(Long userId, LocalDate from, LocalDate to) {
+        return findAllForUserInternal(userId, from, to);
+    }
+
+    /**
+     * Shared body for {@link #findAll(LocalDate, LocalDate)} and
+     * {@link #findAllForUser}, kept un-annotated so calling it from either
+     * public method never bypasses the proxy's transaction demarcation
+     * (self-invoking an {@code @Transactional} method directly would).
+     */
+    private List<DailyStepCountResponse> findAllForUserInternal(Long userId, LocalDate from, LocalDate to) {
         LocalDate effectiveFrom = from != null ? from : DateRanges.DISTANT_PAST;
         LocalDate effectiveTo = to != null ? to : DateRanges.DISTANT_FUTURE;
         return repository.findByUserIdAndDeletedAtIsNullAndDateRange(userId, effectiveFrom, effectiveTo).stream()

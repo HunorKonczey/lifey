@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -34,7 +35,7 @@ class DailyStepCountControllerTest {
     @Test
     void list_returnsOk() throws Exception {
         when(stepCountService.findAll())
-                .thenReturn(List.of(new DailyStepCountResponse(1L, LocalDate.of(2026, 6, 18), 8200,
+                .thenReturn(List.of(new DailyStepCountResponse(1L, LocalDate.of(2026, Month.JUNE, 18), 8200,
                         Instant.parse("2026-06-18T08:00:00Z"), null)));
 
         mockMvc.perform(get("/api/v1/steps"))
@@ -45,8 +46,8 @@ class DailyStepCountControllerTest {
 
     @Test
     void list_withFromAndTo_usesRangeQuery() throws Exception {
-        when(stepCountService.findAll(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
-                .thenReturn(List.of(new DailyStepCountResponse(1L, LocalDate.of(2026, 6, 18), 8200,
+        when(stepCountService.findAll(LocalDate.of(2026, Month.JUNE, 1), LocalDate.of(2026, Month.JUNE, 30)))
+                .thenReturn(List.of(new DailyStepCountResponse(1L, LocalDate.of(2026, Month.JUNE, 18), 8200,
                         Instant.parse("2026-06-18T08:00:00Z"), null)));
 
         mockMvc.perform(get("/api/v1/steps").param("from", "2026-06-01").param("to", "2026-06-30"))
@@ -59,7 +60,7 @@ class DailyStepCountControllerTest {
     @Test
     void delta_returnsPageIncludingTombstones() throws Exception {
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
-        DailyStepCountResponse tombstoned = new DailyStepCountResponse(2L, LocalDate.of(2026, 6, 18), 8200,
+        DailyStepCountResponse tombstoned = new DailyStepCountResponse(2L, LocalDate.of(2026, Month.JUNE, 18), 8200,
                 Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"));
         when(stepCountService.findDelta(eq(since), any())).thenReturn(new PageImpl<>(List.of(tombstoned)));
 
@@ -72,7 +73,7 @@ class DailyStepCountControllerTest {
     @Test
     void create_returnsCreated() throws Exception {
         when(stepCountService.create(any()))
-                .thenReturn(new DailyStepCountResponse(5L, LocalDate.of(2026, 6, 1), 11000,
+                .thenReturn(new DailyStepCountResponse(5L, LocalDate.of(2026, Month.JUNE, 1), 11000,
                         Instant.parse("2026-06-01T00:00:00Z"), null));
 
         mockMvc.perform(post("/api/v1/steps").contentType(MediaType.APPLICATION_JSON)

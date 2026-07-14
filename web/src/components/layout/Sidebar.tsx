@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { useSessionStore } from "@/features/auth/store";
 import { useUiStore } from "@/lib/hooks/useUiStore";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { avatarApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 
@@ -34,12 +34,22 @@ export function Sidebar() {
     staleTime: 5 * 60 * 1000,
     enabled: !!user,
   });
-  const avatarUrl = useMemo(() => (avatarBlob ? URL.createObjectURL(avatarBlob) : null), [avatarBlob]);
+  // Create and revoke the object URL together in one effect (not a useMemo
+  // paired with a separate revoke-on-cleanup effect) — under React StrictMode
+  // in dev, effects run mount→cleanup→mount, and a cleanup that isn't paired
+  // with its own re-creation revokes the URL a still-mounted <img> is using,
+  // breaking it with net::ERR_FILE_NOT_FOUND.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   useEffect(() => {
-    return () => {
-      if (avatarUrl) URL.revokeObjectURL(avatarUrl);
-    };
-  }, [avatarUrl]);
+    if (!avatarBlob) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAvatarUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(avatarBlob);
+    setAvatarUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [avatarBlob]);
 
   // On mobile the rail-collapse is irrelevant — drawer is always full width.
   const width = collapsed ? 74 : 248;

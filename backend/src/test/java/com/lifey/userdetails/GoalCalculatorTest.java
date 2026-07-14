@@ -51,8 +51,7 @@ class GoalCalculatorTest {
         // TDEE = 1345.25 * 1.2 = 1614.3 -> 1614
         assertThat(result.tdee()).isEqualTo(1614);
         // maintain: calories = TDEE rounded to nearest 10, above the 1200 female floor
-        assertThat(result.calories()).isEqualTo(1610);
-        assertThat(result.calories()).isGreaterThanOrEqualTo(1200);
+        assertThat(result.calories()).isEqualTo(1610).isGreaterThanOrEqualTo(1200);
     }
 
     @Test
@@ -147,8 +146,7 @@ class GoalCalculatorTest {
         // sedentary: round50(70*35 + 0) = 2450ml -> 2.45L rounds to 2.5L (rounded to 1 decimal)
         assertThat(sedentary.waterLiters()).isEqualTo(2.5);
         // very active: round50(70*35 + 750) = round50(3200) = 3200ml -> 3.2L
-        assertThat(veryActive.waterLiters()).isEqualTo(3.2);
-        assertThat(veryActive.waterLiters()).isGreaterThan(sedentary.waterLiters());
+        assertThat(veryActive.waterLiters()).isEqualTo(3.2).isGreaterThan(sedentary.waterLiters());
     }
 
     @Test

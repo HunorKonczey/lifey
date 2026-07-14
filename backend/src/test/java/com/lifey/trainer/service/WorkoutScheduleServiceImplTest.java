@@ -2,13 +2,11 @@ package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
-import com.lifey.trainer.ContentType;
+import com.lifey.trainer.ProgramAssignmentRepository;
 import com.lifey.trainer.Recurrence;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.WorkoutScheduleRepository;
-import com.lifey.trainer.dto.AssignmentRequest;
-import com.lifey.trainer.dto.AssignmentResponse;
 import com.lifey.trainer.dto.OccurrenceStatus;
 import com.lifey.trainer.dto.ScheduleRequest;
 import com.lifey.trainer.dto.ScheduleResponse;
@@ -38,6 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -78,6 +77,9 @@ class WorkoutScheduleServiceImplTest {
     @Mock
     CurrentUserProvider currentUserProvider;
 
+    @Mock
+    ProgramAssignmentRepository programAssignmentRepository;
+
     @InjectMocks
     WorkoutScheduleServiceImpl service;
 
@@ -116,8 +118,7 @@ class WorkoutScheduleServiceImplTest {
         WorkoutTemplate clientCopy = new WorkoutTemplate();
         clientCopy.setId(55L);
         clientCopy.setName("Push day");
-        when(workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
-                CLIENT_ID, TRAINER_ID, TEMPLATE_ID)).thenReturn(Optional.of(clientCopy));
+        when(contentAssignmentService.resolveClientCopy(TRAINER_ID, CLIENT_ID, sourceTemplate)).thenReturn(clientCopy);
 
         ScheduleResponse response = service.create(onceRequest(LocalDate.now().plusDays(1)));
 
@@ -129,24 +130,19 @@ class WorkoutScheduleServiceImplTest {
 
     @Test
     void create_assignsFreshCopy_whenNoLiveCopyExists() {
-        when(workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
-                CLIENT_ID, TRAINER_ID, TEMPLATE_ID)).thenReturn(Optional.empty());
-        when(contentAssignmentService.assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, TEMPLATE_ID)))
-                .thenReturn(new AssignmentResponse(1L, ContentType.TEMPLATE, TEMPLATE_ID, 55L, Instant.now(), false));
         WorkoutTemplate clientCopy = new WorkoutTemplate();
         clientCopy.setId(55L);
         clientCopy.setName("Push day");
-        when(workoutTemplateRepository.getReferenceById(55L)).thenReturn(clientCopy);
+        when(contentAssignmentService.resolveClientCopy(TRAINER_ID, CLIENT_ID, sourceTemplate)).thenReturn(clientCopy);
 
         service.create(onceRequest(LocalDate.now().plusDays(1)));
 
-        verify(contentAssignmentService).assign(new AssignmentRequest(CLIENT_ID, ContentType.TEMPLATE, TEMPLATE_ID));
+        verify(contentAssignmentService).resolveClientCopy(TRAINER_ID, CLIENT_ID, sourceTemplate);
     }
 
     @Test
     void create_materializesOneSessionPerOccurrence() {
-        when(workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
-                CLIENT_ID, TRAINER_ID, TEMPLATE_ID)).thenReturn(Optional.of(sourceTemplate));
+        when(contentAssignmentService.resolveClientCopy(TRAINER_ID, CLIENT_ID, sourceTemplate)).thenReturn(sourceTemplate);
 
         LocalDate start = LocalDate.now().plusDays(1);
         ScheduleRequest request = new ScheduleRequest(
@@ -166,7 +162,9 @@ class WorkoutScheduleServiceImplTest {
 
     @Test
     void create_pastStartDate_throws() {
-        assertThatThrownBy(() -> service.create(onceRequest(LocalDate.now().minusDays(1))))
+        ScheduleRequest request = onceRequest(LocalDate.now().minusDays(1));
+
+        assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ScheduleInPastException.class);
     }
 
@@ -191,8 +189,9 @@ class WorkoutScheduleServiceImplTest {
     @Test
     void create_foreignTemplate_throwsNotFound() {
         when(workoutTemplateRepository.findByIdAndUserId(TEMPLATE_ID, TRAINER_ID)).thenReturn(Optional.empty());
+        ScheduleRequest request = onceRequest(LocalDate.now().plusDays(1));
 
-        assertThatThrownBy(() -> service.create(onceRequest(LocalDate.now().plusDays(1))))
+        assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -291,19 +290,21 @@ class WorkoutScheduleServiceImplTest {
         when(trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(TRAINER_ID, TrainerClientStatus.ACTIVE))
                 .thenReturn(List.of(trainerClient));
 
+        LocalDate from = LocalDate.now();
+        LocalDate to = from.plusDays(7);
+        LocalDate scheduledFor = from.plusDays(2);
         WorkoutSession occurrence = new WorkoutSession();
         occurrence.setId(30L);
         occurrence.setUser(anna);
-        occurrence.setScheduledFor(LocalDate.of(2026, 7, 9));
+        occurrence.setScheduledFor(scheduledFor);
         occurrence.setTemplateName("Push day");
         occurrence.setScheduleId(SCHEDULE_ID);
         when(workoutSessionRepository
                 .findByUserIdInAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(
-                        List.of(CLIENT_ID), LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13)))
+                        List.of(CLIENT_ID), from, to))
                 .thenReturn(List.of(occurrence));
 
-        List<TrainerCalendarSessionResponse> result = service.findScheduledSessionsForTrainer(
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13));
+        List<TrainerCalendarSessionResponse> result = service.findScheduledSessionsForTrainer(from, to);
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().clientId()).isEqualTo(CLIENT_ID);
@@ -317,7 +318,7 @@ class WorkoutScheduleServiceImplTest {
                 .thenReturn(List.of());
 
         List<TrainerCalendarSessionResponse> result = service.findScheduledSessionsForTrainer(
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13));
+                LocalDate.of(2026, Month.JULY, 6), LocalDate.of(2026, Month.JULY, 13));
 
         assertThat(result).isEmpty();
         verify(workoutSessionRepository, never())
@@ -327,17 +328,19 @@ class WorkoutScheduleServiceImplTest {
 
     @Test
     void findScheduledSessionsForTrainer_rangeBeyond62Days_throws() {
-        LocalDate from = LocalDate.of(2026, 7, 6);
+        LocalDate from = LocalDate.of(2026, Month.JULY, 6);
+        LocalDate to = from.plusDays(63);
 
-        assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, from.plusDays(63)))
+        assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, to))
                 .isInstanceOf(CalendarRangeExceededException.class);
     }
 
     @Test
     void findScheduledSessionsForTrainer_toBeforeFrom_throws() {
-        LocalDate from = LocalDate.of(2026, 7, 6);
+        LocalDate from = LocalDate.of(2026, Month.JULY, 6);
+        LocalDate to = from.minusDays(1);
 
-        assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, from.minusDays(1)))
+        assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, to))
                 .isInstanceOf(CalendarRangeExceededException.class);
     }
 

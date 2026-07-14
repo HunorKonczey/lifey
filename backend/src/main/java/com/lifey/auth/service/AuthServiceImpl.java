@@ -64,9 +64,15 @@ public class AuthServiceImpl implements AuthService {
             var authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.email().trim(), request.password()));
             principal = (UserPrincipal) authentication.getPrincipal();
-        } catch (BadCredentialsException ex) {
+        } catch (BadCredentialsException _) {
             // Same message regardless of whether the email exists, so login can't be
             // used to enumerate registered accounts.
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
+        if (principal == null) {
+            // Authentication#getPrincipal() is nullable per its contract, though a
+            // successful authenticate() call never actually returns one here in
+            // practice — guard explicitly rather than let a raw NPE surface.
             throw new InvalidCredentialsException("Invalid email or password");
         }
 

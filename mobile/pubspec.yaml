@@ -50,6 +50,19 @@ dependencies:
   # — see lib/core/home_screen_widget/ and docs/24-ios-widget-live-activity-plan.md.
   # No-ops on non-iOS; also gives an Android bridge for free if that's ever added.
   home_widget: ^0.9.3
+  # Android push notifications (docs/30-push-notifications-plan.md, M1b) — iOS
+  # registers through the native `lifey/push` platform channel instead (M1)
+  # and never touches Firebase; these two are Android-only in practice.
+  firebase_core: ^4.5.0
+  firebase_messaging: ^16.0.5
+  # Morning weigh-in reminder scheduling (docs/30-push-notifications-plan.md,
+  # M4). `timezone` is already a transitive dependency of
+  # flutter_local_notifications (its zonedSchedule takes a TZDateTime) — added
+  # directly per the plugin's own recommendation (depend_on_referenced_packages).
+  # flutter_timezone supplies the device's IANA zone name, which the
+  # `timezone` package itself has no way to determine.
+  timezone: ^0.10.1
+  flutter_timezone: ^4.1.1
 
 dev_dependencies:
   flutter_test:

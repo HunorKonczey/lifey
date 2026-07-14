@@ -37,12 +37,25 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
      */
     Page<Meal> findByUserIdAndUpdatedAtGreaterThanEqual(Long userId, Instant since, Pageable pageable);
 
+    /** Latest non-deleted meal timestamp for a user — trainer compliance overview (docs/29). */
+    @Query("select max(m.dateTime) from Meal m where m.user.id = :userId and m.deletedAt is null")
+    Optional<Instant> findMaxDateTimeByUserId(@Param("userId") Long userId);
+
     @Query("""
             select coalesce(sum(f.caloriesPer100g * e.quantityInGrams / 100.0), 0)
             from MealEntry e join e.food f
             where e.meal.user.id = :userId and e.meal.dateTime >= :from and e.meal.deletedAt is null
             """)
     double sumCaloriesSince(@Param("userId") Long userId, @Param("from") Instant from);
+
+    /** Same as {@link #sumCaloriesSince} with an upper bound — weekly trainer report (docs/33), one call per client-day. */
+    @Query("""
+            select coalesce(sum(f.caloriesPer100g * e.quantityInGrams / 100.0), 0)
+            from MealEntry e join e.food f
+            where e.meal.user.id = :userId and e.meal.dateTime >= :from and e.meal.dateTime < :toExclusive
+              and e.meal.deletedAt is null
+            """)
+    double sumCaloriesBetween(@Param("userId") Long userId, @Param("from") Instant from, @Param("toExclusive") Instant toExclusive);
 
     @Query("""
             select coalesce(sum(f.proteinPer100g * e.quantityInGrams / 100.0), 0)

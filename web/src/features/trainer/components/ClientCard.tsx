@@ -8,6 +8,7 @@ import { enUS, hu } from "date-fns/locale";
 import { Sparkline } from "@/components/data/Sparkline";
 import { useLocale } from "@/lib/hooks/useLocale";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
+import { ComplianceBadges } from "./ComplianceBadges";
 import type { TrainerClientResponse } from "../types";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
@@ -75,6 +76,8 @@ export function ClientCard({ client, onRevoke, revoking }: ClientCardProps) {
           {t("workoutsPerWeekCount", { count: client.workoutsPerWeek })}
         </span>
       </div>
+
+      <ComplianceBadges client={client} />
 
       {menuOpen && (
         <>

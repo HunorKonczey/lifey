@@ -9,6 +9,8 @@ public record ScheduledSessionResponse(
         LocalTime scheduledTime,
         String templateName,
         OccurrenceStatus status,
-        Long scheduleId
+        Long scheduleId,
+        /* Set instead of scheduleId when this occurrence came from a multi-week program assignment. */
+        Long programAssignmentId
 ) {
 }

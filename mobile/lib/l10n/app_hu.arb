@@ -400,6 +400,27 @@
     "stepGoalNotificationTitle": "Napi lépéscél elérve!",
     "stepGoalNotificationBody": "Ma {steps} lépést tettél meg. Szép munka!",
 
+    "weighInReminderNotificationTitle": "Ideje mérlegre állni",
+    "weighInReminderNotificationBody": "Mérd meg magad ma is, hogy pontos maradjon a trended",
+
+    "notificationsSettingsTileLabel": "Értesítések",
+    "notificationSettingsTitle": "Értesítések",
+    "allNotificationsLabel": "Összes értesítés",
+    "workoutReminderToggleLabel": "Edzés-emlékeztető",
+    "workoutReminderToggleSubtitle": "Az edzővel ütemezett edzés reggelén",
+    "weighInReminderToggleLabel": "Reggeli súlymérés-emlékeztető",
+    "weighInReminderToggleSubtitle": "Napi emlékeztető a testsúly rögzítésére",
+    "stepGoalNotificationToggleLabel": "Lépéscél elérve",
+    "stepGoalNotificationToggleSubtitle": "Amikor eléred a napi lépéscélod",
+    "trainerCommentPushToggleLabel": "Edzői megjegyzések",
+    "trainerCommentPushToggleSubtitle": "Amikor az edződ megjegyzést fűz egy edzéshez",
+    "trainerGoalsPushToggleLabel": "Táplálkozási célok változása",
+    "trainerGoalsPushToggleSubtitle": "Amikor az edződ frissíti a táplálkozási céljaidat",
+    "programAssignedPushToggleLabel": "Új programok",
+    "programAssignedPushToggleSubtitle": "Amikor az edződ programot indít neked",
+    "reminderTimeLabel": "Időpont",
+    "notificationPermissionDeniedHint": "Az értesítések ki vannak kapcsolva a Lifey számára a rendszerbeállításokban. Kapcsold be őket a Beállításokban, hogy megkapd ezt az emlékeztetőt.",
+
     "editExerciseTitle": "Gyakorlat szerkesztése",
     "categoryLabel": "Kategória",
     "equipmentLabel": "Eszköz",
@@ -468,6 +489,8 @@
     "postWorkoutFeedbackSkipButton": "Kihagyás",
     "postWorkoutFeedbackSectionTitle": "Mennyire volt nehéz?",
     "postWorkoutFeedbackEmptyState": "Értékeld ezt az edzést",
+
+    "trainerCommentLabel": "Edzői megjegyzés",
 
     "onboardingWelcomeTitle": "Személyre szabjuk a terved",
     "onboardingWelcomeMessage": "Néhány gyors kérdés segít, hogy a megfelelő kalória-, makro- és vízcélokat javasoljuk neked.",

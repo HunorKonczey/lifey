@@ -7,6 +7,8 @@ import com.lifey.trainer.dto.TrainerClientResponse;
 import com.lifey.trainer.dto.TrainerInviteResponse;
 import com.lifey.trainer.dto.WeightTrendPoint;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -29,14 +31,18 @@ public final class TrainerClientMapper {
     }
 
     public static TrainerClientResponse toClientResponse(
-            TrainerClient tc, List<WeightTrendPoint> weightTrend, int assignedPlanCount, int workoutsPerWeek) {
+            TrainerClient tc, List<WeightTrendPoint> weightTrend, int assignedPlanCount, int workoutsPerWeek,
+            Instant lastActivityAt, LocalDate lastWeightAt, int missedWorkoutCount) {
         return new TrainerClientResponse(
                 tc.getClient().getId(),
                 tc.getClient().getEmail(),
                 tc.getRespondedAt(),
                 weightTrend,
                 assignedPlanCount,
-                workoutsPerWeek);
+                workoutsPerWeek,
+                lastActivityAt,
+                lastWeightAt,
+                missedWorkoutCount);
     }
 
     public static MyTrainerResponse toMyTrainerResponse(TrainerClient tc) {

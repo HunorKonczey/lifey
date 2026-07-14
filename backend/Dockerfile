@@ -15,7 +15,9 @@ RUN ./mvnw clean package -DskipTests -B
 # Runtime stage
 FROM eclipse-temurin:24-jre
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+RUN groupadd --system app && useradd --system --gid app app
+COPY --from=build --chown=app:app /app/target/*.jar app.jar
+USER app
 EXPOSE 8080
 # Without an explicit cap, the JVM sizes its default heap off the host's
 # *full* visible memory when the platform doesn't enforce a hard cgroup
@@ -26,4 +28,11 @@ EXPOSE 8080
 # under a 1 GB plan; override JAVA_OPTS in Railway's env vars to retune
 # without rebuilding.
 ENV JAVA_OPTS="-Xms128m -Xmx384m -XX:MaxMetaspaceSize=128m"
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+# Railway has no secret-file mount, so push credentials are supplied as
+# base64-encoded (sealed) env Variables and decoded to a file here on startup.
+# Each block is a no-op when its *_B64 var is unset, so a deploy with push
+# disabled boots exactly as before. See devops/deploy-backend-railway.md.
+ENTRYPOINT ["sh", "-c", "\
+  if [ -n \"$PUSH_FCM_CREDENTIALS_B64\" ]; then echo \"$PUSH_FCM_CREDENTIALS_B64\" | base64 -d > \"${PUSH_FCM_CREDENTIALS_PATH:-/tmp/firebase.json}\"; fi; \
+  if [ -n \"$PUSH_APNS_KEY_B64\" ]; then echo \"$PUSH_APNS_KEY_B64\" | base64 -d > \"${PUSH_APNS_KEY_PATH:-/tmp/apns.p8}\"; fi; \
+  java $JAVA_OPTS -jar app.jar"]

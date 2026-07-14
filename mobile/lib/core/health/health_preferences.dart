@@ -18,6 +18,7 @@ class HealthPreferences {
   static const _enabledKey = 'health.enabled';
   static const _lastWeightImportKey = 'health.lastHealthWeightImportedAt';
   static const _lastStepGoalNotifiedKey = 'health.lastStepGoalNotifiedDate';
+  static const _stepGoalNotificationEnabledKey = 'health.stepGoalNotificationEnabled';
 
   Future<bool> isEnabled() async {
     return (await _storage.read(key: _enabledKey)) == 'true';
@@ -49,12 +50,29 @@ class HealthPreferences {
     return _storage.write(key: _lastStepGoalNotifiedKey, value: date.toIso8601String());
   }
 
+  /// Whether the "daily step goal reached" local notification should fire at
+  /// all (docs/30-push-notifications-plan.md, M5) — defaults on, preserving
+  /// the pre-existing behavior for anyone who never visits the new
+  /// notification settings screen.
+  Future<bool> isStepGoalNotificationEnabled() async {
+    final raw = await _storage.read(key: _stepGoalNotificationEnabledKey);
+    return raw != 'false';
+  }
+
+  Future<void> setStepGoalNotificationEnabled(bool enabled) {
+    return _storage.write(
+      key: _stepGoalNotificationEnabledKey,
+      value: enabled ? 'true' : 'false',
+    );
+  }
+
   /// Clears device-local health preferences on logout, so a different
   /// account signing in on this device doesn't inherit them.
   Future<void> clear() async {
     await _storage.delete(key: _enabledKey);
     await _storage.delete(key: _lastWeightImportKey);
     await _storage.delete(key: _lastStepGoalNotifiedKey);
+    await _storage.delete(key: _stepGoalNotificationEnabledKey);
   }
 }
 

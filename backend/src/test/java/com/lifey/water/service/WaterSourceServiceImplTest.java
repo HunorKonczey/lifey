@@ -1,6 +1,7 @@
 package com.lifey.water.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
@@ -63,11 +64,7 @@ class WaterSourceServiceImplTest {
 
     @Test
     void create_savesAndReturnsResponse() {
-        when(repository.save(any(WaterSource.class))).thenAnswer(inv -> {
-            WaterSource s = inv.getArgument(0);
-            s.setId(5L);
-            return s;
-        });
+        when(repository.save(any(WaterSource.class))).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
         WaterSourceRequest request = new WaterSourceRequest("Water Bottle", 0.75);
 
         WaterSourceResponse result = service.create(request);
@@ -92,8 +89,9 @@ class WaterSourceServiceImplTest {
     @Test
     void update_throwsWhenMissing() {
         when(repository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
+        WaterSourceRequest request = new WaterSourceRequest("X", 1.0);
 
-        assertThatThrownBy(() -> service.update(99L, new WaterSourceRequest("X", 1.0)))
+        assertThatThrownBy(() -> service.update(99L, request))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Water source not found: 99");
     }
@@ -112,5 +110,10 @@ class WaterSourceServiceImplTest {
         s.setName(name);
         s.setVolumeLiters(volume);
         return s;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

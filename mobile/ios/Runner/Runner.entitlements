@@ -2,6 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Remote push (docs/30-push-notifications-plan.md, M1). "development" is
+	     the value for debug/dev-signed builds; App Store / TestFlight
+	     distribution needs "production". With automatic signing, Xcode's Push
+	     Notifications capability manages this at archive time; if you ever move
+	     to manual signing, add a per-config release entitlements file with
+	     "production". See devops/push-notifications-ios.md. The Push
+	     Notifications capability must also be enabled on the App ID on the
+	     Apple Developer portal. -->
+	<key>aps-environment</key>
+	<string>development</string>
 	<key>com.apple.developer.healthkit</key>
 	<true/>
 	<key>com.apple.developer.healthkit.access</key>

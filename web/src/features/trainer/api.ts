@@ -7,9 +7,16 @@ import type { MealResponse } from "@/features/nutrition/types";
 import type {
   AssignmentListItemResponse,
   AssignmentRequest,
-  AssignmentResponse,
+  BulkAssignmentResponse,
+  ClientNutritionGoalsRequest,
   ClientNutritionGoalsResponse,
   ContentType,
+  ProgramAssignmentRequest,
+  ProgramAssignmentResponse,
+  ProgramAssignmentSummaryResponse,
+  ProgramRequest,
+  ProgramResponse,
+  ProgramSummaryResponse,
   ScheduleRequest,
   ScheduleResponse,
   ScheduleSummaryResponse,
@@ -18,6 +25,8 @@ import type {
   TrainerClientResponse,
   TrainerInviteRequest,
   TrainerInviteResponse,
+  TrainerPreferencesRequest,
+  TrainerPreferencesResponse,
 } from "./types";
 
 export const trainerApi = {
@@ -30,7 +39,7 @@ export const trainerApi = {
   revokeClient: (clientId: number) => api.delete(`/trainer/clients/${clientId}`),
 
   assign: (body: AssignmentRequest) =>
-    api.post<AssignmentResponse>("/trainer/assignments", body),
+    api.post<BulkAssignmentResponse>("/trainer/assignments", body),
   assignmentsForClient: (clientId: number) =>
     api.get<AssignmentListItemResponse[]>(`/trainer/clients/${clientId}/assignments`),
   assignedClientIds: (contentType: ContentType, sourceId: number) =>
@@ -57,6 +66,15 @@ export const trainerApi = {
     api.get<Page<WorkoutSessionResponse>>(
       `/trainer/clients/${clientId}/workout-sessions?page=${page}&size=${size}`,
     ),
+  putSessionComment: (clientId: number, sessionId: number, comment: string) =>
+    api.put<WorkoutSessionResponse>(
+      `/trainer/clients/${clientId}/workout-sessions/${sessionId}/comment`,
+      { comment },
+    ),
+  deleteSessionComment: (clientId: number, sessionId: number) =>
+    api.delete<WorkoutSessionResponse>(
+      `/trainer/clients/${clientId}/workout-sessions/${sessionId}/comment`,
+    ),
   clientMeals: (clientId: number, from?: string, to?: string) => {
     const params = new URLSearchParams();
     if (from) params.set("from", from);
@@ -66,6 +84,8 @@ export const trainerApi = {
   },
   clientNutritionGoals: (clientId: number) =>
     api.get<ClientNutritionGoalsResponse>(`/trainer/clients/${clientId}/nutrition-goals`),
+  updateClientNutritionGoals: (clientId: number, goals: ClientNutritionGoalsRequest) =>
+    api.put<ClientNutritionGoalsResponse>(`/trainer/clients/${clientId}/nutrition-goals`, goals),
   /** Returns null (not an error) when the client has no profile picture set. */
   clientAvatar: async (clientId: number): Promise<Blob | null> => {
     try {
@@ -87,4 +107,22 @@ export const trainerApi = {
   cancelOccurrence: (sessionId: number) => api.delete(`/trainer/scheduled-sessions/${sessionId}`),
   calendarSessions: (from: string, to: string) =>
     api.get<TrainerCalendarSessionResponse[]>(`/trainer/scheduled-sessions?from=${from}&to=${to}`),
+
+  preferences: () => api.get<TrainerPreferencesResponse>("/trainer/preferences"),
+  updatePreferences: (body: TrainerPreferencesRequest) =>
+    api.put<TrainerPreferencesResponse>("/trainer/preferences", body),
+
+  createProgram: (body: ProgramRequest) => api.post<ProgramResponse>("/trainer/programs", body),
+  programs: () => api.get<ProgramSummaryResponse[]>("/trainer/programs"),
+  program: (programId: number) => api.get<ProgramResponse>(`/trainer/programs/${programId}`),
+  updateProgram: (programId: number, body: ProgramRequest) =>
+    api.put<ProgramResponse>(`/trainer/programs/${programId}`, body),
+  deleteProgram: (programId: number) => api.delete(`/trainer/programs/${programId}`),
+
+  assignProgram: (programId: number, body: ProgramAssignmentRequest) =>
+    api.post<ProgramAssignmentResponse>(`/trainer/programs/${programId}/assignments`, body),
+  programAssignmentsForClient: (clientId: number) =>
+    api.get<ProgramAssignmentSummaryResponse[]>(`/trainer/clients/${clientId}/program-assignments`),
+  cancelProgramAssignment: (assignmentId: number) =>
+    api.delete(`/trainer/program-assignments/${assignmentId}`),
 };

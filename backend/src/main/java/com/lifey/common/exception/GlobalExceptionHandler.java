@@ -6,10 +6,14 @@ import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.trainer.exception.AlreadyClientException;
 import com.lifey.trainer.exception.CalendarRangeExceededException;
 import com.lifey.trainer.exception.EmptyRecurrenceException;
+import com.lifey.trainer.exception.InvalidProgramStructureException;
 import com.lifey.trainer.exception.InviteNotFoundException;
 import com.lifey.trainer.exception.InviteRateLimitedException;
 import com.lifey.trainer.exception.NotYourClientException;
 import com.lifey.trainer.exception.OccurrenceNotCancellableException;
+import com.lifey.trainer.exception.ProgramAssignmentNotFoundException;
+import com.lifey.trainer.exception.ProgramNotFoundException;
+import com.lifey.trainer.exception.ProgramStartDateInvalidException;
 import com.lifey.trainer.exception.ScheduleHorizonExceededException;
 import com.lifey.trainer.exception.ScheduleInPastException;
 import com.lifey.trainer.exception.ScheduleNotFoundException;
@@ -150,6 +154,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(OccurrenceNotCancellableException.class)
     public ResponseEntity<ApiError> handleOccurrenceNotCancellable(OccurrenceNotCancellableException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(ProgramNotFoundException.class)
+    public ResponseEntity<ApiError> handleProgramNotFound(ProgramNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(InvalidProgramStructureException.class)
+    public ResponseEntity<ApiError> handleInvalidProgramStructure(InvalidProgramStructureException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(ProgramAssignmentNotFoundException.class)
+    public ResponseEntity<ApiError> handleProgramAssignmentNotFound(ProgramAssignmentNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(ProgramStartDateInvalidException.class)
+    public ResponseEntity<ApiError> handleProgramStartDateInvalid(ProgramStartDateInvalidException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler({RoleNotManageableException.class, CannotModifySelfException.class})

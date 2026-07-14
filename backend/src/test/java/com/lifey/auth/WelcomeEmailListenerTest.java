@@ -54,7 +54,7 @@ class WelcomeEmailListenerTest {
         user.setId(1L);
         user.setEmail("new@example.com");
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        org.mockito.Mockito.doThrow(new RuntimeException("boom")).when(mailService).sendWelcomeEmail(user);
+        doThrow(new RuntimeException("boom")).when(mailService).sendWelcomeEmail(user);
 
         assertThatCode(() -> listener.onUserRegistered(new UserRegisteredEvent(1L)))
                 .doesNotThrowAnyException();

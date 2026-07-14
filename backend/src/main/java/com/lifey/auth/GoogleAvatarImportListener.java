@@ -82,7 +82,7 @@ class GoogleAvatarImportListener {
         URI uri;
         try {
             uri = URI.create(pictureUrl);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             return null;
         }
         String host = uri.getHost();

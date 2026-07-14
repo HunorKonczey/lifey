@@ -10,10 +10,18 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/features/auth/store";
 import { ClientCard } from "@/features/trainer/components/ClientCard";
 import { ClientListModal } from "@/features/trainer/components/ClientListModal";
+import { ClientSortSelect } from "@/features/trainer/components/ClientSortSelect";
+import { NeedsAttentionSection } from "@/features/trainer/components/NeedsAttentionSection";
+import { sortClients, type ClientSortOption } from "@/features/trainer/compliance";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 
 const MODAL_SEEN_KEY = "lifey-admin-client-modal-shown";
+const SORT_KEY = "lifey-admin-client-sort";
+
+function isSortOption(value: string | null): value is ClientSortOption {
+  return value === "recent" || value === "leastActive" || value === "mostMissed" || value === "weightOverdue";
+}
 
 export default function AdminDashboardPage() {
   const t = useTranslations("admin.dashboard");
@@ -23,6 +31,20 @@ export default function AdminDashboardPage() {
   const [modalDismissed, setModalDismissed] = useState(
     () => typeof window !== "undefined" && sessionStorage.getItem(MODAL_SEEN_KEY) === "1",
   );
+  const [sort, setSort] = useState<ClientSortOption>(() => {
+    if (typeof window === "undefined") return "recent";
+    const stored = sessionStorage.getItem(SORT_KEY);
+    return isSortOption(stored) ? stored : "recent";
+  });
+
+  const updateSort = (value: ClientSortOption) => {
+    setSort(value);
+    try {
+      sessionStorage.setItem(SORT_KEY, value);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const { data: clients, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.trainerClients.all(),
@@ -62,6 +84,7 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
+          {clients && clients.length > 1 && <ClientSortSelect value={sort} onChange={updateSort} />}
           <Link
             href="/admin/invites"
             className="flex items-center gap-2 rounded-2xl px-4 py-2.5 text-[13px] font-extrabold"
@@ -112,8 +135,9 @@ export default function AdminDashboardPage() {
         </div>
       ) : (
         <>
+          <NeedsAttentionSection clients={clients} />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {clients.map((c) => (
+            {sortClients(clients, sort).map((c) => (
               <ClientCard
                 key={c.clientId}
                 client={c}

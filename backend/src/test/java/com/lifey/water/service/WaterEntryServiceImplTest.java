@@ -1,6 +1,7 @@
 package com.lifey.water.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.user.User;
 import com.lifey.user.UserRepository;
@@ -60,11 +61,7 @@ class WaterEntryServiceImplTest {
 
     @Test
     void create_manualEntry_savesWithoutSource() {
-        when(repository.save(any(WaterEntry.class))).thenAnswer(inv -> {
-            WaterEntry e = inv.getArgument(0);
-            e.setId(3L);
-            return e;
-        });
+        when(repository.save(any(WaterEntry.class))).thenAnswer(inv -> withId(inv.getArgument(0), 3L));
         Instant consumedAt = Instant.parse("2026-06-18T08:00:00Z");
         WaterEntryRequest request = new WaterEntryRequest(consumedAt, null, 0.5);
 
@@ -84,11 +81,7 @@ class WaterEntryServiceImplTest {
         source.setName("Creatine Shake");
         source.setVolumeLiters(0.9);
         when(sourceRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(source));
-        when(repository.save(any(WaterEntry.class))).thenAnswer(inv -> {
-            WaterEntry e = inv.getArgument(0);
-            e.setId(4L);
-            return e;
-        });
+        when(repository.save(any(WaterEntry.class))).thenAnswer(inv -> withId(inv.getArgument(0), 4L));
         WaterEntryRequest request =
                 new WaterEntryRequest(Instant.parse("2026-06-18T08:00:00Z"), 1L, 0.9);
 
@@ -174,5 +167,10 @@ class WaterEntryServiceImplTest {
             assertThat(r.id()).isEqualTo(2L);
             assertThat(r.deletedAt()).isEqualTo(deleted.getDeletedAt());
         });
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }

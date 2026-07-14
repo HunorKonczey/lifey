@@ -29,6 +29,12 @@ spring:
       # Profile picture and recipe photo uploads (docs/22-profile-picture-plan.md)
       # — well above a re-encoded image but small enough to bound memory per
       # request, and generous enough for a camera photo before the server resizes it.
+      # Sonar (java:S5693) flags this as above its generic 8MB DoS-prevention
+      # default — reviewed and accepted: both upload endpoints require
+      # authentication (not anonymous/public), accept one file per request,
+      # and re-encode/resize the image server-side immediately after upload
+      # (see ImageReencoder), so 10MB buys real camera-photo headroom without
+      # a meaningfully larger abuse surface than 8MB would.
       max-file-size: 10MB
       max-request-size: 10MB
   flyway:
@@ -95,6 +101,9 @@ lifey:
       # Comma-separated list of accepted audiences: Android, iOS, and Web OAuth
       # client IDs — any of the three is a valid ID-token audience.
       client-ids: ${OAUTH_GOOGLE_CLIENT_IDS:}
+      # Google's published JWKS endpoint — override only for pointing at a
+      # local mock JWKS server in a non-prod environment.
+      jwks-uri: ${OAUTH_GOOGLE_JWKS_URI:https://www.googleapis.com/oauth2/v3/certs}
   openfoodfacts:
     base-url: ${OPENFOODFACTS_BASE_URL:https://world.openfoodfacts.org}
     # OpenFoodFacts requires a descriptive User-Agent identifying the app and a
@@ -109,6 +118,27 @@ lifey:
     # sending so local dev and tests never require a real Resend account.
     enabled: ${MAIL_ENABLED:false}
     resend-api-key: ${RESEND_API_KEY:}
+  push:
+    apns:
+      # Off by default — no bean is created (see ApnsPushSender's
+      # @ConditionalOnProperty), so local dev/CI never need a real APNs key.
+      enabled: ${PUSH_APNS_ENABLED:false}
+      # Path to the .p8 token-auth signing key downloaded from the Apple
+      # Developer portal (Keys > Push Notifications).
+      key-path: ${PUSH_APNS_KEY_PATH:}
+      key-id: ${PUSH_APNS_KEY_ID:}
+      team-id: ${PUSH_APNS_TEAM_ID:}
+      bundle-id: ${PUSH_APNS_BUNDLE_ID:com.khunor.lifey}
+      # True for development-signed builds (Xcode debug); false in production.
+      sandbox: ${PUSH_APNS_SANDBOX:true}
+    fcm:
+      # Off by default — no Firebase beans are created (see FcmConfig's
+      # @ConditionalOnProperty), so local dev/CI never need real Firebase
+      # credentials.
+      enabled: ${PUSH_FCM_ENABLED:false}
+      # Path to the Firebase service-account JSON key (Firebase console >
+      # Project settings > Service accounts > Generate new private key).
+      credentials-path: ${PUSH_FCM_CREDENTIALS_PATH:}
   trainer-invite:
     # Optional email channel for accepting a trainer invite, alongside the
     # existing mobile polling flow (ClientInviteController). Off by default —
@@ -117,3 +147,16 @@ lifey:
     # Used to build the accept/decline links in the invite email; the links
     # point back at this backend's own public endpoint, not a frontend route.
     public-base-url: ${TRAINER_INVITE_PUBLIC_BASE_URL:http://localhost:8080}
+  jobs:
+    password-reset-cleanup:
+      # Daily sweep removing expired/used password reset tokens (PasswordResetTokenCleanupJob).
+      cron: ${JOB_PASSWORD_RESET_CLEANUP_CRON:0 0 3 * * *}
+    trainer-weekly-report:
+      # Weekly trainer report email, every Monday (TrainerWeeklyReportJob).
+      cron: ${JOB_TRAINER_WEEKLY_REPORT_CRON:0 0 5 * * MON}
+    trainer-client-cleanup:
+      # Daily sweep expiring stale PENDING trainer invites (TrainerClientCleanupJob).
+      cron: ${JOB_TRAINER_CLIENT_CLEANUP_CRON:0 30 3 * * *}
+    workout-reminder:
+      # Per-user-local-time workout reminder tick, every 15 minutes (WorkoutReminderJob).
+      cron: ${JOB_WORKOUT_REMINDER_CRON:0 */15 * * * *}

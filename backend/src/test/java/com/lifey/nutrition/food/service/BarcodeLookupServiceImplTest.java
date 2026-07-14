@@ -80,7 +80,7 @@ class BarcodeLookupServiceImplTest {
 
         BarcodeLookupResponse result = service.lookup("8586022215544");
 
-        assertThat(result.name()).isEqualTo("");
+        assertThat(result.name()).isEmpty();
     }
 
     @Test

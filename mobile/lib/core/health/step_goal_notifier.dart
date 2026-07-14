@@ -50,6 +50,7 @@ class StepGoalNotifier with WidgetsBindingObserver {
 
     final prefs = _ref.read(healthPreferencesProvider);
     if (!await prefs.isEnabled()) return;
+    if (!await prefs.isStepGoalNotificationEnabled()) return;
 
     final settings = _ref.read(settingsControllerProvider).value;
     final goal = settings?.dailyStepGoal;

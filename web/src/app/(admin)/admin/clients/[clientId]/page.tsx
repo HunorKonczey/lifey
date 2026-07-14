@@ -122,6 +122,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
       {tab === "schedule" && (
         <ClientScheduleTab
           clientId={clientId}
+          clientEmail={client.clientEmail}
           onOpenDrawer={() => setScheduleDrawerOpen(true)}
           onViewSession={(sessionId) => {
             setFocusSessionId(sessionId);

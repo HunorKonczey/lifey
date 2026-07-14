@@ -1,5 +1,6 @@
 package com.lifey.mail.service;
 
+import com.lifey.mail.WeeklyTrainerReport;
 import com.lifey.user.User;
 
 /**
@@ -14,4 +15,7 @@ public interface MailService {
     void sendPasswordResetEmail(User user, String code);
 
     void sendTrainerInviteEmail(User client, User trainer, String acceptUrl, String declineUrl);
+
+    /** Weekly digest of a trainer's active clients (docs/33-weekly-trainer-report-plan.md). */
+    void sendWeeklyTrainerReport(User trainer, WeeklyTrainerReport report);
 }

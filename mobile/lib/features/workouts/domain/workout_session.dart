@@ -49,6 +49,8 @@ class WorkoutSession {
     this.scheduleId,
     this.rpe,
     this.feedbackNote,
+    this.trainerComment,
+    this.trainerCommentAt,
   });
 
   final String clientId;
@@ -96,6 +98,14 @@ class WorkoutSession {
 
   /// Optional free-text note captured alongside [rpe].
   final String? feedbackNote;
+
+  /// The trainer's single editable comment on this session; null when
+  /// uncommented. Trainer-owned — never sent in this app's create/update
+  /// payload (see `WorkoutSessionRepository._payload`).
+  final String? trainerComment;
+
+  /// When [trainerComment] was last written; null when uncommented.
+  final DateTime? trainerCommentAt;
 
   bool get inProgress => startedAt != null && finishedAt == null;
 

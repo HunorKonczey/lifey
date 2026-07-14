@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -41,7 +42,7 @@ class UserDetailsControllerTest {
     @Test
     void get_returnsOk() throws Exception {
         when(userDetailsService.get()).thenReturn(new UserDetailsResponse(
-                Gender.MALE, LocalDate.of(1990, 1, 1), 180.0, ActivityLevel.MODERATE, PrimaryGoal.MAINTAIN,
+                Gender.MALE, LocalDate.of(1990, Month.JANUARY, 1), 180.0, ActivityLevel.MODERATE, PrimaryGoal.MAINTAIN,
                 null, Instant.parse("2026-06-18T08:00:00Z"), Instant.parse("2026-06-18T08:00:00Z")));
 
         mockMvc.perform(get("/api/v1/user-details"))
@@ -87,7 +88,7 @@ class UserDetailsControllerTest {
     @Test
     void update_validRequestReturnsOk() throws Exception {
         when(userDetailsService.upsert(any())).thenReturn(new UserDetailsResponse(
-                Gender.FEMALE, LocalDate.of(1995, 5, 1), 165.0, ActivityLevel.LIGHT, PrimaryGoal.LOSE_WEIGHT,
+                Gender.FEMALE, LocalDate.of(1995, Month.MAY, 1), 165.0, ActivityLevel.LIGHT, PrimaryGoal.LOSE_WEIGHT,
                 60.0, Instant.parse("2026-06-18T08:00:00Z"), Instant.parse("2026-06-18T08:00:00Z")));
 
         mockMvc.perform(put("/api/v1/user-details").contentType(MediaType.APPLICATION_JSON)
@@ -126,7 +127,7 @@ class UserDetailsControllerTest {
     @Test
     void partialUpdate_validRequestReturnsOk() throws Exception {
         when(userDetailsService.partialUpdate(any())).thenReturn(new UserDetailsResponse(
-                Gender.MALE, LocalDate.of(1990, 1, 1), 182.0, ActivityLevel.MODERATE, PrimaryGoal.MAINTAIN,
+                Gender.MALE, LocalDate.of(1990, Month.JANUARY, 1), 182.0, ActivityLevel.MODERATE, PrimaryGoal.MAINTAIN,
                 null, Instant.parse("2026-06-18T08:00:00Z"), Instant.parse("2026-06-18T08:00:00Z")));
 
         mockMvc.perform(patch("/api/v1/user-details").contentType(MediaType.APPLICATION_JSON)

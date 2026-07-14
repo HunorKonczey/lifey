@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/push/weigh_in_reminder_controller.dart';
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
 import '../data/weight_repository.dart';
@@ -13,8 +14,11 @@ class WeightController extends StreamNotifier<List<WeightEntry>> {
   @override
   Stream<List<WeightEntry>> build() => _repo.watchAll();
 
-  Future<void> addEntry({required DateTime date, required double weight}) {
-    return _repo.create(date: date, weight: weight);
+  Future<void> addEntry({required DateTime date, required double weight}) async {
+    await _repo.create(date: date, weight: weight);
+    // In case today's weight was just logged — skip today's weigh-in
+    // reminder if it's still pending (see WeighInReminderController).
+    await ref.read(weighInReminderControllerProvider).refreshForToday();
   }
 
   Future<void> deleteEntry(String clientId) {

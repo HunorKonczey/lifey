@@ -6,6 +6,9 @@ import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_preferences.dart';
 import '../../../core/local_db/database_provider.dart';
 import '../../../core/network/session_events.dart';
+import '../../../core/notifications/notification_service.dart';
+import '../../../core/push/push_token_registrar.dart';
+import '../../../core/push/weigh_in_reminder_preferences.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/sync/connectivity_sync_controller.dart';
 import '../../my_trainers/application/my_trainers_controller.dart';
@@ -34,6 +37,9 @@ class AuthController extends AsyncNotifier<AuthUser?> {
 
     final accessToken = await _storage.readAccessToken();
     if (accessToken == null) return null;
+    // Cold start while already signed in — (re-)registers the push token,
+    // e.g. after an APNs/FCM rotation that happened while the app was closed.
+    unawaited(ref.read(pushTokenRegistrarProvider).register());
     return AuthUser.fromAccessToken(accessToken);
   }
 
@@ -51,6 +57,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     final tokens = await _repo.login(email: email, password: password);
     await _storage.save(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
     state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
+    unawaited(ref.read(pushTokenRegistrarProvider).register());
     // Sign-in doesn't itself trigger a connectivity-restore or app-resume
     // event, so kick off the initial pull explicitly instead of waiting for
     // one of those triggers (or the 60s timer) to happen to fire.
@@ -67,6 +74,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     final tokens = await _repo.loginWithGoogle(idToken);
     await _storage.save(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
     state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
+    unawaited(ref.read(pushTokenRegistrarProvider).register());
     unawaited(ref.read(connectivitySyncControllerProvider).refreshNow());
     // The backend imports the Google picture asynchronously after this call
     // already returned, so an immediate refetch can still race it and cache
@@ -109,11 +117,18 @@ class AuthController extends AsyncNotifier<AuthUser?> {
 
   Future<void> logout() async {
     final refreshToken = await _storage.readRefreshToken();
+    // Must run before storage.clear() below — the DELETE call needs the
+    // still-valid access token to identify the caller.
+    await ref.read(pushTokenRegistrarProvider).unregister();
     await _storage.clear();
     // Wipe the offline cache too, so a different account signing in on this
     // device doesn't inherit this account's settings, weight, meals, etc.
     await ref.read(appDatabaseProvider).clearAllData();
     await ref.read(healthPreferencesProvider).clear();
+    // Same reasoning as healthPreferences.clear() above — a device-local
+    // notification schedule shouldn't carry over to whoever logs in next.
+    await NotificationService.cancelWeighInReminder();
+    await ref.read(weighInReminderPreferencesProvider).clear();
     await ref.read(avatarRepositoryProvider).clearCache();
     await ref.read(recipeImageRepositoryProvider).clearCache();
     // clearCache()/clear() above only wipe on-disk/secure storage; these

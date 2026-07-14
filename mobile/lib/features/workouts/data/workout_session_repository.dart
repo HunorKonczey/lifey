@@ -116,6 +116,48 @@ class WorkoutSessionRepository {
     });
   }
 
+  /// Looks up a single session by its backend id — used by the trainer-comment
+  /// push tap to open the exact commented session (docs/31-session-feedback-loop-plan.md,
+  /// M3). Returns null if it hasn't synced to this device yet (e.g. the push
+  /// beat the next pull); the caller falls back to the workouts tab.
+  Future<WorkoutSession?> findByServerId(int serverId) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.serverId.equals(serverId)))
+        .getSingleOrNull();
+    if (row == null) return null;
+
+    final exerciseNames = {
+      for (final e in await _db.select(_db.exercises).get()) e.clientId: e.name,
+    };
+    final plannedRows = await (_db.select(_db.workoutSessionExercises)
+          ..where((t) => t.sessionClientId.equals(row.clientId)))
+        .get();
+    final setRows = await (_db.select(_db.exerciseSets)
+          ..where((t) => t.sessionClientId.equals(row.clientId)))
+        .get();
+
+    final exercises = [
+      for (final p in plannedRows)
+        SessionExercise(
+          exerciseClientId: p.exerciseClientId,
+          exerciseName: exerciseNames[p.exerciseClientId] ?? 'Unknown',
+          targetSets: p.targetSets,
+        ),
+    ];
+    final sets = [
+      for (final s in setRows)
+        ExerciseSet(
+          exerciseClientId: s.exerciseClientId,
+          exerciseName: exerciseNames[s.exerciseClientId] ?? 'Unknown',
+          reps: s.reps,
+          weight: s.weight,
+          performedAt: s.performedAt,
+        ),
+    ]..sort((a, b) => a.performedAt.compareTo(b.performedAt));
+
+    return _toDomain(row, exercises, sets);
+  }
+
   /// Returns the newly generated [WorkoutSession.clientId] so callers can keep
   /// editing the same session (e.g. auto-saving each set without re-creating).
   Future<String> create({
@@ -168,30 +210,59 @@ class WorkoutSessionRepository {
     return clientId;
   }
 
+  /// The enrichment fields ([activeCalories], [averageHeartRate],
+  /// [healthWorkoutId], [rpe], [feedbackNote]) use [Value] so "not my field"
+  /// and "clear this field" stay distinct: an absent field keeps whatever the
+  /// row currently holds. Callers pass only the fields their flow owns — the
+  /// health import doesn't know about the rating, the session editor doesn't
+  /// know about health data — and both the server payload and the backend's
+  /// update are full replaces, so a caller-supplied null would otherwise wipe
+  /// the other flow's data (rating a session used to disconnect its Apple
+  /// Health workout, and vice versa).
   Future<void> update(
     String clientId, {
     required DateTime startedAt,
     DateTime? finishedAt,
     required List<PlannedExerciseInput> exercises,
     required List<ExerciseSetInput> sets,
-    double? activeCalories,
-    double? averageHeartRate,
-    String? healthWorkoutId,
-    int? rpe,
-    String? feedbackNote,
+    Value<double?> activeCalories = const Value.absent(),
+    Value<double?> averageHeartRate = const Value.absent(),
+    Value<String?> healthWorkoutId = const Value.absent(),
+    Value<int?> rpe = const Value.absent(),
+    Value<String?> feedbackNote = const Value.absent(),
   }) async {
+    // Merged (caller-supplied or preserved) values, resolved inside the
+    // transaction but also needed for the outbox payload below.
+    double? mergedActiveCalories;
+    double? mergedAverageHeartRate;
+    String? mergedHealthWorkoutId;
+    int? mergedRpe;
+    String? mergedFeedbackNote;
     await _db.transaction(() async {
+      final row = await (_db.select(_db.workoutSessions)
+            ..where((t) => t.clientId.equals(clientId)))
+          .getSingle();
+      mergedActiveCalories =
+          activeCalories.present ? activeCalories.value : row.activeCalories;
+      mergedAverageHeartRate = averageHeartRate.present
+          ? averageHeartRate.value
+          : row.averageHeartRate;
+      mergedHealthWorkoutId =
+          healthWorkoutId.present ? healthWorkoutId.value : row.healthWorkoutId;
+      mergedRpe = rpe.present ? rpe.value : row.rpe;
+      mergedFeedbackNote =
+          feedbackNote.present ? feedbackNote.value : row.feedbackNote;
       await (_db.update(_db.workoutSessions)
             ..where((t) => t.clientId.equals(clientId)))
           .write(
         WorkoutSessionsCompanion(
           startedAt: Value(startedAt),
           finishedAt: Value(finishedAt),
-          activeCalories: Value(activeCalories),
-          averageHeartRate: Value(averageHeartRate),
-          healthWorkoutId: Value(healthWorkoutId),
-          rpe: Value(rpe),
-          feedbackNote: Value(feedbackNote),
+          activeCalories: Value(mergedActiveCalories),
+          averageHeartRate: Value(mergedAverageHeartRate),
+          healthWorkoutId: Value(mergedHealthWorkoutId),
+          rpe: Value(mergedRpe),
+          feedbackNote: Value(mergedFeedbackNote),
         ),
       );
       await (_db.delete(_db.workoutSessionExercises)
@@ -210,11 +281,11 @@ class WorkoutSessionRepository {
         finishedAt: finishedAt,
         exercises: exercises,
         sets: sets,
-        activeCalories: activeCalories,
-        averageHeartRate: averageHeartRate,
-        healthWorkoutId: healthWorkoutId,
-        rpe: rpe,
-        feedbackNote: feedbackNote,
+        activeCalories: mergedActiveCalories,
+        averageHeartRate: mergedAverageHeartRate,
+        healthWorkoutId: mergedHealthWorkoutId,
+        rpe: mergedRpe,
+        feedbackNote: mergedFeedbackNote,
       ),
     );
   }
@@ -223,7 +294,8 @@ class WorkoutSessionRepository {
   /// full editing state in memory (e.g. the dashboard's "rate this workout"
   /// nudge) — reads the session's current fields/children and resubmits them
   /// through [update] with the new rating, since sessions are always synced
-  /// as a full replace.
+  /// as a full replace. The other enrichment fields are left absent so
+  /// [update] preserves them from the row.
   Future<void> rate(
     String clientId, {
     required int rpe,
@@ -257,11 +329,8 @@ class WorkoutSessionRepository {
             performedAt: s.performedAt,
           ),
       ],
-      activeCalories: row.activeCalories,
-      averageHeartRate: row.averageHeartRate,
-      healthWorkoutId: row.healthWorkoutId,
-      rpe: rpe,
-      feedbackNote: feedbackNote,
+      rpe: Value(rpe),
+      feedbackNote: Value(feedbackNote),
     );
   }
 
@@ -374,6 +443,8 @@ class WorkoutSessionRepository {
       scheduleId: row.scheduleId,
       rpe: row.rpe,
       feedbackNote: row.feedbackNote,
+      trainerComment: row.trainerComment,
+      trainerCommentAt: row.trainerCommentAt,
     );
   }
 

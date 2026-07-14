@@ -7,6 +7,7 @@ describe("queryKeys", () => {
     expect(queryKeys.meals.byDate("2026-06-28")).toEqual(["meals", "date", "2026-06-28"]);
     expect(queryKeys.statistics.daily("2026-06-28")).toEqual(["statistics", "daily", "2026-06-28"]);
     expect(queryKeys.foods.detail(5)).toEqual(["foods", 5]);
+    expect(queryKeys.trainerPreferences.all()).toEqual(["trainer-preferences"]);
   });
 
   it("varies the key by argument", () => {

@@ -2,18 +2,18 @@ package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
-import com.lifey.trainer.ContentType;
+import com.lifey.trainer.ProgramAssignmentRepository;
 import com.lifey.trainer.Recurrence;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.WorkoutScheduleRepository;
-import com.lifey.trainer.dto.AssignmentRequest;
 import com.lifey.trainer.dto.OccurrenceStatus;
 import com.lifey.trainer.dto.ScheduleRequest;
 import com.lifey.trainer.dto.ScheduleResponse;
 import com.lifey.trainer.dto.ScheduleSummaryResponse;
 import com.lifey.trainer.dto.ScheduledSessionResponse;
 import com.lifey.trainer.dto.TrainerCalendarSessionResponse;
+import com.lifey.trainer.entity.ProgramAssignment;
 import com.lifey.trainer.entity.TrainerClient;
 import com.lifey.trainer.entity.WorkoutSchedule;
 import com.lifey.trainer.exception.CalendarRangeExceededException;
@@ -38,6 +38,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Schedule creation/materialization/cancellation (docs/personal_trainer/
@@ -60,6 +61,7 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
     private final TrainerClientRepository trainerClientRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ProgramAssignmentRepository programAssignmentRepository;
 
     @Override
     public ScheduleResponse create(ScheduleRequest request) {
@@ -84,7 +86,7 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
         List<LocalDate> occurrenceDates = OccurrenceGenerator.generate(
                 request.recurrence(), request.daysOfWeek(), request.startDate(), endDate);
 
-        WorkoutTemplate clientTemplate = resolveClientTemplate(trainerId, request.clientId(), sourceTemplate);
+        WorkoutTemplate clientTemplate = contentAssignmentService.resolveClientCopy(trainerId, request.clientId(), sourceTemplate);
 
         WorkoutSchedule schedule = new WorkoutSchedule();
         schedule.setTrainer(userRepository.getReferenceById(trainerId));
@@ -116,21 +118,6 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
                 saved.getId(), request.clientId(), sourceTemplate.getId(), clientTemplate.getName(),
                 request.recurrence(), request.daysOfWeek(), request.timeOfDay(),
                 request.startDate(), endDate, occurrenceDates.size());
-    }
-
-    /**
-     * Reuses the client's existing live copy of this exact trainer template if one
-     * already exists (from an earlier assignment or schedule); otherwise deep-copies
-     * it via {@link ContentAssignmentService} — scheduling is thus an implicit assignment.
-     */
-    private WorkoutTemplate resolveClientTemplate(Long trainerId, Long clientId, WorkoutTemplate sourceTemplate) {
-        return workoutTemplateRepository.findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
-                        clientId, trainerId, sourceTemplate.getId())
-                .orElseGet(() -> {
-                    Long copiedId = contentAssignmentService.assign(
-                            new AssignmentRequest(clientId, ContentType.TEMPLATE, sourceTemplate.getId())).copiedId();
-                    return workoutTemplateRepository.getReferenceById(copiedId);
-                });
     }
 
     @Override
@@ -178,7 +165,8 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
     private ScheduledSessionResponse toOccurrenceResponse(WorkoutSession session) {
         return new ScheduledSessionResponse(
                 session.getId(), session.getScheduledFor(), session.getScheduledTime(),
-                session.getTemplateName(), occurrenceStatus(session), session.getScheduleId());
+                session.getTemplateName(), occurrenceStatus(session), session.getScheduleId(),
+                session.getProgramAssignmentId());
     }
 
     private OccurrenceStatus occurrenceStatus(WorkoutSession session) {
@@ -213,20 +201,43 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
             clientEmailsById.put(tc.getClient().getId(), tc.getClient().getEmail());
         }
 
-        return workoutSessionRepository
+        List<WorkoutSession> sessions = workoutSessionRepository
                 .findByUserIdInAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(
-                        List.copyOf(clientEmailsById.keySet()), from, to)
-                .stream()
-                .map(session -> toCalendarResponse(session, clientEmailsById))
+                        List.copyOf(clientEmailsById.keySet()), from, to);
+
+        Map<Long, String> programNamesById = programNamesById(sessions);
+
+        return sessions.stream()
+                .map(session -> toCalendarResponse(session, clientEmailsById, programNamesById))
                 .toList();
     }
 
-    private TrainerCalendarSessionResponse toCalendarResponse(WorkoutSession session, Map<Long, String> clientEmailsById) {
+    /** Batch-resolves the denormalized {@code programName} for every distinct program assignment referenced. */
+    private Map<Long, String> programNamesById(List<WorkoutSession> sessions) {
+        List<Long> programAssignmentIds = sessions.stream()
+                .map(WorkoutSession::getProgramAssignmentId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (programAssignmentIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, String> names = new HashMap<>();
+        for (ProgramAssignment assignment : programAssignmentRepository.findAllById(programAssignmentIds)) {
+            names.put(assignment.getId(), assignment.getProgramName());
+        }
+        return names;
+    }
+
+    private TrainerCalendarSessionResponse toCalendarResponse(
+            WorkoutSession session, Map<Long, String> clientEmailsById, Map<Long, String> programNamesById) {
         Long clientId = session.getUser().getId();
+        Long programAssignmentId = session.getProgramAssignmentId();
         return new TrainerCalendarSessionResponse(
                 session.getId(), clientId, clientEmailsById.get(clientId),
                 session.getScheduledFor(), session.getScheduledTime(),
-                session.getTemplateName(), occurrenceStatus(session), session.getScheduleId());
+                session.getTemplateName(), occurrenceStatus(session), session.getScheduleId(),
+                programAssignmentId, programAssignmentId == null ? null : programNamesById.get(programAssignmentId));
     }
 
     @Override
@@ -251,11 +262,16 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
     public void cancelOccurrence(Long sessionId) {
         Long trainerId = currentUserProvider.getUserId();
         WorkoutSession occurrence = workoutSessionRepository.findById(sessionId)
-                .filter(session -> session.getScheduleId() != null)
-                .orElseThrow(() -> new ScheduleNotFoundException("Scheduled session not found: " + sessionId));
+                .filter(session -> session.getScheduleId() != null || session.getProgramAssignmentId() != null)
+                .orElseThrow(() -> sessionNotFound(sessionId));
 
-        workoutScheduleRepository.findByIdAndTrainerId(occurrence.getScheduleId(), trainerId)
-                .orElseThrow(() -> new ScheduleNotFoundException("Scheduled session not found: " + sessionId));
+        if (occurrence.getScheduleId() != null) {
+            workoutScheduleRepository.findByIdAndTrainerId(occurrence.getScheduleId(), trainerId)
+                    .orElseThrow(() -> sessionNotFound(sessionId));
+        } else {
+            programAssignmentRepository.findByIdAndTrainerId(occurrence.getProgramAssignmentId(), trainerId)
+                    .orElseThrow(() -> sessionNotFound(sessionId));
+        }
 
         if (occurrence.getStartedAt() != null || occurrence.getDeletedAt() != null
                 || occurrence.getScheduledFor().isBefore(LocalDate.now())) {
@@ -271,5 +287,9 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
                 .findByTrainerIdAndClientIdAndCancelledAtIsNull(trainerId, clientId)) {
             cancel(schedule);
         }
+    }
+
+    private static ScheduleNotFoundException sessionNotFound(Long sessionId) {
+        return new ScheduleNotFoundException("Scheduled session not found: " + sessionId);
     }
 }

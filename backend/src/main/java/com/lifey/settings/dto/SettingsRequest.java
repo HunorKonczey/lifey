@@ -34,6 +34,18 @@ public record SettingsRequest(
         ThemePreference theme,
 
         @NotNull
-        LanguagePreference language
+        LanguagePreference language,
+
+        @NotNull
+        Boolean workoutReminderEnabled,
+
+        @NotNull
+        Boolean trainerCommentPushEnabled,
+
+        @NotNull
+        Boolean trainerGoalsPushEnabled,
+
+        @NotNull
+        Boolean programAssignedPushEnabled
 ) {
 }

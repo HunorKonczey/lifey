@@ -1,7 +1,6 @@
 package com.lifey.trainer.dto;
 
 import com.lifey.trainer.Recurrence;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.DayOfWeek;

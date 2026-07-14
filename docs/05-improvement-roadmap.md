@@ -73,7 +73,7 @@ clients, assignments, schedules, calendar) on the web admin.
 
 ### Progress Tracking
 
-#### 10. Progress Photos and Body Measurements
+#### 10. Progress Photos and Body Measurements 
 
 * Photo timeline with side-by-side compare
 * Measurements: waist, chest, arms, thighs — history + charts
@@ -86,37 +86,37 @@ clients, assignments, schedules, calendar) on the web admin.
 
 ## Trainer (Web Admin)
 
-#### 12. Compliance Overview
+#### 12. Compliance Overview (DONE)
 
 * Client list sortable/flagged by: days since last log, missed scheduled
   workouts, weight not logged
 * "Needs attention" section on the trainer dashboard
 * All required data already exists — aggregation only
 
-#### 13. Session Feedback Loop
+#### 13. Session Feedback Loop (DONE)
 
 * Trainer sees client RPE + notes per session (depends on #4)
 * Trainer can comment on a session; client receives a push (depends on #8)
 * Minimal viable communication feature — no full chat needed
 
-#### 14. Multi-Week Program Builder
+#### 14. Multi-Week Program Builder (plan: 34-multi-week-program-plan.md)
 
 * Build 4–12 week programs: weekly structure, progression between weeks
 * Assigning a program generates the scheduled sessions automatically
 * Extends the existing schedule/assignment model
 
-#### 15. Bulk Assignment
+#### 15. Bulk Assignment (plan: 35-bulk-assignment-plan.md)
 
 * Assign a template or recipe to multiple clients at once
 * Extension of the existing AssignmentController
 
-#### 16. Weekly Trainer Report Email
+#### 16. Weekly Trainer Report Email (DONE, plan: 33-weekly-trainer-report-plan.md)
 
 * Automatic weekly summary per client: completed workouts, calorie goal
   adherence, weight change
 * Mail module already exists
 
-#### 17. Trainer-Set Nutrition Goals
+#### 17. Trainer-Set Nutrition Goals (DONE, plan: 32-trainer-nutrition-goals-plan.md)
 
 * Trainer can edit (not just view) a client's nutrition goals
 * Client is notified of changes
@@ -147,5 +147,5 @@ Phase 4 — bigger bets:
 11. Multi-week program builder (#14)
 12. Widget / Live Activity (#9)
 
-Remaining items (#11, #15, #16, #17) are independent quick-to-medium wins
+Remaining items (#11, #15) are independent quick-to-medium wins
 that can be slotted in wherever convenient.

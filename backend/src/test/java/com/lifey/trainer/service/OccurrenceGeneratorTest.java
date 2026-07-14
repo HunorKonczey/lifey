@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,7 +17,7 @@ class OccurrenceGeneratorTest {
 
     @Test
     void once_producesSingleDate() {
-        LocalDate date = LocalDate.of(2026, 7, 10);
+        LocalDate date = LocalDate.of(2026, Month.JULY, 10);
 
         List<LocalDate> dates = OccurrenceGenerator.generate(Recurrence.ONCE, List.of(), date, date);
 
@@ -26,21 +27,21 @@ class OccurrenceGeneratorTest {
     @Test
     void daily_producesEveryDayInclusive_acrossMonthBoundary() {
         List<LocalDate> dates = OccurrenceGenerator.generate(
-                Recurrence.DAILY, List.of(), LocalDate.of(2026, 1, 30), LocalDate.of(2026, 2, 2));
+                Recurrence.DAILY, List.of(), LocalDate.of(2026, Month.JANUARY, 30), LocalDate.of(2026, Month.FEBRUARY, 2));
 
         assertThat(dates).containsExactly(
-                LocalDate.of(2026, 1, 30), LocalDate.of(2026, 1, 31),
-                LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 2));
+                LocalDate.of(2026, Month.JANUARY, 30), LocalDate.of(2026, Month.JANUARY, 31),
+                LocalDate.of(2026, Month.FEBRUARY, 1), LocalDate.of(2026, Month.FEBRUARY, 2));
     }
 
     @Test
     void daily_handlesLeapDay() {
         List<LocalDate> dates = OccurrenceGenerator.generate(
-                Recurrence.DAILY, List.of(), LocalDate.of(2028, 2, 27), LocalDate.of(2028, 3, 1));
+                Recurrence.DAILY, List.of(), LocalDate.of(2028, Month.FEBRUARY, 27), LocalDate.of(2028, Month.MARCH, 1));
 
         assertThat(dates).containsExactly(
-                LocalDate.of(2028, 2, 27), LocalDate.of(2028, 2, 28),
-                LocalDate.of(2028, 2, 29), LocalDate.of(2028, 3, 1));
+                LocalDate.of(2028, Month.FEBRUARY, 27), LocalDate.of(2028, Month.FEBRUARY, 28),
+                LocalDate.of(2028, Month.FEBRUARY, 29), LocalDate.of(2028, Month.MARCH, 1));
     }
 
     @Test
@@ -48,32 +49,37 @@ class OccurrenceGeneratorTest {
         // 2026-07-06 is a Monday.
         List<LocalDate> dates = OccurrenceGenerator.generate(
                 Recurrence.WEEKLY, List.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY),
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 19));
+                LocalDate.of(2026, Month.JULY, 6), LocalDate.of(2026, Month.JULY, 19));
 
         assertThat(dates).containsExactly(
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 9),
-                LocalDate.of(2026, 7, 13), LocalDate.of(2026, 7, 16));
+                LocalDate.of(2026, Month.JULY, 6), LocalDate.of(2026, Month.JULY, 9),
+                LocalDate.of(2026, Month.JULY, 13), LocalDate.of(2026, Month.JULY, 16));
     }
 
     @Test
     void weekly_noMatchInRange_throwsEmptyRecurrence() {
-        assertThatThrownBy(() -> OccurrenceGenerator.generate(
-                Recurrence.WEEKLY, List.of(DayOfWeek.SUNDAY),
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 10)))
+        List<DayOfWeek> sundayOnly = List.of(DayOfWeek.SUNDAY);
+        LocalDate from = LocalDate.of(2026, Month.JULY, 6);
+        LocalDate to = LocalDate.of(2026, Month.JULY, 10);
+
+        assertThatThrownBy(() -> OccurrenceGenerator.generate(Recurrence.WEEKLY, sundayOnly, from, to))
                 .isInstanceOf(EmptyRecurrenceException.class);
     }
 
     @Test
     void exceedsSanityCap_throwsHorizonExceeded() {
-        assertThatThrownBy(() -> OccurrenceGenerator.generate(
-                Recurrence.DAILY, List.of(), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 1)))
+        List<DayOfWeek> noDays = List.of();
+        LocalDate from = LocalDate.of(2026, Month.JANUARY, 1);
+        LocalDate to = LocalDate.of(2026, Month.JUNE, 1);
+
+        assertThatThrownBy(() -> OccurrenceGenerator.generate(Recurrence.DAILY, noDays, from, to))
                 .isInstanceOf(ScheduleHorizonExceededException.class);
     }
 
     @Test
     void threeMonthDailyRange_staysUnderCap() {
         List<LocalDate> dates = OccurrenceGenerator.generate(
-                Recurrence.DAILY, List.of(), LocalDate.of(2026, 7, 6), LocalDate.of(2026, 10, 6));
+                Recurrence.DAILY, List.of(), LocalDate.of(2026, Month.JULY, 6), LocalDate.of(2026, Month.OCTOBER, 6));
 
         assertThat(dates).hasSizeLessThanOrEqualTo(OccurrenceGenerator.MAX_OCCURRENCES);
     }

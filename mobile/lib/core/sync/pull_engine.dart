@@ -565,6 +565,10 @@ class PullEngine {
             dailyFatGoal: Value(json['dailyFatGoal'] as int?),
             dailyWaterGoalLiters: Value((json['dailyWaterGoalLiters'] as num?)?.toDouble()),
             dailyStepGoal: Value(json['dailyStepGoal'] as int?),
+            workoutReminderEnabled: Value(json['workoutReminderEnabled'] as bool? ?? true),
+            trainerCommentPushEnabled: Value(json['trainerCommentPushEnabled'] as bool? ?? true),
+            trainerGoalsPushEnabled: Value(json['trainerGoalsPushEnabled'] as bool? ?? true),
+            programAssignedPushEnabled: Value(json['programAssignedPushEnabled'] as bool? ?? true),
           ),
         );
   }
@@ -762,6 +766,7 @@ class PullEngine {
     final templateClientId = templateServerId != null
         ? await _localClientId('workout_templates', templateServerId)
         : null;
+    final trainerCommentAtRaw = json['trainerCommentAt'] as String?;
     final values = WorkoutSessionsCompanion(
       // Null for a trainer-scheduled session that hasn't been started yet.
       startedAt: Value(startedRaw != null ? DateTime.parse(startedRaw) : null),
@@ -778,6 +783,9 @@ class PullEngine {
       scheduleId: Value(json['scheduleId'] as int?),
       rpe: Value(json['rpe'] as int?),
       feedbackNote: Value(json['feedbackNote'] as String?),
+      trainerComment: Value(json['trainerComment'] as String?),
+      trainerCommentAt:
+          Value(trainerCommentAtRaw != null ? DateTime.parse(trainerCommentAtRaw) : null),
     );
     final plannedExerciseIds = await _mapServerIds(
       'exercises',

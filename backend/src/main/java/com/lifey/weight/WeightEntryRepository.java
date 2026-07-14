@@ -41,6 +41,10 @@ public interface WeightEntryRepository extends JpaRepository<WeightEntry, Long> 
 
     Optional<WeightEntry> findFirstByUserIdAndDeletedAtIsNullOrderByDateDescRecordedAtDesc(Long userId);
 
+    /** Newest entry strictly before a date — baseline for the weekly trainer report's weight-change calc (docs/33). */
+    Optional<WeightEntry> findFirstByUserIdAndDeletedAtIsNullAndDateLessThanOrderByDateDescRecordedAtDesc(
+            Long userId, LocalDate date);
+
     Optional<WeightEntry> findByIdAndUserId(Long id, Long userId);
 
     /**

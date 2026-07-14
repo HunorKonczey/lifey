@@ -2,6 +2,8 @@ package com.lifey.mail;
 
 import com.lifey.settings.LanguagePreference;
 
+import java.util.Locale;
+
 /**
  * The two languages templates are actually written in. {@link LanguagePreference#SYSTEM}
  * has no server-resolvable locale, so it (and any missing settings row) falls
@@ -16,5 +18,9 @@ public enum MailLanguage {
             return HU;
         }
         return EN;
+    }
+
+    Locale toLocale() {
+        return this == HU ? Locale.forLanguageTag("hu") : Locale.ENGLISH;
     }
 }

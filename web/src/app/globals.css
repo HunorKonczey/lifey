@@ -15,7 +15,10 @@
   --tertiary:           #6E9A6A;
   --on-surface:         #F1F0E4;
   --on-surface-variant: #A8A899;
-  --muted:              #777264;
+  /* Was #777264 — below WCAG AA 4.5:1 against every surface tone it's
+     paired with (3.27–3.78:1, verified). Lightened to the same hue,
+     preserving the "quieter than on-surface-variant" character. */
+  --muted:              #918B7A;
   --outline:            #3C3E32;
   --border:             transparent;
   --error:              #CF6679;
@@ -77,7 +80,9 @@
   --tertiary:           #4A7A52;
   --on-surface:         #1E1F18;
   --on-surface-variant: #5C5C50;
-  --muted:              #9A9A8C;
+  /* Was #9A9A8C — below WCAG AA 4.5:1 against every surface tone it's
+     paired with (2.37–2.85:1, verified). Darkened to the same hue. */
+  --muted:              #696960;
   --outline:            #CDCBBC;
   --border:             #E2E0D2;
   --error:              #CF6679;

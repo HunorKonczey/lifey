@@ -1,5 +1,6 @@
 package com.lifey.trainer;
 
+import com.lifey.trainer.service.ProgramAssignmentService;
 import com.lifey.trainer.service.WorkoutScheduleService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,13 +16,17 @@ class ScheduleCancellationListenerTest {
     @Mock
     WorkoutScheduleService workoutScheduleService;
 
+    @Mock
+    ProgramAssignmentService programAssignmentService;
+
     @InjectMocks
     ScheduleCancellationListener listener;
 
     @Test
-    void onTrainerClientRevoked_cancelsSchedulesForThePair() {
+    void onTrainerClientRevoked_cancelsSchedulesAndProgramAssignmentsForThePair() {
         listener.onTrainerClientRevoked(new TrainerClientRevokedEvent(1L, 2L));
 
         verify(workoutScheduleService).cancelActiveSchedulesForPair(1L, 2L);
+        verify(programAssignmentService).cancelActiveAssignmentsForPair(1L, 2L);
     }
 }

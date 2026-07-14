@@ -21,9 +21,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -47,7 +49,7 @@ class WorkoutScheduleControllerTest {
     void create_returnsCreated() throws Exception {
         when(workoutScheduleService.create(any())).thenReturn(new ScheduleResponse(
                 9L, 2L, 7L, "Push day", com.lifey.trainer.Recurrence.ONCE, List.of(), null,
-                LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 10), 1));
+                LocalDate.of(2026, Month.JULY, 10), LocalDate.of(2026, Month.JULY, 10), 1));
 
         mockMvc.perform(post("/api/v1/trainer/schedules").contentType(MediaType.APPLICATION_JSON)
                         .content(ONCE_BODY))
@@ -95,7 +97,7 @@ class WorkoutScheduleControllerTest {
         when(workoutScheduleService.findForClient(2L)).thenReturn(List.of(new ScheduleSummaryResponse(
                 9L, 2L, 7L, "Push day", com.lifey.trainer.Recurrence.WEEKLY,
                 List.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.THURSDAY), null,
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 10, 6), 3, 1, 20, null)));
+                LocalDate.of(2026, Month.JULY, 6), LocalDate.of(2026, Month.OCTOBER, 6), 3, 1, 20, null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients/2/schedules"))
                 .andExpect(status().isOk())
@@ -105,9 +107,9 @@ class WorkoutScheduleControllerTest {
 
     @Test
     void findScheduledSessions_returnsOccurrences() throws Exception {
-        when(workoutScheduleService.findScheduledSessions(2L, LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13)))
+        when(workoutScheduleService.findScheduledSessions(2L, LocalDate.of(2026, Month.JULY, 6), LocalDate.of(2026, Month.JULY, 13)))
                 .thenReturn(List.of(new ScheduledSessionResponse(
-                        30L, LocalDate.of(2026, 7, 9), null, "Push day", OccurrenceStatus.UPCOMING, 9L)));
+                        30L, LocalDate.of(2026, Month.JULY, 9), null, "Push day", OccurrenceStatus.UPCOMING, 9L, null)));
 
         mockMvc.perform(get("/api/v1/trainer/clients/2/scheduled-sessions")
                         .param("from", "2026-07-06").param("to", "2026-07-13"))
@@ -118,10 +120,10 @@ class WorkoutScheduleControllerTest {
     @Test
     void findScheduledSessionsForTrainer_returnsOccurrencesAcrossClients() throws Exception {
         when(workoutScheduleService.findScheduledSessionsForTrainer(
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 13)))
+                LocalDate.of(2026, Month.JULY, 6), LocalDate.of(2026, Month.JULY, 13)))
                 .thenReturn(List.of(new TrainerCalendarSessionResponse(
-                        30L, 2L, "anna@example.com", LocalDate.of(2026, 7, 9), null,
-                        "Push day", OccurrenceStatus.UPCOMING, 9L)));
+                        30L, 2L, "anna@example.com", LocalDate.of(2026, Month.JULY, 9), null,
+                        "Push day", OccurrenceStatus.UPCOMING, 9L, null, null)));
 
         mockMvc.perform(get("/api/v1/trainer/scheduled-sessions")
                         .param("from", "2026-07-06").param("to", "2026-07-13"))
@@ -149,7 +151,7 @@ class WorkoutScheduleControllerTest {
 
     @Test
     void cancelSchedule_notOwnedReturns404() throws Exception {
-        org.mockito.Mockito.doThrow(new ScheduleNotFoundException("nope"))
+        doThrow(new ScheduleNotFoundException("nope"))
                 .when(workoutScheduleService).cancelSchedule(9L);
 
         mockMvc.perform(delete("/api/v1/trainer/schedules/9"))
@@ -164,7 +166,7 @@ class WorkoutScheduleControllerTest {
 
     @Test
     void cancelOccurrence_notCancellableReturns409() throws Exception {
-        org.mockito.Mockito.doThrow(new OccurrenceNotCancellableException("nope"))
+        doThrow(new OccurrenceNotCancellableException("nope"))
                 .when(workoutScheduleService).cancelOccurrence(30L);
 
         mockMvc.perform(delete("/api/v1/trainer/scheduled-sessions/30"))

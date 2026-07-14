@@ -40,6 +40,10 @@ class SettingsRepository {
       dailyFatGoal: Value(settings.dailyFatGoal),
       dailyWaterGoalLiters: Value(settings.dailyWaterGoalLiters),
       dailyStepGoal: Value(settings.dailyStepGoal),
+      workoutReminderEnabled: Value(settings.workoutReminderEnabled),
+      trainerCommentPushEnabled: Value(settings.trainerCommentPushEnabled),
+      trainerGoalsPushEnabled: Value(settings.trainerGoalsPushEnabled),
+      programAssignedPushEnabled: Value(settings.programAssignedPushEnabled),
     );
 
     if (existing == null) {
@@ -62,6 +66,10 @@ class SettingsRepository {
       dailyFatGoal: row.dailyFatGoal,
       dailyWaterGoalLiters: row.dailyWaterGoalLiters,
       dailyStepGoal: row.dailyStepGoal,
+      workoutReminderEnabled: row.workoutReminderEnabled,
+      trainerCommentPushEnabled: row.trainerCommentPushEnabled,
+      trainerGoalsPushEnabled: row.trainerGoalsPushEnabled,
+      programAssignedPushEnabled: row.programAssignedPushEnabled,
     );
   }
 }

@@ -14,6 +14,8 @@ public interface WorkoutTemplateRepository extends JpaRepository<WorkoutTemplate
 
     Optional<WorkoutTemplate> findByIdAndUserId(Long id, Long userId);
 
+    Optional<WorkoutTemplate> findByIdAndUserIdAndDeletedAtIsNull(Long id, Long userId);
+
     /** The client's existing live copy of a specific trainer template, if a previous assignment created one. */
     Optional<WorkoutTemplate> findByUserIdAndOriginTrainerIdAndOriginSourceIdAndDeletedAtIsNull(
             Long userId, Long originTrainerId, Long originSourceId);

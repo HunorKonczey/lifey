@@ -66,9 +66,9 @@ public class JwtService {
             return Jwts.parser().verifyWith(key).build()
                     .parseSignedClaims(token)
                     .getPayload();
-        } catch (ExpiredJwtException ex) {
+        } catch (ExpiredJwtException _) {
             throw new TokenExpiredException("Access token expired");
-        } catch (JwtException | IllegalArgumentException ex) {
+        } catch (JwtException | IllegalArgumentException _) {
             throw new InvalidTokenException("Invalid access token");
         }
     }

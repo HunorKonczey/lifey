@@ -81,7 +81,7 @@ class RecipeControllerTest {
         Page<RecipeResponse> page = new PageImpl<>(
                 List.of(new RecipeResponse(2L, "Banana bread", null, false, 1, List.of(), Instant.now(), null, null, null)),
                 pageable, 1);
-        when(recipeService.findPage(eq(pageable), eq("banana"))).thenReturn(page);
+        when(recipeService.findPage(pageable, "banana")).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/recipes").param("page", "0").param("search", "banana"))
                 .andExpect(status().isOk())

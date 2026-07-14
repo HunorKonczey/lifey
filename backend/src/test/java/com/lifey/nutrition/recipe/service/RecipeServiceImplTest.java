@@ -1,6 +1,7 @@
 package com.lifey.nutrition.recipe.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.nutrition.food.Food;
 import com.lifey.nutrition.food.FoodRepository;
@@ -32,6 +33,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -68,11 +70,7 @@ class RecipeServiceImplTest {
     @Test
     void create_resolvesFoodsAndReturnsResponse() {
         when(foodRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(food(1L, "Chicken")));
-        when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> {
-            Recipe r = inv.getArgument(0);
-            r.setId(7L);
-            return r;
-        });
+        when(recipeRepository.save(any(Recipe.class))).thenAnswer(inv -> withId(inv.getArgument(0), 7L));
         RecipeRequest request = new RecipeRequest("Chicken & rice", "prep", true, 2,
                 List.of(new RecipeIngredientRequest(1L, 200.0)));
 
@@ -166,10 +164,8 @@ class RecipeServiceImplTest {
 
         List<RecipeResponse> result = service.findAll();
 
-        assertThat(result).extracting(RecipeResponse::name)
-                .containsExactly("Apple pie", "Banana bread");
-        assertThat(result).extracting(RecipeResponse::favorite)
-                .containsExactly(true, false);
+        assertThat(result).extracting(RecipeResponse::name, RecipeResponse::favorite)
+                .containsExactly(tuple("Apple pie", true), tuple("Banana bread", false));
     }
 
     @Test
@@ -245,7 +241,7 @@ class RecipeServiceImplTest {
         Pageable pageable = PageRequest.of(0, 10);
         Page<Recipe> page = new PageImpl<>(List.of(recipe(2L, "Banana bread", false)), pageable, 1);
         when(recipeRepository.findByUserIdAndDeletedAtIsNullAndNameContainingIgnoreCase(
-                eq(USER_ID), eq("banana"), eq(pageable))).thenReturn(page);
+                USER_ID, "banana", pageable)).thenReturn(page);
 
         Page<RecipeResponse> result = service.findPage(pageable, "  banana  ");
 
@@ -288,5 +284,10 @@ class RecipeServiceImplTest {
         f.setCaloriesPer100g(100);
         f.setProteinPer100g(10);
         return f;
+    }
+
+    private static <T extends BaseEntity> T withId(T entity, Long id) {
+        entity.setId(id);
+        return entity;
     }
 }
