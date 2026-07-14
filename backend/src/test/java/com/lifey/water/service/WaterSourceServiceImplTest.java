@@ -89,8 +89,9 @@ class WaterSourceServiceImplTest {
     @Test
     void update_throwsWhenMissing() {
         when(repository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
+        WaterSourceRequest request = new WaterSourceRequest("X", 1.0);
 
-        assertThatThrownBy(() -> service.update(99L, new WaterSourceRequest("X", 1.0)))
+        assertThatThrownBy(() -> service.update(99L, request))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Water source not found: 99");
     }

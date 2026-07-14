@@ -106,7 +106,8 @@ class WorkoutReminderJob {
     }
 
     private static String describeSession(WorkoutSession session, boolean hungarian) {
-        String name = session.getTemplateName() != null ? session.getTemplateName() : (hungarian ? "Edzés" : "Workout");
+        String workoutText = hungarian ? "Edzés" : "Workout";
+        String name = session.getTemplateName() != null ? session.getTemplateName() : workoutText;
         if (session.getScheduledTime() == null) {
             return name;
         }

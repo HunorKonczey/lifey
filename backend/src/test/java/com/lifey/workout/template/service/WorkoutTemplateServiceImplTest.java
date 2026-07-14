@@ -139,9 +139,9 @@ class WorkoutTemplateServiceImplTest {
     @Test
     void update_throwsWhenTemplateMissing() {
         when(templateRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
+        WorkoutTemplateRequest request = new WorkoutTemplateRequest("X", List.of(new TemplateExerciseEntry(1L, null)));
 
-        assertThatThrownBy(() -> service.update(99L, new WorkoutTemplateRequest("X",
-                List.of(new TemplateExerciseEntry(1L, null)))))
+        assertThatThrownBy(() -> service.update(99L, request))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Workout template not found: 99");
     }

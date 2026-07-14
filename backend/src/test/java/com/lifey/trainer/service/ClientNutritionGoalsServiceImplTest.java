@@ -92,9 +92,9 @@ class ClientNutritionGoalsServiceImplTest {
     void updateGoals_notYourClientPropagatesAndNeverTouchesSettings() {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID))
                 .thenThrow(new NotYourClientException("nope"));
+        ClientNutritionGoalsRequest request = new ClientNutritionGoalsRequest(2200, 150, 240, 70);
 
-        assertThatThrownBy(() -> service.updateGoals(
-                TRAINER_ID, CLIENT_ID, new ClientNutritionGoalsRequest(2200, 150, 240, 70)))
+        assertThatThrownBy(() -> service.updateGoals(TRAINER_ID, CLIENT_ID, request))
                 .isInstanceOf(NotYourClientException.class);
 
         verify(settingsService, never()).updateNutritionGoalsForUser(any(), any(), any(), any(), any());

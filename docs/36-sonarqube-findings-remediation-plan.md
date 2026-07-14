@@ -504,6 +504,49 @@ involvement.
 
 ---
 
+## Post-Phase-2 correction: broader S5778 pattern
+
+After Phase 6 shipped, the user shared the actual SonarQube for IDE panel
+(real file/line info this time), revealing Phase 2's S5778 fix was
+**incomplete**: it only covered `.thenAnswer(inv -> { ...; return x; })`
+block lambdas. A second, more common pattern was still flagged everywhere:
+`assertThatThrownBy(() -> service.method(new SomeRequest(...)))` — a
+single-*expression* lambda, but with **two** invocations in it (the
+`new SomeRequest(...)` construction and the `service.method(...)` call).
+Confirmed real via the panel: `ProgramAssignmentServiceImplTest.java` (6
+occurrences) and `RecipeImageServiceImplTest.java` (1, a helper-method call
+`pngUpload(10, 10)` rather than a constructor — same shape).
+
+The rule's actual intent, now clear: for an exception-assertion lambda
+specifically, ambiguity about *which* invocation could throw undermines
+what the assertion is testing — even a single-expression lambda is flagged
+if it nests 2+ calls. (This doesn't contradict the Phase 2 `withId(...)`
+fix, which remains valid: those are `.thenAnswer` stubs, not exception
+assertions, and stayed unflagged in the new panel view.)
+
+Swept the whole backend test suite for the same shape (`assertThatThrownBy`
+whose lambda body contains 2+ call-like expressions) and fixed all 29
+occurrences across 12 files — `FoodServiceImplTest`,
+`RecipeImageServiceImplTest`, `ClientNutritionGoalsServiceImplTest`,
+`ContentAssignmentServiceImplTest` (4), `ProgramAssignmentServiceImplTest`
+(6), `TrainerInviteServiceImplTest` (6), `TrainingProgramServiceImplTest`,
+`WaterSourceServiceImplTest`, `WorkoutTemplateServiceImplTest`,
+`WorkoutScheduleServiceImplTest` (4), `OccurrenceGeneratorTest` (2) — by
+extracting the constructed request/argument to a local variable *before*
+the assertion, so the lambda passed to `assertThatThrownBy` contains
+exactly one invocation (the service call under test). One test
+(`RecipeImageServiceImplTest.upload_throwsWhenRecipeNotOwned`) needed
+`throws IOException` added to its signature since the extracted
+`pngUpload(...)` helper call is no longer wrapped in the lambda's implicit
+`Throwable`-tolerant context. Re-scanned after the fix: 0 remaining.
+
+Also added `@SuppressWarnings("java:S4502")` to `SecurityConfig.filterChain`
+— the Phase 4 fix only left an explanatory `//` comment, which documents
+intent for humans but doesn't actually suppress the finding for SonarLint/
+SonarQube (that requires a recognized annotation or `NOSONAR` comment).
+
+Verified: 636/636 backend tests green after every fix in this correction.
+
 ## Suggested execution order
 
 1 → 2 → 3 → 4 → 6, with **5 last and possibly partial** (per the Option B

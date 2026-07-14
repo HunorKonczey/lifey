@@ -105,8 +105,9 @@ class ContentAssignmentServiceImplTest {
     void assign_throwsWhenNotAnActiveClient() {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID))
                 .thenThrow(new NotYourClientException("nope"));
+        AssignmentRequest request = new AssignmentRequest(List.of(CLIENT_ID), ContentType.TEMPLATE, 7L);
 
-        assertThatThrownBy(() -> service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.TEMPLATE, 7L)))
+        assertThatThrownBy(() -> service.assign(request))
                 .isInstanceOf(NotYourClientException.class);
         verify(contentAssignmentRepository, never()).save(any());
     }
@@ -115,8 +116,9 @@ class ContentAssignmentServiceImplTest {
     void assign_template_throwsWhenTemplateNotOwnedByTrainer() {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
         when(workoutTemplateRepository.findByIdAndUserId(7L, TRAINER_ID)).thenReturn(Optional.empty());
+        AssignmentRequest request = new AssignmentRequest(List.of(CLIENT_ID), ContentType.TEMPLATE, 7L);
 
-        assertThatThrownBy(() -> service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.TEMPLATE, 7L)))
+        assertThatThrownBy(() -> service.assign(request))
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(contentAssignmentRepository, never()).save(any());
     }
@@ -612,8 +614,9 @@ class ContentAssignmentServiceImplTest {
     void assign_recipe_throwsWhenRecipeNotOwnedByTrainer() {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
         when(recipeRepository.findByIdAndUserId(12L, TRAINER_ID)).thenReturn(Optional.empty());
+        AssignmentRequest request = new AssignmentRequest(List.of(CLIENT_ID), ContentType.RECIPE, 12L);
 
-        assertThatThrownBy(() -> service.assign(new AssignmentRequest(List.of(CLIENT_ID), ContentType.RECIPE, 12L)))
+        assertThatThrownBy(() -> service.assign(request))
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(contentAssignmentRepository, never()).save(any());
     }
@@ -713,9 +716,9 @@ class ContentAssignmentServiceImplTest {
         when(trainerAccessService.requireActiveClient(TRAINER_ID, CLIENT_ID)).thenReturn(new TrainerClient());
         when(trainerAccessService.requireActiveClient(TRAINER_ID, OTHER_CLIENT_ID))
                 .thenThrow(new NotYourClientException("nope"));
+        AssignmentRequest request = new AssignmentRequest(List.of(CLIENT_ID, OTHER_CLIENT_ID), ContentType.TEMPLATE, 7L);
 
-        assertThatThrownBy(() -> service.assign(
-                new AssignmentRequest(List.of(CLIENT_ID, OTHER_CLIENT_ID), ContentType.TEMPLATE, 7L)))
+        assertThatThrownBy(() -> service.assign(request))
                 .isInstanceOf(NotYourClientException.class);
 
         verify(workoutTemplateRepository, never()).findByIdAndUserId(any(), any());

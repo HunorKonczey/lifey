@@ -236,16 +236,18 @@ class FoodServiceImplTest {
         Food existing = food(3L, "Old", 100, 10);
         when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
         when(repository.findByUserIdAndNameIgnoreCase(USER_ID, "Rice")).thenReturn(Optional.of(food(9L, "Rice", 130, 2.7)));
+        FoodRequest request = new FoodRequest("Rice", 200.0, 25.0, null, null, null, false);
 
-        assertThatThrownBy(() -> service.update(3L, new FoodRequest("Rice", 200.0, 25.0, null, null, null, false)))
+        assertThatThrownBy(() -> service.update(3L, request))
                 .isInstanceOf(DuplicateResourceException.class);
     }
 
     @Test
     void update_throwsWhenMissing() {
         when(repository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
+        FoodRequest request = new FoodRequest("X", 1.0, 1.0, null, null, null, false);
 
-        assertThatThrownBy(() -> service.update(99L, new FoodRequest("X", 1.0, 1.0, null, null, null, false)))
+        assertThatThrownBy(() -> service.update(99L, request))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 

@@ -90,8 +90,9 @@ class TrainerInviteServiceImplTest {
     @Test
     void invite_throwsWhenNoUserWithThatEmail() {
         when(userRepository.findByEmailIgnoreCase("nobody@example.com")).thenReturn(Optional.empty());
+        TrainerInviteRequest request = new TrainerInviteRequest("nobody@example.com");
 
-        assertThatThrownBy(() -> service.invite(new TrainerInviteRequest("nobody@example.com")))
+        assertThatThrownBy(() -> service.invite(request))
                 .isInstanceOf(UserNotFoundForInviteException.class);
         verify(trainerClientRepository, never()).save(any());
     }
@@ -102,8 +103,9 @@ class TrainerInviteServiceImplTest {
         self.setId(TRAINER_ID);
         self.setEmail("me@example.com");
         when(userRepository.findByEmailIgnoreCase("me@example.com")).thenReturn(Optional.of(self));
+        TrainerInviteRequest request = new TrainerInviteRequest("me@example.com");
 
-        assertThatThrownBy(() -> service.invite(new TrainerInviteRequest("me@example.com")))
+        assertThatThrownBy(() -> service.invite(request))
                 .isInstanceOf(SelfInviteException.class);
     }
 
@@ -113,8 +115,9 @@ class TrainerInviteServiceImplTest {
         when(userRepository.findByEmailIgnoreCase("client@example.com")).thenReturn(Optional.of(client));
         when(trainerClientRepository.existsByTrainerIdAndClientIdAndStatus(TRAINER_ID, CLIENT_ID, TrainerClientStatus.ACTIVE))
                 .thenReturn(true);
+        TrainerInviteRequest request = new TrainerInviteRequest("client@example.com");
 
-        assertThatThrownBy(() -> service.invite(new TrainerInviteRequest("client@example.com")))
+        assertThatThrownBy(() -> service.invite(request))
                 .isInstanceOf(AlreadyClientException.class);
         verify(trainerClientRepository, never()).save(any());
     }
@@ -127,8 +130,9 @@ class TrainerInviteServiceImplTest {
         recent.setCreatedAt(Instant.now().minusSeconds(3600));
         when(trainerClientRepository.findFirstByTrainerIdAndClientIdOrderByCreatedAtDesc(TRAINER_ID, CLIENT_ID))
                 .thenReturn(Optional.of(recent));
+        TrainerInviteRequest request = new TrainerInviteRequest("client@example.com");
 
-        assertThatThrownBy(() -> service.invite(new TrainerInviteRequest("client@example.com")))
+        assertThatThrownBy(() -> service.invite(request))
                 .isInstanceOf(InviteRateLimitedException.class);
         verify(trainerClientRepository, never()).save(any());
     }
@@ -156,8 +160,9 @@ class TrainerInviteServiceImplTest {
         when(trainerClientRepository.findFirstByTrainerIdAndClientIdOrderByCreatedAtDesc(TRAINER_ID, CLIENT_ID))
                 .thenReturn(Optional.empty());
         when(trainerClientRepository.countByTrainerIdAndCreatedAtAfter(eq(TRAINER_ID), any())).thenReturn(20L);
+        TrainerInviteRequest request = new TrainerInviteRequest("client@example.com");
 
-        assertThatThrownBy(() -> service.invite(new TrainerInviteRequest("client@example.com")))
+        assertThatThrownBy(() -> service.invite(request))
                 .isInstanceOf(InviteRateLimitedException.class);
         verify(trainerClientRepository, never()).save(any());
     }
@@ -269,8 +274,9 @@ class TrainerInviteServiceImplTest {
         when(currentUserProvider.getUserId()).thenReturn(CLIENT_ID);
         when(trainerClientRepository.findByIdAndClientIdAndStatus(99L, CLIENT_ID, TrainerClientStatus.PENDING))
                 .thenReturn(Optional.empty());
+        RespondToInviteRequest request = new RespondToInviteRequest(true);
 
-        assertThatThrownBy(() -> service.respond(99L, new RespondToInviteRequest(true)))
+        assertThatThrownBy(() -> service.respond(99L, request))
                 .isInstanceOf(InviteNotFoundException.class);
     }
 

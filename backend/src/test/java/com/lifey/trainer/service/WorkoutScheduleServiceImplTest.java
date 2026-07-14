@@ -162,7 +162,9 @@ class WorkoutScheduleServiceImplTest {
 
     @Test
     void create_pastStartDate_throws() {
-        assertThatThrownBy(() -> service.create(onceRequest(LocalDate.now().minusDays(1))))
+        ScheduleRequest request = onceRequest(LocalDate.now().minusDays(1));
+
+        assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ScheduleInPastException.class);
     }
 
@@ -187,8 +189,9 @@ class WorkoutScheduleServiceImplTest {
     @Test
     void create_foreignTemplate_throwsNotFound() {
         when(workoutTemplateRepository.findByIdAndUserId(TEMPLATE_ID, TRAINER_ID)).thenReturn(Optional.empty());
+        ScheduleRequest request = onceRequest(LocalDate.now().plusDays(1));
 
-        assertThatThrownBy(() -> service.create(onceRequest(LocalDate.now().plusDays(1))))
+        assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -326,16 +329,18 @@ class WorkoutScheduleServiceImplTest {
     @Test
     void findScheduledSessionsForTrainer_rangeBeyond62Days_throws() {
         LocalDate from = LocalDate.of(2026, Month.JULY, 6);
+        LocalDate to = from.plusDays(63);
 
-        assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, from.plusDays(63)))
+        assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, to))
                 .isInstanceOf(CalendarRangeExceededException.class);
     }
 
     @Test
     void findScheduledSessionsForTrainer_toBeforeFrom_throws() {
         LocalDate from = LocalDate.of(2026, Month.JULY, 6);
+        LocalDate to = from.minusDays(1);
 
-        assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, from.minusDays(1)))
+        assertThatThrownBy(() -> service.findScheduledSessionsForTrainer(from, to))
                 .isInstanceOf(CalendarRangeExceededException.class);
     }
 

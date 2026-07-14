@@ -77,6 +77,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings("java:S4502") // reviewed: see the .csrf(...) comment below
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtService jwtService,
                                            JwtAuthenticationEntryPoint entryPoint,

@@ -58,16 +58,21 @@ class OccurrenceGeneratorTest {
 
     @Test
     void weekly_noMatchInRange_throwsEmptyRecurrence() {
-        assertThatThrownBy(() -> OccurrenceGenerator.generate(
-                Recurrence.WEEKLY, List.of(DayOfWeek.SUNDAY),
-                LocalDate.of(2026, Month.JULY, 6), LocalDate.of(2026, Month.JULY, 10)))
+        List<DayOfWeek> sundayOnly = List.of(DayOfWeek.SUNDAY);
+        LocalDate from = LocalDate.of(2026, Month.JULY, 6);
+        LocalDate to = LocalDate.of(2026, Month.JULY, 10);
+
+        assertThatThrownBy(() -> OccurrenceGenerator.generate(Recurrence.WEEKLY, sundayOnly, from, to))
                 .isInstanceOf(EmptyRecurrenceException.class);
     }
 
     @Test
     void exceedsSanityCap_throwsHorizonExceeded() {
-        assertThatThrownBy(() -> OccurrenceGenerator.generate(
-                Recurrence.DAILY, List.of(), LocalDate.of(2026, Month.JANUARY, 1), LocalDate.of(2026, Month.JUNE, 1)))
+        List<DayOfWeek> noDays = List.of();
+        LocalDate from = LocalDate.of(2026, Month.JANUARY, 1);
+        LocalDate to = LocalDate.of(2026, Month.JUNE, 1);
+
+        assertThatThrownBy(() -> OccurrenceGenerator.generate(Recurrence.DAILY, noDays, from, to))
                 .isInstanceOf(ScheduleHorizonExceededException.class);
     }
 

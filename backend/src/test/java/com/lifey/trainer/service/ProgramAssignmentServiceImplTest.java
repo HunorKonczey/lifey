@@ -228,29 +228,35 @@ class ProgramAssignmentServiceImplTest {
 
     @Test
     void assign_nonMondayStart_throws() {
-        assertThatThrownBy(() -> service.assign(PROGRAM_ID, new ProgramAssignmentRequest(CLIENT_ID, A_MONDAY.plusDays(1))))
+        ProgramAssignmentRequest request = new ProgramAssignmentRequest(CLIENT_ID, A_MONDAY.plusDays(1));
+
+        assertThatThrownBy(() -> service.assign(PROGRAM_ID, request))
                 .isInstanceOf(ProgramStartDateInvalidException.class);
     }
 
     @Test
     void assign_pastStart_throws() {
-        assertThatThrownBy(() -> service.assign(PROGRAM_ID, new ProgramAssignmentRequest(CLIENT_ID, LocalDate.of(2020, Month.JANUARY, 6))))
+        ProgramAssignmentRequest request = new ProgramAssignmentRequest(CLIENT_ID, LocalDate.of(2020, Month.JANUARY, 6));
+
+        assertThatThrownBy(() -> service.assign(PROGRAM_ID, request))
                 .isInstanceOf(ProgramStartDateInvalidException.class);
     }
 
     @Test
     void assign_unknownProgram_throwsNotFound() {
         when(trainingProgramRepository.findByIdAndUserIdAndDeletedAtIsNull(PROGRAM_ID, TRAINER_ID)).thenReturn(Optional.empty());
+        ProgramAssignmentRequest request = new ProgramAssignmentRequest(CLIENT_ID, A_MONDAY);
 
-        assertThatThrownBy(() -> service.assign(PROGRAM_ID, new ProgramAssignmentRequest(CLIENT_ID, A_MONDAY)))
+        assertThatThrownBy(() -> service.assign(PROGRAM_ID, request))
                 .isInstanceOf(ProgramNotFoundException.class);
     }
 
     @Test
     void assign_emptyProgram_throwsInvalidStructure() {
         program.getWorkouts().clear();
+        ProgramAssignmentRequest request = new ProgramAssignmentRequest(CLIENT_ID, A_MONDAY);
 
-        assertThatThrownBy(() -> service.assign(PROGRAM_ID, new ProgramAssignmentRequest(CLIENT_ID, A_MONDAY)))
+        assertThatThrownBy(() -> service.assign(PROGRAM_ID, request))
                 .isInstanceOf(InvalidProgramStructureException.class);
     }
 
@@ -258,16 +264,18 @@ class ProgramAssignmentServiceImplTest {
     void assign_overlappingActiveAssignment_throwsDuplicate() {
         when(programAssignmentRepository.existsByProgramIdAndClientIdAndCancelledAtIsNullAndEndDateGreaterThanEqual(
                 eq(PROGRAM_ID), eq(CLIENT_ID), any())).thenReturn(true);
+        ProgramAssignmentRequest request = new ProgramAssignmentRequest(CLIENT_ID, A_MONDAY);
 
-        assertThatThrownBy(() -> service.assign(PROGRAM_ID, new ProgramAssignmentRequest(CLIENT_ID, A_MONDAY)))
+        assertThatThrownBy(() -> service.assign(PROGRAM_ID, request))
                 .isInstanceOf(DuplicateResourceException.class);
     }
 
     @Test
     void assign_deletedTemplate_throwsInvalidStructure() {
         when(workoutTemplateRepository.findByIdAndUserIdAndDeletedAtIsNull(TEMPLATE_ID, TRAINER_ID)).thenReturn(Optional.empty());
+        ProgramAssignmentRequest request = new ProgramAssignmentRequest(CLIENT_ID, A_MONDAY);
 
-        assertThatThrownBy(() -> service.assign(PROGRAM_ID, new ProgramAssignmentRequest(CLIENT_ID, A_MONDAY)))
+        assertThatThrownBy(() -> service.assign(PROGRAM_ID, request))
                 .isInstanceOf(InvalidProgramStructureException.class);
     }
 

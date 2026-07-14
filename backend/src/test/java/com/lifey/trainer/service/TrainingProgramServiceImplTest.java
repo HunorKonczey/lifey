@@ -188,8 +188,9 @@ class TrainingProgramServiceImplTest {
     void update_unknownProgram_throwsNotFound() {
         when(trainingProgramRepository.findByIdAndUserIdAndDeletedAtIsNull(anyLong(), anyLong()))
                 .thenReturn(Optional.empty());
+        ProgramRequest request = new ProgramRequest("X", 1, List.of(slot(1, DayOfWeek.MONDAY)));
 
-        assertThatThrownBy(() -> service.update(PROGRAM_ID, new ProgramRequest("X", 1, List.of(slot(1, DayOfWeek.MONDAY)))))
+        assertThatThrownBy(() -> service.update(PROGRAM_ID, request))
                 .isInstanceOf(ProgramNotFoundException.class);
     }
 
