@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +20,7 @@ import '../application/exercise_controller.dart';
 import '../application/workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
 import '../data/workout_template_repository.dart';
+import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
@@ -201,6 +203,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       unawaited(_startScheduledSession(session));
     } else {
       unawaited(_loadPreviousPerformance(_blocks));
+      unawaited(_loadPrBaselines(_blocks));
     }
   }
 
@@ -241,6 +244,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     });
     _pollHeartRate();
     unawaited(_loadPreviousPerformance(_blocks));
+    unawaited(_loadPrBaselines(_blocks));
     await _persist();
   }
 
@@ -323,6 +327,67 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
+  /// Fetches and fills in [ExerciseBlock.prBaseline] for each of [blocks] —
+  /// every set ever logged for that exercise, excluding this session, so
+  /// live PR detection has something to compare against (see
+  /// [_recomputePrFlags]). Fire-and-forget, same pattern as
+  /// [_loadPreviousPerformance]. Template-agnostic on purpose — a record is
+  /// a record regardless of which template it was logged under.
+  Future<void> _loadPrBaselines(List<ExerciseBlock> blocks) async {
+    final repo = ref.read(workoutSessionRepositoryProvider);
+    for (final block in blocks) {
+      final baseline = await repo.getPrBaseline(
+        exerciseClientId: block.exerciseClientId,
+        excludeSessionClientId: _sessionClientId,
+      );
+      if (!mounted) return;
+      setState(() {
+        block.prBaseline = baseline;
+        _recomputePrFlagsForBlock(block);
+      });
+    }
+  }
+
+  /// Recomputes PR flags for every done row in [block] from scratch: the
+  /// block's baseline (once loaded) extended forward through its currently
+  /// done rows in [SetRow.doneAt] order. Flags are fully derived state, so
+  /// they can never go stale or double-count across edits — see
+  /// docs/38-personal-records-plan.md, M3. No-ops (clearing every row's
+  /// flags) while the baseline hasn't loaded yet, rather than celebrating
+  /// against a half-loaded history.
+  void _recomputePrFlagsForBlock(ExerciseBlock block) {
+    for (final row in block.rows) {
+      row.prTypes = const {};
+    }
+    final baseline = block.prBaseline;
+    if (baseline == null) return;
+
+    final doneRows = [
+      for (final row in block.rows)
+        if (row.isDone && row.weight != null && row.reps != null) row,
+    ]..sort((a, b) => a.doneAt!.compareTo(b.doneAt!));
+    final sets = [
+      for (final row in doneRows)
+        (weight: row.weight!, reps: row.reps!, performedAt: row.doneAt!),
+    ];
+    final perRow = detectPrsInOrder(baseline, sets);
+    for (var i = 0; i < doneRows.length; i++) {
+      doneRows[i].prTypes = perRow[i].toSet();
+    }
+  }
+
+  /// [_recomputePrFlagsForBlock] for block index [bi], plus haptic feedback
+  /// when the row just interacted with ([ri]) ends up earning a record —
+  /// instant physical feedback without interrupting the logging flow (the
+  /// full celebration is reserved for the finish-workout success dialog).
+  void _recomputePrFlags(int bi, {int? justEditedRow}) {
+    _recomputePrFlagsForBlock(_blocks[bi]);
+    if (justEditedRow != null &&
+        _blocks[bi].rows[justEditedRow].prTypes.isNotEmpty) {
+      unawaited(HapticFeedback.mediumImpact());
+    }
+  }
+
   DateTime? _lastDoneAt() {
     DateTime? last;
     for (final block in _blocks) {
@@ -387,12 +452,18 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   // ---------------------------------------------------------------------------
 
   void _handleRowMarkDone(int bi, int ri) {
-    setState(() => _blocks[bi].rows[ri].doneAt = DateTime.now());
+    setState(() {
+      _blocks[bi].rows[ri].doneAt = DateTime.now();
+      _recomputePrFlags(bi, justEditedRow: ri);
+    });
     _autoSave();
   }
 
   void _handleRowReopen(int bi, int ri) {
-    setState(() => _blocks[bi].rows[ri].doneAt = null);
+    setState(() {
+      _blocks[bi].rows[ri].doneAt = null;
+      _recomputePrFlags(bi);
+    });
     _autoSave();
   }
 
@@ -401,12 +472,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _blocks[bi].rows[ri].weight = weight;
       _blocks[bi].rows[ri].reps = reps;
       _blocks[bi].rows[ri].doneAt ??= DateTime.now();
+      _recomputePrFlags(bi, justEditedRow: ri);
     });
     _autoSave();
   }
 
   void _handleRowDelete(int bi, int ri) {
-    setState(() => _blocks[bi].rows.removeAt(ri));
+    setState(() {
+      _blocks[bi].rows.removeAt(ri);
+      _recomputePrFlagsForBlock(_blocks[bi]);
+    });
     if (_sessionClientId != null) _autoSave();
   }
 
@@ -477,6 +552,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     );
     setState(() => _blocks.add(block));
     unawaited(_loadPreviousPerformance([block]));
+    unawaited(_loadPrBaselines([block]));
     if (_sessionClientId != null) await _autoSave();
   }
 

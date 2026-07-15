@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../data/workout_session_repository.dart';
+import '../../domain/personal_record.dart';
 
 // ---------------------------------------------------------------------------
 // Presentation-layer models — screen state only, never persisted directly.
@@ -17,6 +18,12 @@ class SetRow {
   /// Stamped when the user taps the trailing circle (marks set as done).
   /// Becomes ExerciseSetInput.performedAt on persist.
   DateTime? doneAt;
+
+  /// Record types this row earned against the exercise's PR baseline,
+  /// recomputed from scratch after every done-row change (see
+  /// LogSessionScreen._recomputePrFlags) — screen state only, never
+  /// persisted, same as [doneAt]'s presentation-only nature.
+  Set<PrType> prTypes = const {};
 
   bool get isDone => doneAt != null;
 }
@@ -39,6 +46,12 @@ class ExerciseBlock {
   /// positionally with [rows] (index 0 = row 0, etc). Filled asynchronously
   /// after construction — see [LogSessionScreen._loadPreviousPerformance].
   List<PreviousSetHint> previousSets = const [];
+
+  /// This exercise's PR baseline (every set ever logged, excluding the
+  /// current session) — null until loaded (see
+  /// [LogSessionScreen._loadPrBaselines]). While null, PR detection stays
+  /// silent rather than celebrating against a half-loaded history.
+  PrBaseline? prBaseline;
 }
 
 // ---------------------------------------------------------------------------
@@ -353,6 +366,22 @@ class _SetRowTile extends StatelessWidget {
     );
   }
 
+  /// Trophy pop for a row that just earned a PR — a quick scale-in unless
+  /// the user has reduced motion enabled, matching the success dialog's
+  /// convention of respecting [MediaQuery.disableAnimations].
+  Widget _prBadge(BuildContext context) {
+    const icon = Icon(Icons.emoji_events, size: 14, color: Color(0xFFD8B35A));
+    if (MediaQuery.of(context).disableAnimations) return icon;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.5, end: 1.0),
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) =>
+          Transform.scale(scale: scale, child: child),
+      child: icon,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDone = row.isDone;
@@ -466,6 +495,10 @@ class _SetRowTile extends StatelessWidget {
                       if (repsArrow != null) ...[
                         const SizedBox(width: 3),
                         repsArrow
+                      ],
+                      if (isDone && row.prTypes.isNotEmpty) ...[
+                        const SizedBox(width: 4),
+                        _prBadge(context),
                       ],
                     ],
                   ),

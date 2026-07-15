@@ -1306,6 +1306,18 @@
     "noSetsForExerciseMessage": "No sets logged yet",
     "@noSetsForExerciseMessage": {"description": "Empty state message on the exercise detail screen when no sets have been logged"},
 
+    "prHistorySectionLabel": "PR history",
+    "@prHistorySectionLabel": {"description": "Section heading for the personal-record history list on the exercise detail screen"},
+
+    "prTypeMaxWeightLabel": "Max weight",
+    "@prTypeMaxWeightLabel": {"description": "Personal-record type label: heaviest weight ever lifted for this exercise"},
+
+    "prTypeRepsAtWeightLabel": "Reps @ weight",
+    "@prTypeRepsAtWeightLabel": {"description": "Personal-record type label: most reps ever done at a given weight"},
+
+    "prTypeEstimatedOneRmLabel": "Est. 1RM",
+    "@prTypeEstimatedOneRmLabel": {"description": "Personal-record type label: best estimated one-rep-max ever reached"},
+
     "prSetValueLabel": "{weight} kg × {reps}",
     "@prSetValueLabel": {
         "description": "PR stat card value: weight in kg then rep count (e.g. '100 kg × 5')",
@@ -1380,6 +1392,18 @@
 
     "workoutSuccessRepsAbbrev": "reps",
     "@workoutSuccessRepsAbbrev": {"description": "Abbreviated unit for a reps-gain chip in the workout-success dialog, e.g. '+2 reps'"},
+
+    "workoutSuccessPrTitle": "{count, plural, one{New personal record!} other{New personal records!}}",
+    "@workoutSuccessPrTitle": {"description": "Title of the celebration dialog when the session included at least one personal record", "placeholders": {"count": {"type": "int"}}},
+
+    "workoutSuccessPrSubtitle": "{count, plural, one{You hit a new personal record} other{You hit {count} new personal records}}",
+    "@workoutSuccessPrSubtitle": {"description": "Subtitle of the celebration dialog when the session included at least one personal record", "placeholders": {"count": {"type": "int"}}},
+
+    "workoutSuccessPrSectionLabel": "Personal records",
+    "@workoutSuccessPrSectionLabel": {"description": "Caption above the PR rows in the celebration dialog, shown only when both PR rows and regular improvement rows are present"},
+
+    "workoutSuccessImprovementsSectionLabel": "Improvements",
+    "@workoutSuccessImprovementsSectionLabel": {"description": "Caption above the improvement rows in the celebration dialog, shown only when both PR rows and regular improvement rows are present"},
 
     "postWorkoutFeedbackTitle": "How hard was this workout?",
     "@postWorkoutFeedbackTitle": {"description": "Title of the post-workout feedback bottom sheet, shown after finishing a session"},

@@ -456,6 +456,11 @@
     "trendLast8WeeksLabel": "8 hetes trend",
     "noSetsForExerciseMessage": "Még nincs naplózott szett",
 
+    "prHistorySectionLabel": "Rekord előzmények",
+    "prTypeMaxWeightLabel": "Max súly",
+    "prTypeRepsAtWeightLabel": "Ismétlés azonos súlyon",
+    "prTypeEstimatedOneRmLabel": "Becsült 1RM",
+
     "prSetValueLabel": "{weight} kg × {reps}",
 
     "restLabel": "Pihenő",
@@ -481,6 +486,10 @@
     "workoutSuccessMoreCount": "+{count} további",
     "workoutSuccessContinueButton": "Tovább",
     "workoutSuccessRepsAbbrev": "ism.",
+    "workoutSuccessPrTitle": "{count, plural, one{Új személyes rekord!} other{Új személyes rekordok!}}",
+    "workoutSuccessPrSubtitle": "{count, plural, one{Új személyes rekordot értél el} other{{count} új személyes rekordot értél el}}",
+    "workoutSuccessPrSectionLabel": "Személyes rekordok",
+    "workoutSuccessImprovementsSectionLabel": "Fejlődés",
 
     "postWorkoutFeedbackTitle": "Mennyire volt nehéz ez az edzés?",
     "postWorkoutFeedbackAnchorEasy": "Nagyon könnyű",
