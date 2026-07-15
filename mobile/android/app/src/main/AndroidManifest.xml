@@ -22,6 +22,12 @@
          a reboot; without it, the daily reminder silently stops firing until
          the app is next opened. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- Rest timer (docs/39-rest-timer-plan.md) — lets the rest-end
+         notification fire at the exact target second instead of drifting by
+         minutes; requested lazily (NotificationService.
+         requestRestTimerExactAlarmPermission) when the user enables the rest
+         timer, with an inexact-alarm fallback if denied. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <application
         android:label="lifey"
         android:name="${applicationName}"

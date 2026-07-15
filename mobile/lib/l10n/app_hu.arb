@@ -425,6 +425,8 @@
     "categoryLabel": "Kategória",
     "equipmentLabel": "Eszköz",
     "exerciseDescriptionLabel": "Leírás",
+    "exerciseRestTimerFieldLabel": "Pihenő a szettek között",
+    "useDefaultOptionLabel": "Alapértelmezett használata",
     "allFilterLabel": "Mind",
 
     "muscleGroupChest": "Mell",
@@ -464,6 +466,14 @@
     "prSetValueLabel": "{weight} kg × {reps}",
 
     "restLabel": "Pihenő",
+    "restTimerAddSecondsButton": "+15 mp",
+    "restTimerSkipButton": "Pihenő kihagyása",
+    "workoutSectionLabel": "Edzés",
+    "restTimerToggleLabel": "Pihenő időzítő",
+    "restTimerDurationLabel": "Alapértelmezett pihenőidő",
+    "restTimerDurationSheetTitle": "Pihenőidő",
+    "restTimerNotificationTitle": "Vége a pihenőnek",
+    "restTimerNotificationBody": "Ideje a következő szettnek",
     "finishWorkoutButton": "Edzés befejezése",
     "noHealthWorkoutTitle": "Nincs egészségügyi edzésadat",
     "noHealthWorkoutMessage": "Nem találtunk közelmúltbeli egészségügyi edzésadatot az edzésed közelében.",

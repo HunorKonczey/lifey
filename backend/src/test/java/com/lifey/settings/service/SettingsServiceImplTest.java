@@ -62,7 +62,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true, true);
+                ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true, true, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -77,7 +77,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, 10000,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -93,7 +93,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -118,7 +118,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, false, true, true, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, false, true, true, true, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -143,7 +143,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, false, true, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, false, true, true, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -168,7 +168,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, false, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, false, true, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -193,11 +193,38 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, false);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, false, true, 90);
 
         SettingsResponse result = service.update(request);
 
         assertThat(result.programAssignedPushEnabled()).isFalse();
+    }
+
+    @Test
+    void get_createsDefaultRowWithRestTimerEnabledAndNinetySecondsWhenNoneExists() {
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsResponse result = service.get();
+
+        assertThat(result.restTimerEnabled()).isTrue();
+        assertThat(result.defaultRestSeconds()).isEqualTo(90);
+    }
+
+    @Test
+    void update_canDisableRestTimerAndChangeDefaultDuration() {
+        UserSettings existing = new UserSettings();
+        existing.setUser(new User());
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, false, 120);
+
+        SettingsResponse result = service.update(request);
+
+        assertThat(result.restTimerEnabled()).isFalse();
+        assertThat(result.defaultRestSeconds()).isEqualTo(120);
     }
 
     @Test

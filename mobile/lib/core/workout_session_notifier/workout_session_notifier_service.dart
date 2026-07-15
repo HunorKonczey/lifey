@@ -18,6 +18,7 @@ class WorkoutSessionState {
     this.setsTotal,
     required this.totalSetsDone,
     this.lastSetAtEpochMs,
+    this.restEndsAtEpochMs,
   });
 
   /// Current (last touched) exercise name; pass a pre-localized fallback
@@ -28,12 +29,19 @@ class WorkoutSessionState {
   final int totalSetsDone;
   final int? lastSetAtEpochMs;
 
+  /// The rest timer's target end time, epoch ms — null when the rest timer
+  /// is disabled, skipped, or already expired (docs/39-rest-timer-plan.md
+  /// §Prompt 5). When present, both native surfaces render a countdown to it
+  /// instead of the plain count-up from [lastSetAtEpochMs].
+  final int? restEndsAtEpochMs;
+
   Map<String, dynamic> toJson() => {
         'exerciseName': exerciseName,
         'setsDone': setsDone,
         'setsTotal': setsTotal,
         'totalSetsDone': totalSetsDone,
         'lastSetAtEpochMs': lastSetAtEpochMs,
+        'restEndsAtEpochMs': restEndsAtEpochMs,
       };
 }
 
@@ -62,6 +70,7 @@ class WorkoutSessionNotifierService {
       required String body,
       required String subText,
       required int whenEpochMs,
+      bool chronometerCountDown,
     })? showAndroidNotification,
     Future<void> Function()? cancelAndroidNotification,
   })  : _channel = channel ?? const MethodChannel('lifey/live_activity'),
@@ -94,6 +103,7 @@ class WorkoutSessionNotifierService {
     required String body,
     required String subText,
     required int whenEpochMs,
+    bool chronometerCountDown,
   }) _showAndroidNotificationCall;
   final Future<void> Function() _cancelAndroidNotification;
 
@@ -182,11 +192,17 @@ class WorkoutSessionNotifierService {
     final startedAt = _androidStartedAt;
     if (title == null || startedAt == null) return;
 
-    // Decision #3 (docs/25-android-widget-ongoing-notification-plan.md):
-    // before the first logged set the chronometer shows elapsed time from
-    // startedAt; after each set it switches to a rest count-up from the
-    // last set.
-    final whenEpochMs = state.lastSetAtEpochMs ?? startedAt.millisecondsSinceEpoch;
+    // A known, still-future rest-timer target renders as a countdown
+    // (docs/39-rest-timer-plan.md, Prompt 5); otherwise decision #3
+    // (docs/25-android-widget-ongoing-notification-plan.md) applies: before
+    // the first logged set the chronometer shows elapsed time from
+    // startedAt, after each set a rest count-up from the last set.
+    final restEndsAt = state.restEndsAtEpochMs;
+    final useRestCountdown =
+        restEndsAt != null && restEndsAt > DateTime.now().millisecondsSinceEpoch;
+    final whenEpochMs = useRestCountdown
+        ? restEndsAt
+        : (state.lastSetAtEpochMs ?? startedAt.millisecondsSinceEpoch);
     final body = state.setsTotal != null
         ? '${state.exerciseName} · ${state.setsDone}/${state.setsTotal}'
         : state.exerciseName;
@@ -197,6 +213,7 @@ class WorkoutSessionNotifierService {
       body: body,
       subText: subText,
       whenEpochMs: whenEpochMs,
+      chronometerCountDown: useRestCountdown,
     );
   }
 }

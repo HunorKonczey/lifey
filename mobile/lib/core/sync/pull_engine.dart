@@ -280,6 +280,7 @@ class PullEngine {
       equipment: Value(json['equipment'] as String?),
       description: Value(json['description'] as String?),
       originTrainerId: Value(json['originTrainerId'] as int?),
+      defaultRestSeconds: Value(json['defaultRestSeconds'] as int?),
     );
     if (existingClientId != null) {
       await (_db.update(_db.exercises)..where((t) => t.clientId.equals(existingClientId)))
@@ -577,6 +578,8 @@ class PullEngine {
             trainerCommentPushEnabled: Value(json['trainerCommentPushEnabled'] as bool? ?? true),
             trainerGoalsPushEnabled: Value(json['trainerGoalsPushEnabled'] as bool? ?? true),
             programAssignedPushEnabled: Value(json['programAssignedPushEnabled'] as bool? ?? true),
+            restTimerEnabled: Value(json['restTimerEnabled'] as bool? ?? true),
+            defaultRestSeconds: Value(json['defaultRestSeconds'] as int? ?? 90),
           ),
         );
   }

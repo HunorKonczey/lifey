@@ -94,4 +94,18 @@ public class UserSettings extends BaseEntity {
      */
     @Column(name = "weekly_report_email_enabled", nullable = false)
     private boolean weeklyReportEmailEnabled = true;
+
+    /**
+     * Master switch for the rest-timer feature (docs/39-rest-timer-plan.md).
+     * Default true.
+     */
+    @Column(name = "rest_timer_enabled", nullable = false)
+    private boolean restTimerEnabled = true;
+
+    /**
+     * Default rest duration in seconds, used when an exercise has no
+     * per-exercise override (docs/39-rest-timer-plan.md §2.2). Default 90.
+     */
+    @Column(name = "default_rest_seconds", nullable = false)
+    private int defaultRestSeconds = 90;
 }

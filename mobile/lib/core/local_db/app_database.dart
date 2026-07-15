@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 28;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -219,6 +219,14 @@ class AppDatabase extends _$AppDatabase {
           // shape as every other push preference here.
           if (from < 27) {
             await m.addColumn(userSettingsTable, userSettingsTable.programAssignedPushEnabled);
+          }
+          // V28: rest timer (docs/39-rest-timer-plan.md) — master toggle
+          // (defaults true) and default duration (defaults 90s) on
+          // settings, plus a nullable per-exercise override.
+          if (from < 28) {
+            await m.addColumn(userSettingsTable, userSettingsTable.restTimerEnabled);
+            await m.addColumn(userSettingsTable, userSettingsTable.defaultRestSeconds);
+            await m.addColumn(exercises, exercises.defaultRestSeconds);
           }
         },
       );

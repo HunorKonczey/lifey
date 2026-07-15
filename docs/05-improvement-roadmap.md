@@ -12,7 +12,7 @@ clients, assignments, schedules, calendar) on the web admin.
 
 ### Workout Experience
 
-#### 1. Rest Timer
+#### 1. Rest Timer (DONE, plan: 39-rest-timer-plan.md)
 
 * Start a rest timer automatically after logging a set
 * Configurable default duration (per exercise or global setting)
@@ -26,7 +26,7 @@ clients, assignments, schedules, calendar) on the web admin.
 * One-tap "repeat last set" to prefill values
 * Biggest quality-of-life gain for logging speed
 
-#### 3. Personal Records (PR) (plan: 38-personal-records-plan.md)
+#### 3. Personal Records (PR) (DONE, plan: 38-personal-records-plan.md)
 
 * Detect new PRs when a set is saved: max weight, max reps at weight,
   estimated 1RM

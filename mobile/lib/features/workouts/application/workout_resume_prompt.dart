@@ -83,7 +83,10 @@ class WorkoutResumePrompt {
       // without ever delivering a termination callback) is an orphan — end
       // it (see docs/24-ios-widget-live-activity-plan.md and
       // docs/25-android-widget-ongoing-notification-plan.md, orphan handling).
+      // A pending rest-timer notification is the same kind of orphan
+      // (docs/39-rest-timer-plan.md §2.3) — cancel it too.
       unawaited(_ref.read(workoutSessionNotifierServiceProvider).endAll());
+      unawaited(NotificationService.cancelRestEnd());
       return;
     }
 

@@ -28,9 +28,12 @@ struct WorkoutLiveActivity: Widget {
             .foregroundColor(.white)
         }
         DynamicIslandExpandedRegion(.trailing) {
-          RestTimerView(lastSetAtEpochMs: context.state.lastSetAtEpochMs)
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(.white)
+          RestTimerView(
+            lastSetAtEpochMs: context.state.lastSetAtEpochMs,
+            restEndsAtEpochMs: context.state.restEndsAtEpochMs
+          )
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundColor(.white)
         }
         DynamicIslandExpandedRegion(.bottom) {
           ExerciseProgressView(state: context.state)
@@ -39,8 +42,11 @@ struct WorkoutLiveActivity: Widget {
       } compactLeading: {
         Image(systemName: "dumbbell.fill")
       } compactTrailing: {
-        RestTimerView(lastSetAtEpochMs: context.state.lastSetAtEpochMs)
-          .font(.system(size: 13, weight: .semibold))
+        RestTimerView(
+          lastSetAtEpochMs: context.state.lastSetAtEpochMs,
+          restEndsAtEpochMs: context.state.restEndsAtEpochMs
+        )
+        .font(.system(size: 13, weight: .semibold))
       } minimal: {
         Image(systemName: "dumbbell.fill")
       }
@@ -51,9 +57,10 @@ struct WorkoutLiveActivity: Widget {
 
 // MARK: - Timers
 // Per the plan's Key Design Decision #4: SwiftUI renders these natively —
-// no push/update needed while backgrounded. Both count *up* (open-ended
-// range to .distantFuture, countsDown: false) since there's no fixed rest
-// duration in the current data model.
+// no push/update needed while backgrounded. ElapsedTimerView always counts
+// *up* (open-ended range to .distantFuture, countsDown: false). RestTimerView
+// counts down to a known rest-timer target when one exists, otherwise up from
+// the last set — see its own doc comment below.
 
 @available(iOS 16.1, *)
 private struct ElapsedTimerView: View {
@@ -66,12 +73,25 @@ private struct ElapsedTimerView: View {
   }
 }
 
+// Countdown when a rest-timer target is known and still in the future
+// (docs/39-rest-timer-plan.md, Prompt 5); otherwise the original plain
+// count-up since the last set — structural extension of the "no rest target
+// in the data model" note in Key Design Decision #4, now that one exists.
 @available(iOS 16.1, *)
 private struct RestTimerView: View {
   let lastSetAtEpochMs: Int64?
+  let restEndsAtEpochMs: Int64?
 
   var body: some View {
-    if let lastSetAtEpochMs {
+    let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+    if let restEndsAtEpochMs, restEndsAtEpochMs > nowMs {
+      let end = Date(timeIntervalSince1970: Double(restEndsAtEpochMs) / 1000)
+      HStack(spacing: 4) {
+        Image(systemName: "hourglass")
+        Text(timerInterval: Date()...end, countsDown: true, showsHours: false)
+          .monospacedDigit()
+      }
+    } else if let lastSetAtEpochMs {
       let start = Date(timeIntervalSince1970: Double(lastSetAtEpochMs) / 1000)
       HStack(spacing: 4) {
         Image(systemName: "hourglass")
@@ -130,9 +150,12 @@ private struct LockScreenView: View {
       ExerciseProgressView(state: state)
         .foregroundColor(.white.opacity(0.9))
       if state.lastSetAtEpochMs != nil {
-        RestTimerView(lastSetAtEpochMs: state.lastSetAtEpochMs)
-          .font(.system(size: 13, weight: .medium))
-          .foregroundColor(.white.opacity(0.7))
+        RestTimerView(
+          lastSetAtEpochMs: state.lastSetAtEpochMs,
+          restEndsAtEpochMs: state.restEndsAtEpochMs
+        )
+        .font(.system(size: 13, weight: .medium))
+        .foregroundColor(.white.opacity(0.7))
       }
     }
   }

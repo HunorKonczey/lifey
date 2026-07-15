@@ -7,6 +7,7 @@ class Exercise {
     this.category,
     this.equipment,
     this.description,
+    this.defaultRestSeconds,
   });
 
   final String clientId;
@@ -21,6 +22,10 @@ class Exercise {
 
   /// Free-text notes (e.g. machine setting), null if not set.
   final String? description;
+
+  /// Per-exercise rest-timer override in seconds (docs/39-rest-timer-plan.md
+  /// §2.2) — null means "use the user's default rest duration".
+  final int? defaultRestSeconds;
 
   /// Value equality by [clientId]: `DropdownButtonFormField<Exercise>`
   /// (add_set_sheet.dart) matches its `initialValue` against `items` by

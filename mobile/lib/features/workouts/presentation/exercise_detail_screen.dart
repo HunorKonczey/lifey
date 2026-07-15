@@ -198,8 +198,10 @@ class _DetailBody extends StatelessWidget {
         MediaQuery.paddingOf(context).bottom + 24,
       ),
       children: [
-          // Category + equipment chips
-          if (exercise.category != null || exercise.equipment != null) ...[
+          // Category + equipment + rest-timer override chips
+          if (exercise.category != null ||
+              exercise.equipment != null ||
+              exercise.defaultRestSeconds != null) ...[
             Wrap(
               spacing: 8,
               runSpacing: 4,
@@ -211,6 +213,11 @@ class _DetailBody extends StatelessWidget {
                   ),
                 if (exercise.equipment != null)
                   _EquipmentChip(label: equipmentLabel(l10n, exercise.equipment!)),
+                if (exercise.defaultRestSeconds != null)
+                  _EquipmentChip(
+                    icon: Icons.timer_outlined,
+                    label: _formatRestDuration(exercise.defaultRestSeconds!),
+                  ),
               ],
             ),
             const SizedBox(height: 20),
@@ -395,6 +402,12 @@ class _DetailBody extends StatelessWidget {
     return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
   }
 
+  String _formatRestDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
   String _prTypeLabel(AppLocalizations l10n, PrType type) => switch (type) {
         PrType.maxWeight => l10n.prTypeMaxWeightLabel,
         PrType.repsAtWeight => l10n.prTypeRepsAtWeightLabel,
@@ -450,10 +463,12 @@ class _CategoryChip extends StatelessWidget {
 }
 
 /// Equipment chip — neutral surfaceContainerLow bg, onSurfaceVariant text + icon.
+/// Also reused for the per-exercise rest-timer override (docs/39-rest-timer-plan.md §3.3).
 class _EquipmentChip extends StatelessWidget {
-  const _EquipmentChip({required this.label});
+  const _EquipmentChip({required this.label, this.icon = Icons.fitness_center});
 
   final String label;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -468,7 +483,7 @@ class _EquipmentChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.fitness_center, size: 16, color: color),
+          Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
           Text(
             label,

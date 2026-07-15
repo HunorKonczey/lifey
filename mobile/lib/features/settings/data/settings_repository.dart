@@ -44,6 +44,8 @@ class SettingsRepository {
       trainerCommentPushEnabled: Value(settings.trainerCommentPushEnabled),
       trainerGoalsPushEnabled: Value(settings.trainerGoalsPushEnabled),
       programAssignedPushEnabled: Value(settings.programAssignedPushEnabled),
+      restTimerEnabled: Value(settings.restTimerEnabled),
+      defaultRestSeconds: Value(settings.defaultRestSeconds),
     );
 
     if (existing == null) {
@@ -70,6 +72,8 @@ class SettingsRepository {
       trainerCommentPushEnabled: row.trainerCommentPushEnabled,
       trainerGoalsPushEnabled: row.trainerGoalsPushEnabled,
       programAssignedPushEnabled: row.programAssignedPushEnabled,
+      restTimerEnabled: row.restTimerEnabled,
+      defaultRestSeconds: row.defaultRestSeconds,
     );
   }
 }

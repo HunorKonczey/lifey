@@ -11,15 +11,19 @@ import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_service.dart';
 import '../../../core/health/health_workout.dart';
 import '../../../core/health/health_workout_import_service.dart';
+import '../../../core/notifications/notification_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../settings/application/settings_controller.dart';
+import '../../settings/domain/user_settings.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
 import '../data/workout_template_repository.dart';
+import '../domain/exercise.dart';
 import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
@@ -95,6 +99,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   bool _dirty = false;
   Timer? _ticker;
   DateTime _now = DateTime.now();
+
+  // ── Rest timer (docs/39-rest-timer-plan.md §2.1) ──
+  // Fully derived from the last-done set's `doneAt` + the effective rest
+  // duration; these three fields are the only ephemeral pieces, all keyed to
+  // the `doneAt` they apply to and reset whenever a newer set is logged (see
+  // the sync in build() below).
+  Duration _restAdjustment = Duration.zero;
+  DateTime? _restSkippedAt;
+  DateTime? _restTrackedDoneAt;
+  bool _restOvertimeHapticFired = false;
 
   // ── Near-live heart rate (Health store, running sessions only) ──
   // Neither HealthKit nor Health Connect streams live samples to a
@@ -388,16 +402,107 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
-  DateTime? _lastDoneAt() {
-    DateTime? last;
+  DateTime? _lastDoneAt() => _lastDoneEntry()?.doneAt;
+
+  /// The block + timestamp of the most recently logged set, or null if none
+  /// is done yet. Used both for the elapsed-since-last-set display and to
+  /// resolve which exercise's rest-timer duration applies (docs/39-rest-timer-plan.md §2.4).
+  ({ExerciseBlock block, DateTime doneAt})? _lastDoneEntry() {
+    ExerciseBlock? bestBlock;
+    DateTime? bestAt;
     for (final block in _blocks) {
       for (final row in block.rows) {
-        if (row.doneAt != null && (last == null || row.doneAt!.isAfter(last))) {
-          last = row.doneAt;
+        final doneAt = row.doneAt;
+        if (doneAt != null && (bestAt == null || doneAt.isAfter(bestAt))) {
+          bestAt = doneAt;
+          bestBlock = block;
         }
       }
     }
-    return last;
+    if (bestBlock == null || bestAt == null) return null;
+    return (block: bestBlock, doneAt: bestAt);
+  }
+
+  /// Effective rest duration for [block]: its own override if set, otherwise
+  /// the account-wide default (docs/39-rest-timer-plan.md §2.2).
+  int _effectiveRestSeconds(ExerciseBlock block, Map<String, Exercise> exercisesById, UserSettings settings) {
+    return exercisesById[block.exerciseClientId]?.defaultRestSeconds ?? settings.defaultRestSeconds;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rest timer notification scheduling (docs/39-rest-timer-plan.md §2.3)
+  // ---------------------------------------------------------------------------
+
+  /// Resets the ephemeral +15s/skip/haptic state whenever a newer set has
+  /// become "last" — they're keyed to the `doneAt` they applied to, never
+  /// carried forward to the next rest. Idempotent; called both from build()
+  /// (for the banner) and from every handler that can change `_lastDoneAt()`
+  /// before it (re)schedules the notification, since setState's callback runs
+  /// synchronously but the next build() doesn't.
+  void _syncRestEphemeralState() {
+    final lastDoneAt = _lastDoneAt();
+    if (lastDoneAt != _restTrackedDoneAt) {
+      _restTrackedDoneAt = lastDoneAt;
+      _restAdjustment = Duration.zero;
+      _restSkippedAt = null;
+      _restOvertimeHapticFired = false;
+    }
+  }
+
+  UserSettings _currentRestSettings() =>
+      ref.read(settingsControllerProvider).value ?? const UserSettings.defaults();
+
+  int _currentEffectiveRestSeconds(ExerciseBlock block, UserSettings settings) {
+    final exercises = ref.read(exerciseControllerProvider).value ?? const <Exercise>[];
+    final exercisesById = {for (final e in exercises) e.clientId: e};
+    return _effectiveRestSeconds(block, exercisesById, settings);
+  }
+
+  /// Re-derives the rest-end target from the current [_lastDoneEntry] (+
+  /// [_restAdjustment]) and (re)schedules the local notification for it, or
+  /// cancels it if there's nothing to notify about. The single call site
+  /// every mutation that can change "the current rest" goes through — a
+  /// newer set logged replaces the schedule (same fixed notification id), an
+  /// exhausted or skipped rest cancels it.
+  Future<void> _rescheduleRestNotification() async {
+    final settings = _currentRestSettings();
+    final entry = _lastDoneEntry();
+    final skipped = _restSkippedAt != null && _restSkippedAt == entry?.doneAt;
+    if (!settings.restTimerEnabled || entry == null || skipped || _finishedAt != null) {
+      await NotificationService.cancelRestEnd();
+      return;
+    }
+    final seconds = _currentEffectiveRestSeconds(entry.block, settings);
+    final endsAt = entry.doneAt.add(Duration(seconds: seconds) + _restAdjustment);
+    if (!endsAt.isAfter(DateTime.now())) {
+      await NotificationService.cancelRestEnd();
+      return;
+    }
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    await NotificationService.scheduleRestEnd(
+      endsAt: endsAt,
+      title: l10n.restTimerNotificationTitle,
+      body: l10n.restTimerNotificationBody,
+    );
+  }
+
+  /// The rest timer's current target end time, epoch ms — null when the
+  /// timer is disabled, skipped, or already expired. Same derivation as
+  /// [_rescheduleRestNotification]'s target; feeds the native countdown on
+  /// both platforms via [WorkoutSessionState.restEndsAtEpochMs] (see
+  /// docs/39-rest-timer-plan.md, Prompt 5).
+  int? _currentRestEndsAtEpochMs() {
+    final settings = _currentRestSettings();
+    if (!settings.restTimerEnabled) return null;
+    final entry = _lastDoneEntry();
+    if (entry == null) return null;
+    final skipped = _restSkippedAt != null && _restSkippedAt == entry.doneAt;
+    if (skipped) return null;
+    final seconds = _currentEffectiveRestSeconds(entry.block, settings);
+    final endsAt = entry.doneAt.add(Duration(seconds: seconds) + _restAdjustment);
+    if (!endsAt.isAfter(DateTime.now())) return null;
+    return endsAt.millisecondsSinceEpoch;
   }
 
   String _formatElapsed() {
@@ -456,6 +561,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _blocks[bi].rows[ri].doneAt = DateTime.now();
       _recomputePrFlags(bi, justEditedRow: ri);
     });
+    _syncRestEphemeralState();
+    unawaited(_rescheduleRestNotification());
     _autoSave();
   }
 
@@ -464,16 +571,28 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _blocks[bi].rows[ri].doneAt = null;
       _recomputePrFlags(bi);
     });
+    // The reopened row may have been the latest done set — recompute and
+    // reschedule against whichever set is now last, or cancel if none is
+    // (docs/39-rest-timer-plan.md §2.3).
+    _syncRestEphemeralState();
+    unawaited(_rescheduleRestNotification());
     _autoSave();
   }
 
   void _handleRowEdit(int bi, int ri, double? weight, int? reps) {
+    final wasDone = _blocks[bi].rows[ri].isDone;
     setState(() {
       _blocks[bi].rows[ri].weight = weight;
       _blocks[bi].rows[ri].reps = reps;
       _blocks[bi].rows[ri].doneAt ??= DateTime.now();
       _recomputePrFlags(bi, justEditedRow: ri);
     });
+    // Only a freshly-stamped doneAt (row wasn't already done) starts a new
+    // rest — editing the weight/reps of an already-done row doesn't move it.
+    if (!wasDone) {
+      _syncRestEphemeralState();
+      unawaited(_rescheduleRestNotification());
+    }
     _autoSave();
   }
 
@@ -482,6 +601,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _blocks[bi].rows.removeAt(ri);
       _recomputePrFlagsForBlock(_blocks[bi]);
     });
+    _syncRestEphemeralState();
+    unawaited(_rescheduleRestNotification());
     if (_sessionClientId != null) _autoSave();
   }
 
@@ -531,6 +652,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       if (confirmed != true || !mounted) return;
     }
     setState(() => _blocks.removeAt(bi));
+    _syncRestEphemeralState();
+    unawaited(_rescheduleRestNotification());
     if (_sessionClientId != null) await _autoSave();
   }
 
@@ -681,6 +804,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       setsTotal: current?.targetSets,
       totalSetsDone: totalSetsDone,
       lastSetAtEpochMs: _lastDoneAt()?.millisecondsSinceEpoch,
+      restEndsAtEpochMs: _currentRestEndsAtEpochMs(),
     );
   }
 
@@ -764,6 +888,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _ticker = null;
     _hrTicker?.cancel();
     _hrTicker = null;
+    // _rescheduleRestNotification() sees _finishedAt set and cancels.
+    unawaited(_rescheduleRestNotification());
     await _persist();
     if (_sessionNotifierStarted) {
       _sessionNotifierStarted = false;
@@ -1198,7 +1324,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     // Resolve exercise names for template-seeded blocks (TemplateExercise has no name).
-    final exercisesById = ref.watch(exerciseControllerProvider).maybeWhen(
+    final Map<String, Exercise> exercisesById = ref.watch(exerciseControllerProvider).maybeWhen(
           data: (list) => {for (final e in list) e.clientId: e},
           orElse: () => const {},
         );
@@ -1208,12 +1334,35 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       }
     }
 
-    final lastDoneAt = _lastDoneAt();
+    // ── Rest timer (docs/39-rest-timer-plan.md §2.1/§2.4) ──
+    final restSettings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
+    final lastDoneEntry = _lastDoneEntry();
+    final lastDoneAt = lastDoneEntry?.doneAt;
+    _syncRestEphemeralState();
+
+    final restIsSkipped = _restSkippedAt != null && _restSkippedAt == lastDoneAt;
+    final restTimerActive = restSettings.restTimerEnabled &&
+        _finishedAt == null &&
+        lastDoneEntry != null &&
+        !restIsSkipped;
+    int? restTargetSeconds;
+    bool restIsOvertime = false;
+    if (restTimerActive) {
+      restTargetSeconds = _effectiveRestSeconds(lastDoneEntry.block, exercisesById, restSettings);
+      final target = Duration(seconds: restTargetSeconds) + _restAdjustment;
+      final elapsed = _now.difference(lastDoneEntry.doneAt);
+      restIsOvertime = elapsed >= target;
+      if (restIsOvertime && !_restOvertimeHapticFired) {
+        _restOvertimeHapticFired = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(HapticFeedback.mediumImpact()));
+      }
+    }
+
     final safeBottom = MediaQuery.paddingOf(context).bottom;
     final statusTop = MediaQuery.paddingOf(context).top;
     final barTop = statusTop + 8.0;
-    const restBannerHeight = 50.0;
-    final restBannerVisible = _finishedAt == null && lastDoneAt != null;
+    final restBannerVisible = _finishedAt == null && lastDoneAt != null && !restIsSkipped;
+    final restBannerHeight = (restBannerVisible && restSettings.restTimerEnabled) ? 74.0 : 50.0;
     final restBannerTop = barTop + 58.0 + 8.0;
     final contentTop = restBannerVisible
         ? restBannerTop + restBannerHeight + 8.0
@@ -1329,7 +1478,28 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               top: restBannerTop,
               left: 16,
               right: 16,
-              child: _RestBanner(lastSetAt: lastDoneAt, now: _now),
+              child: _RestBanner(
+                lastSetAt: lastDoneAt,
+                now: _now,
+                enabled: restSettings.restTimerEnabled,
+                targetSeconds: restTargetSeconds,
+                adjustment: _restAdjustment,
+                isOvertime: restIsOvertime,
+                onAddFifteen: () {
+                  setState(() => _restAdjustment += const Duration(seconds: 15));
+                  unawaited(_rescheduleRestNotification());
+                  // Keep the native Live Activity / Android chronometer
+                  // countdown in sync (docs/39-rest-timer-plan.md, Prompt 5)
+                  // — otherwise it'd only pick up the new target on the next
+                  // autosave.
+                  if (_sessionNotifierStarted) unawaited(_updateSessionNotifier());
+                },
+                onSkip: () {
+                  setState(() => _restSkippedAt = lastDoneAt);
+                  unawaited(NotificationService.cancelRestEnd());
+                  if (_sessionNotifierStarted) unawaited(_updateSessionNotifier());
+                },
+              ),
             ),
 
           // ── Sticky "Finish workout" button ──
@@ -1519,50 +1689,272 @@ class _DashedBorderPainter extends CustomPainter {
 // ---------------------------------------------------------------------------
 
 class _RestBanner extends StatelessWidget {
-  const _RestBanner({required this.lastSetAt, required this.now});
+  const _RestBanner({
+    required this.lastSetAt,
+    required this.now,
+    required this.enabled,
+    required this.targetSeconds,
+    required this.adjustment,
+    required this.isOvertime,
+    required this.onAddFifteen,
+    required this.onSkip,
+  });
 
   final DateTime lastSetAt;
   final DateTime now;
 
+  /// Whether the rest-timer feature is on (`UserSettings.restTimerEnabled`).
+  /// When false, this renders today's plain elapsed-since-last-set count-up
+  /// with no buttons — the feature degrades, it never disappears.
+  final bool enabled;
+
+  /// The effective rest duration for the last-done set's exercise, seconds.
+  /// Null when [enabled] is false (unused in that branch).
+  final int? targetSeconds;
+
+  /// Accumulated +15s taps for the current rest.
+  final Duration adjustment;
+  final bool isOvertime;
+  final VoidCallback onAddFifteen;
+  final VoidCallback onSkip;
+
+  static const _warnColor = Color(0xFFD66B5A);
+
+  String _mmss(Duration d) {
+    final m = d.inMinutes;
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final elapsed = now.difference(lastSetAt);
-    final m = elapsed.inMinutes;
-    final s = (elapsed.inSeconds % 60).toString().padLeft(2, '0');
 
+    if (!enabled) {
+      return _container(
+        scheme: scheme,
+        child: _headerRow(
+          context: context,
+          icon: Icons.hourglass_top,
+          iconColor: scheme.primary,
+          timeText: _mmss(elapsed),
+          timeColor: scheme.primary,
+          l10n: l10n,
+        ),
+      );
+    }
+
+    final target = Duration(seconds: targetSeconds!) + adjustment;
+
+    if (isOvertime) {
+      final overage = elapsed - target;
+      return _container(
+        scheme: scheme,
+        accentColor: _warnColor,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _headerRow(
+              context: context,
+              icon: Icons.hourglass_bottom,
+              iconColor: _warnColor,
+              timeText: '+${_mmss(overage)}',
+              timeColor: _warnColor,
+              l10n: l10n,
+              trailing: _RestIconButton(
+                icon: Icons.close,
+                color: _warnColor,
+                tooltip: l10n.restTimerSkipButton,
+                onTap: onSkip,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _progressBar(color: _warnColor, value: 1),
+          ],
+        ),
+      );
+    }
+
+    final remaining = target - elapsed;
+    final progress = target.inMilliseconds == 0
+        ? 1.0
+        : (elapsed.inMilliseconds / target.inMilliseconds).clamp(0.0, 1.0);
+
+    return _container(
+      scheme: scheme,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _headerRow(
+            context: context,
+            icon: Icons.hourglass_top,
+            iconColor: scheme.primary,
+            timeText: _mmss(remaining),
+            timeColor: scheme.primary,
+            l10n: l10n,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _RestActionChip(
+                  label: l10n.restTimerAddSecondsButton,
+                  color: scheme.primary,
+                  onTap: onAddFifteen,
+                ),
+                const SizedBox(width: 6),
+                _RestIconButton(
+                  icon: Icons.close,
+                  color: scheme.onSurfaceVariant,
+                  tooltip: l10n.restTimerSkipButton,
+                  onTap: onSkip,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _progressBar(color: scheme.primary, value: progress),
+        ],
+      ),
+    );
+  }
+
+  Widget _container({
+    required ColorScheme scheme,
+    required Widget child,
+    Color? accentColor,
+  }) {
+    final accent = accentColor ?? scheme.primary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.14),
+        color: accent.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(AppRadius.input),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.40)),
+        border: Border.all(color: accent.withValues(alpha: 0.40)),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.hourglass_top, size: 22, color: scheme.primary),
-          const SizedBox(width: 10),
-          Text(
-            AppLocalizations.of(context)!.restLabel,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurface,
-            ),
+      child: child,
+    );
+  }
+
+  Widget _headerRow({
+    required BuildContext context,
+    required IconData icon,
+    required Color iconColor,
+    required String timeText,
+    required Color timeColor,
+    required AppLocalizations l10n,
+    Widget? trailing,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Icon(icon, size: 22, color: iconColor),
+        const SizedBox(width: 10),
+        Text(
+          l10n.restLabel,
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: scheme.onSurface,
           ),
-          const Spacer(),
-          Text(
-            '$m:$s',
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: scheme.primary,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+        ),
+        const Spacer(),
+        Text(
+          timeText,
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: timeColor,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing,
         ],
+      ],
+    );
+  }
+
+  Widget _progressBar({required Color color, required double value}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: LinearProgressIndicator(
+        value: value,
+        minHeight: 4,
+        backgroundColor: color.withValues(alpha: 0.2),
+        valueColor: AlwaysStoppedAnimation(color),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rest banner action buttons
+// ---------------------------------------------------------------------------
+
+class _RestActionChip extends StatelessWidget {
+  const _RestActionChip({required this.label, required this.color, required this.onTap});
+
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: 11.5,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RestIconButton extends StatelessWidget {
+  const _RestIconButton({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 14, color: color),
+        ),
       ),
     );
   }

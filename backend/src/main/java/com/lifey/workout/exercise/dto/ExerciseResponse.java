@@ -12,6 +12,8 @@ public record ExerciseResponse(
         Instant deletedAt,
         // Non-null only for a trainer-assigned copy (docs/personal_trainer/05-mobil-terv.md
         // §2) — drives the mobile "Edzőtől" badge.
-        Long originTrainerId
+        Long originTrainerId,
+        // Null means "use the user's default rest duration" (docs/39-rest-timer-plan.md §2.2).
+        Integer defaultRestSeconds
 ) {
 }

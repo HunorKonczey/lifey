@@ -51,12 +51,14 @@ final class LiveActivityChannel: NSObject {
     else { return nil }
     let setsTotal = dict["setsTotal"] as? Int
     let lastSetAtEpochMs = (dict["lastSetAtEpochMs"] as? NSNumber)?.int64Value
+    let restEndsAtEpochMs = (dict["restEndsAtEpochMs"] as? NSNumber)?.int64Value
     return WorkoutActivityAttributes.ContentState(
       exerciseName: exerciseName,
       setsDone: setsDone,
       setsTotal: setsTotal,
       totalSetsDone: totalSetsDone,
-      lastSetAtEpochMs: lastSetAtEpochMs
+      lastSetAtEpochMs: lastSetAtEpochMs,
+      restEndsAtEpochMs: restEndsAtEpochMs
     )
   }
 

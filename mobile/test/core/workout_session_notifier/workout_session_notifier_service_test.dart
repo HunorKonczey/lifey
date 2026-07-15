@@ -89,6 +89,7 @@ void main() {
           'setsTotal': 3,
           'totalSetsDone': 1,
           'lastSetAtEpochMs': 1783075260000,
+          'restEndsAtEpochMs': null,
         },
       });
     });
@@ -121,6 +122,7 @@ void main() {
           'setsTotal': null,
           'totalSetsDone': 5,
           'lastSetAtEpochMs': null,
+          'restEndsAtEpochMs': null,
         },
       });
     });
@@ -136,6 +138,40 @@ void main() {
       await service.endAll();
 
       expect(calls.map((c) => c.method), ['end', 'endAll']);
+    });
+
+    test('update state JSON carries restEndsAtEpochMs when present (docs/39-rest-timer-plan.md, Prompt 5)',
+        () async {
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WorkoutSessionNotifierService(isAvailable: true, useAndroidBranch: false);
+
+      await service.update(
+        sessionClientId: 'session-1',
+        startedLabel: 'Kezdés',
+        state: const WorkoutSessionState(
+          exerciseName: 'Guggolás',
+          setsDone: 2,
+          setsTotal: 4,
+          totalSetsDone: 2,
+          lastSetAtEpochMs: 1783075260000,
+          restEndsAtEpochMs: 1783075350000,
+        ),
+      );
+
+      expect(calls.single.arguments, {
+        'sessionClientId': 'session-1',
+        'state': {
+          'exerciseName': 'Guggolás',
+          'setsDone': 2,
+          'setsTotal': 4,
+          'totalSetsDone': 2,
+          'lastSetAtEpochMs': 1783075260000,
+          'restEndsAtEpochMs': 1783075350000,
+        },
+      });
     });
 
     test('a full session call sequence: start -> update -> end', () async {
@@ -185,6 +221,7 @@ void main() {
           required body,
           required subText,
           required whenEpochMs,
+          bool chronometerCountDown = false,
         }) async {
           showCalls++;
         },
@@ -214,6 +251,7 @@ void main() {
           required body,
           required subText,
           required whenEpochMs,
+          bool chronometerCountDown = false,
         }) async {
           showCalls++;
         },
@@ -243,6 +281,7 @@ void main() {
           required body,
           required subText,
           required whenEpochMs,
+          bool chronometerCountDown = false,
         }) async {
           capturedTitle = title;
           capturedBody = body;
@@ -278,6 +317,7 @@ void main() {
           required body,
           required subText,
           required whenEpochMs,
+          bool chronometerCountDown = false,
         }) async {
           capturedBody = body;
           capturedWhenEpochMs = whenEpochMs;
@@ -310,6 +350,106 @@ void main() {
       expect(capturedWhenEpochMs, lastSetAt.millisecondsSinceEpoch);
     });
 
+    test('update with a future restEndsAtEpochMs anchors the chronometer to it in count-down mode '
+        '(docs/39-rest-timer-plan.md, Prompt 5)', () async {
+      int? capturedWhenEpochMs;
+      bool? capturedCountDown;
+      final service = WorkoutSessionNotifierService(
+        isAvailable: true,
+        useAndroidBranch: true,
+        requestAndroidPermission: () async => true,
+        showAndroidNotification: ({
+          required title,
+          required body,
+          required subText,
+          required whenEpochMs,
+          bool chronometerCountDown = false,
+        }) async {
+          capturedWhenEpochMs = whenEpochMs;
+          capturedCountDown = chronometerCountDown;
+        },
+      );
+
+      // Anchored to the real clock (not a fixed 2026 date like the sibling
+      // tests) — the countdown-vs-count-up decision compares restEndsAt
+      // against DateTime.now(), so it must actually be in the future when
+      // this test runs.
+      final startedAt = DateTime.now().subtract(const Duration(minutes: 10));
+      await service.start(
+        sessionClientId: 'session-1',
+        title: 'Push Day',
+        startedAt: startedAt,
+        startedLabel: 'Started',
+        state: const WorkoutSessionState(exerciseName: 'Bench Press', setsDone: 0, setsTotal: 4, totalSetsDone: 0),
+      );
+
+      final lastSetAt = DateTime.now().subtract(const Duration(minutes: 1));
+      final restEndsAt = DateTime.now().add(const Duration(minutes: 5));
+      await service.update(
+        sessionClientId: 'session-1',
+        startedLabel: 'Started',
+        state: WorkoutSessionState(
+          exerciseName: 'Bench Press',
+          setsDone: 2,
+          setsTotal: 4,
+          totalSetsDone: 2,
+          lastSetAtEpochMs: lastSetAt.millisecondsSinceEpoch,
+          restEndsAtEpochMs: restEndsAt.millisecondsSinceEpoch,
+        ),
+      );
+
+      expect(capturedWhenEpochMs, restEndsAt.millisecondsSinceEpoch);
+      expect(capturedCountDown, isTrue);
+    });
+
+    test('update with a restEndsAtEpochMs already in the past falls back to the plain rest count-up',
+        () async {
+      int? capturedWhenEpochMs;
+      bool? capturedCountDown;
+      final service = WorkoutSessionNotifierService(
+        isAvailable: true,
+        useAndroidBranch: true,
+        requestAndroidPermission: () async => true,
+        showAndroidNotification: ({
+          required title,
+          required body,
+          required subText,
+          required whenEpochMs,
+          bool chronometerCountDown = false,
+        }) async {
+          capturedWhenEpochMs = whenEpochMs;
+          capturedCountDown = chronometerCountDown;
+        },
+      );
+
+      final startedAt = DateTime(2026, 7, 10, 18, 5);
+      await service.start(
+        sessionClientId: 'session-1',
+        title: 'Push Day',
+        startedAt: startedAt,
+        startedLabel: 'Started',
+        state: const WorkoutSessionState(exerciseName: 'Bench Press', setsDone: 0, setsTotal: 4, totalSetsDone: 0),
+      );
+
+      final lastSetAt = DateTime(2026, 7, 10, 18, 12);
+      final expiredRestEnd = DateTime(2000, 1, 1); // already in the past
+      await service.update(
+        sessionClientId: 'session-1',
+        startedLabel: 'Started',
+        state: WorkoutSessionState(
+          exerciseName: 'Bench Press',
+          setsDone: 2,
+          setsTotal: 4,
+          totalSetsDone: 2,
+          lastSetAtEpochMs: lastSetAt.millisecondsSinceEpoch,
+          restEndsAtEpochMs: expiredRestEnd.millisecondsSinceEpoch,
+        ),
+      );
+
+      expect(capturedWhenEpochMs, lastSetAt.millisecondsSinceEpoch);
+      expect(capturedCountDown, isFalse);
+    });
+
     test('end and endAll cancel the notification', () async {
       var cancelCalls = 0;
       final service = WorkoutSessionNotifierService(
@@ -321,6 +461,7 @@ void main() {
           required body,
           required subText,
           required whenEpochMs,
+          bool chronometerCountDown = false,
         }) async {},
         cancelAndroidNotification: () async {
           cancelCalls++;

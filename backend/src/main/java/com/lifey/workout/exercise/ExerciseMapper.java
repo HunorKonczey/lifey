@@ -22,6 +22,7 @@ public final class ExerciseMapper {
         exercise.setCategory(request.category());
         exercise.setEquipment(request.equipment());
         exercise.setDescription(request.description());
+        exercise.setDefaultRestSeconds(request.defaultRestSeconds());
     }
 
     public static ExerciseResponse toResponse(Exercise exercise) {
@@ -33,7 +34,8 @@ public final class ExerciseMapper {
                 exercise.getDescription(),
                 exercise.getUpdatedAt(),
                 exercise.getDeletedAt(),
-                exercise.getOriginTrainerId()
+                exercise.getOriginTrainerId(),
+                exercise.getDefaultRestSeconds()
         );
     }
 }

@@ -1225,6 +1225,12 @@
     "exerciseDescriptionLabel": "Description",
     "@exerciseDescriptionLabel": {"description": "Label for the free-text description/notes field on the add/edit exercise sheet (e.g. machine setting)"},
 
+    "exerciseRestTimerFieldLabel": "Rest between sets",
+    "@exerciseRestTimerFieldLabel": {"description": "Label for the per-exercise rest-timer override field on the add/edit exercise sheet"},
+
+    "useDefaultOptionLabel": "Use default",
+    "@useDefaultOptionLabel": {"description": "Option meaning \"no override, fall back to the app-wide default\" in a duration picker"},
+
     "allFilterLabel": "All",
     "@allFilterLabel": {"description": "Filter chip label meaning no filter / show everything"},
 
@@ -1329,6 +1335,30 @@
 
     "restLabel": "Rest",
     "@restLabel": {"description": "Label for the rest-timer banner shown between sets on the active workout screen"},
+
+    "restTimerAddSecondsButton": "+15 s",
+    "@restTimerAddSecondsButton": {"description": "Button on the rest banner that adds 15 seconds to the current countdown"},
+
+    "restTimerSkipButton": "Skip rest",
+    "@restTimerSkipButton": {"description": "Accessibility label/tooltip for the button that dismisses the current rest countdown"},
+
+    "workoutSectionLabel": "Workout",
+    "@workoutSectionLabel": {"description": "Settings screen group label for workout-related preferences (rest timer, etc.)"},
+
+    "restTimerToggleLabel": "Rest timer",
+    "@restTimerToggleLabel": {"description": "Settings row label for the rest-timer master on/off switch"},
+
+    "restTimerDurationLabel": "Default rest duration",
+    "@restTimerDurationLabel": {"description": "Settings row label for the app-wide default rest-timer duration"},
+
+    "restTimerDurationSheetTitle": "Rest duration",
+    "@restTimerDurationSheetTitle": {"description": "Title of the bottom sheet used to pick a rest duration (settings default or per-exercise override)"},
+
+    "restTimerNotificationTitle": "Rest over",
+    "@restTimerNotificationTitle": {"description": "Title of the local notification fired when the rest timer between sets ends"},
+
+    "restTimerNotificationBody": "Time for your next set",
+    "@restTimerNotificationBody": {"description": "Body of the local notification fired when the rest timer between sets ends"},
 
     "finishWorkoutButton": "Finish workout",
     "@finishWorkoutButton": {"description": "Label for the sticky button that finishes the active workout session"},

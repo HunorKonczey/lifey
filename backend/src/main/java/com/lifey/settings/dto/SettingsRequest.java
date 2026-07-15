@@ -3,6 +3,8 @@ package com.lifey.settings.dto;
 import com.lifey.settings.LanguagePreference;
 import com.lifey.settings.ThemePreference;
 import com.lifey.settings.UnitSystem;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -46,6 +48,14 @@ public record SettingsRequest(
         Boolean trainerGoalsPushEnabled,
 
         @NotNull
-        Boolean programAssignedPushEnabled
+        Boolean programAssignedPushEnabled,
+
+        @NotNull
+        Boolean restTimerEnabled,
+
+        @NotNull
+        @Min(15)
+        @Max(600)
+        Integer defaultRestSeconds
 ) {
 }

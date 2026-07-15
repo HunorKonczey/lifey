@@ -49,4 +49,11 @@ public class Exercise extends SyncableEntity {
 
     @Column(name = "origin_trainer_id")
     private Long originTrainerId;
+
+    /**
+     * Per-exercise rest-timer override in seconds (docs/39-rest-timer-plan.md
+     * §2.2) — null means "use the user's default_rest_seconds".
+     */
+    @Column(name = "default_rest_seconds")
+    private Integer defaultRestSeconds;
 }
