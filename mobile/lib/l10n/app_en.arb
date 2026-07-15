@@ -1721,5 +1721,94 @@
     "@macrosTodayProteinOver": {
         "description": "Fragment of the remaining-budget line on today's featured macros card: protein goal exceeded",
         "placeholders": { "count": { "type": "int" } }
-    }
+    },
+
+    "streakMetricCalories": "calorie",
+    "@streakMetricCalories": {
+        "description": "Lowercase noun for the calorie goal, used inside the streak chip tooltip sentence"
+    },
+
+    "streakMetricSteps": "step",
+    "@streakMetricSteps": {
+        "description": "Lowercase noun for the step goal, used inside the streak chip tooltip sentence"
+    },
+
+    "streakMetricWater": "water",
+    "@streakMetricWater": {
+        "description": "Lowercase noun for the water goal, used inside the streak chip tooltip sentence"
+    },
+
+    "streakActiveTooltip": "{count}-day {metric} streak",
+    "@streakActiveTooltip": {
+        "description": "Tooltip for a dashboard streak chip that has at least one day logged",
+        "placeholders": {
+            "count": { "type": "int" },
+            "metric": { "type": "String", "example": "calorie" }
+        }
+    },
+
+    "streakNotStartedTooltip": "No {metric} streak yet — hit today's goal to start one",
+    "@streakNotStartedTooltip": {
+        "description": "Tooltip for a dashboard streak chip with no active streak (current count is zero)",
+        "placeholders": {
+            "metric": { "type": "String", "example": "calorie" }
+        }
+    },
+
+    "recapScreenTitle": "Weekly Recap",
+    "@recapScreenTitle": {"description": "Title of the weekly recap screen"},
+
+    "recapPreviousWeekTooltip": "Previous week",
+    "@recapPreviousWeekTooltip": {"description": "Tooltip for the back-a-week chevron on the recap screen"},
+
+    "recapNextWeekTooltip": "Next week",
+    "@recapNextWeekTooltip": {"description": "Tooltip for the forward-a-week chevron on the recap screen"},
+
+    "recapWorkoutsSectionTitle": "Workouts",
+    "@recapWorkoutsSectionTitle": {"description": "Recap screen section heading for the week's workouts"},
+
+    "recapWorkoutsCount": "{count} workouts",
+    "@recapWorkoutsCount": {"description": "Number of workouts done during the recap week", "placeholders": {"count": {"type": "int"}}},
+
+    "recapWorkoutsMinutes": "{count} min total",
+    "@recapWorkoutsMinutes": {"description": "Total finished-session minutes during the recap week", "placeholders": {"count": {"type": "int"}}},
+
+    "recapNoWorkoutsMessage": "No workouts logged this week.",
+    "@recapNoWorkoutsMessage": {"description": "Empty-state hint for the recap screen's workouts section"},
+
+    "recapNutritionSectionTitle": "Nutrition",
+    "@recapNutritionSectionTitle": {"description": "Recap screen section heading for the week's nutrition"},
+
+    "recapAvgCaloriesLabel": "Avg calories",
+    "@recapAvgCaloriesLabel": {"description": "Label above the recap week's average daily calorie figure"},
+
+    "recapLoggedDaysCaption": "avg of {count} logged days",
+    "@recapLoggedDaysCaption": {"description": "Caption clarifying the average-calories figure is only over days that had a meal logged", "placeholders": {"count": {"type": "int"}}},
+
+    "recapDaysWithinGoal": "{count}/7 days within goal",
+    "@recapDaysWithinGoal": {"description": "How many days this week stayed within the calorie goal, out of 7", "placeholders": {"count": {"type": "int"}}},
+
+    "recapNoNutritionMessage": "No meals logged this week.",
+    "@recapNoNutritionMessage": {"description": "Empty-state hint for the recap screen's nutrition section"},
+
+    "recapWeightSectionTitle": "Weight",
+    "@recapWeightSectionTitle": {"description": "Recap screen section heading for the week's weight trend"},
+
+    "recapNoWeighInMessage": "No weigh-in this week",
+    "@recapNoWeighInMessage": {"description": "Shown in the recap screen's weight section when there's a baseline but no entry logged this particular week"},
+
+    "recapGoalsSectionTitle": "Goals & Streaks",
+    "@recapGoalsSectionTitle": {"description": "Recap screen section heading for goal-consistency and streaks"},
+
+    "recapDaysMet": "{count}/7 days met",
+    "@recapDaysMet": {"description": "How many days this week met a given goal (steps/water), out of 7", "placeholders": {"count": {"type": "int"}}},
+
+    "recapReadyCardTitle": "Your weekly recap is ready",
+    "@recapReadyCardTitle": {"description": "Title of the dismissible dashboard card nudging toward the new weekly recap"},
+
+    "recapReadyCardCta": "View",
+    "@recapReadyCardCta": {"description": "Button on the recap-ready dashboard card that opens the recap screen"},
+
+    "recapReadyCardDismissTooltip": "Dismiss",
+    "@recapReadyCardDismissTooltip": {"description": "Tooltip for the close button on the recap-ready dashboard card"}
 }

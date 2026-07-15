@@ -594,5 +594,31 @@
     "macrosTodayKcalLeft": "{count} kcal maradt",
     "macrosTodayKcalOver": "{count} kcal túl",
     "macrosTodayProteinLeft": "{count} g fehérje maradt",
-    "macrosTodayProteinOver": "{count} g fehérje túl"
+    "macrosTodayProteinOver": "{count} g fehérje túl",
+
+    "streakMetricCalories": "kalória",
+    "streakMetricSteps": "lépés",
+    "streakMetricWater": "víz",
+    "streakActiveTooltip": "{count} napos {metric} szériád",
+    "streakNotStartedTooltip": "Még nincs {metric} szériád — érd el a mai célt, hogy elindítsd",
+
+    "recapScreenTitle": "Heti összefoglaló",
+    "recapPreviousWeekTooltip": "Előző hét",
+    "recapNextWeekTooltip": "Következő hét",
+    "recapWorkoutsSectionTitle": "Edzések",
+    "recapWorkoutsCount": "{count} edzés",
+    "recapWorkoutsMinutes": "{count} perc összesen",
+    "recapNoWorkoutsMessage": "Ezen a héten nem volt naplózott edzés.",
+    "recapNutritionSectionTitle": "Táplálkozás",
+    "recapAvgCaloriesLabel": "Átlagos kalória",
+    "recapLoggedDaysCaption": "{count} naplózott nap átlaga",
+    "recapDaysWithinGoal": "{count}/7 nap a célon belül",
+    "recapNoNutritionMessage": "Ezen a héten nem volt naplózott étkezés.",
+    "recapWeightSectionTitle": "Testsúly",
+    "recapNoWeighInMessage": "Ezen a héten nem volt mérés",
+    "recapGoalsSectionTitle": "Célok és széria",
+    "recapDaysMet": "{count}/7 nap teljesítve",
+    "recapReadyCardTitle": "Elkészült a heti összefoglalód",
+    "recapReadyCardCta": "Megnézem",
+    "recapReadyCardDismissTooltip": "Bezárás"
 }

@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import '../local_db/app_database.dart';
 import 'client_ref.dart';
 import 'entity_sync_config.dart';
+import 'sync_lock.dart';
 
 /// Drains the `pending_operations` outbox: sends each queued create/update/
 /// delete to the backend, in dependency order, and reconciles local state
@@ -15,10 +16,11 @@ import 'entity_sync_config.dart';
 /// lightweight foreground timer. Safe to call repeatedly — concurrent calls
 /// are coalesced via [_running].
 class SyncEngine {
-  SyncEngine(this._db, this._dio);
+  SyncEngine(this._db, this._dio, [SyncLock? lock]) : _lock = lock ?? SyncLock();
 
   final AppDatabase _db;
   final Dio _dio;
+  final SyncLock _lock;
 
   bool _running = false;
 
@@ -26,13 +28,20 @@ class SyncEngine {
     if (_running) return;
     _running = true;
     try {
-      // Keep draining until a full pass makes no progress: a row blocked on
-      // a dependency earlier in the same pass can become processable once
-      // that dependency succeeds later in the same pass.
-      var madeProgress = true;
-      while (madeProgress) {
-        madeProgress = await _runOnePass();
-      }
+      // Serialized against PullEngine.pullAll via the shared lock (see
+      // SyncLock) so a pull's GET response can never land in between this
+      // push sending a PUT and clearing its pending_operations row —
+      // otherwise the stale GET response would silently overwrite the field
+      // the push just synced.
+      await _lock.synchronized(() async {
+        // Keep draining until a full pass makes no progress: a row blocked
+        // on a dependency earlier in the same pass can become processable
+        // once that dependency succeeds later in the same pass.
+        var madeProgress = true;
+        while (madeProgress) {
+          madeProgress = await _runOnePass();
+        }
+      });
     } finally {
       _running = false;
     }

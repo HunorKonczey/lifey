@@ -26,7 +26,7 @@ clients, assignments, schedules, calendar) on the web admin.
 * One-tap "repeat last set" to prefill values
 * Biggest quality-of-life gain for logging speed
 
-#### 3. Personal Records (PR)
+#### 3. Personal Records (PR) (plan: 38-personal-records-plan.md)
 
 * Detect new PRs when a set is saved: max weight, max reps at weight,
   estimated 1RM
@@ -53,12 +53,12 @@ clients, assignments, schedules, calendar) on the web admin.
 
 ### Motivation & Retention
 
-#### 7. Streaks and Weekly Recap
+#### 7. Streaks and Weekly Recap (DONE, plan: 37-streaks-weekly-recap-plan.md)
 
 * Daily goal streaks (calories, steps, water)
 * Weekly recap screen (workouts done, average calories, weight trend)
 
-#### 8. Push Notifications (infrastructure + first use cases)
+#### 8. Push Notifications (DONE, infrastructure + first use cases)
 
 * Backend push infrastructure (APNs, later FCM) — prerequisite for several
   features below; currently only local notifications exist
@@ -99,13 +99,13 @@ clients, assignments, schedules, calendar) on the web admin.
 * Trainer can comment on a session; client receives a push (depends on #8)
 * Minimal viable communication feature — no full chat needed
 
-#### 14. Multi-Week Program Builder (plan: 34-multi-week-program-plan.md)
+#### 14. Multi-Week Program Builder (DONE, plan: 34-multi-week-program-plan.md)
 
 * Build 4–12 week programs: weekly structure, progression between weeks
 * Assigning a program generates the scheduled sessions automatically
 * Extends the existing schedule/assignment model
 
-#### 15. Bulk Assignment (plan: 35-bulk-assignment-plan.md)
+#### 15. Bulk Assignment (DONE, plan: 35-bulk-assignment-plan.md)
 
 * Assign a template or recipe to multiple clients at once
 * Extension of the existing AssignmentController

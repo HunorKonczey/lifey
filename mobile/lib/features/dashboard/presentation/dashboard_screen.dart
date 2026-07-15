@@ -26,6 +26,10 @@ import '../../workouts/presentation/widgets/recommended_workout_card.dart';
 import '../../nutrition/domain/meal.dart';
 import '../../nutrition/presentation/nutrition_screen.dart';
 import '../../onboarding/presentation/widgets/onboarding_banner.dart';
+import '../../streaks/application/streaks_provider.dart';
+import '../../streaks/domain/streak.dart';
+import '../../streaks/presentation/widgets/recap_ready_card.dart';
+import '../../streaks/presentation/widgets/streak_chip_row.dart';
 import '../application/dashboard_controller.dart';
 import '../application/today_steps_controller.dart';
 import '../domain/dashboard_data.dart';
@@ -127,6 +131,7 @@ class DashboardScreen extends ConsumerWidget {
     final weightDelta = _weightDelta(ref.watch(weightControllerProvider).value ?? const []);
     final todaySteps = ref.watch(todayStepsControllerProvider).value;
     final recommendedTemplate = ref.watch(recommendedTemplateProvider);
+    final streaks = ref.watch(streaksProvider);
     final l10n = AppLocalizations.of(context)!;
 
     final statusTop = MediaQuery.paddingOf(context).top;
@@ -147,6 +152,7 @@ class DashboardScreen extends ConsumerWidget {
                   weightDelta: weightDelta,
                   todaySteps: todaySteps,
                   recommendedTemplate: recommendedTemplate,
+                  streaks: streaks,
                   onStartRecommended: (template) =>
                       _startRecommendedWorkout(context, template),
                   onWorkoutTap: (clientId) => _openWorkout(context, ref, clientId),
@@ -196,6 +202,7 @@ class _DashboardBody extends StatelessWidget {
     this.weightDelta,
     this.todaySteps,
     this.recommendedTemplate,
+    this.streaks = const [],
   });
 
   final DashboardData data;
@@ -203,6 +210,7 @@ class _DashboardBody extends StatelessWidget {
   final WeightDelta? weightDelta;
   final int? todaySteps;
   final WorkoutTemplate? recommendedTemplate;
+  final List<Streak> streaks;
   final ValueChanged<String> onWorkoutTap;
   final ValueChanged<String> onRateWorkoutTap;
   final VoidCallback onMealsTap;
@@ -266,6 +274,10 @@ class _DashboardBody extends StatelessWidget {
 
         // ── Greeting ─────────────────────────────────────────────────
         _DayGreeting(l10n: l10n),
+        if (streaks.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          StreakChipRow(streaks: streaks, onTap: () => context.push('/recap')),
+        ],
         const SizedBox(height: 4),
 
         // ── Calories — hero metric, full width ────────────────────────
@@ -366,6 +378,9 @@ class _DashboardBody extends StatelessWidget {
         // ── Weekly calorie sparkline ───────────────────────────────────
         CalorieSparklineCard(points: data.weeklyCalories),
         const SizedBox(height: 24),
+
+        // ── Weekly recap ready nudge (hidden most of the time) ─────────
+        const RecapReadyCard(),
 
         // ── Today's meals ─────────────────────────────────────────────
         _SectionTitle(l10n.todaysMealsSectionTitle),

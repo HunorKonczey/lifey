@@ -7,6 +7,8 @@ import '../local_db/app_database.dart';
 import '../local_db/database_provider.dart';
 import '../network/dio_client.dart';
 import 'client_id.dart';
+import 'sync_engine_provider.dart';
+import 'sync_lock.dart';
 
 /// Refreshes the local cache from the backend: call on app start or when
 /// connectivity returns, after [SyncEngine.sync] has had a chance to push
@@ -21,10 +23,11 @@ import 'client_id.dart';
 /// device). Once a row's pending operations have drained, server data is
 /// the source of truth, per doc section 7.
 class PullEngine {
-  PullEngine(this._db, this._dio);
+  PullEngine(this._db, this._dio, [SyncLock? lock]) : _lock = lock ?? SyncLock();
 
   final AppDatabase _db;
   final Dio _dio;
+  final SyncLock _lock;
 
   bool _running = false;
 
@@ -41,28 +44,33 @@ class PullEngine {
     _running = true;
     debugPrint('PullEngine: pullAll START');
     try {
-      // Order matters: entities referenced by others (as a clientId lookup)
-      // are pulled first.
-      //
-      // Each entity is pulled in its own guard so a failure in one — a
-      // malformed payload, an unexpected null, or a duplicate-serverId
-      // collision that makes `getSingleOrNull()` throw — can't abort the
-      // whole refresh and leave every *later* entity (water, steps, meals…)
-      // stale. The failing entity keeps its last-known local state and is
-      // retried on the next pull; the rest still refresh. Without this, the
-      // first throwing entity (foods) silently stops the entire sync — the
-      // only network call that goes out is its GET.
-      await _guard('foods', _pullFoods);
-      await _guard('exercises', _pullExercises);
-      await _guard('water_sources', _pullWaterSources);
-      await _guard('weight_entries', _pullWeightEntries);
-      await _guard('water_entries', _pullWaterEntries);
-      await _guard('daily_steps', _pullDailySteps);
-      await _guard('settings', _pullSettings);
-      await _guard('workout_templates', _pullWorkoutTemplates);
-      await _guard('workout_sessions', _pullWorkoutSessions);
-      await _guard('recipes', _pullRecipes);
-      await _guard('meals', _pullMeals);
+      // Serialized against SyncEngine.sync via the shared lock (see
+      // SyncLock) — see that class doc for why a pull can't be allowed to
+      // run concurrently with a push.
+      await _lock.synchronized(() async {
+        // Order matters: entities referenced by others (as a clientId
+        // lookup) are pulled first.
+        //
+        // Each entity is pulled in its own guard so a failure in one — a
+        // malformed payload, an unexpected null, or a duplicate-serverId
+        // collision that makes `getSingleOrNull()` throw — can't abort the
+        // whole refresh and leave every *later* entity (water, steps,
+        // meals…) stale. The failing entity keeps its last-known local
+        // state and is retried on the next pull; the rest still refresh.
+        // Without this, the first throwing entity (foods) silently stops
+        // the entire sync — the only network call that goes out is its GET.
+        await _guard('foods', _pullFoods);
+        await _guard('exercises', _pullExercises);
+        await _guard('water_sources', _pullWaterSources);
+        await _guard('weight_entries', _pullWeightEntries);
+        await _guard('water_entries', _pullWaterEntries);
+        await _guard('daily_steps', _pullDailySteps);
+        await _guard('settings', _pullSettings);
+        await _guard('workout_templates', _pullWorkoutTemplates);
+        await _guard('workout_sessions', _pullWorkoutSessions);
+        await _guard('recipes', _pullRecipes);
+        await _guard('meals', _pullMeals);
+      });
     } finally {
       _running = false;
       debugPrint('PullEngine: pullAll DONE');
@@ -1240,5 +1248,9 @@ class PullEngine {
 }
 
 final pullEngineProvider = Provider<PullEngine>((ref) {
-  return PullEngine(ref.watch(appDatabaseProvider), ref.watch(dioClientProvider));
+  return PullEngine(
+    ref.watch(appDatabaseProvider),
+    ref.watch(dioClientProvider),
+    ref.watch(syncLockProvider),
+  );
 });
