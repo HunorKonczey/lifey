@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -107,14 +109,47 @@ WeightDelta? _weightDelta(List<WeightEntry> entries) {
 /// in any of the underlying feature repositories (see
 /// `dashboardControllerProvider`), so unlike before, no manual refresh is
 /// needed to see a just-logged meal/weight/workout/water entry show up.
-class DashboardScreen extends ConsumerWidget {
+///
+/// The underlying cache is normally kept fresh by [ConnectivitySyncController]
+/// (connectivity restore / app resume / a 60s foreground timer), but that
+/// controller runs independently of whether the dashboard is on screen and
+/// swallows failures silently. So this screen also forces its own sync+pull
+/// every time it becomes visible (first build, and app resume while it's the
+/// active screen) — e.g. the tab was left open overnight and is checked the
+/// next morning — instead of trusting only the background triggers.
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
-  /// Pull-to-refresh now means "sync now" (push then pull) rather than
+  @override
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_forceSync());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_forceSync());
+    }
+  }
+
+  /// Also used by pull-to-refresh: "sync now" (push then pull) rather than
   /// re-fetching this screen's own data, since that's already live —
   /// useful for forcing a sync attempt without waiting for the next
   /// automatic trigger.
-  Future<void> _forceSync(WidgetRef ref) async {
+  Future<void> _forceSync() async {
     try {
       await ref.read(syncEngineProvider).sync();
       await ref.read(pullEngineProvider).pullAll();
@@ -125,7 +160,7 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final data = ref.watch(dashboardControllerProvider);
     final settings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
     final weightDelta = _weightDelta(ref.watch(weightControllerProvider).value ?? const []);
@@ -145,7 +180,7 @@ class DashboardScreen extends ConsumerWidget {
             Positioned.fill(
               child: RefreshIndicator(
                 displacement: contentTop,
-                onRefresh: () => _forceSync(ref),
+                onRefresh: _forceSync,
                 child: _DashboardBody(
                   data: data,
                   settings: settings,

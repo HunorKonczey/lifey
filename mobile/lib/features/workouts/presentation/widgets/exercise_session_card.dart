@@ -42,6 +42,12 @@ class ExerciseBlock {
   final int? targetSets;
   final List<SetRow> rows;
 
+  /// Muscle-group code (e.g. "CHEST"), filled from the catalog at the same
+  /// time as [exerciseName] (see [LogSessionScreen.build]) — feeds the
+  /// per-exercise badge icon on the workout-success dialog
+  /// (workout_success_dialog.dart).
+  String? exerciseCategory;
+
   /// Previous-performance hints for this exercise, sorted to line up
   /// positionally with [rows] (index 0 = row 0, etc). Filled asynchronously
   /// after construction — see [LogSessionScreen._loadPreviousPerformance].
@@ -195,8 +201,7 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
                   : null,
               onTap: (focusReps) => _openEditor(i, focusReps: focusReps),
               onTapPrevious: i < widget.block.previousSets.length
-                  ? () =>
-                      _handleUsePrevious(i, widget.block.previousSets[i])
+                  ? () => _handleUsePrevious(i, widget.block.previousSets[i])
                   : null,
               onDoubleTap: () => _handleDoubleTap(i),
               onTrailingTap: () => _handleTrailingTap(i),
@@ -333,6 +338,7 @@ class _SetRowTile extends StatelessWidget {
   final PreviousSetHint? previous;
   // focusReps: false = weight field, true = reps field
   final void Function(bool focusReps) onTap;
+
   /// Tap on the "PREV" column — null when there's no previous value to use.
   final VoidCallback? onTapPrevious;
   final VoidCallback onDoubleTap;
@@ -348,7 +354,8 @@ class _SetRowTile extends StatelessWidget {
   /// short. If unchanged, shows a gray dash when [showStagnant] is set
   /// (reps), otherwise nothing (weight). Nothing if there's nothing to
   /// compare against.
-  Widget? _deltaArrow(num? current, num? previous, {bool showStagnant = false}) {
+  Widget? _deltaArrow(num? current, num? previous,
+      {bool showStagnant = false}) {
     if (current == null || previous == null) return null;
     if (current == previous) {
       if (!showStagnant) return null;
@@ -395,8 +402,9 @@ class _SetRowTile extends StatelessWidget {
         : '—';
     final weightArrow =
         isDone ? _deltaArrow(row.weight, previous?.weight) : null;
-    final repsArrow =
-        isDone ? _deltaArrow(row.reps, previous?.reps, showStagnant: true) : null;
+    final repsArrow = isDone
+        ? _deltaArrow(row.reps, previous?.reps, showStagnant: true)
+        : null;
 
     // Done row: check_circle (reopen on tap). Plan row: close (delete on tap).
     final trailingIcon = isDone ? Icons.check_circle : Icons.close;
@@ -450,8 +458,7 @@ class _SetRowTile extends StatelessWidget {
                         decoration: onTapPrevious != null
                             ? TextDecoration.underline
                             : null,
-                        decorationColor:
-                            scheme.primary.withValues(alpha: 0.4),
+                        decorationColor: scheme.primary.withValues(alpha: 0.4),
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),

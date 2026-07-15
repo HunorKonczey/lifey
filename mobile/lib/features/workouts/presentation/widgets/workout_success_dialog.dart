@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/exercise_enums.dart';
 import '../../domain/personal_record.dart';
 import 'exercise_session_card.dart';
 
@@ -15,9 +16,14 @@ import 'exercise_session_card.dart';
 /// workout-success dialog. Only exercises with at least one positive gain
 /// are included.
 class WorkoutImprovement {
-  const WorkoutImprovement({required this.exerciseName, required this.chips});
+  const WorkoutImprovement(
+      {required this.exerciseName, this.category, required this.chips});
 
   final String exerciseName;
+
+  /// Muscle-group code (e.g. "CHEST"), null if uncategorized — drives the
+  /// row's badge icon/color (see [_WorkoutSuccessDialogState._buildChipRow]).
+  final String? category;
   final List<String> chips;
 }
 
@@ -25,9 +31,14 @@ class WorkoutImprovement {
 /// 118 kg") earned this session — one chip per (row, [PrType]) pair, see
 /// [SetRow.prTypes] (docs/38-personal-records-plan.md, M4).
 class WorkoutPrRow {
-  const WorkoutPrRow({required this.exerciseName, required this.chips});
+  const WorkoutPrRow(
+      {required this.exerciseName, this.category, required this.chips});
 
   final String exerciseName;
+
+  /// Muscle-group code (e.g. "CHEST"), null if uncategorized — drives the
+  /// row's badge icon/color (see [_WorkoutSuccessDialogState._buildChipRow]).
+  final String? category;
   final List<String> chips;
 }
 
@@ -105,7 +116,11 @@ WorkoutProgressResult computeWorkoutProgress(
     }
     if (chips.isNotEmpty) {
       improvements.add(
-        WorkoutImprovement(exerciseName: block.exerciseName, chips: chips),
+        WorkoutImprovement(
+          exerciseName: block.exerciseName,
+          category: block.exerciseCategory,
+          chips: chips,
+        ),
       );
     }
 
@@ -113,7 +128,10 @@ WorkoutProgressResult computeWorkoutProgress(
     for (final row in block.rows) {
       final weight = row.weight;
       final reps = row.reps;
-      if (!row.isDone || row.prTypes.isEmpty || weight == null || reps == null) {
+      if (!row.isDone ||
+          row.prTypes.isEmpty ||
+          weight == null ||
+          reps == null) {
         continue;
       }
       for (final type in row.prTypes) {
@@ -121,7 +139,8 @@ WorkoutProgressResult computeWorkoutProgress(
           case PrType.maxWeight:
             prChips.add('${weightFormat.format(weight)} ${l10n.statUnitKg}');
           case PrType.repsAtWeight:
-            prChips.add('$reps × ${weightFormat.format(weight)} ${l10n.statUnitKg}');
+            prChips.add(
+                '$reps × ${weightFormat.format(weight)} ${l10n.statUnitKg}');
           case PrType.estimatedOneRm:
             prChips.add(
                 'e1RM ${weightFormat.format(estimateOneRepMax(weight, reps))} ${l10n.statUnitKg}');
@@ -129,11 +148,16 @@ WorkoutProgressResult computeWorkoutProgress(
       }
     }
     if (prChips.isNotEmpty) {
-      records.add(WorkoutPrRow(exerciseName: block.exerciseName, chips: prChips));
+      records.add(WorkoutPrRow(
+        exerciseName: block.exerciseName,
+        category: block.exerciseCategory,
+        chips: prChips,
+      ));
     }
   }
 
-  return WorkoutProgressResult(score: score, improvements: improvements, records: records);
+  return WorkoutProgressResult(
+      score: score, improvements: improvements, records: records);
 }
 
 // ---------------------------------------------------------------------------
@@ -195,8 +219,8 @@ class _ConfettiBurst extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalMs =
-        _kConfettiBurstDuration.inMilliseconds + _kConfettiMaxDelaySeconds * 1000;
+    final totalMs = _kConfettiBurstDuration.inMilliseconds +
+        _kConfettiMaxDelaySeconds * 1000;
 
     return IgnorePointer(
       child: Stack(
@@ -229,7 +253,8 @@ class _ConfettiBurst extends StatelessWidget {
       final eased = Curves.easeOut.transform(local);
       dx = fullDx * eased;
       dy = fullDy * eased;
-      scale = 0.4 + 0.6 * Curves.easeOut.transform((local * 3.0).clamp(0.0, 1.0));
+      scale =
+          0.4 + 0.6 * Curves.easeOut.transform((local * 3.0).clamp(0.0, 1.0));
       rotationDeg = p.angleDeg * 3 * eased;
       opacity = local <= 0
           ? 0
@@ -309,60 +334,98 @@ class _WorkoutSuccessDialogState extends State<WorkoutSuccessDialog>
     super.dispose();
   }
 
+  /// Icon for the per-exercise badge — category-based, mirrors the badge
+  /// used on the exercises list (exercises_tab.dart's `_ExerciseCard`),
+  /// minus the equipment check that dialog doesn't have data for.
+  IconData _exerciseTypeIcon(String? category) {
+    if (category == 'CARDIO') return Icons.directions_run;
+    return Icons.fitness_center;
+  }
+
   /// A single exercise's chip row — shared by the PR section and the
-  /// regular-improvement section, distinguished only by [icon]/[chipBg]/
+  /// regular-improvement section, distinguished only by [chipIcon]/[chipBg]/
   /// [chipText] (trophy + amber for PRs, up-arrow + green for improvements).
+  ///
+  /// The exercise name isn't rendered as text (long names left too little
+  /// room for the chips, which then couldn't fit on one line and had no way
+  /// to wrap) — instead a small category-colored icon badge sits on the
+  /// trailing edge, name available via long-press tooltip, while the chips
+  /// get the full row width via [Wrap] and flow onto a second line if
+  /// needed.
   Widget _buildChipRow({
     required String exerciseName,
+    required String? category,
     required List<String> chips,
-    required IconData icon,
+    required IconData chipIcon,
     required Color chipBg,
     required Color chipText,
     required Color rowBg,
-    required Color titleColor,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color badgeBg;
+    final Color badgeIconColor;
+    if (category != null) {
+      final mc = muscleGroupColor(category, context);
+      badgeBg = mc.withValues(alpha: isDark ? 0.22 : 0.16);
+      badgeIconColor = mc;
+    } else {
+      badgeBg = scheme.primaryContainer;
+      badgeIconColor = scheme.onPrimaryContainer;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-      decoration: BoxDecoration(color: rowBg, borderRadius: BorderRadius.circular(14)),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+      decoration:
+          BoxDecoration(color: rowBg, borderRadius: BorderRadius.circular(14)),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Text(
-              exerciseName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: titleColor,
-                fontFamily: 'PlusJakartaSans',
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          for (final chip in chips) ...[
-            Container(
-              margin: const EdgeInsets.only(left: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(color: chipBg, borderRadius: BorderRadius.circular(999)),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 14, color: chipText),
-                  const SizedBox(width: 3),
-                  Text(
-                    chip,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: chipText,
-                      fontFamily: 'PlusJakartaSans',
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (final chip in chips)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: chipBg,
+                        borderRadius: BorderRadius.circular(999)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(chipIcon, size: 14, color: chipText),
+                        const SizedBox(width: 3),
+                        Text(
+                          chip,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: chipText,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
-          ],
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: exerciseName,
+            triggerMode: TooltipTriggerMode.longPress,
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(color: badgeBg, shape: BoxShape.circle),
+              child: Icon(_exerciseTypeIcon(category),
+                  size: 15, color: badgeIconColor),
+            ),
+          ),
         ],
       ),
     );
@@ -375,20 +438,27 @@ class _WorkoutSuccessDialogState extends State<WorkoutSuccessDialog>
     final reduceMotion = MediaQuery.of(context).disableAnimations;
 
     final dialogBg = isDark ? const Color(0xFF22241B) : const Color(0xFFFFFFFF);
-    final iconColor = isDark ? const Color(0xFF9DAE6B) : const Color(0xFF586E38);
-    final titleColor = isDark ? const Color(0xFFF1F0E4) : const Color(0xFF1C1D18);
-    final subtitleColor = isDark ? const Color(0xFFA8A899) : const Color(0xFF6A6A60);
+    final iconColor =
+        isDark ? const Color(0xFF9DAE6B) : const Color(0xFF586E38);
+    final titleColor =
+        isDark ? const Color(0xFFF1F0E4) : const Color(0xFF1C1D18);
+    final subtitleColor =
+        isDark ? const Color(0xFFA8A899) : const Color(0xFF6A6A60);
     final rowBg = isDark ? const Color(0xFF161611) : const Color(0xFFECEBDE);
-    final moreColor = isDark ? const Color(0xFF777264) : const Color(0xFF8A8A7E);
+    final moreColor =
+        isDark ? const Color(0xFF777264) : const Color(0xFF8A8A7E);
     final chipBg = isDark
         ? const Color(0xFF4CAF50).withValues(alpha: 0.15)
         : const Color(0xFF4CAF50).withValues(alpha: 0.16);
     final chipText = isDark ? const Color(0xFF4CAF50) : const Color(0xFF388E3C);
-    final prChipText = isDark ? const Color(0xFFD8B35A) : const Color(0xFFB8933A);
+    final prChipText =
+        isDark ? const Color(0xFFD8B35A) : const Color(0xFFB8933A);
     final prChipBg = prChipText.withValues(alpha: isDark ? 0.18 : 0.16);
-    final sectionLabelColor = isDark ? const Color(0xFF777264) : const Color(0xFF8A8A7E);
+    final sectionLabelColor =
+        isDark ? const Color(0xFF777264) : const Color(0xFF8A8A7E);
     final buttonBg = isDark ? const Color(0xFF9DAE6B) : const Color(0xFF586E38);
-    final buttonText = isDark ? const Color(0xFF1E1F18) : const Color(0xFFFFFFFF);
+    final buttonText =
+        isDark ? const Color(0xFF1E1F18) : const Color(0xFFFFFFFF);
     final confettiColors = isDark
         ? const [
             Color(0xFF9DAE6B),
@@ -415,176 +485,195 @@ class _WorkoutSuccessDialogState extends State<WorkoutSuccessDialog>
       backgroundColor: dialogBg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 116,
-              height: 116,
-              child: Stack(
-                children: [
-                  // Positioned.fill forces both children to the full 116×116
-                  // box — without it, a Stack with no sized non-positioned
-                  // child shrinks to zero, which threw the icon to the
-                  // top-left and the confetti's "center" off with it.
-                  Positioned.fill(
-                    child: Container(
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: iconColor.withValues(alpha: isDark ? 0.16 : 0.12),
-                      ),
-                      child: Icon(Icons.celebration_rounded, size: 54, color: iconColor),
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: AnimatedBuilder(
-                      animation: _controller,
-                      builder: (context, _) => _ConfettiBurst(
-                        progress: reduceMotion ? 1 : _controller.value,
-                        colors: confettiColors,
-                        reduceMotion: reduceMotion,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              hasRecords
-                  ? l10n.workoutSuccessPrTitle(widget.result.totalPrCount)
-                  : l10n.workoutSuccessTitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: titleColor,
-                letterSpacing: -0.3,
-                fontFamily: 'PlusJakartaSans',
-              ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              hasRecords
-                  ? l10n.workoutSuccessPrSubtitle(widget.result.totalPrCount)
-                  : l10n.workoutSuccessSubtitle(widget.result.improvements.length),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: subtitleColor,
-                height: 1.5,
-                fontFamily: 'PlusJakartaSans',
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (hasRecords) ...[
-              if (showSectionLabels) ...[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      l10n.workoutSuccessPrSectionLabel.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        color: sectionLabelColor,
-                        letterSpacing: 0.6,
-                        fontFamily: 'PlusJakartaSans',
+      // Bounds the dialog so the records/improvements section (below,
+      // wrapped in Flexible+SingleChildScrollView) can scroll instead of
+      // pushing the Continue button off-screen when there are many rows.
+      child: ConstrainedBox(
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.82),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 116,
+                height: 116,
+                child: Stack(
+                  children: [
+                    // Positioned.fill forces both children to the full 116×116
+                    // box — without it, a Stack with no sized non-positioned
+                    // child shrinks to zero, which threw the icon to the
+                    // top-left and the confetti's "center" off with it.
+                    Positioned.fill(
+                      child: Container(
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color:
+                              iconColor.withValues(alpha: isDark ? 0.16 : 0.12),
+                        ),
+                        child: Icon(Icons.celebration_rounded,
+                            size: 54, color: iconColor),
                       ),
                     ),
-                  ),
-                ),
-              ],
-              Column(
-                children: [
-                  for (final row in records) ...[
-                    _buildChipRow(
-                      exerciseName: row.exerciseName,
-                      chips: row.chips,
-                      icon: Icons.emoji_events,
-                      chipBg: prChipBg,
-                      chipText: prChipText,
-                      rowBg: rowBg,
-                      titleColor: titleColor,
+                    Positioned.fill(
+                      child: AnimatedBuilder(
+                        animation: _controller,
+                        builder: (context, _) => _ConfettiBurst(
+                          progress: reduceMotion ? 1 : _controller.value,
+                          colors: confettiColors,
+                          reduceMotion: reduceMotion,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 8),
                   ],
-                ],
-              ),
-              if (rows.isNotEmpty) const SizedBox(height: 4),
-            ],
-            if (showSectionLabels) ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    l10n.workoutSuccessImprovementsSectionLabel.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: sectionLabelColor,
-                      letterSpacing: 0.6,
-                      fontFamily: 'PlusJakartaSans',
-                    ),
-                  ),
                 ),
               ),
-            ],
-            Column(
-              children: [
-                for (final row in rows) ...[
-                  _buildChipRow(
-                    exerciseName: row.exerciseName,
-                    chips: row.chips,
-                    icon: Icons.arrow_upward,
-                    chipBg: chipBg,
-                    chipText: chipText,
-                    rowBg: rowBg,
-                    titleColor: titleColor,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ],
-            ),
-            if (remaining > 0) ...[
+              const SizedBox(height: 16),
               Text(
-                l10n.workoutSuccessMoreCount(remaining),
+                hasRecords
+                    ? l10n.workoutSuccessPrTitle(widget.result.totalPrCount)
+                    : l10n.workoutSuccessTitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: moreColor,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: titleColor,
+                  letterSpacing: -0.3,
                   fontFamily: 'PlusJakartaSans',
                 ),
               ),
-              const SizedBox(height: 18),
-            ] else
-              const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: buttonBg,
-                  foregroundColor: buttonText,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
-                  textStyle: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+              const SizedBox(height: 7),
+              Text(
+                hasRecords
+                    ? l10n.workoutSuccessPrSubtitle(widget.result.totalPrCount)
+                    : l10n.workoutSuccessSubtitle(
+                        widget.result.improvements.length),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: subtitleColor,
+                  height: 1.5,
+                  fontFamily: 'PlusJakartaSans',
+                ),
+              ),
+              const SizedBox(height: 20),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasRecords) ...[
+                        if (showSectionLabels) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                l10n.workoutSuccessPrSectionLabel.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: sectionLabelColor,
+                                  letterSpacing: 0.6,
+                                  fontFamily: 'PlusJakartaSans',
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        Column(
+                          children: [
+                            for (final row in records) ...[
+                              _buildChipRow(
+                                exerciseName: row.exerciseName,
+                                category: row.category,
+                                chips: row.chips,
+                                chipIcon: Icons.emoji_events,
+                                chipBg: prChipBg,
+                                chipText: prChipText,
+                                rowBg: rowBg,
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                          ],
+                        ),
+                        if (rows.isNotEmpty) const SizedBox(height: 4),
+                      ],
+                      if (showSectionLabels) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              l10n.workoutSuccessImprovementsSectionLabel
+                                  .toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: sectionLabelColor,
+                                letterSpacing: 0.6,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      Column(
+                        children: [
+                          for (final row in rows) ...[
+                            _buildChipRow(
+                              exerciseName: row.exerciseName,
+                              category: row.category,
+                              chips: row.chips,
+                              chipIcon: Icons.arrow_upward,
+                              chipBg: chipBg,
+                              chipText: chipText,
+                              rowBg: rowBg,
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ],
+                      ),
+                      if (remaining > 0)
+                        Text(
+                          l10n.workoutSuccessMoreCount(remaining),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: moreColor,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                child: Text(l10n.workoutSuccessContinueButton),
               ),
-            ),
-          ],
+              SizedBox(height: remaining > 0 ? 18 : 10),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: buttonBg,
+                    foregroundColor: buttonText,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(17)),
+                    textStyle: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  child: Text(l10n.workoutSuccessContinueButton),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

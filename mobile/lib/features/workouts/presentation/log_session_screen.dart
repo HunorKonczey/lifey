@@ -47,10 +47,9 @@ import 'widgets/workout_success_dialog.dart';
 /// notification tap handling: it must NOT push a second `LogSessionScreen`
 /// on top of an already-live one, since a fresh instance is reconstructed
 /// from the last *persisted* DB state only — any not-yet-flushed in-memory
-/// edits (e.g. blank "Add set" rows added just before the OS suspended the
-/// app in the background) would be silently dropped, and the duplicate's
-/// stale set count would overwrite the correct Live Activity/notification
-/// content.
+/// edit (e.g. a weight/reps value being typed into the compact set editor,
+/// not yet submitted) would be silently dropped, and the duplicate's stale
+/// state would overwrite the correct Live Activity/notification content.
 bool isLogSessionScreenOpen = false;
 
 class LogSessionScreen extends ConsumerStatefulWidget {
@@ -425,8 +424,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   /// Effective rest duration for [block]: its own override if set, otherwise
   /// the account-wide default (docs/39-rest-timer-plan.md §2.2).
-  int _effectiveRestSeconds(ExerciseBlock block, Map<String, Exercise> exercisesById, UserSettings settings) {
-    return exercisesById[block.exerciseClientId]?.defaultRestSeconds ?? settings.defaultRestSeconds;
+  int _effectiveRestSeconds(ExerciseBlock block,
+      Map<String, Exercise> exercisesById, UserSettings settings) {
+    return exercisesById[block.exerciseClientId]?.defaultRestSeconds ??
+        settings.defaultRestSeconds;
   }
 
   // ---------------------------------------------------------------------------
@@ -450,10 +451,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   }
 
   UserSettings _currentRestSettings() =>
-      ref.read(settingsControllerProvider).value ?? const UserSettings.defaults();
+      ref.read(settingsControllerProvider).value ??
+      const UserSettings.defaults();
 
   int _currentEffectiveRestSeconds(ExerciseBlock block, UserSettings settings) {
-    final exercises = ref.read(exerciseControllerProvider).value ?? const <Exercise>[];
+    final exercises =
+        ref.read(exerciseControllerProvider).value ?? const <Exercise>[];
     final exercisesById = {for (final e in exercises) e.clientId: e};
     return _effectiveRestSeconds(block, exercisesById, settings);
   }
@@ -468,12 +471,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final settings = _currentRestSettings();
     final entry = _lastDoneEntry();
     final skipped = _restSkippedAt != null && _restSkippedAt == entry?.doneAt;
-    if (!settings.restTimerEnabled || entry == null || skipped || _finishedAt != null) {
+    if (!settings.restTimerEnabled ||
+        entry == null ||
+        skipped ||
+        _finishedAt != null) {
       await NotificationService.cancelRestEnd();
       return;
     }
     final seconds = _currentEffectiveRestSeconds(entry.block, settings);
-    final endsAt = entry.doneAt.add(Duration(seconds: seconds) + _restAdjustment);
+    final endsAt =
+        entry.doneAt.add(Duration(seconds: seconds) + _restAdjustment);
     if (!endsAt.isAfter(DateTime.now())) {
       await NotificationService.cancelRestEnd();
       return;
@@ -500,7 +507,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final skipped = _restSkippedAt != null && _restSkippedAt == entry.doneAt;
     if (skipped) return null;
     final seconds = _currentEffectiveRestSeconds(entry.block, settings);
-    final endsAt = entry.doneAt.add(Duration(seconds: seconds) + _restAdjustment);
+    final endsAt =
+        entry.doneAt.add(Duration(seconds: seconds) + _restAdjustment);
     if (!endsAt.isAfter(DateTime.now())) return null;
     return endsAt.millisecondsSinceEpoch;
   }
@@ -538,7 +546,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   List<ExerciseSetInput> _buildSets() => [
         for (final block in _blocks)
           for (final row in block.rows)
-            if (row.isDone && row.reps != null && row.reps! > 0 && row.weight != null)
+            if (row.isDone &&
+                row.reps != null &&
+                row.reps! > 0 &&
+                row.weight != null)
               ExerciseSetInput(
                 exerciseClientId: block.exerciseClientId,
                 reps: row.reps!,
@@ -603,7 +614,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     });
     _syncRestEphemeralState();
     unawaited(_rescheduleRestNotification());
-    if (_sessionClientId != null) _autoSave();
+    _autoSave();
   }
 
   void _handleRowDuplicate(int bi, int ri) {
@@ -628,12 +639,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     setState(() {
       final block = _blocks[bi];
       PreviousSetHint? hint;
-      if (prefillFromPrevious && block.rows.length < block.previousSets.length) {
+      if (prefillFromPrevious &&
+          block.rows.length < block.previousSets.length) {
         hint = block.previousSets[block.rows.length];
       }
       block.rows.add(SetRow(weight: hint?.weight, reps: hint?.reps));
     });
-    if (_sessionClientId != null) _autoSave();
+    _autoSave();
   }
 
   Future<void> _handleRemoveExercise(int bi) async {
@@ -654,7 +666,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     setState(() => _blocks.removeAt(bi));
     _syncRestEphemeralState();
     unawaited(_rescheduleRestNotification());
-    if (_sessionClientId != null) await _autoSave();
+    await _autoSave();
   }
 
   Future<void> _handleAddExercise() async {
@@ -676,7 +688,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     setState(() => _blocks.add(block));
     unawaited(_loadPreviousPerformance([block]));
     unawaited(_loadPrBaselines([block]));
-    if (_sessionClientId != null) await _autoSave();
+    await _autoSave();
   }
 
   // ---------------------------------------------------------------------------
@@ -711,11 +723,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final notifier = ref.read(workoutSessionControllerProvider.notifier);
     final existingId = _sessionClientId;
     if (existingId == null) {
-      // Don't create the session until at least one set is logged, unless we
-      // are finishing (finishedAt != null means the user explicitly hit Finish).
-      if (_buildSets().isEmpty && _finishedAt == null) return;
-
       // First real save: stamp the start time now and kick off the ticker.
+      // Any call reaching here already followed a real user action (a set
+      // logged, a row/exercise added or removed, etc — see the call sites of
+      // _autoSave) rather than just mounting the screen, so it's safe to
+      // create the session immediately instead of waiting specifically for
+      // the first done set: otherwise plan-only edits (e.g. a blank row
+      // added via "+ Add set" before any set is marked done) live only in
+      // memory and are silently dropped if the screen is torn down and
+      // rebuilt from the last persisted DB state (e.g. resuming via the Live
+      // Activity/notification tap — see isLogSessionScreenOpen above).
       if (_startedAt == null) {
         _startedAt = DateTime.now();
         if (_finishedAt == null) {
@@ -779,7 +796,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     for (final block in _blocks) {
       for (final row in block.rows) {
         final doneAt = row.doneAt;
-        if (doneAt != null && (mostRecentAt == null || doneAt.isAfter(mostRecentAt))) {
+        if (doneAt != null &&
+            (mostRecentAt == null || doneAt.isAfter(mostRecentAt))) {
           mostRecentAt = doneAt;
           mostRecent = block;
         }
@@ -794,8 +812,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   WorkoutSessionState _sessionState(AppLocalizations l10n) {
     final current = _currentExerciseBlock();
-    final totalSetsDone =
-        _blocks.fold<int>(0, (sum, b) => sum + b.rows.where((r) => r.isDone).length);
+    final totalSetsDone = _blocks.fold<int>(
+        0, (sum, b) => sum + b.rows.where((r) => r.isDone).length);
     return WorkoutSessionState(
       exerciseName: (current != null && current.exerciseName.isNotEmpty)
           ? current.exerciseName
@@ -809,7 +827,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   }
 
   String _sessionTitle(AppLocalizations l10n) =>
-      widget.session?.templateName ?? widget.template?.name ?? l10n.liveActivityDefaultTitle;
+      widget.session?.templateName ??
+      widget.template?.name ??
+      l10n.liveActivityDefaultTitle;
 
   Future<void> _startSessionNotifier() async {
     if (!mounted) return;
@@ -912,8 +932,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       await _maybeCollectFeedback();
       if (!mounted) return;
 
-      final healthEnabled =
-          ref.read(healthControllerProvider).value ?? false;
+      final healthEnabled = ref.read(healthControllerProvider).value ?? false;
 
       if (!healthEnabled) {
         await _persistFinished();
@@ -1032,7 +1051,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         workout: workout,
       );
       if (!mounted) return;
-      AppSnackbar.showSuccess(context, title: l10n.workoutPairedWithHealthMessage);
+      AppSnackbar.showSuccess(context,
+          title: l10n.workoutPairedWithHealthMessage);
       Navigator.of(context).pop();
     } catch (_) {
       if (mounted) {
@@ -1086,7 +1106,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 ),
               )
             else
-              Icon(Icons.mood_rounded, size: 21, color: scheme.onSurfaceVariant),
+              Icon(Icons.mood_rounded,
+                  size: 21, color: scheme.onSurfaceVariant),
             const SizedBox(width: 11),
             Expanded(
               child: Column(
@@ -1122,7 +1143,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               ),
             ),
             Icon(Icons.chevron_right,
-                size: 20, color: scheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                size: 20,
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.6)),
           ],
         ),
       ),
@@ -1133,7 +1155,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   /// reply affordance (the push notification is the only attention
   /// mechanism; this block is just the persistent record). See
   /// docs/31-session-feedback-loop-plan.md, M2.
-  Widget _buildTrainerCommentSection(BuildContext context, AppLocalizations l10n) {
+  Widget _buildTrainerCommentSection(
+      BuildContext context, AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     final comment = widget.session!.trainerComment!;
     final commentAt = widget.session!.trainerCommentAt;
@@ -1147,7 +1170,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.chat_bubble_outline_rounded, size: 21, color: scheme.onSurfaceVariant),
+          Icon(Icons.chat_bubble_outline_rounded,
+              size: 21, color: scheme.onSurfaceVariant),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
@@ -1324,23 +1348,27 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     // Resolve exercise names for template-seeded blocks (TemplateExercise has no name).
-    final Map<String, Exercise> exercisesById = ref.watch(exerciseControllerProvider).maybeWhen(
-          data: (list) => {for (final e in list) e.clientId: e},
-          orElse: () => const {},
-        );
+    final Map<String, Exercise> exercisesById =
+        ref.watch(exerciseControllerProvider).maybeWhen(
+              data: (list) => {for (final e in list) e.clientId: e},
+              orElse: () => const {},
+            );
     for (final block in _blocks) {
       if (block.exerciseName.isEmpty) {
         block.exerciseName = exercisesById[block.exerciseClientId]?.name ?? '';
       }
+      block.exerciseCategory = exercisesById[block.exerciseClientId]?.category;
     }
 
     // ── Rest timer (docs/39-rest-timer-plan.md §2.1/§2.4) ──
-    final restSettings = ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults();
+    final restSettings = ref.watch(settingsControllerProvider).value ??
+        const UserSettings.defaults();
     final lastDoneEntry = _lastDoneEntry();
     final lastDoneAt = lastDoneEntry?.doneAt;
     _syncRestEphemeralState();
 
-    final restIsSkipped = _restSkippedAt != null && _restSkippedAt == lastDoneAt;
+    final restIsSkipped =
+        _restSkippedAt != null && _restSkippedAt == lastDoneAt;
     final restTimerActive = restSettings.restTimerEnabled &&
         _finishedAt == null &&
         lastDoneEntry != null &&
@@ -1348,21 +1376,25 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     int? restTargetSeconds;
     bool restIsOvertime = false;
     if (restTimerActive) {
-      restTargetSeconds = _effectiveRestSeconds(lastDoneEntry.block, exercisesById, restSettings);
+      restTargetSeconds = _effectiveRestSeconds(
+          lastDoneEntry.block, exercisesById, restSettings);
       final target = Duration(seconds: restTargetSeconds) + _restAdjustment;
       final elapsed = _now.difference(lastDoneEntry.doneAt);
       restIsOvertime = elapsed >= target;
       if (restIsOvertime && !_restOvertimeHapticFired) {
         _restOvertimeHapticFired = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(HapticFeedback.mediumImpact()));
+        WidgetsBinding.instance.addPostFrameCallback(
+            (_) => unawaited(HapticFeedback.mediumImpact()));
       }
     }
 
     final safeBottom = MediaQuery.paddingOf(context).bottom;
     final statusTop = MediaQuery.paddingOf(context).top;
     final barTop = statusTop + 8.0;
-    final restBannerVisible = _finishedAt == null && lastDoneAt != null && !restIsSkipped;
-    final restBannerHeight = (restBannerVisible && restSettings.restTimerEnabled) ? 74.0 : 50.0;
+    final restBannerVisible =
+        _finishedAt == null && lastDoneAt != null && !restIsSkipped;
+    final restBannerHeight =
+        (restBannerVisible && restSettings.restTimerEnabled) ? 74.0 : 50.0;
     final restBannerTop = barTop + 58.0 + 8.0;
     final contentTop = restBannerVisible
         ? restBannerTop + restBannerHeight + 8.0
@@ -1486,18 +1518,23 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 adjustment: _restAdjustment,
                 isOvertime: restIsOvertime,
                 onAddFifteen: () {
-                  setState(() => _restAdjustment += const Duration(seconds: 15));
+                  setState(
+                      () => _restAdjustment += const Duration(seconds: 15));
                   unawaited(_rescheduleRestNotification());
                   // Keep the native Live Activity / Android chronometer
                   // countdown in sync (docs/39-rest-timer-plan.md, Prompt 5)
                   // — otherwise it'd only pick up the new target on the next
                   // autosave.
-                  if (_sessionNotifierStarted) unawaited(_updateSessionNotifier());
+                  if (_sessionNotifierStarted) {
+                    unawaited(_updateSessionNotifier());
+                  }
                 },
                 onSkip: () {
                   setState(() => _restSkippedAt = lastDoneAt);
                   unawaited(NotificationService.cancelRestEnd());
-                  if (_sessionNotifierStarted) unawaited(_updateSessionNotifier());
+                  if (_sessionNotifierStarted) {
+                    unawaited(_updateSessionNotifier());
+                  }
                 },
               ),
             ),
@@ -1896,7 +1933,8 @@ class _RestBanner extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _RestActionChip extends StatelessWidget {
-  const _RestActionChip({required this.label, required this.color, required this.onTap});
+  const _RestActionChip(
+      {required this.label, required this.color, required this.onTap});
 
   final String label;
   final Color color;
