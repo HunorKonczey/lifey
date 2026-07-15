@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/notifications/notification_service.dart';
+import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/application/auth_controller.dart';
+import 'workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
 import '../presentation/log_session_screen.dart';
@@ -66,10 +68,36 @@ class WorkoutResumePrompt {
     NotificationService.setWorkoutSessionTapHandler(
       () => unawaited(openActiveWorkoutSession(_ref)),
     );
+    // The watch answers "session ended" asynchronously and may do so long
+    // after the phone-side LogSessionScreen that started it is gone — e.g.
+    // the watch was unreachable at end time and only reconnects later, or the
+    // phone app was killed right after finishing (docs/40-watch-app-plan.md
+    // §5.4, §3 "Lezárás"). This app-lifetime listener is what actually
+    // applies the summary, regardless of when it arrives.
+    // Never cancelled — this class is a Provider singleton for the app's
+    // entire lifetime (see class doc), so there's no earlier point to do it.
+    _ref.read(watchWorkoutServiceProvider).events.listen(_onWatchEvent);
     WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_check()));
   }
 
   final Ref _ref;
+
+  Future<void> _onWatchEvent(Object event) async {
+    if (event is! WatchWorkoutSummary) return;
+    // A session already paired via the manual Health import (doc 16) reflects
+    // a more recent, explicit user action — the watch summary must not
+    // overwrite it (docs/40-watch-app-plan.md §6.3).
+    final sessions = _ref.read(workoutSessionControllerProvider).value ?? const <WorkoutSession>[];
+    final session = sessions.where((s) => s.clientId == event.sessionClientId).firstOrNull;
+    if (session == null || session.healthWorkoutId != null) return;
+
+    await _ref.read(workoutSessionControllerProvider.notifier).enrichFromWatch(
+          event.sessionClientId,
+          activeCalories: event.activeCalories,
+          averageHeartRate: event.averageHeartRate,
+          healthWorkoutId: event.healthWorkoutId,
+        );
+  }
 
   Future<void> _check() async {
     if (_ref.read(authControllerProvider).value == null) return;

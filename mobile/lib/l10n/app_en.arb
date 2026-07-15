@@ -1051,6 +1051,15 @@
     "recipeMacrosPreviewLabel": "≈ {calories} kcal · {protein} g protein · {carbs} g carbs · {fat} g fat",
     "@recipeMacrosPreviewLabel": {"description": "Preview of the effective calories/protein/carbs/fat being logged in the log-recipe sheet, scaled by the portion divisor when logging a part meal", "placeholders": {"calories": {"type": "String"}, "protein": {"type": "String"}, "carbs": {"type": "String"}, "fat": {"type": "String"}}},
 
+    "adjustIngredientsButton": "Adjust ingredients",
+    "@adjustIngredientsButton": {"description": "Button in the log-recipe sheet that expands the editable per-portion ingredient amounts"},
+
+    "ingredientAmountsHint": "Amounts apply to the portion being logged. Set 0 to leave an ingredient out.",
+    "@ingredientAmountsHint": {"description": "Hint above the editable ingredient amounts in the log-recipe sheet"},
+
+    "resetIngredientTooltip": "Reset to recipe amount",
+    "@resetIngredientTooltip": {"description": "Tooltip on the per-ingredient reset button in the log-recipe sheet, restoring the recipe's own amount"},
+
     "logOutTooltip": "Log out",
     "@logOutTooltip": {"description": "Tooltip for the logout button on the dashboard"},
 

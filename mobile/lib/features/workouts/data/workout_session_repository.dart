@@ -335,6 +335,53 @@ class WorkoutSessionRepository {
     );
   }
 
+  /// Enriches a session with health-adjacent metrics without the caller
+  /// holding its full editing state in memory — mirrors [rate]'s
+  /// read-then-resubmit pattern. Backs the watch-workout summary handler
+  /// (docs/40-watch-app-plan.md §6.3), which only has {clientId,
+  /// activeCalories, averageHeartRate, healthWorkoutId} on hand and may run
+  /// at cold start, long after the session's editing screen is gone. rpe/
+  /// feedbackNote are left absent so this can't disturb a rating.
+  Future<void> enrichHealthMetrics(
+    String clientId, {
+    Value<double?> activeCalories = const Value.absent(),
+    Value<double?> averageHeartRate = const Value.absent(),
+    Value<String?> healthWorkoutId = const Value.absent(),
+  }) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.clientId.equals(clientId)))
+        .getSingle();
+    final plannedRows = await (_db.select(_db.workoutSessionExercises)
+          ..where((t) => t.sessionClientId.equals(clientId)))
+        .get();
+    final setRows = await (_db.select(_db.exerciseSets)
+          ..where((t) => t.sessionClientId.equals(clientId)))
+        .get();
+
+    await update(
+      clientId,
+      startedAt: row.startedAt!,
+      finishedAt: row.finishedAt,
+      exercises: [
+        for (final p in plannedRows)
+          PlannedExerciseInput(
+              exerciseClientId: p.exerciseClientId, targetSets: p.targetSets),
+      ],
+      sets: [
+        for (final s in setRows)
+          ExerciseSetInput(
+            exerciseClientId: s.exerciseClientId,
+            reps: s.reps,
+            weight: s.weight,
+            performedAt: s.performedAt,
+          ),
+      ],
+      activeCalories: activeCalories,
+      averageHeartRate: averageHeartRate,
+      healthWorkoutId: healthWorkoutId,
+    );
+  }
+
   Future<void> delete(String clientId) async {
     // Must enqueue before the local row is gone — enqueueDelete needs to
     // read its serverId while the row still exists. If it queued a server

@@ -70,6 +70,23 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
     return _repo.rate(clientId, rpe: rpe, feedbackNote: feedbackNote);
   }
 
+  /// Applies a watch-workout summary (docs/40-watch-app-plan.md §6.3) to
+  /// [clientId] without disturbing rpe/feedbackNote or the session's
+  /// exercises/sets — see [WorkoutSessionRepository.enrichHealthMetrics].
+  Future<void> enrichFromWatch(
+    String clientId, {
+    required double? activeCalories,
+    required double? averageHeartRate,
+    required String? healthWorkoutId,
+  }) {
+    return _repo.enrichHealthMetrics(
+      clientId,
+      activeCalories: Value(activeCalories),
+      averageHeartRate: Value(averageHeartRate),
+      healthWorkoutId: Value(healthWorkoutId),
+    );
+  }
+
   Future<void> deleteSession(String clientId) => _repo.delete(clientId);
 
   /// Drains the outbox, then re-pulls from the server — matching what the

@@ -12,6 +12,7 @@ import '../../../core/health/health_service.dart';
 import '../../../core/health/health_workout.dart';
 import '../../../core/health/health_workout_import_service.dart';
 import '../../../core/notifications/notification_service.dart';
+import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
@@ -834,23 +835,37 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   Future<void> _startSessionNotifier() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
+    final state = _sessionState(l10n);
     await ref.read(workoutSessionNotifierServiceProvider).start(
           sessionClientId: _sessionClientId!,
           title: _sessionTitle(l10n),
           startedAt: _startedAt!,
           startedLabel: l10n.startedLabel,
-          state: _sessionState(l10n),
+          state: state,
         );
+    // Best-effort, alongside (not instead of) the Live Activity/ongoing
+    // notification above — see docs/40-watch-app-plan.md §6.2.
+    unawaited(ref.read(watchWorkoutServiceProvider).startWorkout(
+          sessionClientId: _sessionClientId!,
+          title: _sessionTitle(l10n),
+          startedAt: _startedAt!,
+          state: state,
+        ));
   }
 
   Future<void> _updateSessionNotifier() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
+    final state = _sessionState(l10n);
     await ref.read(workoutSessionNotifierServiceProvider).update(
           sessionClientId: _sessionClientId!,
           startedLabel: l10n.startedLabel,
-          state: _sessionState(l10n),
+          state: state,
         );
+    unawaited(ref.read(watchWorkoutServiceProvider).updateState(
+          sessionClientId: _sessionClientId!,
+          state: state,
+        ));
   }
 
   /// Shows the post-workout feedback sheet (skippable) and stores the result
@@ -914,6 +929,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     if (_sessionNotifierStarted) {
       _sessionNotifierStarted = false;
       unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
+      // The watch answers asynchronously with a summary on
+      // WatchWorkoutService.events, handled by WorkoutResumePrompt — not here
+      // (docs/40-watch-app-plan.md §3 "Lezárás").
+      unawaited(ref.read(watchWorkoutServiceProvider).endWorkout(_sessionClientId!));
     }
   }
 

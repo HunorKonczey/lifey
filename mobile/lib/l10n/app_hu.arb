@@ -358,6 +358,9 @@
     "divideIntoPartsLabel": "Hányadrészét eszed meg?",
     "perPortionCaloriesLabel": "1 adag: {calories} kcal",
     "recipeMacrosPreviewLabel": "≈ {calories} kcal · {protein} g fehérje · {carbs} g szénhidrát · {fat} g zsír",
+    "adjustIngredientsButton": "Hozzávalók módosítása",
+    "ingredientAmountsHint": "A mennyiségek a naplózott adagra vonatkoznak. 0 = kihagyod a hozzávalót.",
+    "resetIngredientTooltip": "Visszaállítás a recept szerinti mennyiségre",
 
     "logOutTooltip": "Kijelentkezés",
     "todaySectionTitle": "Mai nap",

@@ -7,6 +7,9 @@ import { mealApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { logTimestampFor } from "@/lib/utils/logTime";
+import {
+  buildEntries, defaultGrams, scaledTotals, type GramsOverrides,
+} from "../logRecipePortion";
 import type { RecipeResponse, MealType } from "../types";
 
 /** Pick a sensible default meal type based on the current hour (mirrors mobile). */
@@ -22,6 +25,9 @@ function defaultMealType(): MealType {
  * Log a whole recipe as a meal: its ingredients become the meal's entries.
  * Optionally split into portions (defaults to the recipe's serving count), so
  * logging one serving divides every ingredient's grams by the portion count.
+ * Behind the "Adjust ingredients" button, each ingredient's per-portion grams
+ * can be overridden with what was actually eaten (0 leaves it out) — hidden
+ * by default so the plain log-as-is flow stays untouched.
  */
 export function LogRecipeDialog({
   recipe, date, onClose,
@@ -45,10 +51,21 @@ export function LogRecipeDialog({
   ];
   const [partial, setPartial] = useState(recipe.servings > 1);
   const [divisor, setDivisor] = useState(Math.min(Math.max(recipe.servings, 1), 20));
+  const [showIngredients, setShowIngredients] = useState(false);
+  // User-typed per-ingredient amounts (raw text, keyed by ingredient index);
+  // non-overridden ingredients display the divisor-derived default.
+  const [overrides, setOverrides] = useState<GramsOverrides>({});
 
   const effDivisor = partial ? divisor : 1;
-  const totalKcal = recipe.ingredients.reduce((s, i) => s + i.calories, 0);
-  const totalProtein = recipe.ingredients.reduce((s, i) => s + i.protein, 0);
+  const totals = scaledTotals(recipe.ingredients, effDivisor, overrides);
+  const entries = buildEntries(recipe.ingredients, effDivisor, overrides);
+
+  const resetOverride = (index: number) =>
+    setOverrides((o) => {
+      const next = { ...o };
+      delete next[index];
+      return next;
+    });
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -56,10 +73,7 @@ export function LogRecipeDialog({
         dateTime: logTimestampFor(date),
         mealType,
         name: recipe.name,
-        entries: recipe.ingredients.map((i) => ({
-          foodId: i.foodId,
-          quantityInGrams: Math.round((i.quantityInGrams / effDivisor) * 100) / 100,
-        })),
+        entries,
       });
     },
     onSuccess: () => {
@@ -73,7 +87,7 @@ export function LogRecipeDialog({
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,.5)" }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-[var(--r-lg)] p-5 flex flex-col gap-4"
+      <div className="w-full max-w-md rounded-[var(--r-lg)] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
         style={{ background: "var(--surface)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <div>
@@ -133,13 +147,53 @@ export function LogRecipeDialog({
           </div>
         )}
 
+        {/* Adjustable per-portion ingredient amounts, opt-in behind a button */}
+        {recipe.ingredients.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <button onClick={() => setShowIngredients((s) => !s)}
+              className="flex items-center gap-1 self-start text-xs font-semibold"
+              style={{ color: "var(--on-surface-variant)" }}>
+              <span className="material-symbols-rounded text-base">
+                {showIngredients ? "expand_less" : "tune"}
+              </span>
+              {t("adjustIngredients")}
+            </button>
+            {showIngredients && (
+              <>
+                <p className="text-xs" style={{ color: "var(--muted)" }}>{t("amountsHint")}</p>
+                {recipe.ingredients.map((ing, i) => {
+                  const overridden = overrides[i] !== undefined;
+                  return (
+                    <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-[var(--r-md)]"
+                      style={{ background: "var(--surface-container)" }}>
+                      <span className="flex-1 min-w-0 text-sm truncate">{ing.foodName}</span>
+                      {overridden && (
+                        <button onClick={() => resetOverride(i)} title={t("resetAmount")}
+                          aria-label={t("resetAmount")} style={{ color: "var(--muted)" }}>
+                          <span className="material-symbols-rounded text-lg">restart_alt</span>
+                        </button>
+                      )}
+                      <input type="text" inputMode="decimal"
+                        value={overrides[i] ?? String(defaultGrams(ing, effDivisor))}
+                        onChange={(e) => setOverrides((o) => ({ ...o, [i]: e.target.value }))}
+                        className="w-20 px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm text-right tabular"
+                        style={{ background: "var(--surface)", border: "1px solid var(--outline)" }} />
+                      <span className="text-xs" style={{ color: "var(--muted)" }}>g</span>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Macro preview */}
         <div className="flex gap-4 text-sm tabular px-1 pt-2" style={{ borderTop: "1px solid var(--outline)" }}>
-          <span style={{ color: "var(--metric-kcal)" }}>{Math.round(totalKcal / effDivisor)} kcal</span>
-          <span style={{ color: "var(--metric-protein)" }}>{Math.round(totalProtein / effDivisor)}g protein</span>
+          <span style={{ color: "var(--metric-kcal)" }}>{Math.round(totals.calories)} kcal</span>
+          <span style={{ color: "var(--metric-protein)" }}>{Math.round(totals.protein)}g protein</span>
         </div>
 
-        <button onClick={() => mutation.mutate()} disabled={mutation.isPending || recipe.ingredients.length === 0}
+        <button onClick={() => mutation.mutate()} disabled={mutation.isPending || entries.length === 0}
           className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
           style={{ background: "var(--primary)", color: "#1E1F18" }}>
           {mutation.isPending ? t("logging") : t("logMeal")}

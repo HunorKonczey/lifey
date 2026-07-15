@@ -36,6 +36,7 @@ Identifiers reused across every doc:
 - [deploy-web-vercel.md](deploy-web-vercel.md) — web admin on Vercel (and Railway fallback)
 - [deploy-ios-appstore.md](deploy-ios-appstore.md) — iOS build & App Store submission (incl. widget/Live Activity capabilities)
 - [deploy-android-playstore.md](deploy-android-playstore.md) — Android build & Play Store submission
+- [deploy-watch-testing.md](deploy-watch-testing.md) — Apple Watch & Wear OS companion app, dev/test install (no paid account needed)
 
 ## Secrets: the one rule
 
