@@ -1,0 +1,40 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <application
+        android:label="Lifey"
+        android:allowBackup="true"
+        android:theme="@android:style/Theme.DeviceDefault">
+        <!-- V1: the phone is the master, this app never starts a workout on
+             its own (docs/40-watch-app-plan.md §D4). -->
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- F0 spike (docs/40-watch-app-plan.md §5.1, §5.4): a manifest
+             declaration wakes this service even if the wear app isn't
+             running, when the phone's WatchBridge sends a Data Layer
+             message. F3 replaces the body with real ExerciseClient
+             start/end handling. -->
+        <service
+            android:name=".PhoneListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/lifey/watch" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

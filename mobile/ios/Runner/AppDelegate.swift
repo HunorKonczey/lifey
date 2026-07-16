@@ -7,6 +7,9 @@ import UserNotifications
   // Stored (unlike LiveActivityChannel) so the APNs registration callbacks
   // below can forward into it — see PushChannel / docs/30-push-notifications-plan.md.
   private var pushChannel: PushChannel?
+  // Stored so the WCSessionDelegate it sets on WCSession.default stays alive
+  // for the app's lifetime — see docs/40-watch-app-plan.md §4.5.
+  private var watchBridge: WatchBridge?
 
   override func application(
     _ application: UIApplication,
@@ -18,6 +21,11 @@ import UserNotifications
     }
     if let registrar = self.registrar(forPlugin: "PushChannel") {
       pushChannel = PushChannel(messenger: registrar.messenger(), launchOptions: launchOptions)
+    }
+    // Set the WCSessionDelegate as early as possible so a queued
+    // transferUserInfo summary isn't missed (docs/40-watch-app-plan.md §4.5).
+    if let registrar = self.registrar(forPlugin: "WatchBridge") {
+      watchBridge = WatchBridge.register(with: registrar)
     }
     // Makes this AppDelegate the app's single UNUserNotificationCenterDelegate
     // (FlutterAppDelegate formally conforms via FlutterAppLifeCycleProvider,

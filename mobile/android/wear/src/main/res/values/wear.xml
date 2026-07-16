@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lets the phone's CapabilityClient detect this app on the watch
+         (docs/40-watch-app-plan.md §5.1, §D2). -->
+    <string-array name="android_wear_capabilities">
+        <item>lifey_watch_workout</item>
+    </string-array>
+</resources>

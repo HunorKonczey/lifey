@@ -29,3 +29,7 @@ plugins {
 }
 
 include(":app")
+// Wear OS companion module (docs/40-watch-app-plan.md §5.1) — standalone
+// Kotlin/Gradle module, not part of the Flutter build; built/installed
+// separately via `./gradlew :wear:installDebug` (devops/deploy-watch-testing.md).
+include(":wear")
