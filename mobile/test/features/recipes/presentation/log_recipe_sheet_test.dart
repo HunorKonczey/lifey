@@ -11,7 +11,6 @@ import 'package:lifey/core/sync/sync_engine_provider.dart';
 import 'package:lifey/features/nutrition/application/food_controller.dart';
 import 'package:lifey/features/nutrition/data/meal_repository.dart';
 import 'package:lifey/features/nutrition/domain/food.dart';
-import 'package:lifey/features/nutrition/domain/meal.dart';
 import 'package:lifey/features/recipes/domain/recipe.dart';
 import 'package:lifey/features/recipes/presentation/widgets/log_recipe_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
