@@ -1105,18 +1105,6 @@
     "noWorkoutsLoggedYetPeriodMessage": "No workouts logged yet.",
     "@noWorkoutsLoggedYetPeriodMessage": {"description": "Shown on the dashboard when there are no recent workouts"},
 
-    "pairHealthWorkoutTitle": "Pair with Health workout?",
-    "@pairHealthWorkoutTitle": {"description": "Confirmation dialog title shown when tapping the workout-detected notification"},
-
-    "pairHealthWorkoutMessage": "Started {startTime} · {calories} kcal · {heartRate} bpm avg. Pair this with your active session?",
-    "@pairHealthWorkoutMessage": {"description": "Confirmation dialog body summarizing the matched health workout", "placeholders": {"startTime": {"type": "String"}, "calories": {"type": "String"}, "heartRate": {"type": "String"}}},
-
-    "pairButton": "Pair",
-    "@pairButton": {"description": "Confirm button for pairing a health workout with an active session"},
-
-    "noMatchingActiveWorkoutMessage": "No matching active workout found",
-    "@noMatchingActiveWorkoutMessage": {"description": "Shown when a health workout notification is tapped but no in-progress session matches"},
-
     "importedFromHealthTooltip": "Imported from Health",
     "@importedFromHealthTooltip": {"description": "Tooltip/semantics label for the health badge on a paired workout session card"},
 
@@ -1124,16 +1112,7 @@
     "@healthStatsLine": {"description": "Line showing active calories and average heart rate imported from Health on a session card", "placeholders": {"calories": {"type": "String"}, "heartRate": {"type": "String"}}},
 
     "importFromHealthButton": "Import from Health",
-    "@importFromHealthButton": {"description": "Button on the active workout that imports a just-finished health-store strength workout"},
-
-    "noRecentHealthWorkoutMessage": "No recent health workout found",
-    "@noRecentHealthWorkoutMessage": {"description": "Shown when the import button finds no strength workout finished in the last day"},
-
-    "pickHealthWorkoutTitle": "Pick a health workout",
-    "@pickHealthWorkoutTitle": {"description": "Title of the sheet listing recent health-store strength workouts to pair with an already-closed session"},
-
-    "workoutPairedWithHealthMessage": "Workout paired with Health",
-    "@workoutPairedWithHealthMessage": {"description": "Snackbar shown after manually pairing an already-closed session with a health workout"},
+    "@importFromHealthButton": {"description": "Button on the weight screen that imports recent body-weight entries from the health store"},
 
     "weightImportedFromHealth": "{count, plural, one{{count} entry imported} other{{count} entries imported}}",
     "@weightImportedFromHealth": {"description": "Snackbar after the weight screen's Health import, reporting how many days were backfilled", "placeholders": {"count": {"type": "int"}}},
@@ -1363,6 +1342,12 @@
     "restTimerDurationSheetTitle": "Rest duration",
     "@restTimerDurationSheetTitle": {"description": "Title of the bottom sheet used to pick a rest duration (settings default or per-exercise override)"},
 
+    "watchWorkoutToggleLabel": "Start workout on watch",
+    "@watchWorkoutToggleLabel": {"description": "Settings row label for the master switch controlling whether starting a workout also starts/mirrors it on a paired watch"},
+
+    "watchStartRejectedMessage": "Another workout is already running on your watch",
+    "@watchStartRejectedMessage": {"description": "Snackbar shown when the paired watch declined to start its own workout session because another app already owns one"},
+
     "restTimerNotificationTitle": "Rest over",
     "@restTimerNotificationTitle": {"description": "Title of the local notification fired when the rest timer between sets ends"},
 
@@ -1371,21 +1356,6 @@
 
     "finishWorkoutButton": "Finish workout",
     "@finishWorkoutButton": {"description": "Label for the sticky button that finishes the active workout session"},
-
-    "noHealthWorkoutTitle": "No health workout",
-    "@noHealthWorkoutTitle": {"description": "Dialog title shown when no matching health workout is found at session finish"},
-
-    "noHealthWorkoutMessage": "No recent health workout was found near this session.",
-    "@noHealthWorkoutMessage": {"description": "Dialog body when no matching health workout is found at session finish"},
-
-    "finishAnywayButton": "Finish anyway",
-    "@finishAnywayButton": {"description": "Dialog action: finish the session without pairing a health workout"},
-
-    "finishWithoutPairingButton": "Finish without",
-    "@finishWithoutPairingButton": {"description": "Dialog action: finish the session without pairing the found health workout"},
-
-    "pairAndFinishButton": "Pair & finish",
-    "@pairAndFinishButton": {"description": "Dialog action: pair the found health workout and finish the session"},
 
     "removeExerciseMenuItem": "Remove exercise",
     "@removeExerciseMenuItem": {"description": "Overflow menu item on an exercise card to remove the exercise from the session"},

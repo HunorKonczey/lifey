@@ -11,6 +11,7 @@ import '../../../core/health/health_controller.dart';
 import '../../../core/network/error_message.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/watch/watch_workout_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -63,6 +64,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   late bool _restTimerEnabled;
   late int _defaultRestSeconds;
+  late bool _watchWorkoutEnabled;
+
+  // Whether a paired + installed watch app was detected — the toggle row
+  // only shows once this resolves true (docs/40-watch-app-plan.md §6.4).
+  // Null while the check is still in flight.
+  bool? _watchAvailable;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_checkWatchAvailability());
+  }
+
+  Future<void> _checkWatchAvailability() async {
+    final available = await ref.read(watchWorkoutServiceProvider).isWatchAppAvailable();
+    if (mounted) setState(() => _watchAvailable = available);
+  }
 
   void _initFromSettings(UserSettings s) {
     _unitSystem = s.unitSystem;
@@ -80,6 +98,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _programAssignedPushEnabled = s.programAssignedPushEnabled;
     _restTimerEnabled = s.restTimerEnabled;
     _defaultRestSeconds = s.defaultRestSeconds;
+    _watchWorkoutEnabled = s.watchWorkoutEnabled;
     _initialized = true;
   }
 
@@ -103,6 +122,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             programAssignedPushEnabled: _programAssignedPushEnabled,
             restTimerEnabled: _restTimerEnabled,
             defaultRestSeconds: _defaultRestSeconds,
+            watchWorkoutEnabled: _watchWorkoutEnabled,
           ),
         )
         .catchError((e) {
@@ -731,6 +751,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ],
                       ),
                     ),
+                    // Only shown once a paired + installed watch app was
+                    // detected (docs/40-watch-app-plan.md §6.4) — a live
+                    // check, not persisted, so it can also disappear again if
+                    // the watch is later unpaired.
+                    if (_watchAvailable == true) ...[
+                      const _RowDivider(),
+                      _SettingRow(
+                        icon: Icons.watch_outlined,
+                        iconColor: scheme.primary,
+                        label: l10n.watchWorkoutToggleLabel,
+                        trailing: Switch(
+                          value: _watchWorkoutEnabled,
+                          onChanged: (v) {
+                            setState(() => _watchWorkoutEnabled = v);
+                            _autoSave();
+                          },
+                          activeThumbColor: scheme.primary,
+                          activeTrackColor: scheme.primary.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 20),

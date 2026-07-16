@@ -31,8 +31,10 @@ import kotlinx.coroutines.launch
 
 /**
  * Live workout screen — elapsed time, heart rate, calories, current
- * exercise/set counter (docs/40-watch-app-plan.md §4.4/§5.1 "ActiveWorkoutView"
- * equivalent; rest-timer countdown + haptic is F4, not here). The End button
+ * exercise/set counter, rest-timer countdown (docs/40-watch-app-plan.md
+ * §4.4/§5.1 "ActiveWorkoutView" equivalent; the haptic at rest-end is
+ * scheduled independently in [com.khunor.lifey.ExerciseService], not here —
+ * it needs to fire even while this screen isn't composed). The End button
  * only *asks* the phone to close the session (§8.2 decision (b)) — it never
  * touches [com.khunor.lifey.ExerciseService] directly.
  */
@@ -52,6 +54,21 @@ fun ActiveWorkoutScreen() {
         }
     }
 
+    var restRemainingMs by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(metadata.restEndsAtEpochMs) {
+        val restEndsAtEpochMs = metadata.restEndsAtEpochMs
+        if (restEndsAtEpochMs == null) {
+            restRemainingMs = 0L
+            return@LaunchedEffect
+        }
+        while (true) {
+            val remaining = restEndsAtEpochMs - System.currentTimeMillis()
+            restRemainingMs = remaining
+            if (remaining <= 0) break
+            delay(1000)
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -67,6 +84,12 @@ fun ActiveWorkoutScreen() {
         if (setsDone != null && setsTotal != null) {
             Text(
                 text = stringResource(R.string.active_sets_format, setsDone, setsTotal),
+                style = MaterialTheme.typography.caption1,
+            )
+        }
+        if (restRemainingMs > 0) {
+            Text(
+                text = stringResource(R.string.active_rest_format, formatElapsed(restRemainingMs)),
                 style = MaterialTheme.typography.caption1,
             )
         }

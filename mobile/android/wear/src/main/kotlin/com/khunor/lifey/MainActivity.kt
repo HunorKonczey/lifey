@@ -55,6 +55,16 @@ class MainActivity : ComponentActivity() {
     companion object {
         private val REQUIRED_PERMISSIONS = buildList {
             add(Manifest.permission.BODY_SENSORS)
+            // API 36+ Health Services rejects startExerciseAsync's heart-rate
+            // data type without this, even with BODY_SENSORS granted
+            // (confirmed via a real SecurityException on a 36 system image).
+            add("android.permission.health.READ_HEART_RATE")
+            // Required for ExerciseService to even start as a "health"-typed
+            // foreground service on API 34+ (Android validates that at least
+            // one of a specific permission set is actually granted, not just
+            // declared — ACTIVITY_RECOGNITION is the one from that set this
+            // app plausibly wants; BODY_SENSORS alone doesn't satisfy it).
+            add(Manifest.permission.ACTIVITY_RECOGNITION)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 add(Manifest.permission.POST_NOTIFICATIONS)
             }

@@ -136,5 +136,13 @@
         <intent>
             <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
         </intent>
+        <!-- Android 11+ package visibility (docs/40-watch-app-plan.md §5.1):
+             without this, MessageClient/DataClient/CapabilityClient calls to
+             the watch are silently blocked by the AppsFilter — confirmed via
+             "AppsFilter: interaction ... -> com.google.android.apps.wear.companion BLOCKED"
+             in logcat. Both package names covered since it varies by Wear OS
+             companion version/device. -->
+        <package android:name="com.google.android.apps.wear.companion"/>
+        <package android:name="com.google.android.wearable.app"/>
     </queries>
 </manifest>

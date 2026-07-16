@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Wear UI strings (docs/40-watch-app-plan.md §5.4/§4.4, HU only for V1 —
-     full HU/EN parity is an F4 item). -->
+<!-- Wear UI strings (docs/40-watch-app-plan.md §5.4/§4.4). HU default —
+     see values-en/strings.xml for the English mirror (F4). -->
 <resources>
     <string name="idle_title">Lifey</string>
     <string name="idle_subtitle">Indíts edzést a telefonon</string>
@@ -10,6 +10,7 @@
 
     <string name="active_default_exercise">Gyakorlat</string>
     <string name="active_sets_format">%1$d/%2$d szett</string>
+    <string name="active_rest_format">Pihenő %1$s</string>
     <string name="active_heart_rate_unit">bpm</string>
     <string name="active_calories_unit">kcal</string>
     <string name="active_end_button">Vége</string>

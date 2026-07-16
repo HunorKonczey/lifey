@@ -1,6 +1,7 @@
 package com.khunor.lifey
 
 import android.content.Context
+import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.DataClient
@@ -57,7 +58,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         executor.execute {
             val available =
                 try {
-                    reachableNodes().isNotEmpty()
+                    targetNodes().isNotEmpty()
                 } catch (_: Exception) {
                     false
                 }
@@ -75,7 +76,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         @Suppress("UNCHECKED_CAST") val state = args["state"] as? Map<String, Any?>
 
         pushState(sessionClientId, title, startedAtEpochMs, state, desiredPhase = "running")
-        sendMessage(COMMAND_START, sessionClientId)
+        sendMessage(COMMAND_START, stateMessagePayload(sessionClientId, title, state))
         result.success(null)
     }
 
@@ -85,7 +86,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         @Suppress("UNCHECKED_CAST") val state = args["state"] as? Map<String, Any?>
 
         pushState(sessionClientId, title = null, startedAtEpochMs = null, state = state, desiredPhase = "running")
-        sendMessage(COMMAND_STATE, sessionClientId)
+        sendMessage(COMMAND_STATE, stateMessagePayload(sessionClientId, title = null, state = state))
         result.success(null)
     }
 
@@ -94,8 +95,31 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         val sessionClientId = args["sessionClientId"] as? String ?: return result.success(null)
 
         pushState(sessionClientId, title = null, startedAtEpochMs = null, state = null, desiredPhase = "ended")
-        sendMessage(COMMAND_END, sessionClientId)
+        sendMessage(COMMAND_END, sessionClientId.toByteArray())
         result.success(null)
+    }
+
+    /**
+     * The message payload for start/state (docs/40-watch-app-plan.md §3,
+     * §D2 adjusted): carries the full state JSON directly, rather than only
+     * `sessionClientId` with the watch expected to pick up the rest from the
+     * [pushState] DataItem. `DataItem` sync between two paired devices' Play
+     * services instances has been observed to be unreliable in practice (see
+     * [targetNodes]'s doc comment) — this message is now the primary,
+     * reliable path; `pushState`'s DataItem remains a best-effort backup for
+     * the watch reconnecting later while genuinely unreachable.
+     */
+    private fun stateMessagePayload(sessionClientId: String, title: String?, state: Map<String, Any?>?): ByteArray {
+        val json = JSONObject().apply {
+            put("sessionClientId", sessionClientId)
+            title?.let { put("title", it) }
+            state?.let { s ->
+                val stateJson = JSONObject()
+                s.forEach { (key, value) -> if (value != null) stateJson.put(key, value) }
+                put("state", stateJson)
+            }
+        }
+        return json.toString().toByteArray()
     }
 
     /**
@@ -122,28 +146,48 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             val putDataRequest = putDataMapRequest.asPutDataRequest().setUrgent()
             try {
                 Tasks.await(dataClient.putDataItem(putDataRequest))
-            } catch (_: Exception) {
-                // Best-effort, see class doc.
+                Log.d(TAG, "pushState OK (desiredPhase=$desiredPhase, sessionClientId=$sessionClientId)")
+            } catch (e: Exception) {
+                Log.w(TAG, "pushState FAILED (desiredPhase=$desiredPhase)", e)
             }
         }
     }
 
-    private fun sendMessage(command: String, sessionClientId: String) {
+    private fun sendMessage(command: String, payload: ByteArray) {
         executor.execute {
             try {
-                val payload = sessionClientId.toByteArray()
-                reachableNodes().forEach { node ->
-                    Tasks.await(messageClient.sendMessage(node.id, "$MESSAGE_PATH_PREFIX/$command", payload))
+                val nodeIds = targetNodes()
+                Log.d(TAG, "sendMessage($command): ${nodeIds.size} target node(s)")
+                nodeIds.forEach { nodeId ->
+                    Tasks.await(messageClient.sendMessage(nodeId, "$MESSAGE_PATH_PREFIX/$command", payload))
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // Best-effort — no reachable watch right now; pushState's
                 // DataItem is the fallback (docs/40-watch-app-plan.md §D2).
+                Log.w(TAG, "sendMessage($command) FAILED", e)
             }
         }
     }
 
-    private fun reachableNodes() =
-        Tasks.await(capabilityClient.getCapability(WATCH_CAPABILITY, CapabilityClient.FILTER_REACHABLE)).nodes
+    /**
+     * [CapabilityClient]'s `lifey_watch_workout` node lookup is the precise
+     * way to find "a connected node actually running our watch app" — but
+     * its sync between two paired devices' Play services instances has been
+     * observed to be unreliable in practice: empty even with a genuinely
+     * connected, correctly-installed watch (internal `Mismatched
+     * certificate` warnings from `com.google.android.gms` in logcat). Since
+     * this app only ever has one companion watch app to talk to (same
+     * `applicationId` — docs/40-watch-app-plan.md §5.1), falling back to
+     * every connected node is safe: a node without our wear app installed
+     * just silently drops a message with no listener for our path.
+     */
+    private fun targetNodes(): List<String> {
+        val capabilityNodeIds =
+            Tasks.await(capabilityClient.getCapability(WATCH_CAPABILITY, CapabilityClient.FILTER_REACHABLE))
+                .nodes.map { it.id }
+        if (capabilityNodeIds.isNotEmpty()) return capabilityNodeIds
+        return Tasks.await(Wearable.getNodeClient(appContext).connectedNodes).map { it.id }
+    }
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
         when (messageEvent.path) {
@@ -204,6 +248,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
     }
 
     companion object {
+        private const val TAG = "LifeyWatchBridge"
         private const val CHANNEL_NAME = "lifey/watch"
         private const val EVENT_CHANNEL_NAME = "lifey/watch/events"
         private const val WATCH_CAPABILITY = "lifey_watch_workout"

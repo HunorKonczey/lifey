@@ -1,6 +1,14 @@
 # 16 – Apple Health integration
 
 Status: proposed
+
+> **Superseded 2026-07-16.** The manual "Import from Apple Health" workout
+> pairing flow this doc describes (Phase 1 below) was removed — see
+> docs/40-watch-app-plan.md. `activeCalories`/`averageHeartRate`/`healthWorkoutId`
+> on a finished session now come from the watch summary instead of a
+> user-initiated Health import. The rest of this doc (steps, weight,
+> near-live heart rate during an active session) is unaffected.
+
 Author: planning doc (implement in phases, in order)
 
 > **Revision 2026-06-23 — Phase 1 re-designed.** The original Phase 1 was built

@@ -11,6 +11,8 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -25,8 +27,12 @@ import androidx.health.services.client.data.ExerciseType
 import androidx.health.services.client.data.ExerciseUpdate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
 
@@ -44,6 +50,11 @@ class ExerciseService : Service() {
     private var heartRateSum = 0.0
     private var heartRateSamples = 0
     private var lastActiveCalories: Double? = null
+
+    // Pihenő-visszaszámláló haptika (docs/40-watch-app-plan.md §5.4/F4):
+    // scheduled independently of start/end commands, for the service's whole
+    // lifetime, since restEndsAtEpochMs can change many times per session.
+    private var restVibrationJob: Job? = null
 
     private val updateCallback = object : ExerciseUpdateCallback {
         override fun onExerciseUpdateReceived(update: ExerciseUpdate) {
@@ -75,6 +86,34 @@ class ExerciseService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        // Runs for this service's whole lifetime, not just start/end — a
+        // rest timer can start/end/restart many times within one exercise
+        // (docs/40-watch-app-plan.md §5.4/F4).
+        scope.launch {
+            SessionStateHolder.metadata
+                .map { it.restEndsAtEpochMs }
+                .distinctUntilChanged()
+                .collect { restEndsAtEpochMs -> scheduleRestVibration(restEndsAtEpochMs) }
+        }
+    }
+
+    private fun scheduleRestVibration(restEndsAtEpochMs: Long?) {
+        restVibrationJob?.cancel()
+        if (restEndsAtEpochMs == null) return
+        restVibrationJob = scope.launch {
+            val delayMs = restEndsAtEpochMs - System.currentTimeMillis()
+            if (delayMs > 0) delay(delayMs)
+            vibrateRestEnd()
+        }
+    }
+
+    private fun vibrateRestEnd() {
+        val vibrator = getSystemService(Vibrator::class.java) ?: return
+        vibrator.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val sessionClientId = intent?.getStringExtra(EXTRA_SESSION_CLIENT_ID)
@@ -121,9 +160,15 @@ class ExerciseService : Service() {
     }
 
     private suspend fun startExercise(sessionClientId: String) {
-        val hasHeartRatePermission = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.BODY_SENSORS,
-        ) == PackageManager.PERMISSION_GRANTED
+        // Either satisfies it depending on OS version — BODY_SENSORS pre-36,
+        // the granular health permission on 36+ (see MainActivity, which
+        // requests both). Health Services itself enforces the latter with a
+        // SecurityException regardless of BODY_SENSORS on a 36 system image.
+        val hasHeartRatePermission =
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) ==
+                PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, "android.permission.health.READ_HEART_RATE") ==
+                    PackageManager.PERMISSION_GRANTED
 
         // Always requestable — CALORIES_TOTAL doesn't need BODY_SENSORS.
         val dataTypes = buildSet {

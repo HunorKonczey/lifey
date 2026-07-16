@@ -1,12 +1,28 @@
 # 40 – Watch alkalmazás terv (Apple Watch + Wear OS)
 
-Státusz: javaslat / előzetes terv
+Státusz: **Android (Wear OS) — F0–F4 megvalósítva és emulátoron végigtesztelve (2026-07-16). iOS (Apple Watch) — tervezve, F2/F4 még hátravan, fejlesztése Mac-en folytatódik.**
 Nyelv: a mobil oldali híd Dart, a watch appok **natívak** (SwiftUI ill. Kotlin/Compose — lásd 2. fejezet, ez nem választás kérdése, hanem platformkényszer)
 Kapcsolódó dokumentumok:
-- [16-apple-health-integration-plan.md](16-apple-health-integration-plan.md) — a HealthKit-korlátok és a session-gazdagítás (kalória/pulzus) alapjai
-- [26-android-health-connect-integration-plan.md](26-android-health-connect-integration-plan.md) — Health Connect párja
+- [16-apple-health-integration-plan.md](16-apple-health-integration-plan.md) — a HealthKit-korlátok; a doc saját maga jelzi, hogy a benne leírt **manuális** "Import from Health" workout-párosítás 2026-07-16-tal megszűnt (lásd lent, 7. és 11. fejezet) — a session-gazdagítás (kalória/pulzus) mostantól kizárólag ebből a watch-integrációból jön
+- [26-android-health-connect-integration-plan.md](26-android-health-connect-integration-plan.md) — Health Connect párja, ugyanaz a superseded-jegyzet
 - [24-ios-widget-live-activity-plan.md](24-ios-widget-live-activity-plan.md) — a `lifey/live_activity` MethodChannel-minta, amit a watch-híd is követ
 - [39-rest-timer-plan.md](39-rest-timer-plan.md) — a `restEndsAtEpochMs` állapot, amit a watch is megjelenít
+
+## Implementációs állapot (2026-07-16)
+
+| Fázis | Android (Wear OS) | iOS (Apple Watch) |
+|---|---|---|
+| F0 — Spike-ok | ✅ Kész | ✅ Kész (F0 placeholder: `LifeyWatchApp.swift`/`ContentView.swift`) |
+| F1 — Dart híd | ✅ Kész (mindkét platformra közös) | ✅ Kész (mindkét platformra közös) |
+| F2 — Watch MVP (natív start/end/élő mérés) | ✅ Kész | ❌ **Hátravan** — csak az F0 placeholder van meg, lásd 11. fejezet |
+| F3 — Wear OS MVP | ✅ Kész | n/a (iOS-nek nincs külön F3-a, az F2 a natív MVP) |
+| F4 — Pihenő-visszaszámláló+haptika, Settings-kapcsoló, lokalizáció, hibaút | ✅ Kész (Android fele) | ❌ **Hátravan** (iOS fele), lásd 11. fejezet |
+| F5 — (v2) Set-logolás a watchról | ⏸ Nem kezdődött el — csak azután, hogy iOS is F4-en áll | ⏸ ua. |
+| F6 — (v2) Standalone indítás a watchról | ⏸ ua. | ⏸ ua. |
+
+**A terv**: az iOS-fejlesztés Mac-en folytatódik, F2-től F4-ig (Android-dal egy szintre hozva). Utána közösen térünk vissza F5/F6-ra, mindkét platformon egyszerre.
+
+A 4–10. fejezet az **eredeti terv**, változatlanul hagyva referenciának. A ténylegesen megvalósult Android-implementáció (a tervtől való eltérésekkel, a build/tesztelés közben talált 3 valódi hibával és azok javításával) a **7. fejezet után, új 7.5 alfejezetben** van dokumentálva. Az iOS-hez még hátralévő munka a **11. fejezetben**.
 
 ---
 
@@ -338,7 +354,7 @@ await repo.update(summary.sessionClientId,
 ```
 
 - Ha a `sessionClientId`-hez nincs session (elméleti eset: törölték), a summary-t eldobjuk, logolva.
-- Ha a sessionben **már van** `healthWorkoutId` (a user közben kézzel Health-importált), a watch-summary **nem írja felül** — a kézi import a frissebb user-szándék. (Egy egyszerű „csak ha null” guard a feldolgozóban.)
+- Ha a sessionben **már van** `healthWorkoutId`, a watch-summary **nem írja felül** — egyszerű „csak ha null” guard a feldolgozóban. (Eredetileg a kézi Health-import frissebb user-szándékának védelmére íródott; a manuális import 2026-07-16-tal megszűnt — 7.5.8 —, de a guard továbbra is hasznos: megvédi egy már feldolgozott watch-summaryt egy késve/duplán beérkező második summary-től.)
 - UI: a session-kártyán a meglévő `fromAppleHealth`-badge logika jelenítheti meg, hogy az adat az óráról jött — V1-ben elég a meglévő „Health” badge, később külön ⌚ badge.
 
 ### 6.4 Beállítás / feature-gate
@@ -360,7 +376,76 @@ await repo.update(summary.sessionClientId,
 | **F5 — (v2) Set-logolás a watchról** | „+1 szett” gomb a watchon → esemény a telefonra → a telefon logolja (a telefon marad a mester); offline eset: csak ha a telefon elérhető | M–L |
 | **F6 — (v2) Standalone indítás a watchról** | Edzés indítása óráról telefon nélkül; a watch lokálisan gyűjt, és kapcsolódáskor a telefon sessiont kreál belőle — külön tervezést igényel (ütközés a resume-prompt logikával) | L |
 
-Az F2 és F3 egymástól független, párhuzamosan is mehet. A javasolt sorrend: F0 → F1 → F2 → F4(iOS fele) → F3 → F4(Android fele), mert a fejlesztői környezetben (memória: mindkét build fut itt) az iOS-oldal a kockázatosabb (Xcode-target + entitlement), azt érdemes előbb kivenni.
+Az F2 és F3 egymástól független, párhuzamosan is mehet. **Tényleges sorrend**: F0 → F1 → F3 → F4(Android fele) — az eredeti javaslat (iOS előbb) helyett Android ment előbb, mert ebben a fejlesztői környezetben (Windows) nincs Xcode, csak Android SDK + emulátor volt elérhető build/tesztelés célra. Az iOS-oldal (F2, F4 iOS fele) Mac-en folytatódik.
+
+---
+
+## 7.5 Android — tényleges megvalósítás, eltérések a tervtől
+
+Ez az alfejezet a **ténylegesen leszállított** Wear OS implementációt írja le — a 4–10. fejezet eredeti terve több ponton pontatlannak/hiányosnak bizonyult a valós Play Services viselkedéssel szemben; itt van dokumentálva, mi és miért változott.
+
+### 7.5.1 Fájlok (a tervezettek helyett/mellett ténylegesen létrejöttek)
+
+**`mobile/android/wear/src/main/kotlin/com/khunor/lifey/`:**
+- `MainActivity.kt` — Compose host (`IdleScreen`/`ActiveWorkoutScreen` a `SessionStateHolder.phase` alapján) + a runtime engedélyek elkérése (lásd 7.5.3)
+- `SessionStateHolder.kt` — process-wide `StateFlow`-alapú állapot (session-metaadat + élő metrikák), amit a `PhoneListenerService`, az `ExerciseService` és a Compose UI is olvas/ír
+- `PhoneListenerService.kt : WearableListenerService` — start/state/end üzenetek és a state DataItem fogadása
+- `ExerciseService.kt` — foreground service, Health Services `ExerciseClient`, élő HR/kcal, pihenő-haptika ütemező
+- `SummarySender.kt` — összegzés/`startRejected`/`endRequested` küldése a telefonnak
+- `ui/IdleScreen.kt`, `ui/ActiveWorkoutScreen.kt` — a tervezett 2 képernyő, Compose for Wear OS-ben
+
+**`mobile/android/app/src/main/kotlin/com/khunor/lifey/`:**
+- `WatchBridge.kt` — a tervezett MethodChannel/EventChannel híd, kibővítve (lásd 7.5.2)
+- `WatchSummaryBuffer.kt` + `PhoneWatchSummaryListenerService.kt` — a tervezett "kilőtt app melletti kézbesítés" (§5.4) SharedPreferences-alapú puffere
+
+### 7.5.2 Architektúra-eltérés: a state a **DataItem helyett/mellett az üzenetben** utazik
+
+A terv (§D2, §3 "Élő állapot") a `DataClient`/DataItem-et szánta a session-állapot (gyakorlatnév, szettek, pihenő-időzítő) elsődleges szinkron-csatornájának, a `MessageClient`-et pedig csak "alacsony-latency nudge"-nak. **Emulátoron párosított két Wear OS/telefon eszköz között ez a DataItem-szinkron megbízhatatlannak bizonyult**: a `dataClient.putDataItem()` lokálisan mindig sikeresnek jelentkezett, de a másik oldal `onDataChanged`-je **soha nem hívódott meg** — a logcat `Mismatched certificate: AppKey[com.google.android.gms,...]` hibákat mutatott a két párosított eszköz Play Services-példánya közti belső capability/data-szinkron körül (ismert, dokumentálatlan gyengéje az Android Studio-s emulátor-párosításnak).
+
+**A javítás**: a `start`/`state` üzenetek (`WatchBridge.kt`'s `stateMessagePayload()`) mostantól **a teljes állapotot JSON-ban hordozzák** (`sessionClientId`, `title`, `state{exerciseName, setsDone, setsTotal, restEndsAtEpochMs}`), nem csak a `sessionClientId`-t. A wear oldali `PhoneListenerService.applyStateMessage()` ezt dekódolja és alkalmazza — ez lett az elsődleges csatorna. A `pushState`/DataItem write megmaradt, mint best-effort tartalék (ha egyszer a szinkron működne, pl. fizikai eszközön, az is segít az "óra épp nem elérhető" esetben) — de **nem megbízható**, erre nem szabad építeni.
+
+Ugyanez a bizonytalanság **valós fizikai eszközön (nem emulátoron) elképzelhető, hogy nem áll fenn** — ha valaha fizikai Wear OS órán tesztelünk, érdemes újra megnézni, hogy a DataItem-szinkron ott működik-e; ha igen, a duplikált JSON-payload akkor is ártalmatlan (redundáns, de helyes).
+
+### 7.5.3 Új felfedezések: futásidejű engedélyek (a tervben nem szerepeltek)
+
+A §5.2 csak a `BODY_SENSORS`-t (és a manifestben deklarált `ACTIVITY_RECOGNITION`/`FOREGROUND_SERVICE_HEALTH`-et) említette. Valós tesztelés (API 34+/36 rendszerképen) két további, **futásidőben ténylegesen megadandó** engedélyt igényelt, amik nélkül az `ExerciseService` `SecurityException`-nel elszállt:
+
+1. **`ACTIVITY_RECOGNITION`** — a `health`-típusú foreground service indítása (API 34+) megköveteli, hogy legalább egy a `{ACTIVITY_RECOGNITION, HIGH_SAMPLING_RATE_SENSORS, health.READ_HEART_RATE, health.READ_SKIN_TEMPERATURE, health.READ_OXYGEN_SATURATION}` halmazból ténylegesen meg legyen adva — nem elég deklarálni a manifestben.
+2. **`android.permission.health.READ_HEART_RATE`** — API 36+ rendszerképeken a Health Services **elutasítja** a `HEART_RATE_BPM` adattípust, ha csak `BODY_SENSORS` van megadva; ez az új, granulárisabb engedély kell helyette/mellette.
+
+Mindkettőt a `MainActivity.kt` kéri el a `BODY_SENSORS`/`POST_NOTIFICATIONS` mellett, első indításkor.
+
+### 7.5.4 Package visibility (Android 11+) — új manifest-bejegyzés mindkét oldalon
+
+A `MessageClient`/`DataClient`/`CapabilityClient` hívások **némán** blokkolva voltak (`AppsFilter: ... BLOCKED` a logcat-ban), mert egyik manifest sem deklarálta a láthatóságot a Wear companion csomagra. Mindkét (`mobile/android/app` és `mobile/android/wear`) manifestbe bekerült:
+```xml
+<queries>
+    <package android:name="com.google.android.apps.wear.companion"/>
+    <package android:name="com.google.android.wearable.app"/>
+</queries>
+```
+Enélkül a teljes Data Layer néma módon nem működik — ez valószínűleg **minden** Android 11+ célzó, Wearable Data Layer-t használó appra vonatkozik, nem csak erre.
+
+### 7.5.5 `CapabilityClient` megbízhatatlansága — `NodeClient` fallback
+
+A §D2-ben tervezett `CapabilityClient`-alapú "van-e kinek küldeni" detekció (`lifey_watch_workout` capability) ugyanabba a Play Services szinkron-problémába futott, mint a DataItem (7.5.2) — a capability-broadcast néha sosem jutott el a másik oldalra, így `FILTER_REACHABLE` (és még `FILTER_ALL` is) üres listát adott, **annak ellenére, hogy a `NodeClient.getConnectedNodes()` helyesen látta a párosított órát**. Javítás (`WatchBridge.kt`'s `targetNodes()`): ha a capability-alapú keresés üres, essen vissza az összes csatlakoztatott node-ra — mivel ennek az appnak úgyis csak egy watch-társa lehet (azonos `applicationId`), egy node, amin nincs telepítve a wear app, egyszerűen figyelmen kívül hagyja az üzenetet.
+
+### 7.5.6 F4 (Android fele) — a megvalósult forma
+
+- **Pihenő-visszaszámláló + haptika**: `SessionStateHolder.onStateSynced`-ben a `restEndsAtEpochMs` — a többi mezővel ellentétben — **mindig felülíródik** (nem "hiányzó → előző érték megtartása"), mert a null↔érték váltás gyakori egy session alatt, és a null a wire-on megkülönböztethetetlen a "hiányzó kulcs"-tól. Az `ExerciseService` a service teljes életciklusán át figyeli ezt egy `Job`-bal ütemezett `delay`+`Vibrator.vibrate(VibrationEffect.createOneShot(...))` hívással — függetlenül attól, hogy az `ActiveWorkoutScreen` épp látszik-e.
+- **Settings-kapcsoló**: `UserSettings.watchWorkoutEnabled` (default: be), a Settings képernyőn csak akkor jelenik meg a sor, ha `isWatchAppAvailable()` aktuálisan igazat ad (a terv §6.4 "valaha igazat adott" perzisztens-flag ötletéhez képest egyszerűsítve — nincs külön perzisztált mező). A `startWorkout`/`updateState` hívások kapuzva vannak ezzel; az `endWorkout` **szándékosan nem** — ha a kapcsolót menet közben kikapcsolják, egy már elindult watch-session-t akkor is le kell tudni zárni.
+- **Lokalizáció**: `values-en/strings.xml` mint teljes HU/EN pár (a `values/strings.xml` HU az alap).
+- **`startRejected` visszajelzés**: snackbar a telefonon (`AppSnackbar.showInfo`), ha az órán már fut más edzés.
+- **Ikonok**: a telefon app meglévő launcher- és értesítés-ikonjai (`ic_launcher.png`, `ic_stat_lifey.xml`) újrahasznosítva a wear modulban — nem kellett új design asset.
+- **Végpont (End gomb) döntés**: a §8.2 nyitott kérdés 1 (b) opciója valósult meg — a watch End gombja `endRequested` üzenetet küld, a telefon a saját `_finishWorkout()`-ját futtatja (RPE-dialógus, majd lezárás), a watch csak akkor zárja a szenzor-sessiont, amikor a valódi `end` parancs visszaér.
+
+### 7.5.7 A HC-írás végleges helye (§5.2 döntés megerősítve, más úton)
+
+A §5.2 "a telefon ír HC-be" döntése megvalósult, de **nem natív Kotlin kóddal**, hanem a meglévő Dart `health` csomagon keresztül: `HealthService.writeStrengthWorkoutAndGetId()` (`mobile/lib/core/health/health_service.dart`) írja a Health Connect rekordot és — mivel a `health` csomag `writeWorkoutData` nem ad vissza uuid-ot — utána a meglévő `recentStrengthWorkouts()` lekérdezéssel (idő-közelség alapján) megkeresi a saját maga által írt rekord uuid-ját. Ez a `workout_resume_prompt.dart`'s `_onWatchEvent`-jéből hívódik, amikor a watch-summary `healthWorkoutId`-ja null (ez csak Androidon fordul elő — iOS-en a watch már valódi `HKWorkout` uuid-ot küld). Ez a megoldás elkerülte egy új natív Health Connect Gradle-függőség bevezetését.
+
+### 7.5.8 A manuális Health-import teljes megszűnése
+
+A doc 16/26 által leírt **manuális** "Import from Health" workout-párosítási flow (finish-time dialógusok, edit-time "pair now" gomb) **2026-07-16-tal teljesen megszűnt** — mindkét platformon, mivel megosztott Flutter/Dart kódban élt. A `_finishWorkout()` mostantól: RPE-visszajelzés → egyenesen lezárás + dashboard, health-dialógus nélkül. Az `activeCalories`/`averageHeartRate`/`healthWorkoutId` mezők és a rájuk épülő UI (stat-kártyák, "Health" jelvény a session-listán) megmaradtak — ezek forrása mostantól kizárólag a watch-összegzés. Ez feleslegessé tette a §8.1 kockázati táblázat "HealthKit dupla-számolás" sorát is (nincs többé manuális import-lista, amit szűrni kellene).
 
 ---
 
@@ -380,10 +465,10 @@ Az F2 és F3 egymástól független, párhuzamosan is mehet. A javasolt sorrend:
 
 ### 8.2 Nyitott kérdések (implementáció előtt döntendő)
 
-1. **End gomb a watchon**: V1-ben a watch End gombja (a) csak a szenzor-sessiont zárja, a telefon-session nyitva marad; vagy (b) a telefonnak is küld egy `endRequested`-et, és a telefon zárja a sessiont (RPE-dialógussal a telefonon)? **Javaslat: (b)** — de a telefon-oldali „edzés vége” flow (feedback sheet) miatt a telefonon kell megerősíteni.
-2. **Élő pulzus a telefon UI-án** edzés közben: kell-e V1-be? (iOS-en WCSession message-ekkel vagy iOS 17 mirroringgal menne.) **Javaslat: nem**, V1 az összegzésre fókuszál.
-3. Watch app **külön lokalizációs pipeline**-ja: kézzel tartjuk szinkronban az arb-kulcsokkal, vagy generálunk? V1: kézzel (≈15 string).
-4. `traditionalStrengthTraining` vs `functionalStrengthTraining` (iOS) ill. `STRENGTH_TRAINING` vs `WEIGHTLIFTING` (Wear): melyik aktivitástípus? **Javaslat: traditional / STRENGTH_TRAINING** — a kalóriamodell súlyzós edzésre kalibrált, és a Fitness-gyűrűkben is így jelenik meg.
+1. **End gomb a watchon**: V1-ben a watch End gombja (a) csak a szenzor-sessiont zárja, a telefon-session nyitva marad; vagy (b) a telefonnak is küld egy `endRequested`-et, és a telefon zárja a sessiont (RPE-dialógussal a telefonon)? **Javaslat: (b)** — de a telefon-oldali „edzés vége” flow (feedback sheet) miatt a telefonon kell megerősíteni. **✅ Eldőlt, Androidon megvalósítva (b) szerint (7.5.6) — iOS-en ugyanígy kell implementálni (11.1).**
+2. **Élő pulzus a telefon UI-án** edzés közben: kell-e V1-be? (iOS-en WCSession message-ekkel vagy iOS 17 mirroringgal menne.) **Javaslat: nem**, V1 az összegzésre fókuszál. **✅ Változatlanul nem V1-cél.**
+3. Watch app **külön lokalizációs pipeline**-ja: kézzel tartjuk szinkronban az arb-kulcsokkal, vagy generálunk? V1: kézzel (≈15 string). **✅ Androidon megvalósítva: kézzel, `values/strings.xml` + `values-en/strings.xml` pár (7.5.6).**
+4. `traditionalStrengthTraining` vs `functionalStrengthTraining` (iOS) ill. `STRENGTH_TRAINING` vs `WEIGHTLIFTING` (Wear): melyik aktivitástípus? **Javaslat: traditional / STRENGTH_TRAINING** — a kalóriamodell súlyzós edzésre kalibrált, és a Fitness-gyűrűkben is így jelenik meg. **✅ Androidon `STRENGTH_TRAINING` megvalósítva — iOS-en `traditionalStrengthTraining` a terv szerint még hátravan.**
 
 ---
 
@@ -401,6 +486,8 @@ Az F2 és F3 egymástól független, párhuzamosan is mehet. A javasolt sorrend:
   - ugyanazok a forgatókönyvek + `BODY_SENSORS` megtagadva (kcal HR nélkül), más app exercise-e fut (`startRejected`), watch app nincs telepítve (capability-hiány → no-op + Play-ajánlat).
 - **Regresszió**: watch nélkül (se párosítva, se telepítve) az edzés-flow bitre azonosan viselkedik a maival — a híd minden hívása no-op.
 
+**Android — ténylegesen lefedve (2026-07-16, emulátorpár + `adb`, nem a fenti manuális mátrix szerint sorban, hanem hibakeresés közben szervesen)**: teljes start→élő HR/kcal-mérés→end→summary kör működik valós (bár emulált) Health Services szenzoradattal; `startExercise` engedély-hiány miatti elutasítás (`SecurityException`) felfedezve és javítva; `startRejected` útvonal kódszinten kész, de másik app aktív exercise-ével nem lett explicit tesztelve; capability-hiány (watch app nincs telepítve) eset nem lett explicit tesztelve. **Fizikai Wear OS eszközön még nem futott végig.**
+
 ---
 
 ## 10. Összefoglaló
@@ -409,3 +496,39 @@ Az F2 és F3 egymástól független, párhuzamosan is mehet. A javasolt sorrend:
 - A terv a meglévő építőkövekre ül: a `WorkoutSessionState` (Live Activity / ongoing notification) lesz a watch-kijelző adatmodellje, az `activeCalories`/`averageHeartRate`/`healthWorkoutId` mezők és az absent-megőrző repository-update lesz az összegzés célja — **se séma-, se backend-változás nem kell**.
 - A legnagyobb munka a két natív watch app (SwiftUI + Compose for Wear OS); a Flutter-oldal egy vékony, a meglévő mintát követő channel-híd.
 - V1-ben a telefon a mester: a watch mér, kijelez és összegez; a watchról set-logolás és standalone indítás v2.
+- **Android (Wear OS) oldalon ez a terv 2026-07-16-ra teljes egészében megvalósult és emulátoron végigtesztelve működik** — a tervtől eltérő pontok (DataItem-szinkron megbízhatatlansága, plusz futásidejű engedélyek, package visibility, `CapabilityClient` fallback) a 7.5 fejezetben vannak dokumentálva. **iOS-en még csak az F0-spike áll** — a hátralévő munka a 11. fejezetben.
+
+---
+
+## 11. iOS — hátralévő munka az Android-szinthez
+
+Az Android F0–F4 megvalósítása közben szerzett tapasztalatok (7.5 fejezet) alapján pontosítva. Ez a lista a Mac-en folytatódó fejlesztés kiindulópontja.
+
+### 11.1 F2 — iOS watch MVP (a fő hátralévő munka)
+
+A `mobile/ios/LifeyWatch/` jelenleg csak az F0-spike-ot tartalmazza (`LifeyWatchApp.swift`'s `AppDelegate.handle(_:)` stub, ami csak annyit csinál, hogy eltárolja a kapott `activityTypeRawValue`-t; és egy placeholder `ContentView.swift`). Hiányzik:
+
+1. **`WorkoutManager.swift`** — a §4.3-ban vázolt valódi `HKWorkoutSession` + `HKLiveWorkoutBuilder` életciklus: `start(configuration:)` a kapott `HKWorkoutConfiguration`-ból, élő HR/kcal gyűjtés a `HKLiveWorkoutBuilderDelegate`-en át, `end()` ami elmenti a valódi `HKWorkout`-ot (ennek `uuid`-ja lesz a `healthWorkoutId` — **iOS-en ezt közvetlenül a watch adja, nincs szükség a 7.5.7-ben leírt Android-oldali "phone ír HC-be, majd visszakeresi az uuid-ot" kerülőútra**).
+2. **`PhoneConnector.swift`** — `WCSessionDelegate` a watch oldalán: `applicationContext`/`sendMessage` fogadása, `transferUserInfo` küldése a végén. A telefon oldali fogadó (`mobile/ios/Runner/WatchBridge.swift`'s `didReceiveUserInfo`) **már készen áll**, változtatás nélkül fogadja.
+3. **Valódi UI** — `Views/ActiveWorkoutView.swift` (eltelt idő, élő HR, kcal, gyakorlat/szett-számláló — az Android `ActiveWorkoutScreen.kt` a vizuális/adatmodell-referencia) + `Views/IdleView.swift`, a placeholder `ContentView.swift` helyett.
+4. **Xcode projekt bekötés** (`devops/deploy-watch-testing.md` szerint) — a `LifeyWatch` watchOS App target tényleges felvétele a `Runner.xcworkspace`-be, automatikus aláírás egy Personal Team-mel. **Ez csak Mac-en/Xcode-ban végezhető el**, ez volt az oka, hogy Android előbb készült el ebben a (Windows) környezetben.
+5. **Végpont (End gomb) — már eldöntött, csak implementálandó**: a 8.2/1. nyitott kérdés (b) opciója (Androidon már megvalósítva, 7.5.6) — a watch End gombja **ne** hívjon közvetlenül `session.end()`-et, hanem küldjön egy `endRequested` `sendMessage`-et a telefonnak, ami a saját `_finishWorkout()`-ját (RPE-dialógus, majd lezárás) futtatja; a watch csak a ténylegesen visszaérkező `end` parancsra zárja a `HKWorkoutSession`-t. A Dart oldal (`WatchEndRequested` esemény, `LogSessionScreen`'s `_onWatchEvent`) **már kész és platform-független** — csak az iOS natív oldalnak kell ugyanazt a `/lifey/watch/endRequested`-mintát küldenie, amit az Android `SummarySender.sendEndRequested` küld.
+
+### 11.2 Architektúra-tanulság Androidról, amit érdemes végiggondolni iOS-en is
+
+A 7.5.2-ben leírt DataItem-megbízhatatlanság **Android/Play Services-specifikus** volt (két emulátor GmsCore-példánya közti capability/data-szinkron hiba) — nincs okunk feltételezni, hogy az Apple `WCSession.updateApplicationContext` ugyanígy megbízhatatlan lenne (a WatchConnectivity történetileg stabilabb). **Mindazonáltal érdemes ugyanazt a mintát követni**: a `sendMessage`/`updateApplicationContext` payloadja már most is hordozza a teljes state-et (nem csak egy azonosítót) — tehát a §4.5-ben vázolt terv itt már eleve helyes, nincs szükség utólagos módosításra, csak arra, hogy tesztelés közben (watchOS-szimulátorpárban, majd fizikai eszközön) figyeljünk rá, tényleg megérkezik-e az `applicationContext` a watch oldalra minden esetben.
+
+### 11.3 F4 — iOS fele (Android után, a doc saját fázis-sorrendje szerint)
+
+Csak azután érdemes nekikezdeni, hogy F2 kész és tesztelve van (a doc §7 saját javaslata szerint is F2 → F4 a sorrend):
+
+1. **Pihenő-visszaszámláló + haptika**: `restEndsAtEpochMs` megjelenítése az `ActiveWorkoutView`-n (mm:ss visszaszámláló) + `WKInterfaceDevice.play(.notification)` pontosan a pihenő lejártakor — Android mintája (7.5.6): a haptika-ütemezés **függetlenül fusson** attól, hogy melyik nézet van épp képernyőn (Androidon ezt a mindig-élő `ExerciseService` csinálja egy `SessionStateHolder`-t figyelő coroutine-nal; iOS-en ennek a `WorkoutManager`-ben vagy egy hozzá hasonló, a session teljes élettartama alatt élő objektumban kell élnie).
+2. **Teljes HU/EN lokalizáció** — saját `Localizable.xcstrings` a watch targethez, az Android `values`/`values-en` mintáját követve (kézzel szinkronban tartva az arb-kulcsokkal, nem generálva — a 8.2/3 nyitott kérdés már eldőlt).
+3. **Settings-kapcsoló** ("Edzés indítása az órán") — ez már **platformfüggetlen Dart kód**, Androidon megvalósult (`UserSettings.watchWorkoutEnabled`, 7.5.6) — iOS-en nincs semmi extra teendő, a meglévő `settings_screen.dart` már mindkét platformon működik (a láthatóság-ellenőrzés `isWatchAppAvailable()`-t hív, ami platformfüggetlen).
+4. **`startRejected` visszajelzés** — szintén platformfüggetlen Dart kód, már kész (`AppSnackbar.showInfo` a `LogSessionScreen`-ben) — csak az kell, hogy az iOS natív `WatchBridge.swift` ténylegesen küldje a `startRejected` eseményt, ha a watch elutasítja az indítást (más app HKWorkoutSession-je fut — bár ez a helyzet HealthKit-en ritkább/másképp kezelt, mint Health Services-en, ezt implementáció közben kell pontosítani).
+
+### 11.4 Amit NEM kell újra megcsinálni iOS-hez (már kész, platformfüggetlen)
+
+- A teljes Dart-oldali híd (`WatchWorkoutService`, `WatchWorkoutSummary`, `WatchStartRejected`, `WatchEndRequested`) — F1-ben elkészült, mindkét platformra közös, változtatás nélkül működik, amint az iOS natív oldal helyesen küldi/fogadja ugyanazokat az esemény-típusokat.
+- A manuális Health-import eltávolítása (7.5.8) — már megtörtént, mindkét platformra egyszerre (megosztott Dart kód).
+- A HC-write-és-uuid-visszakeresés mintája **nem kell iOS-re** — ott a watch már közvetlenül valódi `HKWorkout` uuid-ot ad (11.1/1. pont).

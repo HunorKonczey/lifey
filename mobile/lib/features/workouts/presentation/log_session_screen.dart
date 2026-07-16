@@ -9,8 +9,6 @@ import 'package:intl/intl.dart';
 
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_service.dart';
-import '../../../core/health/health_workout.dart';
-import '../../../core/health/health_workout_import_service.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
@@ -29,7 +27,6 @@ import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
-import 'widgets/health_workout_picker_sheet.dart';
 import 'widgets/exercise_session_card.dart';
 import 'widgets/post_workout_feedback_sheet.dart';
 import 'widgets/workout_success_dialog.dart';
@@ -64,7 +61,7 @@ class LogSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
-  // Used only for formatting the Apple workout date in the pairing dialog.
+  // Used for formatting the trainer comment timestamp.
   static final _label = DateFormat('EEE, MMM d · HH:mm');
 
   DateTime? _startedAt;
@@ -136,6 +133,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   StreamSubscription<Object>? _watchEventsSubscription;
 
   bool get _isEditing => widget.session != null;
+
+  /// "Edzés indítása az órán" Settings kapcsoló (docs/40-watch-app-plan.md
+  /// §6.4) — a [WatchWorkoutService] hívásait itt, a call site-oknál
+  /// kapuzzuk, nem magában a service-ben, hogy az settings-független,
+  /// egyszerűen tesztelhető maradjon.
+  bool get _watchEnabled =>
+      ref.read(settingsControllerProvider).value?.watchWorkoutEnabled ?? true;
 
   // ---------------------------------------------------------------------------
   // Init / dispose
@@ -286,10 +290,22 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   /// screen isn't showing the matching session, or it's already
   /// finished/finishing.
   void _onWatchEvent(Object event) {
-    if (event is! WatchEndRequested) return;
-    if (event.sessionClientId != _sessionClientId) return;
-    if (_finishedAt != null || _saving) return;
-    unawaited(_finishWorkout());
+    switch (event) {
+      case WatchEndRequested():
+        if (event.sessionClientId != _sessionClientId) return;
+        if (_finishedAt != null || _saving) return;
+        unawaited(_finishWorkout());
+      case WatchStartRejected():
+        // Another app already owns an exercise on the watch
+        // (docs/40-watch-app-plan.md §5.3/§8.1) — the phone-side workout
+        // itself is unaffected, just let the user know the watch didn't
+        // mirror it.
+        if (event.sessionClientId != _sessionClientId || !mounted) return;
+        AppSnackbar.showInfo(
+          context,
+          title: AppLocalizations.of(context)!.watchStartRejectedMessage,
+        );
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -867,12 +883,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         );
     // Best-effort, alongside (not instead of) the Live Activity/ongoing
     // notification above — see docs/40-watch-app-plan.md §6.2.
-    unawaited(ref.read(watchWorkoutServiceProvider).startWorkout(
-          sessionClientId: _sessionClientId!,
-          title: _sessionTitle(l10n),
-          startedAt: _startedAt!,
-          state: state,
-        ));
+    if (_watchEnabled) {
+      unawaited(ref.read(watchWorkoutServiceProvider).startWorkout(
+            sessionClientId: _sessionClientId!,
+            title: _sessionTitle(l10n),
+            startedAt: _startedAt!,
+            state: state,
+          ));
+    }
   }
 
   Future<void> _updateSessionNotifier() async {
@@ -884,10 +902,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           startedLabel: l10n.startedLabel,
           state: state,
         );
-    unawaited(ref.read(watchWorkoutServiceProvider).updateState(
-          sessionClientId: _sessionClientId!,
-          state: state,
-        ));
+    if (_watchEnabled) {
+      unawaited(ref.read(watchWorkoutServiceProvider).updateState(
+            sessionClientId: _sessionClientId!,
+            state: state,
+          ));
+    }
   }
 
   /// Shows the post-workout feedback sheet (skippable) and stores the result
@@ -958,143 +978,25 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
-  /// Finish button handler — implements the full 5.6 health-import flow.
+  /// Finish button handler. No more health-workout pairing (removed —
+  /// `activeCalories`/`averageHeartRate`/`healthWorkoutId` now come from the
+  /// watch summary instead, see docs/40-watch-app-plan.md and
+  /// [workoutResumePromptProvider]'s `_onWatchEvent`): RPE feedback, then
+  /// straight to persisted + dashboard.
   Future<void> _finishWorkout() async {
     if (_saving) return;
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context)!;
-    final importService = ref.read(healthWorkoutImportServiceProvider);
 
     try {
-      // Ask "how hard was this?" first — it doesn't depend on the health
-      // pairing flow below, and the same _persist() call the pairing
-      // dialogs (or their absence) lead to already carries whatever rating
-      // was collected here.
       await _maybeCollectFeedback();
       if (!mounted) return;
 
-      final healthEnabled = ref.read(healthControllerProvider).value ?? false;
-
-      if (!healthEnabled) {
-        await _persistFinished();
-        if (!mounted) return;
-        await _maybeShowWorkoutSuccess();
-        if (!mounted) return;
-        _navigateToDashboard();
-        return;
-      }
-
-      // Health is enabled — search for an importable workout.
-      final HealthWorkout? workout = await importService.findImportable();
+      await _persistFinished();
       if (!mounted) return;
-
-      if (workout != null) {
-        // Pairing dialog.
-        final pair = await showAppConfirmDialog(
-          context,
-          title: l10n.pairHealthWorkoutTitle,
-          message: l10n.pairHealthWorkoutMessage(
-            _label.format(workout.startDate.toLocal()),
-            workout.activeCalories?.round().toString() ?? '–',
-            workout.averageHeartRate?.round().toString() ?? '–',
-          ),
-          confirmLabel: l10n.pairAndFinishButton,
-          cancelLabel: l10n.finishWithoutPairingButton,
-          icon: Icons.link_rounded,
-          barrierDismissible: false,
-        );
-        if (!mounted || pair == null) return; // barrier dismiss = stay
-        await _persistFinished();
-        if (!mounted) return;
-        if (pair) {
-          await importService.importInto(
-            sessionClientId: _sessionClientId!,
-            startedAt: _startedAt!,
-            exercises: _buildPlanned(),
-            sets: _buildSets(),
-            workout: workout,
-          );
-          if (!mounted) return;
-        }
-        await _maybeShowWorkoutSuccess();
-        if (!mounted) return;
-        _navigateToDashboard();
-      } else {
-        // No health workout found — dialog instead of snackbar.
-        final finish = await showAppConfirmDialog(
-          context,
-          title: l10n.noHealthWorkoutTitle,
-          message: l10n.noHealthWorkoutMessage,
-          confirmLabel: l10n.finishAnywayButton,
-          cancelLabel: l10n.cancelButton,
-          icon: Icons.fitness_center_rounded,
-          barrierDismissible: false,
-        );
-        if (!mounted || finish != true) return; // Cancel = stay
-        await _persistFinished();
-        if (!mounted) return;
-        await _maybeShowWorkoutSuccess();
-        if (!mounted) return;
-        _navigateToDashboard();
-      }
-    } catch (_) {
-      if (mounted) {
-        AppSnackbar.showError(context, title: l10n.couldNotSaveSessionMessage);
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  /// Manual "Import from Health" action for a session that's already been
-  /// closed and isn't paired yet — covers finishing the Lifey session before
-  /// the tracked workout itself ended, so [_finishWorkout]'s same-moment
-  /// auto-match found nothing. Opens a picker over the last two weeks of
-  /// unpaired strength workouts rather than re-running the narrow auto-match.
-  Future<void> _importFromHealthManually() async {
-    if (_saving || _sessionClientId == null) return;
-    setState(() => _saving = true);
-    final l10n = AppLocalizations.of(context)!;
-    final importService = ref.read(healthWorkoutImportServiceProvider);
-
-    try {
-      final candidates = await importService.findImportableCandidates();
+      await _maybeShowWorkoutSuccess();
       if (!mounted) return;
-
-      final workout = await showModalBottomSheet<HealthWorkout>(
-        context: context,
-        useRootNavigator: true,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (_) => HealthWorkoutPickerSheet(candidates: candidates),
-      );
-      if (workout == null || !mounted) return;
-
-      final confirm = await showAppConfirmDialog(
-        context,
-        title: l10n.pairHealthWorkoutTitle,
-        message: l10n.pairHealthWorkoutMessage(
-          _label.format(workout.startDate.toLocal()),
-          workout.activeCalories?.round().toString() ?? '–',
-          workout.averageHeartRate?.round().toString() ?? '–',
-        ),
-        confirmLabel: l10n.pairButton,
-        cancelLabel: l10n.cancelButton,
-        icon: Icons.link_rounded,
-      );
-      if (confirm != true || !mounted) return;
-
-      await importService.importInto(
-        sessionClientId: _sessionClientId!,
-        startedAt: _startedAt!,
-        exercises: _buildPlanned(),
-        sets: _buildSets(),
-        workout: workout,
-      );
-      if (!mounted) return;
-      AppSnackbar.showSuccess(context,
-          title: l10n.workoutPairedWithHealthMessage);
-      Navigator.of(context).pop();
+      _navigateToDashboard();
     } catch (_) {
       if (mounted) {
         AppSnackbar.showError(context, title: l10n.couldNotSaveSessionMessage);
@@ -1443,19 +1345,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
     // Finish button is only shown for running (not-yet-finished) sessions.
     final showFinishButton = _finishedAt == null;
-    // Manual pairing action for a session that's already closed but wasn't
-    // paired with a health workout at finish time (e.g. the tracked workout
-    // was still running when Lifey's session was closed).
-    final healthEnabled = ref.watch(healthControllerProvider).value ?? false;
-    final showImportHealthButton = _isEditing &&
-        _finishedAt != null &&
-        !(widget.session?.fromAppleHealth ?? false) &&
-        healthEnabled &&
-        ref.read(healthServiceProvider).isAvailable;
     // ListView needs extra bottom room so content isn't hidden behind the sticky button.
-    final listBottomPad = (showFinishButton || showImportHealthButton)
-        ? (safeBottom + 24 + 54 + 16)
-        : (safeBottom + 16);
+    final listBottomPad =
+        showFinishButton ? (safeBottom + 24 + 54 + 16) : (safeBottom + 16);
 
     final title = _isEditing
         ? (widget.session!.templateName ?? l10n.editWorkoutTitle)
@@ -1617,47 +1509,6 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                         )
                       : const Icon(Icons.check, size: 20),
                   label: Text(l10n.finishWorkoutButton),
-                ),
-              ),
-            ),
-
-          // ── Sticky "Import from Health" button (closed, unpaired session) ──
-          if (showImportHealthButton)
-            Positioned(
-              bottom: safeBottom + 24,
-              left: 16,
-              right: 16,
-              child: SizedBox(
-                height: 54,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _importFromHealthManually,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: scheme.primary,
-                    foregroundColor: scheme.onPrimary,
-                    disabledBackgroundColor:
-                        scheme.primary.withValues(alpha: 0.6),
-                    disabledForegroundColor:
-                        scheme.onPrimary.withValues(alpha: 0.7),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    textStyle: const TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  icon: _saving
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: scheme.onPrimary.withValues(alpha: 0.7),
-                          ),
-                        )
-                      : const Icon(Icons.link_rounded, size: 20),
-                  label: Text(l10n.importFromHealthButton),
                 ),
               ),
             ),

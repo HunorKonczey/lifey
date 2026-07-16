@@ -12,6 +12,11 @@ data class SessionMetadata(
     val exerciseName: String? = null,
     val setsDone: Int? = null,
     val setsTotal: Int? = null,
+    /** Rest timer's target end time, epoch ms — null when no rest is active
+     * (docs/39-rest-timer-plan.md). Unlike the fields above, [onStateSynced]
+     * always overwrites this one rather than preserving the old value when
+     * absent — see its doc comment for why. */
+    val restEndsAtEpochMs: Long? = null,
 )
 
 data class LiveMetrics(
@@ -37,13 +42,27 @@ object SessionStateHolder {
     private val _liveMetrics = MutableStateFlow(LiveMetrics())
     val liveMetrics: StateFlow<LiveMetrics> = _liveMetrics
 
-    /** Applied from the phone's synced state DataItem — never clears a field the new payload didn't include. */
+    /**
+     * Applied from the phone's synced state DataItem — never clears
+     * [SessionMetadata.title]/[SessionMetadata.exerciseName]/
+     * [SessionMetadata.setsDone]/[SessionMetadata.setsTotal] if the new
+     * payload didn't include them.
+     *
+     * [restEndsAtEpochMs] is the one exception: it toggles between a
+     * timestamp and null constantly within a single session (rest
+     * starts/ends), and a null value is indistinguishable on the wire from
+     * "key absent" (`WatchBridge.kt`'s `toDataMap()` skips null values
+     * entirely) — so unlike the other fields, this one is always overwritten
+     * with the new value (including null), never preserved from the
+     * previous state.
+     */
     fun onStateSynced(
         sessionClientId: String,
         title: String?,
         exerciseName: String?,
         setsDone: Int?,
         setsTotal: Int?,
+        restEndsAtEpochMs: Long?,
     ) {
         _metadata.update { current ->
             current.copy(
@@ -52,6 +71,7 @@ object SessionStateHolder {
                 exerciseName = exerciseName ?: current.exerciseName,
                 setsDone = setsDone ?: current.setsDone,
                 setsTotal = setsTotal ?: current.setsTotal,
+                restEndsAtEpochMs = restEndsAtEpochMs,
             )
         }
     }

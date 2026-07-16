@@ -148,10 +148,11 @@ class HealthService {
   };
 
   /// Foreground read of strength workouts that **finished within [within]** of
-  /// now, most-recently-finished first. This is the Phase 1 import source: the
-  /// user taps "Import from Health" right after finishing their tracked
-  /// workout, so it has already synced and a plain foreground query finds it
-  /// — no observer/background delivery needed.
+  /// now, most-recently-finished first. The manual "Import from Health" UI
+  /// flow this originally backed was removed once the watch integration
+  /// (docs/40-watch-app-plan.md) started supplying the same fields directly —
+  /// the sole remaining caller is [writeStrengthWorkoutAndGetId], looking up
+  /// the uuid of the Health Connect record it just wrote.
   ///
   /// Returns `[]` when unavailable, Health Connect isn't installed, or there's
   /// nothing/permission was denied (neither platform reveals READ-grant
