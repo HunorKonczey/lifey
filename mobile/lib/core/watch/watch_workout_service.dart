@@ -37,6 +37,16 @@ class WatchStartRejected {
   final String sessionClientId;
 }
 
+/// The user pressed "End" on the watch — the watch never closes its own
+/// session unilaterally, it asks the phone to (docs/40-watch-app-plan.md
+/// §8.2 decision (b)), so the phone's normal finish flow (RPE/feedback
+/// sheet) still runs. Handled by [LogSessionScreen] while its instance for
+/// this [sessionClientId] is mounted; a no-op otherwise.
+class WatchEndRequested {
+  const WatchEndRequested(this.sessionClientId);
+  final String sessionClientId;
+}
+
 /// Platform-neutral facade over the phone↔watch workout bridge
 /// (docs/40-watch-app-plan.md §6.1). Mirrors [WorkoutSessionNotifierService]'s
 /// shape and constructor-injection pattern so it can be called side by side
@@ -84,6 +94,8 @@ class WatchWorkoutService {
         return WatchWorkoutSummary.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
       case 'startRejected':
         return WatchStartRejected(map['sessionClientId'] as String);
+      case 'endRequested':
+        return WatchEndRequested(map['sessionClientId'] as String);
       default:
         return (map['type'] as String?) ?? 'unknown';
     }

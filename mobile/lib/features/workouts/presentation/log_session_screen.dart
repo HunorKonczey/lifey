@@ -129,6 +129,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   DateTime? _lastHrSampleAt; // timestamp of the sample currently shown
   bool _showHeartRate = false;
 
+  // Lets the watch's own End button drive the same finish flow as the
+  // in-app one (docs/40-watch-app-plan.md §8.2 decision (b)) — only while
+  // this screen instance for the matching session is mounted; see
+  // [_onWatchEvent].
+  StreamSubscription<Object>? _watchEventsSubscription;
+
   bool get _isEditing => widget.session != null;
 
   // ---------------------------------------------------------------------------
@@ -138,6 +144,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   @override
   void initState() {
     super.initState();
+    _watchEventsSubscription =
+        ref.read(watchWorkoutServiceProvider).events.listen(_onWatchEvent);
     final session = widget.session;
     // For existing sessions, start time is known. For new sessions _startedAt
     // stays null until the first set is persisted — the timer only starts then.
@@ -267,7 +275,21 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     isLogSessionScreenOpen = false;
     _ticker?.cancel();
     _hrTicker?.cancel();
+    unawaited(_watchEventsSubscription?.cancel());
     super.dispose();
+  }
+
+  /// The watch's End button asks the phone to close the session rather than
+  /// ending its own sensor session unilaterally (docs/40-watch-app-plan.md
+  /// §8.2 decision (b)) — this is what actually runs the same finish flow
+  /// (RPE/feedback sheet) the in-app Finish button does. No-ops if this
+  /// screen isn't showing the matching session, or it's already
+  /// finished/finishing.
+  void _onWatchEvent(Object event) {
+    if (event is! WatchEndRequested) return;
+    if (event.sessionClientId != _sessionClientId) return;
+    if (_finishedAt != null || _saving) return;
+    unawaited(_finishWorkout());
   }
 
   // ---------------------------------------------------------------------------

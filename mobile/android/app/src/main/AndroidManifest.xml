@@ -93,6 +93,21 @@
              weigh-in reminder, docs/30-push-notifications-plan.md, M4) — the
              first fires the notification itself, the second reschedules the
              repeating alarm after a reboot or app update. -->
+        <!-- Wakes even if the Flutter engine isn't running, so a workout
+             summary sent by the watch right as the app was killed still gets
+             buffered (docs/40-watch-app-plan.md §5.4). WatchBridge.kt is the
+             live counterpart used while the engine is up. -->
+        <service
+            android:name=".PhoneWatchSummaryListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:path="/lifey/watch/summary" />
+            </intent-filter>
+        </service>
         <receiver android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
         <receiver android:exported="false"

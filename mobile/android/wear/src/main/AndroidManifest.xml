@@ -1,8 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-feature android:name="android.hardware.type.watch" />
 
+    <!-- Live heart rate during the exercise (docs/40-watch-app-plan.md §5.2)
+         — requested at runtime; the exercise still starts without it
+         (kcal-only) if denied. -->
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:label="Lifey"
+        android:icon="@mipmap/ic_launcher"
         android:allowBackup="true"
         android:theme="@android:style/Theme.DeviceDefault">
         <!-- V1: the phone is the master, this app never starts a workout on
@@ -20,11 +30,9 @@
             </intent-filter>
         </activity>
 
-        <!-- F0 spike (docs/40-watch-app-plan.md §5.1, §5.4): a manifest
-             declaration wakes this service even if the wear app isn't
-             running, when the phone's WatchBridge sends a Data Layer
-             message. F3 replaces the body with real ExerciseClient
-             start/end handling. -->
+        <!-- Wakes even if the wear app isn't running, whenever the phone's
+             WatchBridge sends a start/state/end command message (§5.1) or
+             pushes the "last known state" DataItem (§D2). -->
         <service
             android:name=".PhoneListenerService"
             android:exported="true">
@@ -35,6 +43,20 @@
                     android:host="*"
                     android:pathPrefix="/lifey/watch" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/lifey/watch/state" />
+            </intent-filter>
         </service>
+
+        <!-- Owns the Health Services ExerciseClient for the strength-workout
+             session (docs/40-watch-app-plan.md §5.3). -->
+        <service
+            android:name=".ExerciseService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
     </application>
 </manifest>

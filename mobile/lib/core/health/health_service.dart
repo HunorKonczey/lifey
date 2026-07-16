@@ -193,6 +193,45 @@ class HealthService {
     });
   }
 
+  /// Writes the just-finished Android watch exercise to Health Connect and
+  /// returns the written record's uuid to use as `healthWorkoutId` — the
+  /// Android counterpart to iOS, where the watch already writes to HealthKit
+  /// directly and hands back a real `HKWorkout` uuid
+  /// (docs/40-watch-app-plan.md §5.2 "Döntés: a telefon ír HC-be";
+  /// [WorkoutResumePrompt] only calls this when a watch summary arrives with
+  /// no `healthWorkoutId` already, i.e. the Android path).
+  ///
+  /// Returns null on iOS (no-op — iOS never needs this), when unavailable, or
+  /// on any failure. `writeWorkoutData` itself doesn't return the created
+  /// record's id, so this looks it up afterwards via [recentStrengthWorkouts],
+  /// matching by closest [startDate] to [start].
+  Future<String?> writeStrengthWorkoutAndGetId({
+    required DateTime start,
+    required DateTime end,
+    double? activeCalories,
+    String? title,
+  }) async {
+    if (!Platform.isAndroid) return null;
+    return _guarded(null, () async {
+      await _ensureConfigured();
+      final written = await _health.writeWorkoutData(
+        activityType: HealthWorkoutActivityType.STRENGTH_TRAINING,
+        start: start,
+        end: end,
+        totalEnergyBurned: activeCalories?.round(),
+        title: title,
+      );
+      if (!written) return null;
+
+      final candidates = await recentStrengthWorkouts(within: const Duration(minutes: 5));
+      if (candidates.isEmpty) return null;
+      candidates.sort(
+        (a, b) => (a.startDate.difference(start)).abs().compareTo((b.startDate.difference(start)).abs()),
+      );
+      return candidates.first.uuid;
+    });
+  }
+
   /// The single most recent `HealthDataType.HEART_RATE` sample (bpm) whose
   /// timestamp falls within [within] of now, or null when unavailable, Health
   /// Connect isn't installed, no permission, or no recent sample.

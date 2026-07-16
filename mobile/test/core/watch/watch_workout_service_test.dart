@@ -220,5 +220,22 @@ void main() {
       expect(event, isA<WatchStartRejected>());
       expect((event as WatchStartRejected).sessionClientId, 'session-1');
     });
+
+    test('decodes an endRequested event', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({'type': 'endRequested', 'sessionClientId': 'session-1'});
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final event = await service.events.first;
+
+      expect(event, isA<WatchEndRequested>());
+      expect((event as WatchEndRequested).sessionClientId, 'session-1');
+    });
   });
 }

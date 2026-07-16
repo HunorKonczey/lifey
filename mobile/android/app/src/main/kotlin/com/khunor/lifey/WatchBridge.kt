@@ -14,6 +14,7 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
+import org.json.JSONObject
 
 /**
  * Handles the `lifey/watch` MethodChannel + `lifey/watch/events` EventChannel
@@ -150,15 +151,52 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                 val sessionClientId = String(messageEvent.data)
                 eventSink?.success(mapOf("type" to "startRejected", "sessionClientId" to sessionClientId))
             }
-            // F0 spike only proves the wake-up path; the real JSON-encoded
-            // summary payload + PhoneListenerService persistent-buffer
-            // fallback for a killed app land in F3 (docs/40-watch-app-plan.md
-            // §5.4).
+            "$MESSAGE_PATH_PREFIX/$COMMAND_END_REQUESTED" -> {
+                val sessionClientId = String(messageEvent.data)
+                eventSink?.success(mapOf("type" to "endRequested", "sessionClientId" to sessionClientId))
+            }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_SUMMARY" -> {
+                emitSummary(String(messageEvent.data))
+            }
+            // PhoneWatchSummaryListenerService also receives this same
+            // summary message (manifest-declared, so it fires even if this
+            // MethodChannel-backed listener isn't attached yet) and buffers
+            // it for the next onListen sweep below
+            // (docs/40-watch-app-plan.md §5.4).
         }
+    }
+
+    private fun emitSummary(summaryJson: String) {
+        val payload = JSONObject(summaryJson)
+        eventSink?.success(
+            mapOf(
+                "type" to "summary",
+                "payload" to
+                    mapOf(
+                        "sessionClientId" to payload.optString("sessionClientId"),
+                        "activeCalories" to
+                            if (payload.has("activeCalories")) payload.optDouble("activeCalories") else null,
+                        "averageHeartRate" to
+                            if (payload.has("averageHeartRate")) payload.optDouble("averageHeartRate") else null,
+                        // Android never gets this from the watch — the phone
+                        // itself writes Health Connect and fills it in
+                        // (docs/40-watch-app-plan.md §5.2, decided in
+                        // workout_resume_prompt.dart's Android branch).
+                        "healthWorkoutId" to null,
+                    ),
+            )
+        )
     }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         eventSink = events
+        // The moment Dart starts listening (every cold start — see
+        // WorkoutResumePrompt) is also the sweep point for summaries that
+        // arrived while the Flutter engine wasn't running
+        // (docs/40-watch-app-plan.md §5.4).
+        for (buffered in WatchSummaryBuffer.drain(appContext)) {
+            emitSummary(buffered)
+        }
     }
 
     override fun onCancel(arguments: Any?) {
@@ -175,6 +213,8 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_STATE = "state"
         private const val COMMAND_END = "end"
         private const val COMMAND_START_REJECTED = "startRejected"
+        private const val COMMAND_END_REQUESTED = "endRequested"
+        private const val COMMAND_SUMMARY = "summary"
     }
 }
 

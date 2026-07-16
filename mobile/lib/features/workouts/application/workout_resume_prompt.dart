@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/health/health_service.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
@@ -91,11 +92,24 @@ class WorkoutResumePrompt {
     final session = sessions.where((s) => s.clientId == event.sessionClientId).firstOrNull;
     if (session == null || session.healthWorkoutId != null) return;
 
+    // iOS summaries already carry a real HKWorkout uuid; Android summaries
+    // don't — the watch never touches Health Connect, the phone does
+    // (docs/40-watch-app-plan.md §5.2 "Döntés: a telefon ír HC-be").
+    var healthWorkoutId = event.healthWorkoutId;
+    if (healthWorkoutId == null && session.startedAt != null) {
+      healthWorkoutId = await _ref.read(healthServiceProvider).writeStrengthWorkoutAndGetId(
+            start: session.startedAt!,
+            end: session.finishedAt ?? DateTime.now(),
+            activeCalories: event.activeCalories,
+            title: session.templateName,
+          );
+    }
+
     await _ref.read(workoutSessionControllerProvider.notifier).enrichFromWatch(
           event.sessionClientId,
           activeCalories: event.activeCalories,
           averageHeartRate: event.averageHeartRate,
-          healthWorkoutId: event.healthWorkoutId,
+          healthWorkoutId: healthWorkoutId,
         );
   }
 
