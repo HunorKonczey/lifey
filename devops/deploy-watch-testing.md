@@ -10,12 +10,22 @@ Apple account for the watch side.
 
 ## Current state
 
-Native watch targets don't exist yet — this doc covers **F0 (spike) and F2/F3
-(native watch app) setup** from docs/40-watch-app-plan.md. The Dart-side bridge
-(`WatchWorkoutService`, `mobile/lib/core/watch/watch_workout_service.dart`) is
-already in the repo and safely no-ops (catches `MissingPluginException`) until
-the native targets below are added — so nothing here blocks the phone app from
-building/running as-is.
+The Dart-side bridge (`WatchWorkoutService`,
+`mobile/lib/core/watch/watch_workout_service.dart`) is in the repo and safely
+no-ops (catches `MissingPluginException`) until a platform's native side is
+wired up — so nothing here blocks the phone app from building/running as-is.
+
+- **iOS**: `LifeyWatch` watchOS target added to `Runner.xcodeproj` +
+  `mobile/ios/Runner/WatchBridge.swift` (F0 spike / F2 native scaffold) — done
+  on a Mac, build verification in progress. Steps 1–9 below are for
+  continuing that work (real device install, HealthKit permission, etc.).
+- **Android**: `mobile/android/wear/` Gradle module + `mobile/android/app/.../WatchBridge.kt`
+  (F0 spike / F3 native scaffold) — done, `./gradlew :wear:assembleDebug` and
+  `:app:compileDebugKotlin` both green. **The rest of the Android/Wear OS work
+  (F3: Compose UI, `ExerciseClient` integration, HC-write, emulator/device
+  testing) continues on a Windows machine** — nothing about Wear OS
+  development requires a Mac (see the table below), so this is a workflow
+  choice, not a platform constraint.
 
 ## Apple Watch — what works without a paid account
 

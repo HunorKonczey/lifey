@@ -447,6 +447,12 @@ A §5.2 "a telefon ír HC-be" döntése megvalósult, de **nem natív Kotlin kó
 
 A doc 16/26 által leírt **manuális** "Import from Health" workout-párosítási flow (finish-time dialógusok, edit-time "pair now" gomb) **2026-07-16-tal teljesen megszűnt** — mindkét platformon, mivel megosztott Flutter/Dart kódban élt. A `_finishWorkout()` mostantól: RPE-visszajelzés → egyenesen lezárás + dashboard, health-dialógus nélkül. Az `activeCalories`/`averageHeartRate`/`healthWorkoutId` mezők és a rájuk épülő UI (stat-kártyák, "Health" jelvény a session-listán) megmaradtak — ezek forrása mostantól kizárólag a watch-összegzés. Ez feleslegessé tette a §8.1 kockázati táblázat "HealthKit dupla-számolás" sorát is (nincs többé manuális import-lista, amit szűrni kellene).
 
+### Állapot (2026-07-16)
+
+- **F1 — kész.** `WatchWorkoutService` + hívási pontok (`LogSessionScreen`, `WorkoutResumePrompt`) + `WorkoutSessionRepository.enrichHealthMetrics` + unit tesztek a repóban.
+- **F0(a) + F2 natív váz — Mac gépen készül.** `LifeyWatch` watchOS-target felvéve (`mobile/ios/Runner.xcodeproj`), minimális SwiftUI váz (`handle(_:)` proof of concept) + `mobile/ios/Runner/WatchBridge.swift` (a `lifey/watch` csatorna teljes `isWatchAppAvailable`/`startWorkout`/`updateState`/`endWorkout` implementációja, `startWatchApp`/`WCSession` alapon). Build-ellenőrzés folyamatban.
+- **F0(b,c) + F3 natív váz — Android fele elkezdve ezen a Macen, a folytatás Windowson lesz.** `mobile/android/wear/` Gradle-modul (üres Compose-mentes MainActivity + `PhoneListenerService` mint `WearableListenerService`) és `mobile/android/app/.../WatchBridge.kt` (a `lifey/watch` csatorna Kotlin oldala, `MessageClient`/`DataClient`/`CapabilityClient` alapon) megvan és lefordul (`./gradlew :wear:assembleDebug`, `:app:compileDebugKotlin` mindkettő zöld). **A tényleges Wear OS emulátoros/fizikai órás tesztelés és a hátralévő F3-munka (Compose UI, `ExerciseClient` integráció, HC-írás) Windows gépen folytatódik** — a Wear OS/Android Studio toolchain ott is teljes értékű, nincs Mac-kényszer ezen a felén (lásd 0. fejezet).
+
 ---
 
 ## 8. Kockázatok, korlátok, nyitott kérdések
