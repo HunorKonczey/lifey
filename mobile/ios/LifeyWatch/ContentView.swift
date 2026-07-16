@@ -1,28 +1,22 @@
 import SwiftUI
 
-/// F0 spike placeholder — F2 replaces this with `ActiveWorkoutView`/
-/// `IdleView` (docs/40-watch-app-plan.md §4.4).
+/// Top-level watch screen — switches purely on `WorkoutManager.phase`
+/// (docs/40-watch-app-plan.md §4.4, mirrors Android's `MainActivity`). All
+/// the actual state syncing happens in `PhoneConnector`/`WorkoutManager`,
+/// not here.
 struct ContentView: View {
-    @ObservedObject private var lastLaunch = LastLaunchConfiguration.shared
+  @ObservedObject private var workoutManager = WorkoutManager.shared
 
-    var body: some View {
-        VStack(spacing: 8) {
-            Text("Lifey")
-                .font(.headline)
-            if let raw = lastLaunch.activityTypeRawValue {
-                Text("Workout config received (type \(raw))")
-                    .font(.caption)
-                    .multilineTextAlignment(.center)
-            } else {
-                Text("Indíts edzést a telefonon")
-                    .font(.caption)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .padding()
+  var body: some View {
+    switch workoutManager.phase {
+    case .idle:
+      IdleView()
+    case .active:
+      ActiveWorkoutView()
     }
+  }
 }
 
 #Preview {
-    ContentView()
+  ContentView()
 }

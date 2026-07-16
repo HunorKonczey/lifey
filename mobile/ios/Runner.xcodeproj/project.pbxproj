@@ -31,6 +31,11 @@
 		E2C15FF9F2D08196F7D9430B /* LifeyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B869FA4F27F4942A50F51F6 /* LifeyWatchApp.swift */; };
 		E4E728B9F8538B015C8F9150 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CA01381F208E459209B7674 /* ContentView.swift */; };
 		F6BF3582FE4D9C352AFA2F05 /* LifeyWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4611017037CF0707C0EB5D /* LifeyWidgetsBundle.swift */; };
+		1B0DA9772E564056B0723B13 /* WorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3EC32BB8CB246A8BE328032 /* WorkoutManager.swift */; };
+		36AABD05BF944D39BFA79582 /* PhoneConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12F2C6137F4746E0A1818C6D /* PhoneConnector.swift */; };
+		3BA9433482684EBBA84C44CA /* ActiveWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E42293D98E4942DCB04B165E /* ActiveWorkoutView.swift */; };
+		15C0D50A4AAE4258A9903997 /* IdleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 216887D75EC840DFA5F1098B /* IdleView.swift */; };
+		A8A974CAA75743428DE0CAAD /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D6938B0E06EA4E5FB6C769C8 /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -116,6 +121,11 @@
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		7B869FA4F27F4942A50F51F6 /* LifeyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyWatchApp.swift; sourceTree = "<group>"; };
+		B3EC32BB8CB246A8BE328032 /* WorkoutManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
+		12F2C6137F4746E0A1818C6D /* PhoneConnector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneConnector.swift; sourceTree = "<group>"; };
+		E42293D98E4942DCB04B165E /* ActiveWorkoutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutView.swift; sourceTree = "<group>"; };
+		216887D75EC840DFA5F1098B /* IdleView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IdleView.swift; sourceTree = "<group>"; };
+		D6938B0E06EA4E5FB6C769C8 /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		7E57CFB32E5D75AEE74B5ACB /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		8FC6BDA7ED6930FFA22BC04D /* WatchBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
@@ -292,11 +302,25 @@
 			children = (
 				7B869FA4F27F4942A50F51F6 /* LifeyWatchApp.swift */,
 				0CA01381F208E459209B7674 /* ContentView.swift */,
+				B3EC32BB8CB246A8BE328032 /* WorkoutManager.swift */,
+				12F2C6137F4746E0A1818C6D /* PhoneConnector.swift */,
+				2FE3F11E4B1E48CF97E6DD86 /* Views */,
+				D6938B0E06EA4E5FB6C769C8 /* Localizable.xcstrings */,
 				70242DA06A8699B3E8E851BF /* LifeyWatch.entitlements */,
 				C172D655068797390A33BC32 /* Info.plist */,
 			);
 			name = LifeyWatch;
 			path = LifeyWatch;
+			sourceTree = "<group>";
+		};
+		2FE3F11E4B1E48CF97E6DD86 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				E42293D98E4942DCB04B165E /* ActiveWorkoutView.swift */,
+				216887D75EC840DFA5F1098B /* IdleView.swift */,
+			);
+			name = Views;
+			path = Views;
 			sourceTree = "<group>";
 		};
 		FF7C648557FC8F0630BF66DE /* Pods */ = {
@@ -423,6 +447,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				hu,
 				Base,
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
@@ -453,6 +478,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A8A974CAA75743428DE0CAAD /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -586,6 +612,10 @@
 			files = (
 				E2C15FF9F2D08196F7D9430B /* LifeyWatchApp.swift in Sources */,
 				E4E728B9F8538B015C8F9150 /* ContentView.swift in Sources */,
+				1B0DA9772E564056B0723B13 /* WorkoutManager.swift in Sources */,
+				36AABD05BF944D39BFA79582 /* PhoneConnector.swift in Sources */,
+				3BA9433482684EBBA84C44CA /* ActiveWorkoutView.swift in Sources */,
+				15C0D50A4AAE4258A9903997 /* IdleView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

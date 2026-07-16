@@ -96,8 +96,9 @@ final class WatchBridge: NSObject {
       sessionClientId: sessionClientId, title: nil, startedAtEpochMs: nil, state: state,
       desiredPhase: "running")
     if WCSession.default.isReachable {
+      let sanitizedState = (sanitizedForPropertyList(state) as? [String: Any]) ?? [:]
       WCSession.default.sendMessage(
-        ["command": "state", "sessionClientId": sessionClientId, "state": state],
+        ["command": "state", "sessionClientId": sessionClientId, "state": sanitizedState],
         replyHandler: nil, errorHandler: nil)
     }
     result(nil)
@@ -132,9 +133,36 @@ final class WatchBridge: NSObject {
     var context: [String: Any] = ["sessionClientId": sessionClientId, "desiredPhase": desiredPhase]
     if let title { context["title"] = title }
     if let startedAtEpochMs { context["startedAtEpochMs"] = startedAtEpochMs }
-    if let state { context["state"] = state }
+    if let state, let sanitizedState = sanitizedForPropertyList(state) as? [String: Any] {
+      context["state"] = sanitizedState
+    }
     try? WCSession.default.updateApplicationContext(context)
   }
+}
+
+/// Strips `NSNull` (Flutter's encoding of Dart `null`, which the standard
+/// method codec preserves as a real dictionary entry rather than omitting
+/// the key) recursively. Both `updateApplicationContext` and `sendMessage`
+/// require property-list-only values — `NSNull` isn't one, and an
+/// un-sanitized payload fails `updateApplicationContext` silently (`try?`),
+/// dropping the whole state update. This matters in practice because
+/// `restEndsAtEpochMs` (docs/40-watch-app-plan.md §3 "Élő állapot") is
+/// `null` on the wire whenever no rest is active — the common case.
+private func sanitizedForPropertyList(_ value: Any) -> Any? {
+  if value is NSNull { return nil }
+  if let dict = value as? [String: Any] {
+    var result: [String: Any] = [:]
+    for (key, nested) in dict {
+      if let sanitized = sanitizedForPropertyList(nested) {
+        result[key] = sanitized
+      }
+    }
+    return result
+  }
+  if let array = value as? [Any] {
+    return array.compactMap { sanitizedForPropertyList($0) }
+  }
+  return value
 }
 
 // MARK: - WCSessionDelegate
@@ -173,11 +201,20 @@ extension WatchBridge: WCSessionDelegate {
     ])
   }
 
+  // Watch → phone signals: "another app owns the exercise" and "user
+  // pressed End on the watch" (docs/40-watch-app-plan.md §3, §8.2 decision
+  // (b), §11.1/5). WatchEndRequested is handled Dart-side by
+  // LogSessionScreen while mounted for this sessionClientId.
   func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-    guard message["type"] as? String == "startRejected",
-      let sessionClientId = message["sessionClientId"] as? String
-    else { return }
-    eventSink?(["type": "startRejected", "sessionClientId": sessionClientId])
+    guard let sessionClientId = message["sessionClientId"] as? String else { return }
+    switch message["type"] as? String {
+    case "startRejected":
+      eventSink?(["type": "startRejected", "sessionClientId": sessionClientId])
+    case "endRequested":
+      eventSink?(["type": "endRequested", "sessionClientId": sessionClientId])
+    default:
+      break
+    }
   }
 }
 

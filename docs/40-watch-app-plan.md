@@ -1,6 +1,6 @@
 # 40 – Watch alkalmazás terv (Apple Watch + Wear OS)
 
-Státusz: **Android (Wear OS) — F0–F4 megvalósítva és emulátoron végigtesztelve (2026-07-16). iOS (Apple Watch) — tervezve, F2/F4 még hátravan, fejlesztése Mac-en folytatódik.**
+Státusz: **Android (Wear OS) — F0–F4 megvalósítva és emulátoron végigtesztelve (2026-07-16). iOS (Apple Watch) — F0–F4 megvalósítva (2026-07-16), build-ellenőrizve (LifeyWatch target + teljes Runner workspace zöld); watchOS-szimulátoros/fizikai eszközös manuális teszt még hátravan, lásd 11.5.**
 Nyelv: a mobil oldali híd Dart, a watch appok **natívak** (SwiftUI ill. Kotlin/Compose — lásd 2. fejezet, ez nem választás kérdése, hanem platformkényszer)
 Kapcsolódó dokumentumok:
 - [16-apple-health-integration-plan.md](16-apple-health-integration-plan.md) — a HealthKit-korlátok; a doc saját maga jelzi, hogy a benne leírt **manuális** "Import from Health" workout-párosítás 2026-07-16-tal megszűnt (lásd lent, 7. és 11. fejezet) — a session-gazdagítás (kalória/pulzus) mostantól kizárólag ebből a watch-integrációból jön
@@ -12,17 +12,17 @@ Kapcsolódó dokumentumok:
 
 | Fázis | Android (Wear OS) | iOS (Apple Watch) |
 |---|---|---|
-| F0 — Spike-ok | ✅ Kész | ✅ Kész (F0 placeholder: `LifeyWatchApp.swift`/`ContentView.swift`) |
+| F0 — Spike-ok | ✅ Kész | ✅ Kész |
 | F1 — Dart híd | ✅ Kész (mindkét platformra közös) | ✅ Kész (mindkét platformra közös) |
-| F2 — Watch MVP (natív start/end/élő mérés) | ✅ Kész | ❌ **Hátravan** — csak az F0 placeholder van meg, lásd 11. fejezet |
+| F2 — Watch MVP (natív start/end/élő mérés) | ✅ Kész | ✅ Kész — lásd 11. fejezet |
 | F3 — Wear OS MVP | ✅ Kész | n/a (iOS-nek nincs külön F3-a, az F2 a natív MVP) |
-| F4 — Pihenő-visszaszámláló+haptika, Settings-kapcsoló, lokalizáció, hibaút | ✅ Kész (Android fele) | ❌ **Hátravan** (iOS fele), lásd 11. fejezet |
+| F4 — Pihenő-visszaszámláló+haptika, Settings-kapcsoló, lokalizáció, hibaút | ✅ Kész (Android fele) | ✅ Kész (iOS fele) — lásd 11. fejezet |
 | F5 — (v2) Set-logolás a watchról | ⏸ Nem kezdődött el — csak azután, hogy iOS is F4-en áll | ⏸ ua. |
 | F6 — (v2) Standalone indítás a watchról | ⏸ ua. | ⏸ ua. |
 
-**A terv**: az iOS-fejlesztés Mac-en folytatódik, F2-től F4-ig (Android-dal egy szintre hozva). Utána közösen térünk vissza F5/F6-ra, mindkét platformon egyszerre.
+**A terv**: az iOS-fejlesztés F2-től F4-ig 2026-07-16-ra elkészült (Android-dal egy szintre hozva) — a build-ellenőrzés (LifeyWatch target + teljes Runner workspace) zöld, a watchOS-szimulátoros/fizikai eszközös manuális teszt hátravan (11.5). Utána közösen térünk vissza F5/F6-ra, mindkét platformon egyszerre.
 
-A 4–10. fejezet az **eredeti terv**, változatlanul hagyva referenciának. A ténylegesen megvalósult Android-implementáció (a tervtől való eltérésekkel, a build/tesztelés közben talált 3 valódi hibával és azok javításával) a **7. fejezet után, új 7.5 alfejezetben** van dokumentálva. Az iOS-hez még hátralévő munka a **11. fejezetben**.
+A 4–10. fejezet az **eredeti terv**, változatlanul hagyva referenciának. A ténylegesen megvalósult Android-implementáció (a tervtől való eltérésekkel, a build/tesztelés közben talált 3 valódi hibával és azok javításával) a **7. fejezet után, új 7.5 alfejezetben** van dokumentálva. Az iOS-oldal terve és tényleges megvalósítása a **11. fejezetben** (11.1–11.4 a terv, 11.5 a leszállított implementáció és a talált eltérések).
 
 ---
 
@@ -471,10 +471,10 @@ A doc 16/26 által leírt **manuális** "Import from Health" workout-párosítá
 
 ### 8.2 Nyitott kérdések (implementáció előtt döntendő)
 
-1. **End gomb a watchon**: V1-ben a watch End gombja (a) csak a szenzor-sessiont zárja, a telefon-session nyitva marad; vagy (b) a telefonnak is küld egy `endRequested`-et, és a telefon zárja a sessiont (RPE-dialógussal a telefonon)? **Javaslat: (b)** — de a telefon-oldali „edzés vége” flow (feedback sheet) miatt a telefonon kell megerősíteni. **✅ Eldőlt, Androidon megvalósítva (b) szerint (7.5.6) — iOS-en ugyanígy kell implementálni (11.1).**
+1. **End gomb a watchon**: V1-ben a watch End gombja (a) csak a szenzor-sessiont zárja, a telefon-session nyitva marad; vagy (b) a telefonnak is küld egy `endRequested`-et, és a telefon zárja a sessiont (RPE-dialógussal a telefonon)? **Javaslat: (b)** — de a telefon-oldali „edzés vége” flow (feedback sheet) miatt a telefonon kell megerősíteni. **✅ Eldőlt, mindkét platformon megvalósítva (b) szerint (7.5.6 Androidon, 11.1 iOS-en).**
 2. **Élő pulzus a telefon UI-án** edzés közben: kell-e V1-be? (iOS-en WCSession message-ekkel vagy iOS 17 mirroringgal menne.) **Javaslat: nem**, V1 az összegzésre fókuszál. **✅ Változatlanul nem V1-cél.**
-3. Watch app **külön lokalizációs pipeline**-ja: kézzel tartjuk szinkronban az arb-kulcsokkal, vagy generálunk? V1: kézzel (≈15 string). **✅ Androidon megvalósítva: kézzel, `values/strings.xml` + `values-en/strings.xml` pár (7.5.6).**
-4. `traditionalStrengthTraining` vs `functionalStrengthTraining` (iOS) ill. `STRENGTH_TRAINING` vs `WEIGHTLIFTING` (Wear): melyik aktivitástípus? **Javaslat: traditional / STRENGTH_TRAINING** — a kalóriamodell súlyzós edzésre kalibrált, és a Fitness-gyűrűkben is így jelenik meg. **✅ Androidon `STRENGTH_TRAINING` megvalósítva — iOS-en `traditionalStrengthTraining` a terv szerint még hátravan.**
+3. Watch app **külön lokalizációs pipeline**-ja: kézzel tartjuk szinkronban az arb-kulcsokkal, vagy generálunk? V1: kézzel (≈15 string). **✅ Megvalósítva mindkét platformon: kézzel — Androidon `values/strings.xml` + `values-en/strings.xml` pár (7.5.6), iOS-en `Localizable.xcstrings` ugyanazokkal a kulcsokkal (11.3).**
+4. `traditionalStrengthTraining` vs `functionalStrengthTraining` (iOS) ill. `STRENGTH_TRAINING` vs `WEIGHTLIFTING` (Wear): melyik aktivitástípus? **Javaslat: traditional / STRENGTH_TRAINING** — a kalóriamodell súlyzós edzésre kalibrált, és a Fitness-gyűrűkben is így jelenik meg. **✅ Mindkét platformon megvalósítva: `STRENGTH_TRAINING` Androidon, `traditionalStrengthTraining` iOS-en (`WatchBridge.swift`'s `startWorkout`).**
 
 ---
 
@@ -502,39 +502,62 @@ A doc 16/26 által leírt **manuális** "Import from Health" workout-párosítá
 - A terv a meglévő építőkövekre ül: a `WorkoutSessionState` (Live Activity / ongoing notification) lesz a watch-kijelző adatmodellje, az `activeCalories`/`averageHeartRate`/`healthWorkoutId` mezők és az absent-megőrző repository-update lesz az összegzés célja — **se séma-, se backend-változás nem kell**.
 - A legnagyobb munka a két natív watch app (SwiftUI + Compose for Wear OS); a Flutter-oldal egy vékony, a meglévő mintát követő channel-híd.
 - V1-ben a telefon a mester: a watch mér, kijelez és összegez; a watchról set-logolás és standalone indítás v2.
-- **Android (Wear OS) oldalon ez a terv 2026-07-16-ra teljes egészében megvalósult és emulátoron végigtesztelve működik** — a tervtől eltérő pontok (DataItem-szinkron megbízhatatlansága, plusz futásidejű engedélyek, package visibility, `CapabilityClient` fallback) a 7.5 fejezetben vannak dokumentálva. **iOS-en még csak az F0-spike áll** — a hátralévő munka a 11. fejezetben.
+- **Android (Wear OS) oldalon ez a terv 2026-07-16-ra teljes egészében megvalósult és emulátoron végigtesztelve működik** — a tervtől eltérő pontok (DataItem-szinkron megbízhatatlansága, plusz futásidejű engedélyek, package visibility, `CapabilityClient` fallback) a 7.5 fejezetben vannak dokumentálva.
+- **iOS-en (Apple Watch) F0–F4 szintén megvalósult 2026-07-16-ra** — build-ellenőrizve (a `LifeyWatch` watchOS target és a teljes `Runner` workspace is hibátlanul fordul), de watchOS-szimulátoros/fizikai eszközös manuális teszt még nem futott le. A tervezett (11.1–11.4) és a ténylegesen leszállított munka (a `WatchBridge.swift`-ben talált NSNull/property-list hibával együtt) a 11.5 fejezetben van dokumentálva.
 
 ---
 
 ## 11. iOS — hátralévő munka az Android-szinthez
 
-Az Android F0–F4 megvalósítása közben szerzett tapasztalatok (7.5 fejezet) alapján pontosítva. Ez a lista a Mac-en folytatódó fejlesztés kiindulópontja.
+Az Android F0–F4 megvalósítása közben szerzett tapasztalatok (7.5 fejezet) alapján pontosítva. Ez a lista volt a Mac-en folytatódó fejlesztés kiindulópontja — **2026-07-16-ra mind a négy pont megvalósult, lásd 11.5** a tényleges leszállítás és a tervtől való eltérések dokumentációjáért. A pontok alább változatlanul maradnak referenciának, ✅ jelöléssel.
 
-### 11.1 F2 — iOS watch MVP (a fő hátralévő munka)
+### 11.1 F2 — iOS watch MVP (a fő hátralévő munka) — ✅ megvalósítva
 
-A `mobile/ios/LifeyWatch/` jelenleg csak az F0-spike-ot tartalmazza (`LifeyWatchApp.swift`'s `AppDelegate.handle(_:)` stub, ami csak annyit csinál, hogy eltárolja a kapott `activityTypeRawValue`-t; és egy placeholder `ContentView.swift`). Hiányzik:
+A `mobile/ios/LifeyWatch/` korábban csak az F0-spike-ot tartalmazta. A hiányzó darabok mind elkészültek:
 
-1. **`WorkoutManager.swift`** — a §4.3-ban vázolt valódi `HKWorkoutSession` + `HKLiveWorkoutBuilder` életciklus: `start(configuration:)` a kapott `HKWorkoutConfiguration`-ból, élő HR/kcal gyűjtés a `HKLiveWorkoutBuilderDelegate`-en át, `end()` ami elmenti a valódi `HKWorkout`-ot (ennek `uuid`-ja lesz a `healthWorkoutId` — **iOS-en ezt közvetlenül a watch adja, nincs szükség a 7.5.7-ben leírt Android-oldali "phone ír HC-be, majd visszakeresi az uuid-ot" kerülőútra**).
-2. **`PhoneConnector.swift`** — `WCSessionDelegate` a watch oldalán: `applicationContext`/`sendMessage` fogadása, `transferUserInfo` küldése a végén. A telefon oldali fogadó (`mobile/ios/Runner/WatchBridge.swift`'s `didReceiveUserInfo`) **már készen áll**, változtatás nélkül fogadja.
-3. **Valódi UI** — `Views/ActiveWorkoutView.swift` (eltelt idő, élő HR, kcal, gyakorlat/szett-számláló — az Android `ActiveWorkoutScreen.kt` a vizuális/adatmodell-referencia) + `Views/IdleView.swift`, a placeholder `ContentView.swift` helyett.
-4. **Xcode projekt bekötés** (`devops/deploy-watch-testing.md` szerint) — a `LifeyWatch` watchOS App target tényleges felvétele a `Runner.xcworkspace`-be, automatikus aláírás egy Personal Team-mel. **Ez csak Mac-en/Xcode-ban végezhető el**, ez volt az oka, hogy Android előbb készült el ebben a (Windows) környezetben.
-5. **Végpont (End gomb) — már eldöntött, csak implementálandó**: a 8.2/1. nyitott kérdés (b) opciója (Androidon már megvalósítva, 7.5.6) — a watch End gombja **ne** hívjon közvetlenül `session.end()`-et, hanem küldjön egy `endRequested` `sendMessage`-et a telefonnak, ami a saját `_finishWorkout()`-ját (RPE-dialógus, majd lezárás) futtatja; a watch csak a ténylegesen visszaérkező `end` parancsra zárja a `HKWorkoutSession`-t. A Dart oldal (`WatchEndRequested` esemény, `LogSessionScreen`'s `_onWatchEvent`) **már kész és platform-független** — csak az iOS natív oldalnak kell ugyanazt a `/lifey/watch/endRequested`-mintát küldenie, amit az Android `SummarySender.sendEndRequested` küld.
+1. **`WorkoutManager.swift`** — a §4.3-ban vázolt valódi `HKWorkoutSession` + `HKLiveWorkoutBuilder` életciklus: `start(configuration:)` a kapott `HKWorkoutConfiguration`-ból, élő HR/kcal gyűjtés a `HKLiveWorkoutBuilderDelegate`-en át, `finishAndSendSummary()` ami elmenti a valódi `HKWorkout`-ot (ennek `uuid`-ja a `healthWorkoutId` — **iOS-en ezt közvetlenül a watch adja, nincs szükség a 7.5.7-ben leírt Android-oldali "phone ír HC-be, majd visszakeresi az uuid-ot" kerülőútra**). ✅
+2. **`PhoneConnector.swift`** — `WCSessionDelegate` a watch oldalán: `applicationContext`/`sendMessage` fogadása, `transferUserInfo` küldése a végén. A telefon oldali fogadó (`mobile/ios/Runner/WatchBridge.swift`'s `didReceiveUserInfo`) változtatás nélkül fogadja. ✅
+3. **Valódi UI** — `Views/ActiveWorkoutView.swift` (eltelt idő, élő HR, kcal, gyakorlat/szett-számláló, pihenő-visszaszámláló — az Android `ActiveWorkoutScreen.kt` volt a vizuális/adatmodell-referencia) + `Views/IdleView.swift`, a placeholder `ContentView.swift` helyett (ami most csak a fázis szerint választ a kettő között). ✅
+4. **Xcode projekt bekötés** — a `LifeyWatch` watchOS App target már korábban fel volt véve a workspace-be (F0); az új fájlok (`WorkoutManager.swift`, `PhoneConnector.swift`, a `Views/` csoport, `Localizable.xcstrings`) kézzel lettek bekötve a `project.pbxproj`-ba (`PBXFileReference`/`PBXBuildFile`/`PBXGroup`/`PBXSourcesBuildPhase`/`PBXResourcesBuildPhase` bejegyzések) — ellenőrizve `plutil -lint`-tel és sikeres build-del. ✅
+5. **Végpont (End gomb)** — a 8.2/1. nyitott kérdés (b) opciója (Androidon 7.5.6): a watch End gombja **nem** hív közvetlenül `session.end()`-et, hanem `endRequested` `sendMessage`-et küld a telefonnak (`WorkoutManager.requestEnd()` → `PhoneConnector.sendEndRequested`); a watch csak a ténylegesen visszaérkező `end` parancsra zárja a `HKWorkoutSession`-t (`finishAndSendSummary()`). A Dart oldal (`WatchEndRequested` esemény) változtatás nélkül fogadja — az iOS natív oldal (mindkét irányban: watch küldés + `Runner/WatchBridge.swift`'s fogadása) elkészült. ✅
 
 ### 11.2 Architektúra-tanulság Androidról, amit érdemes végiggondolni iOS-en is
 
 A 7.5.2-ben leírt DataItem-megbízhatatlanság **Android/Play Services-specifikus** volt (két emulátor GmsCore-példánya közti capability/data-szinkron hiba) — nincs okunk feltételezni, hogy az Apple `WCSession.updateApplicationContext` ugyanígy megbízhatatlan lenne (a WatchConnectivity történetileg stabilabb). **Mindazonáltal érdemes ugyanazt a mintát követni**: a `sendMessage`/`updateApplicationContext` payloadja már most is hordozza a teljes state-et (nem csak egy azonosítót) — tehát a §4.5-ben vázolt terv itt már eleve helyes, nincs szükség utólagos módosításra, csak arra, hogy tesztelés közben (watchOS-szimulátorpárban, majd fizikai eszközön) figyeljünk rá, tényleg megérkezik-e az `applicationContext` a watch oldalra minden esetben.
 
-### 11.3 F4 — iOS fele (Android után, a doc saját fázis-sorrendje szerint)
+**Ami tényleg felszínre került (nem a DataItem-szinkron, hanem property-list szerializáció)**: lásd 11.5 — a state-payloadban gyakori `null` (pl. `restEndsAtEpochMs` amíg nincs pihenő) `NSNull`-ként érkezett a Flutter-kódektől, ami `updateApplicationContext`/`sendMessage`-nél érvénytelen property-list érték, és a meglévő `try?` némán elnyelte a hibát.
 
-Csak azután érdemes nekikezdeni, hogy F2 kész és tesztelve van (a doc §7 saját javaslata szerint is F2 → F4 a sorrend):
+### 11.3 F4 — iOS fele (Android után, a doc saját fázis-sorrendje szerint) — ✅ megvalósítva
 
-1. **Pihenő-visszaszámláló + haptika**: `restEndsAtEpochMs` megjelenítése az `ActiveWorkoutView`-n (mm:ss visszaszámláló) + `WKInterfaceDevice.play(.notification)` pontosan a pihenő lejártakor — Android mintája (7.5.6): a haptika-ütemezés **függetlenül fusson** attól, hogy melyik nézet van épp képernyőn (Androidon ezt a mindig-élő `ExerciseService` csinálja egy `SessionStateHolder`-t figyelő coroutine-nal; iOS-en ennek a `WorkoutManager`-ben vagy egy hozzá hasonló, a session teljes élettartama alatt élő objektumban kell élnie).
-2. **Teljes HU/EN lokalizáció** — saját `Localizable.xcstrings` a watch targethez, az Android `values`/`values-en` mintáját követve (kézzel szinkronban tartva az arb-kulcsokkal, nem generálva — a 8.2/3 nyitott kérdés már eldőlt).
-3. **Settings-kapcsoló** ("Edzés indítása az órán") — ez már **platformfüggetlen Dart kód**, Androidon megvalósult (`UserSettings.watchWorkoutEnabled`, 7.5.6) — iOS-en nincs semmi extra teendő, a meglévő `settings_screen.dart` már mindkét platformon működik (a láthatóság-ellenőrzés `isWatchAppAvailable()`-t hív, ami platformfüggetlen).
-4. **`startRejected` visszajelzés** — szintén platformfüggetlen Dart kód, már kész (`AppSnackbar.showInfo` a `LogSessionScreen`-ben) — csak az kell, hogy az iOS natív `WatchBridge.swift` ténylegesen küldje a `startRejected` eseményt, ha a watch elutasítja az indítást (más app HKWorkoutSession-je fut — bár ez a helyzet HealthKit-en ritkább/másképp kezelt, mint Health Services-en, ezt implementáció közben kell pontosítani).
+1. **Pihenő-visszaszámláló + haptika**: `restEndsAtEpochMs` megjelenítése az `ActiveWorkoutView`-n (mm:ss visszaszámláló) + `WKInterfaceDevice.play(.notification)` pontosan a pihenő lejártakor — a haptika-ütemezés (`WorkoutManager.scheduleRestHaptic`) **függetlenül fut** attól, hogy melyik nézet van épp képernyőn, mert magában a mindig-élő `WorkoutManager.shared`-ben él (nem a View-ban) — ez az iOS-megfelelője az Android mindig-élő `ExerciseService`-ének (7.5.6). ✅
+2. **Teljes HU/EN lokalizáció** — `LifeyWatch/Localizable.xcstrings`, az Android `values`/`values-en` kulcsaival 1:1 megegyezve (`idle_title`, `idle_subtitle`, `active_default_exercise`, `active_sets_format`, `active_rest_format`, `active_heart_rate_unit`, `active_calories_unit`, `active_end_button`), kézzel szinkronban tartva. A String Catalog `sourceLanguage`-e `en` (a Runner-projekt `developmentRegion`-jét követve, eltérően az Android `values/` HU-alapértelmezésétől) — a `project.pbxproj` `knownRegions`-ébe felkerült a `hu`. ✅
+3. **Settings-kapcsoló** ("Edzés indítása az órán") — platformfüggetlen Dart kód, változtatás nélkül működik iOS-en is. ✅ (nem igényelt iOS-natív munkát)
+4. **`startRejected` visszajelzés** — a Dart-oldal már kész volt; az iOS natív oldal mindkét fele elkészült: a watch (`WorkoutManager.start`'s catch ága) elutasítás esetén `PhoneConnector.sendStartRejected`-et hív, a telefon (`Runner/WatchBridge.swift`) továbbítja a Dart oldalnak. ✅
 
 ### 11.4 Amit NEM kell újra megcsinálni iOS-hez (már kész, platformfüggetlen)
 
 - A teljes Dart-oldali híd (`WatchWorkoutService`, `WatchWorkoutSummary`, `WatchStartRejected`, `WatchEndRequested`) — F1-ben elkészült, mindkét platformra közös, változtatás nélkül működik, amint az iOS natív oldal helyesen küldi/fogadja ugyanazokat az esemény-típusokat.
 - A manuális Health-import eltávolítása (7.5.8) — már megtörtént, mindkét platformra egyszerre (megosztott Dart kód).
 - A HC-write-és-uuid-visszakeresés mintája **nem kell iOS-re** — ott a watch már közvetlenül valódi `HKWorkout` uuid-ot ad (11.1/1. pont).
+
+### 11.5 iOS — tényleges megvalósítás, eltérések a tervtől
+
+Ez az alfejezet a **ténylegesen leszállított** F2+F4 iOS-implementációt írja le, a 7.5 Android-alfejezet mintájára.
+
+**Új fájlok:**
+- `mobile/ios/LifeyWatch/WorkoutManager.swift` — `HKWorkoutSession`/`HKLiveWorkoutBuilder` életciklus, élő HR/kcal, pihenő-haptika ütemezés, `applyStateUpdate` (Android `SessionStateHolder.onStateSynced` mintájára: `restEndsAtEpochMs` mindig felülíródik, a többi mező csak ha jelen van).
+- `mobile/ios/LifeyWatch/PhoneConnector.swift` — `WCSessionDelegate`, a `SessionStateHolder`+`PhoneListenerService`+`SummarySender` Android-hármas iOS-megfelelője egyetlen fájlban.
+- `mobile/ios/LifeyWatch/Views/ActiveWorkoutView.swift`, `Views/IdleView.swift` — a tervezett 2 képernyő.
+- `mobile/ios/LifeyWatch/Localizable.xcstrings` — HU/EN String Catalog.
+
+**Módosított fájl:**
+- `mobile/ios/Runner/WatchBridge.swift` — két valódi hiba javítva build/implementáció közben (a 7.5-höz hasonlóan, ahol az Android-oldalon is a tényleges implementáció közben derültek ki a tervtől eltérő korlátok):
+  1. **`NSNull`/property-list hiba** (lásd 11.2 vége): a Flutter standard method codec a Dart `null`-t `NSNull`-ként kódolja a state-mapben (nem hagyja ki a kulcsot), és sem `WCSession.updateApplicationContext`, sem `sendMessage` nem fogad el `NSNull`-t — érvénytelen property-list érték. A meglévő `try?` ezt némán elnyelte, azaz a state-szinkron **minden alkalommal megbukott volna**, amikor nincs aktív pihenő (a leggyakoribb eset). Javítás: új `sanitizedForPropertyList(_:)` helper, ami rekurzívan kiszűri az `NSNull`-t mielőtt a payload elmegy.
+  2. **`endRequested` továbbítás hiánya**: a `didReceiveMessage` eddig csak a `startRejected` típust kezelte — az `endRequested` (amit a watch End gombja küld) nem jutott el a Dart oldalra. Bővítve, ugyanazzal a mintával.
+- `mobile/ios/Runner.xcodeproj/project.pbxproj` — kézzel bekötve az új fájlok (`PBXFileReference`/`PBXBuildFile`/`PBXGroup`/`PBXSourcesBuildPhase`/`PBXResourcesBuildPhase`), a `knownRegions`-be felvéve a `hu`.
+
+**HealthKit-típusok**: `HKObjectType.quantityType(forIdentifier:)` a hagyományos formában (nem a `HKQuantityType(.heartRate)` kényelmi inicializáló), mert az utóbbi újabb OS-verziót igényelne, mint a target `WATCHOS_DEPLOYMENT_TARGET`-je (10.0).
+
+**Végállapot-eldöntés**: a `WorkoutManager.finishAndSendSummary()` a `session.end()` + `builder.endCollection`/`finishWorkout` előtt olvassa ki a `builder.statistics(for:)`-ból az átlagpulzust és összkalóriát — nem kell a Dart/Android-oldali "utólagos lekérdezés" mintát követni, mert a builder statisztikái a `finishWorkout()` után is elérhetők maradnak, de a kiolvasás sorrendje (előbb statisztika, utána `finishWorkout`) biztonságosabb.
+
+**Build-ellenőrzés (2026-07-16, ezen a Macen)**: mindkét build zöld — `xcodebuild -target LifeyWatch -sdk watchsimulator` és a teljes `xcodebuild -workspace Runner.xcworkspace -scheme Runner` (CocoaPods + SPM + beágyazott `LifeyWatch`/`LifeyWidgets` targetekkel) is `BUILD SUCCEEDED`-del zárult, új fájlokra vonatkozó figyelmeztetés nélkül. **Watch-szimulátoros vagy fizikai órás manuális futtatás (a §9 teszt-mátrix szerint) még nem történt** — ez van hátra, mielőtt F2/F4 az Androidhoz hasonlóan "emulátoron/szimulátoron végigtesztelve" státuszba kerülhetne.
