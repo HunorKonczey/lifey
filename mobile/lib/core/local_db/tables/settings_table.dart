@@ -32,6 +32,10 @@ class UserSettingsTable extends Table {
   // Added in schema v27 (docs/34-multi-week-program-plan.md, M6) — needs a
   // DEFAULT for the same reason as `language` above.
   BoolColumn get programAssignedPushEnabled => boolean().withDefault(const Constant(true))();
+  // Added in schema v28 (docs/39-rest-timer-plan.md) — needs a DEFAULT for
+  // the same reason as `language` above.
+  BoolColumn get restTimerEnabled => boolean().withDefault(const Constant(true))();
+  IntColumn get defaultRestSeconds => integer().withDefault(const Constant(90))();
 
   @override
   Set<Column> get primaryKey => {clientId};

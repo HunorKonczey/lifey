@@ -17,10 +17,12 @@ class NotificationService {
 
   static const workoutSessionChannelId = 'workout_session';
   static const stepGoalChannelId = 'step_goal';
+  static const restTimerChannelId = 'rest_timer';
 
   static const _stepGoalNotificationId = 1;
   static const _workoutSessionNotificationId = 2;
   static const _weighInReminderNotificationId = 3;
+  static const _restTimerNotificationId = 4;
 
   // Distinguishes a tap on the workout-session notification from a tap on
   // the step-goal one in [onDidReceiveNotificationResponse] below.
@@ -98,6 +100,12 @@ class NotificationService {
     weighInReminderChannelId,
     'Weigh-in reminder',
     description: 'Daily reminder to log today\'s weight',
+  );
+
+  static const _restTimerChannel = AndroidNotificationChannel(
+    restTimerChannelId,
+    'Rest timer',
+    description: 'Notifies you when your rest between sets is over',
   );
 
   static bool _tzInitialized = false;
@@ -199,12 +207,17 @@ class NotificationService {
 
   /// Shows/updates the ongoing workout-session notification (Android only;
   /// see [WorkoutSessionNotifierService]'s Android branch for the
-  /// title/body/subText/`when` it passes in).
+  /// title/body/subText/`when` it passes in). [chronometerCountDown] flips
+  /// the chronometer from counting up from `when` to counting down to it —
+  /// used for the rest-timer countdown (docs/39-rest-timer-plan.md, Prompt 5)
+  /// when a target end time is known, same as the elapsed/rest count-up
+  /// otherwise.
   static Future<void> showWorkoutSession({
     required String title,
     required String body,
     required String subText,
     required int whenEpochMs,
+    bool chronometerCountDown = false,
   }) async {
     if (!Platform.isAndroid) return;
     await _plugin.show(
@@ -226,6 +239,7 @@ class NotificationService {
           showWhen: true,
           when: whenEpochMs,
           usesChronometer: true,
+          chronometerCountDown: chronometerCountDown,
           subText: subText,
           category: AndroidNotificationCategory.workout,
         ),
@@ -321,6 +335,65 @@ class NotificationService {
   /// Cancels the daily weigh-in reminder.
   static Future<void> cancelWeighInReminder() async {
     await _plugin.cancel(_weighInReminderNotificationId);
+  }
+
+  /// Schedules (replacing any previous one — fixed id) a one-shot local
+  /// notification for [endsAt], the rest-timer's target end time
+  /// (docs/39-rest-timer-plan.md §2.3). Uses an exact Android alarm when the
+  /// OS currently allows it (`SCHEDULE_EXACT_ALARM`, requested from the
+  /// settings toggle flow — see [requestExactAlarmsPermission]), falling
+  /// back to an inexact one otherwise: the in-app countdown stays correct
+  /// either way, only the background nudge gets fuzzy. No-op (silently) if
+  /// notifications can't be shown at all (e.g. POST_NOTIFICATIONS denied).
+  static Future<void> scheduleRestEnd({
+    required DateTime endsAt,
+    required String title,
+    required String body,
+  }) async {
+    if (!Platform.isIOS && !Platform.isAndroid) return;
+    var exact = true;
+    if (Platform.isAndroid) {
+      if (!await _ensureAndroidChannel(_restTimerChannel)) return;
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      exact = await android?.canScheduleExactNotifications() ?? false;
+    }
+    await _ensureTimezoneInitialized();
+
+    await _plugin.zonedSchedule(
+      _restTimerNotificationId,
+      title,
+      body,
+      tz.TZDateTime.from(endsAt, tz.local),
+      NotificationDetails(
+        android: Platform.isAndroid
+            ? const AndroidNotificationDetails(
+                restTimerChannelId,
+                'Rest timer',
+                channelDescription: 'Notifies you when your rest between sets is over',
+              )
+            : null,
+        iOS: Platform.isIOS ? const DarwinNotificationDetails() : null,
+      ),
+      androidScheduleMode:
+          exact ? AndroidScheduleMode.exactAllowWhileIdle : AndroidScheduleMode.inexactAllowWhileIdle,
+    );
+  }
+
+  /// Cancels the pending rest-end notification, if any.
+  static Future<void> cancelRestEnd() async {
+    await _plugin.cancel(_restTimerNotificationId);
+  }
+
+  /// Requests Android 12+'s exact-alarm permission for the rest timer.
+  /// Called once from the settings toggle flow when the user turns the rest
+  /// timer on — never mid-workout (docs/39-rest-timer-plan.md §2.3). No-op
+  /// on iOS/already-granted/older Android.
+  static Future<void> requestRestTimerExactAlarmPermission() async {
+    if (!Platform.isAndroid) return;
+    final android =
+        _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await android?.requestExactAlarmsPermission();
   }
 
   /// The next occurrence of [hour]:[minute] in `tz.local` — today if that

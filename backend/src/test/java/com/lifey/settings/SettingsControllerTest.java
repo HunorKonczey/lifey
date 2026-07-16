@@ -29,7 +29,7 @@ class SettingsControllerTest {
     void get_returnsLanguageDefaultingToSystem() throws Exception {
         when(settingsService.get())
                 .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, null,
-                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true));
+                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, 90));
 
         mockMvc.perform(get("/api/v1/settings"))
                 .andExpect(status().isOk())
@@ -40,11 +40,11 @@ class SettingsControllerTest {
     void update_withHungarianReturnsIt() throws Exception {
         when(settingsService.update(any()))
                 .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, null,
-                        ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true, true));
+                        ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true, true, true, 90));
 
         mockMvc.perform(put("/api/v1/settings").contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"unitSystem":"METRIC","theme":"SYSTEM","language":"HUNGARIAN","workoutReminderEnabled":true,"trainerCommentPushEnabled":true,"trainerGoalsPushEnabled":true,"programAssignedPushEnabled":true}
+                                {"unitSystem":"METRIC","theme":"SYSTEM","language":"HUNGARIAN","workoutReminderEnabled":true,"trainerCommentPushEnabled":true,"trainerGoalsPushEnabled":true,"programAssignedPushEnabled":true,"restTimerEnabled":true,"defaultRestSeconds":90}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.language").value("HUNGARIAN"));
@@ -63,11 +63,11 @@ class SettingsControllerTest {
     void update_withDailyStepGoalReturnsIt() throws Exception {
         when(settingsService.update(any()))
                 .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, 10000,
-                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true));
+                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, 90));
 
         mockMvc.perform(put("/api/v1/settings").contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"unitSystem":"METRIC","theme":"SYSTEM","language":"SYSTEM","dailyStepGoal":10000,"workoutReminderEnabled":true,"trainerCommentPushEnabled":true,"trainerGoalsPushEnabled":true,"programAssignedPushEnabled":true}
+                                {"unitSystem":"METRIC","theme":"SYSTEM","language":"SYSTEM","dailyStepGoal":10000,"workoutReminderEnabled":true,"trainerCommentPushEnabled":true,"trainerGoalsPushEnabled":true,"programAssignedPushEnabled":true,"restTimerEnabled":true,"defaultRestSeconds":90}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dailyStepGoal").value(10000));
@@ -78,6 +78,32 @@ class SettingsControllerTest {
         mockMvc.perform(put("/api/v1/settings").contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"unitSystem":"METRIC","theme":"SYSTEM","language":"SYSTEM","dailyStepGoal":0}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verify(settingsService, never()).update(any());
+    }
+
+    @Test
+    void update_withRestTimerFieldsReturnsThem() throws Exception {
+        when(settingsService.update(any()))
+                .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, null,
+                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, false, 120));
+
+        mockMvc.perform(put("/api/v1/settings").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"unitSystem":"METRIC","theme":"SYSTEM","language":"SYSTEM","workoutReminderEnabled":true,"trainerCommentPushEnabled":true,"trainerGoalsPushEnabled":true,"programAssignedPushEnabled":true,"restTimerEnabled":false,"defaultRestSeconds":120}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.restTimerEnabled").value(false))
+                .andExpect(jsonPath("$.defaultRestSeconds").value(120));
+    }
+
+    @Test
+    void update_defaultRestSecondsTooLowReturns400() throws Exception {
+        mockMvc.perform(put("/api/v1/settings").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"unitSystem":"METRIC","theme":"SYSTEM","language":"SYSTEM","workoutReminderEnabled":true,"trainerCommentPushEnabled":true,"trainerGoalsPushEnabled":true,"programAssignedPushEnabled":true,"restTimerEnabled":true,"defaultRestSeconds":5}
                                 """))
                 .andExpect(status().isBadRequest());
 

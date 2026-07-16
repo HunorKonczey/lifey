@@ -27,11 +27,20 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
   late final TextEditingController _description;
   String? _category;
   String? _equipment;
+  int? _defaultRestSeconds;
   bool _submitting = false;
   String? _error;
   Timer? _autoSaveDebounce;
 
   bool get _isEdit => widget.exercise != null;
+
+  static const List<int> _restDurationPresets = [30, 45, 60, 90, 120, 150, 180, 240, 300];
+
+  static String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
 
   @override
   void initState() {
@@ -40,6 +49,7 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
     _description = TextEditingController(text: widget.exercise?.description ?? '');
     _category = widget.exercise?.category;
     _equipment = widget.exercise?.equipment;
+    _defaultRestSeconds = widget.exercise?.defaultRestSeconds;
     if (_isEdit) {
       _name.addListener(_scheduleAutoSave);
       _description.addListener(_scheduleAutoSave);
@@ -62,6 +72,7 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
         category: _category,
         equipment: _equipment,
         description: _description.text.trim().isEmpty ? null : _description.text.trim(),
+        defaultRestSeconds: _defaultRestSeconds,
       );
     } catch (_) {
       // Silent fail — the explicit save button surfaces errors.
@@ -93,6 +104,7 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
           category: _category,
           equipment: _equipment,
           description: description,
+          defaultRestSeconds: _defaultRestSeconds,
         );
       } else {
         await notifier.addExercise(
@@ -100,6 +112,7 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
           category: _category,
           equipment: _equipment,
           description: description,
+          defaultRestSeconds: _defaultRestSeconds,
         );
       }
       if (mounted) Navigator.of(context).pop();
@@ -108,6 +121,46 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  // Scrollable (isScrollControlled + ListView, not a plain Column) since
+  // "Use default" + 9 presets don't fit a fixed-height sheet on shorter
+  // screens.
+  Future<void> _pickRestDuration() async {
+    final result = await showModalBottomSheet<({int? seconds})>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetCtx) {
+        final l10n = AppLocalizations.of(sheetCtx)!;
+        final scheme = Theme.of(sheetCtx).colorScheme;
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              ListTile(
+                title: Text(l10n.useDefaultOptionLabel),
+                trailing: _defaultRestSeconds == null
+                    ? Icon(Icons.check, color: scheme.primary)
+                    : null,
+                onTap: () => Navigator.of(sheetCtx).pop((seconds: null)),
+              ),
+              for (final seconds in _restDurationPresets)
+                ListTile(
+                  title: Text(_formatDuration(seconds)),
+                  trailing: _defaultRestSeconds == seconds
+                      ? Icon(Icons.check, color: scheme.primary)
+                      : null,
+                  onTap: () => Navigator.of(sheetCtx).pop((seconds: seconds)),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (result == null || !mounted) return;
+    setState(() => _defaultRestSeconds = result.seconds);
+    if (_isEdit) _autoSaveInBackground();
   }
 
   @override
@@ -172,6 +225,28 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
               decoration: InputDecoration(
                 labelText: l10n.exerciseDescriptionLabel,
                 border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: _pickRestDuration,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: l10n.exerciseRestTimerFieldLabel,
+                  border: const OutlineInputBorder(),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _defaultRestSeconds != null
+                          ? _formatDuration(_defaultRestSeconds!)
+                          : l10n.useDefaultOptionLabel,
+                    ),
+                    Icon(Icons.expand_more, color: theme.colorScheme.onSurfaceVariant),
+                  ],
+                ),
               ),
             ),
             if (_error != null) ...[

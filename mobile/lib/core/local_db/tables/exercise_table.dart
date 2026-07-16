@@ -23,6 +23,10 @@ class Exercises extends Table {
   /// §2) — the trainer's server-side user id, drives the "Edzőtől" badge.
   IntColumn get originTrainerId => integer().nullable()();
 
+  /// Per-exercise rest-timer override in seconds (docs/39-rest-timer-plan.md
+  /// §2.2) — null means "use the user's default rest duration".
+  IntColumn get defaultRestSeconds => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

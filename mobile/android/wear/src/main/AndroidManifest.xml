@@ -1,0 +1,77 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <!-- Live heart rate during the exercise (docs/40-watch-app-plan.md §5.2)
+         — requested at runtime; the exercise still starts without it
+         (kcal-only) if denied. -->
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <!-- API 36+ replaces BODY_SENSORS with this granular permission for
+         Health Services' own heart-rate access — both declared/requested
+         since this app's minSdk (30) predates the split. -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Rest-timer-vége haptika (docs/40-watch-app-plan.md §5.4/F4) — normal
+         permission, nem kell runtime kérés. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:label="Lifey"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="true"
+        android:theme="@android:style/Theme.DeviceDefault">
+        <!-- V1: the phone is the master, this app never starts a workout on
+             its own (docs/40-watch-app-plan.md §D4). -->
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Wakes even if the wear app isn't running, whenever the phone's
+             WatchBridge sends a start/state/end command message (§5.1) or
+             pushes the "last known state" DataItem (§D2). -->
+        <service
+            android:name=".PhoneListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/lifey/watch" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/lifey/watch/state" />
+            </intent-filter>
+        </service>
+
+        <!-- Owns the Health Services ExerciseClient for the strength-workout
+             session (docs/40-watch-app-plan.md §5.3). -->
+        <service
+            android:name=".ExerciseService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+    </application>
+
+    <!-- Android 11+ package visibility (docs/40-watch-app-plan.md §5.1) —
+         mirrors the same fix on the phone's manifest, for the wear→phone
+         summary/startRejected/endRequested sends (SummarySender.kt). -->
+    <queries>
+        <package android:name="com.google.android.apps.wear.companion"/>
+        <package android:name="com.google.android.wearable.app"/>
+    </queries>
+</manifest>

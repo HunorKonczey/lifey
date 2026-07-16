@@ -8,6 +8,7 @@ import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/outbox_writer.dart';
 import '../../../core/sync/pending_delete_filter.dart';
 import '../../../core/utils/combine_latest.dart';
+import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
 
 /// One planned exercise when logging a session — clientId + optional target sets.
@@ -334,6 +335,53 @@ class WorkoutSessionRepository {
     );
   }
 
+  /// Enriches a session with health-adjacent metrics without the caller
+  /// holding its full editing state in memory — mirrors [rate]'s
+  /// read-then-resubmit pattern. Backs the watch-workout summary handler
+  /// (docs/40-watch-app-plan.md §6.3), which only has {clientId,
+  /// activeCalories, averageHeartRate, healthWorkoutId} on hand and may run
+  /// at cold start, long after the session's editing screen is gone. rpe/
+  /// feedbackNote are left absent so this can't disturb a rating.
+  Future<void> enrichHealthMetrics(
+    String clientId, {
+    Value<double?> activeCalories = const Value.absent(),
+    Value<double?> averageHeartRate = const Value.absent(),
+    Value<String?> healthWorkoutId = const Value.absent(),
+  }) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.clientId.equals(clientId)))
+        .getSingle();
+    final plannedRows = await (_db.select(_db.workoutSessionExercises)
+          ..where((t) => t.sessionClientId.equals(clientId)))
+        .get();
+    final setRows = await (_db.select(_db.exerciseSets)
+          ..where((t) => t.sessionClientId.equals(clientId)))
+        .get();
+
+    await update(
+      clientId,
+      startedAt: row.startedAt!,
+      finishedAt: row.finishedAt,
+      exercises: [
+        for (final p in plannedRows)
+          PlannedExerciseInput(
+              exerciseClientId: p.exerciseClientId, targetSets: p.targetSets),
+      ],
+      sets: [
+        for (final s in setRows)
+          ExerciseSetInput(
+            exerciseClientId: s.exerciseClientId,
+            reps: s.reps,
+            weight: s.weight,
+            performedAt: s.performedAt,
+          ),
+      ],
+      activeCalories: activeCalories,
+      averageHeartRate: averageHeartRate,
+      healthWorkoutId: healthWorkoutId,
+    );
+  }
+
   Future<void> delete(String clientId) async {
     // Must enqueue before the local row is gone — enqueueDelete needs to
     // read its serverId while the row still exists. If it queued a server
@@ -472,6 +520,42 @@ class WorkoutSessionRepository {
       exerciseClientId: exerciseClientId,
       excludeSessionClientId: excludeSessionClientId,
     );
+  }
+
+  /// Builds a [PrBaseline] for [exerciseClientId] from every set ever logged
+  /// for it, excluding [excludeSessionClientId] (the session currently being
+  /// edited, if any — its own sets must not count as a baseline against
+  /// themselves). Template-agnostic by design: unlike
+  /// [getPreviousPerformance], a record is a record regardless of which
+  /// template (or no template) it was logged under
+  /// (docs/38-personal-records-plan.md, M2).
+  Future<PrBaseline> getPrBaseline({
+    required String exerciseClientId,
+    String? excludeSessionClientId,
+  }) async {
+    final query = _db.select(_db.exerciseSets).join([
+      innerJoin(
+        _db.workoutSessions,
+        _db.workoutSessions.clientId
+            .equalsExp(_db.exerciseSets.sessionClientId),
+      ),
+    ])
+      ..where(_db.exerciseSets.exerciseClientId.equals(exerciseClientId));
+    if (excludeSessionClientId != null) {
+      query.where(
+          _db.workoutSessions.clientId.equals(excludeSessionClientId).not());
+    }
+
+    final rows = await query.get();
+    final sets = [
+      for (final r in rows)
+        (
+          weight: r.readTable(_db.exerciseSets).weight,
+          reps: r.readTable(_db.exerciseSets).reps,
+          performedAt: r.readTable(_db.exerciseSets).performedAt,
+        ),
+    ];
+    return PrBaseline.fromSets(sets);
   }
 
   Future<List<PreviousSetHint>> _lastSessionSets({

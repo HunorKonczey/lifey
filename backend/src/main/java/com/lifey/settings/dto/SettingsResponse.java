@@ -17,6 +17,8 @@ public record SettingsResponse(
         Boolean workoutReminderEnabled,
         Boolean trainerCommentPushEnabled,
         Boolean trainerGoalsPushEnabled,
-        Boolean programAssignedPushEnabled
+        Boolean programAssignedPushEnabled,
+        Boolean restTimerEnabled,
+        Integer defaultRestSeconds
 ) {
 }

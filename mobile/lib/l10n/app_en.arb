@@ -1051,6 +1051,15 @@
     "recipeMacrosPreviewLabel": "≈ {calories} kcal · {protein} g protein · {carbs} g carbs · {fat} g fat",
     "@recipeMacrosPreviewLabel": {"description": "Preview of the effective calories/protein/carbs/fat being logged in the log-recipe sheet, scaled by the portion divisor when logging a part meal", "placeholders": {"calories": {"type": "String"}, "protein": {"type": "String"}, "carbs": {"type": "String"}, "fat": {"type": "String"}}},
 
+    "adjustIngredientsButton": "Adjust ingredients",
+    "@adjustIngredientsButton": {"description": "Button in the log-recipe sheet that expands the editable per-portion ingredient amounts"},
+
+    "ingredientAmountsHint": "Amounts apply to the portion being logged. Set 0 to leave an ingredient out.",
+    "@ingredientAmountsHint": {"description": "Hint above the editable ingredient amounts in the log-recipe sheet"},
+
+    "resetIngredientTooltip": "Reset to recipe amount",
+    "@resetIngredientTooltip": {"description": "Tooltip on the per-ingredient reset button in the log-recipe sheet, restoring the recipe's own amount"},
+
     "logOutTooltip": "Log out",
     "@logOutTooltip": {"description": "Tooltip for the logout button on the dashboard"},
 
@@ -1096,18 +1105,6 @@
     "noWorkoutsLoggedYetPeriodMessage": "No workouts logged yet.",
     "@noWorkoutsLoggedYetPeriodMessage": {"description": "Shown on the dashboard when there are no recent workouts"},
 
-    "pairHealthWorkoutTitle": "Pair with Health workout?",
-    "@pairHealthWorkoutTitle": {"description": "Confirmation dialog title shown when tapping the workout-detected notification"},
-
-    "pairHealthWorkoutMessage": "Started {startTime} · {calories} kcal · {heartRate} bpm avg. Pair this with your active session?",
-    "@pairHealthWorkoutMessage": {"description": "Confirmation dialog body summarizing the matched health workout", "placeholders": {"startTime": {"type": "String"}, "calories": {"type": "String"}, "heartRate": {"type": "String"}}},
-
-    "pairButton": "Pair",
-    "@pairButton": {"description": "Confirm button for pairing a health workout with an active session"},
-
-    "noMatchingActiveWorkoutMessage": "No matching active workout found",
-    "@noMatchingActiveWorkoutMessage": {"description": "Shown when a health workout notification is tapped but no in-progress session matches"},
-
     "importedFromHealthTooltip": "Imported from Health",
     "@importedFromHealthTooltip": {"description": "Tooltip/semantics label for the health badge on a paired workout session card"},
 
@@ -1115,16 +1112,7 @@
     "@healthStatsLine": {"description": "Line showing active calories and average heart rate imported from Health on a session card", "placeholders": {"calories": {"type": "String"}, "heartRate": {"type": "String"}}},
 
     "importFromHealthButton": "Import from Health",
-    "@importFromHealthButton": {"description": "Button on the active workout that imports a just-finished health-store strength workout"},
-
-    "noRecentHealthWorkoutMessage": "No recent health workout found",
-    "@noRecentHealthWorkoutMessage": {"description": "Shown when the import button finds no strength workout finished in the last day"},
-
-    "pickHealthWorkoutTitle": "Pick a health workout",
-    "@pickHealthWorkoutTitle": {"description": "Title of the sheet listing recent health-store strength workouts to pair with an already-closed session"},
-
-    "workoutPairedWithHealthMessage": "Workout paired with Health",
-    "@workoutPairedWithHealthMessage": {"description": "Snackbar shown after manually pairing an already-closed session with a health workout"},
+    "@importFromHealthButton": {"description": "Button on the weight screen that imports recent body-weight entries from the health store"},
 
     "weightImportedFromHealth": "{count, plural, one{{count} entry imported} other{{count} entries imported}}",
     "@weightImportedFromHealth": {"description": "Snackbar after the weight screen's Health import, reporting how many days were backfilled", "placeholders": {"count": {"type": "int"}}},
@@ -1225,6 +1213,12 @@
     "exerciseDescriptionLabel": "Description",
     "@exerciseDescriptionLabel": {"description": "Label for the free-text description/notes field on the add/edit exercise sheet (e.g. machine setting)"},
 
+    "exerciseRestTimerFieldLabel": "Rest between sets",
+    "@exerciseRestTimerFieldLabel": {"description": "Label for the per-exercise rest-timer override field on the add/edit exercise sheet"},
+
+    "useDefaultOptionLabel": "Use default",
+    "@useDefaultOptionLabel": {"description": "Option meaning \"no override, fall back to the app-wide default\" in a duration picker"},
+
     "allFilterLabel": "All",
     "@allFilterLabel": {"description": "Filter chip label meaning no filter / show everything"},
 
@@ -1306,6 +1300,18 @@
     "noSetsForExerciseMessage": "No sets logged yet",
     "@noSetsForExerciseMessage": {"description": "Empty state message on the exercise detail screen when no sets have been logged"},
 
+    "prHistorySectionLabel": "PR history",
+    "@prHistorySectionLabel": {"description": "Section heading for the personal-record history list on the exercise detail screen"},
+
+    "prTypeMaxWeightLabel": "Max weight",
+    "@prTypeMaxWeightLabel": {"description": "Personal-record type label: heaviest weight ever lifted for this exercise"},
+
+    "prTypeRepsAtWeightLabel": "Reps @ weight",
+    "@prTypeRepsAtWeightLabel": {"description": "Personal-record type label: most reps ever done at a given weight"},
+
+    "prTypeEstimatedOneRmLabel": "Est. 1RM",
+    "@prTypeEstimatedOneRmLabel": {"description": "Personal-record type label: best estimated one-rep-max ever reached"},
+
     "prSetValueLabel": "{weight} kg × {reps}",
     "@prSetValueLabel": {
         "description": "PR stat card value: weight in kg then rep count (e.g. '100 kg × 5')",
@@ -1318,23 +1324,38 @@
     "restLabel": "Rest",
     "@restLabel": {"description": "Label for the rest-timer banner shown between sets on the active workout screen"},
 
+    "restTimerAddSecondsButton": "+15 s",
+    "@restTimerAddSecondsButton": {"description": "Button on the rest banner that adds 15 seconds to the current countdown"},
+
+    "restTimerSkipButton": "Skip rest",
+    "@restTimerSkipButton": {"description": "Accessibility label/tooltip for the button that dismisses the current rest countdown"},
+
+    "workoutSectionLabel": "Workout",
+    "@workoutSectionLabel": {"description": "Settings screen group label for workout-related preferences (rest timer, etc.)"},
+
+    "restTimerToggleLabel": "Rest timer",
+    "@restTimerToggleLabel": {"description": "Settings row label for the rest-timer master on/off switch"},
+
+    "restTimerDurationLabel": "Default rest duration",
+    "@restTimerDurationLabel": {"description": "Settings row label for the app-wide default rest-timer duration"},
+
+    "restTimerDurationSheetTitle": "Rest duration",
+    "@restTimerDurationSheetTitle": {"description": "Title of the bottom sheet used to pick a rest duration (settings default or per-exercise override)"},
+
+    "watchWorkoutToggleLabel": "Start workout on watch",
+    "@watchWorkoutToggleLabel": {"description": "Settings row label for the master switch controlling whether starting a workout also starts/mirrors it on a paired watch"},
+
+    "watchStartRejectedMessage": "Another workout is already running on your watch",
+    "@watchStartRejectedMessage": {"description": "Snackbar shown when the paired watch declined to start its own workout session because another app already owns one"},
+
+    "restTimerNotificationTitle": "Rest over",
+    "@restTimerNotificationTitle": {"description": "Title of the local notification fired when the rest timer between sets ends"},
+
+    "restTimerNotificationBody": "Time for your next set",
+    "@restTimerNotificationBody": {"description": "Body of the local notification fired when the rest timer between sets ends"},
+
     "finishWorkoutButton": "Finish workout",
     "@finishWorkoutButton": {"description": "Label for the sticky button that finishes the active workout session"},
-
-    "noHealthWorkoutTitle": "No health workout",
-    "@noHealthWorkoutTitle": {"description": "Dialog title shown when no matching health workout is found at session finish"},
-
-    "noHealthWorkoutMessage": "No recent health workout was found near this session.",
-    "@noHealthWorkoutMessage": {"description": "Dialog body when no matching health workout is found at session finish"},
-
-    "finishAnywayButton": "Finish anyway",
-    "@finishAnywayButton": {"description": "Dialog action: finish the session without pairing a health workout"},
-
-    "finishWithoutPairingButton": "Finish without",
-    "@finishWithoutPairingButton": {"description": "Dialog action: finish the session without pairing the found health workout"},
-
-    "pairAndFinishButton": "Pair & finish",
-    "@pairAndFinishButton": {"description": "Dialog action: pair the found health workout and finish the session"},
 
     "removeExerciseMenuItem": "Remove exercise",
     "@removeExerciseMenuItem": {"description": "Overflow menu item on an exercise card to remove the exercise from the session"},
@@ -1380,6 +1401,18 @@
 
     "workoutSuccessRepsAbbrev": "reps",
     "@workoutSuccessRepsAbbrev": {"description": "Abbreviated unit for a reps-gain chip in the workout-success dialog, e.g. '+2 reps'"},
+
+    "workoutSuccessPrTitle": "{count, plural, one{New personal record!} other{New personal records!}}",
+    "@workoutSuccessPrTitle": {"description": "Title of the celebration dialog when the session included at least one personal record", "placeholders": {"count": {"type": "int"}}},
+
+    "workoutSuccessPrSubtitle": "{count, plural, one{You hit a new personal record} other{You hit {count} new personal records}}",
+    "@workoutSuccessPrSubtitle": {"description": "Subtitle of the celebration dialog when the session included at least one personal record", "placeholders": {"count": {"type": "int"}}},
+
+    "workoutSuccessPrSectionLabel": "Personal records",
+    "@workoutSuccessPrSectionLabel": {"description": "Caption above the PR rows in the celebration dialog, shown only when both PR rows and regular improvement rows are present"},
+
+    "workoutSuccessImprovementsSectionLabel": "Improvements",
+    "@workoutSuccessImprovementsSectionLabel": {"description": "Caption above the improvement rows in the celebration dialog, shown only when both PR rows and regular improvement rows are present"},
 
     "postWorkoutFeedbackTitle": "How hard was this workout?",
     "@postWorkoutFeedbackTitle": {"description": "Title of the post-workout feedback bottom sheet, shown after finishing a session"},
@@ -1721,5 +1754,94 @@
     "@macrosTodayProteinOver": {
         "description": "Fragment of the remaining-budget line on today's featured macros card: protein goal exceeded",
         "placeholders": { "count": { "type": "int" } }
-    }
+    },
+
+    "streakMetricCalories": "calorie",
+    "@streakMetricCalories": {
+        "description": "Lowercase noun for the calorie goal, used inside the streak chip tooltip sentence"
+    },
+
+    "streakMetricSteps": "step",
+    "@streakMetricSteps": {
+        "description": "Lowercase noun for the step goal, used inside the streak chip tooltip sentence"
+    },
+
+    "streakMetricWater": "water",
+    "@streakMetricWater": {
+        "description": "Lowercase noun for the water goal, used inside the streak chip tooltip sentence"
+    },
+
+    "streakActiveTooltip": "{count}-day {metric} streak",
+    "@streakActiveTooltip": {
+        "description": "Tooltip for a dashboard streak chip that has at least one day logged",
+        "placeholders": {
+            "count": { "type": "int" },
+            "metric": { "type": "String", "example": "calorie" }
+        }
+    },
+
+    "streakNotStartedTooltip": "No {metric} streak yet — hit today's goal to start one",
+    "@streakNotStartedTooltip": {
+        "description": "Tooltip for a dashboard streak chip with no active streak (current count is zero)",
+        "placeholders": {
+            "metric": { "type": "String", "example": "calorie" }
+        }
+    },
+
+    "recapScreenTitle": "Weekly Recap",
+    "@recapScreenTitle": {"description": "Title of the weekly recap screen"},
+
+    "recapPreviousWeekTooltip": "Previous week",
+    "@recapPreviousWeekTooltip": {"description": "Tooltip for the back-a-week chevron on the recap screen"},
+
+    "recapNextWeekTooltip": "Next week",
+    "@recapNextWeekTooltip": {"description": "Tooltip for the forward-a-week chevron on the recap screen"},
+
+    "recapWorkoutsSectionTitle": "Workouts",
+    "@recapWorkoutsSectionTitle": {"description": "Recap screen section heading for the week's workouts"},
+
+    "recapWorkoutsCount": "{count} workouts",
+    "@recapWorkoutsCount": {"description": "Number of workouts done during the recap week", "placeholders": {"count": {"type": "int"}}},
+
+    "recapWorkoutsMinutes": "{count} min total",
+    "@recapWorkoutsMinutes": {"description": "Total finished-session minutes during the recap week", "placeholders": {"count": {"type": "int"}}},
+
+    "recapNoWorkoutsMessage": "No workouts logged this week.",
+    "@recapNoWorkoutsMessage": {"description": "Empty-state hint for the recap screen's workouts section"},
+
+    "recapNutritionSectionTitle": "Nutrition",
+    "@recapNutritionSectionTitle": {"description": "Recap screen section heading for the week's nutrition"},
+
+    "recapAvgCaloriesLabel": "Avg calories",
+    "@recapAvgCaloriesLabel": {"description": "Label above the recap week's average daily calorie figure"},
+
+    "recapLoggedDaysCaption": "avg of {count} logged days",
+    "@recapLoggedDaysCaption": {"description": "Caption clarifying the average-calories figure is only over days that had a meal logged", "placeholders": {"count": {"type": "int"}}},
+
+    "recapDaysWithinGoal": "{count}/7 days within goal",
+    "@recapDaysWithinGoal": {"description": "How many days this week stayed within the calorie goal, out of 7", "placeholders": {"count": {"type": "int"}}},
+
+    "recapNoNutritionMessage": "No meals logged this week.",
+    "@recapNoNutritionMessage": {"description": "Empty-state hint for the recap screen's nutrition section"},
+
+    "recapWeightSectionTitle": "Weight",
+    "@recapWeightSectionTitle": {"description": "Recap screen section heading for the week's weight trend"},
+
+    "recapNoWeighInMessage": "No weigh-in this week",
+    "@recapNoWeighInMessage": {"description": "Shown in the recap screen's weight section when there's a baseline but no entry logged this particular week"},
+
+    "recapGoalsSectionTitle": "Goals & Streaks",
+    "@recapGoalsSectionTitle": {"description": "Recap screen section heading for goal-consistency and streaks"},
+
+    "recapDaysMet": "{count}/7 days met",
+    "@recapDaysMet": {"description": "How many days this week met a given goal (steps/water), out of 7", "placeholders": {"count": {"type": "int"}}},
+
+    "recapReadyCardTitle": "Your weekly recap is ready",
+    "@recapReadyCardTitle": {"description": "Title of the dismissible dashboard card nudging toward the new weekly recap"},
+
+    "recapReadyCardCta": "View",
+    "@recapReadyCardCta": {"description": "Button on the recap-ready dashboard card that opens the recap screen"},
+
+    "recapReadyCardDismissTooltip": "Dismiss",
+    "@recapReadyCardDismissTooltip": {"description": "Tooltip for the close button on the recap-ready dashboard card"}
 }

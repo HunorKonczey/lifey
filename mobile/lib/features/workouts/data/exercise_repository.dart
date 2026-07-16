@@ -26,7 +26,13 @@ class ExerciseRepository {
     });
   }
 
-  Future<void> create(String name, {String? category, String? equipment, String? description}) async {
+  Future<void> create(
+    String name, {
+    String? category,
+    String? equipment,
+    String? description,
+    int? defaultRestSeconds,
+  }) async {
     final clientId = newClientId();
     await _db.into(_db.exercises).insert(
           ExercisesCompanion.insert(
@@ -35,12 +41,19 @@ class ExerciseRepository {
             category: Value(category),
             equipment: Value(equipment),
             description: Value(description),
+            defaultRestSeconds: Value(defaultRestSeconds),
           ),
         );
     await _outbox.enqueueCreate(
       clientId: clientId,
       entityType: 'exercise',
-      payload: {'name': name, 'category': category, 'equipment': equipment, 'description': description},
+      payload: {
+        'name': name,
+        'category': category,
+        'equipment': equipment,
+        'description': description,
+        'defaultRestSeconds': defaultRestSeconds,
+      },
     );
   }
 
@@ -50,6 +63,7 @@ class ExerciseRepository {
     String? category,
     String? equipment,
     String? description,
+    int? defaultRestSeconds,
   }) async {
     await (_db.update(_db.exercises)..where((t) => t.clientId.equals(clientId))).write(
           ExercisesCompanion(
@@ -57,12 +71,19 @@ class ExerciseRepository {
             category: Value(category),
             equipment: Value(equipment),
             description: Value(description),
+            defaultRestSeconds: Value(defaultRestSeconds),
           ),
         );
     await _outbox.enqueueUpdate(
       clientId: clientId,
       entityType: 'exercise',
-      payload: {'name': name, 'category': category, 'equipment': equipment, 'description': description},
+      payload: {
+        'name': name,
+        'category': category,
+        'equipment': equipment,
+        'description': description,
+        'defaultRestSeconds': defaultRestSeconds,
+      },
     );
   }
 
@@ -85,6 +106,7 @@ class ExerciseRepository {
       category: row.category,
       equipment: row.equipment,
       description: row.description,
+      defaultRestSeconds: row.defaultRestSeconds,
     );
   }
 }

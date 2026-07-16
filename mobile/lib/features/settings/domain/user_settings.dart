@@ -21,6 +21,9 @@ class UserSettings {
     this.trainerCommentPushEnabled = true,
     this.trainerGoalsPushEnabled = true,
     this.programAssignedPushEnabled = true,
+    this.restTimerEnabled = true,
+    this.defaultRestSeconds = 90,
+    this.watchWorkoutEnabled = true,
   });
 
   const UserSettings.defaults()
@@ -36,7 +39,10 @@ class UserSettings {
         workoutReminderEnabled = true,
         trainerCommentPushEnabled = true,
         trainerGoalsPushEnabled = true,
-        programAssignedPushEnabled = true;
+        programAssignedPushEnabled = true,
+        restTimerEnabled = true,
+        defaultRestSeconds = 90,
+        watchWorkoutEnabled = true;
 
   final UnitSystem unitSystem;
   final ThemePreference theme;
@@ -63,6 +69,16 @@ class UserSettings {
   // (docs/34-multi-week-program-plan.md, M6) — same shape as
   // [workoutReminderEnabled] above.
   final bool programAssignedPushEnabled;
+  // Master switch for the rest-timer feature (docs/39-rest-timer-plan.md) —
+  // same shape as [workoutReminderEnabled] above.
+  final bool restTimerEnabled;
+  // Default rest duration in seconds, used when an exercise has no
+  // per-exercise override (docs/39-rest-timer-plan.md §2.2).
+  final int defaultRestSeconds;
+  // Master switch for starting/mirroring the workout on a paired watch
+  // (docs/40-watch-app-plan.md §6.4) — same shape as [workoutReminderEnabled]
+  // above.
+  final bool watchWorkoutEnabled;
 
   UserSettings copyWith({
     UnitSystem? unitSystem,
@@ -78,6 +94,9 @@ class UserSettings {
     bool? trainerCommentPushEnabled,
     bool? trainerGoalsPushEnabled,
     bool? programAssignedPushEnabled,
+    bool? restTimerEnabled,
+    int? defaultRestSeconds,
+    bool? watchWorkoutEnabled,
   }) {
     return UserSettings(
       unitSystem: unitSystem ?? this.unitSystem,
@@ -93,6 +112,9 @@ class UserSettings {
       trainerCommentPushEnabled: trainerCommentPushEnabled ?? this.trainerCommentPushEnabled,
       trainerGoalsPushEnabled: trainerGoalsPushEnabled ?? this.trainerGoalsPushEnabled,
       programAssignedPushEnabled: programAssignedPushEnabled ?? this.programAssignedPushEnabled,
+      restTimerEnabled: restTimerEnabled ?? this.restTimerEnabled,
+      defaultRestSeconds: defaultRestSeconds ?? this.defaultRestSeconds,
+      watchWorkoutEnabled: watchWorkoutEnabled ?? this.watchWorkoutEnabled,
     );
   }
 
@@ -111,6 +133,9 @@ class UserSettings {
       trainerCommentPushEnabled: json['trainerCommentPushEnabled'] as bool? ?? true,
       trainerGoalsPushEnabled: json['trainerGoalsPushEnabled'] as bool? ?? true,
       programAssignedPushEnabled: json['programAssignedPushEnabled'] as bool? ?? true,
+      restTimerEnabled: json['restTimerEnabled'] as bool? ?? true,
+      defaultRestSeconds: json['defaultRestSeconds'] as int? ?? 90,
+      watchWorkoutEnabled: json['watchWorkoutEnabled'] as bool? ?? true,
     );
   }
 
@@ -128,5 +153,8 @@ class UserSettings {
         'trainerCommentPushEnabled': trainerCommentPushEnabled,
         'trainerGoalsPushEnabled': trainerGoalsPushEnabled,
         'programAssignedPushEnabled': programAssignedPushEnabled,
+        'restTimerEnabled': restTimerEnabled,
+        'defaultRestSeconds': defaultRestSeconds,
+        'watchWorkoutEnabled': watchWorkoutEnabled,
       };
 }

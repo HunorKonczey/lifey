@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../data/workout_session_repository.dart';
+import '../../domain/personal_record.dart';
 
 // ---------------------------------------------------------------------------
 // Presentation-layer models — screen state only, never persisted directly.
@@ -17,6 +18,12 @@ class SetRow {
   /// Stamped when the user taps the trailing circle (marks set as done).
   /// Becomes ExerciseSetInput.performedAt on persist.
   DateTime? doneAt;
+
+  /// Record types this row earned against the exercise's PR baseline,
+  /// recomputed from scratch after every done-row change (see
+  /// LogSessionScreen._recomputePrFlags) — screen state only, never
+  /// persisted, same as [doneAt]'s presentation-only nature.
+  Set<PrType> prTypes = const {};
 
   bool get isDone => doneAt != null;
 }
@@ -35,10 +42,22 @@ class ExerciseBlock {
   final int? targetSets;
   final List<SetRow> rows;
 
+  /// Muscle-group code (e.g. "CHEST"), filled from the catalog at the same
+  /// time as [exerciseName] (see [LogSessionScreen.build]) — feeds the
+  /// per-exercise badge icon on the workout-success dialog
+  /// (workout_success_dialog.dart).
+  String? exerciseCategory;
+
   /// Previous-performance hints for this exercise, sorted to line up
   /// positionally with [rows] (index 0 = row 0, etc). Filled asynchronously
   /// after construction — see [LogSessionScreen._loadPreviousPerformance].
   List<PreviousSetHint> previousSets = const [];
+
+  /// This exercise's PR baseline (every set ever logged, excluding the
+  /// current session) — null until loaded (see
+  /// [LogSessionScreen._loadPrBaselines]). While null, PR detection stays
+  /// silent rather than celebrating against a half-loaded history.
+  PrBaseline? prBaseline;
 }
 
 // ---------------------------------------------------------------------------
@@ -182,8 +201,7 @@ class _ExerciseSessionCardState extends State<ExerciseSessionCard> {
                   : null,
               onTap: (focusReps) => _openEditor(i, focusReps: focusReps),
               onTapPrevious: i < widget.block.previousSets.length
-                  ? () =>
-                      _handleUsePrevious(i, widget.block.previousSets[i])
+                  ? () => _handleUsePrevious(i, widget.block.previousSets[i])
                   : null,
               onDoubleTap: () => _handleDoubleTap(i),
               onTrailingTap: () => _handleTrailingTap(i),
@@ -320,6 +338,7 @@ class _SetRowTile extends StatelessWidget {
   final PreviousSetHint? previous;
   // focusReps: false = weight field, true = reps field
   final void Function(bool focusReps) onTap;
+
   /// Tap on the "PREV" column — null when there's no previous value to use.
   final VoidCallback? onTapPrevious;
   final VoidCallback onDoubleTap;
@@ -335,7 +354,8 @@ class _SetRowTile extends StatelessWidget {
   /// short. If unchanged, shows a gray dash when [showStagnant] is set
   /// (reps), otherwise nothing (weight). Nothing if there's nothing to
   /// compare against.
-  Widget? _deltaArrow(num? current, num? previous, {bool showStagnant = false}) {
+  Widget? _deltaArrow(num? current, num? previous,
+      {bool showStagnant = false}) {
     if (current == null || previous == null) return null;
     if (current == previous) {
       if (!showStagnant) return null;
@@ -353,6 +373,22 @@ class _SetRowTile extends StatelessWidget {
     );
   }
 
+  /// Trophy pop for a row that just earned a PR — a quick scale-in unless
+  /// the user has reduced motion enabled, matching the success dialog's
+  /// convention of respecting [MediaQuery.disableAnimations].
+  Widget _prBadge(BuildContext context) {
+    const icon = Icon(Icons.emoji_events, size: 14, color: Color(0xFFD8B35A));
+    if (MediaQuery.of(context).disableAnimations) return icon;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.5, end: 1.0),
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) =>
+          Transform.scale(scale: scale, child: child),
+      child: icon,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDone = row.isDone;
@@ -366,8 +402,9 @@ class _SetRowTile extends StatelessWidget {
         : '—';
     final weightArrow =
         isDone ? _deltaArrow(row.weight, previous?.weight) : null;
-    final repsArrow =
-        isDone ? _deltaArrow(row.reps, previous?.reps, showStagnant: true) : null;
+    final repsArrow = isDone
+        ? _deltaArrow(row.reps, previous?.reps, showStagnant: true)
+        : null;
 
     // Done row: check_circle (reopen on tap). Plan row: close (delete on tap).
     final trailingIcon = isDone ? Icons.check_circle : Icons.close;
@@ -421,8 +458,7 @@ class _SetRowTile extends StatelessWidget {
                         decoration: onTapPrevious != null
                             ? TextDecoration.underline
                             : null,
-                        decorationColor:
-                            scheme.primary.withValues(alpha: 0.4),
+                        decorationColor: scheme.primary.withValues(alpha: 0.4),
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -466,6 +502,10 @@ class _SetRowTile extends StatelessWidget {
                       if (repsArrow != null) ...[
                         const SizedBox(width: 3),
                         repsArrow
+                      ],
+                      if (isDone && row.prTypes.isNotEmpty) ...[
+                        const SizedBox(width: 4),
+                        _prBadge(context),
                       ],
                     ],
                   ),

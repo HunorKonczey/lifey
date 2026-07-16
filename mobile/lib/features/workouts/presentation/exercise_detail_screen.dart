@@ -11,6 +11,7 @@ import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../domain/exercise.dart';
 import '../domain/exercise_enums.dart';
+import '../domain/personal_record.dart';
 import 'widgets/add_exercise_sheet.dart';
 
 // ---------------------------------------------------------------------------
@@ -108,9 +109,6 @@ class _DetailBody extends StatelessWidget {
   final AppLocalizations l10n;
   final double contentTop;
 
-  /// Epley formula: weight × (1 + reps / 30)
-  double _epley(double weight, int reps) => weight * (1 + reps / 30);
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -121,7 +119,7 @@ class _DetailBody extends StatelessWidget {
     ExerciseSetRow? prSet;
     double bestOneRM = 0;
     for (final s in sets) {
-      final orm = _epley(s.weight, s.reps);
+      final orm = estimateOneRepMax(s.weight, s.reps);
       if (orm > bestOneRM) {
         bestOneRM = orm;
         prSet = s;
@@ -135,7 +133,7 @@ class _DetailBody extends StatelessWidget {
     final weeklyBest = <String, double>{};
     for (final s in recentSets) {
       final weekKey = _isoWeekKey(s.performedAt);
-      final orm = _epley(s.weight, s.reps);
+      final orm = estimateOneRepMax(s.weight, s.reps);
       final current = weeklyBest[weekKey] ?? 0;
       weeklyBest[weekKey] = orm > current ? orm : current;
     }
@@ -153,6 +151,16 @@ class _DetailBody extends StatelessWidget {
       final sign = pct >= 0 ? '+' : '';
       trendPct = '$sign${pct.round()}%';
     }
+
+    // PR history — sets arrive newest-first from the provider; computePrHistory
+    // needs oldest-first to walk the running baseline forward, then the
+    // resulting events are reversed back to newest-first for display and
+    // capped, same convention as the recent-sets list below.
+    final prSetsAscending = [
+      for (final s in sets.reversed)
+        (weight: s.weight, reps: s.reps, performedAt: s.performedAt),
+    ];
+    final prHistory = computePrHistory(prSetsAscending).reversed.take(10).toList();
 
     // Recent sets — take 10, group by calendar day
     final recentVisible = sets.take(10).toList();
@@ -190,8 +198,10 @@ class _DetailBody extends StatelessWidget {
         MediaQuery.paddingOf(context).bottom + 24,
       ),
       children: [
-          // Category + equipment chips
-          if (exercise.category != null || exercise.equipment != null) ...[
+          // Category + equipment + rest-timer override chips
+          if (exercise.category != null ||
+              exercise.equipment != null ||
+              exercise.defaultRestSeconds != null) ...[
             Wrap(
               spacing: 8,
               runSpacing: 4,
@@ -203,6 +213,11 @@ class _DetailBody extends StatelessWidget {
                   ),
                 if (exercise.equipment != null)
                   _EquipmentChip(label: equipmentLabel(l10n, exercise.equipment!)),
+                if (exercise.defaultRestSeconds != null)
+                  _EquipmentChip(
+                    icon: Icons.timer_outlined,
+                    label: _formatRestDuration(exercise.defaultRestSeconds!),
+                  ),
               ],
             ),
             const SizedBox(height: 20),
@@ -324,6 +339,26 @@ class _DetailBody extends StatelessWidget {
             const SizedBox(height: 12),
           ],
 
+          // PR history — when each record type's running best increased.
+          if (prHistory.isNotEmpty) ...[
+            Text(
+              l10n.prHistorySectionLabel.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final event in prHistory)
+              _PrHistoryRow(
+                dateLabel: shortDateFmt.format(event.performedAt),
+                typeLabel: _prTypeLabel(l10n, event.type),
+                valueLabel: _prEventValueLabel(event, weightFormat),
+              ),
+            const SizedBox(height: 12),
+          ],
+
           // Recent sets grouped by day — one compact row per day
           Text(
             l10n.recentSetsLabel.toUpperCase(),
@@ -366,6 +401,30 @@ class _DetailBody extends StatelessWidget {
     final parts = key.split('-');
     return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
   }
+
+  String _formatRestDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  String _prTypeLabel(AppLocalizations l10n, PrType type) => switch (type) {
+        PrType.maxWeight => l10n.prTypeMaxWeightLabel,
+        PrType.repsAtWeight => l10n.prTypeRepsAtWeightLabel,
+        PrType.estimatedOneRm => l10n.prTypeEstimatedOneRmLabel,
+      };
+
+  String _prEventValueLabel(PrEvent event, NumberFormat weightFormat) {
+    switch (event.type) {
+      case PrType.maxWeight:
+        return '${weightFormat.format(event.weight)} kg × ${event.reps}';
+      case PrType.repsAtWeight:
+        return '${event.reps} × ${weightFormat.format(event.weight)} kg';
+      case PrType.estimatedOneRm:
+        final orm = estimateOneRepMax(event.weight, event.reps);
+        return '${weightFormat.format(orm)} kg';
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -404,10 +463,12 @@ class _CategoryChip extends StatelessWidget {
 }
 
 /// Equipment chip — neutral surfaceContainerLow bg, onSurfaceVariant text + icon.
+/// Also reused for the per-exercise rest-timer override (docs/39-rest-timer-plan.md §3.3).
 class _EquipmentChip extends StatelessWidget {
-  const _EquipmentChip({required this.label});
+  const _EquipmentChip({required this.label, this.icon = Icons.fitness_center});
 
   final String label;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -422,7 +483,7 @@ class _EquipmentChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.fitness_center, size: 16, color: color),
+          Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
           Text(
             label,
@@ -524,6 +585,70 @@ class _TrendPill extends StatelessWidget {
           fontWeight: FontWeight.w700,
           color: fg,
           height: 1.0,
+        ),
+      ),
+    );
+  }
+}
+
+/// One row in the PR history list — date + record-type label + the value
+/// reached (docs/38-personal-records-plan.md, M5).
+class _PrHistoryRow extends StatelessWidget {
+  const _PrHistoryRow({
+    required this.dateLabel,
+    required this.typeLabel,
+    required this.valueLabel,
+  });
+
+  final String dateLabel;
+  final String typeLabel;
+  final String valueLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final mc = context.metricColors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.emoji_events, size: 16, color: mc.carbs),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    typeLabel,
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)
+                        .copyWith(color: scheme.onSurface),
+                  ),
+                  Text(
+                    dateLabel,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              valueLabel,
+              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800)
+                  .copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
         ),
       ),
     );

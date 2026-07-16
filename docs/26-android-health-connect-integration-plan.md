@@ -1,6 +1,13 @@
 # 26 – Android Health Connect integration
 
 Status: implemented
+
+> **Partially superseded 2026-07-16.** The manual workout import/pairing
+> feature this doc mentions was removed on both platforms — see
+> docs/40-watch-app-plan.md and docs/16-apple-health-integration-plan.md's
+> own superseded note. Steps, weight sync, and near-live heart rate during an
+> active session are unaffected.
+
 Android counterpart of [16-apple-health-integration-plan.md](16-apple-health-integration-plan.md),
 which is iOS-only. Every feature that doc built on top of Apple HealthKit —
 permission foundation, manual workout import (calories + avg HR), dashboard

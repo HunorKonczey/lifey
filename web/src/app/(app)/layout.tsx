@@ -7,6 +7,7 @@ import { useSessionStore } from "@/features/auth/store";
 import { settingsApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useLocale } from "@/lib/hooks/useLocale";
+import { useDateStore } from "@/lib/hooks/useDateStore";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { ErrorBoundary } from "@/components/status/ErrorBoundary";
@@ -29,6 +30,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // Rolls the date-store's "today" forward when the tab regains focus —
+  // otherwise a tab left open overnight keeps filtering fresh data against
+  // yesterday's date until the user manually clicks the "today" pill.
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === "visible") useDateStore.getState().syncToday();
+    };
+    document.addEventListener("visibilitychange", handler);
+    window.addEventListener("focus", handler);
+    return () => {
+      document.removeEventListener("visibilitychange", handler);
+      window.removeEventListener("focus", handler);
+    };
+  }, []);
 
   // Redirect to login whenever there is no authenticated user (covers both
   // a failed initialize() and an explicit logout()).

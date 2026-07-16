@@ -97,7 +97,7 @@ class ExerciseServiceImplTest {
         when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
         when(repository.save(any(Exercise.class))).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
 
-        ExerciseResponse result = service.create(new ExerciseRequest("Lunge", MuscleGroup.QUADS, Equipment.BODYWEIGHT, null));
+        ExerciseResponse result = service.create(new ExerciseRequest("Lunge", MuscleGroup.QUADS, Equipment.BODYWEIGHT, null, null));
 
         assertThat(result.id()).isEqualTo(5L);
         assertThat(result.name()).isEqualTo("Lunge");
@@ -110,7 +110,7 @@ class ExerciseServiceImplTest {
         when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
         when(repository.save(any(Exercise.class))).thenAnswer(inv -> withId(inv.getArgument(0), 6L));
 
-        ExerciseResponse result = service.create(new ExerciseRequest("Plank", null, null, null));
+        ExerciseResponse result = service.create(new ExerciseRequest("Plank", null, null, null, null));
 
         assertThat(result.category()).isNull();
         assertThat(result.equipment()).isNull();
@@ -121,12 +121,34 @@ class ExerciseServiceImplTest {
         Exercise existing = exercise(3L, "Old");
         when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
 
-        ExerciseResponse result = service.update(3L, new ExerciseRequest("New", MuscleGroup.BACK, Equipment.BARBELL, null));
+        ExerciseResponse result = service.update(3L, new ExerciseRequest("New", MuscleGroup.BACK, Equipment.BARBELL, null, null));
 
         assertThat(result.name()).isEqualTo("New");
         assertThat(existing.getName()).isEqualTo("New");
         assertThat(existing.getCategory()).isEqualTo(MuscleGroup.BACK);
         assertThat(existing.getEquipment()).isEqualTo(Equipment.BARBELL);
+    }
+
+    @Test
+    void create_withDefaultRestSecondsSavesAndReturnsIt() {
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
+        when(repository.save(any(Exercise.class))).thenAnswer(inv -> withId(inv.getArgument(0), 7L));
+
+        ExerciseResponse result = service.create(new ExerciseRequest("Deadlift", null, null, null, 120));
+
+        assertThat(result.defaultRestSeconds()).isEqualTo(120);
+    }
+
+    @Test
+    void update_nullDefaultRestSecondsClearsExistingOverride() {
+        Exercise existing = exercise(3L, "Old");
+        existing.setDefaultRestSeconds(120);
+        when(repository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+
+        ExerciseResponse result = service.update(3L, new ExerciseRequest("New", null, null, null, null));
+
+        assertThat(result.defaultRestSeconds()).isNull();
+        assertThat(existing.getDefaultRestSeconds()).isNull();
     }
 
     @Test

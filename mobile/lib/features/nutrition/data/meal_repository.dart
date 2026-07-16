@@ -8,6 +8,7 @@ import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/outbox_writer.dart';
 import '../../../core/sync/pending_delete_filter.dart';
 import '../../../core/utils/combine_latest.dart';
+import '../domain/daily_macros.dart';
 import '../domain/food_usage.dart';
 import '../domain/meal.dart';
 
@@ -130,6 +131,77 @@ class MealRepository {
         .toList()
       ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
     return meals;
+  }
+
+  /// Full-history per-day macro totals, unpaged and unbounded — unlike
+  /// [watchPaged]'s UI window, every day back to account creation is
+  /// included. Needed for streaks/weekly recap to be accurate over months of
+  /// history (see docs/37-streaks-weekly-recap-plan.md), which the old
+  /// approach of aggregating [watchPaged]'s 40-meal window could not do.
+  ///
+  /// Sums come from a slim projection of the join — [mealDateTime],
+  /// [quantityInGrams] and the food's per-100g macros — rather than building
+  /// a full [Meal]/[MealEntry] domain object per entry, so materializing
+  /// years of history doesn't hold onto more than the numbers needed for a
+  /// running total.
+  ///
+  /// Bucketed by *local* calendar day in Dart, not SQL: [mealDateTime] is
+  /// stored as a UTC instant, and grouping in SQL would bucket by UTC day
+  /// boundaries instead of the device's local day, silently misplacing
+  /// meals logged near midnight.
+  ///
+  /// A meal with no entries still creates its day's bucket (at zero) via the
+  /// left join, matching "a meal was logged that day" even when it has no
+  /// entries yet — the shape the calorie streak's "day counts only if
+  /// something was logged" rule needs.
+  Stream<List<DailyMacros>> watchDailyMacros() {
+    final joined$ = _db.select(_db.meals).join([
+      leftOuterJoin(_db.mealEntries, _db.mealEntries.mealClientId.equalsExp(_db.meals.clientId)),
+      leftOuterJoin(_db.foods, _db.foods.clientId.equalsExp(_db.mealEntries.foodClientId)),
+    ]).watch();
+
+    return combineLatest2(joined$, _db.select(_db.pendingOperations).watch(), _aggregateDaily);
+  }
+
+  List<DailyMacros> _aggregateDaily(
+    List<_JoinedMealRow> joinedRows,
+    List<PendingOperationRow> ops,
+  ) {
+    final blocked = blockedByActiveDelete(ops);
+    final byDay = <DateTime, _DailyAccumulator>{};
+
+    for (final row in joinedRows) {
+      final meal = row.readTable(_db.meals);
+      if (blocked.contains(meal.clientId)) continue;
+
+      final local = meal.mealDateTime.toLocal();
+      final day = DateTime(local.year, local.month, local.day);
+      final acc = byDay.putIfAbsent(day, () => _DailyAccumulator());
+
+      final entry = row.readTableOrNull(_db.mealEntries);
+      if (entry == null) continue; // meal has no entries — left join produced no match
+
+      final food = row.readTableOrNull(_db.foods);
+      final grams = entry.quantityInGrams;
+      acc.add(
+        calories: (food?.caloriesPer100g ?? 0) * grams / 100,
+        protein: (food?.proteinPer100g ?? 0) * grams / 100,
+        carbs: (food?.carbsPer100g ?? 0) * grams / 100,
+        fat: (food?.fatPer100g ?? 0) * grams / 100,
+      );
+    }
+
+    final result = byDay.entries
+        .map((e) => DailyMacros(
+              day: e.key,
+              calories: e.value.calories,
+              protein: e.value.protein,
+              carbs: e.value.carbs,
+              fat: e.value.fat,
+            ))
+        .toList()
+      ..sort((a, b) => b.day.compareTo(a.day));
+    return result;
   }
 
   /// Per-food usage stats over the last [_usageWindow] of meal history,
@@ -290,3 +362,22 @@ class MealRepository {
 final mealRepositoryProvider = Provider<MealRepository>((ref) {
   return MealRepository(ref.watch(appDatabaseProvider), ref.watch(outboxWriterProvider));
 });
+
+class _DailyAccumulator {
+  double calories = 0;
+  double protein = 0;
+  double carbs = 0;
+  double fat = 0;
+
+  void add({
+    required double calories,
+    required double protein,
+    required double carbs,
+    required double fat,
+  }) {
+    this.calories += calories;
+    this.protein += protein;
+    this.carbs += carbs;
+    this.fat += fat;
+  }
+}

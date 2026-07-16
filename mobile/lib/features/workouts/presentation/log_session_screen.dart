@@ -2,27 +2,31 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_service.dart';
-import '../../../core/health/health_workout.dart';
-import '../../../core/health/health_workout_import_service.dart';
+import '../../../core/notifications/notification_service.dart';
+import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../settings/application/settings_controller.dart';
+import '../../settings/domain/user_settings.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
 import '../data/workout_template_repository.dart';
+import '../domain/exercise.dart';
+import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
-import 'widgets/health_workout_picker_sheet.dart';
 import 'widgets/exercise_session_card.dart';
 import 'widgets/post_workout_feedback_sheet.dart';
 import 'widgets/workout_success_dialog.dart';
@@ -41,10 +45,9 @@ import 'widgets/workout_success_dialog.dart';
 /// notification tap handling: it must NOT push a second `LogSessionScreen`
 /// on top of an already-live one, since a fresh instance is reconstructed
 /// from the last *persisted* DB state only — any not-yet-flushed in-memory
-/// edits (e.g. blank "Add set" rows added just before the OS suspended the
-/// app in the background) would be silently dropped, and the duplicate's
-/// stale set count would overwrite the correct Live Activity/notification
-/// content.
+/// edit (e.g. a weight/reps value being typed into the compact set editor,
+/// not yet submitted) would be silently dropped, and the duplicate's stale
+/// state would overwrite the correct Live Activity/notification content.
 bool isLogSessionScreenOpen = false;
 
 class LogSessionScreen extends ConsumerStatefulWidget {
@@ -58,7 +61,7 @@ class LogSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
-  // Used only for formatting the Apple workout date in the pairing dialog.
+  // Used for formatting the trainer comment timestamp.
   static final _label = DateFormat('EEE, MMM d · HH:mm');
 
   DateTime? _startedAt;
@@ -94,6 +97,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   Timer? _ticker;
   DateTime _now = DateTime.now();
 
+  // ── Rest timer (docs/39-rest-timer-plan.md §2.1) ──
+  // Fully derived from the last-done set's `doneAt` + the effective rest
+  // duration; these three fields are the only ephemeral pieces, all keyed to
+  // the `doneAt` they apply to and reset whenever a newer set is logged (see
+  // the sync in build() below).
+  Duration _restAdjustment = Duration.zero;
+  DateTime? _restSkippedAt;
+  DateTime? _restTrackedDoneAt;
+  bool _restOvertimeHapticFired = false;
+
   // ── Near-live heart rate (Health store, running sessions only) ──
   // Neither HealthKit nor Health Connect streams live samples to a
   // third-party app: a paired watch syncs heart-rate samples into the store
@@ -113,7 +126,20 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   DateTime? _lastHrSampleAt; // timestamp of the sample currently shown
   bool _showHeartRate = false;
 
+  // Lets the watch's own End button drive the same finish flow as the
+  // in-app one (docs/40-watch-app-plan.md §8.2 decision (b)) — only while
+  // this screen instance for the matching session is mounted; see
+  // [_onWatchEvent].
+  StreamSubscription<Object>? _watchEventsSubscription;
+
   bool get _isEditing => widget.session != null;
+
+  /// "Edzés indítása az órán" Settings kapcsoló (docs/40-watch-app-plan.md
+  /// §6.4) — a [WatchWorkoutService] hívásait itt, a call site-oknál
+  /// kapuzzuk, nem magában a service-ben, hogy az settings-független,
+  /// egyszerűen tesztelhető maradjon.
+  bool get _watchEnabled =>
+      ref.read(settingsControllerProvider).value?.watchWorkoutEnabled ?? true;
 
   // ---------------------------------------------------------------------------
   // Init / dispose
@@ -122,6 +148,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   @override
   void initState() {
     super.initState();
+    _watchEventsSubscription =
+        ref.read(watchWorkoutServiceProvider).events.listen(_onWatchEvent);
     final session = widget.session;
     // For existing sessions, start time is known. For new sessions _startedAt
     // stays null until the first set is persisted — the timer only starts then.
@@ -201,6 +229,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       unawaited(_startScheduledSession(session));
     } else {
       unawaited(_loadPreviousPerformance(_blocks));
+      unawaited(_loadPrBaselines(_blocks));
     }
   }
 
@@ -241,6 +270,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     });
     _pollHeartRate();
     unawaited(_loadPreviousPerformance(_blocks));
+    unawaited(_loadPrBaselines(_blocks));
     await _persist();
   }
 
@@ -249,7 +279,33 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     isLogSessionScreenOpen = false;
     _ticker?.cancel();
     _hrTicker?.cancel();
+    unawaited(_watchEventsSubscription?.cancel());
     super.dispose();
+  }
+
+  /// The watch's End button asks the phone to close the session rather than
+  /// ending its own sensor session unilaterally (docs/40-watch-app-plan.md
+  /// §8.2 decision (b)) — this is what actually runs the same finish flow
+  /// (RPE/feedback sheet) the in-app Finish button does. No-ops if this
+  /// screen isn't showing the matching session, or it's already
+  /// finished/finishing.
+  void _onWatchEvent(Object event) {
+    switch (event) {
+      case WatchEndRequested():
+        if (event.sessionClientId != _sessionClientId) return;
+        if (_finishedAt != null || _saving) return;
+        unawaited(_finishWorkout());
+      case WatchStartRejected():
+        // Another app already owns an exercise on the watch
+        // (docs/40-watch-app-plan.md §5.3/§8.1) — the phone-side workout
+        // itself is unaffected, just let the user know the watch didn't
+        // mirror it.
+        if (event.sessionClientId != _sessionClientId || !mounted) return;
+        AppSnackbar.showInfo(
+          context,
+          title: AppLocalizations.of(context)!.watchStartRejectedMessage,
+        );
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -323,16 +379,177 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
-  DateTime? _lastDoneAt() {
-    DateTime? last;
+  /// Fetches and fills in [ExerciseBlock.prBaseline] for each of [blocks] —
+  /// every set ever logged for that exercise, excluding this session, so
+  /// live PR detection has something to compare against (see
+  /// [_recomputePrFlags]). Fire-and-forget, same pattern as
+  /// [_loadPreviousPerformance]. Template-agnostic on purpose — a record is
+  /// a record regardless of which template it was logged under.
+  Future<void> _loadPrBaselines(List<ExerciseBlock> blocks) async {
+    final repo = ref.read(workoutSessionRepositoryProvider);
+    for (final block in blocks) {
+      final baseline = await repo.getPrBaseline(
+        exerciseClientId: block.exerciseClientId,
+        excludeSessionClientId: _sessionClientId,
+      );
+      if (!mounted) return;
+      setState(() {
+        block.prBaseline = baseline;
+        _recomputePrFlagsForBlock(block);
+      });
+    }
+  }
+
+  /// Recomputes PR flags for every done row in [block] from scratch: the
+  /// block's baseline (once loaded) extended forward through its currently
+  /// done rows in [SetRow.doneAt] order. Flags are fully derived state, so
+  /// they can never go stale or double-count across edits — see
+  /// docs/38-personal-records-plan.md, M3. No-ops (clearing every row's
+  /// flags) while the baseline hasn't loaded yet, rather than celebrating
+  /// against a half-loaded history.
+  void _recomputePrFlagsForBlock(ExerciseBlock block) {
+    for (final row in block.rows) {
+      row.prTypes = const {};
+    }
+    final baseline = block.prBaseline;
+    if (baseline == null) return;
+
+    final doneRows = [
+      for (final row in block.rows)
+        if (row.isDone && row.weight != null && row.reps != null) row,
+    ]..sort((a, b) => a.doneAt!.compareTo(b.doneAt!));
+    final sets = [
+      for (final row in doneRows)
+        (weight: row.weight!, reps: row.reps!, performedAt: row.doneAt!),
+    ];
+    final perRow = detectPrsInOrder(baseline, sets);
+    for (var i = 0; i < doneRows.length; i++) {
+      doneRows[i].prTypes = perRow[i].toSet();
+    }
+  }
+
+  /// [_recomputePrFlagsForBlock] for block index [bi], plus haptic feedback
+  /// when the row just interacted with ([ri]) ends up earning a record —
+  /// instant physical feedback without interrupting the logging flow (the
+  /// full celebration is reserved for the finish-workout success dialog).
+  void _recomputePrFlags(int bi, {int? justEditedRow}) {
+    _recomputePrFlagsForBlock(_blocks[bi]);
+    if (justEditedRow != null &&
+        _blocks[bi].rows[justEditedRow].prTypes.isNotEmpty) {
+      unawaited(HapticFeedback.mediumImpact());
+    }
+  }
+
+  DateTime? _lastDoneAt() => _lastDoneEntry()?.doneAt;
+
+  /// The block + timestamp of the most recently logged set, or null if none
+  /// is done yet. Used both for the elapsed-since-last-set display and to
+  /// resolve which exercise's rest-timer duration applies (docs/39-rest-timer-plan.md §2.4).
+  ({ExerciseBlock block, DateTime doneAt})? _lastDoneEntry() {
+    ExerciseBlock? bestBlock;
+    DateTime? bestAt;
     for (final block in _blocks) {
       for (final row in block.rows) {
-        if (row.doneAt != null && (last == null || row.doneAt!.isAfter(last))) {
-          last = row.doneAt;
+        final doneAt = row.doneAt;
+        if (doneAt != null && (bestAt == null || doneAt.isAfter(bestAt))) {
+          bestAt = doneAt;
+          bestBlock = block;
         }
       }
     }
-    return last;
+    if (bestBlock == null || bestAt == null) return null;
+    return (block: bestBlock, doneAt: bestAt);
+  }
+
+  /// Effective rest duration for [block]: its own override if set, otherwise
+  /// the account-wide default (docs/39-rest-timer-plan.md §2.2).
+  int _effectiveRestSeconds(ExerciseBlock block,
+      Map<String, Exercise> exercisesById, UserSettings settings) {
+    return exercisesById[block.exerciseClientId]?.defaultRestSeconds ??
+        settings.defaultRestSeconds;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rest timer notification scheduling (docs/39-rest-timer-plan.md §2.3)
+  // ---------------------------------------------------------------------------
+
+  /// Resets the ephemeral +15s/skip/haptic state whenever a newer set has
+  /// become "last" — they're keyed to the `doneAt` they applied to, never
+  /// carried forward to the next rest. Idempotent; called both from build()
+  /// (for the banner) and from every handler that can change `_lastDoneAt()`
+  /// before it (re)schedules the notification, since setState's callback runs
+  /// synchronously but the next build() doesn't.
+  void _syncRestEphemeralState() {
+    final lastDoneAt = _lastDoneAt();
+    if (lastDoneAt != _restTrackedDoneAt) {
+      _restTrackedDoneAt = lastDoneAt;
+      _restAdjustment = Duration.zero;
+      _restSkippedAt = null;
+      _restOvertimeHapticFired = false;
+    }
+  }
+
+  UserSettings _currentRestSettings() =>
+      ref.read(settingsControllerProvider).value ??
+      const UserSettings.defaults();
+
+  int _currentEffectiveRestSeconds(ExerciseBlock block, UserSettings settings) {
+    final exercises =
+        ref.read(exerciseControllerProvider).value ?? const <Exercise>[];
+    final exercisesById = {for (final e in exercises) e.clientId: e};
+    return _effectiveRestSeconds(block, exercisesById, settings);
+  }
+
+  /// Re-derives the rest-end target from the current [_lastDoneEntry] (+
+  /// [_restAdjustment]) and (re)schedules the local notification for it, or
+  /// cancels it if there's nothing to notify about. The single call site
+  /// every mutation that can change "the current rest" goes through — a
+  /// newer set logged replaces the schedule (same fixed notification id), an
+  /// exhausted or skipped rest cancels it.
+  Future<void> _rescheduleRestNotification() async {
+    final settings = _currentRestSettings();
+    final entry = _lastDoneEntry();
+    final skipped = _restSkippedAt != null && _restSkippedAt == entry?.doneAt;
+    if (!settings.restTimerEnabled ||
+        entry == null ||
+        skipped ||
+        _finishedAt != null) {
+      await NotificationService.cancelRestEnd();
+      return;
+    }
+    final seconds = _currentEffectiveRestSeconds(entry.block, settings);
+    final endsAt =
+        entry.doneAt.add(Duration(seconds: seconds) + _restAdjustment);
+    if (!endsAt.isAfter(DateTime.now())) {
+      await NotificationService.cancelRestEnd();
+      return;
+    }
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    await NotificationService.scheduleRestEnd(
+      endsAt: endsAt,
+      title: l10n.restTimerNotificationTitle,
+      body: l10n.restTimerNotificationBody,
+    );
+  }
+
+  /// The rest timer's current target end time, epoch ms — null when the
+  /// timer is disabled, skipped, or already expired. Same derivation as
+  /// [_rescheduleRestNotification]'s target; feeds the native countdown on
+  /// both platforms via [WorkoutSessionState.restEndsAtEpochMs] (see
+  /// docs/39-rest-timer-plan.md, Prompt 5).
+  int? _currentRestEndsAtEpochMs() {
+    final settings = _currentRestSettings();
+    if (!settings.restTimerEnabled) return null;
+    final entry = _lastDoneEntry();
+    if (entry == null) return null;
+    final skipped = _restSkippedAt != null && _restSkippedAt == entry.doneAt;
+    if (skipped) return null;
+    final seconds = _currentEffectiveRestSeconds(entry.block, settings);
+    final endsAt =
+        entry.doneAt.add(Duration(seconds: seconds) + _restAdjustment);
+    if (!endsAt.isAfter(DateTime.now())) return null;
+    return endsAt.millisecondsSinceEpoch;
   }
 
   String _formatElapsed() {
@@ -368,7 +585,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   List<ExerciseSetInput> _buildSets() => [
         for (final block in _blocks)
           for (final row in block.rows)
-            if (row.isDone && row.reps != null && row.reps! > 0 && row.weight != null)
+            if (row.isDone &&
+                row.reps != null &&
+                row.reps! > 0 &&
+                row.weight != null)
               ExerciseSetInput(
                 exerciseClientId: block.exerciseClientId,
                 reps: row.reps!,
@@ -387,27 +607,53 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   // ---------------------------------------------------------------------------
 
   void _handleRowMarkDone(int bi, int ri) {
-    setState(() => _blocks[bi].rows[ri].doneAt = DateTime.now());
+    setState(() {
+      _blocks[bi].rows[ri].doneAt = DateTime.now();
+      _recomputePrFlags(bi, justEditedRow: ri);
+    });
+    _syncRestEphemeralState();
+    unawaited(_rescheduleRestNotification());
     _autoSave();
   }
 
   void _handleRowReopen(int bi, int ri) {
-    setState(() => _blocks[bi].rows[ri].doneAt = null);
+    setState(() {
+      _blocks[bi].rows[ri].doneAt = null;
+      _recomputePrFlags(bi);
+    });
+    // The reopened row may have been the latest done set — recompute and
+    // reschedule against whichever set is now last, or cancel if none is
+    // (docs/39-rest-timer-plan.md §2.3).
+    _syncRestEphemeralState();
+    unawaited(_rescheduleRestNotification());
     _autoSave();
   }
 
   void _handleRowEdit(int bi, int ri, double? weight, int? reps) {
+    final wasDone = _blocks[bi].rows[ri].isDone;
     setState(() {
       _blocks[bi].rows[ri].weight = weight;
       _blocks[bi].rows[ri].reps = reps;
       _blocks[bi].rows[ri].doneAt ??= DateTime.now();
+      _recomputePrFlags(bi, justEditedRow: ri);
     });
+    // Only a freshly-stamped doneAt (row wasn't already done) starts a new
+    // rest — editing the weight/reps of an already-done row doesn't move it.
+    if (!wasDone) {
+      _syncRestEphemeralState();
+      unawaited(_rescheduleRestNotification());
+    }
     _autoSave();
   }
 
   void _handleRowDelete(int bi, int ri) {
-    setState(() => _blocks[bi].rows.removeAt(ri));
-    if (_sessionClientId != null) _autoSave();
+    setState(() {
+      _blocks[bi].rows.removeAt(ri);
+      _recomputePrFlagsForBlock(_blocks[bi]);
+    });
+    _syncRestEphemeralState();
+    unawaited(_rescheduleRestNotification());
+    _autoSave();
   }
 
   void _handleRowDuplicate(int bi, int ri) {
@@ -432,12 +678,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     setState(() {
       final block = _blocks[bi];
       PreviousSetHint? hint;
-      if (prefillFromPrevious && block.rows.length < block.previousSets.length) {
+      if (prefillFromPrevious &&
+          block.rows.length < block.previousSets.length) {
         hint = block.previousSets[block.rows.length];
       }
       block.rows.add(SetRow(weight: hint?.weight, reps: hint?.reps));
     });
-    if (_sessionClientId != null) _autoSave();
+    _autoSave();
   }
 
   Future<void> _handleRemoveExercise(int bi) async {
@@ -456,7 +703,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       if (confirmed != true || !mounted) return;
     }
     setState(() => _blocks.removeAt(bi));
-    if (_sessionClientId != null) await _autoSave();
+    _syncRestEphemeralState();
+    unawaited(_rescheduleRestNotification());
+    await _autoSave();
   }
 
   Future<void> _handleAddExercise() async {
@@ -477,7 +726,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     );
     setState(() => _blocks.add(block));
     unawaited(_loadPreviousPerformance([block]));
-    if (_sessionClientId != null) await _autoSave();
+    unawaited(_loadPrBaselines([block]));
+    await _autoSave();
   }
 
   // ---------------------------------------------------------------------------
@@ -512,11 +762,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final notifier = ref.read(workoutSessionControllerProvider.notifier);
     final existingId = _sessionClientId;
     if (existingId == null) {
-      // Don't create the session until at least one set is logged, unless we
-      // are finishing (finishedAt != null means the user explicitly hit Finish).
-      if (_buildSets().isEmpty && _finishedAt == null) return;
-
       // First real save: stamp the start time now and kick off the ticker.
+      // Any call reaching here already followed a real user action (a set
+      // logged, a row/exercise added or removed, etc — see the call sites of
+      // _autoSave) rather than just mounting the screen, so it's safe to
+      // create the session immediately instead of waiting specifically for
+      // the first done set: otherwise plan-only edits (e.g. a blank row
+      // added via "+ Add set" before any set is marked done) live only in
+      // memory and are silently dropped if the screen is torn down and
+      // rebuilt from the last persisted DB state (e.g. resuming via the Live
+      // Activity/notification tap — see isLogSessionScreenOpen above).
       if (_startedAt == null) {
         _startedAt = DateTime.now();
         if (_finishedAt == null) {
@@ -580,7 +835,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     for (final block in _blocks) {
       for (final row in block.rows) {
         final doneAt = row.doneAt;
-        if (doneAt != null && (mostRecentAt == null || doneAt.isAfter(mostRecentAt))) {
+        if (doneAt != null &&
+            (mostRecentAt == null || doneAt.isAfter(mostRecentAt))) {
           mostRecentAt = doneAt;
           mostRecent = block;
         }
@@ -595,8 +851,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   WorkoutSessionState _sessionState(AppLocalizations l10n) {
     final current = _currentExerciseBlock();
-    final totalSetsDone =
-        _blocks.fold<int>(0, (sum, b) => sum + b.rows.where((r) => r.isDone).length);
+    final totalSetsDone = _blocks.fold<int>(
+        0, (sum, b) => sum + b.rows.where((r) => r.isDone).length);
     return WorkoutSessionState(
       exerciseName: (current != null && current.exerciseName.isNotEmpty)
           ? current.exerciseName
@@ -605,32 +861,53 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       setsTotal: current?.targetSets,
       totalSetsDone: totalSetsDone,
       lastSetAtEpochMs: _lastDoneAt()?.millisecondsSinceEpoch,
+      restEndsAtEpochMs: _currentRestEndsAtEpochMs(),
     );
   }
 
   String _sessionTitle(AppLocalizations l10n) =>
-      widget.session?.templateName ?? widget.template?.name ?? l10n.liveActivityDefaultTitle;
+      widget.session?.templateName ??
+      widget.template?.name ??
+      l10n.liveActivityDefaultTitle;
 
   Future<void> _startSessionNotifier() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
+    final state = _sessionState(l10n);
     await ref.read(workoutSessionNotifierServiceProvider).start(
           sessionClientId: _sessionClientId!,
           title: _sessionTitle(l10n),
           startedAt: _startedAt!,
           startedLabel: l10n.startedLabel,
-          state: _sessionState(l10n),
+          state: state,
         );
+    // Best-effort, alongside (not instead of) the Live Activity/ongoing
+    // notification above — see docs/40-watch-app-plan.md §6.2.
+    if (_watchEnabled) {
+      unawaited(ref.read(watchWorkoutServiceProvider).startWorkout(
+            sessionClientId: _sessionClientId!,
+            title: _sessionTitle(l10n),
+            startedAt: _startedAt!,
+            state: state,
+          ));
+    }
   }
 
   Future<void> _updateSessionNotifier() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
+    final state = _sessionState(l10n);
     await ref.read(workoutSessionNotifierServiceProvider).update(
           sessionClientId: _sessionClientId!,
           startedLabel: l10n.startedLabel,
-          state: _sessionState(l10n),
+          state: state,
         );
+    if (_watchEnabled) {
+      unawaited(ref.read(watchWorkoutServiceProvider).updateState(
+            sessionClientId: _sessionClientId!,
+            state: state,
+          ));
+    }
   }
 
   /// Shows the post-workout feedback sheet (skippable) and stores the result
@@ -688,150 +965,38 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _ticker = null;
     _hrTicker?.cancel();
     _hrTicker = null;
+    // _rescheduleRestNotification() sees _finishedAt set and cancels.
+    unawaited(_rescheduleRestNotification());
     await _persist();
     if (_sessionNotifierStarted) {
       _sessionNotifierStarted = false;
       unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
+      // The watch answers asynchronously with a summary on
+      // WatchWorkoutService.events, handled by WorkoutResumePrompt — not here
+      // (docs/40-watch-app-plan.md §3 "Lezárás").
+      unawaited(ref.read(watchWorkoutServiceProvider).endWorkout(_sessionClientId!));
     }
   }
 
-  /// Finish button handler — implements the full 5.6 health-import flow.
+  /// Finish button handler. No more health-workout pairing (removed —
+  /// `activeCalories`/`averageHeartRate`/`healthWorkoutId` now come from the
+  /// watch summary instead, see docs/40-watch-app-plan.md and
+  /// [workoutResumePromptProvider]'s `_onWatchEvent`): RPE feedback, then
+  /// straight to persisted + dashboard.
   Future<void> _finishWorkout() async {
     if (_saving) return;
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context)!;
-    final importService = ref.read(healthWorkoutImportServiceProvider);
 
     try {
-      // Ask "how hard was this?" first — it doesn't depend on the health
-      // pairing flow below, and the same _persist() call the pairing
-      // dialogs (or their absence) lead to already carries whatever rating
-      // was collected here.
       await _maybeCollectFeedback();
       if (!mounted) return;
 
-      final healthEnabled =
-          ref.read(healthControllerProvider).value ?? false;
-
-      if (!healthEnabled) {
-        await _persistFinished();
-        if (!mounted) return;
-        await _maybeShowWorkoutSuccess();
-        if (!mounted) return;
-        _navigateToDashboard();
-        return;
-      }
-
-      // Health is enabled — search for an importable workout.
-      final HealthWorkout? workout = await importService.findImportable();
+      await _persistFinished();
       if (!mounted) return;
-
-      if (workout != null) {
-        // Pairing dialog.
-        final pair = await showAppConfirmDialog(
-          context,
-          title: l10n.pairHealthWorkoutTitle,
-          message: l10n.pairHealthWorkoutMessage(
-            _label.format(workout.startDate.toLocal()),
-            workout.activeCalories?.round().toString() ?? '–',
-            workout.averageHeartRate?.round().toString() ?? '–',
-          ),
-          confirmLabel: l10n.pairAndFinishButton,
-          cancelLabel: l10n.finishWithoutPairingButton,
-          icon: Icons.link_rounded,
-          barrierDismissible: false,
-        );
-        if (!mounted || pair == null) return; // barrier dismiss = stay
-        await _persistFinished();
-        if (!mounted) return;
-        if (pair) {
-          await importService.importInto(
-            sessionClientId: _sessionClientId!,
-            startedAt: _startedAt!,
-            exercises: _buildPlanned(),
-            sets: _buildSets(),
-            workout: workout,
-          );
-          if (!mounted) return;
-        }
-        await _maybeShowWorkoutSuccess();
-        if (!mounted) return;
-        _navigateToDashboard();
-      } else {
-        // No health workout found — dialog instead of snackbar.
-        final finish = await showAppConfirmDialog(
-          context,
-          title: l10n.noHealthWorkoutTitle,
-          message: l10n.noHealthWorkoutMessage,
-          confirmLabel: l10n.finishAnywayButton,
-          cancelLabel: l10n.cancelButton,
-          icon: Icons.fitness_center_rounded,
-          barrierDismissible: false,
-        );
-        if (!mounted || finish != true) return; // Cancel = stay
-        await _persistFinished();
-        if (!mounted) return;
-        await _maybeShowWorkoutSuccess();
-        if (!mounted) return;
-        _navigateToDashboard();
-      }
-    } catch (_) {
-      if (mounted) {
-        AppSnackbar.showError(context, title: l10n.couldNotSaveSessionMessage);
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  /// Manual "Import from Health" action for a session that's already been
-  /// closed and isn't paired yet — covers finishing the Lifey session before
-  /// the tracked workout itself ended, so [_finishWorkout]'s same-moment
-  /// auto-match found nothing. Opens a picker over the last two weeks of
-  /// unpaired strength workouts rather than re-running the narrow auto-match.
-  Future<void> _importFromHealthManually() async {
-    if (_saving || _sessionClientId == null) return;
-    setState(() => _saving = true);
-    final l10n = AppLocalizations.of(context)!;
-    final importService = ref.read(healthWorkoutImportServiceProvider);
-
-    try {
-      final candidates = await importService.findImportableCandidates();
+      await _maybeShowWorkoutSuccess();
       if (!mounted) return;
-
-      final workout = await showModalBottomSheet<HealthWorkout>(
-        context: context,
-        useRootNavigator: true,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (_) => HealthWorkoutPickerSheet(candidates: candidates),
-      );
-      if (workout == null || !mounted) return;
-
-      final confirm = await showAppConfirmDialog(
-        context,
-        title: l10n.pairHealthWorkoutTitle,
-        message: l10n.pairHealthWorkoutMessage(
-          _label.format(workout.startDate.toLocal()),
-          workout.activeCalories?.round().toString() ?? '–',
-          workout.averageHeartRate?.round().toString() ?? '–',
-        ),
-        confirmLabel: l10n.pairButton,
-        cancelLabel: l10n.cancelButton,
-        icon: Icons.link_rounded,
-      );
-      if (confirm != true || !mounted) return;
-
-      await importService.importInto(
-        sessionClientId: _sessionClientId!,
-        startedAt: _startedAt!,
-        exercises: _buildPlanned(),
-        sets: _buildSets(),
-        workout: workout,
-      );
-      if (!mounted) return;
-      AppSnackbar.showSuccess(context, title: l10n.workoutPairedWithHealthMessage);
-      Navigator.of(context).pop();
+      _navigateToDashboard();
     } catch (_) {
       if (mounted) {
         AppSnackbar.showError(context, title: l10n.couldNotSaveSessionMessage);
@@ -884,7 +1049,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 ),
               )
             else
-              Icon(Icons.mood_rounded, size: 21, color: scheme.onSurfaceVariant),
+              Icon(Icons.mood_rounded,
+                  size: 21, color: scheme.onSurfaceVariant),
             const SizedBox(width: 11),
             Expanded(
               child: Column(
@@ -920,7 +1086,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               ),
             ),
             Icon(Icons.chevron_right,
-                size: 20, color: scheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                size: 20,
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.6)),
           ],
         ),
       ),
@@ -931,7 +1098,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   /// reply affordance (the push notification is the only attention
   /// mechanism; this block is just the persistent record). See
   /// docs/31-session-feedback-loop-plan.md, M2.
-  Widget _buildTrainerCommentSection(BuildContext context, AppLocalizations l10n) {
+  Widget _buildTrainerCommentSection(
+      BuildContext context, AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     final comment = widget.session!.trainerComment!;
     final commentAt = widget.session!.trainerCommentAt;
@@ -945,7 +1113,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.chat_bubble_outline_rounded, size: 21, color: scheme.onSurfaceVariant),
+          Icon(Icons.chat_bubble_outline_rounded,
+              size: 21, color: scheme.onSurfaceVariant),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
@@ -1122,22 +1291,53 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     // Resolve exercise names for template-seeded blocks (TemplateExercise has no name).
-    final exercisesById = ref.watch(exerciseControllerProvider).maybeWhen(
-          data: (list) => {for (final e in list) e.clientId: e},
-          orElse: () => const {},
-        );
+    final Map<String, Exercise> exercisesById =
+        ref.watch(exerciseControllerProvider).maybeWhen(
+              data: (list) => {for (final e in list) e.clientId: e},
+              orElse: () => const {},
+            );
     for (final block in _blocks) {
       if (block.exerciseName.isEmpty) {
         block.exerciseName = exercisesById[block.exerciseClientId]?.name ?? '';
       }
+      block.exerciseCategory = exercisesById[block.exerciseClientId]?.category;
     }
 
-    final lastDoneAt = _lastDoneAt();
+    // ── Rest timer (docs/39-rest-timer-plan.md §2.1/§2.4) ──
+    final restSettings = ref.watch(settingsControllerProvider).value ??
+        const UserSettings.defaults();
+    final lastDoneEntry = _lastDoneEntry();
+    final lastDoneAt = lastDoneEntry?.doneAt;
+    _syncRestEphemeralState();
+
+    final restIsSkipped =
+        _restSkippedAt != null && _restSkippedAt == lastDoneAt;
+    final restTimerActive = restSettings.restTimerEnabled &&
+        _finishedAt == null &&
+        lastDoneEntry != null &&
+        !restIsSkipped;
+    int? restTargetSeconds;
+    bool restIsOvertime = false;
+    if (restTimerActive) {
+      restTargetSeconds = _effectiveRestSeconds(
+          lastDoneEntry.block, exercisesById, restSettings);
+      final target = Duration(seconds: restTargetSeconds) + _restAdjustment;
+      final elapsed = _now.difference(lastDoneEntry.doneAt);
+      restIsOvertime = elapsed >= target;
+      if (restIsOvertime && !_restOvertimeHapticFired) {
+        _restOvertimeHapticFired = true;
+        WidgetsBinding.instance.addPostFrameCallback(
+            (_) => unawaited(HapticFeedback.mediumImpact()));
+      }
+    }
+
     final safeBottom = MediaQuery.paddingOf(context).bottom;
     final statusTop = MediaQuery.paddingOf(context).top;
     final barTop = statusTop + 8.0;
-    const restBannerHeight = 50.0;
-    final restBannerVisible = _finishedAt == null && lastDoneAt != null;
+    final restBannerVisible =
+        _finishedAt == null && lastDoneAt != null && !restIsSkipped;
+    final restBannerHeight =
+        (restBannerVisible && restSettings.restTimerEnabled) ? 74.0 : 50.0;
     final restBannerTop = barTop + 58.0 + 8.0;
     final contentTop = restBannerVisible
         ? restBannerTop + restBannerHeight + 8.0
@@ -1145,19 +1345,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
     // Finish button is only shown for running (not-yet-finished) sessions.
     final showFinishButton = _finishedAt == null;
-    // Manual pairing action for a session that's already closed but wasn't
-    // paired with a health workout at finish time (e.g. the tracked workout
-    // was still running when Lifey's session was closed).
-    final healthEnabled = ref.watch(healthControllerProvider).value ?? false;
-    final showImportHealthButton = _isEditing &&
-        _finishedAt != null &&
-        !(widget.session?.fromAppleHealth ?? false) &&
-        healthEnabled &&
-        ref.read(healthServiceProvider).isAvailable;
     // ListView needs extra bottom room so content isn't hidden behind the sticky button.
-    final listBottomPad = (showFinishButton || showImportHealthButton)
-        ? (safeBottom + 24 + 54 + 16)
-        : (safeBottom + 16);
+    final listBottomPad =
+        showFinishButton ? (safeBottom + 24 + 54 + 16) : (safeBottom + 16);
 
     final title = _isEditing
         ? (widget.session!.templateName ?? l10n.editWorkoutTitle)
@@ -1253,7 +1443,33 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               top: restBannerTop,
               left: 16,
               right: 16,
-              child: _RestBanner(lastSetAt: lastDoneAt, now: _now),
+              child: _RestBanner(
+                lastSetAt: lastDoneAt,
+                now: _now,
+                enabled: restSettings.restTimerEnabled,
+                targetSeconds: restTargetSeconds,
+                adjustment: _restAdjustment,
+                isOvertime: restIsOvertime,
+                onAddFifteen: () {
+                  setState(
+                      () => _restAdjustment += const Duration(seconds: 15));
+                  unawaited(_rescheduleRestNotification());
+                  // Keep the native Live Activity / Android chronometer
+                  // countdown in sync (docs/39-rest-timer-plan.md, Prompt 5)
+                  // — otherwise it'd only pick up the new target on the next
+                  // autosave.
+                  if (_sessionNotifierStarted) {
+                    unawaited(_updateSessionNotifier());
+                  }
+                },
+                onSkip: () {
+                  setState(() => _restSkippedAt = lastDoneAt);
+                  unawaited(NotificationService.cancelRestEnd());
+                  if (_sessionNotifierStarted) {
+                    unawaited(_updateSessionNotifier());
+                  }
+                },
+              ),
             ),
 
           // ── Sticky "Finish workout" button ──
@@ -1293,47 +1509,6 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                         )
                       : const Icon(Icons.check, size: 20),
                   label: Text(l10n.finishWorkoutButton),
-                ),
-              ),
-            ),
-
-          // ── Sticky "Import from Health" button (closed, unpaired session) ──
-          if (showImportHealthButton)
-            Positioned(
-              bottom: safeBottom + 24,
-              left: 16,
-              right: 16,
-              child: SizedBox(
-                height: 54,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _importFromHealthManually,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: scheme.primary,
-                    foregroundColor: scheme.onPrimary,
-                    disabledBackgroundColor:
-                        scheme.primary.withValues(alpha: 0.6),
-                    disabledForegroundColor:
-                        scheme.onPrimary.withValues(alpha: 0.7),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    textStyle: const TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  icon: _saving
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: scheme.onPrimary.withValues(alpha: 0.7),
-                          ),
-                        )
-                      : const Icon(Icons.link_rounded, size: 20),
-                  label: Text(l10n.importFromHealthButton),
                 ),
               ),
             ),
@@ -1443,50 +1618,273 @@ class _DashedBorderPainter extends CustomPainter {
 // ---------------------------------------------------------------------------
 
 class _RestBanner extends StatelessWidget {
-  const _RestBanner({required this.lastSetAt, required this.now});
+  const _RestBanner({
+    required this.lastSetAt,
+    required this.now,
+    required this.enabled,
+    required this.targetSeconds,
+    required this.adjustment,
+    required this.isOvertime,
+    required this.onAddFifteen,
+    required this.onSkip,
+  });
 
   final DateTime lastSetAt;
   final DateTime now;
 
+  /// Whether the rest-timer feature is on (`UserSettings.restTimerEnabled`).
+  /// When false, this renders today's plain elapsed-since-last-set count-up
+  /// with no buttons — the feature degrades, it never disappears.
+  final bool enabled;
+
+  /// The effective rest duration for the last-done set's exercise, seconds.
+  /// Null when [enabled] is false (unused in that branch).
+  final int? targetSeconds;
+
+  /// Accumulated +15s taps for the current rest.
+  final Duration adjustment;
+  final bool isOvertime;
+  final VoidCallback onAddFifteen;
+  final VoidCallback onSkip;
+
+  static const _warnColor = Color(0xFFD66B5A);
+
+  String _mmss(Duration d) {
+    final m = d.inMinutes;
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final elapsed = now.difference(lastSetAt);
-    final m = elapsed.inMinutes;
-    final s = (elapsed.inSeconds % 60).toString().padLeft(2, '0');
 
+    if (!enabled) {
+      return _container(
+        scheme: scheme,
+        child: _headerRow(
+          context: context,
+          icon: Icons.hourglass_top,
+          iconColor: scheme.primary,
+          timeText: _mmss(elapsed),
+          timeColor: scheme.primary,
+          l10n: l10n,
+        ),
+      );
+    }
+
+    final target = Duration(seconds: targetSeconds!) + adjustment;
+
+    if (isOvertime) {
+      final overage = elapsed - target;
+      return _container(
+        scheme: scheme,
+        accentColor: _warnColor,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _headerRow(
+              context: context,
+              icon: Icons.hourglass_bottom,
+              iconColor: _warnColor,
+              timeText: '+${_mmss(overage)}',
+              timeColor: _warnColor,
+              l10n: l10n,
+              trailing: _RestIconButton(
+                icon: Icons.close,
+                color: _warnColor,
+                tooltip: l10n.restTimerSkipButton,
+                onTap: onSkip,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _progressBar(color: _warnColor, value: 1),
+          ],
+        ),
+      );
+    }
+
+    final remaining = target - elapsed;
+    final progress = target.inMilliseconds == 0
+        ? 1.0
+        : (elapsed.inMilliseconds / target.inMilliseconds).clamp(0.0, 1.0);
+
+    return _container(
+      scheme: scheme,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _headerRow(
+            context: context,
+            icon: Icons.hourglass_top,
+            iconColor: scheme.primary,
+            timeText: _mmss(remaining),
+            timeColor: scheme.primary,
+            l10n: l10n,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _RestActionChip(
+                  label: l10n.restTimerAddSecondsButton,
+                  color: scheme.primary,
+                  onTap: onAddFifteen,
+                ),
+                const SizedBox(width: 6),
+                _RestIconButton(
+                  icon: Icons.close,
+                  color: scheme.onSurfaceVariant,
+                  tooltip: l10n.restTimerSkipButton,
+                  onTap: onSkip,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _progressBar(color: scheme.primary, value: progress),
+        ],
+      ),
+    );
+  }
+
+  Widget _container({
+    required ColorScheme scheme,
+    required Widget child,
+    Color? accentColor,
+  }) {
+    final accent = accentColor ?? scheme.primary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.14),
+        color: accent.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(AppRadius.input),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.40)),
+        border: Border.all(color: accent.withValues(alpha: 0.40)),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.hourglass_top, size: 22, color: scheme.primary),
-          const SizedBox(width: 10),
-          Text(
-            AppLocalizations.of(context)!.restLabel,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurface,
-            ),
+      child: child,
+    );
+  }
+
+  Widget _headerRow({
+    required BuildContext context,
+    required IconData icon,
+    required Color iconColor,
+    required String timeText,
+    required Color timeColor,
+    required AppLocalizations l10n,
+    Widget? trailing,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Icon(icon, size: 22, color: iconColor),
+        const SizedBox(width: 10),
+        Text(
+          l10n.restLabel,
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: scheme.onSurface,
           ),
-          const Spacer(),
-          Text(
-            '$m:$s',
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: scheme.primary,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+        ),
+        const Spacer(),
+        Text(
+          timeText,
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: timeColor,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing,
         ],
+      ],
+    );
+  }
+
+  Widget _progressBar({required Color color, required double value}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: LinearProgressIndicator(
+        value: value,
+        minHeight: 4,
+        backgroundColor: color.withValues(alpha: 0.2),
+        valueColor: AlwaysStoppedAnimation(color),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rest banner action buttons
+// ---------------------------------------------------------------------------
+
+class _RestActionChip extends StatelessWidget {
+  const _RestActionChip(
+      {required this.label, required this.color, required this.onTap});
+
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: 11.5,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RestIconButton extends StatelessWidget {
+  const _RestIconButton({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 14, color: color),
+        ),
       ),
     );
   }

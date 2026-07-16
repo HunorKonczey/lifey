@@ -14,6 +14,11 @@ struct WorkoutActivityAttributes: ActivityAttributes {
     var setsTotal: Int?
     var totalSetsDone: Int
     var lastSetAtEpochMs: Int64?
+    // Rest-timer target end time (docs/39-rest-timer-plan.md, Prompt 5) —
+    // nil when the rest timer is disabled, skipped, or already expired; the
+    // Live Activity then falls back to the plain count-up from
+    // lastSetAtEpochMs.
+    var restEndsAtEpochMs: Int64?
   }
 
   var sessionClientId: String

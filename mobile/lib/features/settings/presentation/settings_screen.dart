@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show File, Platform;
 import 'dart:typed_data' show Uint8List;
 
@@ -8,7 +9,9 @@ import 'package:intl/intl.dart';
 
 import '../../../core/health/health_controller.dart';
 import '../../../core/network/error_message.dart';
+import '../../../core/notifications/notification_service.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/watch/watch_workout_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -51,6 +54,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int? _stepGoal;
   bool _avatarBusy = false;
 
+  // Passed through unchanged on every autosave from this screen (not edited
+  // here) so a save doesn't silently reset fields owned by other screens
+  // (notification settings) back to their class defaults.
+  late bool _workoutReminderEnabled;
+  late bool _trainerCommentPushEnabled;
+  late bool _trainerGoalsPushEnabled;
+  late bool _programAssignedPushEnabled;
+
+  late bool _restTimerEnabled;
+  late int _defaultRestSeconds;
+  late bool _watchWorkoutEnabled;
+
+  // Whether a paired + installed watch app was detected — the toggle row
+  // only shows once this resolves true (docs/40-watch-app-plan.md §6.4).
+  // Null while the check is still in flight.
+  bool? _watchAvailable;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_checkWatchAvailability());
+  }
+
+  Future<void> _checkWatchAvailability() async {
+    final available = await ref.read(watchWorkoutServiceProvider).isWatchAppAvailable();
+    if (mounted) setState(() => _watchAvailable = available);
+  }
+
   void _initFromSettings(UserSettings s) {
     _unitSystem = s.unitSystem;
     _theme = s.theme;
@@ -61,6 +92,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _fatGoal = s.dailyFatGoal;
     _waterGoal = s.dailyWaterGoalLiters;
     _stepGoal = s.dailyStepGoal;
+    _workoutReminderEnabled = s.workoutReminderEnabled;
+    _trainerCommentPushEnabled = s.trainerCommentPushEnabled;
+    _trainerGoalsPushEnabled = s.trainerGoalsPushEnabled;
+    _programAssignedPushEnabled = s.programAssignedPushEnabled;
+    _restTimerEnabled = s.restTimerEnabled;
+    _defaultRestSeconds = s.defaultRestSeconds;
+    _watchWorkoutEnabled = s.watchWorkoutEnabled;
     _initialized = true;
   }
 
@@ -78,6 +116,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             dailyFatGoal: _fatGoal,
             dailyWaterGoalLiters: _waterGoal,
             dailyStepGoal: _stepGoal,
+            workoutReminderEnabled: _workoutReminderEnabled,
+            trainerCommentPushEnabled: _trainerCommentPushEnabled,
+            trainerGoalsPushEnabled: _trainerGoalsPushEnabled,
+            programAssignedPushEnabled: _programAssignedPushEnabled,
+            restTimerEnabled: _restTimerEnabled,
+            defaultRestSeconds: _defaultRestSeconds,
+            watchWorkoutEnabled: _watchWorkoutEnabled,
           ),
         )
         .catchError((e) {
@@ -85,6 +130,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             AppSnackbar.showError(context, title: friendlyError(e));
           }
         });
+  }
+
+  static const List<int> _restDurationPresets = [30, 45, 60, 90, 120, 150, 180, 240, 300];
+
+  static String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  // Opens a bottom-sheet picker for the default rest duration. Scrollable
+  // (isScrollControlled + ListView, not a plain Column) since the 9 presets
+  // don't fit a fixed-height sheet on shorter screens.
+  void _pickRestDuration(AppLocalizations l10n) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  l10n.restTimerDurationSheetTitle,
+                  style: Theme.of(sheetCtx).textTheme.titleMedium,
+                ),
+              ),
+              for (final seconds in _restDurationPresets)
+                ListTile(
+                  title: Text(_formatDuration(seconds)),
+                  trailing: _defaultRestSeconds == seconds
+                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    setState(() => _defaultRestSeconds = seconds);
+                    _autoSave();
+                    Navigator.of(sheetCtx).pop();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   // Opens a bottom-sheet picker for Language.
@@ -602,6 +694,84 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ],
                     ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Workout (docs/39-rest-timer-plan.md §3.2) ────────────────
+                _GroupLabel(l10n.workoutSectionLabel),
+                const SizedBox(height: 8),
+                _SettingsCard(
+                  children: [
+                    _SettingRow(
+                      icon: Icons.timer_outlined,
+                      iconColor: scheme.primary,
+                      label: l10n.restTimerToggleLabel,
+                      trailing: Switch(
+                        value: _restTimerEnabled,
+                        onChanged: (v) {
+                          setState(() => _restTimerEnabled = v);
+                          _autoSave();
+                          if (v) {
+                            // Exact-alarm permission is requested here (an
+                            // explicit user action) rather than mid-workout —
+                            // see docs/39-rest-timer-plan.md §2.3.
+                            unawaited(NotificationService.requestRestTimerExactAlarmPermission());
+                          } else {
+                            unawaited(NotificationService.cancelRestEnd());
+                          }
+                        },
+                        activeThumbColor: scheme.primary,
+                        activeTrackColor: scheme.primary.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    const _RowDivider(),
+                    _SettingRow(
+                      icon: Icons.hourglass_bottom,
+                      iconColor: scheme.primary,
+                      label: l10n.restTimerDurationLabel,
+                      onTap: () => _pickRestDuration(l10n),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _formatDuration(_defaultRestSeconds),
+                            style: TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Icon(
+                            Icons.expand_more,
+                            size: 20,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Only shown once a paired + installed watch app was
+                    // detected (docs/40-watch-app-plan.md §6.4) — a live
+                    // check, not persisted, so it can also disappear again if
+                    // the watch is later unpaired.
+                    if (_watchAvailable == true) ...[
+                      const _RowDivider(),
+                      _SettingRow(
+                        icon: Icons.watch_outlined,
+                        iconColor: scheme.primary,
+                        label: l10n.watchWorkoutToggleLabel,
+                        trailing: Switch(
+                          value: _watchWorkoutEnabled,
+                          onChanged: (v) {
+                            setState(() => _watchWorkoutEnabled = v);
+                            _autoSave();
+                          },
+                          activeThumbColor: scheme.primary,
+                          activeTrackColor: scheme.primary.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 20),

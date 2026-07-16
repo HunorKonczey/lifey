@@ -25,6 +25,8 @@ public final class SettingsMapper {
         settings.setTrainerCommentPushEnabled(request.trainerCommentPushEnabled());
         settings.setTrainerGoalsPushEnabled(request.trainerGoalsPushEnabled());
         settings.setProgramAssignedPushEnabled(request.programAssignedPushEnabled());
+        settings.setRestTimerEnabled(request.restTimerEnabled());
+        settings.setDefaultRestSeconds(request.defaultRestSeconds());
     }
 
     public static SettingsResponse toResponse(UserSettings settings) {
@@ -41,7 +43,9 @@ public final class SettingsMapper {
                 settings.isWorkoutReminderEnabled(),
                 settings.isTrainerCommentPushEnabled(),
                 settings.isTrainerGoalsPushEnabled(),
-                settings.isProgramAssignedPushEnabled()
+                settings.isProgramAssignedPushEnabled(),
+                settings.isRestTimerEnabled(),
+                settings.getDefaultRestSeconds()
         );
     }
 }

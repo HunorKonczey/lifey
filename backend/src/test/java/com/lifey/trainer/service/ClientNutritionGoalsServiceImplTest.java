@@ -52,7 +52,7 @@ class ClientNutritionGoalsServiceImplTest {
 
     private static SettingsResponse settings(Integer calories, Integer protein, Integer carbs, Integer fat) {
         return new SettingsResponse(UnitSystem.METRIC, calories, protein, carbs, fat, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, 90);
     }
 
     @Test

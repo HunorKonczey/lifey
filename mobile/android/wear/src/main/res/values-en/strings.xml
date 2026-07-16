@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English mirror of values/strings.xml (docs/40-watch-app-plan.md F4) —
+     kept in sync by hand, same keys, same order. -->
+<resources>
+    <string name="idle_title">Lifey</string>
+    <string name="idle_subtitle">Start a workout on your phone</string>
+
+    <string name="exercise_notification_channel">Workout</string>
+    <string name="exercise_notification_title">Lifey workout running</string>
+
+    <string name="active_default_exercise">Exercise</string>
+    <string name="active_sets_format">%1$d/%2$d sets</string>
+    <string name="active_rest_format">Rest %1$s</string>
+    <string name="active_heart_rate_unit">bpm</string>
+    <string name="active_calories_unit">kcal</string>
+    <string name="active_end_button">End</string>
+</resources>

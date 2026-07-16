@@ -148,10 +148,11 @@ class HealthService {
   };
 
   /// Foreground read of strength workouts that **finished within [within]** of
-  /// now, most-recently-finished first. This is the Phase 1 import source: the
-  /// user taps "Import from Health" right after finishing their tracked
-  /// workout, so it has already synced and a plain foreground query finds it
-  /// — no observer/background delivery needed.
+  /// now, most-recently-finished first. The manual "Import from Health" UI
+  /// flow this originally backed was removed once the watch integration
+  /// (docs/40-watch-app-plan.md) started supplying the same fields directly —
+  /// the sole remaining caller is [writeStrengthWorkoutAndGetId], looking up
+  /// the uuid of the Health Connect record it just wrote.
   ///
   /// Returns `[]` when unavailable, Health Connect isn't installed, or there's
   /// nothing/permission was denied (neither platform reveals READ-grant
@@ -190,6 +191,45 @@ class HealthService {
       }
       workouts.sort((a, b) => b.endDate.compareTo(a.endDate));
       return workouts;
+    });
+  }
+
+  /// Writes the just-finished Android watch exercise to Health Connect and
+  /// returns the written record's uuid to use as `healthWorkoutId` — the
+  /// Android counterpart to iOS, where the watch already writes to HealthKit
+  /// directly and hands back a real `HKWorkout` uuid
+  /// (docs/40-watch-app-plan.md §5.2 "Döntés: a telefon ír HC-be";
+  /// [WorkoutResumePrompt] only calls this when a watch summary arrives with
+  /// no `healthWorkoutId` already, i.e. the Android path).
+  ///
+  /// Returns null on iOS (no-op — iOS never needs this), when unavailable, or
+  /// on any failure. `writeWorkoutData` itself doesn't return the created
+  /// record's id, so this looks it up afterwards via [recentStrengthWorkouts],
+  /// matching by closest [startDate] to [start].
+  Future<String?> writeStrengthWorkoutAndGetId({
+    required DateTime start,
+    required DateTime end,
+    double? activeCalories,
+    String? title,
+  }) async {
+    if (!Platform.isAndroid) return null;
+    return _guarded(null, () async {
+      await _ensureConfigured();
+      final written = await _health.writeWorkoutData(
+        activityType: HealthWorkoutActivityType.STRENGTH_TRAINING,
+        start: start,
+        end: end,
+        totalEnergyBurned: activeCalories?.round(),
+        title: title,
+      );
+      if (!written) return null;
+
+      final candidates = await recentStrengthWorkouts(within: const Duration(minutes: 5));
+      if (candidates.isEmpty) return null;
+      candidates.sort(
+        (a, b) => (a.startDate.difference(start)).abs().compareTo((b.startDate.difference(start)).abs()),
+      );
+      return candidates.first.uuid;
     });
   }
 
