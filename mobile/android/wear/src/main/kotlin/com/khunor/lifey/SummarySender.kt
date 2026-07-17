@@ -39,6 +39,12 @@ object SummarySender {
         send(context, "$MESSAGE_PATH_PREFIX/endRequested", sessionClientId)
     }
 
+    /** The watch's own exercise session actually started measuring — drives
+     * the phone's "Measuring" pill (docs/40-watch-app-plan.md §12.4 B14). */
+    suspend fun sendStartedOnWatch(context: Context, sessionClientId: String) {
+        send(context, "$MESSAGE_PATH_PREFIX/startedOnWatch", sessionClientId)
+    }
+
     private suspend fun send(context: Context, path: String, payload: Any) {
         val messageClient = Wearable.getMessageClient(context)
         val nodeClient = Wearable.getNodeClient(context)

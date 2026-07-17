@@ -374,7 +374,7 @@
     "recentWorkoutsSectionTitle": "Legutóbbi edzések",
     "noWorkoutsLoggedYetPeriodMessage": "Még nincs naplózott edzés.",
 
-    "importedFromHealthTooltip": "Importálva egészségügyi adatokból",
+    "enrichedFromWatchTooltip": "Órán mérve",
     "healthStatsLine": "{calories} kcal · {heartRate} bpm átlag (Egészségügyi adatok)",
 
     "importFromHealthButton": "Importálás egészségügyi adatokból",
@@ -469,6 +469,7 @@
     "restTimerDurationSheetTitle": "Pihenőidő",
     "watchWorkoutToggleLabel": "Edzés indítása az órán",
     "watchStartRejectedMessage": "Az órán már fut egy másik edzés",
+    "watchMeasuringPillLabel": "Mérés",
     "restTimerNotificationTitle": "Vége a pihenőnek",
     "restTimerNotificationBody": "Ideje a következő szettnek",
     "finishWorkoutButton": "Edzés befejezése",

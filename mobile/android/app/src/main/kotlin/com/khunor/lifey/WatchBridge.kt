@@ -199,6 +199,10 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                 val sessionClientId = String(messageEvent.data)
                 eventSink?.success(mapOf("type" to "endRequested", "sessionClientId" to sessionClientId))
             }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_STARTED_ON_WATCH" -> {
+                val sessionClientId = String(messageEvent.data)
+                eventSink?.success(mapOf("type" to "startedOnWatch", "sessionClientId" to sessionClientId))
+            }
             "$MESSAGE_PATH_PREFIX/$COMMAND_SUMMARY" -> {
                 emitSummary(String(messageEvent.data))
             }
@@ -259,6 +263,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_END = "end"
         private const val COMMAND_START_REJECTED = "startRejected"
         private const val COMMAND_END_REQUESTED = "endRequested"
+        private const val COMMAND_STARTED_ON_WATCH = "startedOnWatch"
         private const val COMMAND_SUMMARY = "summary"
     }
 }

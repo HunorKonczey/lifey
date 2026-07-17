@@ -63,13 +63,21 @@ class WorkoutSession {
   final List<SessionExercise> exercises;
   final List<ExerciseSet> sets;
 
-  /// Active energy burned (kcal), imported from Apple Health.
+  /// Active energy burned (kcal), enriched from a paired watch's workout
+  /// summary (docs/watch/40-watch-app-plan.md) — the old manual "Import from
+  /// Health" flow (doc 16) was removed 2026-07-16; this is the only source now.
   final double? activeCalories;
 
-  /// Average heart rate (bpm) over the workout, imported from Apple Health.
+  /// Average heart rate (bpm) over the workout, enriched from a paired
+  /// watch's workout summary — see [activeCalories].
   final double? averageHeartRate;
 
-  /// HKWorkout UUID this session was paired with, if imported from Apple Health.
+  /// The health-store workout id this session is paired with: a real
+  /// `HKWorkout` UUID on iOS (the watch writes it directly), or a Health
+  /// Connect record id on Android (the phone writes it itself once the watch
+  /// summary arrives, since Health Connect writes must come from the phone —
+  /// docs/watch/40-watch-app-plan.md §5.2). Non-null exactly when
+  /// [enrichedFromWatch] is true.
   final String? healthWorkoutId;
 
   /// clientId of the template this session was started from, null when
@@ -113,7 +121,12 @@ class WorkoutSession {
   /// while [scheduledFor] is within the client's 7-day visibility window.
   bool get isUpcoming => startedAt == null && scheduledFor != null;
 
-  bool get fromAppleHealth => healthWorkoutId != null;
+  /// True once a paired watch's workout summary has enriched this session
+  /// with health-store metrics (docs/watch/40-watch-app-plan.md §12.4 B15) —
+  /// drives the ⌚ badge on the session card. Named for the *source*
+  /// (watch), not the *destination* store, since that differs by platform
+  /// (HealthKit on iOS, Health Connect on Android — see [healthWorkoutId]).
+  bool get enrichedFromWatch => healthWorkoutId != null;
 
   /// True once the user has rated this session's difficulty (see [rpe]).
   bool get isRated => rpe != null;

@@ -10,7 +10,13 @@
 		056127ACDC2D6C06538EC411 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F3E1B2D6084DD2CF55DBF111 /* Foundation.framework */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		15C0D50A4AAE4258A9903997 /* IdleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 216887D75EC840DFA5F1098B /* IdleView.swift */; };
+		F4608790FA1570EE9F3CE57B /* EndingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15894AC08BE110C70266202E /* EndingView.swift */; };
+		8F5C79780C88D2D334880F4E /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9579E90AC7DE881411D162D8 /* SummaryView.swift */; };
+		4EEF1AC98123BD8D0100B686 /* HealthDeniedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30F1283363772E14034D7802 /* HealthDeniedView.swift */; };
+		2DC0C7362BA1403C3BA2FECB /* LifeyColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97874626E4BBCC64426D69CE /* LifeyColors.swift */; };
+		6FA25C1A3FE6FE2086FBA112 /* LifeyShapes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FBAC8928C47BE228C8BD2B7 /* LifeyShapes.swift */; };
 		1B0DA9772E564056B0723B13 /* WorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3EC32BB8CB246A8BE328032 /* WorkoutManager.swift */; };
+		92D6C4D89BCE9885B1286ACA /* DynamicSizing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F328E47DE6754604F801D76F /* DynamicSizing.swift */; };
 		211362E920CA478773747268 /* LifeyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 23A1073CDB2DBB6581FCF4F6 /* LifeyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2675BFA5059C5368D62BED3C /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
@@ -107,6 +113,11 @@
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		216887D75EC840DFA5F1098B /* IdleView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IdleView.swift; sourceTree = "<group>"; };
+		15894AC08BE110C70266202E /* EndingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EndingView.swift; sourceTree = "<group>"; };
+		9579E90AC7DE881411D162D8 /* SummaryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SummaryView.swift; sourceTree = "<group>"; };
+		30F1283363772E14034D7802 /* HealthDeniedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthDeniedView.swift; sourceTree = "<group>"; };
+		97874626E4BBCC64426D69CE /* LifeyColors.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyColors.swift; sourceTree = "<group>"; };
+		4FBAC8928C47BE228C8BD2B7 /* LifeyShapes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyShapes.swift; sourceTree = "<group>"; };
 		23A1073CDB2DBB6581FCF4F6 /* LifeyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LifeyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		241E2499ED7993F93985D060 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
@@ -138,6 +149,7 @@
 		A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
 		ABDF281739DB260B7315FE49 /* TodaySummaryWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TodaySummaryWidget.swift; sourceTree = "<group>"; };
 		B3EC32BB8CB246A8BE328032 /* WorkoutManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
+		F328E47DE6754604F801D76F /* DynamicSizing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DynamicSizing.swift; sourceTree = "<group>"; };
 		C172D655068797390A33BC32 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C5B4A3928170F6E5D4C3B2A1 /* PushChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PushChannel.swift; sourceTree = "<group>"; };
 		CFF035215C8B3D9E96C6BB53 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -200,8 +212,20 @@
 			children = (
 				E42293D98E4942DCB04B165E /* ActiveWorkoutView.swift */,
 				216887D75EC840DFA5F1098B /* IdleView.swift */,
+				15894AC08BE110C70266202E /* EndingView.swift */,
+				9579E90AC7DE881411D162D8 /* SummaryView.swift */,
+				30F1283363772E14034D7802 /* HealthDeniedView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		3CF41998C8934E37E77E6F52 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				97874626E4BBCC64426D69CE /* LifeyColors.swift */,
+				4FBAC8928C47BE228C8BD2B7 /* LifeyShapes.swift */,
+			);
+			path = Theme;
 			sourceTree = "<group>";
 		};
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
@@ -316,8 +340,10 @@
 				7B869FA4F27F4942A50F51F6 /* LifeyWatchApp.swift */,
 				0CA01381F208E459209B7674 /* ContentView.swift */,
 				B3EC32BB8CB246A8BE328032 /* WorkoutManager.swift */,
+				F328E47DE6754604F801D76F /* DynamicSizing.swift */,
 				12F2C6137F4746E0A1818C6D /* PhoneConnector.swift */,
 				2FE3F11E4B1E48CF97E6DD86 /* Views */,
+				3CF41998C8934E37E77E6F52 /* Theme */,
 				D6938B0E06EA4E5FB6C769C8 /* Localizable.xcstrings */,
 				B199F30DFF924EE0928C6D21 /* Assets.xcassets */,
 				70242DA06A8699B3E8E851BF /* LifeyWatch.entitlements */,
@@ -643,9 +669,15 @@
 				E2C15FF9F2D08196F7D9430B /* LifeyWatchApp.swift in Sources */,
 				E4E728B9F8538B015C8F9150 /* ContentView.swift in Sources */,
 				1B0DA9772E564056B0723B13 /* WorkoutManager.swift in Sources */,
+				92D6C4D89BCE9885B1286ACA /* DynamicSizing.swift in Sources */,
 				36AABD05BF944D39BFA79582 /* PhoneConnector.swift in Sources */,
 				3BA9433482684EBBA84C44CA /* ActiveWorkoutView.swift in Sources */,
 				15C0D50A4AAE4258A9903997 /* IdleView.swift in Sources */,
+				F4608790FA1570EE9F3CE57B /* EndingView.swift in Sources */,
+				8F5C79780C88D2D334880F4E /* SummaryView.swift in Sources */,
+				4EEF1AC98123BD8D0100B686 /* HealthDeniedView.swift in Sources */,
+				2DC0C7362BA1403C3BA2FECB /* LifeyColors.swift in Sources */,
+				6FA25C1A3FE6FE2086FBA112 /* LifeyShapes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

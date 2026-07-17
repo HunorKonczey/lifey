@@ -126,6 +126,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   DateTime? _lastHrSampleAt; // timestamp of the sample currently shown
   bool _showHeartRate = false;
 
+  // "Measuring" ⌚-pill (docs/40-watch-app-plan.md §12.4 B14) — true once the
+  // watch confirms its own session actually started, cleared on reachability
+  // loss; also implicitly hidden once [_finishedAt] is set (see build()).
+  bool _measuringOnWatch = false;
+
   // Lets the watch's own End button drive the same finish flow as the
   // in-app one (docs/40-watch-app-plan.md §8.2 decision (b)) — only while
   // this screen instance for the matching session is mounted; see
@@ -305,6 +310,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           context,
           title: AppLocalizations.of(context)!.watchStartRejectedMessage,
         );
+      case WatchStartedOnWatch():
+        if (event.sessionClientId != _sessionClientId || !mounted) return;
+        setState(() => _measuringOnWatch = true);
+      case WatchReachabilityChanged():
+        if (event.reachable || !mounted) return;
+        setState(() => _measuringOnWatch = false);
     }
   }
 
@@ -1278,6 +1289,36 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                     ),
                   ),
                 ],
+                // "Measuring" pill (docs/40-watch-app-plan.md §12.4 B14):
+                // the watch confirmed its own session started, until it ends
+                // or reachability is lost.
+                if (_measuringOnWatch && _finishedAt == null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.watch, size: 18, color: scheme.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          l10n.watchMeasuringPillLabel,
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 // Near-live heart rate, shown while a fresh sample is arriving.
                 if (_showHeartRate && _currentHeartRate != null) ...[
                   const SizedBox(width: 8),
@@ -1396,9 +1437,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           ListView(
             padding: EdgeInsets.fromLTRB(16, contentTop, 16, listBottomPad),
             children: [
-              // Health stat cards (health-imported finished sessions only).
+              // Health stat cards (watch-enriched finished sessions only).
               if (widget.session?.finishedAt != null &&
-                  widget.session!.fromAppleHealth) ...[
+                  widget.session!.enrichedFromWatch) ...[
                 Row(
                   children: [
                     Expanded(

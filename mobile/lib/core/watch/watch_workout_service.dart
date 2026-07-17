@@ -47,6 +47,24 @@ class WatchEndRequested {
   final String sessionClientId;
 }
 
+/// The watch's own session actually started measuring (its HealthKit/Health
+/// Services session is running) — docs/watch/40-watch-app-plan.md §12.4 B14.
+/// Drives the "Measuring" ⌚-pill in [LogSessionScreen]'s header; fired once
+/// per watch session, not on every state sync.
+class WatchStartedOnWatch {
+  const WatchStartedOnWatch(this.sessionClientId);
+  final String sessionClientId;
+}
+
+/// `WCSession.isReachable`'s change events, relayed 1:1 from iOS (Android has
+/// no equivalent push and never emits this — see [WatchWorkoutService.events]'s
+/// class doc). Used to hide the "Measuring" pill when the watch drops out of
+/// range (docs/watch/42-watch-design-implementation-plan.md D1.4 P1).
+class WatchReachabilityChanged {
+  const WatchReachabilityChanged(this.reachable);
+  final bool reachable;
+}
+
 /// Platform-neutral facade over the phone↔watch workout bridge
 /// (docs/40-watch-app-plan.md §6.1). Mirrors [WorkoutSessionNotifierService]'s
 /// shape and constructor-injection pattern so it can be called side by side
@@ -78,10 +96,10 @@ class WatchWorkoutService {
 
   Stream<Object>? _events;
 
-  /// Emits [WatchWorkoutSummary], [WatchStartRejected], or a raw event-name
-  /// `String` (`'startedOnWatch'`, `'reachabilityChanged'`) as they arrive
-  /// from the native side — see docs/40-watch-app-plan.md §3. A no-op stream
-  /// (never emits) when [isAvailable] is false.
+  /// Emits [WatchWorkoutSummary], [WatchStartRejected], [WatchEndRequested],
+  /// [WatchStartedOnWatch], [WatchReachabilityChanged], or a raw event-name
+  /// `String` for anything not yet decoded — see docs/40-watch-app-plan.md
+  /// §3. A no-op stream (never emits) when [isAvailable] is false.
   Stream<Object> get events {
     if (!isAvailable) return const Stream.empty();
     return _events ??= _eventChannel.receiveBroadcastStream().map(_decodeEvent);
@@ -96,6 +114,10 @@ class WatchWorkoutService {
         return WatchStartRejected(map['sessionClientId'] as String);
       case 'endRequested':
         return WatchEndRequested(map['sessionClientId'] as String);
+      case 'startedOnWatch':
+        return WatchStartedOnWatch(map['sessionClientId'] as String);
+      case 'reachabilityChanged':
+        return WatchReachabilityChanged(map['reachable'] as bool);
       default:
         return (map['type'] as String?) ?? 'unknown';
     }

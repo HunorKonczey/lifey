@@ -212,6 +212,8 @@ extension WatchBridge: WCSessionDelegate {
       eventSink?(["type": "startRejected", "sessionClientId": sessionClientId])
     case "endRequested":
       eventSink?(["type": "endRequested", "sessionClientId": sessionClientId])
+    case "startedOnWatch":
+      eventSink?(["type": "startedOnWatch", "sessionClientId": sessionClientId])
     default:
       break
     }

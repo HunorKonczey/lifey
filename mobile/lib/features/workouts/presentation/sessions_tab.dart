@@ -332,17 +332,17 @@ class _SessionCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (session.fromAppleHealth)
+                          if (session.enrichedFromWatch)
                             Padding(
                               padding: const EdgeInsets.only(left: 4),
                               child: Tooltip(
-                                message: l10n.importedFromHealthTooltip,
+                                message: l10n.enrichedFromWatchTooltip,
                                 child: Icon(
-                                  Icons.favorite,
+                                  Icons.watch,
                                   size: 15,
                                   color: scheme.onSurfaceVariant,
                                   semanticLabel:
-                                      l10n.importedFromHealthTooltip,
+                                      l10n.enrichedFromWatchTooltip,
                                 ),
                               ),
                             ),

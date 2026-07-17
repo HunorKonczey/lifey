@@ -49,6 +49,13 @@ final class PhoneConnector: NSObject {
     sendMessage(["type": "endRequested", "sessionClientId": sessionClientId])
   }
 
+  /// The watch's own `HKWorkoutSession` actually started running — drives the
+  /// phone's "Measuring" pill (docs/40-watch-app-plan.md §12.4 B14). Sent
+  /// once per watch session by `WorkoutManager`, not on every state sync.
+  func sendStartedOnWatch(sessionClientId: String) {
+    sendMessage(["type": "startedOnWatch", "sessionClientId": sessionClientId])
+  }
+
   private func sendMessage(_ message: [String: Any]) {
     // Best-effort, like the phone side's own sendMessage calls — a lost
     // startRejected/endRequested simply means the user retries
@@ -101,7 +108,8 @@ extension PhoneConnector: WCSessionDelegate {
       state: context["state"] as? [String: Any])
     if context["desiredPhase"] as? String == "ended" {
       Task { @MainActor in
-        if WorkoutManager.shared.phase == .active {
+        let phase = WorkoutManager.shared.phase
+        if phase == .active || phase == .ending {
           await WorkoutManager.shared.finishAndSendSummary()
         }
       }
@@ -116,7 +124,8 @@ extension PhoneConnector: WCSessionDelegate {
         exerciseName: state?["exerciseName"] as? String,
         setsDone: (state?["setsDone"] as? NSNumber)?.intValue,
         setsTotal: (state?["setsTotal"] as? NSNumber)?.intValue,
-        restEndsAtEpochMs: (state?["restEndsAtEpochMs"] as? NSNumber)?.int64Value)
+        restRemainingSeconds: (state?["restRemainingSeconds"] as? NSNumber)?.intValue,
+        restTotalSeconds: (state?["restTotalSeconds"] as? NSNumber)?.intValue)
     }
   }
 }

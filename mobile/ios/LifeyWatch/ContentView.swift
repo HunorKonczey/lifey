@@ -13,6 +13,12 @@ struct ContentView: View {
       IdleView()
     case .active:
       ActiveWorkoutView()
+    case .ending:
+      EndingView()
+    case .summary(let data):
+      SummaryView(data: data)
+    case .healthDenied:
+      HealthDeniedView()
     }
   }
 }

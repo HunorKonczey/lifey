@@ -202,6 +202,7 @@ class ExerciseService : Service() {
             exerciseClient.setUpdateCallback(updateCallback)
             exerciseClient.startExerciseAsync(config).await()
             SessionStateHolder.onExerciseActive(SystemClock.elapsedRealtime())
+            SummarySender.sendStartedOnWatch(this, sessionClientId)
         } catch (e: Exception) {
             // Another app already owns an exercise, or the sensor/service is
             // unavailable — docs/40-watch-app-plan.md §5.3, §8.1. §12.1 B12:
