@@ -172,6 +172,6 @@ without needing to physically wear the device and move.
 
 ## Related
 
-- Feature plan and architecture: [docs/40-watch-app-plan.md](../docs/40-watch-app-plan.md)
+- Feature plan and architecture: [docs/40-watch-app-plan.md](../docs/watch/40-watch-app-plan.md)
 - iOS phone-app signing/capabilities baseline: [deploy-ios-appstore.md](deploy-ios-appstore.md)
 - Android phone-app signing/capabilities baseline: [deploy-android-playstore.md](deploy-android-playstore.md)

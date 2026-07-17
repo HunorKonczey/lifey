@@ -121,7 +121,9 @@ class NotificationService {
     if (_tzInitialized) return;
     tzdata.initializeTimeZones();
     try {
-      tz.setLocalLocation(tz.getLocation(await FlutterTimezone.getLocalTimezone()));
+      tz.setLocalLocation(
+        tz.getLocation((await FlutterTimezone.getLocalTimezone()).identifier),
+      );
     } catch (_) {
       // See doc comment above.
     }
@@ -146,7 +148,7 @@ class NotificationService {
       ),
     );
     await _plugin.initialize(
-      settings,
+      settings: settings,
       onDidReceiveNotificationResponse: (details) {
         final payload = details.payload;
         if (payload == _workoutSessionPayload) {
@@ -183,10 +185,10 @@ class NotificationService {
     if (Platform.isAndroid && !await _ensureAndroidChannel(_stepGoalChannel)) return;
 
     await _plugin.show(
-      _stepGoalNotificationId, // fixed ID so re-firing replaces the previous banner
-      title,
-      body,
-      NotificationDetails(
+      id: _stepGoalNotificationId, // fixed ID so re-firing replaces the previous banner
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
         android: Platform.isAndroid
             ? const AndroidNotificationDetails(
                 stepGoalChannelId,
@@ -221,10 +223,10 @@ class NotificationService {
   }) async {
     if (!Platform.isAndroid) return;
     await _plugin.show(
-      _workoutSessionNotificationId,
-      title,
-      body,
-      NotificationDetails(
+      id: _workoutSessionNotificationId,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           workoutSessionChannelId,
           'Workout session',
@@ -251,7 +253,7 @@ class NotificationService {
   /// Cancels the ongoing workout-session notification (Android only).
   static Future<void> cancelWorkoutSession() async {
     if (!Platform.isAndroid) return;
-    await _plugin.cancel(_workoutSessionNotificationId);
+    await _plugin.cancel(id: _workoutSessionNotificationId);
   }
 
   /// Surfaces a remote push as a local notification banner — Android only.
@@ -273,10 +275,10 @@ class NotificationService {
     await _plugin.show(
       // Distinct ID per push (unlike the fixed step-goal/workout-session
       // ones) so multiple pushes don't replace each other in the tray.
-      DateTime.now().millisecondsSinceEpoch.remainder(1 << 31),
-      title,
-      body,
-      const NotificationDetails(
+      id: DateTime.now().millisecondsSinceEpoch.remainder(1 << 31),
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           _pushChannelId,
           'Push notifications',
@@ -309,11 +311,11 @@ class NotificationService {
     await _ensureTimezoneInitialized();
 
     await _plugin.zonedSchedule(
-      _weighInReminderNotificationId,
-      title,
-      body,
-      _nextInstanceOf(hour: hour, minute: minute, skipToday: skipToday),
-      NotificationDetails(
+      id: _weighInReminderNotificationId,
+      title: title,
+      body: body,
+      scheduledDate: _nextInstanceOf(hour: hour, minute: minute, skipToday: skipToday),
+      notificationDetails: NotificationDetails(
         android: Platform.isAndroid
             ? const AndroidNotificationDetails(
                 weighInReminderChannelId,
@@ -334,7 +336,7 @@ class NotificationService {
 
   /// Cancels the daily weigh-in reminder.
   static Future<void> cancelWeighInReminder() async {
-    await _plugin.cancel(_weighInReminderNotificationId);
+    await _plugin.cancel(id: _weighInReminderNotificationId);
   }
 
   /// Schedules (replacing any previous one — fixed id) a one-shot local
@@ -361,11 +363,11 @@ class NotificationService {
     await _ensureTimezoneInitialized();
 
     await _plugin.zonedSchedule(
-      _restTimerNotificationId,
-      title,
-      body,
-      tz.TZDateTime.from(endsAt, tz.local),
-      NotificationDetails(
+      id: _restTimerNotificationId,
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(endsAt, tz.local),
+      notificationDetails: NotificationDetails(
         android: Platform.isAndroid
             ? const AndroidNotificationDetails(
                 restTimerChannelId,
@@ -382,7 +384,7 @@ class NotificationService {
 
   /// Cancels the pending rest-end notification, if any.
   static Future<void> cancelRestEnd() async {
-    await _plugin.cancel(_restTimerNotificationId);
+    await _plugin.cancel(id: _restTimerNotificationId);
   }
 
   /// Requests Android 12+'s exact-alarm permission for the rest timer.

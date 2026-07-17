@@ -1,12 +1,14 @@
 # 40 – Watch alkalmazás terv (Apple Watch + Wear OS)
 
-Státusz: **Android (Wear OS) — F0–F4 megvalósítva és emulátoron végigtesztelve (2026-07-16). iOS (Apple Watch) — F0–F4 megvalósítva (2026-07-16), build-ellenőrizve (LifeyWatch target + teljes Runner workspace zöld); watchOS-szimulátoros/fizikai eszközös manuális teszt még hátravan, lásd 11.5.**
+Státusz: **Android (Wear OS) — F0–F4 megvalósítva és emulátoron végigtesztelve (2026-07-16). iOS (Apple Watch) — F0–F4 megvalósítva (2026-07-16), build-ellenőrizve (LifeyWatch target + teljes Runner workspace zöld); watchOS-szimulátoros/fizikai eszközös manuális teszt még hátravan, lásd 11.5. A 41-es design (prompt + canvas) F4-scope képernyőiből több funkcionális elem nincs lefejlesztve — ez az F4B design-adósság, lásd 12. fejezet (felmérés: 2026-07-17).**
 Nyelv: a mobil oldali híd Dart, a watch appok **natívak** (SwiftUI ill. Kotlin/Compose — lásd 2. fejezet, ez nem választás kérdése, hanem platformkényszer)
 Kapcsolódó dokumentumok:
-- [16-apple-health-integration-plan.md](16-apple-health-integration-plan.md) — a HealthKit-korlátok; a doc saját maga jelzi, hogy a benne leírt **manuális** "Import from Health" workout-párosítás 2026-07-16-tal megszűnt (lásd lent, 7. és 11. fejezet) — a session-gazdagítás (kalória/pulzus) mostantól kizárólag ebből a watch-integrációból jön
-- [26-android-health-connect-integration-plan.md](26-android-health-connect-integration-plan.md) — Health Connect párja, ugyanaz a superseded-jegyzet
-- [24-ios-widget-live-activity-plan.md](24-ios-widget-live-activity-plan.md) — a `lifey/live_activity` MethodChannel-minta, amit a watch-híd is követ
-- [39-rest-timer-plan.md](39-rest-timer-plan.md) — a `restEndsAtEpochMs` állapot, amit a watch is megjelenít
+- [16-apple-health-integration-plan.md](../16-apple-health-integration-plan.md) — a HealthKit-korlátok; a doc saját maga jelzi, hogy a benne leírt **manuális** "Import from Health" workout-párosítás 2026-07-16-tal megszűnt (lásd lent, 7. és 11. fejezet) — a session-gazdagítás (kalória/pulzus) mostantól kizárólag ebből a watch-integrációból jön
+- [26-android-health-connect-integration-plan.md](../26-android-health-connect-integration-plan.md) — Health Connect párja, ugyanaz a superseded-jegyzet
+- [24-ios-widget-live-activity-plan.md](../24-ios-widget-live-activity-plan.md) — a `lifey/live_activity` MethodChannel-minta, amit a watch-híd is követ
+- [39-rest-timer-plan.md](../39-rest-timer-plan.md) — a `restEndsAtEpochMs` állapot, amit a watch is megjelenít
+- [41-watch-design-prompt.md](41-watch-design-prompt.md) — a watch UI design-promptja; a kész design canvas: `docs/watch/design/Lifey Watch Design.dc.html`
+- [42-watch-design-implementation-plan.md](42-watch-design-implementation-plan.md) — a design-implementáció terve (F4B fejlesztés → F4 design → F5 → F6, watchOS/Wear OS bontásban)
 
 ## Implementációs állapot (2026-07-16)
 
@@ -17,6 +19,7 @@ Kapcsolódó dokumentumok:
 | F2 — Watch MVP (natív start/end/élő mérés) | ✅ Kész | ✅ Kész — lásd 11. fejezet |
 | F3 — Wear OS MVP | ✅ Kész | n/a (iOS-nek nincs külön F3-a, az F2 a natív MVP) |
 | F4 — Pihenő-visszaszámláló+haptika, Settings-kapcsoló, lokalizáció, hibaút | ✅ Kész (Android fele) | ✅ Kész (iOS fele) — lásd 11. fejezet |
+| F4B — Design-parity: a 41-es design F4-scope funkciói, amik nem készültek el (lista: 12. fejezet) | ⏸ Nem kezdődött el | ⏸ Nem kezdődött el |
 | F5 — (v2) Set-logolás a watchról | ⏸ Nem kezdődött el — csak azután, hogy iOS is F4-en áll | ⏸ ua. |
 | F6 — (v2) Standalone indítás a watchról | ⏸ ua. | ⏸ ua. |
 
@@ -373,6 +376,7 @@ await repo.update(summary.sessionClientId,
 | **F2 — iOS watch MVP** | Watch target, WorkoutManager (start/end, HR+kcal), PhoneConnector, 2 képernyős UI, summary-visszaút, `WatchBridge.swift` | L |
 | **F3 — Wear OS MVP** | Wear-modul, ExerciseService + ListenerService, Compose UI, summary-visszaút + telefon-oldali perzisztens fogadó, HC-írás a telefonon | L |
 | **F4 — Pihenő + polish** | `restEndsAtEpochMs` visszaszámláló + haptika mindkét watchon, lokalizáció, badge, Settings-kapcsoló, hibautak (startRejected, engedély-megtagadás) | M |
+| **F4B — Design-parity (utólag felvett fázis)** | A 41-es design F4-scope-jának le nem fejlesztett **funkcionális** elemei: controls-lap/szekció + Pause, end-requested-váró és saved-összegző képernyő (iOS), hibaképernyők az órán, degradált HR-állapot, GO-pillanat, telefon-oldali „Measuring” pill + ⌚ badge — részletes, kód ellen ellenőrzött lista a 12. fejezetben | M–L |
 | **F5 — (v2) Set-logolás a watchról** | „+1 szett” gomb a watchon → esemény a telefonra → a telefon logolja (a telefon marad a mester); offline eset: csak ha a telefon elérhető | M–L |
 | **F6 — (v2) Standalone indítás a watchról** | Edzés indítása óráról telefon nélkül; a watch lokálisan gyűjt, és kapcsolódáskor a telefon sessiont kreál belőle — külön tervezést igényel (ütközés a resume-prompt logikával) | L |
 
@@ -561,3 +565,57 @@ Ez az alfejezet a **ténylegesen leszállított** F2+F4 iOS-implementációt ír
 **Végállapot-eldöntés**: a `WorkoutManager.finishAndSendSummary()` a `session.end()` + `builder.endCollection`/`finishWorkout` előtt olvassa ki a `builder.statistics(for:)`-ból az átlagpulzust és összkalóriát — nem kell a Dart/Android-oldali "utólagos lekérdezés" mintát követni, mert a builder statisztikái a `finishWorkout()` után is elérhetők maradnak, de a kiolvasás sorrendje (előbb statisztika, utána `finishWorkout`) biztonságosabb.
 
 **Build-ellenőrzés (2026-07-16, ezen a Macen)**: mindkét build zöld — `xcodebuild -target LifeyWatch -sdk watchsimulator` és a teljes `xcodebuild -workspace Runner.xcworkspace -scheme Runner` (CocoaPods + SPM + beágyazott `LifeyWatch`/`LifeyWidgets` targetekkel) is `BUILD SUCCEEDED`-del zárult, új fájlokra vonatkozó figyelmeztetés nélkül. **Watch-szimulátoros vagy fizikai órás manuális futtatás (a §9 teszt-mátrix szerint) még nem történt** — ez van hátra, mielőtt F2/F4 az Androidhoz hasonlóan "emulátoron/szimulátoron végigtesztelve" státuszba kerülhetne.
+
+---
+
+## 12. F4B — a designban szereplő, de le nem fejlesztett funkciók (design-adósság)
+
+Felmérés: **2026-07-17**, a design-anyagok ([41-watch-design-prompt.md](41-watch-design-prompt.md) + a leszállított canvas, `docs/watch/design/Lifey Watch Design.dc.html`) és a tényleges kód (`mobile/ios/LifeyWatch/`, `mobile/android/wear/`, telefon-oldali Dart) összevetése alapján.
+
+**Kontextus**: a canvas az F4-scope-ot **7 Apple Watch-frame + 6 Wear OS-frame + dynamic-sizing sor + 3 telefon-oldali elem** formában fedi le. A jelenlegi implementáció funkcionálisan F4-en áll, de a watch-UI mindkét platformon stock-widget (2 fázis: `IDLE`/`ACTIVE`, egy-egy egyszerű képernyő — `ContentView.swift` ill. `SessionStateHolder.SessionPhase`), és a designnak több eleme **nem csak styling, hanem hiányzó funkció**. Ezek együtt az **F4B** fázis. Sorrend: előbb az F4B-funkciók lefejlesztése, utána a design-styling ráhúzása — a lebontást a [42-watch-design-implementation-plan.md](42-watch-design-implementation-plan.md) tartalmazza.
+
+A frame-hivatkozások a canvas számozását követik (Apple Watch 01–07, Wear OS 01–06, telefon A–C).
+
+### 12.1 Mindkét watch-platformon hiányzik
+
+| # | Hiányzó funkció | Design-forrás | Mai állapot a kódban |
+|---|---|---|---|
+| B1 | **Pihenő mint hero-állapot**: a visszaszámláló átveszi a képernyőt — drain-elő progress-ring, „of 1:30” cél-idő, „Next · Bench Press — Set 3 of 4” sor, utolsó 5 mp színváltás `negative #E08A52`-re | AW 03, Wear 04; prompt §3.3 | A rest csak egy plusz caption-sor a metrikák közt (`ActiveWorkoutView.restText`, `ActiveWorkoutScreen` `active_rest_format` Text) |
+| B2 | **Rest-end „GO” vizuális pillanat**: a 0-ra érésnél a haptika mellé 1–2 mp-es vizuális flash/átmenet | prompt §3.4 (a canvas csak „snaps back to metrics”-et említ — lásd 12.5) | Csak haptika van (`WorkoutManager.scheduleRestHaptic` / `ExerciseService` vibrátor), vizuális állapot nincs |
+| B3 | **Pause/Resume** (csak a szenzor-sessiont pauzálja, a telefon-session időzítését nem) | AW 04, Wear 03 | Egyik platformon sincs pause; a §4.4 „V1-ben akár el is hagyható” opcióval éltünk |
+| B4 | **Dynamic sizing**: százalék-alapú paddingek és metrika-típusskála (SwiftUI `ViewThatFits`/scaled metrics, Compose `BoxWithConstraints`-frakciók), 41 mm / 1.2″ ellenőrzéssel | canvas „Dynamic sizing” sor | Fix dp/pt paddingek és fix font-stílusok mindkét képernyőn |
+| B5 | **Idle brand-moment**: levél/eco jel + „Lifey” wordmark az üres képernyőn | AW 01, Wear 01; prompt §3.1 | Két sor natúr szöveg (`IdleView`, `IdleScreen`), semmilyen brand-elem |
+| B6 | **Teljes brand-styling** (átfogó): warm-black rétegzett felületek, moss-olive primary, metric-accent színek (♥ `#C46A6A`+ikon, kcal `#E0915A`+láng), „STRENGTH” fejléc-chip, szett-számláló pill, tabular numerálok, radius-skála | minden frame; prompt §1–2 | Stock platform-téma, ikonok és szín-tokenek nélkül — a design-prompt kiinduló diagnózisa („unstyled stock-widget UI”) változatlanul áll |
+
+### 12.2 iOS-specifikus hiányok
+
+| # | Hiányzó funkció | Design-forrás | Mai állapot a kódban |
+|---|---|---|---|
+| B7 | **Lapozós szerkezet (TabView), külön controls-lap** End+Pause gombbal, Apple Workout-minta | AW 02+04; terv §4.4 (eredetileg is 2 lap volt tervben) | `ContentView` egyetlen `ActiveWorkoutView`-t mutat, az End gomb a metrikák alatt inline |
+| B8 | **„End requested — waiting for phone” képernyő** („Finish on your iPhone / Rate your effort…”) az End megnyomása után, amíg a telefon `end` parancsa vissza nem ér | AW 05 | A `requestEnd()` után a nézet változatlan marad; nincs köztes fázis |
+| B9 | **„Workout saved” összegző képernyő**: teljes idő, átlag bpm, kcal, „Saved to Health” jelzés, ~6 mp után auto-dismiss → Idle | AW 06 | `finishAndSendSummary()` után azonnal Idle-be vált, az összegzést a user az órán sosem látja |
+| B10 | **HealthKit-engedély-hiba képernyő** („Allow Health access” + „Review access” gomb) | AW 07 | Engedély-hiba esetén a watch egyszerűen Idle-t mutat (§9 teszt-mátrix szerinti viselkedés, de dedikált képernyő nélkül) |
+
+### 12.3 Wear OS-specifikus hiányok
+
+| # | Hiányzó funkció | Design-forrás | Mai állapot a kódban |
+|---|---|---|---|
+| B11 | **`ScalingLazyColumn`-szerkezet**: metrikák felül, lejjebb görgetve a controls-szekció (End workout + Pause), jobb oldali scroll-jelzővel | Wear 02+03 | Fix, nem görgethető `Column`, End gomb inline |
+| B12 | **„Workout already running” hibaképernyő az órán** (OK gombbal) | Wear 05; terv §5.3 („a watch UI hibát mutat”) | A `startRejected` a telefonra megy (snackbar ✅), de az óra UI-jának nincs hiba-fázisa — a `SessionPhase` csak `IDLE`/`ACTIVE` |
+| B13 | **Degradált HR-állapot**: „––” placeholder (muted) + „Heart rate off — allow sensors” chip, ami az engedély-sheetet nyitja | Wear 06; prompt §3.6 | HR-megtagadásnál a HR-sor egyszerűen nem jelenik meg (`liveMetrics.heartRateBpm?.let`), nincs „––” és nincs engedély-chip |
+
+### 12.4 Telefon-oldali hiányok (Flutter)
+
+| # | Hiányzó funkció | Design-forrás | Mai állapot a kódban |
+|---|---|---|---|
+| B14 | **„Measuring” pill** a log-képernyő fejlécében, a `workoutStartedOnWatch` eseményre | telefon B | A `startedOnWatch` esemény a Dart-hídon átjön, de UI-t nem hajt; a Health-store-poll alapú near-live HR-kijelző (`_pollHeartRate`) részben fedi a szándékot, de nem ez a designolt ⌚-pill |
+| B15 | **⌚ „Watch” badge** a session-kártyán a régi „Health” badge helyett, amikor a metrikák watch-summaryból jöttek | telefon C; §6.3 („később külön ⌚ badge”) | `sessions_tab.dart` a `session.fromAppleHealth` alapján a régi „Health” badge-et mutatja. Megjegyzés: a manuális Health-import megszűnése (7.5.8) óta gazdagítás **kizárólag** watch-summaryból jöhet, így külön adatmezőre nincs szükség — csak a badge vizuális cseréje és a mező/getter átnevezése kell. **✅ Eldőlt (2026-07-17, a 42-es doc D0.4 döntése): nem lesz új mező.** |
+
+A telefon A elem (Settings-kapcsoló) és a startRejected-snackbar **kész** (7.5.6, 11.3) — ezek nem F4B-tételek, csak a design-styling érintheti őket.
+
+### 12.5 Ami a design-oldalon hiányzik (a canvas hiányai — a 42-es doc tervezi be)
+
+- **F5/F6 koncepció-frame-ek**: a prompt §4–5 kérte, de a leszállított canvas **csak az F4-scope-ot** tartalmazza — az F5/F6 design még el sem készült.
+- **Ambient/always-on dimmed variáns**: a prompt §6 kért egy frame-et, a canvasban nincs.
+- **„GO”-pillanat frame** (prompt §3.4): a canvas a rest-végét csak szövegesen írja le („view snaps back to metrics”), dedikált frame nélkül.
+- **Token-ellentmondás**: az eltelt idő színe a promptban `onSurface` (neutrális hero, §2.6), a canvasban „Elapsed in primary olive” — implementáció előtt el kell dönteni.
