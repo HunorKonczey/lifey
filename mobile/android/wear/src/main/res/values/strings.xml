@@ -10,8 +10,21 @@
 
     <string name="active_default_exercise">Gyakorlat</string>
     <string name="active_sets_format">%1$d/%2$d szett</string>
-    <string name="active_rest_format">Pihenő %1$s</string>
     <string name="active_heart_rate_unit">bpm</string>
     <string name="active_calories_unit">kcal</string>
     <string name="active_end_button">Vége</string>
+    <string name="active_pause_button">Szünet</string>
+    <string name="active_resume_button">Folytatás</string>
+    <string name="active_paused_indicator">Szüneteltetve</string>
+    <string name="active_heart_rate_denied_placeholder">-- bpm</string>
+    <string name="active_heart_rate_denied_chip">Pulzusmérés ki — érzékelők engedélyezése</string>
+
+    <string name="rest_hero_label">Pihenő</string>
+    <string name="rest_hero_total_format">/ %1$s</string>
+    <string name="rest_hero_next_with_sets_format">Következő · %1$s — %2$d/%3$d. szett</string>
+    <string name="rest_hero_next_format">Következő · %1$s</string>
+    <string name="rest_go_label">Mehet!</string>
+
+    <string name="error_already_running_title">Már fut egy másik edzés az órán</string>
+    <string name="error_ok_button">Rendben</string>
 </resources>

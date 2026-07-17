@@ -533,12 +533,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     );
   }
 
-  /// The rest timer's current target end time, epoch ms — null when the
-  /// timer is disabled, skipped, or already expired. Same derivation as
-  /// [_rescheduleRestNotification]'s target; feeds the native countdown on
-  /// both platforms via [WorkoutSessionState.restEndsAtEpochMs] (see
-  /// docs/39-rest-timer-plan.md, Prompt 5).
-  int? _currentRestEndsAtEpochMs() {
+  /// Shared derivation behind [_currentRestEndsAtEpochMs],
+  /// [_currentRestTotalSeconds], and [_currentRestRemainingSeconds] — null
+  /// under the same conditions for all three (timer disabled, no last set,
+  /// skipped, or already expired). Same derivation as
+  /// [_rescheduleRestNotification]'s target.
+  ({DateTime endsAt, int totalSeconds})? _currentRestTarget() {
     final settings = _currentRestSettings();
     if (!settings.restTimerEnabled) return null;
     final entry = _lastDoneEntry();
@@ -546,10 +546,38 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final skipped = _restSkippedAt != null && _restSkippedAt == entry.doneAt;
     if (skipped) return null;
     final seconds = _currentEffectiveRestSeconds(entry.block, settings);
-    final endsAt =
-        entry.doneAt.add(Duration(seconds: seconds) + _restAdjustment);
+    final totalSeconds = seconds + _restAdjustment.inSeconds;
+    final endsAt = entry.doneAt.add(Duration(seconds: totalSeconds));
     if (!endsAt.isAfter(DateTime.now())) return null;
-    return endsAt.millisecondsSinceEpoch;
+    return (endsAt: endsAt, totalSeconds: totalSeconds);
+  }
+
+  /// The rest timer's current target end time, epoch ms — feeds the phone's
+  /// own native countdown on both platforms via
+  /// [WorkoutSessionState.restEndsAtEpochMs] (docs/39-rest-timer-plan.md,
+  /// Prompt 5). Same-device only (Live Activity / Android notification) —
+  /// safe to compare against this device's own wall clock. The watch bridge
+  /// uses [_currentRestRemainingSeconds] instead, precisely to avoid that
+  /// same comparison across two devices' potentially-unsynced wall clocks.
+  int? _currentRestEndsAtEpochMs() => _currentRestTarget()?.endsAt.millisecondsSinceEpoch;
+
+  /// The rest timer's full configured duration in seconds — feeds
+  /// [WorkoutSessionState.restTotalSeconds] (docs/40-watch-app-plan.md §12.1
+  /// B1) so the watch can render "0:47 of 1:30" instead of just "0:47".
+  int? _currentRestTotalSeconds() => _currentRestTarget()?.totalSeconds;
+
+  /// Seconds remaining *right now*, computed entirely against this device's
+  /// own clock — feeds [WorkoutSessionState.restRemainingSeconds], which the
+  /// watch bridge turns into a local deadline anchored to its own monotonic
+  /// clock (`SystemClock.elapsedRealtime()`) instead of comparing timestamps
+  /// across two devices' wall clocks. [_currentRestEndsAtEpochMs] doesn't
+  /// work for this: a watch whose wall clock has drifted from the phone's
+  /// (seen in practice on paired emulators, hours apart) would render a
+  /// wildly wrong countdown from an absolute epoch target.
+  int? _currentRestRemainingSeconds() {
+    final target = _currentRestTarget();
+    if (target == null) return null;
+    return target.endsAt.difference(DateTime.now()).inSeconds;
   }
 
   String _formatElapsed() {
@@ -858,10 +886,18 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           ? current.exerciseName
           : l10n.liveActivityDefaultExerciseName,
       setsDone: current?.rows.where((r) => r.isDone).length ?? 0,
-      setsTotal: current?.targetSets,
+      // current.targetSets is the frozen original plan count — a row added
+      // ad-hoc via "+ Add set" (or removed) doesn't update it. rows.length
+      // is the live count, matching setsDone's own semantics above; using
+      // targetSets here made the watch/Live-Activity "N of total" freeze at
+      // the session's starting value forever (docs/40-watch-app-plan.md
+      // §12.1 B-fixes).
+      setsTotal: current?.rows.length,
       totalSetsDone: totalSetsDone,
       lastSetAtEpochMs: _lastDoneAt()?.millisecondsSinceEpoch,
       restEndsAtEpochMs: _currentRestEndsAtEpochMs(),
+      restTotalSeconds: _currentRestTotalSeconds(),
+      restRemainingSeconds: _currentRestRemainingSeconds(),
     );
   }
 

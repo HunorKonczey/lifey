@@ -98,6 +98,8 @@ void main() {
           'totalSetsDone': 1,
           'lastSetAtEpochMs': 1783075260000,
           'restEndsAtEpochMs': null,
+          'restTotalSeconds': null,
+          'restRemainingSeconds': null,
         },
       });
     });
@@ -116,6 +118,8 @@ void main() {
           setsDone: 2,
           totalSetsDone: 5,
           restEndsAtEpochMs: 1783075350000,
+          restTotalSeconds: 90,
+          restRemainingSeconds: 47,
         ),
       );
 
@@ -129,6 +133,8 @@ void main() {
           'totalSetsDone': 5,
           'lastSetAtEpochMs': null,
           'restEndsAtEpochMs': 1783075350000,
+          'restTotalSeconds': 90,
+          'restRemainingSeconds': 47,
         },
       });
     });

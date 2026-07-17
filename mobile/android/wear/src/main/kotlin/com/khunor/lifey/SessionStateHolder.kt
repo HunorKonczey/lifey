@@ -1,10 +1,17 @@
 package com.khunor.lifey
 
+import android.os.SystemClock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
-enum class SessionPhase { IDLE, ACTIVE }
+/**
+ * [ERROR] is `startExercise` having been rejected because another app
+ * already owns the Health Services exercise session (docs/40-watch-app-plan.md
+ * §12.1 B12) — shown as a dedicated screen with an OK button, the watch-side
+ * counterpart of the phone's `startRejected` snackbar.
+ */
+enum class SessionPhase { IDLE, ACTIVE, ERROR }
 
 data class SessionMetadata(
     val sessionClientId: String? = null,
@@ -12,17 +19,42 @@ data class SessionMetadata(
     val exerciseName: String? = null,
     val setsDone: Int? = null,
     val setsTotal: Int? = null,
-    /** Rest timer's target end time, epoch ms — null when no rest is active
-     * (docs/39-rest-timer-plan.md). Unlike the fields above, [onStateSynced]
-     * always overwrites this one rather than preserving the old value when
-     * absent — see its doc comment for why. */
-    val restEndsAtEpochMs: Long? = null,
+    /**
+     * The rest timer's target end time, anchored to *this device's own*
+     * `SystemClock.elapsedRealtime()` — null when no rest is active
+     * (docs/39-rest-timer-plan.md). Deliberately not an absolute epoch
+     * timestamp: [onStateSynced] converts the phone's relative
+     * "seconds remaining" into this local monotonic deadline the instant a
+     * sync arrives, so the countdown never depends on the watch's wall
+     * clock agreeing with the phone's — two paired devices' wall clocks can
+     * be meaningfully unsynced (seen in practice on paired emulators, hours
+     * apart), which used to make this countdown wildly wrong
+     * (docs/40-watch-app-plan.md §12.1 bugfix). Unlike the fields above,
+     * [onStateSynced] always overwrites this one rather than preserving the
+     * old value when absent — see its doc comment for why. */
+    val restDeadlineElapsedRealtimeMs: Long? = null,
+    /** The rest timer's full configured duration in seconds — null exactly
+     * when [restDeadlineElapsedRealtimeMs] is null (docs/40-watch-app-plan.md
+     * §12.1 B1). Same always-overwritten treatment. */
+    val restTotalSeconds: Int? = null,
 )
 
 data class LiveMetrics(
     val heartRateBpm: Double? = null,
     val activeCalories: Double? = null,
     val startedAtElapsedRealtimeMs: Long? = null,
+    /** Mirrors `ExerciseUpdate.exerciseStateInfo.state.isPaused` — true for
+     * both `USER_PAUSED` and `AUTO_PAUSED` (docs/40-watch-app-plan.md §12.1
+     * B3). Only the *sensor* session is paused; the elapsed-time display
+     * keeps ticking, matching the phone-session's timing (§4.4/§5.3: "csak a
+     * szenzor-sessiont pauzálja, a telefon-session időzítését nem"). */
+    val isPaused: Boolean = false,
+    /** Whether `startExercise` was able to request `HEART_RATE_BPM` — false
+     * means the sensor permission was denied, not just "no sample yet"
+     * (docs/40-watch-app-plan.md §12.1 B13). Defaults to true (optimistic)
+     * so the metrics page doesn't flash a denial before the first exercise
+     * start has even run. */
+    val hasHeartRatePermission: Boolean = true,
 )
 
 /**
@@ -43,18 +75,26 @@ object SessionStateHolder {
     val liveMetrics: StateFlow<LiveMetrics> = _liveMetrics
 
     /**
-     * Applied from the phone's synced state DataItem — never clears
+     * Applied from the phone's synced state message/DataItem — never clears
      * [SessionMetadata.title]/[SessionMetadata.exerciseName]/
      * [SessionMetadata.setsDone]/[SessionMetadata.setsTotal] if the new
      * payload didn't include them.
      *
-     * [restEndsAtEpochMs] is the one exception: it toggles between a
-     * timestamp and null constantly within a single session (rest
-     * starts/ends), and a null value is indistinguishable on the wire from
-     * "key absent" (`WatchBridge.kt`'s `toDataMap()` skips null values
-     * entirely) — so unlike the other fields, this one is always overwritten
-     * with the new value (including null), never preserved from the
-     * previous state.
+     * [restRemainingSeconds] is the phone's own "seconds left" at the moment
+     * it built the payload — converted here, on receipt, into
+     * [SessionMetadata.restDeadlineElapsedRealtimeMs] by adding it to this
+     * device's *own* `elapsedRealtime()`. That's the fix for the countdown
+     * being wildly wrong: the old code stored the phone's absolute epoch
+     * target and compared it against `System.currentTimeMillis()` on every
+     * tick, which is only correct if the two devices' wall clocks agree.
+     *
+     * [restDeadlineElapsedRealtimeMs]/[SessionMetadata.restTotalSeconds] are
+     * the exception to the "preserve if absent" rule above: they toggle
+     * between a value and null constantly within a single session (rest
+     * starts/ends), and null is indistinguishable on the wire from "key
+     * absent" (`WatchBridge.kt`'s `toDataMap()` skips null values entirely)
+     * — so unlike the other fields, these are always overwritten with the
+     * new value, never preserved from the previous state.
      */
     fun onStateSynced(
         sessionClientId: String,
@@ -62,8 +102,12 @@ object SessionStateHolder {
         exerciseName: String?,
         setsDone: Int?,
         setsTotal: Int?,
-        restEndsAtEpochMs: Long?,
+        restRemainingSeconds: Int?,
+        restTotalSeconds: Int?,
     ) {
+        val restDeadlineElapsedRealtimeMs = restRemainingSeconds?.let {
+            SystemClock.elapsedRealtime() + it * 1_000L
+        }
         _metadata.update { current ->
             current.copy(
                 sessionClientId = sessionClientId,
@@ -71,7 +115,8 @@ object SessionStateHolder {
                 exerciseName = exerciseName ?: current.exerciseName,
                 setsDone = setsDone ?: current.setsDone,
                 setsTotal = setsTotal ?: current.setsTotal,
-                restEndsAtEpochMs = restEndsAtEpochMs,
+                restDeadlineElapsedRealtimeMs = restDeadlineElapsedRealtimeMs,
+                restTotalSeconds = restTotalSeconds,
             )
         }
     }
@@ -89,7 +134,25 @@ object SessionStateHolder {
         _liveMetrics.update { it.copy(activeCalories = kcal) }
     }
 
-    /** Reset to idle once the exercise (and its notification) is fully torn down. */
+    fun onPausedChanged(isPaused: Boolean) {
+        _liveMetrics.update { it.copy(isPaused = isPaused) }
+    }
+
+    fun onHeartRatePermissionChecked(hasPermission: Boolean) {
+        _liveMetrics.update { it.copy(hasHeartRatePermission = hasPermission) }
+    }
+
+    /**
+     * `startExercise` was rejected — another app already owns the exercise
+     * session (docs/40-watch-app-plan.md §12.1 B12). Drives `MainActivity`
+     * to `ErrorScreen`; [reset] (its OK button) is what clears it.
+     */
+    fun onStartRejected() {
+        _phase.value = SessionPhase.ERROR
+    }
+
+    /** Back to idle — both once a real exercise's notification is fully torn
+     * down, and as [ErrorScreen]'s OK-button dismissal for [onStartRejected]. */
     fun reset() {
         _phase.value = SessionPhase.IDLE
         _metadata.value = SessionMetadata()
