@@ -1,17 +1,19 @@
 package com.khunor.lifey.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -19,12 +21,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.khunor.lifey.R
+import com.khunor.lifey.ui.theme.LifeyColors
 
-/** 41-watch-design-prompt.md §2.6 `primary` — the idle screen's moss-green brand mark. */
-private val LeafMarkColor = Color(0xFF9DAE6B)
-
-/** The leaf mark's diameter as a fraction of the shorter screen dimension. */
-private const val LEAF_MARK_SIZE_FRACTION = 0.22f
+/** The badge behind the leaf mark, and the leaf itself within it, as
+ * fractions of the shorter screen dimension — canvas Wear 01's badge:leaf
+ * ratio is roughly 72:42. */
+private const val LEAF_BADGE_SIZE_FRACTION = 0.22f
+private const val LEAF_MARK_SIZE_FRACTION = 0.13f
 
 /**
  * No active session — docs/40-watch-app-plan.md §4.4/§5.1 "IdleView"
@@ -38,20 +41,31 @@ private const val LEAF_MARK_SIZE_FRACTION = 0.22f
 fun IdleScreen() {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = isCompactScreen(maxWidth)
-        val leafSize = minOf(maxWidth, maxHeight) * LEAF_MARK_SIZE_FRACTION
+        val shortSide = minOf(maxWidth, maxHeight)
+        val badgeSize = shortSide * LEAF_BADGE_SIZE_FRACTION
+        val leafSize = shortSide * LEAF_MARK_SIZE_FRACTION
         Column(
             modifier = Modifier.fillMaxSize().padding(maxWidth * SCREEN_PADDING_FRACTION),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(leafSize * 0.35f, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(badgeSize * 0.35f, Alignment.CenterVertically),
         ) {
-            LeafMark(size = leafSize)
+            Box(
+                modifier = Modifier
+                    .size(badgeSize)
+                    .background(LifeyColors.surface, RoundedCornerShape(badgeSize * 0.3f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                LeafMark(size = leafSize)
+            }
             Text(
                 text = stringResource(R.string.idle_title),
                 style = if (isCompact) MaterialTheme.typography.title3 else MaterialTheme.typography.title2,
+                color = LifeyColors.onSurface,
             )
             Text(
                 text = stringResource(R.string.idle_subtitle),
                 style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
+                color = LifeyColors.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
         }
@@ -75,9 +89,9 @@ private fun LeafMark(size: Dp) {
             cubicTo(w * 0.05f, h * 0.72f, w * 0.05f, h * 0.28f, w / 2f, 0f)
             close()
         }
-        drawPath(leafPath, color = LeafMarkColor)
+        drawPath(leafPath, color = LifeyColors.primary)
         drawLine(
-            color = LeafMarkColor.copy(alpha = 0.45f),
+            color = LifeyColors.primary.copy(alpha = 0.45f),
             start = Offset(w / 2f, h * 0.1f),
             end = Offset(w / 2f, h * 0.9f),
             strokeWidth = w * 0.05f,

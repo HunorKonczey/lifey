@@ -60,6 +60,12 @@ dependencies {
     implementation("androidx.wear.compose:compose-material:1.4.1")
     implementation("androidx.wear.compose:compose-foundation:1.4.1")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    // Material Symbols equivalents for the brand icon set (favorite, flame,
+    // fitness_center, timer, pause/stop, heart_broken, priority_high —
+    // docs/40-watch-app-plan.md §12.1 B6). Wear Compose's own `Icon` accepts
+    // any `ImageVector`, so this classic Compose Material icon pack works
+    // fine here even though the rest of the UI uses `compose-material` (Wear).
+    implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     // Health Services — live HR/kcal during the strength-training exercise

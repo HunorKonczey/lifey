@@ -8,6 +8,7 @@
     <string name="exercise_notification_channel">Edzés</string>
     <string name="exercise_notification_title">Lifey edzés fut</string>
 
+    <string name="active_header_label">ERŐEDZÉS</string>
     <string name="active_default_exercise">Gyakorlat</string>
     <string name="active_sets_format">%1$d/%2$d szett</string>
     <string name="active_heart_rate_unit">bpm</string>
@@ -26,5 +27,6 @@
     <string name="rest_go_label">Mehet!</string>
 
     <string name="error_already_running_title">Már fut egy másik edzés az órán</string>
+    <string name="error_already_running_subtitle">Egy másik alkalmazás rögzít edzést. Fejezd be előbb azt.</string>
     <string name="error_ok_button">Rendben</string>
 </resources>

@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import com.khunor.lifey.ui.ActiveWorkoutScreen
 import com.khunor.lifey.ui.ErrorScreen
 import com.khunor.lifey.ui.IdleScreen
+import com.khunor.lifey.ui.theme.LifeyTheme
 
 /**
  * Compose host, switching between [IdleScreen], [ActiveWorkoutScreen], and
@@ -36,11 +37,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         requestSensorPermissionsIfNeeded()
         setContent {
-            val phase by SessionStateHolder.phase.collectAsState()
-            when (phase) {
-                SessionPhase.IDLE -> IdleScreen()
-                SessionPhase.ACTIVE -> ActiveWorkoutScreen()
-                SessionPhase.ERROR -> ErrorScreen()
+            LifeyTheme {
+                val phase by SessionStateHolder.phase.collectAsState()
+                when (phase) {
+                    SessionPhase.IDLE -> IdleScreen()
+                    SessionPhase.ACTIVE -> ActiveWorkoutScreen()
+                    SessionPhase.ERROR -> ErrorScreen()
+                }
             }
         }
     }

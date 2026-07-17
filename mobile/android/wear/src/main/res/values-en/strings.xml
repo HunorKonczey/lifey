@@ -8,6 +8,7 @@
     <string name="exercise_notification_channel">Workout</string>
     <string name="exercise_notification_title">Lifey workout running</string>
 
+    <string name="active_header_label">STRENGTH</string>
     <string name="active_default_exercise">Exercise</string>
     <string name="active_sets_format">%1$d/%2$d sets</string>
     <string name="active_heart_rate_unit">bpm</string>
@@ -26,5 +27,6 @@
     <string name="rest_go_label">Go!</string>
 
     <string name="error_already_running_title">A workout is already running on the watch</string>
+    <string name="error_already_running_subtitle">Another app is recording an exercise. Finish it first.</string>
     <string name="error_ok_button">OK</string>
 </resources>
