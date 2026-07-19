@@ -11,6 +11,7 @@
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		15C0D50A4AAE4258A9903997 /* IdleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 216887D75EC840DFA5F1098B /* IdleView.swift */; };
 		F4608790FA1570EE9F3CE57B /* EndingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15894AC08BE110C70266202E /* EndingView.swift */; };
+		C4CBB17F6045BBECC9D48179 /* EffortSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3DF1BAA0E811718B4315813 /* EffortSelectorView.swift */; };
 		8F5C79780C88D2D334880F4E /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9579E90AC7DE881411D162D8 /* SummaryView.swift */; };
 		4EEF1AC98123BD8D0100B686 /* HealthDeniedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30F1283363772E14034D7802 /* HealthDeniedView.swift */; };
 		2DC0C7362BA1403C3BA2FECB /* LifeyColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97874626E4BBCC64426D69CE /* LifeyColors.swift */; };
@@ -114,6 +115,7 @@
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		216887D75EC840DFA5F1098B /* IdleView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IdleView.swift; sourceTree = "<group>"; };
 		15894AC08BE110C70266202E /* EndingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EndingView.swift; sourceTree = "<group>"; };
+		F3DF1BAA0E811718B4315813 /* EffortSelectorView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EffortSelectorView.swift; sourceTree = "<group>"; };
 		9579E90AC7DE881411D162D8 /* SummaryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SummaryView.swift; sourceTree = "<group>"; };
 		30F1283363772E14034D7802 /* HealthDeniedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthDeniedView.swift; sourceTree = "<group>"; };
 		97874626E4BBCC64426D69CE /* LifeyColors.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyColors.swift; sourceTree = "<group>"; };
@@ -213,6 +215,7 @@
 				E42293D98E4942DCB04B165E /* ActiveWorkoutView.swift */,
 				216887D75EC840DFA5F1098B /* IdleView.swift */,
 				15894AC08BE110C70266202E /* EndingView.swift */,
+				F3DF1BAA0E811718B4315813 /* EffortSelectorView.swift */,
 				9579E90AC7DE881411D162D8 /* SummaryView.swift */,
 				30F1283363772E14034D7802 /* HealthDeniedView.swift */,
 			);
@@ -674,6 +677,7 @@
 				3BA9433482684EBBA84C44CA /* ActiveWorkoutView.swift in Sources */,
 				15C0D50A4AAE4258A9903997 /* IdleView.swift in Sources */,
 				F4608790FA1570EE9F3CE57B /* EndingView.swift in Sources */,
+				C4CBB17F6045BBECC9D48179 /* EffortSelectorView.swift in Sources */,
 				8F5C79780C88D2D334880F4E /* SummaryView.swift in Sources */,
 				4EEF1AC98123BD8D0100B686 /* HealthDeniedView.swift in Sources */,
 				2DC0C7362BA1403C3BA2FECB /* LifeyColors.swift in Sources */,

@@ -9,10 +9,6 @@ private let restRingNegativeThresholdSeconds = 5
 /// mirrors Android's `GO_FLASH_HOLD_MS`.
 private let goFlashHoldSeconds: TimeInterval = 1.3
 
-/// The rest-hero progress ring's diameter as a fraction of the shorter
-/// screen dimension (docs/40-watch-app-plan.md §12.1 B4, mirrors Android's
-/// `REST_RING_SIZE_FRACTION`).
-private let restRingSizeFraction: CGFloat = 0.42
 
 /// Live workout screen — a two-page `TabView` (docs/40-watch-app-plan.md
 /// §12.1 B7, mirrors the Apple Workout app's own paging pattern and canvas
@@ -29,19 +25,33 @@ private let restRingSizeFraction: CGFloat = 0.42
 struct ActiveWorkoutView: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   @State private var showGoFlash = false
+  @State private var selectedPage = 0
+  /// Mirrors `selectedPage` as a `Double` for `.digitalCrownRotation`, which
+  /// needs its own continuous binding rather than the page `Int` itself —
+  /// kept in sync with `selectedPage` in both directions so a crown turn and
+  /// a swipe agree on where the "next" turn should land.
+  @State private var crownRotation: Double = 0
 
   var body: some View {
     GeometryReader { geometry in
       let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
       let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
-      let ringSize = min(geometry.size.width, geometry.size.height) * restRingSizeFraction
 
       ZStack {
-        TabView {
-          MetricsPage(isCompact: isCompact, padding: padding, ringSize: ringSize)
-          ControlsPage(isCompact: isCompact, padding: padding)
+        TabView(selection: $selectedPage) {
+          MetricsPage(isCompact: isCompact, padding: padding).tag(0)
+          ControlsPage(isCompact: isCompact, padding: padding).tag(1)
         }
         .tabViewStyle(.page)
+        .digitalCrownRotation(
+          $crownRotation, from: 0, through: 1, by: 1,
+          sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+        .onChange(of: crownRotation) { _, newValue in
+          selectedPage = Int(newValue.rounded())
+        }
+        .onChange(of: selectedPage) { _, newValue in
+          crownRotation = Double(newValue)
+        }
         if showGoFlash {
           GoFlashView()
         }
@@ -105,17 +115,15 @@ private struct HeaderChip: View {
   }
 }
 
-/// One icon + number + muted unit metric reading (HR or kcal, canvas AW 02).
-/// [unit] is nil for the rest-hero's small kcal reading, which drops its
-/// unit to save space (canvas AW 03/Wear 04).
+/// One icon + number metric reading (HR or kcal, canvas AW 02) — no unit
+/// suffix next to the number; the icon itself already disambiguates HR vs.
+/// kcal, and dropping the unit keeps the reading compact on a small dial.
 private struct MetricReading: View {
   let icon: String
   let iconTint: Color
   let value: String
-  let unit: String?
   let iconSize: CGFloat
   let valueFont: Font
-  let unitFont: Font
 
   var body: some View {
     HStack(spacing: 4) {
@@ -127,12 +135,6 @@ private struct MetricReading: View {
         .foregroundColor(LifeyColors.onSurface)
         .monospacedDigit()
         .lineLimit(1)
-      if let unit {
-        Text(unit)
-          .font(unitFont)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
-          .lineLimit(1)
-      }
     }
   }
 }
@@ -185,12 +187,14 @@ private struct MetricsPage: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
   let padding: CGFloat
-  let ringSize: CGFloat
 
   private var heroFont: Font { isCompact ? .system(.title3, design: .rounded) : .system(.title2, design: .rounded) }
   private var captionFont: Font { isCompact ? .caption2 : .caption }
-  private var metricValueFont: Font { isCompact ? .title3 : .title2 }
-  private var metricIconSize: CGFloat { isCompact ? 18 : 22 }
+  // Shrunk from title3/title2 (overflow fix) — at title2, two 3-digit
+  // readings (HR + kcal both >= 100) side by side clipped against the
+  // round bezel instead of fitting on one line.
+  private var metricValueFont: Font { isCompact ? .body : .title3 }
+  private var metricIconSize: CGFloat { isCompact ? 14 : 18 }
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -202,8 +206,7 @@ private struct MetricsPage: View {
             exerciseName: workoutManager.exerciseName ?? String(localized: "active_default_exercise"),
             setsDone: workoutManager.setsDone,
             setsTotal: workoutManager.setsTotal,
-            isCompact: isCompact,
-            ringSize: ringSize)
+            isCompact: isCompact)
         } else {
           HeaderChip(icon: "dumbbell", label: String(localized: "active_header_label"), isCompact: isCompact)
           Text(elapsedText(now: context.date))
@@ -215,18 +218,16 @@ private struct MetricsPage: View {
               .font(captionFont)
               .foregroundColor(LifeyColors.negative)
           }
-          HStack(spacing: isCompact ? 12 : 18) {
+          HStack(spacing: isCompact ? 8 : 14) {
             if let heartRate = workoutManager.heartRateBpm {
               MetricReading(
                 icon: "heart.fill", iconTint: LifeyColors.heart, value: "\(Int(heartRate.rounded()))",
-                unit: String(localized: "active_heart_rate_unit"), iconSize: metricIconSize,
-                valueFont: metricValueFont, unitFont: captionFont)
+                iconSize: metricIconSize, valueFont: metricValueFont)
             }
             if let calories = workoutManager.activeCalories {
               MetricReading(
                 icon: "flame.fill", iconTint: LifeyColors.calories, value: "\(Int(calories.rounded()))",
-                unit: String(localized: "active_calories_unit"), iconSize: metricIconSize,
-                valueFont: metricValueFont, unitFont: captionFont)
+                iconSize: metricIconSize, valueFont: metricValueFont)
             }
           }
           ExerciseCard(
@@ -259,9 +260,10 @@ private struct MetricsPage: View {
 /// Second `TabView` page (docs/40-watch-app-plan.md §12.1 B7, canvas AW 04):
 /// two large circular buttons — End (negative-tinted) and Pause/Resume
 /// (container-tinted) — under a header chip showing the ticking elapsed
-/// time instead of "STRENGTH". The End button only *asks* the phone to
-/// close the session (§8.2 decision (b)) — it never calls
-/// `WorkoutManager.finishAndSendSummary()` directly.
+/// time instead of "STRENGTH". The End button opens `EffortSelectorView`
+/// rather than closing anything itself — only *asking* the phone to close
+/// the session (§8.2 decision (b)) happens once that's confirmed/skipped;
+/// this button never calls `WorkoutManager.finishAndSendSummary()` directly.
 private struct ControlsPage: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
@@ -284,7 +286,7 @@ private struct ControlsPage: View {
             labelColor: LifeyColors.onSurface,
             isCompact: isCompact
           ) {
-            workoutManager.requestEnd()
+            workoutManager.beginEffortSelection()
           }
           ControlButton(
             icon: workoutManager.isPaused ? "play.fill" : "pause.fill",
@@ -362,10 +364,7 @@ private struct RestHeroView: View {
   let exerciseName: String
   let setsDone: Int?
   let setsTotal: Int?
-  /// From the caller's `GeometryReader` (docs/40-watch-app-plan.md §12.1
-  /// B4) — this view has no size opinion of its own.
   let isCompact: Bool
-  let ringSize: CGFloat
 
   private var progress: Double {
     guard let totalSeconds, totalSeconds > 0 else { return 1 }
@@ -377,27 +376,36 @@ private struct RestHeroView: View {
   }
 
   private var labelFont: Font { isCompact ? .caption2 : .caption }
-  private var ringNumberFont: Font { isCompact ? .system(.title3, design: .rounded) : .system(.title, design: .rounded) }
+  private var ringNumberFont: Font { isCompact ? .system(.title, design: .rounded) : .system(.largeTitle, design: .rounded) }
   private var nextLineFont: Font { isCompact ? .caption2 : .caption }
-  private var smallMetricFont: Font { isCompact ? .caption : .title3 }
-  private var smallMetricIconSize: CGFloat { isCompact ? 16 : 18 }
+  // Shrunk from caption/title3 (overflow fix, mirrors MetricsPage's row) —
+  // same 3-digit clipping risk for the small HR/kcal reading under the ring.
+  private var smallMetricFont: Font { isCompact ? .caption2 : .body }
+  private var smallMetricIconSize: CGFloat { isCompact ? 14 : 16 }
+  /// A wide, short bar rather than a ring (a round dial leaves the ring's
+  /// corners empty; a full-width bar uses that space and reads bigger at a
+  /// glance) — docs/40-watch-app-plan.md §12.1 B1 follow-up feedback.
+  private var barHeight: CGFloat { isCompact ? 60 : 78 }
 
   var body: some View {
     VStack(spacing: 4) {
       HeaderChip(icon: "timer", label: String(localized: "rest_hero_label"), isCompact: isCompact)
-      ZStack {
-        Circle()
-          .stroke(LifeyColors.container, lineWidth: 6)
-        Circle()
-          .trim(from: 0, to: progress)
-          .stroke(ringColor, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-          .rotationEffect(.degrees(-90))
-        Text(formatSeconds(remainingSeconds))
-          .font(ringNumberFont)
-          .foregroundColor(LifeyColors.onSurface)
-          .monospacedDigit()
+      GeometryReader { barGeometry in
+        ZStack(alignment: .leading) {
+          RoundedRectangle(cornerRadius: LifeyShapes.cardLarge)
+            .fill(LifeyColors.container)
+          RoundedRectangle(cornerRadius: LifeyShapes.cardLarge)
+            .fill(ringColor)
+            .frame(width: barGeometry.size.width * progress)
+        }
+        .overlay(
+          Text(formatSeconds(remainingSeconds))
+            .font(ringNumberFont)
+            .foregroundColor(LifeyColors.onSurface)
+            .monospacedDigit()
+        )
       }
-      .frame(width: ringSize, height: ringSize)
+      .frame(height: barHeight)
       .padding(.top, 8)
       if let totalSeconds {
         Text(String(format: String(localized: "rest_hero_total_format"), formatSeconds(totalSeconds)))
@@ -421,16 +429,16 @@ private struct RestHeroView: View {
           .lineLimit(1)
           .truncationMode(.tail)
       }
-      HStack(spacing: isCompact ? 12 : 18) {
+      HStack(spacing: isCompact ? 8 : 14) {
         if let heartRate = workoutManager.heartRateBpm {
           MetricReading(
-            icon: "heart.fill", iconTint: LifeyColors.heart, value: "\(Int(heartRate.rounded()))", unit: nil,
-            iconSize: smallMetricIconSize, valueFont: smallMetricFont, unitFont: labelFont)
+            icon: "heart.fill", iconTint: LifeyColors.heart, value: "\(Int(heartRate.rounded()))",
+            iconSize: smallMetricIconSize, valueFont: smallMetricFont)
         }
         if let calories = workoutManager.activeCalories {
           MetricReading(
-            icon: "flame.fill", iconTint: LifeyColors.calories, value: "\(Int(calories.rounded()))", unit: nil,
-            iconSize: smallMetricIconSize, valueFont: smallMetricFont, unitFont: labelFont)
+            icon: "flame.fill", iconTint: LifeyColors.calories, value: "\(Int(calories.rounded()))",
+            iconSize: smallMetricIconSize, valueFont: smallMetricFont)
         }
       }
       .padding(.top, 8)

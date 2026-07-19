@@ -45,8 +45,15 @@ final class PhoneConnector: NSObject {
     sendMessage(["type": "startRejected", "sessionClientId": sessionClientId])
   }
 
-  func sendEndRequested(sessionClientId: String) {
-    sendMessage(["type": "endRequested", "sessionClientId": sessionClientId])
+  /// [rpe] is whatever `EffortSelectorView`'s stepper produced (nil if the
+  /// user skipped it) — the key is omitted entirely when nil, never sent as
+  /// `NSNull`, which `sendMessage`'s property-list encoding rejects (the
+  /// same pitfall already hit `restEndsAtEpochMs`, docs/40-watch-app-plan.md
+  /// §11.2).
+  func sendEndRequested(sessionClientId: String, rpe: Int?) {
+    var message: [String: Any] = ["type": "endRequested", "sessionClientId": sessionClientId]
+    if let rpe { message["rpe"] = rpe }
+    sendMessage(message)
   }
 
   /// The watch's own `HKWorkoutSession` actually started running — drives the
@@ -54,6 +61,19 @@ final class PhoneConnector: NSObject {
   /// once per watch session by `WorkoutManager`, not on every state sync.
   func sendStartedOnWatch(sessionClientId: String) {
     sendMessage(["type": "startedOnWatch", "sessionClientId": sessionClientId])
+  }
+
+  /// Live heart-rate/calorie readings, pushed every time
+  /// `HKLiveWorkoutBuilderDelegate` reports fresh data — far more often than
+  /// `sendSummary`'s one-shot totals. Best-effort like the other `sendMessage`
+  /// calls here: a reading dropped while unreachable is superseded moments
+  /// later by the next one, so there's no `transferUserInfo`-style delivery
+  /// guarantee to bother with.
+  func sendLiveMetrics(sessionClientId: String, heartRateBpm: Double?, activeCalories: Double?) {
+    var message: [String: Any] = ["type": "liveMetrics", "sessionClientId": sessionClientId]
+    if let heartRateBpm { message["heartRateBpm"] = heartRateBpm }
+    if let activeCalories { message["activeCalories"] = activeCalories }
+    sendMessage(message)
   }
 
   private func sendMessage(_ message: [String: Any]) {

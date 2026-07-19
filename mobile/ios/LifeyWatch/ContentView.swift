@@ -12,7 +12,11 @@ struct ContentView: View {
     case .idle:
       IdleView()
     case .active:
-      ActiveWorkoutView()
+      if workoutManager.showEffortSelector {
+        EffortSelectorView()
+      } else {
+        ActiveWorkoutView()
+      }
     case .ending:
       EndingView()
     case .summary(let data):

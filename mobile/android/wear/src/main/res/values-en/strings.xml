@@ -11,13 +11,11 @@
     <string name="active_header_label">STRENGTH</string>
     <string name="active_default_exercise">Exercise</string>
     <string name="active_sets_format">%1$d/%2$d sets</string>
-    <string name="active_heart_rate_unit">bpm</string>
-    <string name="active_calories_unit">kcal</string>
     <string name="active_end_button">End</string>
     <string name="active_pause_button">Pause</string>
     <string name="active_resume_button">Resume</string>
     <string name="active_paused_indicator">Paused</string>
-    <string name="active_heart_rate_denied_placeholder">-- bpm</string>
+    <string name="active_heart_rate_denied_placeholder">--</string>
     <string name="active_heart_rate_denied_chip">Heart rate off — allow sensors</string>
 
     <string name="rest_hero_label">Rest</string>
@@ -29,4 +27,8 @@
     <string name="error_already_running_title">A workout is already running on the watch</string>
     <string name="error_already_running_subtitle">Another app is recording an exercise. Finish it first.</string>
     <string name="error_ok_button">OK</string>
+
+    <string name="effort_selector_title">How hard was it?</string>
+    <string name="effort_selector_confirm">End workout</string>
+    <string name="effort_selector_skip">Skip</string>
 </resources>

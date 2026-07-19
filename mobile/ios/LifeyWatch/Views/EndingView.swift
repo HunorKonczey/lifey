@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// Shown between the watch's End button and the phone's real `end` command
-/// coming back (docs/40-watch-app-plan.md §12.1 B8, §8.2 decision (b)): the
-/// sensors keep recording underneath (`WorkoutManager` stays in `.ending`,
-/// the `HKWorkoutSession` is untouched) — this screen just tells the user
-/// the finish flow (RPE rating) is happening on the phone, not stuck.
+/// Shown between `EffortSelectorView`'s Confirm/Skip and the phone's real
+/// `end` command coming back (docs/40-watch-app-plan.md §12.1 B8, §8.2
+/// decision (b)): the sensors keep recording underneath (`WorkoutManager`
+/// stays in `.ending`, the `HKWorkoutSession` is untouched) — the effort
+/// rating was already collected on the watch by this point, this screen
+/// just tells the user the phone is finishing saving, not stuck.
 /// Styling (§12.1 B6) matches canvas frame AW 05: `primary`-tinted phone
 /// glyph, bold title, muted subtitle, and the 3-dot progress row (first dot
 /// `primary`, the other two `outline`) the canvas shows under the copy.

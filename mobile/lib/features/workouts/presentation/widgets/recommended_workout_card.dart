@@ -26,7 +26,7 @@ class RecommendedWorkoutCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 13),
       decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.12),
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: scheme.primary.withValues(alpha: 0.45)),
       ),

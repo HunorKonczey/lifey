@@ -12,12 +12,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -32,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,9 +51,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.wear.compose.foundation.pager.HorizontalPager
+import androidx.wear.compose.foundation.pager.rememberPagerState
+import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Chip
-import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
@@ -71,9 +75,6 @@ private const val REST_RING_NEGATIVE_THRESHOLD_MS = 5_000L
 
 /** Total on-screen time for the rest-end "GO" flash (§3.4: "1–2 s flash/transition"). */
 private const val GO_FLASH_HOLD_MS = 1_300
-
-/** The rest-hero progress ring's diameter as a fraction of the shorter screen dimension (§12.1 B4). */
-private const val REST_RING_SIZE_FRACTION = 0.42f
 
 private const val METRICS_PAGE = 0
 private const val PAGE_COUNT = 2
@@ -165,53 +166,82 @@ fun ActiveWorkoutScreen() {
 
     val pagerState = rememberPagerState(pageCount = { PAGE_COUNT })
 
+    // Local, watch-only UI step (docs/40-watch-app-plan.md §8.2 decision (b)
+    // still holds — nothing here talks to ExerciseService or the phone until
+    // Confirm/Skip): intercepts the End press before
+    // SummarySender.sendEndRequested is ever called, so the effort rating
+    // (or a deliberate skip) is already final by the time the phone hears
+    // about it.
+    var showEffortSelector by remember { mutableStateOf(false) }
+    var effortRpe by remember { mutableIntStateOf(5) }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = isCompactScreen(maxWidth)
 
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-        ) { page ->
-            when (page) {
-                METRICS_PAGE -> MetricsOrRestPage(
-                    resting = resting,
-                    elapsedMs = elapsedMs,
-                    restRemainingMs = restRemainingMs,
-                    restTotalSeconds = metadata.restTotalSeconds,
-                    exerciseName = metadata.exerciseName ?: stringResource(R.string.active_default_exercise),
-                    setsDone = setsDone,
-                    setsTotal = setsTotal,
-                    liveMetrics = liveMetrics,
-                    isCompact = isCompact,
-                    maxWidth = maxWidth,
-                    maxHeight = maxHeight,
-                )
-                else -> ControlsPage(
-                    exerciseName = metadata.exerciseName ?: stringResource(R.string.active_default_exercise),
-                    setsDone = setsDone,
-                    setsTotal = setsTotal,
-                    isPaused = liveMetrics.isPaused,
-                    isCompact = isCompact,
-                    onEnd = {
-                        val sessionClientId = metadata.sessionClientId ?: return@ControlsPage
-                        scope.launch { SummarySender.sendEndRequested(context, sessionClientId) }
-                    },
-                    onTogglePause = {
-                        val paused = liveMetrics.isPaused
-                        scope.launch {
-                            if (paused) ExerciseService.resume(context) else ExerciseService.pause(context)
-                        }
-                    },
-                )
+        if (showEffortSelector) {
+            val sessionClientId = metadata.sessionClientId
+            EffortSelectorScreen(
+                rpe = effortRpe,
+                onRpeChange = { effortRpe = it },
+                onConfirm = {
+                    if (sessionClientId != null) {
+                        scope.launch { SummarySender.sendEndRequested(context, sessionClientId, effortRpe) }
+                    }
+                    showEffortSelector = false
+                },
+                onSkip = {
+                    if (sessionClientId != null) {
+                        scope.launch { SummarySender.sendEndRequested(context, sessionClientId, rpe = null) }
+                    }
+                    showEffortSelector = false
+                },
+            )
+        } else {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                // Lets the rotating bezel/crown page between metrics and
+                // controls too, not just a swipe (mirrors the watchOS side's
+                // `.digitalCrownRotation`).
+                rotaryScrollableBehavior = RotaryScrollableDefaults.snapBehavior(pagerState),
+            ) { page ->
+                when (page) {
+                    METRICS_PAGE -> MetricsOrRestPage(
+                        resting = resting,
+                        elapsedMs = elapsedMs,
+                        restRemainingMs = restRemainingMs,
+                        restTotalSeconds = metadata.restTotalSeconds,
+                        exerciseName = metadata.exerciseName ?: stringResource(R.string.active_default_exercise),
+                        setsDone = setsDone,
+                        setsTotal = setsTotal,
+                        liveMetrics = liveMetrics,
+                        isCompact = isCompact,
+                        maxWidth = maxWidth,
+                    )
+                    else -> ControlsPage(
+                        exerciseName = metadata.exerciseName ?: stringResource(R.string.active_default_exercise),
+                        setsDone = setsDone,
+                        setsTotal = setsTotal,
+                        isPaused = liveMetrics.isPaused,
+                        isCompact = isCompact,
+                        onEnd = { showEffortSelector = true },
+                        onTogglePause = {
+                            val paused = liveMetrics.isPaused
+                            scope.launch {
+                                if (paused) ExerciseService.resume(context) else ExerciseService.pause(context)
+                            }
+                        },
+                    )
+                }
             }
-        }
-        PageDots(
-            pageCount = PAGE_COUNT,
-            selectedPage = pagerState.currentPage,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
-        )
-        if (showGoFlash) {
-            GoFlash(modifier = Modifier.fillMaxSize())
+            PageDots(
+                pageCount = PAGE_COUNT,
+                selectedPage = pagerState.currentPage,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+            )
+            if (showGoFlash) {
+                GoFlash(modifier = Modifier.fillMaxSize())
+            }
         }
     }
 }
@@ -255,13 +285,14 @@ private fun MetricsOrRestPage(
     liveMetrics: LiveMetrics,
     isCompact: Boolean,
     maxWidth: Dp,
-    maxHeight: Dp,
 ) {
     val heroStyle = if (isCompact) MaterialTheme.typography.display3 else MaterialTheme.typography.display2
     val captionStyle = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1
-    val metricNumberStyle = if (isCompact) MaterialTheme.typography.title3 else MaterialTheme.typography.title2
-    val metricIconSize = if (isCompact) 18.dp else 22.dp
-    val ringSize = minOf(maxWidth, maxHeight) * REST_RING_SIZE_FRACTION
+    // Shrunk from title3/title2 (§ overflow fix) — at title2, two 3-digit
+    // readings (HR + kcal both >= 100) side by side clipped against the
+    // round bezel instead of fitting on one line.
+    val metricNumberStyle = if (isCompact) MaterialTheme.typography.body2 else MaterialTheme.typography.title3
+    val metricIconSize = if (isCompact) 14.dp else 18.dp
 
     Column(
         modifier = Modifier
@@ -279,7 +310,6 @@ private fun MetricsOrRestPage(
                 setsTotal = setsTotal,
                 liveMetrics = liveMetrics,
                 isCompact = isCompact,
-                ringSize = ringSize,
             )
         } else {
             HeaderChip(
@@ -295,22 +325,19 @@ private fun MetricsOrRestPage(
                     color = LifeyColors.negative,
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(if (isCompact) 12.dp else 18.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp)) {
                 HeartRateReading(
                     liveMetrics = liveMetrics,
                     iconSize = metricIconSize,
                     valueStyle = metricNumberStyle,
-                    unitStyle = captionStyle,
                 )
                 liveMetrics.activeCalories?.let { kcal ->
                     MetricReading(
                         icon = Icons.Filled.LocalFireDepartment,
                         iconTint = LifeyColors.calories,
                         value = kcal.roundToInt().toString(),
-                        unit = stringResource(R.string.active_calories_unit),
                         iconSize = metricIconSize,
                         valueStyle = metricNumberStyle,
-                        unitStyle = captionStyle,
                     )
                 }
             }
@@ -464,7 +491,6 @@ private fun HeartRateReading(
     liveMetrics: LiveMetrics,
     iconSize: Dp,
     valueStyle: TextStyle,
-    unitStyle: TextStyle,
 ) {
     if (liveMetrics.hasHeartRatePermission) {
         liveMetrics.heartRateBpm?.let { bpm ->
@@ -472,10 +498,8 @@ private fun HeartRateReading(
                 icon = Icons.Filled.Favorite,
                 iconTint = LifeyColors.heart,
                 value = bpm.roundToInt().toString(),
-                unit = stringResource(R.string.active_heart_rate_unit),
                 iconSize = iconSize,
                 valueStyle = valueStyle,
-                unitStyle = unitStyle,
             )
         }
     } else {
@@ -487,38 +511,30 @@ private fun HeartRateReading(
             icon = Icons.Filled.HeartBroken,
             iconTint = LifeyColors.outline,
             value = stringResource(R.string.active_heart_rate_denied_placeholder),
-            unit = null,
             iconSize = iconSize,
             valueStyle = valueStyle,
-            unitStyle = unitStyle,
             valueColor = LifeyColors.onSurfaceVariant,
         )
     }
 }
 
-/** One icon + number + muted unit metric reading (HR or kcal, canvas
- * AW02/Wear02) — [unit] is null for the degraded-HR placeholder, which has
- * no unit to show next to "--" (§12.1 B13). [maxLines]/no-wrap on both value
- * and unit: on a narrow round display a two-word unit like "kcal" could
- * otherwise wrap onto its own second line mid-word instead of staying on
- * one line next to the number. */
+/** One icon + number metric reading (HR or kcal, canvas AW02/Wear02) — no
+ * unit suffix next to the number; the icon itself already disambiguates HR
+ * vs. kcal, and dropping the unit keeps the reading compact on a small
+ * round display. [maxLines]/no-wrap on the value: a multi-digit number could
+ * otherwise wrap mid-word onto its own second line. */
 @Composable
 private fun MetricReading(
     icon: ImageVector,
     iconTint: Color,
     value: String,
-    unit: String?,
     iconSize: Dp,
     valueStyle: TextStyle,
-    unitStyle: TextStyle,
     valueColor: Color = LifeyColors.onSurface,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(iconSize))
         Text(text = value, style = valueStyle, color = valueColor, maxLines = 1, softWrap = false)
-        if (unit != null) {
-            Text(text = unit, style = unitStyle, color = LifeyColors.onSurfaceVariant, maxLines = 1, softWrap = false)
-        }
     }
 }
 
@@ -607,7 +623,6 @@ private fun RestHero(
     setsTotal: Int?,
     liveMetrics: LiveMetrics,
     isCompact: Boolean,
-    ringSize: Dp,
 ) {
     val ringColor = if (restRemainingMs <= REST_RING_NEGATIVE_THRESHOLD_MS) {
         LifeyColors.negative
@@ -619,23 +634,42 @@ private fun RestHero(
         ?.let { (restRemainingMs.toFloat() / (it * 1000)).coerceIn(0f, 1f) }
         ?: 1f
     val captionStyle = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1
-    val ringNumberStyle = if (isCompact) MaterialTheme.typography.title3 else MaterialTheme.typography.display3
-    val smallMetricStyle = if (isCompact) MaterialTheme.typography.caption1 else MaterialTheme.typography.title3
-    val smallMetricIconSize = if (isCompact) 16.dp else 18.dp
+    val ringNumberStyle = if (isCompact) MaterialTheme.typography.title2 else MaterialTheme.typography.display2
+    // Shrunk from caption1/title3 (§ overflow fix, mirrors the metrics-page
+    // row above) — same 3-digit clipping risk for the small HR/kcal reading
+    // under the rest ring.
+    val smallMetricStyle = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.body2
+    val smallMetricIconSize = if (isCompact) 14.dp else 16.dp
+    // A wide, short bar rather than a ring (a round dial leaves the ring's
+    // corners empty; a full-width bar uses that space and reads bigger at a
+    // glance) — docs/40-watch-app-plan.md §12.1 B1 follow-up feedback.
+    val barHeight = if (isCompact) 60.dp else 78.dp
 
     HeaderChip(
         icon = Icons.Filled.Timer,
         label = stringResource(R.string.rest_hero_label),
         isCompact = isCompact,
     )
-    Box(modifier = Modifier.size(ringSize).padding(top = 8.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(
-            progress = progress,
-            modifier = Modifier.fillMaxSize(),
-            indicatorColor = ringColor,
-            trackColor = LifeyColors.container,
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(barHeight)
+            .padding(top = 8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(LifeyColors.container, LifeyShapes.cardLarge),
         )
-        Text(text = formatElapsed(restRemainingMs), style = ringNumberStyle, color = LifeyColors.onSurface)
+        Box(
+            modifier = Modifier
+                .width(maxWidth * progress)
+                .fillMaxHeight()
+                .background(ringColor, LifeyShapes.cardLarge),
+        )
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text = formatElapsed(restRemainingMs), style = ringNumberStyle, color = LifeyColors.onSurface)
+        }
     }
     if (restTotalSeconds != null) {
         Text(
@@ -669,23 +703,20 @@ private fun RestHero(
     }
     Row(
         modifier = Modifier.padding(top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(if (isCompact) 12.dp else 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp),
     ) {
         HeartRateReading(
             liveMetrics = liveMetrics,
             iconSize = smallMetricIconSize,
             valueStyle = smallMetricStyle,
-            unitStyle = captionStyle,
         )
         liveMetrics.activeCalories?.let { kcal ->
             MetricReading(
                 icon = Icons.Filled.LocalFireDepartment,
                 iconTint = LifeyColors.calories,
                 value = kcal.roundToInt().toString(),
-                unit = null,
                 iconSize = smallMetricIconSize,
                 valueStyle = smallMetricStyle,
-                unitStyle = captionStyle,
             )
         }
     }

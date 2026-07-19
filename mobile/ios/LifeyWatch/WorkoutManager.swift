@@ -85,6 +85,14 @@ final class WorkoutManager: NSObject, ObservableObject {
   @Published private(set) var activeCalories: Double?
   @Published private(set) var startedAt: Date?
 
+  /// Whether `EffortSelectorView` should be shown over `ActiveWorkoutView`
+  /// right now — set by the End button, cleared once `requestEnd(rpe:)`
+  /// actually sends the effort rating (or a skip) to the phone. A separate
+  /// flag rather than a new `WorkoutPhase` case: `phase` stays `.active` the
+  /// whole time the selector is up, since nothing about the session's
+  /// lifecycle changes until Confirm/Skip is tapped.
+  @Published private(set) var showEffortSelector = false
+
   private let store = HKHealthStore()
   private var session: HKWorkoutSession?
   private var builder: HKLiveWorkoutBuilder?
@@ -236,16 +244,27 @@ final class WorkoutManager: NSObject, ObservableObject {
     session?.resume()
   }
 
+  /// The watch's End button shows `EffortSelectorView` over `ActiveWorkoutView`
+  /// instead of ending anything right away — `phase` stays `.active` until
+  /// the user actually confirms or skips (see `requestEnd(rpe:)`).
+  func beginEffortSelection() {
+    guard phase == .active else { return }
+    showEffortSelector = true
+  }
+
   /// The watch's End button never closes the session itself — it asks the
-  /// phone to, so the phone's finish flow (RPE sheet) still runs
-  /// (docs/40-watch-app-plan.md §8.2 decision (b), §11.1/5). `phase` moves
-  /// to `.ending` right away so `ContentView` shows the "waiting for phone"
-  /// screen (§12.1 B8) — the session only actually ends once the real `end`
-  /// command comes back, via `finishAndSendSummary()`.
-  func requestEnd() {
+  /// phone to, so the phone's finish flow still runs, but only to persist
+  /// (docs/40-watch-app-plan.md §8.2 decision (b), §11.1/5): the watch
+  /// already collected [rpe] itself via `EffortSelectorView` (nil if
+  /// skipped), so the phone no longer needs to show its own RPE sheet for
+  /// this path. `phase` moves to `.ending` right away so `ContentView` shows
+  /// the "waiting for phone" screen (§12.1 B8) — the session only actually
+  /// ends once the real `end` command comes back, via `finishAndSendSummary()`.
+  func requestEnd(rpe: Int?) {
     guard phase == .active, let sessionClientId else { return }
+    showEffortSelector = false
     phase = .ending
-    PhoneConnector.shared.sendEndRequested(sessionClientId: sessionClientId)
+    PhoneConnector.shared.sendEndRequested(sessionClientId: sessionClientId, rpe: rpe)
   }
 
   /// The real end, triggered by `PhoneConnector` once the phone's `end`
@@ -387,7 +406,20 @@ extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
           break
         }
       }
+      sendLiveMetricsIfNeeded()
     }
+  }
+
+  /// Relays the just-updated `heartRateBpm`/`activeCalories` to the phone
+  /// (docs/40-watch-app-plan.md — mirrors Android's `ExerciseService`
+  /// forwarding every `ExerciseUpdateCallback` tick). No-ops without a
+  /// `sessionClientId` — that only happens before `PhoneConnector`'s
+  /// applicationContext has arrived, a narrow startup race also guarded
+  /// against elsewhere in this class (see `notifyStartedOnWatchIfNeeded`).
+  private func sendLiveMetricsIfNeeded() {
+    guard let sessionClientId else { return }
+    PhoneConnector.shared.sendLiveMetrics(
+      sessionClientId: sessionClientId, heartRateBpm: heartRateBpm, activeCalories: activeCalories)
   }
 
   nonisolated func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {}

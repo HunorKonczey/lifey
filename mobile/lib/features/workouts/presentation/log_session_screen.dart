@@ -126,6 +126,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   DateTime? _lastHrSampleAt; // timestamp of the sample currently shown
   bool _showHeartRate = false;
 
+  // Live calories burned, pushed straight from the watch's own session
+  // (WatchLiveMetrics) — unlike heart rate there's no Health-store polling
+  // fallback for this on the phone, so it's only ever shown while a
+  // connected watch is actively measuring and feeding it.
+  double? _watchActiveCalories;
+
   // "Measuring" ⌚-pill (docs/40-watch-app-plan.md §12.4 B14) — true once the
   // watch confirms its own session actually started, cleared on reachability
   // loss; also implicitly hidden once [_finishedAt] is set (see build()).
@@ -290,16 +296,17 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   /// The watch's End button asks the phone to close the session rather than
   /// ending its own sensor session unilaterally (docs/40-watch-app-plan.md
-  /// §8.2 decision (b)) — this is what actually runs the same finish flow
-  /// (RPE/feedback sheet) the in-app Finish button does. No-ops if this
-  /// screen isn't showing the matching session, or it's already
-  /// finished/finishing.
+  /// §8.2 decision (b)) — but unlike the in-app Finish button, the watch
+  /// already collected (or skipped) the effort rating itself before sending
+  /// this, so [_finishWorkoutFromWatch] persists it directly instead of
+  /// showing the phone's own feedback sheet. No-ops if this screen isn't
+  /// showing the matching session, or it's already finished/finishing.
   void _onWatchEvent(Object event) {
     switch (event) {
       case WatchEndRequested():
         if (event.sessionClientId != _sessionClientId) return;
         if (_finishedAt != null || _saving) return;
-        unawaited(_finishWorkout());
+        unawaited(_finishWorkoutFromWatch(event.rpe));
       case WatchStartRejected():
         // Another app already owns an exercise on the watch
         // (docs/40-watch-app-plan.md §5.3/§8.1) — the phone-side workout
@@ -315,7 +322,26 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         setState(() => _measuringOnWatch = true);
       case WatchReachabilityChanged():
         if (event.reachable || !mounted) return;
-        setState(() => _measuringOnWatch = false);
+        setState(() {
+          _measuringOnWatch = false;
+          _watchActiveCalories = null;
+        });
+      case WatchLiveMetrics():
+        // The watch is the more real-time source while it's actively
+        // measuring: its readings arrive far more often than the Health
+        // store's batched samples _pollHeartRate polls for, so a live push
+        // simply supersedes whatever _pollHeartRate last saw.
+        if (event.sessionClientId != _sessionClientId || !mounted) return;
+        setState(() {
+          if (event.heartRateBpm != null) {
+            _currentHeartRate = event.heartRateBpm!.round();
+            _showHeartRate = true;
+            _lastHrSampleAt = DateTime.now();
+          }
+          if (event.activeCalories != null) {
+            _watchActiveCalories = event.activeCalories;
+          }
+        });
     }
   }
 
@@ -339,10 +365,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         .latestHeartRate(within: _kHrFreshWindow);
     if (!mounted) return;
 
-    // No fresh sample → the watch isn't syncing live data right now. Hide a
-    // previously shown value rather than leaving it frozen on screen.
+    // No fresh Health-store sample → normally the watch has stopped syncing,
+    // so hide a stale readout. But while the watch is actively measuring, it
+    // already pushes HR far more often than the Health store's batched sync
+    // can keep up with (see [WatchLiveMetrics]'s handler) — a poll finding
+    // nothing here just means the store hasn't caught up yet, not that the
+    // watch stopped; a real disconnect clears [_showHeartRate] via
+    // [WatchReachabilityChanged] instead. Don't let a stale poll tick clobber
+    // an up-to-date live-pushed value in that case.
     if (sample == null) {
-      if (_showHeartRate) setState(() => _showHeartRate = false);
+      if (_showHeartRate && !_measuringOnWatch) setState(() => _showHeartRate = false);
       return;
     }
 
@@ -1053,6 +1085,34 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     }
   }
 
+  /// The watch's End button handler. [rpe] is whatever the watch's own
+  /// effort stepper produced (null if the user skipped it) — unlike
+  /// [_finishWorkout], this never shows [PostWorkoutFeedbackSheet]: the
+  /// rating was already collected (or deliberately skipped) on the watch, so
+  /// [_feedbackNote] is left untouched and stays empty.
+  Future<void> _finishWorkoutFromWatch(int? rpe) async {
+    if (_saving) return;
+    setState(() {
+      _saving = true;
+      _rpe = rpe;
+    });
+    final l10n = AppLocalizations.of(context)!;
+
+    try {
+      await _persistFinished();
+      if (!mounted) return;
+      await _maybeShowWorkoutSuccess();
+      if (!mounted) return;
+      _navigateToDashboard();
+    } catch (_) {
+      if (mounted) {
+        AppSnackbar.showError(context, title: l10n.couldNotSaveSessionMessage);
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Top bar
   // ---------------------------------------------------------------------------
@@ -1291,31 +1351,24 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 ],
                 // "Measuring" pill (docs/40-watch-app-plan.md §12.4 B14):
                 // the watch confirmed its own session started, until it ends
-                // or reachability is lost.
+                // or reachability is lost. Icon-only — the label is still
+                // exposed via the tooltip/semantics for accessibility.
                 if (_measuringOnWatch && _finishedAt == null) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    padding: const EdgeInsets.all(9),
                     decoration: BoxDecoration(
                       color: scheme.surfaceContainerLowest,
                       borderRadius: BorderRadius.circular(13),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.watch, size: 18, color: scheme.primary),
-                        const SizedBox(width: 6),
-                        Text(
-                          l10n.watchMeasuringPillLabel,
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                      ],
+                    child: Tooltip(
+                      message: l10n.watchMeasuringPillLabel,
+                      child: Icon(
+                        Icons.watch,
+                        size: 18,
+                        color: scheme.primary,
+                        semanticLabel: l10n.watchMeasuringPillLabel,
+                      ),
                     ),
                   ),
                 ],
@@ -1337,6 +1390,38 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                         const SizedBox(width: 6),
                         Text(
                           '$_currentHeartRate',
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: scheme.onSurface,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                // Live calories burned, pushed from the watch's own session
+                // — only ever available while a connected watch is actively
+                // measuring (see [WatchLiveMetrics]).
+                if (_watchActiveCalories != null && _finishedAt == null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.local_fire_department,
+                            size: 18, color: context.metricColors.calories),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_watchActiveCalories!.round()}',
                           style: TextStyle(
                             fontFamily: 'PlusJakartaSans',
                             fontSize: 15,

@@ -57,8 +57,11 @@ dependencies {
     // Compose for Wear OS UI (docs/40-watch-app-plan.md §5, F3).
     implementation(platform("androidx.compose:compose-bom:2026.06.00"))
     implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.wear.compose:compose-material:1.4.1")
-    implementation("androidx.wear.compose:compose-foundation:1.4.1")
+    implementation("androidx.wear.compose:compose-material:1.6.2")
+    // 1.6.2: androidx.wear.compose.foundation.pager's HorizontalPager, needed
+    // for its `rotaryScrollableBehavior` param (1.4.1 only has the plain
+    // androidx.compose.foundation.pager one, with no rotary/crown support).
+    implementation("androidx.wear.compose:compose-foundation:1.6.2")
     implementation("androidx.compose.ui:ui-tooling-preview")
     // Material Symbols equivalents for the brand icon set (favorite, flame,
     // fitness_center, timer, pause/stop, heart_broken, priority_high —

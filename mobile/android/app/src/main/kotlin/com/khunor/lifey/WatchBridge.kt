@@ -196,8 +196,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                 eventSink?.success(mapOf("type" to "startRejected", "sessionClientId" to sessionClientId))
             }
             "$MESSAGE_PATH_PREFIX/$COMMAND_END_REQUESTED" -> {
-                val sessionClientId = String(messageEvent.data)
-                eventSink?.success(mapOf("type" to "endRequested", "sessionClientId" to sessionClientId))
+                emitEndRequested(String(messageEvent.data))
             }
             "$MESSAGE_PATH_PREFIX/$COMMAND_STARTED_ON_WATCH" -> {
                 val sessionClientId = String(messageEvent.data)
@@ -206,12 +205,32 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "$MESSAGE_PATH_PREFIX/$COMMAND_SUMMARY" -> {
                 emitSummary(String(messageEvent.data))
             }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_LIVE_METRICS" -> {
+                emitLiveMetrics(String(messageEvent.data))
+            }
             // PhoneWatchSummaryListenerService also receives this same
             // summary message (manifest-declared, so it fires even if this
             // MethodChannel-backed listener isn't attached yet) and buffers
             // it for the next onListen sweep below
             // (docs/40-watch-app-plan.md §5.4).
         }
+    }
+
+    /**
+     * The watch already collected (or skipped) the effort rating itself
+     * before sending this — [rpe] is null when skipped. Payload is now JSON
+     * (like `start`/`state`) rather than a raw sessionClientId string, so it
+     * can carry `rpe` alongside the id.
+     */
+    private fun emitEndRequested(endRequestedJson: String) {
+        val payload = JSONObject(endRequestedJson)
+        eventSink?.success(
+            mapOf(
+                "type" to "endRequested",
+                "sessionClientId" to payload.optString("sessionClientId"),
+                "rpe" to if (payload.has("rpe")) payload.optInt("rpe") else null,
+            ),
+        )
     }
 
     private fun emitSummary(summaryJson: String) {
@@ -231,6 +250,23 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                         // (docs/40-watch-app-plan.md §5.2, decided in
                         // workout_resume_prompt.dart's Android branch).
                         "healthWorkoutId" to null,
+                    ),
+            )
+        )
+    }
+
+    private fun emitLiveMetrics(liveMetricsJson: String) {
+        val payload = JSONObject(liveMetricsJson)
+        eventSink?.success(
+            mapOf(
+                "type" to "liveMetrics",
+                "payload" to
+                    mapOf(
+                        "sessionClientId" to payload.optString("sessionClientId"),
+                        "heartRateBpm" to
+                            if (payload.has("heartRateBpm")) payload.optDouble("heartRateBpm") else null,
+                        "activeCalories" to
+                            if (payload.has("activeCalories")) payload.optDouble("activeCalories") else null,
                     ),
             )
         )
@@ -265,6 +301,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_END_REQUESTED = "endRequested"
         private const val COMMAND_STARTED_ON_WATCH = "startedOnWatch"
         private const val COMMAND_SUMMARY = "summary"
+        private const val COMMAND_LIVE_METRICS = "liveMetrics"
     }
 }
 

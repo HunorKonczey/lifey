@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@" : {
+
+    },
     "active_calories_unit" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -153,18 +156,66 @@
         }
       }
     },
-    "ending_subtitle" : {
+    "effort_selector_confirm" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rate your effort on the phone to save this workout"
+            "value" : "End workout"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Értékeld az edzést a telefonon a mentéshez"
+            "value" : "Edzés lezárása"
+          }
+        }
+      }
+    },
+    "effort_selector_skip" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kihagyás"
+          }
+        }
+      }
+    },
+    "effort_selector_title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How hard was it?"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Milyen nehéz volt?"
+          }
+        }
+      }
+    },
+    "ending_subtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saving your workout…"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az edzés mentése…"
           }
         }
       }
