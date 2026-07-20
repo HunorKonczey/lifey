@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Remove
@@ -39,7 +41,9 @@ private const val RPE_MAX = 10
  * stepper rather than the phone's 10-chip row: a row of 10 numbered chips
  * doesn't fit legibly on a round dial. [onSkip] closes the workout with no
  * rating at all — the comment/note is never collected here either way, it
- * always stays empty for a watch-closed session.
+ * always stays empty for a watch-closed session. [onBack] dismisses this
+ * screen without ending the workout at all — nothing is sent to the phone,
+ * the session just resumes on [ActiveWorkoutScreen] exactly as it was.
  */
 @Composable
 fun EffortSelectorScreen(
@@ -47,6 +51,7 @@ fun EffortSelectorScreen(
     onRpeChange: (Int) -> Unit,
     onConfirm: () -> Unit,
     onSkip: () -> Unit,
+    onBack: () -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = isCompactScreen(maxWidth)
@@ -118,5 +123,18 @@ fun EffortSelectorScreen(
                     .clickable(onClick = onSkip),
             )
         }
+
+        // Top-start corner, out of the centered Column's flow — dismisses
+        // back to the normal active-workout view without ending anything.
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = stringResource(R.string.effort_selector_back),
+            tint = LifeyColors.onSurfaceVariant,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+                .clickable(onClick = onBack)
+                .size(20.dp),
+        )
     }
 }

@@ -156,6 +156,22 @@
         }
       }
     },
+    "effort_selector_back" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vissza"
+          }
+        }
+      }
+    },
     "effort_selector_confirm" : {
       "localizations" : {
         "en" : {

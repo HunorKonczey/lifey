@@ -9,6 +9,9 @@ Kapcsolódó dokumentumok:
 - [39-rest-timer-plan.md](../39-rest-timer-plan.md) — a `restEndsAtEpochMs` állapot, amit a watch is megjelenít
 - [41-watch-design-prompt.md](41-watch-design-prompt.md) — a watch UI design-promptja; a kész design canvas: `docs/watch/design/Lifey Watch Design.dc.html`
 - [42-watch-design-implementation-plan.md](42-watch-design-implementation-plan.md) — a design-implementáció terve (F4B fejlesztés → F4 design → F5 → F6, watchOS/Wear OS bontásban)
+- [43-watch-f5-set-logging-plan.md](43-watch-f5-set-logging-plan.md) — az F5 (set-logolás a watchról) részletes terve
+- [44-watch-f6-standalone-plan.md](44-watch-f6-standalone-plan.md) — az F6 (standalone indítás) részletes funkcionális terve (a §7-ben előírt „külön tervezés”)
+- [45-watch-f5-f6-design-prompt.md](45-watch-f5-f6-design-prompt.md) — az F5/F6 canvas-bővítés önhordó design-promptja (a 12.5-ben jelzett hiányzó F5/F6-frame-ekhez)
 
 ## Implementációs állapot (2026-07-16)
 

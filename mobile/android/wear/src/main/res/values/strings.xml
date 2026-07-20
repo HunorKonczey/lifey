@@ -31,4 +31,5 @@
     <string name="effort_selector_title">Milyen nehéz volt?</string>
     <string name="effort_selector_confirm">Edzés lezárása</string>
     <string name="effort_selector_skip">Kihagyás</string>
+    <string name="effort_selector_back">Vissza</string>
 </resources>

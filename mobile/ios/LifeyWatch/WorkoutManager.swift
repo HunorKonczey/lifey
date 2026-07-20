@@ -252,6 +252,13 @@ final class WorkoutManager: NSObject, ObservableObject {
     showEffortSelector = true
   }
 
+  /// `EffortSelectorView`'s back button — dismisses it without ending the
+  /// workout at all, nothing is sent to the phone, `ActiveWorkoutView` just
+  /// resumes exactly as it was.
+  func cancelEffortSelection() {
+    showEffortSelector = false
+  }
+
   /// The watch's End button never closes the session itself — it asks the
   /// phone to, so the phone's finish flow still runs, but only to persist
   /// (docs/40-watch-app-plan.md §8.2 decision (b), §11.1/5): the watch

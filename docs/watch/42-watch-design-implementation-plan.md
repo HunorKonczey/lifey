@@ -5,6 +5,9 @@ Kapcsolódó dokumentumok:
 - [40-watch-app-plan.md](40-watch-app-plan.md) — az implementációs terv; az F4B design-adósság kód ellen ellenőrzött listája a **12. fejezetében** (B1–B15) — ez a doc arra hivatkozik, nem ismétli meg
 - [41-watch-design-prompt.md](41-watch-design-prompt.md) — a design-prompt (brand-tokenek, típusskála, F5/F6 koncepció-specifikáció)
 - `docs/watch/design/Lifey Watch Design.dc.html` — a leszállított design canvas (F4-scope: Apple Watch 01–07, Wear OS 01–06, dynamic sizing, telefon A–C)
+- [43-watch-f5-set-logging-plan.md](43-watch-f5-set-logging-plan.md) — a D3 (F5) részletes terve (2026-07-19)
+- [44-watch-f6-standalone-plan.md](44-watch-f6-standalone-plan.md) — a D4 (F6) részletes funkcionális terve (2026-07-19)
+- [45-watch-f5-f6-design-prompt.md](45-watch-f5-f6-design-prompt.md) — a D3.1/D4.1 design-fázisok önhordó promptja (2026-07-19)
 
 **A sorrend elve** (a felhasználói döntés szerint): előbb az F4B **funkciók** lefejlesztése (a design frame-jei enélkül nem építhetők meg), utána a design-styling ráhúzása az immár teljes F4-scope-ra; F5 és F6 esetén fordított a helyzet — ott **előbb a design** készül el (a canvas ma nem tartalmaz F5/F6 frame-et), és csak utána az implementáció.
 

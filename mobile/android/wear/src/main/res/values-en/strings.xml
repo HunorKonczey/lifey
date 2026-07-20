@@ -31,4 +31,5 @@
     <string name="effort_selector_title">How hard was it?</string>
     <string name="effort_selector_confirm">End workout</string>
     <string name="effort_selector_skip">Skip</string>
+    <string name="effort_selector_back">Back</string>
 </resources>

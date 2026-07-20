@@ -195,6 +195,7 @@ fun ActiveWorkoutScreen() {
                     }
                     showEffortSelector = false
                 },
+                onBack = { showEffortSelector = false },
             )
         } else {
             HorizontalPager(

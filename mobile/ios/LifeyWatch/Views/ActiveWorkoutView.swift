@@ -118,6 +118,8 @@ private struct HeaderChip: View {
 /// One icon + number metric reading (HR or kcal, canvas AW 02) — no unit
 /// suffix next to the number; the icon itself already disambiguates HR vs.
 /// kcal, and dropping the unit keeps the reading compact on a small dial.
+/// Used for the compact row under [RestHeroView]'s ring, not the main
+/// metrics-page hero readings (see [HeroMetricRow] for those).
 private struct MetricReading: View {
   let icon: String
   let iconTint: Color
@@ -135,6 +137,37 @@ private struct MetricReading: View {
         .foregroundColor(LifeyColors.onSurface)
         .monospacedDigit()
         .lineLimit(1)
+    }
+  }
+}
+
+/// A full-width, stacked icon + value + unit row for [MetricsPage]'s primary
+/// HR/kcal readings (canvas AW 02) — one reading per row rather than
+/// squeezed side by side, with its unit label back (a row this size has
+/// plenty of width for it, unlike [RestHeroView]'s compact under-ring
+/// variant).
+private struct HeroMetricRow: View {
+  let icon: String
+  let iconTint: Color
+  let value: String
+  let unit: String
+  let isCompact: Bool
+
+  var body: some View {
+    HStack(spacing: 8) {
+      Image(systemName: icon)
+        .font(.system(size: isCompact ? 20 : 24))
+        .foregroundColor(iconTint)
+      Text(value)
+        .font(isCompact ? .title3 : .title2)
+        .fontWeight(.bold)
+        .foregroundColor(LifeyColors.onSurface)
+        .monospacedDigit()
+        .lineLimit(1)
+      Text(unit)
+        .font(isCompact ? .caption2 : .caption)
+        .foregroundColor(LifeyColors.onSurfaceVariant)
+        .textCase(.uppercase)
     }
   }
 }
@@ -190,53 +223,59 @@ private struct MetricsPage: View {
 
   private var heroFont: Font { isCompact ? .system(.title3, design: .rounded) : .system(.title2, design: .rounded) }
   private var captionFont: Font { isCompact ? .caption2 : .caption }
-  // Shrunk from title3/title2 (overflow fix) — at title2, two 3-digit
-  // readings (HR + kcal both >= 100) side by side clipped against the
-  // round bezel instead of fitting on one line.
-  private var metricValueFont: Font { isCompact ? .body : .title3 }
-  private var metricIconSize: CGFloat { isCompact ? 14 : 18 }
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
-      VStack(spacing: 4) {
+      Group {
         if let remainingSeconds = restRemainingSeconds() {
-          RestHeroView(
-            remainingSeconds: remainingSeconds,
-            totalSeconds: workoutManager.restTotalSeconds,
-            exerciseName: workoutManager.exerciseName ?? String(localized: "active_default_exercise"),
-            setsDone: workoutManager.setsDone,
-            setsTotal: workoutManager.setsTotal,
-            isCompact: isCompact)
+          VStack(spacing: 4) {
+            RestHeroView(
+              remainingSeconds: remainingSeconds,
+              totalSeconds: workoutManager.restTotalSeconds,
+              exerciseName: workoutManager.exerciseName ?? String(localized: "active_default_exercise"),
+              setsDone: workoutManager.setsDone,
+              setsTotal: workoutManager.setsTotal,
+              isCompact: isCompact)
+          }
         } else {
-          HeaderChip(icon: "dumbbell", label: String(localized: "active_header_label"), isCompact: isCompact)
-          Text(elapsedText(now: context.date))
-            .font(heroFont)
-            .foregroundColor(LifeyColors.primary)
-            .monospacedDigit()
-          if workoutManager.isPaused {
-            Text("active_paused_indicator")
-              .font(captionFont)
-              .foregroundColor(LifeyColors.negative)
-          }
-          HStack(spacing: isCompact ? 8 : 14) {
-            if let heartRate = workoutManager.heartRateBpm {
-              MetricReading(
-                icon: "heart.fill", iconTint: LifeyColors.heart, value: "\(Int(heartRate.rounded()))",
-                iconSize: metricIconSize, valueFont: metricValueFont)
+          // Left-aligned column (canvas AW 02) rather than centered — a
+          // `Spacer()` between the readings and the exercise card lets the
+          // card settle near the bottom instead of everything bunching in
+          // the middle.
+          VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
+            HeaderChip(icon: "dumbbell", label: String(localized: "active_header_label"), isCompact: isCompact)
+            Text(elapsedText(now: context.date))
+              .font(heroFont)
+              .fontWeight(.bold)
+              .foregroundColor(LifeyColors.primary)
+              .monospacedDigit()
+            if workoutManager.isPaused {
+              Text("active_paused_indicator")
+                .font(captionFont)
+                .foregroundColor(LifeyColors.negative)
             }
-            if let calories = workoutManager.activeCalories {
-              MetricReading(
-                icon: "flame.fill", iconTint: LifeyColors.calories, value: "\(Int(calories.rounded()))",
-                iconSize: metricIconSize, valueFont: metricValueFont)
+            VStack(alignment: .leading, spacing: isCompact ? 4 : 8) {
+              if let heartRate = workoutManager.heartRateBpm {
+                HeroMetricRow(
+                  icon: "heart", iconTint: LifeyColors.heart, value: "\(Int(heartRate.rounded()))",
+                  unit: String(localized: "active_heart_rate_unit"), isCompact: isCompact)
+              }
+              if let calories = workoutManager.activeCalories {
+                HeroMetricRow(
+                  icon: "flame.fill", iconTint: LifeyColors.calories, value: "\(Int(calories.rounded()))",
+                  unit: String(localized: "active_calories_unit"), isCompact: isCompact)
+              }
             }
+            .padding(.top, 4)
+            Spacer(minLength: 4)
+            ExerciseCard(
+              exerciseName: workoutManager.exerciseName ?? String(localized: "active_default_exercise"),
+              setsDone: workoutManager.setsDone, setsTotal: workoutManager.setsTotal, isCompact: isCompact)
           }
-          ExerciseCard(
-            exerciseName: workoutManager.exerciseName ?? String(localized: "active_default_exercise"),
-            setsDone: workoutManager.setsDone, setsTotal: workoutManager.setsTotal, isCompact: isCompact)
         }
       }
       .padding(.horizontal, padding)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
   }
 
@@ -277,7 +316,9 @@ private struct ControlsPage: View {
           Spacer()
         }
         Spacer()
-        HStack(spacing: isCompact ? 24 : 34) {
+        // Tightened from 24/34 — that far apart, End and Pause read as two
+        // unrelated buttons instead of one action pair (user report).
+        HStack(spacing: isCompact ? 12 : 18) {
           ControlButton(
             icon: "stop.fill",
             label: String(localized: "active_end_button"),
