@@ -1,8 +1,13 @@
 # 46 – Zenevezérlés edzés közben (Spotify / YouTube Music / Apple Music)
 
-Status: terv kész + design kész + **M1 + M2 implementálva** (Dart-mag + UI-váz
-+ Android MediaSession-híd) — lásd §8/§9; M3 (iOS Apple Music) a következő
-lépés, Mac-hozzáférést igényel
+Status: terv kész + design kész + **M1 + M2 + M3 + M5 implementálva**
+(Dart-mag + UI-váz + Android MediaSession-híd + iOS Apple Music-híd +
+polírozás/QA) — lásd §8/§9/§10/§11. **M4 (iOS Spotify App Remote) tudatosan
+kimaradt** — YouTube Music és Apple Music mindkét platformon (Androidon
+mindhárom szolgáltató, iOS-en az Apple Music) már éles, Spotify egyelőre csak
+Androidon; iOS-en Spotify-ra a §10-es stub-visszaesés vonatkozik, amíg M4 le
+nem cseréli. M4 előfeltétele (Spotify Developer Dashboard-regisztráció, kézi
+lépés) egyelőre nincs elintézve — lásd §7 pont 3, §12.
 Scope: csak mobil (Flutter + natív hidak) — **nincs backend-változás**
 Design prompt: `47-workout-music-design-prompt.md`
 Kész design: `Lifey Music Control.dc.html` (A–D elemek, sötét/világos, HU/EN) —
@@ -259,20 +264,27 @@ Minden felhasználó felé néző szöveg HU/EN kulcsokkal az arb-fájlokba
   artwork-átvitel; a stub lecserélve `music_service_android.dart`-ra platform-
   ág szerint. **Kézi teszt valós eszközön mindhárom appal még hátravan** — csak
   a Dart-réteg és a Kotlin-fordítás van automatikusan ellenőrizve.
-- **M3 — iOS Apple Music-híd.** Swift `AppleMusicBridge`
+- **M3 — iOS Apple Music-híd. ✅ Kész** — lásd §10. Swift `AppleMusicBridge`
   (`MPMusicPlayerController.systemMusicPlayer` + notificationök), Info.plist
-  kulcs, MPMediaLibrary-auth flow, `music_service_ios.dart` (egyelőre csak
-  Apple Music-ággal; Spotify/YT a pickerben iOS-en még letiltva).
-- **M4 — iOS Spotify (App Remote).** *Előfeltétel: Spotify Developer
-  Dashboard-regisztráció (kézi lépés).* `spotify_sdk` beépítés iOS-re,
-  redirect-séma, kapcsolódás/ébresztés flow, playerState-subscribe; a picker
-  iOS-en engedélyezi a Spotify-t.
-- **M5 — Polírozás + QA.** Equalizer-animáció, hiba-pötty, resume-refresh
-  (3.3), edge-case-ek végigpróbálása (app kill mid-workout, engedély-visszavonás,
-  szolgáltató-váltás lejátszás közben), végső l10n-átnézés.
+  kulcs, MPMediaLibrary-auth flow, `music_service_ios.dart` (Apple Music-ág
+  valós híddal; Spotify egyelőre az M1-es stub-viselkedésre esik vissza —
+  lásd §10 döntés).
+- **M4 — iOS Spotify (App Remote). ⏭️ Tudatosan kihagyva egyelőre** — lásd
+  §12. *Előfeltétel: Spotify Developer Dashboard-regisztráció (kézi lépés).*
+  `spotify_sdk` beépítés iOS-re, redirect-séma, kapcsolódás/ébresztés flow,
+  playerState-subscribe; a picker iOS-en engedélyezi a Spotify-t. Az M4
+  hiánya **csak iOS Spotify-t** érint — YouTube Music-ra sosem is vonatkozott
+  (§2.2, iOS-en végig letiltva), Androidon pedig mindhárom szolgáltató
+  (Spotify is) M2 óta éles.
+- **M5 — Polírozás + QA. ✅ Kész** — lásd §11. Equalizer-animáció + hiba-pötty
+  már M1 óta megvolt; resume-refresh (3.3) újonnan bekötve; edge-case-ek
+  átgondolva (app kill mid-workout, engedély-visszavonás,
+  szolgáltató-váltás lejátszás közben); l10n-átnézés közben talált és
+  javított hiba (permission-sheet szövege).
 
 Az M2/M3/M4 egymástól függetlenek (mind az M1-re épül) — sorrendjük igény
 szerint cserélhető; az Android-híd (M2) adja a legtöbb értéket egy lépésben.
+M5 nem függött M4-től — a §11-es tételek egyike sem Spotify-specifikus.
 
 ## 5. Kockázatok
 
@@ -538,3 +550,224 @@ Kézi teszt valós Android-eszközön (Spotify, YouTube Music, Apple Music
 telepítve): engedélykérés-folyam végigcsinálása, lejátszás-vezérlés,
 szolgáltató-váltás, app-eltávolítás közbeni viselkedés. Utána M3 — iOS Apple
 Music-híd (§4/§7 pont 4), Mac-hozzáférést igényel.
+
+## 10. M3 megvalósítás — jegyzőkönyv
+
+Elkészült/módosult fájlok:
+
+- `mobile/ios/Runner/AppleMusicBridge.swift` (új) — a Swift híd: ugyanazt a
+  `lifey/music` MethodChannel + `lifey/music/events` EventChannel párost
+  szolgálja ki, amit `MediaSessionBridge.kt` Androidon (egy build csak az
+  egyiket regisztrálja, ütközés nincs). `MPMusicPlayerController
+  .systemMusicPlayer` köré épül:
+  `beginGeneratingPlaybackNotifications`/notification-observerek
+  (`MPMusicPlayerControllerPlaybackStateDidChange`/
+  `NowPlayingItemDidChange`) → állapot-újraszámolás → emit; transport-hívások
+  közvetlen metódushívások (`play()`/`pause()`/`skipToNextItem()`/
+  `skipToPreviousItem()`); artwork `MPMediaItemArtwork.image(at:)` → PNG,
+  300 px-re downscale-elve (ugyanaz a korlát, mint Android oldalon).
+- `mobile/ios/Runner/AppDelegate.swift` — `AppleMusicBridge.register(with:)`
+  hívva `configureFlutterEngine`-ben, a `WatchBridge` mintáját követve (a
+  bridge maga tárolva, hogy a notification-observerek élve maradjanak).
+- `mobile/ios/Runner/Info.plist` — `NSAppleMusicUsageDescription` (a
+  `MPMediaLibrary`-olvasáshoz kötelező) + `LSApplicationQueriesSchemes:
+  [music]` (az `noActiveSession` üres állapot „Megnyitás" CTA-jához, amely
+  `music://`-t nyit).
+- `mobile/lib/core/music/music_service_ios.dart` (új) — `MusicServiceIos
+  implements MusicService`: Apple Music-ág a natív hídra, minden más
+  (gyakorlatban: Spotify — YouTube Music-ot az
+  `isSupportedOnThisPlatform` már kiszűri a pickerből) a §10 alábbi
+  döntése szerinti stub-visszaesésre.
+- `mobile/lib/core/music/music_controller.dart` — `musicServiceProvider`-ben
+  új `Platform.isIOS` ág (`MusicServiceIos`), a Android-ág mögé, a
+  `MusicServiceStub` fallback elé.
+- `mobile/test/core/music/music_service_ios_test.dart` (új) — 11 teszt:
+  Apple Music-ág (MethodChannel-hívások, EventChannel-dekódolás
+  connected/permissionNeeded, missing-plugin-swallow), stub-visszaesés-ág
+  (Spotify: no native hívás, transport-hívások no-op), és a két irányú
+  élő szolgáltató-váltás (Apple Music ↔ Spotify) natív aktiválás/deaktiválás
+  helyessége.
+- `mobile/ios/Runner.xcodeproj/project.pbxproj` — `AppleMusicBridge.swift`
+  felvéve a Runner target Sources-ába és a Runner csoportba (ugyanúgy, mint
+  `WatchBridge.swift`).
+
+### Döntés: Spotify iOS-en M3-ban stub-visszaesésre esik, nem hibaállapotra
+
+A terv (§3.2) a `connectPrompt` státuszt kifejezetten "csak iOS Spotify-n"
+fordulónak írja le, és az M4-hez köti (App Remote-ébresztés). Mivel M3 csak
+az Apple Music-ágat vezeti be, eldöntendő volt, mi történjen, ha a
+felhasználó a pickeren mégis Spotify-t választ iOS-en — a
+`MusicProviderIdX.isSupportedOnThisPlatform` (§2.3 mátrix szerint helyesen)
+`true`-t ad Spotify-ra iOS-en is, tehát a picker sorban nem tiltja le.
+Két lehetőség közül választva: (a) egy új, "még nincs kész" jellegű
+hibaállapot bevezetése, vagy (b) az M1-es `MusicServiceStub` viselkedésének
+megismétlése kizárólag erre az ágra (mindig `noActiveSession`, minden
+vezérlő-hívás no-op). A (b) mellett döntöttem — nem vezet be új állapotot,
+nem tér el a §3.2 állapotgépétől, és pontosan azt a viselkedést adja
+vissza, amit a felhasználó M1 óta megszokott (a gomb működik, csak semmi
+sincs "aktívan lejátszva" — nem hibát mutat, csak azt jelzi, hogy a
+zenevezérlés erre a szolgáltatóra még nem kötött be). `MusicServiceIos`
+belsőleg `_activeProvider`-t követve dönti el, hogy egy adott hívást a
+natív hídra továbbítson-e; a natív oldal Spotify providerId-t sosem lát.
+M4 ezt az ágat cseréli le a `spotify_sdk`-alapú App Remote kompozitra
+(benne a `connectPrompt`/`connecting`/`error` állapotokkal, amik így most is
+"halottak" — a player sheet renderel rájuk widgetet, de a Dart-oldali
+állapotgép sosem lép beléjük Apple Music-on kívül más iOS-ágon).
+
+### Döntés: engedély-visszajelzés is push, mint Androidon (§9), de más forrásból
+
+A §9 M2-es döntése (engedély-visszajelzés push, nem `AppLifecycleState
+.resumed`-poll) itt csak részben ismétlődik meg: Apple Music-nál a
+`MPMediaLibrary.requestAuthorization` callback-je maga ad azonnali,
+megbízható visszajelzést (nem kell háttérből visszatérésre várni, mint
+Androidon a Beállítások-appból visszatéréskor) — a callback után azonnal
+újraszámolt állapotot emittálunk. Így itt sem kellett
+`WidgetsBindingObserver`-t bevezetni a `LogSessionScreen`-be, de más okból,
+mint Androidon: nem azért, mert a natív oldal magától újra-bind-el, hanem
+mert az auth-kérés maga szinkron (egy hívás, egy callback), nincs "külső
+appba menekülés" köztes állapot, mint a notification-access
+rendszerbeállításnál.
+
+### Döntés: a `permissionNeeded` minden nem-`authorized` állapotot lefed
+
+Az `MPMediaLibraryAuthorizationStatus`-nak négy értéke van
+(`notDetermined`/`denied`/`restricted`/`authorized`); a payload-építő
+`currentStatePayload()` csak az `authorized`-at engedi át `noActiveSession`/
+`connected` felé, a másik hármat egységesen `permissionNeeded`-nek jelenti.
+A `restricted` (pl. szülői felügyelet) valójában nem oldható fel a
+"Beállítások" CTA-val, de a UI ettől függetlenül ugyanazt a "Engedély
+megadása" gombot mutatná — ez elfogadható első körben (ritka eset, a
+`requestAuthorization` ilyenkor is lefut, csak nem változtat semmin, a
+felhasználó egy újabb `permissionNeeded`-et lát vissza), finomítása M5-re
+hagyva, ha egyáltalán szükségesnek bizonyul.
+
+### Ellenőrzés
+
+- `flutter analyze lib` és a célzott `flutter test`
+  (music + workouts + watch, 89 teszt) tiszta.
+- `flutter gen-l10n` újrafuttatva — a generált `app_localizations*.dart` ezen
+  a gépen hiányzott/elavult volt (gitignore-olt build-artifact), az M1-ben
+  hozzáadott 22 kulcs nélküle `undefined_getter`/`undefined_method` hibákat
+  adott az `flutter analyze`-ben; nem tartalom-változás, csak a generátor
+  újrafuttatása.
+- Xcode build ellenőrizve valós Mac-en: `xcodebuild -workspace
+  Runner.xcworkspace -scheme Runner -destination "platform=iOS
+  Simulator,id=<paired-simulator>" build` — lásd alábbi megjegyzés a párosított
+  szimulátor-választásról.
+- **Kézi teszt valós iOS-eszközön/szimulátoron (Apple Music-könyvtárral,
+  aktív lejátszással) még hátravan** — csak a Dart-réteg és a Swift-fordítás
+  van automatikusan ellenőrizve, ugyanaz a korlát, mint M2-nél Androidon.
+
+### Megjegyzés: szimulátor-választás a Watch-companion miatt
+
+A Runner scheme Watch-companion alkalmazást tartalmaz (LifeyWatch) —
+Xcode ezért a `build` akció során csak olyan iPhone-szimulátort fogad el
+célpontnak, amelyhez van **párosított** Apple Watch-szimulátor
+(`xcrun simctl list pairs`); egy párosítatlan iPhone-szimulátor (pl. frissen
+létrehozott, sosem párosított) az `xcodebuild -showdestinations` listában
+megjelenik, de a tényleges `build`-nél "Unable to find a destination
+matching" hibát ad, és a hibaüzenet elérhető célpontlistája ilyenkor csak a
+fizikai eszközt mutatja. Ez nem M3-specifikus, hanem a projekt Watch-app
+architektúrájának (docs/40-watch-app-plan.md) általános következménye —
+érdemes emlékezetben tartani jövőbeli iOS-buildeknél ezen a gépen.
+
+## 11. M5 megvalósítás — jegyzőkönyv
+
+M4 (iOS Spotify App Remote) kihagyásával közvetlenül M5-re térve — indoklás
+§12-ben. A §4-es M5-listát tétel szerint végigmenve:
+
+- **Equalizer-animáció + hiba-pötty** — ✅ már M1 óta megvan
+  (`music_sticky_button.dart`: 3-sávos `AnimationController`-alapú equalizer,
+  reduce-motion ág, figyelem-pötty `permissionNeeded`/`error` állapotban).
+  Nem kellett hozzányúlni.
+- **Resume-refresh (§3.3) — újonnan bekötve.**
+  `log_session_screen.dart`: `_LogSessionScreenState` mostantól
+  `WidgetsBindingObserver`-t is mixel be (ugyanaz a minta, mint
+  `upcoming_workout_card.dart`/`dashboard_screen.dart`-ban), és
+  `didChangeAppLifecycleState`-ben `AppLifecycleState.resumed` +
+  `_musicActivated` esetén meghívja `_musicController.refresh()`-t.
+  Indoklás: Androidon (push, §9) és iOS Apple Music-on (a natív
+  notification-observerek + a permission-callback, §10) a state már enélkül
+  is szinkronban marad — de M4 hiányában ez az egyetlen hely, ahol egy
+  háttérben történt változás (pl. engedély-visszavonás a Beállításokból,
+  vagy — később, M4 után — egy megszakadt Spotify App Remote-kapcsolat)
+  egyáltalán újra lekérdezésre kerül, ha a felhasználó nem nyúl a
+  vezérlőkhöz. Olcsó és platform-független: nem ágaztattam el
+  Android/iOS szerint, mindkét `MusicService.refresh()` implementáció
+  best-effort no-op, ha nincs mit frissíteni.
+- **Edge-case-ek (app kill mid-workout, engedély-visszavonás,
+  szolgáltató-váltás lejátszás közben) — átgondolva, kód szintjén rendben,
+  valós eszközön még nem tesztelve:**
+  - *App kill mid-workout:* nincs saját állapot, amit menteni kellene — a
+    `MusicController`/`MusicService` teljesen újraépül a következő
+    `LogSessionScreen.initState`-ből, ugyanúgy, mint minden más futó-session
+    állapot.
+  - *Engedély-visszavonás:* Androidon már M2 óta kezelve (a
+    `NotificationListenerService` OS-szintű unbind-callback-je azonnal
+    lefut, függetlenül attól, hogy az app előtérben van-e); iOS-en a fenti
+    resume-refresh fedezi le (a `MPMediaLibrary.authorizationStatus()`
+    minden `refresh()`-nél újraellenőrződik).
+  - *Szolgáltató-váltás lejátszás közben:* mindkét platformon
+    unit-teszttel fedve (`music_service_ios_test.dart` "switching providers
+    mid-session" csoport; Android oldalon a `selectProvider()` teszt +
+    §9 "a natív oldal state-mentes" döntés miatt eleve nincs
+    átfedés-kockázat).
+  Mindhárom **kód-szinten** átgondolt/tesztelt, de **valós eszközön kézzel
+  még nem próbált** — ugyanaz a korlát, mint M2/M3-nál.
+- **Végső l10n-átnézés — egy valódi hibát talált és javított.** A
+  `musicPermissionExplanationLine1`/`Line2` szövege kifejezetten Android
+  notification-access-specifikus ("más értesítésedet nem olvassa"), de M3
+  óta a `permissionNeeded` sheet iOS Apple Music `MPMediaLibrary`-auth
+  esetén is megjelenik, aminek semmi köze nincs értesítésekhez — a régi
+  szöveg félrevezető lett volna iOS-en. Javítás: új `musicPermissionExplanationIos`
+  kulcs (egy mondat, könyvtár-hozzáférésről, nem értesítésről), a
+  `_PermissionSheet` (`music_player_sheet.dart`) `Platform.isIOS` alapján
+  választ a kétsoros Android-szöveg és az egysoros iOS-szöveg között. +1
+  l10n kulcs mindkét arb-fájlban (összesen 23 zenei kulcs).
+- **§6.5 kilépő animáció — nem alkalmazandó, kód-szinten ellenőrizve.** A
+  sticky zene-gomb és a "Befejezés" gomb egyetlen közös
+  `if (showFinishButton)` ág mögött él (`showFinishButton = _finishedAt ==
+  null`) — a kettő mindig egyszerre jelenik meg/tűnik el, sosem külön-külön.
+  A §6.5-ben leírt "a zene-gomb eltűnik, a Befejezés visszanő" átmenet ezért
+  a jelenlegi huzalozás mellett szerkezetileg nem is fordulhat elő (ezt a
+  terv maga is jelezte: "gyakorlatban ritkán látszik... alacsony
+  prioritás"). `AnimatedSize` bevezetése egy sosem bekövetkező átmenethez
+  felesleges komplexitás lenne — nem nyúltam hozzá.
+- **§6.7 szolgáltató-glyph brand-ikonok — elfogadva monogramként,
+  véglegesként.** Nincs elérhető, guideline-ellenőrzött monokróm
+  brand-asset egyik szolgáltatóhoz sem; a terv saját szövege szerint is
+  "ha a guideline-megfelelés bizonytalan, a monogram véglegesnek is
+  elfogadható (semleges, védjegy-kockázat nélkül)" — ez a helyzet most is,
+  úgyhogy ezt a tételt lezártnak tekintem, amíg valódi brand-asset-ek elő
+  nem kerülnek (külön, ezen a döntésen kívüli feladat).
+
+### Ellenőrzés
+
+- `flutter analyze lib` és a célzott `flutter test`
+  (music + workouts + watch, 89 teszt) tiszta.
+- `flutter gen-l10n` újrafuttatva a `musicPermissionExplanationIos` kulcs
+  felvétele után — mindkét arb-fájlban (en/hu) jelen van, 23/23 zenei kulcs
+  egyezik.
+
+## 12. M4 kihagyásának indoklása (jelenlegi állapot)
+
+A felhasználó explicit döntése alapján M4 (iOS Spotify App Remote) egyelőre
+kimarad, és a munka M5-re (polírozás/QA) ugrott. Ennek nincs funkcionális
+ára a jelenleg éles szolgáltatásokra nézve:
+
+- **YouTube Music** — sosem is volt M4-függő: Androidon M2 óta éles (a
+  MediaSessionManager-híd package-szűréssel), iOS-en pedig a terv maga
+  zárja ki eleve (§2.2 — nincs semmilyen vezérlő API/SDK hozzá), ez M4
+  után is így marad.
+- **Apple Music** — Androidon M2 óta éles, iOS-en M3 óta éles (ez a
+  jelen munka tárgya volt).
+- **Spotify** — Androidon M2 óta éles (a MediaSession-híd itt is fog).
+  Csak **iOS-en** hiányzik a valós vezérlés: a `MusicServiceIos` ilyenkor a
+  §10-ben leírt stub-visszaesésre esik (mindig "nincs aktív lejátszás",
+  vezérlő-gombok no-op) — nem hibát mutat, csak azt jelzi, hogy erre a
+  kombinációra a zenevezérlés még nem kötött be.
+
+Amikor M4 mégis napirendre kerül: előfeltétele a Spotify Developer
+Dashboard-regisztráció (Client ID + `lifey://spotify-callback` redirect,
+§2.2) — ez az egyetlen blokkoló, kézzel elintézendő lépés, bármikor
+elkezdhető M4 tényleges implementálása előtt is.

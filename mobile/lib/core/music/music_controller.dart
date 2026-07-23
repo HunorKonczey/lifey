@@ -7,6 +7,7 @@ import 'music_preferences.dart';
 import 'music_provider_id.dart';
 import 'music_service.dart';
 import 'music_service_android.dart';
+import 'music_service_ios.dart';
 
 /// The UI's single entry point into the music-control feature — a thin
 /// pass-through Notifier over whichever `MusicService` is wired up, mirroring
@@ -68,16 +69,18 @@ final musicControllerProvider = NotifierProvider<MusicController, MusicSessionSt
 
 /// Picks the platform-specific [MusicService]. Declared here (not in
 /// music_service.dart, alongside [MusicServiceStub]) to avoid an import
-/// cycle: this file needs to import `music_service_android.dart` to
-/// construct [MusicServiceAndroid], and that file needs `music_service.dart`
-/// for the [MusicService] interface it implements.
+/// cycle: this file needs to import `music_service_android.dart`/
+/// `music_service_ios.dart` to construct their services, and those files need
+/// `music_service.dart` for the [MusicService] interface they implement.
 ///
-/// M2 shipped [MusicServiceAndroid]. M3/M4 (iOS Apple Music / Spotify App
-/// Remote) will add the iOS branch here — until then, iOS (and any other
-/// platform) still gets [MusicServiceStub] — see
-/// docs/music/46-workout-music-controls-plan.md §3.2/§4.
+/// M2 shipped [MusicServiceAndroid]. M3 shipped [MusicServiceIos] (Apple
+/// Music branch only — Spotify falls back to stub-like behavior inside it
+/// until M4 adds the App Remote composite). Any other platform still gets
+/// [MusicServiceStub] — see docs/music/46-workout-music-controls-plan.md
+/// §3.2/§4.
 final musicServiceProvider = Provider<MusicService>((ref) {
   final preferences = ref.read(musicPreferencesProvider);
   if (Platform.isAndroid) return MusicServiceAndroid(preferences);
+  if (Platform.isIOS) return MusicServiceIos(preferences);
   return MusicServiceStub(preferences);
 });

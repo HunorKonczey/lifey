@@ -1888,13 +1888,16 @@
     "@musicRetryButton": {"description": "Retry button in the mini music player's error state"},
 
     "musicPermissionTitle": "Permission needed to control music",
-    "@musicPermissionTitle": {"description": "Title of the Android notification-access permission prompt in the mini music player"},
+    "@musicPermissionTitle": {"description": "Title of the music-control permission prompt in the mini music player — shown for both Android's notification-access grant and iOS's Music library authorization"},
 
     "musicPermissionExplanationLine1": "On Android, media control needs notification access.",
     "@musicPermissionExplanationLine1": {"description": "First line of the Android notification-access permission explanation — required prominent disclosure for the Play Store"},
 
     "musicPermissionExplanationLine2": "Lifey only detects what's playing and controls playback — it never reads your other notifications.",
     "@musicPermissionExplanationLine2": {"description": "Second line of the Android notification-access permission explanation — required prominent disclosure for the Play Store"},
+
+    "musicPermissionExplanationIos": "Apple Music needs Music library access to show what's playing and control playback — Lifey never sees anything else in your library.",
+    "@musicPermissionExplanationIos": {"description": "iOS Apple Music library-authorization permission explanation (docs/music/46-workout-music-controls-plan.md M3) — a different underlying grant than Android's notification access, so it gets its own copy rather than reusing the Android disclosure text"},
 
     "musicPermissionCta": "Grant access",
     "@musicPermissionCta": {"description": "Button that opens system settings to grant notification access for music control"},

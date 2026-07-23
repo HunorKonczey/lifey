@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -395,6 +397,17 @@ class _PermissionSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    // Two different underlying grants share this sheet: Android's
+    // notification access (two-line prominent disclosure required by Play
+    // policy — §2.1/§6.8) and iOS Apple Music's `MPMediaLibrary`
+    // authorization (M3) — a single, differently-worded line, since the
+    // Android copy's "we never read your other notifications" disclosure
+    // doesn't apply to a library-access grant.
+    final explanationLines =
+        Platform.isIOS ? [l10n.musicPermissionExplanationIos] : [
+          l10n.musicPermissionExplanationLine1,
+          l10n.musicPermissionExplanationLine2,
+        ];
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(22, 8, 22, 22),
@@ -423,29 +436,20 @@ class _PermissionSheet extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Text(
-              l10n.musicPermissionExplanationLine1,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurfaceVariant,
-                height: 1.55,
+            for (final line in explanationLines) ...[
+              Text(
+                line,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: scheme.onSurfaceVariant,
+                  height: 1.55,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              l10n.musicPermissionExplanationLine2,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurfaceVariant,
-                height: 1.55,
-              ),
-            ),
+              if (line != explanationLines.last) const SizedBox(height: 4),
+            ],
             const SizedBox(height: 20),
             _FilledCta(
               icon: Icons.settings_rounded,

@@ -650,6 +650,7 @@
     "musicPermissionTitle": "Engedély szükséges a vezérléshez",
     "musicPermissionExplanationLine1": "A médiavezérléshez Androidon értesítés-hozzáférés kell.",
     "musicPermissionExplanationLine2": "A Lifey csak azt érzékeli, milyen zene szól, és a lejátszást vezérli — más értesítésedet nem olvassa.",
+    "musicPermissionExplanationIos": "Az Apple Musichoz Zene könyvtár-hozzáférés kell, hogy megjelenítse a szóló számot, és vezérelni tudja a lejátszást — a Lifey semmi mást nem lát a könyvtáradból.",
     "musicPermissionCta": "Engedély megadása",
     "musicNotNowButton": "Most nem",
     "musicConnectTitle": "Kapcsolódás: {provider}",

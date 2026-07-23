@@ -62,7 +62,8 @@ class LogSessionScreen extends ConsumerStatefulWidget {
   ConsumerState<LogSessionScreen> createState() => _LogSessionScreenState();
 }
 
-class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
+class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
+    with WidgetsBindingObserver {
   // Used for formatting the trainer comment timestamp.
   static final _label = DateFormat('EEE, MMM d · HH:mm');
 
@@ -171,6 +172,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _watchEventsSubscription =
         ref.read(watchWorkoutServiceProvider).events.listen(_onWatchEvent);
     final session = widget.session;
@@ -300,12 +302,30 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     isLogSessionScreenOpen = false;
     _ticker?.cancel();
     _hrTicker?.cancel();
     unawaited(_watchEventsSubscription?.cancel());
     _deactivateMusic();
     super.dispose();
+  }
+
+  /// M5 polish (docs/music/46-workout-music-controls-plan.md §3.3/§4): the
+  /// only platform bridge that can silently miss a change while backgrounded
+  /// is iOS Spotify's App Remote connection (not yet wired — M4) — Android's
+  /// MediaSessionManager callbacks and iOS Apple Music's
+  /// MPMusicPlayerController notifications both keep firing/get re-checked
+  /// on their own (§9/§10). Still cheap and correct to resync unconditionally
+  /// on every resume rather than special-case by platform: catches a
+  /// mid-background permission revocation too (Settings → notification
+  /// access / Media Library), which otherwise would only surface the next
+  /// time a transport button is tapped.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _musicActivated) {
+      unawaited(_musicController?.refresh());
+    }
   }
 
   /// Starts the music controller listening to the platform bridge
