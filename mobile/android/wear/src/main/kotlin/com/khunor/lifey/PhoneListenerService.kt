@@ -57,7 +57,9 @@ class PhoneListenerService : WearableListenerService() {
                 exerciseName = state?.optString("exerciseName")?.ifEmpty { null },
                 setsDone = state?.takeIf { it.has("setsDone") }?.optInt("setsDone"),
                 setsTotal = state?.takeIf { it.has("setsTotal") }?.optInt("setsTotal"),
-                restEndsAtEpochMs = state?.takeIf { it.has("restEndsAtEpochMs") }?.optLong("restEndsAtEpochMs"),
+                restRemainingSeconds = state?.takeIf { it.has("restRemainingSeconds") }
+                    ?.optInt("restRemainingSeconds"),
+                restTotalSeconds = state?.takeIf { it.has("restTotalSeconds") }?.optInt("restTotalSeconds"),
             )
             sessionClientId
         } catch (e: Exception) {
@@ -82,7 +84,9 @@ class PhoneListenerService : WearableListenerService() {
                 exerciseName = state?.getString("exerciseName"),
                 setsDone = state?.takeIf { it.containsKey("setsDone") }?.getInt("setsDone"),
                 setsTotal = state?.takeIf { it.containsKey("setsTotal") }?.getInt("setsTotal"),
-                restEndsAtEpochMs = state?.takeIf { it.containsKey("restEndsAtEpochMs") }?.getLong("restEndsAtEpochMs"),
+                restRemainingSeconds = state?.takeIf { it.containsKey("restRemainingSeconds") }
+                    ?.getInt("restRemainingSeconds"),
+                restTotalSeconds = state?.takeIf { it.containsKey("restTotalSeconds") }?.getInt("restTotalSeconds"),
             )
 
             // The phone's `end` message may never have reached us while

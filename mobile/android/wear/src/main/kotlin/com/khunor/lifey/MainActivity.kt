@@ -11,11 +11,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import com.khunor.lifey.ui.ActiveWorkoutScreen
+import com.khunor.lifey.ui.ErrorScreen
 import com.khunor.lifey.ui.IdleScreen
+import com.khunor.lifey.ui.theme.LifeyTheme
 
 /**
- * Compose host, switching between [IdleScreen] and [ActiveWorkoutScreen]
- * purely off [SessionStateHolder.phase] — all the actual state syncing
+ * Compose host, switching between [IdleScreen], [ActiveWorkoutScreen], and
+ * [ErrorScreen] purely off [SessionStateHolder.phase] — all the actual state syncing
  * happens in [PhoneListenerService]/[ExerciseService], not here
  * (docs/40-watch-app-plan.md §5.1, F3).
  *
@@ -35,10 +37,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         requestSensorPermissionsIfNeeded()
         setContent {
-            val phase by SessionStateHolder.phase.collectAsState()
-            when (phase) {
-                SessionPhase.IDLE -> IdleScreen()
-                SessionPhase.ACTIVE -> ActiveWorkoutScreen()
+            LifeyTheme {
+                val phase by SessionStateHolder.phase.collectAsState()
+                when (phase) {
+                    SessionPhase.IDLE -> IdleScreen()
+                    SessionPhase.ACTIVE -> ActiveWorkoutScreen()
+                    SessionPhase.ERROR -> ErrorScreen()
+                }
             }
         }
     }

@@ -308,12 +308,12 @@ class _AppBarButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
         ),
         child: Center(
-          child: AnimatedSwitcher(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(end: iconSize),
             duration: AppDuration.fast,
-            child: Icon(
+            builder: (context, size, child) => Icon(
               icon,
-              key: ValueKey(iconSize),
-              size: iconSize,
+              size: size,
               color: scheme.onSurfaceVariant,
             ),
           ),

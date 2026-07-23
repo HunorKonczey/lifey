@@ -211,7 +211,20 @@ extension WatchBridge: WCSessionDelegate {
     case "startRejected":
       eventSink?(["type": "startRejected", "sessionClientId": sessionClientId])
     case "endRequested":
-      eventSink?(["type": "endRequested", "sessionClientId": sessionClientId])
+      // The watch already collected (or skipped) the effort rating itself
+      // before sending this — rpe is nil when skipped.
+      eventSink?(["type": "endRequested", "sessionClientId": sessionClientId, "rpe": message["rpe"]])
+    case "startedOnWatch":
+      eventSink?(["type": "startedOnWatch", "sessionClientId": sessionClientId])
+    case "liveMetrics":
+      eventSink?([
+        "type": "liveMetrics",
+        "payload": [
+          "sessionClientId": sessionClientId,
+          "heartRateBpm": message["heartRateBpm"],
+          "activeCalories": message["activeCalories"],
+        ],
+      ])
     default:
       break
     }

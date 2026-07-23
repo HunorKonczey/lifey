@@ -49,7 +49,19 @@ class ExerciseService : Service() {
 
     private var heartRateSum = 0.0
     private var heartRateSamples = 0
-    private var lastActiveCalories: Double? = null
+    // Running sum of DataType.CALORIES deltas (activity only, excludes BMR) —
+    // not DataType.CALORIES_TOTAL, which is a Health Services *aggregate*
+    // that keeps accruing basal/resting calories for the whole exercise
+    // duration on top of the activity kcal, and read noticeably too high
+    // (user report after a leg session). CALORIES is a delta type, so each
+    // callback only carries the *new* interval(s) since the last one — this
+    // has to be summed by hand, unlike CALORIES_TOTAL's precomputed running
+    // total.
+    // Null (not 0.0) until the first delta arrives, so a session that ends
+    // before any CALORIES callback fires still reports "no data" rather than
+    // a misleading zero (mirrors the old CALORIES_TOTAL field's nullability).
+    private var activeCaloriesTotal: Double? = null
+    private var currentSessionClientId: String? = null
 
     // Pihenő-visszaszámláló haptika (docs/40-watch-app-plan.md §5.4/F4):
     // scheduled independently of start/end commands, for the service's whole
@@ -63,10 +75,13 @@ class ExerciseService : Service() {
                 heartRateSum += bpm
                 heartRateSamples += 1
             }
-            update.latestMetrics.getData(DataType.CALORIES_TOTAL)?.total?.let { kcal ->
-                SessionStateHolder.onCalories(kcal)
-                lastActiveCalories = kcal
+            val newActiveCalories = update.latestMetrics.getData(DataType.CALORIES)
+            if (newActiveCalories.isNotEmpty()) {
+                activeCaloriesTotal = (activeCaloriesTotal ?: 0.0) + newActiveCalories.sumOf { it.value }
+                SessionStateHolder.onCalories(activeCaloriesTotal!!)
             }
+            SessionStateHolder.onPausedChanged(update.exerciseStateInfo.state.isPaused)
+            sendLiveMetrics()
         }
 
         override fun onLapSummaryReceived(lapSummary: ExerciseLapSummary) {
@@ -85,6 +100,23 @@ class ExerciseService : Service() {
         }
     }
 
+    /** Relays [SessionStateHolder]'s just-updated live metrics to the phone
+     * (docs/40-watch-app-plan.md — mirrors iOS's `WorkoutManager` forwarding
+     * every `HKLiveWorkoutBuilderDelegate` tick). No-ops before
+     * [startExercise] has recorded a [currentSessionClientId]. */
+    private fun sendLiveMetrics() {
+        val sessionClientId = currentSessionClientId ?: return
+        val liveMetrics = SessionStateHolder.liveMetrics.value
+        scope.launch {
+            SummarySender.sendLiveMetrics(
+                context = this@ExerciseService,
+                sessionClientId = sessionClientId,
+                heartRateBpm = liveMetrics.heartRateBpm,
+                activeCalories = liveMetrics.activeCalories,
+            )
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -94,17 +126,26 @@ class ExerciseService : Service() {
         // (docs/40-watch-app-plan.md §5.4/F4).
         scope.launch {
             SessionStateHolder.metadata
-                .map { it.restEndsAtEpochMs }
+                .map { it.restDeadlineElapsedRealtimeMs }
                 .distinctUntilChanged()
-                .collect { restEndsAtEpochMs -> scheduleRestVibration(restEndsAtEpochMs) }
+                .collect { deadlineElapsedRealtimeMs -> scheduleRestVibration(deadlineElapsedRealtimeMs) }
         }
     }
 
-    private fun scheduleRestVibration(restEndsAtEpochMs: Long?) {
+    /**
+     * [deadlineElapsedRealtimeMs] is anchored to this device's own
+     * `SystemClock.elapsedRealtime()` (docs/40-watch-app-plan.md §12.1
+     * bugfix) — comparing it against `System.currentTimeMillis()` here would
+     * reintroduce the exact cross-device wall-clock bug this field exists to
+     * avoid (see `SessionStateHolder.SessionMetadata`'s doc comment): a
+     * wall-clock target would previously schedule the haptic hours late (or
+     * early) whenever the watch's and phone's clocks disagreed.
+     */
+    private fun scheduleRestVibration(deadlineElapsedRealtimeMs: Long?) {
         restVibrationJob?.cancel()
-        if (restEndsAtEpochMs == null) return
+        if (deadlineElapsedRealtimeMs == null) return
         restVibrationJob = scope.launch {
-            val delayMs = restEndsAtEpochMs - System.currentTimeMillis()
+            val delayMs = deadlineElapsedRealtimeMs - SystemClock.elapsedRealtime()
             if (delayMs > 0) delay(delayMs)
             vibrateRestEnd()
         }
@@ -160,6 +201,7 @@ class ExerciseService : Service() {
     }
 
     private suspend fun startExercise(sessionClientId: String) {
+        currentSessionClientId = sessionClientId
         // Either satisfies it depending on OS version — BODY_SENSORS pre-36,
         // the granular health permission on 36+ (see MainActivity, which
         // requests both). Health Services itself enforces the latter with a
@@ -170,9 +212,16 @@ class ExerciseService : Service() {
                 ContextCompat.checkSelfPermission(this, "android.permission.health.READ_HEART_RATE") ==
                     PackageManager.PERMISSION_GRANTED
 
-        // Always requestable — CALORIES_TOTAL doesn't need BODY_SENSORS.
+        // §12.1 B13: the Compose UI needs this to tell "permission denied"
+        // apart from "no HR sample has arrived yet" and show the degraded
+        // state accordingly.
+        SessionStateHolder.onHeartRatePermissionChecked(hasHeartRatePermission)
+
+        // Always requestable — CALORIES (like CALORIES_TOTAL) doesn't need
+        // BODY_SENSORS, it's derived from motion/user profile, not the heart
+        // rate sensor.
         val dataTypes = buildSet {
-            add(DataType.CALORIES_TOTAL)
+            add(DataType.CALORIES)
             if (hasHeartRatePermission) add(DataType.HEART_RATE_BPM)
         }
 
@@ -187,11 +236,17 @@ class ExerciseService : Service() {
             exerciseClient.setUpdateCallback(updateCallback)
             exerciseClient.startExerciseAsync(config).await()
             SessionStateHolder.onExerciseActive(SystemClock.elapsedRealtime())
+            SummarySender.sendStartedOnWatch(this, sessionClientId)
         } catch (e: Exception) {
             // Another app already owns an exercise, or the sensor/service is
-            // unavailable — docs/40-watch-app-plan.md §5.3, §8.1.
+            // unavailable — docs/40-watch-app-plan.md §5.3, §8.1. §12.1 B12:
+            // surface it locally too, not just to the phone — the ongoing
+            // notification promoteToForeground() already posted would
+            // otherwise claim an exercise is running when it isn't.
             Log.w(TAG, "startExercise failed for $sessionClientId", e)
+            SessionStateHolder.onStartRejected()
             SummarySender.sendStartRejected(this, sessionClientId)
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
     }
@@ -208,7 +263,7 @@ class ExerciseService : Service() {
             SummarySender.sendSummary(
                 context = this,
                 sessionClientId = sessionClientId,
-                activeCalories = lastActiveCalories,
+                activeCalories = activeCaloriesTotal,
                 averageHeartRate = averageHeartRate,
             )
         }
@@ -235,5 +290,31 @@ class ExerciseService : Service() {
             Intent(context, ExerciseService::class.java).apply {
                 action = ACTION_END
             }
+
+        /**
+         * Pause/resume (docs/40-watch-app-plan.md §12.1 B3) go straight
+         * through a fresh [androidx.health.services.client.ExerciseClient]
+         * handle rather than through this service's Binder — the exercise
+         * session lives in the system Health Services process, not in this
+         * [ExerciseService] instance, so any client handle for this app can
+         * command it. Unlike End (§8.2 decision (b)), this never involves the
+         * phone: only the *sensor* session pauses, the phone-session's own
+         * timing is untouched (§4.4/§5.3).
+         */
+        suspend fun pause(context: Context) {
+            try {
+                HealthServices.getClient(context).exerciseClient.pauseExerciseAsync().await()
+            } catch (e: Exception) {
+                Log.w(TAG, "pauseExercise failed", e)
+            }
+        }
+
+        suspend fun resume(context: Context) {
+            try {
+                HealthServices.getClient(context).exerciseClient.resumeExerciseAsync().await()
+            } catch (e: Exception) {
+                Log.w(TAG, "resumeExercise failed", e)
+            }
+        }
     }
 }

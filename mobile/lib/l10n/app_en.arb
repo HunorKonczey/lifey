@@ -1105,8 +1105,8 @@
     "noWorkoutsLoggedYetPeriodMessage": "No workouts logged yet.",
     "@noWorkoutsLoggedYetPeriodMessage": {"description": "Shown on the dashboard when there are no recent workouts"},
 
-    "importedFromHealthTooltip": "Imported from Health",
-    "@importedFromHealthTooltip": {"description": "Tooltip/semantics label for the health badge on a paired workout session card"},
+    "enrichedFromWatchTooltip": "Measured by watch",
+    "@enrichedFromWatchTooltip": {"description": "Tooltip/semantics label for the watch badge on a session card whose metrics were enriched from a paired watch's workout summary"},
 
     "healthStatsLine": "{calories} kcal · {heartRate} bpm avg (Health)",
     "@healthStatsLine": {"description": "Line showing active calories and average heart rate imported from Health on a session card", "placeholders": {"calories": {"type": "String"}, "heartRate": {"type": "String"}}},
@@ -1347,6 +1347,9 @@
 
     "watchStartRejectedMessage": "Another workout is already running on your watch",
     "@watchStartRejectedMessage": {"description": "Snackbar shown when the paired watch declined to start its own workout session because another app already owns one"},
+
+    "watchMeasuringPillLabel": "Measuring",
+    "@watchMeasuringPillLabel": {"description": "Label on the small header pill shown while a paired watch is actively measuring the current workout"},
 
     "restTimerNotificationTitle": "Rest over",
     "@restTimerNotificationTitle": {"description": "Title of the local notification fired when the rest timer between sets ends"},

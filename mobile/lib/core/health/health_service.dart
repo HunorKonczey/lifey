@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io' show Platform;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,12 +70,45 @@ class HealthService {
   /// throws `UnsupportedError` in that case). Every public read method below
   /// is wrapped in this so "no data" always means the same thing to callers,
   /// regardless of platform or cause.
+  ///
+  /// Android also silently *revokes* previously granted health permissions —
+  /// after a period of app inactivity (OS auto-reset) or a Health Connect
+  /// module update — without notifying the app, so a read that worked
+  /// yesterday can throw `SecurityException: Caller requires
+  /// android.permission.health.READ_STEPS` today even though our own
+  /// [HealthPreferences] flag still says "enabled". On that specific error we
+  /// re-request authorization once and retry [body] once before falling back,
+  /// so the user doesn't have to manually toggle Health off/on to recover.
   Future<T> _guarded<T>(T fallback, Future<T> Function() body) async {
     try {
       return await body();
-    } catch (_) {
+    } catch (error) {
+      if (Platform.isAndroid && _looksLikeRevokedPermission(error)) {
+        try {
+          developer.log(
+            'Health read failed with a permission error; re-requesting '
+            'authorization and retrying once.',
+            name: 'HealthService',
+            error: error,
+          );
+          await _health.requestAuthorization(healthDataTypes);
+          return await body();
+        } catch (_) {
+          return fallback;
+        }
+      }
       return fallback;
     }
+  }
+
+  /// Heuristic match for Health Connect's permission-denial exception. The
+  /// plugin doesn't expose a typed exception for this, so we match on the
+  /// native error text (e.g. `SecurityException: Caller requires
+  /// android.permission.health.READ_STEPS ...`) instead.
+  bool _looksLikeRevokedPermission(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('permission') &&
+        (message.contains('securityexception') || message.contains('healthconnectexception'));
   }
 
   /// Requests READ access to [types] (defaults to [healthDataTypes]). Returns

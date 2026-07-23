@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#e7e5df;}
+  a{color:#586E38;} a:hover{color:#3f5226;}
+  .mi{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  .fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+</style>
+</helmet>
+<div style="min-width:100%;min-height:100vh;width:max-content;padding:48px 56px 72px;background:#e7e5df;font-family:'Plus Jakarta Sans',sans-serif;">
+
+  <!-- ================= HEADER ================= -->
+  <div style="max-width:1200px;margin-bottom:44px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+      <div style="width:46px;height:46px;border-radius:14px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;">
+        <span class="mi fill" style="font-size:28px;">watch</span>
+      </div>
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#1c1d18;letter-spacing:-0.5px;">Lifey Watch — Apple Watch + Wear OS</div>
+        <div style="font-size:14px;font-weight:500;color:#6a6a60;">Companion to doc 40 · phone is master, watch measures · strength sessions · HU/EN (EN shown)</div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:500;color:#76766c;line-height:1.6;max-width:900px;">Native watch UI (SwiftUI / Compose for Wear OS) styled with the Lifey redesign tokens: warm-black surfaces, moss-olive <span style="font-family:monospace;background:#d9d7cf;padding:1px 5px;border-radius:4px;">9DAE6B</span> primary, Plus Jakarta Sans with tabular numerals. Layouts are %-inset based so they scale across case sizes — proven in the “Dynamic sizing” row below. All copy maps 1:1 to the shared string keys (<span style="font-family:monospace;">idle_title, active_sets_format, active_rest_format…</span>).</div>
+  </div>
+
+  <!-- ================= FLOW STRIP ================= -->
+  <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8a8a7e;margin-bottom:16px;">Session flow (V1 — phone is source of truth)</div>
+  <div style="display:flex;align-items:stretch;gap:10px;margin-bottom:56px;flex-wrap:wrap;max-width:1500px;">
+    <div style="background:#fff;border-radius:16px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.09);width:215px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span class="mi fill" style="font-size:18px;color:#586E38;">smartphone</span><span style="font-size:13px;font-weight:700;color:#1c1d18;">1 · Start on phone</span></div>
+      <div style="font-size:11.5px;font-weight:500;color:#76766c;line-height:1.5;">Log screen starts session; bridge wakes the watch.</div>
+      <div style="font-size:10px;font-family:monospace;color:#9a9a8c;margin-top:6px;">startWatchApp / MessageClient</div>
+    </div>
+    <div style="align-self:center;color:#9a9a8c;"><span class="mi" style="font-size:20px;">arrow_forward</span></div>
+    <div style="background:#fff;border-radius:16px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.09);width:215px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span class="mi fill" style="font-size:18px;color:#586E38;">watch</span><span style="font-size:13px;font-weight:700;color:#1c1d18;">2 · Watch measures</span></div>
+      <div style="font-size:11.5px;font-weight:500;color:#76766c;line-height:1.5;">Live HR + active kcal, strength-specific session.</div>
+      <div style="font-size:10px;font-family:monospace;color:#9a9a8c;margin-top:6px;">HKWorkoutSession / ExerciseClient</div>
+    </div>
+    <div style="align-self:center;color:#9a9a8c;"><span class="mi" style="font-size:20px;">arrow_forward</span></div>
+    <div style="background:#fff;border-radius:16px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.09);width:215px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span class="mi fill" style="font-size:18px;color:#586E38;">sync</span><span style="font-size:13px;font-weight:700;color:#1c1d18;">3 · Phone syncs state</span></div>
+      <div style="font-size:11.5px;font-weight:500;color:#76766c;line-height:1.5;">Every set / rest start pushes exercise, sets, rest timer.</div>
+      <div style="font-size:10px;font-family:monospace;color:#9a9a8c;margin-top:6px;">WorkoutSessionState JSON</div>
+    </div>
+    <div style="align-self:center;color:#9a9a8c;"><span class="mi" style="font-size:20px;">arrow_forward</span></div>
+    <div style="background:#fff;border-radius:16px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.09);width:215px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span class="mi fill" style="font-size:18px;color:#586E38;">timer</span><span style="font-size:13px;font-weight:700;color:#1c1d18;">4 · Rest + haptic</span></div>
+      <div style="font-size:11.5px;font-weight:500;color:#76766c;line-height:1.5;">Countdown on the wrist, tap when rest ends — the watch’s biggest win.</div>
+      <div style="font-size:10px;font-family:monospace;color:#9a9a8c;margin-top:6px;">restEndsAtEpochMs</div>
+    </div>
+    <div style="align-self:center;color:#9a9a8c;"><span class="mi" style="font-size:20px;">arrow_forward</span></div>
+    <div style="background:#fff;border-radius:16px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.09);width:215px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span class="mi fill" style="font-size:18px;color:#586E38;">check_circle</span><span style="font-size:13px;font-weight:700;color:#1c1d18;">5 · End → summary</span></div>
+      <div style="font-size:11.5px;font-weight:500;color:#76766c;line-height:1.5;">Phone finishes (RPE sheet); watch saves workout, sends kcal / avg HR back.</div>
+      <div style="font-size:10px;font-family:monospace;color:#9a9a8c;margin-top:6px;">transferUserInfo / summary</div>
+    </div>
+  </div>
+
+  <!-- ================= APPLE WATCH ================= -->
+  <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8a8a7e;margin-bottom:18px;">Apple Watch · 45 mm (SwiftUI, watchOS 10+)</div>
+  <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;margin-bottom:64px;" data-screen-label="Apple Watch flow">
+
+    <!-- AW 01 IDLE -->
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">01 · Idle</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:0 52px;text-align:center;">
+              <div style="width:76px;height:76px;border-radius:24px;background:#1C1E16;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:44px;">eco</span></div>
+              <div style="font-size:30px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;">Lifey</div>
+              <div style="font-size:23px;font-weight:500;color:#A8A899;line-height:1.4;">Start a workout on your phone</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">No local start in V1. Key: <span style="font-family:monospace;">idle_title / idle_subtitle</span>. Also shown after HealthKit-denied fallback while phone session runs untouched.</div>
+    </div>
+
+    <!-- AW 02 ACTIVE METRICS -->
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">02 · Active — metrics page</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:26px;left:46px;display:flex;align-items:center;gap:8px;color:#9DAE6B;"><span class="mi fill" style="font-size:22px;">fitness_center</span><span style="font-size:19px;font-weight:700;letter-spacing:1px;">STRENGTH</span></div>
+            <div style="position:absolute;top:66px;left:46px;right:44px;bottom:26px;display:flex;flex-direction:column;">
+              <div style="font-size:62px;font-weight:800;color:#9DAE6B;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.1;">24:36</div>
+              <div style="display:flex;align-items:center;gap:14px;margin-top:10px;">
+                <span class="mi fill" style="font-size:34px;color:#D97F7F;">favorite</span>
+                <span style="font-size:50px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">128</span>
+                <span style="font-size:22px;font-weight:600;color:#A8A899;">BPM</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;margin-top:2px;">
+                <span class="mi fill" style="font-size:34px;color:#E0915A;">local_fire_department</span>
+                <span style="font-size:50px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">246</span>
+                <span style="font-size:22px;font-weight:600;color:#A8A899;">KCAL</span>
+              </div>
+              <div style="margin-top:auto;background:#1C1E16;border-radius:26px;padding:16px 22px;">
+                <div style="font-size:25px;font-weight:700;color:#F1F0E4;letter-spacing:-0.3px;">Bench Press</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+                  <span style="font-size:21px;font-weight:600;color:#A8A899;">Set 2 of 4</span>
+                  <span style="display:flex;gap:6px;">
+                    <span style="width:12px;height:12px;border-radius:50%;background:#9DAE6B;"></span>
+                    <span style="width:12px;height:12px;border-radius:50%;background:#9DAE6B;"></span>
+                    <span style="width:12px;height:12px;border-radius:50%;background:#32342A;"></span>
+                    <span style="width:12px;height:12px;border-radius:50%;background:#32342A;"></span>
+                  </span>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:center;gap:8px;margin-top:14px;">
+                <span style="width:8px;height:8px;border-radius:50%;background:#F1F0E4;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#46463e;"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">TabView page 1 of 2. Elapsed in primary olive; HR rose <span style="font-family:monospace;">D97F7F</span>, kcal <span style="font-family:monospace;">E0915A</span> (shared metric accents). Exercise card = phone-pushed <span style="font-family:monospace;">WorkoutSessionState</span>.</div>
+    </div>
+
+    <!-- AW 03 REST -->
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">03 · Active — rest countdown</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:26px;left:46px;display:flex;align-items:center;gap:8px;color:#9DAE6B;"><span class="mi fill" style="font-size:22px;">timer</span><span style="font-size:19px;font-weight:700;letter-spacing:1px;">REST</span></div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:14px;">
+              <div style="position:relative;width:216px;height:216px;border-radius:50%;background:conic-gradient(#9DAE6B 0 62%, #22241B 62% 100%);display:flex;align-items:center;justify-content:center;">
+                <div style="width:184px;height:184px;border-radius:50%;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                  <div style="font-size:58px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">0:47</div>
+                  <div style="font-size:18px;font-weight:600;color:#A8A899;">of 1:30</div>
+                </div>
+              </div>
+              <div style="font-size:21px;font-weight:600;color:#A8A899;margin-top:18px;">Next · Bench Press — Set 3 of 4</div>
+              <div style="display:flex;align-items:center;gap:18px;margin-top:12px;">
+                <span style="display:flex;align-items:center;gap:6px;"><span class="mi fill" style="font-size:22px;color:#D97F7F;">favorite</span><span style="font-size:21px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">114</span></span>
+                <span style="display:flex;align-items:center;gap:6px;"><span class="mi fill" style="font-size:22px;color:#E0915A;">local_fire_department</span><span style="font-size:21px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">248</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">Ring drains as rest elapses; at 0:00 → <span style="font-family:monospace;">WKInterfaceDevice.play(.notification)</span> haptic, view snaps back to metrics. Timer always overwritten on sync (null ≠ missing rule).</div>
+    </div>
+
+    <!-- AW 04 CONTROLS -->
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">04 · Active — controls page</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:26px;left:46px;display:flex;align-items:center;gap:8px;color:#9DAE6B;"><span class="mi fill" style="font-size:22px;">fitness_center</span><span style="font-size:19px;font-weight:700;letter-spacing:1px;">24:36</span></div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:34px;padding-top:10px;">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+                <div style="width:124px;height:124px;border-radius:50%;background:rgba(224,138,82,.18);display:flex;align-items:center;justify-content:center;color:#E08A52;"><span class="mi fill" style="font-size:52px;">stop</span></div>
+                <div style="font-size:22px;font-weight:700;color:#F1F0E4;">End</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+                <div style="width:124px;height:124px;border-radius:50%;background:#22241B;display:flex;align-items:center;justify-content:center;color:#F1F0E4;"><span class="mi fill" style="font-size:52px;">pause</span></div>
+                <div style="font-size:22px;font-weight:700;color:#A8A899;">Pause</div>
+              </div>
+            </div>
+            <div style="position:absolute;bottom:26px;left:0;right:0;display:flex;justify-content:center;gap:8px;">
+              <span style="width:8px;height:8px;border-radius:50%;background:#46463e;"></span>
+              <span style="width:8px;height:8px;border-radius:50%;background:#F1F0E4;"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">Swipe-right page. End does <b>not</b> close locally — it sends <span style="font-family:monospace;">endRequested</span> to the phone (decision 8.2/1b). Pause only pauses the sensor session.</div>
+    </div>
+
+    <!-- AW 05 END REQUESTED -->
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">05 · End requested — waiting for phone</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 54px;text-align:center;">
+              <span class="mi" style="font-size:58px;color:#9DAE6B;">smartphone</span>
+              <div style="font-size:29px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;line-height:1.25;">Finish on your iPhone</div>
+              <div style="font-size:21px;font-weight:500;color:#A8A899;line-height:1.45;">Rate your effort on the phone to save this workout</div>
+              <div style="display:flex;gap:8px;margin-top:4px;">
+                <span style="width:10px;height:10px;border-radius:50%;background:#9DAE6B;"></span>
+                <span style="width:10px;height:10px;border-radius:50%;background:#46463e;"></span>
+                <span style="width:10px;height:10px;border-radius:50%;background:#46463e;"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">Shown after watch End tap. Sensors keep recording until the real <span style="font-family:monospace;">end</span> command returns from the phone’s RPE flow.</div>
+    </div>
+
+    <!-- AW 06 SAVED -->
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">06 · Workout saved — summary</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 46px;">
+              <span class="mi fill" style="font-size:60px;color:#9DAE6B;">check_circle</span>
+              <div style="font-size:28px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;">Workout saved</div>
+              <div style="display:flex;gap:12px;margin-top:6px;width:100%;">
+                <div style="flex:1;background:#1C1E16;border-radius:20px;padding:12px 8px;text-align:center;">
+                  <div style="font-size:26px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">52:14</div>
+                  <div style="font-size:15px;font-weight:600;color:#A8A899;margin-top:2px;">time</div>
+                </div>
+                <div style="flex:1;background:#1C1E16;border-radius:20px;padding:12px 8px;text-align:center;">
+                  <div style="font-size:26px;font-weight:800;color:#D97F7F;font-variant-numeric:tabular-nums;">132</div>
+                  <div style="font-size:15px;font-weight:600;color:#A8A899;margin-top:2px;">avg bpm</div>
+                </div>
+                <div style="flex:1;background:#1C1E16;border-radius:20px;padding:12px 8px;text-align:center;">
+                  <div style="font-size:26px;font-weight:800;color:#E0915A;font-variant-numeric:tabular-nums;">318</div>
+                  <div style="font-size:15px;font-weight:600;color:#A8A899;margin-top:2px;">kcal</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;background:rgba(157,174,107,.14);border-radius:999px;padding:8px 18px;margin-top:8px;">
+                <span class="mi fill" style="font-size:19px;color:#9DAE6B;">favorite</span>
+                <span style="font-size:18px;font-weight:600;color:#9DAE6B;">Saved to Health</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">HKWorkout saved; its UUID + kcal + avg HR travel back as the summary (queued via <span style="font-family:monospace;">transferUserInfo</span> if the phone app is killed). Auto-dismiss → Idle after ~6 s.</div>
+    </div>
+
+    <!-- AW 07 PERMISSION -->
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">07 · Error — Health access denied</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 50px;text-align:center;">
+              <span class="mi" style="font-size:56px;color:#A8A899;">ecg_heart</span>
+              <div style="font-size:27px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;line-height:1.25;">Allow Health access</div>
+              <div style="font-size:20px;font-weight:500;color:#A8A899;line-height:1.45;">Lifey needs Health permission to record heart rate and calories</div>
+              <div style="background:#32342A;border-radius:999px;padding:13px 26px;font-size:20px;font-weight:700;color:#F1F0E4;margin-top:4px;">Review access</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">Denied → phone session continues untouched, watch falls back to Idle after dismissal. Test-matrix case §9.</div>
+    </div>
+  </div>
+
+  <!-- ================= WEAR OS ================= -->
+  <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8a8a7e;margin-bottom:18px;">Wear OS · 1.4″ round (Compose, Wear OS 3+)</div>
+  <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;margin-bottom:64px;" data-screen-label="Wear OS flow">
+
+    <!-- W 01 IDLE -->
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">01 · Idle</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:22px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 76px;text-align:center;">
+              <div style="width:72px;height:72px;border-radius:22px;background:#1C1E16;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:42px;">eco</span></div>
+              <div style="font-size:28px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;">Lifey</div>
+              <div style="font-size:22px;font-weight:500;color:#A8A899;line-height:1.4;">Start a workout on your phone</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;">Woken by <span style="font-family:monospace;">WearableListenerService</span> on START — no need to open manually. Same string keys as iOS.</div>
+    </div>
+
+    <!-- W 02 ACTIVE -->
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">02 · Active — live metrics</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:22px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;right:24px;top:170px;width:6px;height:110px;border-radius:3px;background:#22241B;">
+              <div style="width:6px;height:44px;border-radius:3px;background:#A8A899;"></div>
+            </div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 64px;">
+              <div style="display:flex;align-items:center;gap:8px;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span><span style="font-size:17px;font-weight:700;letter-spacing:1px;">STRENGTH</span></div>
+              <div style="font-size:56px;font-weight:800;color:#9DAE6B;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1;">24:36</div>
+              <div style="display:flex;align-items:center;gap:22px;margin-top:6px;">
+                <span style="display:flex;align-items:center;gap:8px;"><span class="mi fill" style="font-size:28px;color:#D97F7F;">favorite</span><span style="font-size:38px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">128</span></span>
+                <span style="display:flex;align-items:center;gap:8px;"><span class="mi fill" style="font-size:28px;color:#E0915A;">local_fire_department</span><span style="font-size:38px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">246</span></span>
+              </div>
+              <div style="background:#1C1E16;border-radius:22px;padding:12px 24px;margin-top:10px;text-align:center;">
+                <div style="font-size:22px;font-weight:700;color:#F1F0E4;">Bench Press</div>
+                <div style="font-size:18px;font-weight:600;color:#A8A899;margin-top:2px;">Set 2 of 4</div>
+              </div>
+            </div>
+            <div style="position:absolute;bottom:18px;left:0;right:0;display:flex;justify-content:center;"><span class="mi fill" style="font-size:20px;color:#9DAE6B;">fitness_center</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;"><span style="font-family:monospace;">ScalingLazyColumn</span> — scroll bar right, ongoing-activity glyph bottom. Data: <span style="font-family:monospace;">ExerciseUpdateCallback</span> (HEART_RATE_BPM, CALORIES_TOTAL).</div>
+    </div>
+
+    <!-- W 03 SCROLLED END -->
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">03 · Active — scrolled to controls</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:22px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;right:24px;top:170px;width:6px;height:110px;border-radius:3px;background:#22241B;">
+              <div style="width:6px;height:44px;border-radius:3px;background:#A8A899;margin-top:66px;"></div>
+            </div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 70px;">
+              <div style="background:#1C1E16;border-radius:22px;padding:12px 24px;text-align:center;opacity:.55;transform:scale(.92);">
+                <div style="font-size:22px;font-weight:700;color:#F1F0E4;">Bench Press</div>
+                <div style="font-size:18px;font-weight:600;color:#A8A899;margin-top:2px;">Set 2 of 4</div>
+              </div>
+              <div style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;background:rgba(224,138,82,.16);border-radius:999px;padding:18px 0;">
+                <span class="mi fill" style="font-size:28px;color:#E08A52;">stop</span>
+                <span style="font-size:24px;font-weight:700;color:#E08A52;">End workout</span>
+              </div>
+              <div style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;background:#22241B;border-radius:999px;padding:18px 0;">
+                <span class="mi fill" style="font-size:28px;color:#F1F0E4;">pause</span>
+                <span style="font-size:24px;font-weight:700;color:#F1F0E4;">Pause</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;">Controls live below metrics in the same scroll. End sends <span style="font-family:monospace;">endRequested</span> to the phone (7.5.6); sensor session closes only on the returned <span style="font-family:monospace;">end</span>.</div>
+    </div>
+
+    <!-- W 04 REST -->
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">04 · Rest countdown + haptic</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;inset:10px;border-radius:50%;background:conic-gradient(#9DAE6B 0 62%, #22241B 62% 100%);"></div>
+            <div style="position:absolute;inset:22px;border-radius:50%;background:#000;"></div>
+            <div style="position:absolute;top:34px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 80px;text-align:center;">
+              <div style="display:flex;align-items:center;gap:8px;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">timer</span><span style="font-size:17px;font-weight:700;letter-spacing:1px;">REST</span></div>
+              <div style="font-size:72px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-2px;line-height:1;">0:47</div>
+              <div style="font-size:20px;font-weight:600;color:#A8A899;">Next · Bench Press — Set 3 of 4</div>
+              <div style="display:flex;align-items:center;gap:18px;margin-top:8px;">
+                <span style="display:flex;align-items:center;gap:6px;"><span class="mi fill" style="font-size:22px;color:#D97F7F;">favorite</span><span style="font-size:20px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">114</span></span>
+                <span style="display:flex;align-items:center;gap:6px;"><span class="mi fill" style="font-size:22px;color:#E0915A;">local_fire_department</span><span style="font-size:20px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">248</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;">Bezel ring doubles as the progress indicator on round displays. At 0 → <span style="font-family:monospace;">Vibrator.createOneShot</span> in the always-alive <span style="font-family:monospace;">ExerciseService</span>, even off-screen.</div>
+    </div>
+
+    <!-- W 05 START REJECTED -->
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">05 · Error — another workout running</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:22px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 78px;text-align:center;">
+              <div style="width:64px;height:64px;border-radius:50%;background:rgba(224,138,82,.16);display:flex;align-items:center;justify-content:center;color:#E08A52;"><span class="mi" style="font-size:36px;">priority_high</span></div>
+              <div style="font-size:25px;font-weight:800;color:#F1F0E4;letter-spacing:-0.5px;line-height:1.3;">Workout already running</div>
+              <div style="font-size:19px;font-weight:500;color:#A8A899;line-height:1.45;">Another app is recording an exercise. Finish it first.</div>
+              <div style="background:#32342A;border-radius:999px;padding:12px 34px;font-size:20px;font-weight:700;color:#F1F0E4;margin-top:2px;">OK</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;"><span style="font-family:monospace;">startExercise</span> rejected → watch shows this + phone gets <span style="font-family:monospace;">startRejected</span> (snackbar, see phone row). Take-over is v2.</div>
+    </div>
+
+    <!-- W 06 SENSORS DENIED -->
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">06 · Degraded — heart-rate permission off</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:22px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 64px;">
+              <div style="display:flex;align-items:center;gap:8px;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span><span style="font-size:17px;font-weight:700;letter-spacing:1px;">STRENGTH</span></div>
+              <div style="font-size:56px;font-weight:800;color:#9DAE6B;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1;">24:36</div>
+              <div style="display:flex;align-items:center;gap:22px;margin-top:6px;">
+                <span style="display:flex;align-items:center;gap:8px;"><span class="mi" style="font-size:28px;color:#46463e;">favorite</span><span style="font-size:38px;font-weight:800;color:#46463e;">––</span></span>
+                <span style="display:flex;align-items:center;gap:8px;"><span class="mi fill" style="font-size:28px;color:#E0915A;">local_fire_department</span><span style="font-size:38px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">198</span></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;background:#22241B;border-radius:999px;padding:8px 18px;margin-top:10px;">
+                <span class="mi" style="font-size:18px;color:#A8A899;">heart_broken</span>
+                <span style="font-size:16.5px;font-weight:600;color:#A8A899;">Heart rate off — allow sensors</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;"><span style="font-family:monospace;">BODY_SENSORS</span>/<span style="font-family:monospace;">READ_HEART_RATE</span> denied (7.5.3): session runs, kcal estimate degrades, summary carries <span style="font-family:monospace;">averageHeartRate: null</span>. Chip opens permission sheet.</div>
+    </div>
+  </div>
+
+  <!-- ================= DYNAMIC SIZING ================= -->
+  <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8a8a7e;margin-bottom:18px;">Dynamic sizing — same layout, smaller cases</div>
+  <div style="display:flex;gap:44px;align-items:flex-end;flex-wrap:wrap;margin-bottom:22px;" data-screen-label="Dynamic sizing">
+    <!-- 41mm scaled -->
+    <div style="flex:none;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">Apple Watch 41 mm <span style="font-weight:500;color:#8a8a7e;">— 352×430, ~0.89×</span></div>
+      <div style="width:372px;height:452px;">
+        <div style="transform:scale(0.889);transform-origin:top left;width:416px;">
+          <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+            <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+              <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+              <div style="position:absolute;top:26px;left:46px;display:flex;align-items:center;gap:8px;color:#9DAE6B;"><span class="mi fill" style="font-size:22px;">fitness_center</span><span style="font-size:19px;font-weight:700;letter-spacing:1px;">STRENGTH</span></div>
+              <div style="position:absolute;top:66px;left:46px;right:44px;bottom:26px;display:flex;flex-direction:column;">
+                <div style="font-size:62px;font-weight:800;color:#9DAE6B;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1.1;">24:36</div>
+                <div style="display:flex;align-items:center;gap:14px;margin-top:10px;">
+                  <span class="mi fill" style="font-size:34px;color:#D97F7F;">favorite</span>
+                  <span style="font-size:50px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">128</span>
+                  <span style="font-size:22px;font-weight:600;color:#A8A899;">BPM</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;margin-top:2px;">
+                  <span class="mi fill" style="font-size:34px;color:#E0915A;">local_fire_department</span>
+                  <span style="font-size:50px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">246</span>
+                  <span style="font-size:22px;font-weight:600;color:#A8A899;">KCAL</span>
+                </div>
+                <div style="margin-top:auto;background:#1C1E16;border-radius:26px;padding:16px 22px;">
+                  <div style="font-size:25px;font-weight:700;color:#F1F0E4;letter-spacing:-0.3px;">Bench Press</div>
+                  <div style="font-size:21px;font-weight:600;color:#A8A899;margin-top:6px;">Set 2 of 4</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Wear 1.2 scaled -->
+    <div style="flex:none;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">Wear OS 1.2″ <span style="font-weight:500;color:#8a8a7e;">— 384 px, ~0.87×</span></div>
+      <div style="width:420px;height:420px;">
+        <div style="transform:scale(0.873);transform-origin:top left;width:480px;">
+          <div style="position:relative;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+            <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+              <div style="position:absolute;top:22px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 64px;">
+                <div style="display:flex;align-items:center;gap:8px;color:#9DAE6B;"><span class="mi fill" style="font-size:20px;">fitness_center</span><span style="font-size:17px;font-weight:700;letter-spacing:1px;">STRENGTH</span></div>
+                <div style="font-size:56px;font-weight:800;color:#9DAE6B;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;line-height:1;">24:36</div>
+                <div style="display:flex;align-items:center;gap:22px;margin-top:6px;">
+                  <span style="display:flex;align-items:center;gap:8px;"><span class="mi fill" style="font-size:28px;color:#D97F7F;">favorite</span><span style="font-size:38px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">128</span></span>
+                  <span style="display:flex;align-items:center;gap:8px;"><span class="mi fill" style="font-size:28px;color:#E0915A;">local_fire_department</span><span style="font-size:38px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">246</span></span>
+                </div>
+                <div style="background:#1C1E16;border-radius:22px;padding:12px 24px;margin-top:10px;text-align:center;">
+                  <div style="font-size:22px;font-weight:700;color:#F1F0E4;">Bench Press</div>
+                  <div style="font-size:18px;font-weight:600;color:#A8A899;margin-top:2px;">Set 2 of 4</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="max-width:340px;font-size:12.5px;font-weight:500;color:#76766c;line-height:1.7;padding-bottom:20px;">Rule for implementation: paddings and the metric type ramp are <b>percent-of-screen</b>, not fixed pt/dp — SwiftUI <span style="font-family:monospace;">ViewThatFits</span> + scaled metrics, Compose <span style="font-family:monospace;">BoxWithConstraints</span> fractions. Everything above survives the 41 mm / 1.2″ crop with no layout change; smallest label ≥ 16 px at 1×.</div>
+  </div>
+
+  <!-- ================= PHONE TOUCHES ================= -->
+  <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8a8a7e;margin:42px 0 18px;">Phone-side touches (Flutter, dark theme)</div>
+  <div style="display:flex;gap:36px;align-items:flex-start;flex-wrap:wrap;" data-screen-label="Phone touches">
+
+    <!-- P1 SETTINGS -->
+    <div style="flex:none;width:406px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A · Settings — watch toggle</div>
+      <div style="width:390px;background:#161611;border-radius:28px;padding:20px 16px;box-shadow:0 14px 36px rgba(0,0,0,.22);">
+        <div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin:0 8px 10px;">Watch</div>
+        <div style="background:#1C1E16;border-radius:20px;padding:16px;display:flex;align-items:center;gap:13px;">
+          <div style="width:42px;height:42px;border-radius:13px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:22px;">watch</span></div>
+          <div style="flex:1;">
+            <div style="font-size:14.5px;font-weight:700;color:#F1F0E4;">Start workout on watch</div>
+            <div style="font-size:11.5px;font-weight:500;color:#A8A899;margin-top:2px;line-height:1.45;">Runs a strength session on your paired watch and syncs heart rate &amp; calories</div>
+          </div>
+          <div style="width:50px;height:30px;border-radius:999px;background:#9DAE6B;position:relative;flex:none;"><div style="position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;background:#161611;"></div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin:10px 10px 0;color:#777264;">
+          <span class="mi" style="font-size:15px;">info</span>
+          <span style="font-size:11px;font-weight:500;">Row appears only while a watch app is paired &amp; installed</span>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;">Default on. Gates <span style="font-family:monospace;">startWorkout/updateState</span>; <span style="font-family:monospace;">endWorkout</span> intentionally not gated (7.5.6).</div>
+    </div>
+
+    <!-- P2 LIVE CHIP + SNACKBAR -->
+    <div style="flex:none;width:406px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">B · Log session — watch status + startRejected</div>
+      <div style="width:390px;background:#161611;border-radius:28px;padding:16px;box-shadow:0 14px 36px rgba(0,0,0,.22);display:flex;flex-direction:column;gap:12px;">
+        <div style="background:rgba(34,36,27,.94);border-radius:22px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 22px rgba(0,0,0,.30);">
+          <div>
+            <div style="font-size:17px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Push day</div>
+            <div style="font-size:11.5px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">24:36 · 5 sets logged</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;background:rgba(157,174,107,.14);border-radius:999px;padding:7px 13px;">
+            <span style="width:7px;height:7px;border-radius:50%;background:#9DAE6B;"></span>
+            <span class="mi fill" style="font-size:16px;color:#9DAE6B;">watch</span>
+            <span style="font-size:11.5px;font-weight:700;color:#9DAE6B;">Measuring</span>
+          </div>
+        </div>
+        <div style="height:44px;border-radius:18px;background:#1C1E16;opacity:.4;"></div>
+        <div style="height:44px;border-radius:18px;background:#1C1E16;opacity:.25;"></div>
+        <div style="background:#32342A;border-radius:18px;padding:13px 16px;display:flex;align-items:center;gap:11px;box-shadow:0 10px 26px rgba(0,0,0,.4);">
+          <span class="mi" style="font-size:20px;color:#E08A52;">watch</span>
+          <span style="flex:1;font-size:12.5px;font-weight:600;color:#F1F0E4;line-height:1.4;">A workout is already running on your watch</span>
+          <span style="font-size:12.5px;font-weight:800;color:#9DAE6B;">OK</span>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;">“Measuring” pill appears on <span style="font-family:monospace;">workoutStartedOnWatch</span>; snackbar = <span style="font-family:monospace;">startRejected</span> via <span style="font-family:monospace;">AppSnackbar.showInfo</span>.</div>
+    </div>
+
+    <!-- P3 SESSION CARD -->
+    <div style="flex:none;width:406px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">C · Session card — enriched from watch summary</div>
+      <div style="width:390px;background:#161611;border-radius:28px;padding:16px;box-shadow:0 14px 36px rgba(0,0,0,.22);">
+        <div style="background:#1C1E16;border-radius:20px;padding:16px;">
+          <div style="display:flex;align-items:center;gap:13px;">
+            <div style="width:42px;height:42px;border-radius:13px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi fill" style="font-size:22px;">fitness_center</span></div>
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:14.5px;font-weight:700;color:#F1F0E4;">Push day</span>
+                <span style="display:flex;align-items:center;gap:4px;background:rgba(157,174,107,.14);border-radius:999px;padding:2.5px 9px;"><span class="mi fill" style="font-size:12px;color:#9DAE6B;">watch</span><span style="font-size:10px;font-weight:700;color:#9DAE6B;">Watch</span></span>
+              </div>
+              <div style="font-size:11.5px;font-weight:500;color:#A8A899;margin-top:2px;">Today · 52 min · 6 exercises</div>
+            </div>
+            <span class="mi" style="font-size:18px;color:#777264;">chevron_right</span>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:14px;">
+            <div style="flex:1;background:#161611;border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:8px;">
+              <span class="mi fill" style="font-size:17px;color:#E0915A;">local_fire_department</span>
+              <div><div style="font-size:14px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">318</div><div style="font-size:9.5px;font-weight:600;color:#777264;">kcal active</div></div>
+            </div>
+            <div style="flex:1;background:#161611;border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:8px;">
+              <span class="mi fill" style="font-size:17px;color:#D97F7F;">favorite</span>
+              <div><div style="font-size:14px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">132</div><div style="font-size:9.5px;font-weight:600;color:#777264;">avg bpm</div></div>
+            </div>
+            <div style="flex:1;background:#161611;border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:8px;">
+              <span class="mi fill" style="font-size:17px;color:#9DAE6B;">schedule</span>
+              <div><div style="font-size:14px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">52:14</div><div style="font-size:9.5px;font-weight:600;color:#777264;">duration</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;">⌚ badge replaces the old “Health” badge when metrics came from the watch summary (<span style="font-family:monospace;">activeCalories / averageHeartRate / healthWorkoutId</span>). Accepts late summaries — even days after sync.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

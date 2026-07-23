@@ -37,14 +37,59 @@ class WatchStartRejected {
   final String sessionClientId;
 }
 
-/// The user pressed "End" on the watch — the watch never closes its own
+/// The user ended the workout on the watch — the watch never closes its own
 /// session unilaterally, it asks the phone to (docs/40-watch-app-plan.md
-/// §8.2 decision (b)), so the phone's normal finish flow (RPE/feedback
-/// sheet) still runs. Handled by [LogSessionScreen] while its instance for
-/// this [sessionClientId] is mounted; a no-op otherwise.
+/// §8.2 decision (b)). The watch collects the effort rating itself before
+/// sending this (an on-watch stepper, skippable), so [rpe] is already final:
+/// the phone no longer shows its own feedback sheet for this path, it just
+/// persists [rpe] as-is (null if skipped) with an empty note. Handled by
+/// [LogSessionScreen] while its instance for this [sessionClientId] is
+/// mounted; a no-op otherwise.
 class WatchEndRequested {
-  const WatchEndRequested(this.sessionClientId);
+  const WatchEndRequested(this.sessionClientId, this.rpe);
   final String sessionClientId;
+  final int? rpe;
+}
+
+/// The watch's own session actually started measuring (its HealthKit/Health
+/// Services session is running) — docs/watch/40-watch-app-plan.md §12.4 B14.
+/// Drives the "Measuring" ⌚-pill in [LogSessionScreen]'s header; fired once
+/// per watch session, not on every state sync.
+class WatchStartedOnWatch {
+  const WatchStartedOnWatch(this.sessionClientId);
+  final String sessionClientId;
+}
+
+/// `WCSession.isReachable`'s change events, relayed 1:1 from iOS (Android has
+/// no equivalent push and never emits this — see [WatchWorkoutService.events]'s
+/// class doc). Used to hide the "Measuring" pill when the watch drops out of
+/// range (docs/watch/42-watch-design-implementation-plan.md D1.4 P1).
+class WatchReachabilityChanged {
+  const WatchReachabilityChanged(this.reachable);
+  final bool reachable;
+}
+
+/// Live heart-rate/calorie readings pushed from the watch's own session
+/// while it's actively measuring — far more frequent than the one-shot
+/// [WatchWorkoutSummary] sent when the workout ends. Best-effort and lossy:
+/// sent as a plain message, not a guaranteed delivery, so a dropped reading
+/// simply means the next one (moments later) supersedes it.
+class WatchLiveMetrics {
+  const WatchLiveMetrics({
+    required this.sessionClientId,
+    this.heartRateBpm,
+    this.activeCalories,
+  });
+
+  final String sessionClientId;
+  final double? heartRateBpm;
+  final double? activeCalories;
+
+  factory WatchLiveMetrics.fromJson(Map<Object?, Object?> json) => WatchLiveMetrics(
+        sessionClientId: json['sessionClientId'] as String,
+        heartRateBpm: (json['heartRateBpm'] as num?)?.toDouble(),
+        activeCalories: (json['activeCalories'] as num?)?.toDouble(),
+      );
 }
 
 /// Platform-neutral facade over the phone↔watch workout bridge
@@ -78,10 +123,11 @@ class WatchWorkoutService {
 
   Stream<Object>? _events;
 
-  /// Emits [WatchWorkoutSummary], [WatchStartRejected], or a raw event-name
-  /// `String` (`'startedOnWatch'`, `'reachabilityChanged'`) as they arrive
-  /// from the native side — see docs/40-watch-app-plan.md §3. A no-op stream
-  /// (never emits) when [isAvailable] is false.
+  /// Emits [WatchWorkoutSummary], [WatchStartRejected], [WatchEndRequested],
+  /// [WatchStartedOnWatch], [WatchReachabilityChanged], [WatchLiveMetrics],
+  /// or a raw event-name `String` for anything not yet decoded — see
+  /// docs/40-watch-app-plan.md §3. A no-op stream (never emits) when
+  /// [isAvailable] is false.
   Stream<Object> get events {
     if (!isAvailable) return const Stream.empty();
     return _events ??= _eventChannel.receiveBroadcastStream().map(_decodeEvent);
@@ -95,7 +141,13 @@ class WatchWorkoutService {
       case 'startRejected':
         return WatchStartRejected(map['sessionClientId'] as String);
       case 'endRequested':
-        return WatchEndRequested(map['sessionClientId'] as String);
+        return WatchEndRequested(map['sessionClientId'] as String, map['rpe'] as int?);
+      case 'startedOnWatch':
+        return WatchStartedOnWatch(map['sessionClientId'] as String);
+      case 'reachabilityChanged':
+        return WatchReachabilityChanged(map['reachable'] as bool);
+      case 'liveMetrics':
+        return WatchLiveMetrics.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
       default:
         return (map['type'] as String?) ?? 'unknown';
     }

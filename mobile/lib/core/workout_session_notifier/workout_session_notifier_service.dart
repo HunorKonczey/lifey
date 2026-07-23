@@ -19,6 +19,8 @@ class WorkoutSessionState {
     required this.totalSetsDone,
     this.lastSetAtEpochMs,
     this.restEndsAtEpochMs,
+    this.restTotalSeconds,
+    this.restRemainingSeconds,
   });
 
   /// Current (last touched) exercise name; pass a pre-localized fallback
@@ -35,6 +37,24 @@ class WorkoutSessionState {
   /// instead of the plain count-up from [lastSetAtEpochMs].
   final int? restEndsAtEpochMs;
 
+  /// The rest timer's full configured duration in seconds (including any
+  /// manual +15s adjustments already applied when the timer started) — null
+  /// exactly when [restEndsAtEpochMs] is null. Watch UIs use this alongside
+  /// [restEndsAtEpochMs] to render a drain-down progress ring (the "of 1:30"
+  /// target in docs/40-watch-app-plan.md §12.1 B1), not just the bare
+  /// countdown text.
+  final int? restTotalSeconds;
+
+  /// Seconds remaining *as of this device's own clock, right now* — null
+  /// exactly when [restEndsAtEpochMs] is null. This is what the watch bridge
+  /// uses for its countdown instead of [restEndsAtEpochMs]: turning an
+  /// absolute epoch target into a countdown requires comparing it against
+  /// the *receiving* device's wall clock, which can be meaningfully
+  /// unsynced from the phone's on a paired watch (docs/40-watch-app-plan.md
+  /// §12.1 bugfix). A relative "seconds left" value sidesteps that entirely
+  /// — the watch anchors it to its own monotonic clock on receipt.
+  final int? restRemainingSeconds;
+
   Map<String, dynamic> toJson() => {
         'exerciseName': exerciseName,
         'setsDone': setsDone,
@@ -42,6 +62,8 @@ class WorkoutSessionState {
         'totalSetsDone': totalSetsDone,
         'lastSetAtEpochMs': lastSetAtEpochMs,
         'restEndsAtEpochMs': restEndsAtEpochMs,
+        'restTotalSeconds': restTotalSeconds,
+        'restRemainingSeconds': restRemainingSeconds,
       };
 }
 
