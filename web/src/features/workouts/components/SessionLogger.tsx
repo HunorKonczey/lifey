@@ -106,6 +106,9 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
   const updateDraft = (globalIdx: number, patch: Partial<DraftSet>) =>
     setDrafts((prev) => prev.map((d, i) => i === globalIdx ? { ...d, ...patch } : d));
 
+  const removeDraft = (globalIdx: number) =>
+    setDrafts((prev) => prev.filter((_, i) => i !== globalIdx));
+
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
@@ -182,12 +185,13 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
             <p className="font-bold text-sm mb-3">{ex.exerciseName}</p>
 
             {/* table header */}
-            <div className="grid grid-cols-[40px_1fr_1fr_1fr_44px] gap-2 px-1 mb-2 text-xs font-semibold"
+            <div className="grid grid-cols-[40px_1fr_1fr_1fr_44px_32px] gap-2 px-1 mb-2 text-xs font-semibold"
               style={{ color: "var(--on-surface-variant)" }}>
               <span>{t("setColumn")}</span>
               <span>{t("previous")}</span>
               <span>{t("kg")}</span>
               <span>{t("reps")}</span>
+              <span></span>
               <span></span>
             </div>
 
@@ -196,7 +200,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
               const weightDelta = d.done ? delta(d.weight, prev?.weight) : null;
               const repsDelta = d.done ? delta(d.reps, prev?.reps) : null;
               return (
-              <div key={i} className="grid grid-cols-[40px_1fr_1fr_1fr_44px] gap-2 items-center px-1 py-1 rounded-[var(--r-sm)]"
+              <div key={i} className="grid grid-cols-[40px_1fr_1fr_1fr_44px_32px] gap-2 items-center px-1 py-1 rounded-[var(--r-sm)]"
                 style={{ outline: d.done ? "1px solid color-mix(in srgb, var(--primary) 40%, transparent)" : "none" }}>
                 <span className="text-sm tabular font-semibold">{localIdx + 1}</span>
                 <span className="text-xs tabular" style={{ color: "var(--muted)" }}>
@@ -215,8 +219,8 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
                   )}
                 </div>
                 <div className="relative">
-                  <input type="number" value={d.reps} min={0}
-                    onChange={(e) => updateDraft(i, { reps: Number(e.target.value) })}
+                  <input type="number" value={d.reps === 0 ? "" : d.reps} min={0} placeholder="0"
+                    onChange={(e) => updateDraft(i, { reps: e.target.value === "" ? 0 : Number(e.target.value) })}
                     className="w-full px-2 h-8 rounded-[var(--r-sm)] outline-none text-sm tabular"
                     style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
                   {repsDelta && (
@@ -233,6 +237,11 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
                     color: d.done ? "#1E1F18" : "var(--muted)",
                   }} aria-label={t("markSetDoneAria")}>
                   <span className="material-symbols-rounded text-lg">check</span>
+                </button>
+                <button onClick={() => removeDraft(i)}
+                  className="w-8 h-8 rounded-[var(--r-sm)] flex items-center justify-center"
+                  style={{ color: "var(--muted)" }} aria-label={t("removeSetAria")}>
+                  <span className="material-symbols-rounded text-lg">close</span>
                 </button>
               </div>
               );

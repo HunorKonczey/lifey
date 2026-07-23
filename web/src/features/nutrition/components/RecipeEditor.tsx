@@ -12,8 +12,7 @@ import type { RecipeResponse, RecipeIngredientRequest, FoodResponse } from "../t
 
 interface RecipeEditorProps {
   recipe: RecipeResponse | null;
-  onSaved: () => void;
-  onCancel: () => void;
+  onClose: () => void;
 }
 
 interface DraftIngredient extends RecipeIngredientRequest {
@@ -22,7 +21,7 @@ interface DraftIngredient extends RecipeIngredientRequest {
   proteinPer100g: number;
 }
 
-export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
+export function RecipeEditor({ recipe, onClose }: RecipeEditorProps) {
   const t = useTranslations("nutrition.recipeEditor");
   const common = useTranslations("common");
   const queryClient = useQueryClient();
@@ -46,6 +45,9 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
   );
   const [search, setSearch] = useState("");
   const gramsRefs = useRef<(HTMLInputElement | null)[]>([]);
+  // The recipe this editor is persisting to — the prop's id when editing, or
+  // whatever id got created by the first auto-save otherwise.
+  const [recipeId, setRecipeId] = useState<number | null>(recipe?.id ?? null);
 
   const { data: foods } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
 
@@ -76,47 +78,105 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
     (s, i) => s + (i.proteinPer100g * i.quantityInGrams) / 100, 0,
   );
 
-  const mutation = useMutation({
+  // A recipe needs a name and at least one fully-quantified ingredient
+  // before the backend will accept it (name is @NotBlank, each ingredient's
+  // quantityInGrams is @Positive) — matches the guard the old manual Save
+  // button used, now driving auto-save instead.
+  const canPersist = name.trim().length > 0 && ingredients.length > 0 && ingredients.every((i) => i.quantityInGrams > 0);
+
+  const persistMutation = useMutation({
     mutationFn: () => {
       const body = {
         name, description: description || null, favorite, servings,
         ingredients: ingredients.map((i) => ({ foodId: i.foodId, quantityInGrams: i.quantityInGrams })),
       };
-      return recipe ? recipeApi.update(recipe.id, body) : recipeApi.create(body);
+      return recipeId != null ? recipeApi.update(recipeId, body) : recipeApi.create(body);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      setRecipeId(result.id);
       queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() });
-      show(recipe ? t("updated") : t("created"), "success");
-      onSaved();
     },
     onError: () => show(t("saveFailed"), "error"),
   });
 
+  // Persists are serialized (never more than one in flight): a change that
+  // arrives mid-save is queued and re-run with the latest snapshot once the
+  // in-flight one settles, so two rapid changes can't each try to create
+  // their own recipe.
+  const isPersisting = useRef(false);
+  const pendingPersist = useRef(false);
+
+  const runPersist = async () => {
+    isPersisting.current = true;
+    try {
+      await persistMutation.mutateAsync();
+    } catch {
+      // already surfaced via persistMutation's onError
+    } finally {
+      isPersisting.current = false;
+      if (pendingPersist.current) {
+        pendingPersist.current = false;
+        runPersist();
+      }
+    }
+  };
+
+  const schedulePersist = () => {
+    if (isPersisting.current) {
+      pendingPersist.current = true;
+      return;
+    }
+    runPersist();
+  };
+
+  // Auto-save: debounced so a burst of edits (typing a name, nudging
+  // servings) collapses into one request, and skipped on the very first
+  // render so opening an existing recipe doesn't immediately re-save it.
+  const skipFirstPersist = useRef(true);
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (skipFirstPersist.current) {
+      skipFirstPersist.current = false;
+      return;
+    }
+    if (!canPersist) return;
+    if (persistTimer.current) clearTimeout(persistTimer.current);
+    persistTimer.current = setTimeout(schedulePersist, 400);
+    return () => {
+      if (persistTimer.current) clearTimeout(persistTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, description, favorite, servings, ingredients, canPersist]);
+
   const deleteMutation = useMutation({
-    mutationFn: () => recipeApi.delete(recipe!.id),
+    mutationFn: () => recipeApi.delete(recipeId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() });
       show(t("deleted"), "success");
-      onSaved();
+      onClose();
     },
     onError: () => show(t("deleteFailed"), "error"),
   });
 
-  const canSave = name.trim() && ingredients.length > 0 && ingredients.every((i) => i.quantityInGrams > 0);
-
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,.5)" }} onClick={onCancel}>
+      style={{ background: "rgba(0,0,0,.5)" }} onClick={onClose}>
       <div className="w-full max-w-lg rounded-[var(--r-lg)] p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
         style={{ background: "var(--surface)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-base">{recipe ? t("editRecipe") : t("newRecipe")}</h3>
-          <button onClick={onCancel} aria-label={common("close")} className="p-1 rounded-[var(--r-sm)]">
-            <span className="material-symbols-rounded">close</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {persistMutation.isPending && (
+              <span className="text-xs" style={{ color: "var(--on-surface-variant)" }}>{common("saving")}</span>
+            )}
+            <button onClick={onClose} aria-label={common("close")} className="p-1 rounded-[var(--r-sm)]">
+              <span className="material-symbols-rounded">close</span>
+            </button>
+          </div>
         </div>
 
-        {recipe && <RecipeImageUploader recipeId={recipe.id} />}
+        {recipeId != null && <RecipeImageUploader recipeId={recipeId} />}
 
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("namePlaceholder")}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm font-semibold"
@@ -213,21 +273,14 @@ export function RecipeEditor({ recipe, onSaved, onCancel }: RecipeEditorProps) {
           </span>
         </div>
 
-        <div className="flex gap-2">
-          <button onClick={() => mutation.mutate()} disabled={!canSave || mutation.isPending}
-            className="flex-1 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
-            style={{ background: "var(--primary)", color: "#1E1F18" }}>
-            {mutation.isPending ? common("saving") : t("saveRecipe")}
+        {recipeId != null && (
+          <button onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}
+            className="h-10 rounded-[var(--r-input)] font-semibold text-sm"
+            style={{ background: "color-mix(in srgb, var(--error) 15%, transparent)", color: "var(--error)" }}
+            aria-label={t("deleteAria")}>
+            <span className="material-symbols-rounded text-xl align-middle">delete</span>
           </button>
-          {recipe && (
-            <button onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}
-              className="px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
-              style={{ background: "color-mix(in srgb, var(--error) 15%, transparent)", color: "var(--error)" }}
-              aria-label={t("deleteAria")}>
-              <span className="material-symbols-rounded text-xl">delete</span>
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

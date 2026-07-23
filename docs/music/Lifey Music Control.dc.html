@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  a{color:#586E38;} a:hover{color:#3f5228;}
+  .mi{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  .fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+  @keyframes eqa{0%,100%{height:7px;}50%{height:16px;}}
+  @keyframes eqb{0%,100%{height:15px;}45%{height:6px;}}
+  @keyframes eqc{0%,100%{height:10px;}60%{height:16px;}}
+</style>
+</helmet>
+<div style="min-width:100%;min-height:100vh;width:max-content;padding:48px;background:#e7e5df;font-family:'Plus Jakarta Sans',sans-serif;">
+
+  <div style="display:flex;align-items:center;gap:16px;max-width:1200px;margin-bottom:8px;">
+    <div style="width:54px;height:54px;border-radius:16px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:30px;">music_note</span></div>
+    <div>
+      <div style="font-size:34px;font-weight:800;color:#1c1d18;letter-spacing:-0.8px;">Lifey — Zenevezérlés edzés közben</div>
+      <div style="font-size:16px;font-weight:500;color:#6a6a60;">Sticky zene-gomb · szolgáltató-választó · mini lejátszó · engedély-állapotok — sötét/HU és világos/EN párban. Sosem indít zenét: ami szól, azt vezérli.</div>
+    </div>
+  </div>
+  <div style="font-size:13px;font-weight:600;color:#8a8a7e;margin:0 0 36px 70px;">Szolgáltató-brand szín soha nem háttér — a glyph monokróm monogram (végleges assetig placeholder), az akcent mindig a Lifey primary.</div>
+
+  <!-- ============ ROW A · STICKY ZONE ============ -->
+  <div style="display:flex;gap:36px;align-items:flex-start;margin-bottom:56px;">
+
+    <!-- A1 dark phone -->
+    <div style="flex:none;" data-screen-label="A · Sticky zóna · sötét HU">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A1 · Futó edzés + zene-gomb <span style="font-weight:500;color:#8a8a7e;">— sötét · HU · lejátszás alatt (3. állapot)</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:58px;background:rgba(34,36,27,.92);backdrop-filter:blur(12px);border-radius:24px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:40;box-shadow:0 8px 22px rgba(0,0,0,.30);">
+            <div style="display:flex;align-items:center;gap:10px;"><div style="width:40px;height:40px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">arrow_back</span></div><div style="font-size:17px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Push day</div></div>
+            <div style="display:flex;align-items:center;gap:6px;background:#161611;border-radius:13px;padding:7px 12px;"><span class="mi fill" style="font-size:18px;color:#9DAE6B;">timer</span><span style="font-size:15px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">28:14</span></div>
+          </div>
+          <div style="position:absolute;top:132px;left:0;right:0;bottom:0;padding:6px 16px 102px;display:flex;flex-direction:column;gap:13px;">
+            <div style="background:rgba(157,174,107,.14);border:1px solid rgba(157,174,107,.4);border-radius:18px;padding:11px 12px 11px 16px;display:flex;align-items:center;gap:10px;">
+              <span class="mi fill" style="font-size:22px;color:#9DAE6B;">hourglass_top</span>
+              <span style="font-size:14px;font-weight:700;color:#F1F0E4;">Pihenő</span>
+              <span style="font-size:20px;font-weight:800;color:#9DAE6B;font-variant-numeric:tabular-nums;">0:42</span>
+              <div style="margin-left:auto;display:flex;gap:7px;">
+                <span style="background:#161611;border-radius:11px;padding:8px 13px;font-size:12.5px;font-weight:800;color:#9DAE6B;">+15 mp</span>
+                <span style="background:#161611;border-radius:11px;padding:8px 13px;font-size:12.5px;font-weight:700;color:#A8A899;">Kihagyás</span>
+              </div>
+            </div>
+            <div style="background:#22241B;border-radius:22px;padding:16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;"><div style="display:flex;align-items:center;gap:10px;"><span class="mi fill" style="font-size:22px;color:#9DAE6B;">fitness_center</span><span style="font-size:16px;font-weight:800;color:#F1F0E4;">Fekvenyomás</span></div><span class="mi" style="font-size:22px;color:#777264;">more_horiz</span></div>
+              <div style="display:flex;font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#777264;padding:0 4px 8px;"><span style="width:46px;">Szett</span><span style="flex:1;">Kg</span><span style="flex:1;">Ism</span><span style="width:34px;"></span></div>
+              <div style="display:flex;align-items:center;padding:9px 4px;border-radius:12px;background:rgba(157,174,107,.10);margin-bottom:5px;"><span style="width:46px;font-size:14px;font-weight:800;color:#9DAE6B;">1</span><span style="flex:1;font-size:15px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">60</span><span style="flex:1;font-size:15px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">10</span><span style="width:34px;text-align:right;color:#9DAE6B;"><span class="mi fill" style="font-size:22px;">check_circle</span></span></div>
+              <div style="display:flex;align-items:center;padding:9px 4px;border-radius:12px;background:rgba(157,174,107,.10);margin-bottom:5px;"><span style="width:46px;font-size:14px;font-weight:800;color:#9DAE6B;">2</span><span style="flex:1;font-size:15px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">62.5</span><span style="flex:1;font-size:15px;font-weight:700;color:#F1F0E4;font-variant-numeric:tabular-nums;">8</span><span style="width:34px;text-align:right;color:#9DAE6B;"><span class="mi fill" style="font-size:22px;">check_circle</span></span></div>
+              <div style="display:flex;align-items:center;padding:9px 4px;border-radius:12px;margin-bottom:10px;"><span style="width:46px;font-size:14px;font-weight:800;color:#777264;">3</span><span style="flex:1;font-size:15px;font-weight:700;color:#777264;font-variant-numeric:tabular-nums;">62.5</span><span style="flex:1;font-size:15px;font-weight:700;color:#777264;font-variant-numeric:tabular-nums;">—</span><span style="width:34px;text-align:right;color:#777264;"><span class="mi" style="font-size:22px;">radio_button_unchecked</span></span></div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:7px;background:#161611;border-radius:13px;padding:11px;color:#9DAE6B;"><span class="mi" style="font-size:20px;">add</span><span style="font-size:13px;font-weight:700;">Új szett</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:7px;border:1.5px dashed #3C3E32;border-radius:18px;padding:14px;color:#A8A899;"><span class="mi" style="font-size:21px;">add</span><span style="font-size:13.5px;font-weight:700;">Gyakorlat hozzáadása</span></div>
+          </div>
+          <!-- sticky row: music button + finish -->
+          <div style="position:absolute;bottom:24px;left:16px;right:16px;display:flex;gap:10px;z-index:45;">
+            <div style="position:relative;width:54px;height:54px;flex:none;border-radius:20px;background:rgba(42,44,32,.90);backdrop-filter:blur(12px);box-shadow:0 10px 28px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;gap:5px;">
+              <span style="width:21px;height:21px;border-radius:50%;border:2px solid #A8A899;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#A8A899;">S</span>
+              <span style="display:flex;align-items:flex-end;gap:2px;height:16px;">
+                <span style="width:3px;border-radius:2px;background:#9DAE6B;height:10px;animation:eqa .9s ease-in-out infinite;"></span>
+                <span style="width:3px;border-radius:2px;background:#9DAE6B;height:15px;animation:eqb .8s ease-in-out infinite;"></span>
+                <span style="width:3px;border-radius:2px;background:#9DAE6B;height:8px;animation:eqc 1s ease-in-out infinite;"></span>
+              </span>
+            </div>
+            <div style="flex:1;background:#9DAE6B;color:#161611;height:54px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 10px 28px rgba(0,0,0,.4);"><span class="mi fill" style="font-size:23px;">check</span><span style="font-size:15px;font-weight:800;">Befejezés</span></div>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A2 light phone -->
+    <div style="flex:none;" data-screen-label="A · Sticky zóna · világos EN">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A2 · Running workout + music button <span style="font-weight:500;color:#8a8a7e;">— light · EN · provider chosen, idle (2. állapot)</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#F3F2E8;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#1c1d18;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:58px;background:rgba(255,255,255,.90);backdrop-filter:blur(12px);border-radius:24px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:40;box-shadow:0 8px 22px rgba(28,29,24,.10);border:1px solid #e6e5dc;">
+            <div style="display:flex;align-items:center;gap:10px;"><div style="width:40px;height:40px;border-radius:13px;background:#ECEBDE;display:flex;align-items:center;justify-content:center;color:#6a6a60;"><span class="mi" style="font-size:22px;">arrow_back</span></div><div style="font-size:17px;font-weight:800;color:#1c1d18;letter-spacing:-0.3px;">Push day</div></div>
+            <div style="display:flex;align-items:center;gap:6px;background:#ECEBDE;border-radius:13px;padding:7px 12px;"><span class="mi fill" style="font-size:18px;color:#586E38;">timer</span><span style="font-size:15px;font-weight:800;color:#1c1d18;font-variant-numeric:tabular-nums;">28:14</span></div>
+          </div>
+          <div style="position:absolute;top:132px;left:0;right:0;bottom:0;padding:6px 16px 102px;display:flex;flex-direction:column;gap:13px;">
+            <div style="background:rgba(88,110,56,.10);border:1px solid rgba(88,110,56,.32);border-radius:18px;padding:11px 12px 11px 16px;display:flex;align-items:center;gap:10px;">
+              <span class="mi fill" style="font-size:22px;color:#586E38;">hourglass_top</span>
+              <span style="font-size:14px;font-weight:700;color:#1c1d18;">Rest</span>
+              <span style="font-size:20px;font-weight:800;color:#586E38;font-variant-numeric:tabular-nums;">0:42</span>
+              <div style="margin-left:auto;display:flex;gap:7px;">
+                <span style="background:#FFFFFF;border:1px solid #e6e5dc;border-radius:11px;padding:8px 13px;font-size:12.5px;font-weight:800;color:#586E38;">+15 s</span>
+                <span style="background:#FFFFFF;border:1px solid #e6e5dc;border-radius:11px;padding:8px 13px;font-size:12.5px;font-weight:700;color:#6a6a60;">Skip</span>
+              </div>
+            </div>
+            <div style="background:#FFFFFF;border-radius:22px;padding:16px;box-shadow:0 1px 3px rgba(28,29,24,.07);">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;"><div style="display:flex;align-items:center;gap:10px;"><span class="mi fill" style="font-size:22px;color:#586E38;">fitness_center</span><span style="font-size:16px;font-weight:800;color:#1c1d18;">Bench press</span></div><span class="mi" style="font-size:22px;color:#9a9a8c;">more_horiz</span></div>
+              <div style="display:flex;font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#9a9a8c;padding:0 4px 8px;"><span style="width:34px;">Set</span><span style="flex:1;">Kg</span><span style="flex:1;">Reps</span><span style="width:34px;"></span></div>
+              <div style="display:flex;align-items:center;padding:9px 4px;border-radius:12px;background:rgba(88,110,56,.09);margin-bottom:5px;"><span style="width:34px;font-size:14px;font-weight:800;color:#586E38;">1</span><span style="flex:1;font-size:15px;font-weight:700;color:#1c1d18;font-variant-numeric:tabular-nums;">60</span><span style="flex:1;font-size:15px;font-weight:700;color:#1c1d18;font-variant-numeric:tabular-nums;">10</span><span style="width:34px;text-align:right;color:#586E38;"><span class="mi fill" style="font-size:22px;">check_circle</span></span></div>
+              <div style="display:flex;align-items:center;padding:9px 4px;border-radius:12px;margin-bottom:10px;"><span style="width:34px;font-size:14px;font-weight:800;color:#9a9a8c;">2</span><span style="flex:1;font-size:15px;font-weight:700;color:#9a9a8c;font-variant-numeric:tabular-nums;">62.5</span><span style="flex:1;font-size:15px;font-weight:700;color:#9a9a8c;font-variant-numeric:tabular-nums;">—</span><span style="width:34px;text-align:right;color:#9a9a8c;"><span class="mi" style="font-size:22px;">radio_button_unchecked</span></span></div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:7px;background:#ECEBDE;border-radius:13px;padding:11px;color:#586E38;"><span class="mi" style="font-size:20px;">add</span><span style="font-size:13px;font-weight:700;">Add set</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:7px;border:1.5px dashed #d5d4c8;border-radius:18px;padding:14px;color:#6a6a60;"><span class="mi" style="font-size:21px;">add</span><span style="font-size:13.5px;font-weight:700;">Add exercise</span></div>
+          </div>
+          <div style="position:absolute;bottom:24px;left:16px;right:16px;display:flex;gap:10px;z-index:45;">
+            <div style="position:relative;width:54px;height:54px;flex:none;border-radius:20px;background:rgba(255,255,255,.88);backdrop-filter:blur(12px);border:1px solid #e6e5dc;box-shadow:0 10px 28px rgba(28,29,24,.12);display:flex;align-items:center;justify-content:center;">
+              <span style="width:22px;height:22px;border-radius:50%;border:2px solid #6a6a60;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#6a6a60;">S</span>
+            </div>
+            <div style="flex:1;background:#586E38;color:#F3F2E8;height:54px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 10px 28px rgba(28,29,24,.18);"><span class="mi fill" style="font-size:23px;">check</span><span style="font-size:15px;font-weight:800;">Finish workout</span></div>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(28,29,24,.35);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A3 states panel -->
+    <div style="flex:none;width:430px;display:flex;flex-direction:column;gap:20px;" data-screen-label="A · Gomb-állapotok">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A3 · A zene-gomb 4 állapota <span style="font-weight:500;color:#8a8a7e;">— 54×54 · radius 20 · frosted</span></div>
+        <div style="background:#161611;border-radius:24px;padding:22px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+          <div style="text-align:center;">
+            <div style="width:54px;height:54px;margin:0 auto;border-radius:20px;background:rgba(42,44,32,.90);box-shadow:0 8px 20px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:24px;">music_note</span></div>
+            <div style="font-size:10.5px;font-weight:700;color:#F1F0E4;margin-top:9px;">1 · Nincs app</div>
+            <div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">music_note · onSurfVar</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="width:54px;height:54px;margin:0 auto;border-radius:20px;background:rgba(42,44,32,.90);box-shadow:0 8px 20px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #A8A899;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#A8A899;">S</span></div>
+            <div style="font-size:10.5px;font-weight:700;color:#F1F0E4;margin-top:9px;">2 · Nyugalmi</div>
+            <div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">monokróm glyph</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="width:54px;height:54px;margin:0 auto;border-radius:20px;background:rgba(42,44,32,.90);box-shadow:0 8px 20px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;gap:5px;">
+              <span style="width:21px;height:21px;border-radius:50%;border:2px solid #A8A899;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#A8A899;">S</span>
+              <span style="display:flex;align-items:flex-end;gap:2px;height:16px;"><span style="width:3px;border-radius:2px;background:#9DAE6B;height:10px;animation:eqa .9s ease-in-out infinite;"></span><span style="width:3px;border-radius:2px;background:#9DAE6B;height:15px;animation:eqb .8s ease-in-out infinite;"></span><span style="width:3px;border-radius:2px;background:#9DAE6B;height:8px;animation:eqc 1s ease-in-out infinite;"></span></span>
+            </div>
+            <div style="font-size:10.5px;font-weight:700;color:#F1F0E4;margin-top:9px;">3 · Szól a zene</div>
+            <div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">glyph + eq · primary</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="position:relative;width:54px;height:54px;margin:0 auto;border-radius:20px;background:rgba(42,44,32,.90);box-shadow:0 8px 20px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;">
+              <span style="width:22px;height:22px;border-radius:50%;border:2px solid #A8A899;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#A8A899;">S</span>
+              <span style="position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:#E08A52;border:2px solid #161611;"></span>
+            </div>
+            <div style="font-size:10.5px;font-weight:700;color:#F1F0E4;margin-top:9px;">4 · Figyelem</div>
+            <div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">pötty #E08A52 + bg-ring</div>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border-radius:24px;padding:22px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:12px;box-shadow:0 1px 3px rgba(0,0,0,.09);">
+          <div style="text-align:center;">
+            <div style="width:54px;height:54px;margin:0 auto;border-radius:20px;background:rgba(255,255,255,.88);border:1px solid #e6e5dc;box-shadow:0 8px 20px rgba(28,29,24,.10);display:flex;align-items:center;justify-content:center;color:#6a6a60;"><span class="mi" style="font-size:24px;">music_note</span></div>
+            <div style="font-size:10.5px;font-weight:700;color:#1c1d18;margin-top:9px;">1 · No provider</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="width:54px;height:54px;margin:0 auto;border-radius:20px;background:rgba(255,255,255,.88);border:1px solid #e6e5dc;box-shadow:0 8px 20px rgba(28,29,24,.10);display:flex;align-items:center;justify-content:center;"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #6a6a60;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#6a6a60;">S</span></div>
+            <div style="font-size:10.5px;font-weight:700;color:#1c1d18;margin-top:9px;">2 · Idle</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="width:54px;height:54px;margin:0 auto;border-radius:20px;background:rgba(255,255,255,.88);border:1px solid #e6e5dc;box-shadow:0 8px 20px rgba(28,29,24,.10);display:flex;align-items:center;justify-content:center;gap:5px;">
+              <span style="width:21px;height:21px;border-radius:50%;border:2px solid #6a6a60;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#6a6a60;">S</span>
+              <span style="display:flex;align-items:flex-end;gap:2px;height:16px;"><span style="width:3px;border-radius:2px;background:#586E38;height:10px;animation:eqa .9s ease-in-out infinite;"></span><span style="width:3px;border-radius:2px;background:#586E38;height:15px;animation:eqb .8s ease-in-out infinite;"></span><span style="width:3px;border-radius:2px;background:#586E38;height:8px;animation:eqc 1s ease-in-out infinite;"></span></span>
+            </div>
+            <div style="font-size:10.5px;font-weight:700;color:#1c1d18;margin-top:9px;">3 · Playing</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="position:relative;width:54px;height:54px;margin:0 auto;border-radius:20px;background:rgba(255,255,255,.88);border:1px solid #e6e5dc;box-shadow:0 8px 20px rgba(28,29,24,.10);display:flex;align-items:center;justify-content:center;">
+              <span style="width:22px;height:22px;border-radius:50%;border:2px solid #6a6a60;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#6a6a60;">S</span>
+              <span style="position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:#E08A52;border:2px solid #FFFFFF;"></span>
+            </div>
+            <div style="font-size:10.5px;font-weight:700;color:#1c1d18;margin-top:9px;">4 · Attention</div>
+          </div>
+        </div>
+      </div>
+      <!-- 360dp check -->
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A4 · 360 dp ellenőrzés <span style="font-weight:500;color:#8a8a7e;">— 16 px oldalinset · 54 + 10 + 264 a Befejezésnek</span></div>
+        <div style="width:360px;background:#161611;border-radius:20px;padding:16px;">
+          <div style="display:flex;gap:10px;">
+            <div style="width:54px;height:54px;flex:none;border-radius:20px;background:rgba(42,44,32,.90);box-shadow:0 8px 20px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;gap:5px;">
+              <span style="width:21px;height:21px;border-radius:50%;border:2px solid #A8A899;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#A8A899;">S</span>
+              <span style="display:flex;align-items:flex-end;gap:2px;height:16px;"><span style="width:3px;border-radius:2px;background:#9DAE6B;height:10px;animation:eqa .9s ease-in-out infinite;"></span><span style="width:3px;border-radius:2px;background:#9DAE6B;height:15px;animation:eqb .8s ease-in-out infinite;"></span><span style="width:3px;border-radius:2px;background:#9DAE6B;height:8px;animation:eqc 1s ease-in-out infinite;"></span></span>
+            </div>
+            <div style="flex:1;background:#9DAE6B;color:#161611;height:54px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:9px;"><span class="mi fill" style="font-size:23px;">check</span><span style="font-size:15px;font-weight:800;">Befejezés</span></div>
+          </div>
+        </div>
+        <div style="width:360px;background:#F3F2E8;border:1px solid #e6e5dc;border-radius:20px;padding:16px;margin-top:10px;">
+          <div style="display:flex;gap:10px;">
+            <div style="width:54px;height:54px;flex:none;border-radius:20px;background:rgba(255,255,255,.88);border:1px solid #e6e5dc;box-shadow:0 8px 20px rgba(28,29,24,.10);display:flex;align-items:center;justify-content:center;"><span style="width:22px;height:22px;border-radius:50%;border:2px solid #6a6a60;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#6a6a60;">S</span></div>
+            <div style="flex:1;background:#586E38;color:#F3F2E8;height:54px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:9px;"><span class="mi fill" style="font-size:23px;">check</span><span style="font-size:15px;font-weight:800;">Finish workout</span></div>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:500;color:#8a8a7e;margin-top:12px;max-width:400px;">A gomb csak futó edzés alatt látszik. Kilépéskor a Befejezés visszanő teljes szélességre (200 ms, standard easing). A gomb teljes 54×54 felülete tap-target.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ROW B · PROVIDER SHEET ============ -->
+  <div style="display:flex;gap:36px;align-items:flex-start;margin-bottom:56px;">
+    <div style="flex:none;" data-screen-label="B · Szolgáltató-választó · sötét HU">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">B1 · Szolgáltató-választó sheet <span style="font-weight:500;color:#8a8a7e;">— sötét · HU · Spotify kiválasztva, YT Music iOS-en tiltva</span></div>
+      <div style="width:414px;background:#0d0e0a;border-radius:32px;padding:70px 12px 0;">
+        <div style="background:#22241B;border-radius:28px 28px 32px 32px;padding:10px 20px 24px;">
+          <div style="width:40px;height:5px;border-radius:3px;background:#3C3E32;margin:0 auto 18px;"></div>
+          <div style="font-size:19px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Zene edzés közben</div>
+          <div style="font-size:13px;font-weight:500;color:#A8A899;margin:3px 0 18px;">Válaszd ki, melyik appot vezérelje a Lifey</div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="display:flex;align-items:center;gap:13px;background:rgba(157,174,107,.14);border:1.5px solid rgba(157,174,107,.45);border-radius:18px;padding:13px 15px;">
+              <span style="width:44px;height:44px;flex:none;border-radius:50%;background:#2A2C20;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#F1F0E4;">S</span>
+              <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Spotify</div><div style="font-size:12px;font-weight:600;color:#9DAE6B;margin-top:1px;">Csatlakoztatva</div></div>
+              <span class="mi fill" style="font-size:24px;color:#9DAE6B;">check_circle</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:13px;background:#1C1E16;border:1.5px solid transparent;border-radius:18px;padding:13px 15px;">
+              <span style="width:44px;height:44px;flex:none;border-radius:50%;background:#2A2C20;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#F1F0E4;">A</span>
+              <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Apple Music</div><div style="font-size:12px;font-weight:600;color:#A8A899;margin-top:1px;">Elérhető</div></div>
+              <span class="mi" style="font-size:22px;color:#777264;">chevron_right</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:13px;background:#1C1E16;border:1.5px solid transparent;border-radius:18px;padding:13px 15px;opacity:.42;">
+              <span style="width:44px;height:44px;flex:none;border-radius:50%;background:#2A2C20;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#F1F0E4;">YT</span>
+              <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">YouTube Music</div><div style="font-size:12px;font-weight:600;color:#A8A899;margin-top:1px;">iOS-en nem támogatott — az iOS nem enged más appot vezérelni</div></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:9px;margin-top:16px;padding:0 4px;">
+            <span class="mi" style="font-size:17px;color:#777264;margin-top:1px;">info</span>
+            <span style="font-size:12px;font-weight:500;color:#A8A899;line-height:1.45;">A zenét a saját alkalmazásod játssza le — a Lifey csak vezérli, és sosem indít el semmit magától.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:none;" data-screen-label="B · Provider picker · világos EN">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">B2 · Provider picker sheet <span style="font-weight:500;color:#8a8a7e;">— light · EN · YT Music „Not installed" változat (Android)</span></div>
+      <div style="width:414px;background:rgba(28,29,24,.42);border-radius:32px;padding:70px 12px 0;">
+        <div style="background:#FFFFFF;border-radius:28px 28px 32px 32px;padding:10px 20px 24px;">
+          <div style="width:40px;height:5px;border-radius:3px;background:#e6e5dc;margin:0 auto 18px;"></div>
+          <div style="font-size:19px;font-weight:800;color:#1c1d18;letter-spacing:-0.3px;">Music during workouts</div>
+          <div style="font-size:13px;font-weight:500;color:#6a6a60;margin:3px 0 18px;">Choose which app Lifey controls</div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="display:flex;align-items:center;gap:13px;background:rgba(88,110,56,.10);border:1.5px solid rgba(88,110,56,.40);border-radius:18px;padding:13px 15px;">
+              <span style="width:44px;height:44px;flex:none;border-radius:50%;background:#ECEBDE;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#1c1d18;">S</span>
+              <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#1c1d18;">Spotify</div><div style="font-size:12px;font-weight:600;color:#586E38;margin-top:1px;">Connected</div></div>
+              <span class="mi fill" style="font-size:24px;color:#586E38;">check_circle</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:13px;background:#F3F2E8;border:1.5px solid transparent;border-radius:18px;padding:13px 15px;">
+              <span style="width:44px;height:44px;flex:none;border-radius:50%;background:#ECEBDE;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#1c1d18;">A</span>
+              <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#1c1d18;">Apple Music</div><div style="font-size:12px;font-weight:600;color:#6a6a60;margin-top:1px;">Available</div></div>
+              <span class="mi" style="font-size:22px;color:#9a9a8c;">chevron_right</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:13px;background:#F3F2E8;border:1.5px solid transparent;border-radius:18px;padding:13px 15px;opacity:.45;">
+              <span style="width:44px;height:44px;flex:none;border-radius:50%;background:#ECEBDE;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#1c1d18;">YT</span>
+              <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#1c1d18;">YouTube Music</div><div style="font-size:12px;font-weight:600;color:#6a6a60;margin-top:1px;">Not installed</div></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:9px;margin-top:16px;padding:0 4px;">
+            <span class="mi" style="font-size:17px;color:#9a9a8c;margin-top:1px;">info</span>
+            <span style="font-size:12px;font-weight:500;color:#6a6a60;line-height:1.45;">Your own app plays the music — Lifey only controls it and never starts anything on its own.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- spec card -->
+    <div style="flex:none;width:430px;background:#FFFFFF;border-radius:24px;padding:26px;box-shadow:0 1px 3px rgba(0,0,0,.09);" data-screen-label="Token-spec">
+      <div style="font-size:17px;font-weight:800;color:#1c1d18;margin-bottom:14px;">Token-használat <span style="font-weight:500;color:#8a8a7e;">— sötét / világos</span></div>
+      <div style="display:flex;flex-direction:column;font-size:12px;font-weight:500;color:#3a3a34;line-height:1.5;">
+        <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0efe6;padding:7px 0;"><span style="font-weight:700;">Zene-gomb háttér</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">rgba(42,44,32,.90)+blur12 / rgba(255,255,255,.88)+blur12 +outline</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0efe6;padding:7px 0;"><span style="font-weight:700;">Glyph nyugalmi</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">onSurfaceVariant #A8A899 / #6A6A60</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0efe6;padding:7px 0;"><span style="font-weight:700;">Equalizer-sávok</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">primary #9DAE6B / #586E38</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0efe6;padding:7px 0;"><span style="font-weight:700;">Figyelem-pötty</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">#E08A52 + 2px ring a gomb hátterével</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0efe6;padding:7px 0;"><span style="font-weight:700;">Sheet felület</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">surfaceContainer #22241B / surface #FFFFFF</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0efe6;padding:7px 0;"><span style="font-weight:700;">Drag-handle</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">outline #3C3E32 / #E6E5DC</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0efe6;padding:7px 0;"><span style="font-weight:700;">Kiválasztott sor</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">primary 14% bg + 1.5px primary 45% keret</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0efe6;padding:7px 0;"><span style="font-weight:700;">Tiltott sor</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">teljes sor 42–45% opacity, nem tappolható</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0efe6;padding:7px 0;"><span style="font-weight:700;">Play/pause</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">primary fill · onPrimary #161611 / #F3F2E8 ikon</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0efe6;padding:7px 0;"><span style="font-weight:700;">Szolgáltató-chip</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">tonal: primary 14% / #ECEBDE · glyph monokróm</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;"><span style="font-weight:700;">CTA a sheetben</span><span style="text-align:right;color:#6a6a60;font-family:monospace;font-size:11px;">primary fill, 50 magas, radius 16 · másodlagos: csak szöveg onSurfVar</span></div>
+      </div>
+      <div style="font-size:12px;font-weight:500;color:#8a8a7e;margin-top:14px;line-height:1.5;">Minden szöveg ARB-kulcs (HU+EN), számok tabular figures. A glyph-monogramok placeholder-ek a végleges monokróm szolgáltató-ikonokig.</div>
+    </div>
+  </div>
+
+  <!-- ============ ROW C · MINI PLAYER ============ -->
+  <div style="display:flex;gap:36px;align-items:flex-start;margin-bottom:56px;">
+    <div style="flex:none;" data-screen-label="C · Mini lejátszó · sötét HU">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">C1 · Mini lejátszó <span style="font-weight:500;color:#8a8a7e;">— sötét · HU · szól a zene</span></div>
+      <div style="width:414px;background:#0d0e0a;border-radius:32px;padding:70px 12px 0;">
+        <div style="background:#22241B;border-radius:28px 28px 32px 32px;padding:10px 20px 26px;">
+          <div style="width:40px;height:5px;border-radius:3px;background:#3C3E32;margin:0 auto 16px;"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <span style="display:flex;align-items:center;gap:8px;background:rgba(157,174,107,.14);border-radius:999px;padding:7px 14px 7px 8px;">
+              <span style="width:24px;height:24px;border-radius:50%;background:#2A2C20;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#F1F0E4;">S</span>
+              <span style="font-size:12.5px;font-weight:700;color:#F1F0E4;">Spotify</span>
+            </span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#9DAE6B;"><span class="mi" style="font-size:18px;">swap_horiz</span>Váltás</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;">
+            <div style="width:64px;height:64px;flex:none;border-radius:16px;background:repeating-linear-gradient(45deg,#2A2C20,#2A2C20 8px,#31332a 8px,#31332a 16px);display:flex;align-items:center;justify-content:center;color:#777264;"><span class="mi" style="font-size:26px;">music_note</span></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:17px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Neon Horizon</div>
+              <div style="font-size:13px;font-weight:600;color:#A8A899;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Kavarga</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:26px;">
+            <span style="width:48px;height:48px;border-radius:16px;background:#1C1E16;display:flex;align-items:center;justify-content:center;color:#F1F0E4;"><span class="mi fill" style="font-size:26px;">skip_previous</span></span>
+            <span style="width:64px;height:64px;border-radius:50%;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;box-shadow:0 8px 22px rgba(0,0,0,.35);"><span class="mi fill" style="font-size:32px;">pause</span></span>
+            <span style="width:48px;height:48px;border-radius:16px;background:#1C1E16;display:flex;align-items:center;justify-content:center;color:#F1F0E4;"><span class="mi fill" style="font-size:26px;">skip_next</span></span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:500;color:#8a8a7e;margin-top:10px;max-width:414px;">Nincs progress-csík, nincs hangerő — szándékosan. Play/pause a vizuális központ, minden célpont ≥48 dp.</div>
+    </div>
+
+    <div style="flex:none;" data-screen-label="C · Mini player · világos EN">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">C2 · Mini player <span style="font-weight:500;color:#8a8a7e;">— light · EN · playing</span></div>
+      <div style="width:414px;background:rgba(28,29,24,.42);border-radius:32px;padding:70px 12px 0;">
+        <div style="background:#FFFFFF;border-radius:28px 28px 32px 32px;padding:10px 20px 26px;">
+          <div style="width:40px;height:5px;border-radius:3px;background:#e6e5dc;margin:0 auto 16px;"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <span style="display:flex;align-items:center;gap:8px;background:#ECEBDE;border-radius:999px;padding:7px 14px 7px 8px;">
+              <span style="width:24px;height:24px;border-radius:50%;background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#1c1d18;">S</span>
+              <span style="font-size:12.5px;font-weight:700;color:#1c1d18;">Spotify</span>
+            </span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#586E38;"><span class="mi" style="font-size:18px;">swap_horiz</span>Switch</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;">
+            <div style="width:64px;height:64px;flex:none;border-radius:16px;background:repeating-linear-gradient(45deg,#ECEBDE,#ECEBDE 8px,#e2e1d3 8px,#e2e1d3 16px);display:flex;align-items:center;justify-content:center;color:#9a9a8c;"><span class="mi" style="font-size:26px;">music_note</span></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:17px;font-weight:800;color:#1c1d18;letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Neon Horizon</div>
+              <div style="font-size:13px;font-weight:600;color:#6a6a60;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Kavarga</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:26px;">
+            <span style="width:48px;height:48px;border-radius:16px;background:#F3F2E8;display:flex;align-items:center;justify-content:center;color:#1c1d18;"><span class="mi fill" style="font-size:26px;">skip_previous</span></span>
+            <span style="width:64px;height:64px;border-radius:50%;background:#586E38;display:flex;align-items:center;justify-content:center;color:#F3F2E8;box-shadow:0 8px 22px rgba(28,29,24,.22);"><span class="mi fill" style="font-size:32px;">pause</span></span>
+            <span style="width:48px;height:48px;border-radius:16px;background:#F3F2E8;display:flex;align-items:center;justify-content:center;color:#1c1d18;"><span class="mi fill" style="font-size:26px;">skip_next</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:none;width:414px;display:flex;flex-direction:column;gap:20px;" data-screen-label="C · Üres és hiba">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">C3 · Üres állapot <span style="font-weight:500;color:#8a8a7e;">— sötét · HU · nem szól semmi</span></div>
+        <div style="background:#22241B;border-radius:28px;padding:10px 20px 24px;">
+          <div style="width:40px;height:5px;border-radius:3px;background:#3C3E32;margin:0 auto 16px;"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <span style="display:flex;align-items:center;gap:8px;background:rgba(157,174,107,.14);border-radius:999px;padding:7px 14px 7px 8px;"><span style="width:24px;height:24px;border-radius:50%;background:#2A2C20;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#F1F0E4;">S</span><span style="font-size:12.5px;font-weight:700;color:#F1F0E4;">Spotify</span></span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#9DAE6B;"><span class="mi" style="font-size:18px;">swap_horiz</span>Váltás</span>
+          </div>
+          <div style="text-align:center;padding:4px 10px 8px;">
+            <div style="width:64px;height:64px;border-radius:50%;background:#1C1E16;display:flex;align-items:center;justify-content:center;color:#777264;margin:0 auto 12px;"><span class="mi" style="font-size:30px;">music_off</span></div>
+            <div style="font-size:14px;font-weight:600;color:#A8A899;margin-bottom:16px;">A Spotifyban most nem szól semmi.</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;background:#9DAE6B;color:#161611;height:50px;border-radius:16px;font-size:14px;font-weight:800;"><span class="mi" style="font-size:20px;">open_in_new</span>Megnyitás: Spotify</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">C4 · Hiba-állapot <span style="font-weight:500;color:#8a8a7e;">— light · EN</span></div>
+        <div style="background:#FFFFFF;border-radius:28px;padding:10px 20px 24px;box-shadow:0 1px 3px rgba(0,0,0,.09);">
+          <div style="width:40px;height:5px;border-radius:3px;background:#e6e5dc;margin:0 auto 16px;"></div>
+          <div style="text-align:center;padding:4px 10px 8px;">
+            <div style="width:64px;height:64px;border-radius:50%;background:rgba(224,138,82,.14);display:flex;align-items:center;justify-content:center;color:#E08A52;margin:0 auto 12px;"><span class="mi" style="font-size:30px;">cloud_off</span></div>
+            <div style="font-size:14px;font-weight:600;color:#6a6a60;margin-bottom:16px;">Lost connection to Spotify.</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;background:#ECEBDE;color:#1c1d18;height:50px;border-radius:16px;font-size:14px;font-weight:800;"><span class="mi" style="font-size:20px;">refresh</span>Try again</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ROW D · PERMISSIONS ============ -->
+  <div style="display:flex;gap:36px;align-items:flex-start;">
+    <div style="flex:none;" data-screen-label="D · Android engedély · sötét HU">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">D1 · Android engedély-állapot <span style="font-weight:500;color:#8a8a7e;">— sötét · HU · prominent disclosure</span></div>
+      <div style="width:414px;background:#0d0e0a;border-radius:32px;padding:70px 12px 0;">
+        <div style="background:#22241B;border-radius:28px 28px 32px 32px;padding:10px 22px 26px;">
+          <div style="width:40px;height:5px;border-radius:3px;background:#3C3E32;margin:0 auto 20px;"></div>
+          <div style="width:64px;height:64px;border-radius:20px;background:rgba(157,174,107,.14);display:flex;align-items:center;justify-content:center;color:#9DAE6B;margin:0 auto 16px;"><span class="mi" style="font-size:32px;">graphic_eq</span></div>
+          <div style="font-size:18px;font-weight:800;color:#F1F0E4;text-align:center;letter-spacing:-0.3px;">Engedély szükséges a vezérléshez</div>
+          <div style="font-size:13.5px;font-weight:500;color:#A8A899;text-align:center;line-height:1.55;margin:10px 0 4px;">A médiavezérléshez Androidon értesítés-hozzáférés kell.</div>
+          <div style="font-size:13.5px;font-weight:500;color:#A8A899;text-align:center;line-height:1.55;margin-bottom:20px;">A Lifey csak azt érzékeli, milyen zene szól, és a lejátszást vezérli — <span style="color:#F1F0E4;font-weight:700;">más értesítésedet nem olvassa</span>.</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;background:#9DAE6B;color:#161611;height:50px;border-radius:16px;font-size:14px;font-weight:800;"><span class="mi" style="font-size:20px;">settings</span>Engedély megadása</div>
+          <div style="text-align:center;font-size:13.5px;font-weight:700;color:#A8A899;padding:15px 0 2px;">Most nem</div>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:500;color:#8a8a7e;margin-top:10px;max-width:414px;">A CTA a rendszer „Értesítés-hozzáférés" beállítójába visz; visszatérve a sheet automatikusan újraellenőriz.</div>
+    </div>
+
+    <div style="flex:none;" data-screen-label="D · Android permission · világos EN">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">D2 · Android permission state <span style="font-weight:500;color:#8a8a7e;">— light · EN</span></div>
+      <div style="width:414px;background:rgba(28,29,24,.42);border-radius:32px;padding:70px 12px 0;">
+        <div style="background:#FFFFFF;border-radius:28px 28px 32px 32px;padding:10px 22px 26px;">
+          <div style="width:40px;height:5px;border-radius:3px;background:#e6e5dc;margin:0 auto 20px;"></div>
+          <div style="width:64px;height:64px;border-radius:20px;background:rgba(88,110,56,.10);display:flex;align-items:center;justify-content:center;color:#586E38;margin:0 auto 16px;"><span class="mi" style="font-size:32px;">graphic_eq</span></div>
+          <div style="font-size:18px;font-weight:800;color:#1c1d18;text-align:center;letter-spacing:-0.3px;">Permission needed to control music</div>
+          <div style="font-size:13.5px;font-weight:500;color:#6a6a60;text-align:center;line-height:1.55;margin:10px 0 4px;">On Android, media control needs notification access.</div>
+          <div style="font-size:13.5px;font-weight:500;color:#6a6a60;text-align:center;line-height:1.55;margin-bottom:20px;">Lifey only detects what's playing and controls playback — <span style="color:#1c1d18;font-weight:700;">it never reads your other notifications</span>.</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;background:#586E38;color:#F3F2E8;height:50px;border-radius:16px;font-size:14px;font-weight:800;"><span class="mi" style="font-size:20px;">settings</span>Grant access</div>
+          <div style="text-align:center;font-size:13.5px;font-weight:700;color:#6a6a60;padding:15px 0 2px;">Not now</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:none;width:414px;" data-screen-label="D · iOS kapcsolódás">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">D3 · iOS Spotify-kapcsolódás <span style="font-weight:500;color:#8a8a7e;">— sötét · HU · enyhébb, előrejelző változat</span></div>
+      <div style="background:#22241B;border-radius:28px;padding:10px 22px 26px;">
+        <div style="width:40px;height:5px;border-radius:3px;background:#3C3E32;margin:0 auto 20px;"></div>
+        <div style="width:64px;height:64px;border-radius:20px;background:rgba(157,174,107,.14);display:flex;align-items:center;justify-content:center;color:#9DAE6B;margin:0 auto 16px;"><span class="mi" style="font-size:32px;">link</span></div>
+        <div style="font-size:18px;font-weight:800;color:#F1F0E4;text-align:center;letter-spacing:-0.3px;">Kapcsolódás a Spotifyhoz</div>
+        <div style="font-size:13.5px;font-weight:500;color:#A8A899;text-align:center;line-height:1.55;margin:10px 0 18px;">A Spotify egy pillanatra megnyílik a kapcsolódáshoz, aztán visszakerülsz az edzésedhez.</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;background:#9DAE6B;color:#161611;height:50px;border-radius:16px;font-size:14px;font-weight:800;"><span class="mi" style="font-size:20px;">link</span>Kapcsolódás</div>
+        <div style="text-align:center;font-size:13.5px;font-weight:700;color:#A8A899;padding:15px 0 2px;">Most nem</div>
+      </div>
+      <div style="font-size:12px;font-weight:500;color:#8a8a7e;margin-top:10px;line-height:1.5;">EN: „Spotify will open briefly to connect, then you'll be right back in your workout." · Sikertelen visszatérésnél a gomb 4. (figyelem) állapotba vált, a sheet a C4 hiba-állapotot mutatja.</div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

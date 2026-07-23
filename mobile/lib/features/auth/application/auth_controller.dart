@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_preferences.dart';
 import '../../../core/local_db/database_provider.dart';
+import '../../../core/music/music_controller.dart';
+import '../../../core/music/music_preferences.dart';
 import '../../../core/network/session_events.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/push/push_token_registrar.dart';
@@ -129,6 +131,10 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     // notification schedule shouldn't carry over to whoever logs in next.
     await NotificationService.cancelWeighInReminder();
     await ref.read(weighInReminderPreferencesProvider).clear();
+    // Same "fresh start for whoever logs in next" policy as the two clears
+    // above, even though the choice itself is device-local rather than
+    // account-specific (docs/music/46-workout-music-controls-plan.md §3.1).
+    await ref.read(musicPreferencesProvider).clear();
     await ref.read(avatarRepositoryProvider).clearCache();
     await ref.read(recipeImageRepositoryProvider).clearCache();
     // clearCache()/clear() above only wipe on-disk/secure storage; these
@@ -139,6 +145,7 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     ref.invalidate(myTrainersControllerProvider);
     ref.invalidate(trainerInviteControllerProvider);
     ref.invalidate(healthControllerProvider);
+    ref.invalidate(musicControllerProvider);
     state = const AsyncValue.data(null);
     if (refreshToken != null) {
       try {

@@ -119,6 +119,22 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
             </intent-filter>
         </receiver>
+        <!-- Workout music controls (docs/music/46-workout-music-controls-plan.md
+             §2.1, M2): exists only so its ComponentName can be passed to
+             MediaSessionManager.getActiveSessions/addOnActiveSessionsChangedListener
+             — never reads notification content, only the enabled/bound state
+             the system grants when the user allows notification access for
+             this app (surfaced to the user with prominent disclosure in the
+             in-app permission prompt before they're sent here). -->
+        <service
+            android:name=".MusicNotificationListenerService"
+            android:label="lifey"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService"/>
+            </intent-filter>
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -144,5 +160,11 @@
              companion version/device. -->
         <package android:name="com.google.android.apps.wear.companion"/>
         <package android:name="com.google.android.wearable.app"/>
+        <!-- Workout music controls (docs/music/46-workout-music-controls-plan.md
+             §2.1, M2): lets MediaSessionBridge check whether each provider is
+             installed (picker sheet) and launch it directly (empty-state CTA). -->
+        <package android:name="com.spotify.music"/>
+        <package android:name="com.google.android.apps.youtube.music"/>
+        <package android:name="com.apple.android.music"/>
     </queries>
 </manifest>

@@ -1846,5 +1846,71 @@
     "@recapReadyCardCta": {"description": "Button on the recap-ready dashboard card that opens the recap screen"},
 
     "recapReadyCardDismissTooltip": "Dismiss",
-    "@recapReadyCardDismissTooltip": {"description": "Tooltip for the close button on the recap-ready dashboard card"}
+    "@recapReadyCardDismissTooltip": {"description": "Tooltip for the close button on the recap-ready dashboard card"},
+
+    "musicButtonTooltip": "Music",
+    "@musicButtonTooltip": {"description": "Tooltip/accessibility label for the sticky music-control button shown during a running workout"},
+
+    "musicPickerTitle": "Music during workouts",
+    "@musicPickerTitle": {"description": "Title of the bottom sheet where the user picks which music app (Spotify/Apple Music/YouTube Music) Lifey controls"},
+
+    "musicPickerSubtitle": "Choose which app Lifey controls",
+    "@musicPickerSubtitle": {"description": "Subtitle under musicPickerTitle"},
+
+    "musicProviderConnected": "Connected",
+    "@musicProviderConnected": {"description": "Status label under a music provider's name in the picker when it's the currently selected one"},
+
+    "musicProviderAvailable": "Available",
+    "@musicProviderAvailable": {"description": "Status label under a music provider's name in the picker when it's selectable but not currently chosen"},
+
+    "musicProviderNotInstalled": "Not installed",
+    "@musicProviderNotInstalled": {"description": "Status label under a music provider's name in the picker when its app isn't installed on this device"},
+
+    "musicProviderUnsupportedIos": "Not supported on iOS — iOS doesn't allow controlling other apps",
+    "@musicProviderUnsupportedIos": {"description": "Status label for YouTube Music in the picker on iOS, where no control API exists at all"},
+
+    "musicPickerFooterNote": "Your own app plays the music — Lifey only controls it and never starts anything on its own.",
+    "@musicPickerFooterNote": {"description": "Reassuring footnote at the bottom of the music provider picker sheet"},
+
+    "musicSwitchProvider": "Switch",
+    "@musicSwitchProvider": {"description": "Button in the mini music player sheet's header that reopens the provider picker"},
+
+    "musicNoActiveSessionMessage": "Nothing is playing in {provider} right now.",
+    "@musicNoActiveSessionMessage": {"description": "Empty-state message in the mini music player when the chosen provider has no active playback", "placeholders": {"provider": {"type": "String"}}},
+
+    "musicOpenAppButton": "Open {provider}",
+    "@musicOpenAppButton": {"description": "Button that launches the chosen music provider's app, shown in the mini player's empty state", "placeholders": {"provider": {"type": "String"}}},
+
+    "musicErrorMessage": "Lost connection to {provider}.",
+    "@musicErrorMessage": {"description": "Error message in the mini music player when the platform bridge fails or the provider app isn't installed", "placeholders": {"provider": {"type": "String"}}},
+
+    "musicRetryButton": "Try again",
+    "@musicRetryButton": {"description": "Retry button in the mini music player's error state"},
+
+    "musicPermissionTitle": "Permission needed to control music",
+    "@musicPermissionTitle": {"description": "Title of the Android notification-access permission prompt in the mini music player"},
+
+    "musicPermissionExplanationLine1": "On Android, media control needs notification access.",
+    "@musicPermissionExplanationLine1": {"description": "First line of the Android notification-access permission explanation — required prominent disclosure for the Play Store"},
+
+    "musicPermissionExplanationLine2": "Lifey only detects what's playing and controls playback — it never reads your other notifications.",
+    "@musicPermissionExplanationLine2": {"description": "Second line of the Android notification-access permission explanation — required prominent disclosure for the Play Store"},
+
+    "musicPermissionCta": "Grant access",
+    "@musicPermissionCta": {"description": "Button that opens system settings to grant notification access for music control"},
+
+    "musicNotNowButton": "Not now",
+    "@musicNotNowButton": {"description": "Secondary dismiss action on the music permission/connect prompts"},
+
+    "musicConnectTitle": "Connect to {provider}",
+    "@musicConnectTitle": {"description": "Title of the iOS Spotify App Remote connect prompt, shown before handing off to the Spotify app", "placeholders": {"provider": {"type": "String"}}},
+
+    "musicConnectBody": "{provider} will open briefly to connect, then you'll be right back in your workout.",
+    "@musicConnectBody": {"description": "Body text of the iOS Spotify connect prompt, explaining the brief app-switch ahead of time", "placeholders": {"provider": {"type": "String"}}},
+
+    "musicConnectCta": "Connect",
+    "@musicConnectCta": {"description": "Primary button on the iOS Spotify connect prompt"},
+
+    "musicConnectingMessage": "Connecting…",
+    "@musicConnectingMessage": {"description": "Loading label shown in the mini music player while a connection attempt is in flight"}
 }

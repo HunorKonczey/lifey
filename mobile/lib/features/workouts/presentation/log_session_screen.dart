@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_service.dart';
+import '../../../core/music/music_controller.dart';
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
@@ -28,6 +29,7 @@ import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
 import 'widgets/exercise_session_card.dart';
+import 'widgets/music_sticky_button.dart';
 import 'widgets/post_workout_feedback_sheet.dart';
 import 'widgets/workout_success_dialog.dart';
 
@@ -84,6 +86,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   /// a session can exist in the DB (e.g. a resumed in-progress session)
   /// before this screen has (re-)started its notifier.
   bool _sessionNotifierStarted = false;
+
+  /// Whether this screen instance has (re-)activated the music controller
+  /// (docs/music/46-workout-music-controls-plan.md §3.3) — same shape as
+  /// [_sessionNotifierStarted], but tied to "showing a running session" (see
+  /// `initState`) rather than to the first successful persist, since a
+  /// music-app choice made before the first set is logged should still work.
+  /// [_musicController] is cached at activation time so [dispose] can call
+  /// it directly without touching `ref` (which isn't safe to read there).
+  bool _musicActivated = false;
+  MusicController? _musicController;
 
   /// One block per planned exercise. Each block's rows are either done
   /// (doneAt set → will be persisted) or plan (doneAt null → UI only).
@@ -170,6 +182,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _feedbackNote = session?.feedbackNote;
 
     if (_finishedAt == null) isLogSessionScreenOpen = true;
+    if (_finishedAt == null) _activateMusic();
 
     if (session != null) {
       _sessionClientId = session.clientId;
@@ -291,7 +304,33 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _ticker?.cancel();
     _hrTicker?.cancel();
     unawaited(_watchEventsSubscription?.cancel());
+    _deactivateMusic();
     super.dispose();
+  }
+
+  /// Starts the music controller listening to the platform bridge
+  /// (docs/music/46-workout-music-controls-plan.md §3.3). Cheap and
+  /// idempotent — guarded by [_musicActivated] — and safe to call even
+  /// before a provider is chosen; the controller/service simply reports
+  /// `notConfigured` until [MusicController.selectProvider] is called from
+  /// the picker sheet.
+  void _activateMusic() {
+    if (_musicActivated) return;
+    _musicActivated = true;
+    _musicController = ref.read(musicControllerProvider.notifier);
+    unawaited(_musicController!.activate());
+  }
+
+  /// Stops listening — called both from [_persistFinished] (so a session
+  /// that finishes without the screen unmounting yet, e.g. while the
+  /// feedback sheet/success dialog is still showing, stops right away
+  /// rather than waiting for [dispose]) and from [dispose] itself as a
+  /// safety net for a session abandoned mid-workout. Never touches actual
+  /// playback — whatever's playing keeps playing.
+  void _deactivateMusic() {
+    if (!_musicActivated) return;
+    _musicActivated = false;
+    unawaited(_musicController?.deactivate());
   }
 
   /// The watch's End button asks the phone to close the session rather than
@@ -1044,6 +1083,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _ticker = null;
     _hrTicker?.cancel();
     _hrTicker = null;
+    _deactivateMusic();
     // _rescheduleRestNotification() sees _finishedAt set and cancels.
     unawaited(_rescheduleRestNotification());
     await _persist();
@@ -1634,44 +1674,56 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               ),
             ),
 
-          // ── Sticky "Finish workout" button ──
+          // ── Sticky music button + "Finish workout" button ──
+          // The music button only shows alongside Finish — both gated on
+          // "running session" (docs/music/46-workout-music-controls-plan.md
+          // §3.4); it never grows the sticky zone's height (listBottomPad
+          // above stays keyed to the Finish button's own 54px alone).
           if (showFinishButton)
             Positioned(
               bottom: safeBottom + 24,
               left: 16,
               right: 16,
-              child: SizedBox(
-                height: 54,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _finishWorkout,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: scheme.primary,
-                    foregroundColor: scheme.onPrimary,
-                    disabledBackgroundColor:
-                        scheme.primary.withValues(alpha: 0.6),
-                    disabledForegroundColor:
-                        scheme.onPrimary.withValues(alpha: 0.7),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    textStyle: const TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+              child: Row(
+                children: [
+                  const MusicStickyButton(),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 54,
+                      child: FilledButton.icon(
+                        onPressed: _saving ? null : _finishWorkout,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: scheme.primary,
+                          foregroundColor: scheme.onPrimary,
+                          disabledBackgroundColor:
+                              scheme.primary.withValues(alpha: 0.6),
+                          disabledForegroundColor:
+                              scheme.onPrimary.withValues(alpha: 0.7),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          textStyle: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        icon: _saving
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: scheme.onPrimary.withValues(alpha: 0.7),
+                                ),
+                              )
+                            : const Icon(Icons.check, size: 20),
+                        label: Text(l10n.finishWorkoutButton),
+                      ),
                     ),
                   ),
-                  icon: _saving
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: scheme.onPrimary.withValues(alpha: 0.7),
-                          ),
-                        )
-                      : const Icon(Icons.check, size: 20),
-                  label: Text(l10n.finishWorkoutButton),
-                ),
+                ],
               ),
             ),
         ],
