@@ -252,6 +252,7 @@ class _AddMealEntrySheetState extends ConsumerState<AddMealEntrySheet> {
                       });
                       final stats = usage[food.clientId];
                       if (stats != null) _prefillGrams(stats);
+                      _gramsFocus.requestFocus();
                     },
                   ),
                 const SizedBox(height: 12),

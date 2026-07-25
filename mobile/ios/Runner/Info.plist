@@ -32,11 +32,21 @@
 	<string>A fényképtár elérése szükséges a profilkép kiválasztásához.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>A Lifey az Apple Health-ből olvassa be az edzéseket, a lépésszámot és a testsúlyt, hogy automatikusan kiegészítse a naplódat.</string>
+	<!-- Zenevezérlés edzés közben, Apple Music ág (docs/music/46-workout-music-controls-plan.md §2.2, M3). -->
+	<key>NSAppleMusicUsageDescription</key>
+	<string>A Lifey a Zene könyvtáradhoz fér hozzá, hogy edzés közben megjelenítse a szóló számot, és app-váltás nélkül vezérelhesd a lejátszást (lejátszás, szüneteltetés, következő/előző szám).</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<!-- Zenevezérlés: az Apple Music app megnyitásához a noActiveSession
+	     üres állapot CTA-jából (docs/music/46-workout-music-controls-plan.md
+	     §2.2/§3.5, M3). Spotify/YouTube Music sémái M4-ben kerülnek ide. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>music</string>
+	</array>
 	<!-- Live Activities (docs/24-ios-widget-live-activity-plan.md) -->
 	<key>NSSupportsLiveActivities</key>
 	<true/>

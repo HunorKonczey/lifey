@@ -186,8 +186,7 @@ export function RecipesView({ onAssign }: RecipesViewProps = {}) {
         <RecipeEditor
           key={editing?.id ?? "new"}
           recipe={editing}
-          onSaved={() => { setEditing(null); setCreating(false); }}
-          onCancel={() => { setEditing(null); setCreating(false); }}
+          onClose={() => { setEditing(null); setCreating(false); }}
         />
       )}
 

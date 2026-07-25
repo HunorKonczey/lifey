@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
@@ -55,6 +55,14 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
   const isEditing = meal != null;
   const [mode, setMode] = useState<Mode>("search");
   const [items, setItems] = useState<DraftItem[]>(() => (meal ? draftItemsFromMeal(meal) : []));
+  // The meal this dialog is persisting to — the prop's id when editing, or
+  // whatever id got created by the very first auto-saved item otherwise.
+  const [mealId, setMealId] = useState<number | null>(meal?.id ?? null);
+  const gramsSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (gramsSaveTimer.current) clearTimeout(gramsSaveTimer.current);
+  }, []);
 
   const { data: recentMeals } = useQuery({ queryKey: queryKeys.meals.all(), queryFn: mealApi.list });
   const usage = computeFoodUsage(recentMeals ?? []);
@@ -66,13 +74,13 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
   });
 
   // "What's left" outcome preview (W3): today's already-saved consumption
-  // (excluding this meal's own pre-edit entries, since `items` supersedes
-  // them) plus whatever's staged in this dialog so far — only meaningful
-  // when logging for today and a calorie goal is set.
+  // (excluding this meal's own entries, since `items` supersedes them)
+  // plus whatever's staged in this dialog so far — only meaningful when
+  // logging for today and a calorie goal is set.
   const dateStr = format(date, "yyyy-MM-dd");
   const isTodayDate = dateStr === format(new Date(), "yyyy-MM-dd");
   const otherTodayMeals = (recentMeals ?? []).filter(
-    (m) => format(new Date(m.dateTime), "yyyy-MM-dd") === dateStr && m.id !== meal?.id,
+    (m) => format(new Date(m.dateTime), "yyyy-MM-dd") === dateStr && m.id !== mealId,
   );
   const stagedKcal = items.reduce((s, i) => s + (i.caloriesPer100g * i.quantityInGrams) / 100, 0);
   const currentTodayKcal =
@@ -82,30 +90,89 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
       ? { calorieGoal: settings.dailyCalorieGoal, currentTodayKcal }
       : null;
 
-  const addItem = (item: DraftItem) => setItems((prev) => [...prev, item]);
-  const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
+  // Persists the current entry list right after every change, since there's
+  // no separate Save action: creates the meal on the first item, updates it
+  // on every later change, and deletes it again if the last item is removed
+  // (the API rejects an empty entry list).
+  const persistMutation = useMutation({
+    mutationFn: async (nextItems: DraftItem[]) => {
+      const entries = nextItems.map((i) => ({ foodId: i.foodId, quantityInGrams: i.quantityInGrams }));
+      if (entries.length === 0) {
+        if (mealId != null) await mealApi.delete(mealId);
+        return null;
+      }
+      return mealId != null
+        ? mealApi.update(mealId, {
+            dateTime: meal?.dateTime ?? logTimestampFor(date),
+            mealType: meal?.mealType ?? mealType,
+            name: meal?.name ?? null,
+            entries,
+          })
+        : mealApi.create({ dateTime: logTimestampFor(date), mealType, name: null, entries });
+    },
+    onSuccess: (result) => {
+      setMealId(result?.id ?? null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
+    },
+    onError: () => show(isEditing ? t("updateFailed") : t("saveFailed"), "error"),
+  });
+
+  // Persists are serialized (never more than one in flight): while creating
+  // the meal for the first item, a second rapid addition would otherwise
+  // also see `mealId === null` and fire its own create, producing two meals.
+  // A save that arrives mid-flight is queued and re-run with the latest
+  // snapshot once the in-flight one settles.
+  const pendingPersist = useRef<DraftItem[] | null>(null);
+  const isPersisting = useRef(false);
+
+  const runPersist = async (nextItems: DraftItem[]) => {
+    isPersisting.current = true;
+    try {
+      await persistMutation.mutateAsync(nextItems);
+    } catch {
+      // already surfaced via persistMutation's onError
+    } finally {
+      isPersisting.current = false;
+      const queued = pendingPersist.current;
+      if (queued) {
+        pendingPersist.current = null;
+        runPersist(queued);
+      }
+    }
+  };
+
+  const schedulePersist = (nextItems: DraftItem[]) => {
+    if (isPersisting.current) {
+      pendingPersist.current = nextItems;
+      return;
+    }
+    runPersist(nextItems);
+  };
+
+  const addItem = (item: DraftItem) =>
+    setItems((prev) => {
+      const next = [...prev, item];
+      schedulePersist(next);
+      return next;
+    });
+  const removeItem = (idx: number) =>
+    setItems((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      schedulePersist(next);
+      return next;
+    });
   const updateGrams = (idx: number, grams: number) =>
-    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, quantityInGrams: grams } : it)));
+    setItems((prev) => {
+      const next = prev.map((it, i) => (i === idx ? { ...it, quantityInGrams: grams } : it));
+      if (gramsSaveTimer.current) clearTimeout(gramsSaveTimer.current);
+      gramsSaveTimer.current = setTimeout(() => schedulePersist(next), 500);
+      return next;
+    });
 
   const totalKcal = items.reduce((s, i) => s + (i.caloriesPer100g * i.quantityInGrams) / 100, 0);
   const totalProtein = items.reduce((s, i) => s + (i.proteinPer100g * i.quantityInGrams) / 100, 0);
   const totalCarbs = items.reduce((s, i) => s + (i.carbsPer100g * i.quantityInGrams) / 100, 0);
   const totalFat = items.reduce((s, i) => s + (i.fatPer100g * i.quantityInGrams) / 100, 0);
-
-  const saveMutation = useMutation({
-    mutationFn: () => {
-      const entries = items.map((i) => ({ foodId: i.foodId, quantityInGrams: i.quantityInGrams }));
-      return meal
-        ? mealApi.update(meal.id, { dateTime: meal.dateTime, mealType: meal.mealType, name: meal.name, entries })
-        : mealApi.create({ dateTime: logTimestampFor(date), mealType, name: null, entries });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.meals.all() });
-      show(isEditing ? t("mealUpdated") : t("mealSaved"), "success");
-      onClose();
-    },
-    onError: () => show(isEditing ? t("updateFailed") : t("saveFailed"), "error"),
-  });
 
   const mealTypeLabels: Record<MealType, string> = {
     BREAKFAST: n("breakfast"), LUNCH: n("lunch"), DINNER: n("dinner"), SNACK: n("snack"),
@@ -126,10 +193,15 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
           <h3 className="font-bold text-base">
             {isEditing ? t("editTitle", { meal: mealTypeLabels[mealType] }) : t("addTitle", { meal: mealTypeLabels[mealType] })}
           </h3>
-          <button onClick={onClose} aria-label={common("close")}
-            className="p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container">
-            <span className="material-symbols-rounded">close</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {persistMutation.isPending && (
+              <span className="text-xs" style={{ color: "var(--on-surface-variant)" }}>{common("saving")}</span>
+            )}
+            <button onClick={onClose} aria-label={common("close")}
+              className="p-1 rounded-[var(--r-sm)] transition-colors hover:bg-surface-container">
+              <span className="material-symbols-rounded">close</span>
+            </button>
+          </div>
         </div>
 
         {/* Mode tabs */}
@@ -181,18 +253,6 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
             </div>
           </div>
         )}
-
-        <button onClick={() => saveMutation.mutate()} disabled={items.length === 0 || saveMutation.isPending}
-          className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
-          style={{ background: "var(--primary)", color: "#1E1F18" }}>
-          {saveMutation.isPending
-            ? common("saving")
-            : isEditing
-              ? t("saveChanges")
-              : items.length > 0
-                ? t("saveMealCount", { count: items.length })
-                : t("saveMeal")}
-        </button>
       </div>
     </div>
   );
@@ -218,6 +278,14 @@ function SearchMode({
   const [picked, setPicked] = useState<FoodResponse | null>(null);
   const [gramsStr, setGramsStr] = useState("");
   const grams = gramsStr.trim() ? Math.max(1, Number(gramsStr)) : 0;
+  const gramsInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (picked) {
+      gramsInputRef.current?.focus();
+      gramsInputRef.current?.select();
+    }
+  }, [picked]);
 
   const { data: foods } = useQuery({ queryKey: queryKeys.foods.all(), queryFn: foodApi.list });
 
@@ -311,7 +379,8 @@ function SearchMode({
 
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{t("quantityG")}</label>
-        <input type="number" value={gramsStr} min={1} autoFocus placeholder="100"
+        <input type="number" value={gramsStr} min={1} placeholder="100"
+          ref={gramsInputRef}
           onChange={(e) => setGramsStr(e.target.value)}
           onFocus={(e) => e.target.select()}
           className="px-3 h-10 rounded-[var(--r-input)] outline-none text-sm tabular"

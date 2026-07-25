@@ -10,6 +10,9 @@ import UserNotifications
   // Stored so the WCSessionDelegate it sets on WCSession.default stays alive
   // for the app's lifetime — see docs/40-watch-app-plan.md §4.5.
   private var watchBridge: WatchBridge?
+  // Stored so its MPMusicPlayerController notification observers stay alive
+  // for the app's lifetime — see docs/music/46-workout-music-controls-plan.md §2.2.
+  private var appleMusicBridge: AppleMusicBridge?
 
   override func application(
     _ application: UIApplication,
@@ -26,6 +29,9 @@ import UserNotifications
     // transferUserInfo summary isn't missed (docs/40-watch-app-plan.md §4.5).
     if let registrar = self.registrar(forPlugin: "WatchBridge") {
       watchBridge = WatchBridge.register(with: registrar)
+    }
+    if let registrar = self.registrar(forPlugin: "AppleMusicBridge") {
+      appleMusicBridge = AppleMusicBridge.register(with: registrar)
     }
     // Makes this AppDelegate the app's single UNUserNotificationCenterDelegate
     // (FlutterAppDelegate formally conforms via FlutterAppLifeCycleProvider,

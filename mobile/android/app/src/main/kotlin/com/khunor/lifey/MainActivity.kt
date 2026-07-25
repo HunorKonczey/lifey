@@ -8,10 +8,13 @@ import io.flutter.embedding.engine.FlutterEngine
 // ComponentActivity — see docs/26-android-health-connect-integration-plan.md.
 class MainActivity : FlutterFragmentActivity() {
     private var watchBridge: WatchBridge? = null
+    private var mediaSessionBridge: MediaSessionBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         // docs/40-watch-app-plan.md §5.1, §6.1.
         watchBridge = WatchBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+        // docs/music/46-workout-music-controls-plan.md §2.1, M2.
+        mediaSessionBridge = MediaSessionBridge(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 }
