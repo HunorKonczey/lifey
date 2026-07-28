@@ -43,6 +43,8 @@ void main() {
         state: const WorkoutSessionState(exerciseName: 'x', setsDone: 0, totalSetsDone: 0),
       );
       await service.endWorkout('session-1');
+      await service.ackSetLogged(sessionClientId: 'session-1', eventId: 'event-1', accepted: true);
+      await service.ackStandaloneSession('standalone-1');
 
       expect(available, isFalse);
       expect(calls, isEmpty);
@@ -100,6 +102,8 @@ void main() {
           'restEndsAtEpochMs': null,
           'restTotalSeconds': null,
           'restRemainingSeconds': null,
+          'nextSetWeight': null,
+          'nextSetReps': null,
         },
       });
     });
@@ -135,8 +139,33 @@ void main() {
           'restEndsAtEpochMs': 1783075350000,
           'restTotalSeconds': 90,
           'restRemainingSeconds': 47,
+          'nextSetWeight': null,
+          'nextSetReps': null,
         },
       });
+    });
+
+    test('updateState carries the F5b adjust prefill when the phone has one', () async {
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WatchWorkoutService(isAvailable: true);
+
+      await service.updateState(
+        sessionClientId: 'session-1',
+        state: const WorkoutSessionState(
+          exerciseName: 'Guggolás',
+          setsDone: 2,
+          totalSetsDone: 5,
+          nextSetWeight: 62.5,
+          nextSetReps: 6,
+        ),
+      );
+
+      final state = (calls.single.arguments as Map)['state'] as Map;
+      expect(state['nextSetWeight'], 62.5);
+      expect(state['nextSetReps'], 6);
     });
 
     test('endWorkout sends sessionClientId', () async {
@@ -161,6 +190,52 @@ void main() {
 
       expect(await service.isWatchAppAvailable(), isTrue);
       expect(calls.single.method, 'isWatchAppAvailable');
+    });
+
+    test('ackSetLogged sends sessionClientId + eventId + accepted', () async {
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WatchWorkoutService(isAvailable: true);
+
+      await service.ackSetLogged(sessionClientId: 'session-1', eventId: 'event-1', accepted: true);
+
+      expect(calls.single.method, 'ackSetLogged');
+      expect(calls.single.arguments, {
+        'sessionClientId': 'session-1',
+        'eventId': 'event-1',
+        'accepted': true,
+      });
+    });
+
+    test('ackSetLogged sends accepted: false', () async {
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WatchWorkoutService(isAvailable: true);
+
+      await service.ackSetLogged(sessionClientId: 'session-1', eventId: 'event-2', accepted: false);
+
+      expect(calls.single.arguments, {
+        'sessionClientId': 'session-1',
+        'eventId': 'event-2',
+        'accepted': false,
+      });
+    });
+
+    test('ackStandaloneSession sends standaloneSessionId', () async {
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WatchWorkoutService(isAvailable: true);
+
+      await service.ackStandaloneSession('standalone-1');
+
+      expect(calls.single.method, 'ackStandaloneSession');
+      expect(calls.single.arguments, {'standaloneSessionId': 'standalone-1'});
     });
   });
 
@@ -242,6 +317,206 @@ void main() {
 
       expect(event, isA<WatchEndRequested>());
       expect((event as WatchEndRequested).sessionClientId, 'session-1');
+    });
+
+    test('decodes a setLogged event', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'setLogged',
+              'sessionClientId': 'session-1',
+              'eventId': 'event-1',
+              'loggedAtEpochMs': 1783075260000,
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final event = await service.events.first;
+
+      expect(event, isA<WatchSetLogged>());
+      final setLogged = event as WatchSetLogged;
+      expect(setLogged.sessionClientId, 'session-1');
+      expect(setLogged.eventId, 'event-1');
+      expect(setLogged.loggedAtEpochMs, 1783075260000);
+      // F5a's plain one-tap flow sends no values (D-F5b.6).
+      expect(setLogged.reps, isNull);
+      expect(setLogged.weight, isNull);
+      expect(setLogged.loggedValues, isNull);
+    });
+
+    test('decodes a setLogged event carrying the F5b adjust values', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'setLogged',
+              'sessionClientId': 'session-1',
+              'eventId': 'event-1',
+              'loggedAtEpochMs': 1783075260000,
+              'reps': 12,
+              'weight': 62.5,
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final setLogged = await service.events.first as WatchSetLogged;
+
+      expect(setLogged.reps, 12);
+      expect(setLogged.weight, 62.5);
+      expect(setLogged.loggedValues, (weight: 62.5, reps: 12));
+    });
+
+    test('a whole-number weight arriving as an int still decodes as double', () async {
+      // The platform channel delivers 60, not 60.0 — `as double?` would throw.
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'setLogged',
+              'sessionClientId': 'session-1',
+              'eventId': 'event-1',
+              'loggedAtEpochMs': 1783075260000,
+              'reps': 10,
+              'weight': 60,
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final setLogged = await service.events.first as WatchSetLogged;
+
+      expect(setLogged.weight, 60.0);
+      expect(setLogged.loggedValues, (weight: 60.0, reps: 10));
+    });
+
+    test('a half-filled payload counts as no values (§4.1: reps and weight travel together)', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'setLogged',
+              'sessionClientId': 'session-1',
+              'eventId': 'event-1',
+              'loggedAtEpochMs': 1783075260000,
+              'reps': 12, // weight hiányzik
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final setLogged = await service.events.first as WatchSetLogged;
+
+      expect(setLogged.reps, 12);
+      expect(setLogged.weight, isNull);
+      expect(
+        setLogged.loggedValues,
+        isNull,
+        reason: 'a hiányos pár nem írhat null-t egy tervezett érték fölé',
+      );
+    });
+
+    test('decodes a standaloneSession event', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'standaloneSession',
+              'payload': {
+                'standaloneSessionId': 'standalone-1',
+                'templateId': null,
+                'startedAtEpochMs': 1783075200000,
+                'endedAtEpochMs': 1783078800000,
+                'rpe': 7,
+                'sets': [
+                  {'loggedAtEpochMs': 1783075260000, 'reps': 10, 'exerciseIndex': null},
+                  {'loggedAtEpochMs': 1783075320000, 'reps': 10, 'exerciseIndex': null},
+                ],
+                'activeCalories': 214.0,
+                'averageHeartRate': 126.0,
+                'healthWorkoutId': 'watch-uuid-2',
+              },
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final event = await service.events.first;
+
+      expect(event, isA<WatchStandaloneSession>());
+      final session = event as WatchStandaloneSession;
+      expect(session.standaloneSessionId, 'standalone-1');
+      expect(session.templateId, isNull);
+      expect(session.startedAtEpochMs, 1783075200000);
+      expect(session.endedAtEpochMs, 1783078800000);
+      expect(session.rpe, 7);
+      expect(session.sets, hasLength(2));
+      expect(session.sets.first.loggedAtEpochMs, 1783075260000);
+      expect(session.sets.first.reps, 10);
+      expect(session.sets.first.exerciseIndex, isNull);
+      expect(session.activeCalories, 214.0);
+      expect(session.averageHeartRate, 126.0);
+      expect(session.healthWorkoutId, 'watch-uuid-2');
+    });
+
+    test('decodes a standaloneSession event with empty sets and no optional fields', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'standaloneSession',
+              'payload': {
+                'standaloneSessionId': 'standalone-2',
+                'startedAtEpochMs': 1783075200000,
+                'endedAtEpochMs': 1783075200000,
+                'sets': <Object?>[],
+              },
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final event = await service.events.first;
+
+      expect(event, isA<WatchStandaloneSession>());
+      final session = event as WatchStandaloneSession;
+      expect(session.standaloneSessionId, 'standalone-2');
+      expect(session.templateId, isNull);
+      expect(session.rpe, isNull);
+      expect(session.sets, isEmpty);
+      expect(session.activeCalories, isNull);
+      expect(session.averageHeartRate, isNull);
+      expect(session.healthWorkoutId, isNull);
+    });
+
+    test('an unknown event type falls back to its raw type string', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({'type': 'somethingUnhandled'});
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final event = await service.events.first;
+
+      expect(event, 'somethingUnhandled');
     });
   });
 }

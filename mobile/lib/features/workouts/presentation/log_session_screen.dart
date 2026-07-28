@@ -27,6 +27,7 @@ import '../domain/exercise.dart';
 import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
+import 'watch_set_log_decision.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
 import 'widgets/exercise_session_card.dart';
 import 'widgets/music_sticky_button.dart';
@@ -155,6 +156,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   // this screen instance for the matching session is mounted; see
   // [_onWatchEvent].
   StreamSubscription<Object>? _watchEventsSubscription;
+
+  /// Last 8 `WatchSetLogged.eventId`s already handled — retried deliveries of
+  /// the same tap (transport retry, not a second real tap) ack `true` again
+  /// without logging twice (docs/watch/43-watch-f5-set-logging-plan.md §4.2).
+  final List<String> _recentWatchSetEventIds = [];
 
   bool get _isEditing => widget.session != null;
 
@@ -401,6 +407,75 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
             _watchActiveCalories = event.activeCalories;
           }
         });
+      case WatchSetLogged():
+        _handleWatchSetLogged(event);
+    }
+  }
+
+  /// The watch is a dumb trigger — it doesn't choose which exercise/set gets
+  /// logged, only that "the next one" should be (docs/watch/
+  /// 43-watch-f5-set-logging-plan.md §2, §5.2/3–4). The actual guard/dedup/
+  /// row-selection decision lives in [decideWatchSetLog], a pure function,
+  /// so it stays unit-testable without mounting this screen; logging itself
+  /// goes through the exact same [_handleRowMarkDone]/[_handleAddSet] paths
+  /// the phone's own "+" button uses, so rest-start/state-sync/autosave all
+  /// fire the same way.
+  void _handleWatchSetLogged(WatchSetLogged event) {
+    final decision = decideWatchSetLog(
+      eventSessionClientId: event.sessionClientId,
+      currentSessionClientId: _sessionClientId,
+      sessionFinished: _finishedAt != null,
+      saving: _saving,
+      eventId: event.eventId,
+      recentEventIds: _recentWatchSetEventIds,
+      blocks: _blocks,
+      currentBlock: _currentExerciseBlock(),
+    );
+
+    switch (decision.action) {
+      case WatchSetLogAction.reject:
+        unawaited(ref.read(watchWorkoutServiceProvider).ackSetLogged(
+              sessionClientId: event.sessionClientId,
+              eventId: event.eventId,
+              accepted: false,
+            ));
+      case WatchSetLogAction.dedupe:
+        unawaited(ref.read(watchWorkoutServiceProvider).ackSetLogged(
+              sessionClientId: event.sessionClientId,
+              eventId: event.eventId,
+              accepted: true,
+            ));
+      case WatchSetLogAction.log:
+        final target = decision.target!;
+        final blockIndex = target.blockIndex;
+        final int rowIndex;
+        if (target.needsNewRow) {
+          _handleAddSet(blockIndex, prefillFromPrevious: true);
+          rowIndex = _blocks[blockIndex].rows.length - 1;
+        } else {
+          rowIndex = target.rowIndex!;
+        }
+        // F5b (docs/watch/48-watch-f5b-set-adjust-plan.md D-F5b.3): a tap that
+        // came through the watch's adjust stepper carries reps+weight, and
+        // goes through _handleRowEdit — which writes the values *and* stamps
+        // doneAt, so rest/PR/autosave all fire exactly as they do for the
+        // phone's own compact editor. A plain F5a tap (no values) keeps the
+        // mark-done path, bit for bit.
+        final values = event.loggedValues;
+        if (values != null) {
+          _handleRowEdit(blockIndex, rowIndex, values.weight, values.reps);
+        } else {
+          _handleRowMarkDone(blockIndex, rowIndex);
+        }
+        _recentWatchSetEventIds.add(event.eventId);
+        if (_recentWatchSetEventIds.length > 8) {
+          _recentWatchSetEventIds.removeAt(0);
+        }
+        unawaited(ref.read(watchWorkoutServiceProvider).ackSetLogged(
+              sessionClientId: event.sessionClientId,
+              eventId: event.eventId,
+              accepted: true,
+            ));
     }
   }
 
@@ -983,6 +1058,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     final current = _currentExerciseBlock();
     final totalSetsDone = _blocks.fold<int>(
         0, (sum, b) => sum + b.rows.where((r) => r.isDone).length);
+    // What a watch "+1 set" tap would start its adjust stepper from — resolved
+    // against the same row the tap would log into (docs/watch/
+    // 48-watch-f5b-set-adjust-plan.md D-F5b.2). Recomputed on every state sync,
+    // so the watch is at most one sync behind.
+    final prefill = watchSetPrefill(_blocks, current);
     return WorkoutSessionState(
       exerciseName: (current != null && current.exerciseName.isNotEmpty)
           ? current.exerciseName
@@ -1000,6 +1080,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       restEndsAtEpochMs: _currentRestEndsAtEpochMs(),
       restTotalSeconds: _currentRestTotalSeconds(),
       restRemainingSeconds: _currentRestRemainingSeconds(),
+      nextSetWeight: prefill?.weight,
+      nextSetReps: prefill?.reps,
     );
   }
 

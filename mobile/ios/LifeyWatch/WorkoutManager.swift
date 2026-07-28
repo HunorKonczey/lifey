@@ -14,6 +14,17 @@ struct WorkoutSummaryData: Equatable {
   /// `healthWorkoutId` was sent in the summary) — drives the "Saved to
   /// Health" line, not just whether the sensors *collected* HR/kcal data.
   let savedToHealth: Bool
+  /// Non-nil only for a standalone summary (docs/watch/
+  /// 44-watch-f6-standalone-plan.md D-F6.7) — phone-mastered sessions don't
+  /// carry a set count on the watch at all (the phone owns that number).
+  /// Drives `SummaryView`'s fourth "sets" tile.
+  let setsCount: Int?
+  /// Non-nil only for a standalone summary — the same id
+  /// `StandaloneSessionPayload.standaloneSessionId` was queued under, so
+  /// `SummaryView` can tell whether *this* session (not just "the queue")
+  /// has been acked yet (§4.2) and render its own `sync_pending`/`sync_done`
+  /// chip correctly even while other sessions remain queued.
+  let standaloneSessionId: String?
 }
 
 /// How long the SUMMARY screen stays up before falling back to `.idle` on
@@ -43,6 +54,38 @@ enum WorkoutPhase: Equatable {
   /// lists a dedicated screen for the health-denied case on iOS.
   case healthDenied
 }
+
+/// The tap-to-ack lifecycle of the "+1 set" control (docs/watch/
+/// 43-watch-f5-set-logging-plan.md §3.2). `.pending`'s associated `String`
+/// is the tap's `eventId` — `applyLogSetAck` only acts on an ack matching
+/// this exact id, so a stale ack for an already-settled/superseded tap is a
+/// no-op. F6 (docs/watch/44-watch-f6-standalone-plan.md §2.1) will add a
+/// local mode that skips straight to `.confirmed` — kept as a single branch
+/// point in `logSet()` rather than scattered UI `if`s so that's a small
+/// addition, not a restructure.
+enum LogSetState: Equatable {
+  case ready
+  case pending(String)
+  case confirmed
+  case failed
+}
+
+/// How long `logSet()` waits for a `logSetAck` before giving up
+/// (docs/watch/43-watch-f5-set-logging-plan.md §3.2, §10/4 — calibratable).
+private let logSetAckTimeoutSeconds: TimeInterval = 5
+/// How long `.confirmed`/`.failed` stays up before `logSetState` falls back
+/// to `.ready` on its own (docs/watch/43-watch-f5-set-logging-plan.md §3.2).
+private let logSetConfirmedSettleSeconds: TimeInterval = 1.2
+private let logSetFailedSettleSeconds: TimeInterval = 2.5
+
+/// D-F6.8 — the watch has no reps input yet in F6a, so every locally logged
+/// standalone set uses this fixed value; the user corrects it on the phone
+/// later. Carried per-set on the wire already so a future watch-side
+/// stepper (F5b/F6b) won't need a protocol change.
+private let standaloneDefaultReps = 10
+/// §3.5 — standalone has no phone-driven rest timer, so the watch starts
+/// its own fixed-length one on every logged set.
+private let standaloneRestSeconds: TimeInterval = 90
 
 /// Mirrors Android's `SessionStateHolder` + `ExerciseService` combined
 /// (docs/40-watch-app-plan.md §4.3, §5.1/§5.3) — the single in-process
@@ -93,10 +136,40 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// lifecycle changes until Confirm/Skip is tapped.
   @Published private(set) var showEffortSelector = false
 
+  /// The "+1 set" control's own lifecycle — see [LogSetState]. Independent
+  /// of `phase`/`showEffortSelector`, since a set can be logged mid-rest or
+  /// while paused (docs/watch/43-watch-f5-set-logging-plan.md §3.3).
+  @Published private(set) var logSetState: LogSetState = .ready
+  /// Drives the log-set control's ghosted "phone not reachable" state
+  /// before a tap ever happens (docs/watch/43-watch-f5-set-logging-plan.md
+  /// §4.4) — set from `PhoneConnector.applyReachabilityChanged(_:)`.
+  /// Defaults `true` so the very first frame (before activation completes)
+  /// doesn't flash ghosted on a normally-connected pair.
+  @Published private(set) var isPhoneReachable = true
+
+  /// Whether the running session is watch-only (docs/watch/
+  /// 44-watch-f6-standalone-plan.md §1) rather than phone-mastered — `false`
+  /// for every pre-F6 flow. Gates `logSet()`'s local-vs-remote branch,
+  /// `applyStateUpdate`'s phone-state rejection (D-F6.2), and which of
+  /// `finishAndSendSummary()`/`endStandalone(rpe:)` `requestEnd(rpe:)` calls.
+  @Published private(set) var isStandalone = false
+  /// The standalone session's own set log — the only record of it until
+  /// `endStandalone(rpe:)` queues it (docs/watch/44-watch-f6-standalone-plan.md
+  /// §3.1). Unused (`[]`) outside standalone mode; phone-mastered sessions
+  /// track their set count via `setsDone`/`setsTotal` instead, which the
+  /// phone itself owns.
+  @Published private(set) var standaloneSets: [StandaloneSet] = []
+
   private let store = HKHealthStore()
   private var session: HKWorkoutSession?
   private var builder: HKLiveWorkoutBuilder?
   private var restHapticTask: Task<Void, Never>?
+  /// Cancelled/replaced on every `logSet()` tap and on `reset()` — see
+  /// `logSet()`, `applyLogSetAck(eventId:accepted:)`.
+  private var logSetTimeoutTask: Task<Void, Never>?
+  /// Drives `.confirmed`/`.failed` falling back to `.ready` on their own —
+  /// see `scheduleLogSetSettle(after:)`.
+  private var logSetSettleTask: Task<Void, Never>?
   /// The `sessionClientId` `sendStartedOnWatch` was already sent for, so a
   /// later `applyStateUpdate` (which fires on every state sync, many times
   /// per session) doesn't resend it — see `notifyStartedOnWatchIfNeeded()`.
@@ -118,23 +191,7 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// those in separately, in whatever order the two arrive.
   func start(configuration: HKWorkoutConfiguration) async {
     guard phase == .idle, HKHealthStore.isHealthDataAvailable() else { return }
-    do {
-      try await requestAuthorizationIfNeeded()
-    } catch {
-      // The authorization *request* itself failed (rare) — treat the same
-      // as an explicit denial (§12.1 B10).
-      phase = .healthDenied
-      return
-    }
-    // Read-type denials are invisible by design (HealthKit's privacy model
-    // never reveals whether READ was granted), but workoutType is a *share*
-    // type, so its status is queryable — and a session that can't save a
-    // workout shouldn't silently run one (§12.1 B10, replacing the earlier
-    // "just falls back to Idle" behavior noted in the doc's §9 test matrix).
-    guard store.authorizationStatus(for: HKObjectType.workoutType()) != .sharingDenied else {
-      phase = .healthDenied
-      return
-    }
+    guard await ensureHealthAuthorized() else { return }
     do {
       try await startSession(configuration: configuration)
     } catch {
@@ -147,6 +204,66 @@ final class WorkoutManager: NSObject, ObservableObject {
         PhoneConnector.shared.sendStartRejected(sessionClientId: sessionClientId)
       }
     }
+  }
+
+  /// Entry point for the launcher's "Start workout" / picker's "Quick
+  /// strength" tap (docs/watch/44-watch-f6-standalone-plan.md §3.1) — no
+  /// `HKWorkoutConfiguration` from the phone this time, since there's no
+  /// phone-mastered session to hang off: the watch builds its own
+  /// configuration and generates its own session id. Reuses
+  /// `startSession(configuration:)`'s HealthKit plumbing and
+  /// `start(configuration:)`'s permission gate (§7: "ez az egyetlen
+  /// kérési pont" — standalone has no prior phone onboarding to have
+  /// already asked).
+  func startStandalone() async {
+    guard phase == .idle, HKHealthStore.isHealthDataAvailable() else { return }
+    guard await ensureHealthAuthorized() else { return }
+
+    let configuration = HKWorkoutConfiguration()
+    configuration.activityType = .traditionalStrengthTraining
+    configuration.locationType = .indoor
+
+    isStandalone = true
+    sessionClientId = UUID().uuidString
+    standaloneSets = []
+
+    do {
+      try await startSession(configuration: configuration)
+    } catch {
+      // Another app owns the sensors — unlike `start(configuration:)`,
+      // there's no phone waiting on a `sessionClientId` to reject against
+      // here, so just fail back to idle silently (a dedicated error state
+      // is out of scope for F6a).
+      isStandalone = false
+      sessionClientId = nil
+      return
+    }
+    saveActiveSnapshot()
+  }
+
+  /// Shared by `start(configuration:)` (phone-mastered) and
+  /// `startStandalone()` — sets `phase = .healthDenied` and returns `false`
+  /// if HealthKit sharing is denied or the authorization request itself
+  /// fails (§12.1 B10).
+  private func ensureHealthAuthorized() async -> Bool {
+    do {
+      try await requestAuthorizationIfNeeded()
+    } catch {
+      // The authorization *request* itself failed (rare) — treat the same
+      // as an explicit denial (§12.1 B10).
+      phase = .healthDenied
+      return false
+    }
+    // Read-type denials are invisible by design (HealthKit's privacy model
+    // never reveals whether READ was granted), but workoutType is a *share*
+    // type, so its status is queryable — and a session that can't save a
+    // workout shouldn't silently run one (§12.1 B10, replacing the earlier
+    // "just falls back to Idle" behavior noted in the doc's §9 test matrix).
+    guard store.authorizationStatus(for: HKObjectType.workoutType()) != .sharingDenied else {
+      phase = .healthDenied
+      return false
+    }
+    return true
   }
 
   private func requestAuthorizationIfNeeded() async throws {
@@ -188,9 +305,12 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// (`startSession()`'s HealthKit callback vs. `PhoneConnector`'s
   /// applicationContext race, see `start(configuration:)`'s doc comment).
   /// Guarded by `notifiedStartedOnWatchFor` so repeated state syncs don't
-  /// resend it.
+  /// resend it. Never fires for a standalone session — there's no
+  /// phone-mastered session waiting on this signal (docs/watch/
+  /// 44-watch-f6-standalone-plan.md §3.1).
   private func notifyStartedOnWatchIfNeeded() {
-    guard phase == .active, let sessionClientId, notifiedStartedOnWatchFor != sessionClientId
+    guard !isStandalone, phase == .active, let sessionClientId,
+      notifiedStartedOnWatchFor != sessionClientId
     else { return }
     notifiedStartedOnWatchFor = sessionClientId
     PhoneConnector.shared.sendStartedOnWatch(sessionClientId: sessionClientId)
@@ -220,6 +340,20 @@ final class WorkoutManager: NSObject, ObservableObject {
     restRemainingSeconds: Int?,
     restTotalSeconds: Int?
   ) {
+    guard !isStandalone else {
+      // A phone-mastered session's state can't touch the watch's own
+      // standalone session (docs/watch/44-watch-f6-standalone-plan.md
+      // D-F6.2). During standalone, `self.sessionClientId` holds the
+      // watch's own locally generated id, so any context/state arriving
+      // here necessarily belongs to a *different* (phone) session — which
+      // doubles as "a phone tried to start while standalone is active",
+      // rejected the same way the existing "another app owns the sensors"
+      // conflict is (§5.3).
+      if sessionClientId != self.sessionClientId {
+        PhoneConnector.shared.sendStartRejected(sessionClientId: sessionClientId)
+      }
+      return
+    }
     self.sessionClientId = sessionClientId
     self.title = title ?? self.title
     self.exerciseName = exerciseName ?? self.exerciseName
@@ -228,6 +362,106 @@ final class WorkoutManager: NSObject, ObservableObject {
     self.restDeadlineUptime = restRemainingSeconds.map { ProcessInfo.processInfo.systemUptime + Double($0) }
     self.restTotalSeconds = restTotalSeconds
     notifyStartedOnWatchIfNeeded()
+  }
+
+  // MARK: - Log-set (docs/watch/43-watch-f5-set-logging-plan.md §3.2)
+
+  /// The "+1 set" control's entry point. Gated on `phase == .active` only —
+  /// the log page doesn't exist outside `.active` at all (docs/watch/
+  /// 43-watch-f5-set-logging-plan.md §3.3), but stays reachable and the
+  /// button stays enabled through rest and pause, both of which leave
+  /// `phase` at `.active` (pause only touches the sensor session, §3.3).
+  func logSet() {
+    guard phase == .active, let sessionClientId, logSetState == .ready else { return }
+    // F6 (docs/watch/44-watch-f6-standalone-plan.md §2.1) local-mode branch:
+    // confirms immediately instead of going through PhoneConnector — kept
+    // as this single branch point rather than scattered UI `if`s.
+    if isStandalone {
+      beginLocalLogSet()
+    } else {
+      beginRemoteLogSet(sessionClientId: sessionClientId, eventId: UUID().uuidString)
+    }
+  }
+
+  /// The standalone local-mode branch (docs/watch/44-watch-f6-standalone-plan.md
+  /// §2.1, §3.2) — no PENDING/ack round-trip: this tap's set *is* the record
+  /// (there's no phone to confirm against), so it's appended and CONFIRMED
+  /// immediately, and a fixed-length local rest starts right away.
+  private func beginLocalLogSet() {
+    let now = Date()
+    standaloneSets.append(
+      StandaloneSet(
+        loggedAtEpochMs: Int64(now.timeIntervalSince1970 * 1000),
+        reps: standaloneDefaultReps,
+        exerciseIndex: nil))
+    saveActiveSnapshot()
+
+    logSetState = .confirmed
+    WKInterfaceDevice.current().play(.success)
+    scheduleLogSetSettle(after: logSetConfirmedSettleSeconds)
+
+    restDeadlineUptime = ProcessInfo.processInfo.systemUptime + standaloneRestSeconds
+    restTotalSeconds = Int(standaloneRestSeconds)
+  }
+
+  private func beginRemoteLogSet(sessionClientId: String, eventId: String) {
+    logSetState = .pending(eventId)
+    let loggedAtEpochMs = Int64(Date().timeIntervalSince1970 * 1000)
+    PhoneConnector.shared.sendLogSet(
+      sessionClientId: sessionClientId, eventId: eventId, loggedAtEpochMs: loggedAtEpochMs)
+
+    logSetTimeoutTask?.cancel()
+    logSetTimeoutTask = Task {
+      try? await Task.sleep(nanoseconds: UInt64(logSetAckTimeoutSeconds * 1_000_000_000))
+      guard !Task.isCancelled, case .pending(let pendingEventId) = logSetState,
+        pendingEventId == eventId
+      else { return }
+      failLogSet()
+    }
+  }
+
+  /// Called by `PhoneConnector` on a `logSetAck` reply
+  /// (docs/watch/43-watch-f5-set-logging-plan.md §4.3). Only acts when
+  /// [eventId] matches the currently-pending tap — a late ack for a tap
+  /// that already timed out (and thus already settled back to `.ready`) is
+  /// a no-op, not a resurrection of stale state.
+  func applyLogSetAck(eventId: String, accepted: Bool) {
+    guard case .pending(let pendingEventId) = logSetState, pendingEventId == eventId else { return }
+    logSetTimeoutTask?.cancel()
+    logSetTimeoutTask = nil
+    if accepted {
+      logSetState = .confirmed
+      WKInterfaceDevice.current().play(.success)
+      scheduleLogSetSettle(after: logSetConfirmedSettleSeconds)
+    } else {
+      failLogSet()
+    }
+  }
+
+  private func failLogSet() {
+    logSetState = .failed
+    WKInterfaceDevice.current().play(.failure)
+    scheduleLogSetSettle(after: logSetFailedSettleSeconds)
+  }
+
+  /// Called by `PhoneConnector` on every `sessionReachabilityDidChange` (and
+  /// once right after activation, for the initial value) — see
+  /// `isPhoneReachable`.
+  func applyReachabilityChanged(_ reachable: Bool) {
+    isPhoneReachable = reachable
+  }
+
+  /// Falls `.confirmed`/`.failed` back to `.ready` on its own after
+  /// [seconds] — mirrors `scheduleSummaryAutoDismiss()`'s cancellable-`Task`
+  /// shape. A fresh `logSet()` tap can't race this: `logSet()` requires
+  /// `logSetState == .ready`, which only becomes true once this fires.
+  private func scheduleLogSetSettle(after seconds: TimeInterval) {
+    logSetSettleTask?.cancel()
+    logSetSettleTask = Task {
+      try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+      guard !Task.isCancelled else { return }
+      logSetState = .ready
+    }
   }
 
   /// Pause/Resume (docs/40-watch-app-plan.md §12.1 B3) go straight through
@@ -267,11 +501,73 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// this path. `phase` moves to `.ending` right away so `ContentView` shows
   /// the "waiting for phone" screen (§12.1 B8) — the session only actually
   /// ends once the real `end` command comes back, via `finishAndSendSummary()`.
+  /// Standalone (docs/watch/44-watch-f6-standalone-plan.md §3.1) skips the
+  /// phone round-trip entirely — no `.ending` phase (nothing to wait for),
+  /// straight to `endStandalone(rpe:)`. The effort-selector UI itself is
+  /// unchanged/shared between both modes (§11's decision to reuse it here).
   func requestEnd(rpe: Int?) {
     guard phase == .active, let sessionClientId else { return }
     showEffortSelector = false
-    phase = .ending
-    PhoneConnector.shared.sendEndRequested(sessionClientId: sessionClientId, rpe: rpe)
+    if isStandalone {
+      Task { await endStandalone(rpe: rpe) }
+    } else {
+      phase = .ending
+      PhoneConnector.shared.sendEndRequested(sessionClientId: sessionClientId, rpe: rpe)
+    }
+  }
+
+  /// The standalone counterpart of `finishAndSendSummary()` (docs/watch/
+  /// 44-watch-f6-standalone-plan.md §3.1, §4.1) — the watch closes its own
+  /// `HKWorkoutSession` right away (no phone to wait for) and queues the
+  /// finished session for delivery instead of sending a live `sendSummary`.
+  func endStandalone(rpe: Int?) async {
+    guard phase == .active, isStandalone, let session, let builder, let sessionClientId,
+      let startedAt
+    else { return }
+    session.end()
+
+    let averageHeartRate = builder.statistics(for: Self.heartRateType)?
+      .averageQuantity()?.doubleValue(for: HKUnit(from: "count/min"))
+    let activeCaloriesTotal = builder.statistics(for: Self.activeEnergyType)?
+      .sumQuantity()?.doubleValue(for: .kilocalorie())
+    let endedAt = Date()
+
+    var healthWorkoutId: String?
+    do {
+      try await builder.endCollection(at: endedAt)
+      let workout = try await builder.finishWorkout()
+      healthWorkoutId = workout?.uuid.uuidString
+    } catch {
+      // Best-effort, same as finishAndSendSummary() — the payload still
+      // queues with whatever metrics were collected.
+    }
+
+    let payload = StandaloneSessionPayload(
+      standaloneSessionId: sessionClientId,
+      templateId: nil,
+      startedAtEpochMs: Int64(startedAt.timeIntervalSince1970 * 1000),
+      endedAtEpochMs: Int64(endedAt.timeIntervalSince1970 * 1000),
+      rpe: rpe,
+      sets: standaloneSets,
+      activeCalories: activeCaloriesTotal,
+      averageHeartRate: averageHeartRate,
+      healthWorkoutId: healthWorkoutId)
+    StandaloneSessionStore.shared.append(payload)
+    StandaloneSessionStore.shared.clearActive()
+    PhoneConnector.shared.flushPendingStandaloneSessions()
+
+    let setsCount = standaloneSets.count
+    let totalDuration = endedAt.timeIntervalSince(startedAt)
+    reset()
+    phase = .summary(
+      WorkoutSummaryData(
+        totalDuration: totalDuration,
+        averageHeartRate: averageHeartRate,
+        activeCalories: activeCaloriesTotal,
+        savedToHealth: healthWorkoutId != nil,
+        setsCount: setsCount,
+        standaloneSessionId: payload.standaloneSessionId))
+    scheduleSummaryAutoDismiss()
   }
 
   /// The real end, triggered by `PhoneConnector` once the phone's `end`
@@ -281,8 +577,8 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// watch ever requested an end, e.g. after being unreachable) or
   /// `.ending` (the normal watch-initiated path, §12.1 B8).
   func finishAndSendSummary() async {
-    guard phase == .active || phase == .ending, let session, let builder, let sessionClientId,
-      let startedAt
+    guard phase == .active || phase == .ending, !isStandalone, let session, let builder,
+      let sessionClientId, let startedAt
     else { return }
     session.end()
 
@@ -314,13 +610,16 @@ final class WorkoutManager: NSObject, ObservableObject {
         totalDuration: totalDuration,
         averageHeartRate: averageHeartRate,
         activeCalories: activeCaloriesTotal,
-        savedToHealth: healthWorkoutId != nil))
+        savedToHealth: healthWorkoutId != nil,
+        setsCount: nil,
+        standaloneSessionId: nil))
     scheduleSummaryAutoDismiss()
   }
 
-  /// Clears the running-session fields but leaves `phase` alone — the two
-  /// callers each set it themselves right after (`.summary` here, `.idle`
-  /// implicitly once `scheduleSummaryAutoDismiss()`'s timer fires).
+  /// Clears the running-session fields but leaves `phase` alone — the
+  /// callers each set it themselves right after (`.summary` here,
+  /// `endStandalone(rpe:)`, or `.idle` implicitly once
+  /// `scheduleSummaryAutoDismiss()`'s timer fires).
   private func reset() {
     session = nil
     builder = nil
@@ -336,6 +635,57 @@ final class WorkoutManager: NSObject, ObservableObject {
     heartRateBpm = nil
     activeCalories = nil
     startedAt = nil
+    isStandalone = false
+    standaloneSets = []
+    logSetTimeoutTask?.cancel()
+    logSetTimeoutTask = nil
+    logSetSettleTask?.cancel()
+    logSetSettleTask = nil
+    logSetState = .ready
+  }
+
+  /// Overwrites the live standalone session's recovery snapshot — called on
+  /// start and after every locally logged set (docs/watch/
+  /// 44-watch-f6-standalone-plan.md §3.2).
+  private func saveActiveSnapshot() {
+    guard isStandalone, let sessionClientId, let startedAt else { return }
+    StandaloneSessionStore.shared.saveActive(
+      StandaloneActiveSessionMeta(
+        standaloneSessionId: sessionClientId,
+        templateId: nil,
+        startedAtEpochMs: Int64(startedAt.timeIntervalSince1970 * 1000),
+        sets: standaloneSets))
+  }
+
+  /// Reattaches to a still-running standalone `HKWorkoutSession` after a
+  /// process death/reboot (docs/watch/44-watch-f6-standalone-plan.md §3.2)
+  /// — called once from `AppDelegate.applicationDidFinishLaunching()`. A
+  /// no-op if there's no active session to recover (the normal case) or no
+  /// saved meta to resume into.
+  func recoverStandaloneSessionIfNeeded() async {
+    guard phase == .idle, let recovered = await recoverActiveWorkoutSession(),
+      let meta = StandaloneSessionStore.shared.loadActive()
+    else { return }
+
+    let recoveredBuilder = recovered.associatedWorkoutBuilder()
+    recovered.delegate = self
+    recoveredBuilder.delegate = self
+
+    session = recovered
+    builder = recoveredBuilder
+    isStandalone = true
+    sessionClientId = meta.standaloneSessionId
+    standaloneSets = meta.sets
+    startedAt = Date(timeIntervalSince1970: Double(meta.startedAtEpochMs) / 1000)
+    phase = .active
+  }
+
+  private func recoverActiveWorkoutSession() async -> HKWorkoutSession? {
+    await withCheckedContinuation { continuation in
+      store.recoverActiveWorkoutSession { session, _ in
+        continuation.resume(returning: session)
+      }
+    }
   }
 
   // MARK: - SUMMARY auto-dismiss (docs/40-watch-app-plan.md §12.1 B9)

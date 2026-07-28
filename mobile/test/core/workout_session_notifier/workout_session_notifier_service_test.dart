@@ -92,6 +92,8 @@ void main() {
           'restEndsAtEpochMs': null,
           'restTotalSeconds': null,
           'restRemainingSeconds': null,
+          'nextSetWeight': null,
+          'nextSetReps': null,
         },
       });
     });
@@ -127,6 +129,8 @@ void main() {
           'restEndsAtEpochMs': null,
           'restTotalSeconds': null,
           'restRemainingSeconds': null,
+          'nextSetWeight': null,
+          'nextSetReps': null,
         },
       });
     });
@@ -176,6 +180,8 @@ void main() {
           'restEndsAtEpochMs': 1783075350000,
           'restTotalSeconds': null,
           'restRemainingSeconds': null,
+          'nextSetWeight': null,
+          'nextSetReps': null,
         },
       });
     });

@@ -6,7 +6,13 @@ import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.Node
 import com.google.android.gms.wearable.WearableListenerService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /**
@@ -18,20 +24,101 @@ import org.json.JSONObject
  * [onDataChanged] is now only a best-effort backup for a reconnect.
  */
 class PhoneListenerService : WearableListenerService() {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onMessageReceived(messageEvent: MessageEvent) {
         Log.d(TAG, "onMessageReceived: ${messageEvent.path}")
         if (!messageEvent.path.startsWith(MESSAGE_PATH_PREFIX)) return
         when (messageEvent.path) {
             "$MESSAGE_PATH_PREFIX/start" -> {
+                // applyStateMessage's onStateSynced call already no-ops
+                // during standalone (D-F6.2) — this just decides whether to
+                // *also* start a second, phone-mastered exercise on top of
+                // a running standalone one, and rejects if so (the reverse
+                // of the existing "another app owns the sensors" conflict).
                 val sessionClientId = applyStateMessage(messageEvent.data) ?: return
+                if (SessionStateHolder.metadata.value.isStandalone) {
+                    scope.launch { SummarySender.sendStartRejected(this@PhoneListenerService, sessionClientId) }
+                    return
+                }
                 ContextCompat.startForegroundService(this, ExerciseService.startIntent(this, sessionClientId))
             }
             "$MESSAGE_PATH_PREFIX/state" -> {
+                // No explicit standalone guard needed here — onStateSynced
+                // itself already no-ops for a state sync during standalone
+                // (D-F6.2), and unlike "start" a stray state sync doesn't
+                // warrant a startRejected reply.
                 applyStateMessage(messageEvent.data)
             }
             "$MESSAGE_PATH_PREFIX/end" -> {
+                // A stray end for a phone-mastered session can't close a
+                // running standalone one (D-F6.2) — the watch's own End
+                // button drives ExerciseService.endStandaloneExercise
+                // instead (S17), through a different intent action.
+                if (SessionStateHolder.metadata.value.isStandalone) return
                 ContextCompat.startForegroundService(this, ExerciseService.endIntent(this))
             }
+            "$MESSAGE_PATH_PREFIX/logSetAck" -> {
+                applyLogSetAck(messageEvent.data)
+            }
+            "$MESSAGE_PATH_PREFIX/standaloneSessionAck" -> {
+                applyStandaloneSessionAck(messageEvent.data)
+            }
+        }
+    }
+
+    /**
+     * The phone just reconnected — the closest Wear OS equivalent to iOS's
+     * `sessionReachabilityDidChange` (docs/watch/44-watch-f6-standalone-plan.md
+     * §4.1's retry trigger). Dispatched automatically by
+     * `WearableListenerService` to any manifest-registered listener, no new
+     * `CAPABILITY_CHANGED` filter/capability declaration needed — this app
+     * has no phone-side capability to watch for reachability the way it
+     * advertises `lifey_watch_workout` in the other direction.
+     */
+    override fun onPeerConnected(peer: Node) {
+        scope.launch { SummarySender.flushPending(applicationContext) }
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
+    }
+
+    /**
+     * Decodes `WatchBridge.kt`'s `ackSetLogged` JSON
+     * (docs/watch/43-watch-f5-set-logging-plan.md §4.3) and applies it to
+     * [SessionStateHolder]. `sessionClientId` isn't checked against the
+     * watch's own current session here — [SessionStateHolder.onLogSetAck]
+     * (S12) only acts when `eventId` matches its own pending tap, which
+     * already rules out a stray ack for a stale/different session.
+     */
+    private fun applyLogSetAck(data: ByteArray) {
+        try {
+            val json = JSONObject(String(data))
+            val eventId = json.optString("eventId").ifEmpty { null } ?: return
+            val accepted = json.optBoolean("accepted")
+            SessionStateHolder.onLogSetAck(eventId, accepted)
+        } catch (e: Exception) {
+            Log.w(TAG, "applyLogSetAck failed to parse payload", e)
+        }
+    }
+
+    /**
+     * Decodes `WatchBridge.kt`'s `ackStandaloneSession` JSON (docs/watch/
+     * 44-watch-f6-standalone-plan.md §4.2) and applies it: removes the
+     * payload from [StandaloneSessionStore] so it isn't retried, then
+     * broadcasts the id via [SessionStateHolder.onStandaloneSessionAcked]
+     * for whichever summary screen (S17) is currently showing it.
+     */
+    private fun applyStandaloneSessionAck(data: ByteArray) {
+        try {
+            val json = JSONObject(String(data))
+            val standaloneSessionId = json.optString("standaloneSessionId").ifEmpty { null } ?: return
+            StandaloneSessionStore.remove(this, standaloneSessionId)
+            SessionStateHolder.onStandaloneSessionAcked(standaloneSessionId)
+        } catch (e: Exception) {
+            Log.w(TAG, "applyStandaloneSessionAck failed to parse payload", e)
         }
     }
 
@@ -92,8 +179,14 @@ class PhoneListenerService : WearableListenerService() {
             // The phone's `end` message may never have reached us while
             // unreachable — this DataItem resync, once we reconnect, is the
             // delivery guarantee's fallback (docs/40-watch-app-plan.md §3
-            // "Kézbesítési garancia").
-            if (map.getString("desiredPhase") == "ended" && SessionStateHolder.phase.value == SessionPhase.ACTIVE) {
+            // "Kézbesítési garancia"). Same standalone guard as the "end"
+            // message case above (D-F6.2) — this fallback is keyed only on
+            // phase, not sessionClientId, so without it a stray
+            // phone-mastered desiredPhase:"ended" could otherwise close a
+            // running standalone session.
+            if (map.getString("desiredPhase") == "ended" && SessionStateHolder.phase.value == SessionPhase.ACTIVE &&
+                !SessionStateHolder.metadata.value.isStandalone
+            ) {
                 ContextCompat.startForegroundService(this, ExerciseService.endIntent(this))
             }
         }

@@ -25,6 +25,7 @@ import androidx.health.services.client.data.ExerciseConfig
 import androidx.health.services.client.data.ExerciseLapSummary
 import androidx.health.services.client.data.ExerciseType
 import androidx.health.services.client.data.ExerciseUpdate
+import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,6 +36,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Foreground service owning the Health Services `ExerciseClient` for the
@@ -67,6 +70,20 @@ class ExerciseService : Service() {
     // scheduled independently of start/end commands, for the service's whole
     // lifetime, since restEndsAtEpochMs can change many times per session.
     private var restVibrationJob: Job? = null
+
+    // "+1 set" tap-to-ack timeout/haptika (docs/watch/
+    // 43-watch-f5-set-logging-plan.md §3.2): scheduled here rather than on
+    // the Compose UI, mirroring [restVibrationJob] — dropping the log page
+    // (or the whole UI) mid-tap must not cut off a pending ack's timeout or
+    // a confirm/fail haptic + settle-back-to-Ready.
+    private var logSetJob: Job? = null
+
+    // SUMMARY auto-dismiss for a standalone session (docs/watch/
+    // 44-watch-f6-standalone-plan.md D-F6.7, mirrors iOS's
+    // scheduleSummaryAutoDismiss) — scheduled here, not the Compose UI, so
+    // it still fires even if MainActivity isn't the foreground component
+    // right when the session ends.
+    private var summaryDismissJob: Job? = null
 
     private val updateCallback = object : ExerciseUpdateCallback {
         override fun onExerciseUpdateReceived(update: ExerciseUpdate) {
@@ -130,6 +147,25 @@ class ExerciseService : Service() {
                 .distinctUntilChanged()
                 .collect { deadlineElapsedRealtimeMs -> scheduleRestVibration(deadlineElapsedRealtimeMs) }
         }
+        // Same "for the service's whole lifetime" treatment as the rest
+        // haptic above — see [logSetJob].
+        scope.launch {
+            SessionStateHolder.logSetState.collect { state -> scheduleLogSetTransition(state) }
+        }
+        // Keeps the recovery snapshot current after every locally logged
+        // standalone set (docs/watch/44-watch-f6-standalone-plan.md §3.2) —
+        // observed here rather than called from the (not-yet-built, S17)
+        // log-tap UI, so this service stays the single owner of
+        // `StandaloneSessionStore` writes. Harmlessly no-ops via
+        // [saveStandaloneActiveSnapshot]'s own guards outside standalone
+        // mode, including the first (empty-list) emission every flow
+        // collector gets on subscribe.
+        scope.launch {
+            SessionStateHolder.metadata
+                .map { it.standaloneSets }
+                .distinctUntilChanged()
+                .collect { saveStandaloneActiveSnapshot() }
+        }
     }
 
     /**
@@ -156,6 +192,50 @@ class ExerciseService : Service() {
         vibrator.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 
+    /**
+     * Reacts to every [LogSetState] change (docs/watch/
+     * 43-watch-f5-set-logging-plan.md §3.2) by (re)scheduling exactly one of:
+     * the 5 s ack-timeout ([LogSetState.Pending]), or a confirm/fail haptic
+     * followed by the 1.2 s/2.5 s settle-back-to-Ready
+     * ([LogSetState.Confirmed]/[LogSetState.Failed]). [LogSetState.Ready]
+     * itself needs nothing scheduled — cancelling the previous job is enough
+     * (harmless even if that job already finished on its own, e.g. the
+     * settle job that just called `onLogSetSettled()` and produced this very
+     * `Ready` emission).
+     */
+    private fun scheduleLogSetTransition(state: LogSetState) {
+        logSetJob?.cancel()
+        logSetJob = when (state) {
+            is LogSetState.Ready -> null
+            is LogSetState.Pending -> scope.launch {
+                delay(LOG_SET_ACK_TIMEOUT_MS)
+                SessionStateHolder.onLogSetTimeout(state.eventId)
+            }
+            is LogSetState.Confirmed -> scope.launch {
+                vibrateLogSetConfirmed()
+                delay(LOG_SET_CONFIRMED_SETTLE_MS)
+                SessionStateHolder.onLogSetSettled()
+            }
+            is LogSetState.Failed -> scope.launch {
+                vibrateLogSetFailed()
+                delay(LOG_SET_FAILED_SETTLE_MS)
+                SessionStateHolder.onLogSetSettled()
+            }
+        }
+    }
+
+    private fun vibrateLogSetConfirmed() {
+        val vibrator = getSystemService(Vibrator::class.java) ?: return
+        // Short double pulse — success (docs/watch/43-watch-f5-set-logging-plan.md §3.2).
+        vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 60, 80, 60), -1))
+    }
+
+    private fun vibrateLogSetFailed() {
+        val vibrator = getSystemService(Vibrator::class.java) ?: return
+        // One longer pulse — failure, same shape as vibrateRestEnd's.
+        vibrator.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val sessionClientId = intent?.getStringExtra(EXTRA_SESSION_CLIENT_ID)
         when (intent?.action) {
@@ -174,6 +254,15 @@ class ExerciseService : Service() {
                 // startService in that case.
                 promoteToForeground()
                 scope.launch { endExercise() }
+            }
+            ACTION_START_STANDALONE -> {
+                promoteToForeground()
+                scope.launch { startStandaloneExercise() }
+            }
+            ACTION_END_STANDALONE -> {
+                val rpe = if (intent.hasExtra(EXTRA_RPE)) intent.getIntExtra(EXTRA_RPE, 0) else null
+                promoteToForeground()
+                scope.launch { endStandaloneExercise(rpe) }
             }
             else -> stopSelf()
         }
@@ -200,8 +289,12 @@ class ExerciseService : Service() {
         )
     }
 
-    private suspend fun startExercise(sessionClientId: String) {
-        currentSessionClientId = sessionClientId
+    /**
+     * Shared by [startExercise] and [startStandaloneExercise] — checks the
+     * heart-rate permission, publishes it (§12.1 B13), and builds the
+     * `ExerciseConfig` both start paths use identically.
+     */
+    private fun buildExerciseConfig(): ExerciseConfig {
         // Either satisfies it depending on OS version — BODY_SENSORS pre-36,
         // the granular health permission on 36+ (see MainActivity, which
         // requests both). Health Services itself enforces the latter with a
@@ -225,13 +318,17 @@ class ExerciseService : Service() {
             if (hasHeartRatePermission) add(DataType.HEART_RATE_BPM)
         }
 
-        val config = ExerciseConfig(
+        return ExerciseConfig(
             exerciseType = ExerciseType.STRENGTH_TRAINING,
             dataTypes = dataTypes,
             isAutoPauseAndResumeEnabled = false,
             isGpsEnabled = false,
         )
+    }
 
+    private suspend fun startExercise(sessionClientId: String) {
+        currentSessionClientId = sessionClientId
+        val config = buildExerciseConfig()
         try {
             exerciseClient.setUpdateCallback(updateCallback)
             exerciseClient.startExerciseAsync(config).await()
@@ -246,6 +343,39 @@ class ExerciseService : Service() {
             Log.w(TAG, "startExercise failed for $sessionClientId", e)
             SessionStateHolder.onStartRejected()
             SummarySender.sendStartRejected(this, sessionClientId)
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
+    }
+
+    /**
+     * Entry point for the launcher's "Start workout" / picker's "Quick
+     * strength" tap (docs/watch/44-watch-f6-standalone-plan.md §3.1) — no
+     * `sessionClientId` from the phone this time, since there's no
+     * phone-mastered session to hang off: the watch generates its own.
+     * Guarded on `SessionPhase.IDLE` (mirrors iOS's `guard phase == .idle`
+     * in `startStandalone()`) so a double-tap on the picker's "Quick
+     * strength" row — S16 doesn't debounce it, this is where that
+     * protection actually has to live — can't launch two overlapping
+     * exercises.
+     */
+    private suspend fun startStandaloneExercise() {
+        if (SessionStateHolder.phase.value != SessionPhase.IDLE) return
+        val sessionClientId = UUID.randomUUID().toString()
+        currentSessionClientId = sessionClientId
+        val config = buildExerciseConfig()
+        try {
+            exerciseClient.setUpdateCallback(updateCallback)
+            exerciseClient.startExerciseAsync(config).await()
+            SessionStateHolder.onStandaloneStarted(sessionClientId, SystemClock.elapsedRealtime())
+            saveStandaloneActiveSnapshot()
+        } catch (e: Exception) {
+            // Another app owns the sensors — unlike startExercise, there's
+            // no phone waiting on a sessionClientId to reject against here,
+            // so just fail back to idle silently (a dedicated error state
+            // is out of scope for F6a).
+            Log.w(TAG, "startStandaloneExercise failed", e)
+            currentSessionClientId = null
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -272,13 +402,163 @@ class ExerciseService : Service() {
         stopSelf()
     }
 
+    /**
+     * The standalone counterpart of [endExercise] (docs/watch/
+     * 44-watch-f6-standalone-plan.md §3.1, §4.1) — closes the Health
+     * Services exercise the same way, but queues the finished session for
+     * delivery instead of sending a live `sendSummary`, and moves to
+     * `SessionPhase.SUMMARY` (with a ~6 s auto-dismiss, D-F6.7) instead of
+     * going straight back to idle. [rpe] is whatever the watch's own
+     * effort-selector produced (null if skipped) — same source as
+     * [SummarySender.sendEndRequested]'s [rpe] on the phone-mastered path.
+     */
+    private suspend fun endStandaloneExercise(rpe: Int?) {
+        val metadata = SessionStateHolder.metadata.value
+        val sessionClientId = metadata.sessionClientId
+        val startedAtElapsedRealtimeMs = SessionStateHolder.liveMetrics.value.startedAtElapsedRealtimeMs
+        val setsCount = metadata.standaloneSets.size
+
+        try {
+            exerciseClient.endExerciseAsync().await()
+        } catch (e: Exception) {
+            Log.w(TAG, "endStandaloneExercise failed", e)
+        }
+
+        if (sessionClientId != null) {
+            val averageHeartRate = if (heartRateSamples > 0) heartRateSum / heartRateSamples else null
+            val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
+            val nowEpochMs = System.currentTimeMillis()
+            // Converts this device's own monotonic start mark back to an
+            // epoch instant for the wire payload (§4.1) — the reverse of
+            // what SessionStateHolder.onStateSynced does for the phone's
+            // rest deadline, same reasoning: only this device's own clock
+            // readings are compared against each other here.
+            val startedAtEpochMs = startedAtElapsedRealtimeMs?.let {
+                nowEpochMs - (nowElapsedRealtimeMs - it)
+            } ?: nowEpochMs
+            val totalDurationSeconds = startedAtElapsedRealtimeMs?.let {
+                ((nowElapsedRealtimeMs - it) / 1_000L).toInt()
+            } ?: 0
+
+            val payload = JSONObject().apply {
+                put("standaloneSessionId", sessionClientId)
+                put("startedAtEpochMs", startedAtEpochMs)
+                put("endedAtEpochMs", nowEpochMs)
+                putOpt("rpe", rpe)
+                put(
+                    "sets",
+                    JSONArray().apply {
+                        metadata.standaloneSets.forEach { set ->
+                            put(
+                                JSONObject().apply {
+                                    put("loggedAtEpochMs", set.loggedAtEpochMs)
+                                    put("reps", set.reps)
+                                    putOpt("exerciseIndex", set.exerciseIndex)
+                                },
+                            )
+                        }
+                    },
+                )
+                putOpt("activeCalories", activeCaloriesTotal)
+                putOpt("averageHeartRate", averageHeartRate)
+                // Android never writes Health Connect from the watch — the
+                // phone does (D-F6.5) — so healthWorkoutId is simply absent
+                // rather than an explicit null (matches how the rest of
+                // this payload omits absent optionals).
+            }
+            StandaloneSessionStore.add(this, payload.toString())
+            StandaloneSessionStore.clearActive(this)
+            SummarySender.flushPending(this)
+
+            SessionStateHolder.onStandaloneEnded(
+                StandaloneSummary(
+                    standaloneSessionId = sessionClientId,
+                    totalDurationSeconds = totalDurationSeconds,
+                    setsCount = setsCount,
+                    averageHeartRate = averageHeartRate,
+                    activeCalories = activeCaloriesTotal,
+                ),
+            )
+            // Notification comes down right away — the workout genuinely
+            // ended — but the service (and this coroutine's scope) stays
+            // alive a little longer for the delayed reset below.
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            scheduleSummaryAutoDismiss()
+        } else {
+            SessionStateHolder.reset()
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
+    }
+
+    /** Mirrors iOS's `scheduleSummaryAutoDismiss()` — falls
+     * `SessionPhase.SUMMARY` back to idle on its own after
+     * [SUMMARY_AUTO_DISMISS_MS] (docs/40-watch-app-plan.md §12.1 B9's ~6 s,
+     * reused for D-F6.7's standalone summary). */
+    private fun scheduleSummaryAutoDismiss() {
+        summaryDismissJob?.cancel()
+        summaryDismissJob = scope.launch {
+            delay(SUMMARY_AUTO_DISMISS_MS)
+            SessionStateHolder.reset()
+            stopSelf()
+        }
+    }
+
+    /** Overwrites the live standalone session's recovery snapshot — called
+     * on start and after every locally logged set (docs/watch/
+     * 44-watch-f6-standalone-plan.md §3.2). Recovery itself (reading this
+     * back after a process death) isn't implemented yet — out of scope for
+     * S15, flagged as an open gap (§10). */
+    private fun saveStandaloneActiveSnapshot() {
+        val metadata = SessionStateHolder.metadata.value
+        val sessionClientId = metadata.sessionClientId ?: return
+        val startedAtElapsedRealtimeMs = SessionStateHolder.liveMetrics.value.startedAtElapsedRealtimeMs ?: return
+        val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
+        val nowEpochMs = System.currentTimeMillis()
+        val startedAtEpochMs = nowEpochMs - (nowElapsedRealtimeMs - startedAtElapsedRealtimeMs)
+
+        val json = JSONObject().apply {
+            put("standaloneSessionId", sessionClientId)
+            put("startedAtEpochMs", startedAtEpochMs)
+            put(
+                "sets",
+                JSONArray().apply {
+                    metadata.standaloneSets.forEach { set ->
+                        put(
+                            JSONObject().apply {
+                                put("loggedAtEpochMs", set.loggedAtEpochMs)
+                                put("reps", set.reps)
+                                putOpt("exerciseIndex", set.exerciseIndex)
+                            },
+                        )
+                    }
+                },
+            )
+        }
+        StandaloneSessionStore.saveActive(this, json.toString())
+    }
+
     companion object {
         private const val TAG = "LifeyExerciseService"
         private const val CHANNEL_ID = "lifey_exercise"
         private const val NOTIFICATION_ID = 1001
+
+        // "+1 set" timing (docs/watch/43-watch-f5-set-logging-plan.md §3.2, §10/4).
+        private const val LOG_SET_ACK_TIMEOUT_MS = 5_000L
+        private const val LOG_SET_CONFIRMED_SETTLE_MS = 1_200L
+        private const val LOG_SET_FAILED_SETTLE_MS = 2_500L
+
+        // Standalone SUMMARY auto-dismiss (docs/watch/
+        // 44-watch-f6-standalone-plan.md D-F6.7, mirrors iOS's ~6 s).
+        private const val SUMMARY_AUTO_DISMISS_MS = 6_000L
+
         const val ACTION_START = "com.khunor.lifey.action.START_EXERCISE"
         const val ACTION_END = "com.khunor.lifey.action.END_EXERCISE"
         const val EXTRA_SESSION_CLIENT_ID = "sessionClientId"
+
+        const val ACTION_START_STANDALONE = "com.khunor.lifey.action.START_STANDALONE_EXERCISE"
+        const val ACTION_END_STANDALONE = "com.khunor.lifey.action.END_STANDALONE_EXERCISE"
+        const val EXTRA_RPE = "rpe"
 
         fun startIntent(context: Context, sessionClientId: String) =
             Intent(context, ExerciseService::class.java).apply {
@@ -289,6 +569,24 @@ class ExerciseService : Service() {
         fun endIntent(context: Context) =
             Intent(context, ExerciseService::class.java).apply {
                 action = ACTION_END
+            }
+
+        /** Entry point for the launcher/picker "Quick strength" tap (S16) —
+         * no `sessionClientId` extra, `startStandaloneExercise` generates
+         * its own (docs/watch/44-watch-f6-standalone-plan.md §3.1). */
+        fun startStandaloneIntent(context: Context) =
+            Intent(context, ExerciseService::class.java).apply {
+                action = ACTION_START_STANDALONE
+            }
+
+        /** Entry point for the End button in standalone mode (S17). [rpe] is
+         * whatever the watch's own effort-selector produced, omitted
+         * entirely when null (mirrors [SummarySender.sendEndRequested]'s
+         * `putOpt` treatment of the same field). */
+        fun endStandaloneIntent(context: Context, rpe: Int?) =
+            Intent(context, ExerciseService::class.java).apply {
+                action = ACTION_END_STANDALONE
+                rpe?.let { putExtra(EXTRA_RPE, it) }
             }
 
         /**

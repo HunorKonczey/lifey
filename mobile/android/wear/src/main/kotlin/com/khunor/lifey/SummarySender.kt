@@ -56,6 +56,23 @@ object SummarySender {
     }
 
     /**
+     * The watch's "+1 set" tap (docs/watch/43-watch-f5-set-logging-plan.md
+     * §4.1) — no exercise/reps/weight on the wire, the phone logs the next
+     * row from its own current position (§2, §5.2). [eventId] is generated
+     * by whoever calls this (`ActiveWorkoutScreen`'s log-lap, S13), used for
+     * dedup (§4.2) and to correlate the eventual `logSetAck` back to this
+     * specific tap.
+     */
+    suspend fun sendLogSet(context: Context, sessionClientId: String, eventId: String, loggedAtEpochMs: Long) {
+        val payload = JSONObject().apply {
+            put("sessionClientId", sessionClientId)
+            put("eventId", eventId)
+            put("loggedAtEpochMs", loggedAtEpochMs)
+        }
+        send(context, "$MESSAGE_PATH_PREFIX/logSet", payload)
+    }
+
+    /**
      * Live heart-rate/calorie readings, sent on every [ExerciseUpdateCallback]
      * tick — far more often than [sendSummary]'s one-shot totals. Best-effort
      * like the other sends here: a reading dropped while unreachable is
@@ -73,6 +90,32 @@ object SummarySender {
             putOpt("activeCalories", activeCalories)
         }
         send(context, "$MESSAGE_PATH_PREFIX/liveMetrics", payload)
+    }
+
+    /**
+     * Sends a just-closed standalone session (docs/watch/
+     * 44-watch-f6-standalone-plan.md §4.1) — [payloadJson] already carries
+     * `standaloneSessionId` etc. per §4.1's shape. Unlike the other sends
+     * here, this one never removes anything from [StandaloneSessionStore]
+     * itself — only the eventual `standaloneSessionAck` does that (§4.2), so
+     * a delivery that doesn't land simply gets retried by [flushPending].
+     */
+    suspend fun sendStandaloneSession(context: Context, payloadJson: String) {
+        send(context, "$MESSAGE_PATH_PREFIX/standaloneSessionCompleted", JSONObject(payloadJson))
+    }
+
+    /**
+     * Re-sends every not-yet-acked standalone session from the local queue —
+     * called on app start (`MainActivity.onCreate`) and on phone reconnect
+     * (`PhoneListenerService.onPeerConnected`). [send]'s own best-effort
+     * behavior already tolerates being called while unreachable, so this is
+     * only about re-triggering delivery at moments it's newly likely to
+     * land, not a correctness requirement on its own.
+     */
+    suspend fun flushPending(context: Context) {
+        for (payload in StandaloneSessionStore.all(context)) {
+            sendStandaloneSession(context, payload.toString())
+        }
     }
 
     private suspend fun send(context: Context, path: String, payload: Any) {

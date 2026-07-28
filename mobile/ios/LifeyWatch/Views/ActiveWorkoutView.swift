@@ -10,16 +10,19 @@ private let restRingNegativeThresholdSeconds = 5
 private let goFlashHoldSeconds: TimeInterval = 1.3
 
 
-/// Live workout screen — a two-page `TabView` (docs/40-watch-app-plan.md
+/// Live workout screen — a three-page `TabView` (docs/40-watch-app-plan.md
 /// §12.1 B7, mirrors the Apple Workout app's own paging pattern and canvas
-/// frames AW 02–04): the metrics page (elapsed time, heart rate, calories,
-/// current exercise/set counter, rest-timer countdown) and a separate
-/// controls page (Pause/Resume + End), rather than cramming the buttons
-/// under the metrics on one screen. Styling (§12.1 B6) follows
-/// `docs/watch/design/Lifey Watch Design.dc.html`'s Apple Watch frames
-/// pixel-for-pixel where practical — colors/icons/copy match exactly; literal
-/// canvas px offsets don't, since §12.1 B4 already committed this app to
-/// percent-of-screen layout instead. The rest-end haptic is scheduled
+/// frames AW 02–04, extended by AW 08/09/11 — docs/watch/
+/// 43-watch-f5-set-logging-plan.md §3.1 decision (b)): the log-set page
+/// (leftmost/default — a wrist-raise mid-set lands directly on it), the
+/// metrics page (elapsed time, heart rate, calories, current exercise/set
+/// counter, rest-timer countdown), and a separate controls page
+/// (Pause/Resume + End) — deliberately three single-purpose pages rather
+/// than cramming buttons under the metrics on one screen. Styling (§12.1 B6)
+/// follows `docs/watch/design/Lifey Watch Design.dc.html`'s Apple Watch
+/// frames pixel-for-pixel where practical — colors/icons/copy match exactly;
+/// literal canvas px offsets don't, since §12.1 B4 already committed this
+/// app to percent-of-screen layout instead. The rest-end haptic is scheduled
 /// independently in `WorkoutManager`, not here — it needs to fire even while
 /// this view isn't on screen.
 struct ActiveWorkoutView: View {
@@ -39,12 +42,13 @@ struct ActiveWorkoutView: View {
 
       ZStack {
         TabView(selection: $selectedPage) {
-          MetricsPage(isCompact: isCompact, padding: padding).tag(0)
-          ControlsPage(isCompact: isCompact, padding: padding).tag(1)
+          LogPage(isCompact: isCompact, padding: padding, screenWidth: geometry.size.width).tag(0)
+          MetricsPage(isCompact: isCompact, padding: padding).tag(1)
+          ControlsPage(isCompact: isCompact, padding: padding).tag(2)
         }
         .tabViewStyle(.page)
         .digitalCrownRotation(
-          $crownRotation, from: 0, through: 1, by: 1,
+          $crownRotation, from: 0, through: 2, by: 1,
           sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
         .onChange(of: crownRotation) { _, newValue in
           selectedPage = Int(newValue.rounded())
@@ -100,6 +104,12 @@ private struct HeaderChip: View {
   let icon: String
   let label: String
   let isCompact: Bool
+  /// Standalone mode indicator (docs/watch/44-watch-f6-standalone-plan.md
+  /// §3.4, design canvas AW 14/W 13) — a quiet glyph, no chip/background/
+  /// copy of its own ("mode, not alarm"), so every page's header carries it
+  /// consistently rather than singling out the metrics page's "STRENGTH"
+  /// label alone.
+  let isStandalone: Bool
 
   var body: some View {
     HStack(spacing: 6) {
@@ -111,6 +121,12 @@ private struct HeaderChip: View {
         .foregroundColor(LifeyColors.primary)
         .tracking(0.5)
         .lineLimit(1)
+      if isStandalone {
+        Image(systemName: "iphone.slash")
+          .font(.system(size: isCompact ? 14 : 16))
+          .foregroundColor(LifeyColors.standaloneIndicator)
+          .accessibilityLabel(Text("standalone_badge"))
+      }
     }
   }
 }
@@ -181,6 +197,11 @@ private struct ExerciseCard: View {
   let setsDone: Int?
   let setsTotal: Int?
   let isCompact: Bool
+  /// Standalone's set-count line (docs/watch/44-watch-f6-standalone-plan.md
+  /// §3.4, D-F6.3) — no plan, so no dot row or "n of total"; just how many
+  /// sets and their combined reps. Nil for phone-mastered sessions, which
+  /// use `setsDone`/`setsTotal` instead.
+  var freeFormatSets: (count: Int, totalReps: Int)? = nil
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -189,7 +210,15 @@ private struct ExerciseCard: View {
         .foregroundColor(LifeyColors.onSurface)
         .lineLimit(1)
         .truncationMode(.tail)
-      if let setsDone, let setsTotal {
+      if let freeFormatSets {
+        Text(
+          String(
+            format: String(localized: "active_sets_free_format"), freeFormatSets.count,
+            freeFormatSets.totalReps)
+        )
+        .font(isCompact ? .caption2 : .caption)
+        .foregroundColor(LifeyColors.onSurfaceVariant)
+      } else if let setsDone, let setsTotal {
         HStack {
           Text(String(format: String(localized: "active_sets_format"), setsDone, setsTotal))
             .font(isCompact ? .caption2 : .caption)
@@ -213,9 +242,240 @@ private struct ExerciseCard: View {
   }
 }
 
-/// First `TabView` page (docs/40-watch-app-plan.md §12.1 B7, canvas AW 02):
-/// elapsed/rest time, exercise/set counter, heart rate and calories — no
-/// controls here, those live on `ControlsPage`.
+/// The leftmost/default `TabView` page (docs/watch/
+/// 43-watch-f5-set-logging-plan.md §3.1 decision (b), canvas AW 08/09/11): a
+/// single large circular "+1 SET" control that fills nearly the whole safe
+/// area — a dedicated page turns the entire tap target into one ~5×-minimum
+/// circle, with zero mis-tap risk near End/Pause (that's why `MetricsPage`
+/// stays deliberately button-free, §12.1 B4/B6 heritage). `WorkoutManager
+/// .logSetState` (docs/watch/43-watch-f5-set-logging-plan.md §3.2) drives
+/// four visuals — `.ready` (primary ring + context line), `.pending`
+/// (ghosted + "Logging…"), `.confirmed` (check + "Set n of total" + "Logged"
+/// pill), `.failed` (ghosted + red toast) — plus a fifth, independent
+/// ghosted state when `WorkoutManager.isPhoneReachable` is false: a tap
+/// can't even start a `.pending` round-trip with no phone to answer it.
+private struct LogPage: View {
+  @ObservedObject private var workoutManager = WorkoutManager.shared
+  let isCompact: Bool
+  let padding: CGFloat
+  let screenWidth: CGFloat
+
+  /// 300 ms tap-debounce (docs/watch/43-watch-f5-set-logging-plan.md §4.2) —
+  /// belt-and-braces alongside `logSet()`'s own `logSetState == .ready`
+  /// guard (the primary defense, since the button also visually disables
+  /// the instant state leaves `.ready`): this just also swallows a
+  /// double-tap landing in the same frame, before that state change has
+  /// propagated back into `.disabled(_:)`.
+  @State private var lastTapAt: Date?
+  private let tapDebounceSeconds: TimeInterval = 0.3
+
+  private var circleDiameter: CGFloat { screenWidth * DynamicSizing.logCircleDiameterFraction }
+  private var canTap: Bool { workoutManager.logSetState == .ready && workoutManager.isPhoneReachable }
+
+  var body: some View {
+    TimelineView(.periodic(from: .now, by: 1)) { context in
+      VStack(spacing: isCompact ? 10 : 16) {
+        HStack {
+          HeaderChip(
+            icon: "dumbbell", label: elapsedText(now: context.date), isCompact: isCompact,
+            isStandalone: workoutManager.isStandalone)
+          Spacer()
+        }
+        Spacer(minLength: 0)
+        Button(action: handleTap) {
+          circleContent
+        }
+        .buttonStyle(.plain)
+        .disabled(!canTap)
+        .accessibilityLabel(Text("log_set_button_a11y"))
+        belowCircleContent
+        Spacer(minLength: 0)
+      }
+      .padding(.horizontal, padding)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+  }
+
+  private func handleTap() {
+    let now = Date()
+    if let lastTapAt, now.timeIntervalSince(lastTapAt) < tapDebounceSeconds { return }
+    lastTapAt = now
+    workoutManager.logSet()
+  }
+
+  private func elapsedText(now: Date) -> String {
+    guard let startedAt = workoutManager.startedAt else { return "00:00" }
+    return formatSeconds(Int(max(0, now.timeIntervalSince(startedAt))))
+  }
+
+  private var checkmarkFont: Font { isCompact ? .system(size: 40, weight: .bold) : .system(size: 48, weight: .bold) }
+  /// The "+1 set" wordmark's font — same visual weight as `RestHeroView`'s
+  /// countdown number, this page's closest equivalent focal point.
+  private var logSetButtonFont: Font { isCompact ? .system(.title2, design: .rounded) : .system(.largeTitle, design: .rounded) }
+
+  @ViewBuilder
+  private var circleContent: some View {
+    switch workoutManager.logSetState {
+    case .confirmed:
+      ZStack {
+        Circle()
+          .fill(LifeyColors.primary.opacity(0.18))
+          .overlay(Circle().strokeBorder(LifeyColors.primary, lineWidth: 3))
+        VStack(spacing: 4) {
+          Image(systemName: "checkmark")
+            .font(checkmarkFont)
+            .foregroundColor(LifeyColors.primary)
+          if workoutManager.isStandalone {
+            // No plan/total to report against (docs/watch/
+            // 44-watch-f6-standalone-plan.md §3.4) — reuses
+            // active_sets_free_format (count + combined reps) rather than a
+            // bare "Set n" label, matching the exercise card's own line
+            // instead of introducing a third, narrower string just for
+            // this confirmed-state readout.
+            Text(
+              String(
+                format: String(localized: "active_sets_free_format"),
+                workoutManager.standaloneSets.count,
+                workoutManager.standaloneSets.reduce(0) { $0 + $1.reps })
+            )
+            .font(isCompact ? .body : .title3)
+            .fontWeight(.bold)
+            .foregroundColor(LifeyColors.onSurface)
+          } else if let setsDone = workoutManager.setsDone, let setsTotal = workoutManager.setsTotal {
+            Text(String(format: String(localized: "active_sets_format"), setsDone, setsTotal))
+              .font(isCompact ? .body : .title3)
+              .fontWeight(.bold)
+              .foregroundColor(LifeyColors.onSurface)
+          }
+        }
+      }
+      .frame(width: circleDiameter, height: circleDiameter)
+    case .pending, .failed:
+      ghostedCircle
+    case .ready where !workoutManager.isPhoneReachable:
+      ghostedCircle
+    case .ready:
+      ZStack {
+        Circle()
+          .fill(LifeyColors.container)
+          .overlay(Circle().strokeBorder(LifeyColors.primary.opacity(0.55), lineWidth: 3))
+        logSetButtonLabel(color: LifeyColors.primary)
+      }
+      .frame(width: circleDiameter, height: circleDiameter)
+    }
+  }
+
+  private var ghostedCircle: some View {
+    ZStack {
+      Circle()
+        .fill(LifeyColors.surface)
+        .overlay(Circle().strokeBorder(LifeyColors.outline, lineWidth: 3))
+      logSetButtonLabel(color: LifeyColors.ghostedOnSurface)
+    }
+    .opacity(0.75)
+    .frame(width: circleDiameter, height: circleDiameter)
+  }
+
+  /// `log_set_button` ("+1 set" / "+1 szett", §3.4) as a single localized
+  /// wordmark — the canvas mockup renders "+1" and "SET" as two separately
+  /// sized lines, but that split isn't reproducible from one localized
+  /// string without parsing it apart, which is fragile across locales; one
+  /// bold centered line reads just as clearly on a page this uncluttered.
+  private func logSetButtonLabel(color: Color) -> some View {
+    Text(String(localized: "log_set_button"))
+      .font(logSetButtonFont)
+      .fontWeight(.heavy)
+      .multilineTextAlignment(.center)
+      .lineLimit(2)
+      .minimumScaleFactor(0.7)
+      .foregroundColor(color)
+  }
+
+  private func plusOneSetLabel(numberColor: Color, labelColor: Color) -> some View {
+    VStack(spacing: 2) {
+      Text("+1")
+        .font(.system(size: circleDiameter * 0.34, weight: .heavy, design: .rounded))
+        .foregroundColor(numberColor)
+        .monospacedDigit()
+      Text("SET")
+        .font(.system(size: circleDiameter * 0.09, weight: .bold))
+        .foregroundColor(labelColor)
+        .tracking(3)
+    }
+  }
+
+  @ViewBuilder
+  private var belowCircleContent: some View {
+    switch workoutManager.logSetState {
+    case .ready where !workoutManager.isPhoneReachable:
+      logStatusPill(
+        icon: "wifi.slash", text: String(localized: "phone_unreachable"),
+        tint: LifeyColors.onSurfaceVariant, background: LifeyColors.container)
+    case .ready:
+      Text(contextLine)
+        .font(isCompact ? .caption2 : .caption)
+        .foregroundColor(LifeyColors.onSurfaceVariant)
+        .lineLimit(1)
+        .truncationMode(.tail)
+    case .pending:
+      Text("log_set_pending")
+        .font(isCompact ? .caption2 : .caption)
+        .foregroundColor(LifeyColors.onSurfaceVariant)
+    case .confirmed:
+      logStatusPill(
+        icon: nil, text: String(localized: "log_set_logged"), tint: LifeyColors.primary,
+        background: LifeyColors.primary.opacity(0.14))
+    case .failed:
+      logStatusPill(
+        icon: nil, text: String(localized: "log_set_failed"), tint: LifeyColors.onErrorContainer,
+        background: LifeyColors.errorContainer)
+    }
+  }
+
+  private func logStatusPill(icon: String?, text: String, tint: Color, background: Color) -> some View {
+    HStack(spacing: 6) {
+      if let icon {
+        Image(systemName: icon)
+          .font(.system(size: isCompact ? 13 : 15))
+          .foregroundColor(tint)
+      }
+      Text(text)
+        .font(isCompact ? .caption2 : .caption)
+        .fontWeight(.semibold)
+        .foregroundColor(tint)
+    }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 6)
+    .background(background)
+    .clipShape(Capsule())
+  }
+
+  /// "<exercise> · Set <n> of <total>" (`log_set_context_format`, §3.4) — the
+  /// *next* set number, mirroring `RestHeroView`'s identical
+  /// `min(setsDone + 1, setsTotal)` "what's coming up" arithmetic, not
+  /// `setsDone` itself (which would read one set behind what a tap is about
+  /// to log).
+  private var contextLine: String {
+    if workoutManager.isStandalone {
+      // No plan, so no "next set of total" to preview — just names the
+      // session (docs/watch/44-watch-f6-standalone-plan.md §3.4), matching
+      // the exercise card's own title below.
+      return String(localized: "standalone_quick_start")
+    }
+    let exerciseName = workoutManager.exerciseName ?? String(localized: "active_default_exercise")
+    guard let setsDone = workoutManager.setsDone, let setsTotal = workoutManager.setsTotal else {
+      return exerciseName
+    }
+    return String(
+      format: String(localized: "log_set_context_format"), exerciseName,
+      min(setsDone + 1, setsTotal), setsTotal)
+  }
+}
+
+/// Middle `TabView` page — `LogPage`'s original AW 02–04 home before the F5
+/// log page took the leftmost slot (docs/40-watch-app-plan.md §12.1 B7,
+/// canvas AW 02): elapsed/rest time, exercise/set counter, heart rate and
+/// calories — no controls here, those live on `ControlsPage`.
 private struct MetricsPage: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
@@ -232,7 +492,7 @@ private struct MetricsPage: View {
             RestHeroView(
               remainingSeconds: remainingSeconds,
               totalSeconds: workoutManager.restTotalSeconds,
-              exerciseName: workoutManager.exerciseName ?? String(localized: "active_default_exercise"),
+              exerciseName: restExerciseName,
               setsDone: workoutManager.setsDone,
               setsTotal: workoutManager.setsTotal,
               isCompact: isCompact)
@@ -243,7 +503,9 @@ private struct MetricsPage: View {
           // card settle near the bottom instead of everything bunching in
           // the middle.
           VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
-            HeaderChip(icon: "dumbbell", label: String(localized: "active_header_label"), isCompact: isCompact)
+            HeaderChip(
+              icon: "dumbbell", label: String(localized: "active_header_label"), isCompact: isCompact,
+              isStandalone: workoutManager.isStandalone)
             Text(elapsedText(now: context.date))
               .font(heroFont)
               .fontWeight(.bold)
@@ -268,9 +530,19 @@ private struct MetricsPage: View {
             }
             .padding(.top, 4)
             Spacer(minLength: 4)
-            ExerciseCard(
-              exerciseName: workoutManager.exerciseName ?? String(localized: "active_default_exercise"),
-              setsDone: workoutManager.setsDone, setsTotal: workoutManager.setsTotal, isCompact: isCompact)
+            if workoutManager.isStandalone {
+              ExerciseCard(
+                exerciseName: String(localized: "standalone_quick_start"), setsDone: nil, setsTotal: nil,
+                isCompact: isCompact,
+                freeFormatSets: (
+                  workoutManager.standaloneSets.count,
+                  workoutManager.standaloneSets.reduce(0) { $0 + $1.reps }
+                ))
+            } else {
+              ExerciseCard(
+                exerciseName: workoutManager.exerciseName ?? String(localized: "active_default_exercise"),
+                setsDone: workoutManager.setsDone, setsTotal: workoutManager.setsTotal, isCompact: isCompact)
+            }
           }
         }
       }
@@ -282,6 +554,16 @@ private struct MetricsPage: View {
   private func elapsedText(now: Date) -> String {
     guard let startedAt = workoutManager.startedAt else { return "00:00" }
     return formatSeconds(Int(max(0, now.timeIntervalSince(startedAt))))
+  }
+
+  /// `RestHeroView`'s "Next · <name>" label — standalone has no plan/exercise
+  /// name, so the fallback is `standalone_quick_start` rather than the
+  /// generic `active_default_exercise` (docs/watch/
+  /// 44-watch-f6-standalone-plan.md §3.5).
+  private var restExerciseName: String {
+    workoutManager.exerciseName
+      ?? String(
+        localized: workoutManager.isStandalone ? "standalone_quick_start" : "active_default_exercise")
   }
 
   /// Seconds left in the current rest, computed against this device's own
@@ -296,7 +578,7 @@ private struct MetricsPage: View {
   }
 }
 
-/// Second `TabView` page (docs/40-watch-app-plan.md §12.1 B7, canvas AW 04):
+/// Third/last `TabView` page (docs/40-watch-app-plan.md §12.1 B7, canvas AW 04):
 /// two large circular buttons — End (negative-tinted) and Pause/Resume
 /// (container-tinted) — under a header chip showing the ticking elapsed
 /// time instead of "STRENGTH". The End button opens `EffortSelectorView`
@@ -312,7 +594,9 @@ private struct ControlsPage: View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
       VStack {
         HStack {
-          HeaderChip(icon: "dumbbell", label: elapsedText(now: context.date), isCompact: isCompact)
+          HeaderChip(
+            icon: "dumbbell", label: elapsedText(now: context.date), isCompact: isCompact,
+            isStandalone: workoutManager.isStandalone)
           Spacer()
         }
         Spacer()
@@ -430,7 +714,9 @@ private struct RestHeroView: View {
 
   var body: some View {
     VStack(spacing: 4) {
-      HeaderChip(icon: "timer", label: String(localized: "rest_hero_label"), isCompact: isCompact)
+      HeaderChip(
+        icon: "timer", label: String(localized: "rest_hero_label"), isCompact: isCompact,
+        isStandalone: workoutManager.isStandalone)
       GeometryReader { barGeometry in
         ZStack(alignment: .leading) {
           RoundedRectangle(cornerRadius: LifeyShapes.cardLarge)

@@ -7,6 +7,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -21,12 +23,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.HeartBroken
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SignalWifiOff
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
@@ -46,11 +50,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.filled.PhonelinkOff
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
@@ -60,24 +69,37 @@ import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
+import com.google.android.gms.wearable.Wearable
 import com.khunor.lifey.ExerciseService
 import com.khunor.lifey.LiveMetrics
+import com.khunor.lifey.LogSetState
 import com.khunor.lifey.R
 import com.khunor.lifey.SessionStateHolder
 import com.khunor.lifey.SummarySender
 import com.khunor.lifey.ui.theme.LifeyColors
 import com.khunor.lifey.ui.theme.LifeyShapes
+import java.util.UUID
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 private const val REST_RING_NEGATIVE_THRESHOLD_MS = 5_000L
 
 /** Total on-screen time for the rest-end "GO" flash (§3.4: "1–2 s flash/transition"). */
 private const val GO_FLASH_HOLD_MS = 1_300
 
-private const val METRICS_PAGE = 0
-private const val PAGE_COUNT = 2
+private const val LOG_PAGE = 0
+private const val METRICS_PAGE = 1
+private const val CONTROLS_PAGE = 2
+private const val PAGE_COUNT = 3
+
+/** 300 ms tap-debounce for the log-set control (docs/watch/
+ * 43-watch-f5-set-logging-plan.md §4.2) — belt-and-braces alongside
+ * [LogSetState] itself disabling the control the instant it leaves
+ * [LogSetState.Ready]; this just also swallows a double-tap landing in the
+ * same frame, before that state change has propagated back to `.clickable`. */
+private const val LOG_SET_TAP_DEBOUNCE_MS = 300L
 
 /** Re-requested by the "allow sensors" chip (§12.1 B13) — the same pair
  * [com.khunor.lifey.ExerciseService.startExercise] checks before adding
@@ -94,16 +116,18 @@ private val HEART_RATE_PERMISSIONS = arrayOf(
  * scheduled independently in [com.khunor.lifey.ExerciseService], not here —
  * it needs to fire even while this screen isn't composed).
  *
- * Two swipeable pages, not one scrolling column: [MetricsOrRestPage] (metrics
- * or the rest-hero) and [ControlsPage] (End/Pause). An earlier version put
- * both in a single scrollable `Column`, but on a round display the End chip
- * ended up peeking in at the bottom of *every* metrics/rest view without any
- * scroll gesture, visibly clipped by the bezel — confusing and ugly on real
- * hardware even though it matched the canvas's own scroll-then-see-controls
- * intent in principle. A `HorizontalPager` (with a page-dot
- * [HorizontalPageIndicator]) gives the same two-section structure the design
- * canvas frames (Wear 02 vs. Wear 03) without that clipping, at the cost of
- * a swipe instead of a scroll to reach the controls.
+ * Three swipeable pages, not one scrolling column: [LogPage] (leftmost/
+ * default — docs/watch/43-watch-f5-set-logging-plan.md §3.1 decision (b)),
+ * [MetricsOrRestPage] (metrics or the rest-hero), and [ControlsPage]
+ * (End/Pause). An earlier version put metrics and controls in a single
+ * scrollable `Column`, but on a round display the End chip ended up peeking
+ * in at the bottom of *every* metrics/rest view without any scroll gesture,
+ * visibly clipped by the bezel — confusing and ugly on real hardware even
+ * though it matched the canvas's own scroll-then-see-controls intent in
+ * principle. A `HorizontalPager` (with a page-dot [PageDots]) gives the same
+ * section-per-page structure the design canvas frames (Wear 07 log page,
+ * Wear 02 metrics, Wear 03 controls) without that clipping, at the cost of a
+ * swipe instead of a scroll to reach controls.
  *
  * The End button only *asks* the phone to close the session (§8.2 decision
  * (b)) — it never touches [com.khunor.lifey.ExerciseService] directly.
@@ -115,6 +139,7 @@ private val HEART_RATE_PERMISSIONS = arrayOf(
 fun ActiveWorkoutScreen() {
     val metadata by SessionStateHolder.metadata.collectAsState()
     val liveMetrics by SessionStateHolder.liveMetrics.collectAsState()
+    val logSetState by SessionStateHolder.logSetState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -163,6 +188,23 @@ fun ActiveWorkoutScreen() {
     val setsDone = metadata.setsDone
     val setsTotal = metadata.setsTotal
     val resting = restRemainingMs > 0
+    val isStandalone = metadata.isStandalone
+    // Standalone's own fallback (docs/watch/44-watch-f6-standalone-plan.md
+    // §3.4/§3.5, mirrors iOS's `restExerciseName`) — F6a never sets
+    // `exerciseName` for a standalone session (no plan), so every page
+    // that would otherwise show `active_default_exercise` shows
+    // `standalone_quick_start` instead.
+    val exerciseName = metadata.exerciseName ?: stringResource(
+        if (isStandalone) R.string.standalone_quick_start else R.string.active_default_exercise,
+    )
+    // No plan/total to report against in standalone (D-F6.3) — count +
+    // combined reps instead of "n of total" (mirrors iOS's identical
+    // `freeFormatSets` computation).
+    val freeFormatSets = if (isStandalone) {
+        metadata.standaloneSets.size to metadata.standaloneSets.sumOf { it.reps }
+    } else {
+        null
+    }
 
     val pagerState = rememberPagerState(pageCount = { PAGE_COUNT })
 
@@ -184,13 +226,28 @@ fun ActiveWorkoutScreen() {
                 rpe = effortRpe,
                 onRpeChange = { effortRpe = it },
                 onConfirm = {
-                    if (sessionClientId != null) {
+                    // Standalone owns its own close (D-F6.2) — no phone-
+                    // mastered session to ask, unlike the `sendEndRequested`
+                    // branch below (docs/watch/44-watch-f6-standalone-plan.md
+                    // §3.1, mirrors iOS's `beginEffortSelection` routing
+                    // inside `WorkoutManager` itself).
+                    if (isStandalone) {
+                        ContextCompat.startForegroundService(
+                            context,
+                            ExerciseService.endStandaloneIntent(context, effortRpe),
+                        )
+                    } else if (sessionClientId != null) {
                         scope.launch { SummarySender.sendEndRequested(context, sessionClientId, effortRpe) }
                     }
                     showEffortSelector = false
                 },
                 onSkip = {
-                    if (sessionClientId != null) {
+                    if (isStandalone) {
+                        ContextCompat.startForegroundService(
+                            context,
+                            ExerciseService.endStandaloneIntent(context, rpe = null),
+                        )
+                    } else if (sessionClientId != null) {
                         scope.launch { SummarySender.sendEndRequested(context, sessionClientId, rpe = null) }
                     }
                     showEffortSelector = false
@@ -207,23 +264,38 @@ fun ActiveWorkoutScreen() {
                 rotaryScrollableBehavior = RotaryScrollableDefaults.snapBehavior(pagerState),
             ) { page ->
                 when (page) {
+                    LOG_PAGE -> LogPage(
+                        elapsedMs = elapsedMs,
+                        exerciseName = exerciseName,
+                        setsDone = setsDone,
+                        setsTotal = setsTotal,
+                        sessionClientId = metadata.sessionClientId,
+                        logSetState = logSetState,
+                        isStandalone = isStandalone,
+                        freeFormatSets = freeFormatSets,
+                        isCompact = isCompact,
+                        maxWidth = maxWidth,
+                    )
                     METRICS_PAGE -> MetricsOrRestPage(
                         resting = resting,
                         elapsedMs = elapsedMs,
                         restRemainingMs = restRemainingMs,
                         restTotalSeconds = metadata.restTotalSeconds,
-                        exerciseName = metadata.exerciseName ?: stringResource(R.string.active_default_exercise),
+                        exerciseName = exerciseName,
                         setsDone = setsDone,
                         setsTotal = setsTotal,
                         liveMetrics = liveMetrics,
+                        isStandalone = isStandalone,
+                        freeFormatSets = freeFormatSets,
                         isCompact = isCompact,
                         maxWidth = maxWidth,
                     )
-                    else -> ControlsPage(
-                        exerciseName = metadata.exerciseName ?: stringResource(R.string.active_default_exercise),
+                    CONTROLS_PAGE -> ControlsPage(
+                        exerciseName = exerciseName,
                         setsDone = setsDone,
                         setsTotal = setsTotal,
                         isPaused = liveMetrics.isPaused,
+                        freeFormatSets = freeFormatSets,
                         isCompact = isCompact,
                         onEnd = { showEffortSelector = true },
                         onTogglePause = {
@@ -271,7 +343,292 @@ private fun PageDots(pageCount: Int, selectedPage: Int, modifier: Modifier = Mod
     }
 }
 
-/** Page 1 of 2 (canvas Wear 02/04): metrics normally, or the rest-hero while
+/**
+ * The leftmost/default page (docs/watch/43-watch-f5-set-logging-plan.md
+ * §3.1 decision (b), canvas W 07/08/10): a single large circular "+1 set"
+ * control that fills nearly the whole safe area — a dedicated page turns
+ * the entire tap target into one ~5×-minimum circle, with zero mis-tap risk
+ * near End/Pause (that's why [MetricsOrRestPage] stays deliberately
+ * button-free — same B4/B6 heritage as the metrics page's own layout).
+ * [logSetState] (docs/watch/43-watch-f5-set-logging-plan.md §3.2) drives
+ * four visuals: Ready (primary ring + context line), Pending (ghosted +
+ * "Logging…"), Confirmed (check + "Set n of total" + "Logged" pill), Failed
+ * (ghosted + red toast) — plus a fifth, independent ghosted state when
+ * [hasConnectedNode] is false: a tap can't even start a Pending round-trip
+ * with no phone node to answer it. Mirrors iOS's `LogPage`.
+ */
+@Composable
+private fun LogPage(
+    elapsedMs: Long,
+    exerciseName: String,
+    setsDone: Int?,
+    setsTotal: Int?,
+    sessionClientId: String?,
+    logSetState: LogSetState,
+    isStandalone: Boolean,
+    freeFormatSets: Pair<Int, Int>?,
+    isCompact: Boolean,
+    maxWidth: Dp,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Best-effort pre-tap hint, not a continuously-updated signal — Android
+    // has no reliable continuous reachability push, unlike iOS's
+    // `WCSession.isReachable`/`reachabilityChanged` (docs/watch/
+    // 43-watch-f5-set-logging-plan.md §4.4's Android branch). Checked once
+    // when this page appears; a tap that turns out to be wrong anyway just
+    // surfaces via the normal ack-timeout → Failed path, same as any other
+    // send that doesn't land.
+    var hasConnectedNode by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        hasConnectedNode = try {
+            Wearable.getNodeClient(context).connectedNodes.await().isNotEmpty()
+        } catch (_: Exception) {
+            true
+        }
+    }
+
+    var lastTapAtMs by remember { mutableLongStateOf(0L) }
+    val canTap = logSetState is LogSetState.Ready && hasConnectedNode
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = maxWidth * SCREEN_PADDING_FRACTION),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        HeaderChip(
+            icon = Icons.Filled.FitnessCenter,
+            label = formatElapsed(elapsedMs),
+            isStandalone = isStandalone,
+            isCompact = isCompact,
+        )
+        val ghosted = logSetState is LogSetState.Pending ||
+            logSetState is LogSetState.Failed ||
+            (logSetState is LogSetState.Ready && !hasConnectedNode)
+        LogCircle(
+            logSetState = logSetState,
+            ghosted = ghosted,
+            diameter = maxWidth * LOG_CIRCLE_DIAMETER_FRACTION,
+            setsDone = setsDone,
+            setsTotal = setsTotal,
+            freeFormatSets = freeFormatSets,
+            isCompact = isCompact,
+            enabled = canTap,
+            onTap = {
+                val currentSessionClientId = sessionClientId ?: return@LogCircle
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastTapAtMs < LOG_SET_TAP_DEBOUNCE_MS) return@LogCircle
+                lastTapAtMs = now
+                val eventId = UUID.randomUUID().toString()
+                SessionStateHolder.onLogSetRequested(eventId)
+                scope.launch {
+                    SummarySender.sendLogSet(
+                        context = context,
+                        sessionClientId = currentSessionClientId,
+                        eventId = eventId,
+                        loggedAtEpochMs = System.currentTimeMillis(),
+                    )
+                }
+            },
+        )
+        LogStatusLine(
+            logSetState = logSetState,
+            hasConnectedNode = hasConnectedNode,
+            exerciseName = exerciseName,
+            setsDone = setsDone,
+            setsTotal = setsTotal,
+            isStandalone = isStandalone,
+            isCompact = isCompact,
+        )
+    }
+}
+
+/** The circular control itself — ready/confirmed get the primary tint,
+ * everything else (pending/failed/unreachable) shares one ghosted look
+ * ([ghosted]), matching iOS's identical `ghostedCircle` collapsing of those
+ * three states into one visual. */
+@Composable
+private fun LogCircle(
+    logSetState: LogSetState,
+    ghosted: Boolean,
+    diameter: Dp,
+    setsDone: Int?,
+    setsTotal: Int?,
+    freeFormatSets: Pair<Int, Int>?,
+    isCompact: Boolean,
+    enabled: Boolean,
+    onTap: () -> Unit,
+) {
+    val backgroundColor = if (logSetState is LogSetState.Confirmed) {
+        LifeyColors.primary.copy(alpha = 0.18f)
+    } else if (ghosted) {
+        LifeyColors.surface
+    } else {
+        LifeyColors.container
+    }
+    val borderColor = if (logSetState is LogSetState.Confirmed) {
+        LifeyColors.primary
+    } else if (ghosted) {
+        LifeyColors.outline
+    } else {
+        LifeyColors.primary.copy(alpha = 0.55f)
+    }
+    val contentColor = if (ghosted) LifeyColors.ghostedOnSurface else LifeyColors.primary
+    val a11yLabel = stringResource(R.string.log_set_button_a11y)
+
+    Box(
+        modifier = Modifier
+            .padding(top = if (isCompact) 8.dp else 12.dp)
+            .size(diameter)
+            .background(backgroundColor, CircleShape)
+            .border(3.dp, borderColor, CircleShape)
+            .clickable(enabled = enabled, onClick = onTap)
+            .semantics { contentDescription = a11yLabel },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (logSetState is LogSetState.Confirmed) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = LifeyColors.primary,
+                    modifier = Modifier.size(if (isCompact) 40.dp else 48.dp),
+                )
+                if (freeFormatSets != null) {
+                    Text(
+                        text = stringResource(
+                            R.string.active_sets_free_format, freeFormatSets.first, freeFormatSets.second,
+                        ),
+                        style = if (isCompact) MaterialTheme.typography.body2 else MaterialTheme.typography.title3,
+                        color = LifeyColors.onSurface,
+                    )
+                } else if (setsDone != null && setsTotal != null) {
+                    Text(
+                        text = stringResource(R.string.active_sets_format, setsDone, setsTotal),
+                        style = if (isCompact) MaterialTheme.typography.body2 else MaterialTheme.typography.title3,
+                        color = LifeyColors.onSurface,
+                    )
+                }
+            }
+        } else {
+            Text(
+                text = stringResource(R.string.log_set_button),
+                style = if (isCompact) MaterialTheme.typography.title2 else MaterialTheme.typography.display3,
+                color = contentColor,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+            )
+        }
+    }
+}
+
+/** The line below the circle — context/status copy that changes with
+ * [logSetState] (and, while Ready, with [hasConnectedNode]). Mirrors iOS's
+ * `belowCircleContent`. */
+@Composable
+private fun LogStatusLine(
+    logSetState: LogSetState,
+    hasConnectedNode: Boolean,
+    exerciseName: String,
+    setsDone: Int?,
+    setsTotal: Int?,
+    isStandalone: Boolean,
+    isCompact: Boolean,
+) {
+    val captionStyle = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1
+    when {
+        logSetState is LogSetState.Ready && !hasConnectedNode -> LogStatusPill(
+            icon = Icons.Filled.SignalWifiOff,
+            text = stringResource(R.string.phone_unreachable),
+            tint = LifeyColors.onSurfaceVariant,
+            background = LifeyColors.container,
+            isCompact = isCompact,
+        )
+        logSetState is LogSetState.Ready -> {
+            val nextSet = if (setsDone != null && setsTotal != null) {
+                (setsDone + 1).coerceAtMost(setsTotal)
+            } else {
+                null
+            }
+            val text = if (isStandalone) {
+                // No plan, so no "next set of total" to preview — just
+                // names the session (docs/watch/44-watch-f6-standalone-
+                // plan.md §3.4, mirrors iOS's `contextLine`).
+                stringResource(R.string.standalone_quick_start)
+            } else if (nextSet != null && setsTotal != null) {
+                stringResource(R.string.log_set_context_format, exerciseName, nextSet, setsTotal)
+            } else {
+                exerciseName
+            }
+            Text(
+                text = text,
+                style = captionStyle,
+                color = LifeyColors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+        logSetState is LogSetState.Pending -> Text(
+            text = stringResource(R.string.log_set_pending),
+            style = captionStyle,
+            color = LifeyColors.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        logSetState is LogSetState.Confirmed -> LogStatusPill(
+            icon = null,
+            text = stringResource(R.string.log_set_logged),
+            tint = LifeyColors.primary,
+            background = LifeyColors.primary.copy(alpha = 0.14f),
+            isCompact = isCompact,
+        )
+        logSetState is LogSetState.Failed -> LogStatusPill(
+            icon = null,
+            text = stringResource(R.string.log_set_failed),
+            tint = LifeyColors.onErrorContainer,
+            background = LifeyColors.errorContainer,
+            isCompact = isCompact,
+        )
+    }
+}
+
+@Composable
+private fun LogStatusPill(
+    icon: ImageVector?,
+    text: String,
+    tint: Color,
+    background: Color,
+    isCompact: Boolean,
+) {
+    Row(
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .background(background, CircleShape)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(if (isCompact) 13.dp else 15.dp),
+            )
+        }
+        Text(
+            text = text,
+            style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
+            color = tint,
+            maxLines = 1,
+        )
+    }
+}
+
+/** Page 2 of 3 (canvas Wear 02/04): metrics normally, or the rest-hero while
  * a rest timer is running — never any controls, so it always fits one
  * screen without scrolling. */
 @Composable
@@ -284,6 +641,8 @@ private fun MetricsOrRestPage(
     setsDone: Int?,
     setsTotal: Int?,
     liveMetrics: LiveMetrics,
+    isStandalone: Boolean,
+    freeFormatSets: Pair<Int, Int>?,
     isCompact: Boolean,
     maxWidth: Dp,
 ) {
@@ -310,12 +669,14 @@ private fun MetricsOrRestPage(
                 setsDone = setsDone,
                 setsTotal = setsTotal,
                 liveMetrics = liveMetrics,
+                isStandalone = isStandalone,
                 isCompact = isCompact,
             )
         } else {
             HeaderChip(
                 icon = Icons.Filled.FitnessCenter,
                 label = stringResource(R.string.active_header_label),
+                isStandalone = isStandalone,
                 isCompact = isCompact,
             )
             Text(text = formatElapsed(elapsedMs), style = heroStyle, color = LifeyColors.primary)
@@ -372,21 +733,23 @@ private fun MetricsOrRestPage(
                 exerciseName = exerciseName,
                 setsDone = setsDone,
                 setsTotal = setsTotal,
+                freeFormatSets = freeFormatSets,
                 isCompact = isCompact,
             )
         }
     }
 }
 
-/** Page 2 of 2 (canvas Wear 03): End + Pause only, with a dimmed reminder of
+/** Page 3 of 3 (canvas Wear 03): End + Pause only, with a dimmed reminder of
  * what's in progress (matching the canvas's faded, scaled-down exercise
- * card) so the page doesn't feel disconnected from page 1. */
+ * card) so the page doesn't feel disconnected from the metrics page. */
 @Composable
 private fun ControlsPage(
     exerciseName: String,
     setsDone: Int?,
     setsTotal: Int?,
     isPaused: Boolean,
+    freeFormatSets: Pair<Int, Int>?,
     isCompact: Boolean,
     onEnd: () -> Unit,
     onTogglePause: () -> Unit,
@@ -401,6 +764,7 @@ private fun ControlsPage(
                 exerciseName = exerciseName,
                 setsDone = setsDone,
                 setsTotal = setsTotal,
+                freeFormatSets = freeFormatSets,
                 isCompact = true,
             )
         }
@@ -462,6 +826,7 @@ private fun ControlsPage(
 private fun HeaderChip(
     icon: ImageVector,
     label: String,
+    isStandalone: Boolean,
     isCompact: Boolean,
 ) {
     Row(
@@ -481,6 +846,19 @@ private fun HeaderChip(
             letterSpacing = 0.5.sp,
             maxLines = 1,
         )
+        if (isStandalone) {
+            // Standalone mode indicator (docs/watch/44-watch-f6-standalone-
+            // plan.md §3.4, canvas W 13) — a quiet glyph, no chip/background/
+            // copy of its own ("mode, not alarm"), so every page's header
+            // carries it consistently rather than singling out the
+            // STRENGTH-label page alone (mirrors iOS's identical `HeaderChip`).
+            Icon(
+                imageVector = Icons.Filled.PhonelinkOff,
+                contentDescription = stringResource(R.string.standalone_badge),
+                tint = LifeyColors.standaloneIndicator,
+                modifier = Modifier.size(if (isCompact) 14.dp else 16.dp),
+            )
+        }
     }
 }
 
@@ -549,6 +927,12 @@ private fun ExerciseCard(
     setsDone: Int?,
     setsTotal: Int?,
     isCompact: Boolean,
+    /** Standalone's set-count line (docs/watch/44-watch-f6-standalone-
+     * plan.md §3.4, D-F6.3) — no plan, so no "n of total"; just how many
+     * sets and their combined reps. Null for phone-mastered sessions, which
+     * use [setsDone]/[setsTotal] instead (mirrors iOS's `ExerciseCard
+     * .freeFormatSets`). */
+    freeFormatSets: Pair<Int, Int>? = null,
 ) {
     Column(
         modifier = Modifier
@@ -565,7 +949,14 @@ private fun ExerciseCard(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        if (setsDone != null && setsTotal != null) {
+        if (freeFormatSets != null) {
+            Text(
+                text = stringResource(R.string.active_sets_free_format, freeFormatSets.first, freeFormatSets.second),
+                style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
+                color = LifeyColors.onSurfaceVariant,
+                maxLines = 1,
+            )
+        } else if (setsDone != null && setsTotal != null) {
             Text(
                 text = stringResource(R.string.active_sets_format, setsDone, setsTotal),
                 style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
@@ -623,6 +1014,7 @@ private fun RestHero(
     setsDone: Int?,
     setsTotal: Int?,
     liveMetrics: LiveMetrics,
+    isStandalone: Boolean,
     isCompact: Boolean,
 ) {
     val ringColor = if (restRemainingMs <= REST_RING_NEGATIVE_THRESHOLD_MS) {
@@ -649,6 +1041,7 @@ private fun RestHero(
     HeaderChip(
         icon = Icons.Filled.Timer,
         label = stringResource(R.string.rest_hero_label),
+        isStandalone = isStandalone,
         isCompact = isCompact,
     )
     BoxWithConstraints(

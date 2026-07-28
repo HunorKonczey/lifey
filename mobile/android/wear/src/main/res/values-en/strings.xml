@@ -32,4 +32,42 @@
     <string name="effort_selector_confirm">End workout</string>
     <string name="effort_selector_skip">Skip</string>
     <string name="effort_selector_back">Back</string>
+
+    <!-- F5 set logging (docs/watch/43-watch-f5-set-logging-plan.md §3.4) -->
+    <string name="log_set_button">+1 set</string>
+    <string name="log_set_button_a11y">Log one set</string>
+    <string name="log_set_context_format">%1$s · Set %2$d of %3$d</string>
+    <string name="log_set_pending">Logging…</string>
+    <string name="log_set_logged">Logged</string>
+    <string name="log_set_failed">Couldn\'t log — try again</string>
+    <string name="phone_unreachable">Phone not reachable</string>
+
+    <!-- F6 standalone (docs/watch/44-watch-f6-standalone-plan.md §5) -->
+    <string name="standalone_start_button">Start workout</string>
+    <string name="standalone_start_button_a11y">Start a workout on the watch</string>
+    <string name="standalone_start_caption">or start on your phone</string>
+    <string name="standalone_picker_title">Start</string>
+    <string name="standalone_quick_start">Quick strength</string>
+    <string name="standalone_quick_caption">No plan needed</string>
+    <string name="standalone_empty_hint">Plans sync from your phone</string>
+    <string name="standalone_plan_exercises">%1$d exercises</string>
+    <string name="standalone_badge">Watch only</string>
+    <string name="active_sets_free_format">Set %1$d · %2$d reps total</string>
+    <string name="sync_pending">Will sync to phone</string>
+    <string name="sync_done">Synced to phone</string>
+    <string name="sync_queue_count">%1$d sessions waiting to sync</string>
+    <string name="summary_sets_label">sets</string>
+    <string name="summary_title">Workout saved</string>
+    <string name="summary_time_label">time</string>
+    <string name="summary_avg_hr_label">avg bpm</string>
+    <string name="active_calories_unit">kcal</string>
+
+    <!-- F5b adjust (docs/watch/48-watch-f5b-set-adjust-plan.md §5) -->
+    <string name="log_adjust_title">Adjust</string>
+    <string name="log_adjust_reps">Reps</string>
+    <string name="log_adjust_weight">Weight</string>
+    <string name="log_adjust_confirm">Log %1$d reps</string>
+    <string name="log_adjust_caption_reps">reps · %1$s kg</string>
+    <string name="log_adjust_caption_weight">kg · %1$d reps</string>
+    <string name="log_adjust_open_a11y">Adjust reps and weight</string>
 </resources>

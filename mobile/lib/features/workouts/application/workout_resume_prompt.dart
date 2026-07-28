@@ -9,6 +9,9 @@ import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/router/app_router.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../settings/application/settings_controller.dart';
+import '../../settings/domain/user_settings.dart';
+import 'standalone_session_processor.dart';
 import 'workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
@@ -74,7 +77,10 @@ class WorkoutResumePrompt {
     // the watch was unreachable at end time and only reconnects later, or the
     // phone app was killed right after finishing (docs/40-watch-app-plan.md
     // §5.4, §3 "Lezárás"). This app-lifetime listener is what actually
-    // applies the summary, regardless of when it arrives.
+    // applies the summary, regardless of when it arrives. A standalone
+    // (phone-less) session arrives on the same stream and never has a live
+    // LogSessionScreen at all — it's already finished by the time it's
+    // delivered (docs/watch/44-watch-f6-standalone-plan.md §1, §6/3).
     // Never cancelled — this class is a Provider singleton for the app's
     // entire lifetime (see class doc), so there's no earlier point to do it.
     _ref.read(watchWorkoutServiceProvider).events.listen(_onWatchEvent);
@@ -84,6 +90,12 @@ class WorkoutResumePrompt {
   final Ref _ref;
 
   Future<void> _onWatchEvent(Object event) async {
+    if (event is WatchStandaloneSession) {
+      final language =
+          _ref.read(settingsControllerProvider).value?.language ?? LanguagePreference.system;
+      await _ref.read(standaloneSessionProcessorProvider).process(event, language: language);
+      return;
+    }
     if (event is! WatchWorkoutSummary) return;
     // A session already paired via the manual Health import (doc 16) reflects
     // a more recent, explicit user action — the watch summary must not

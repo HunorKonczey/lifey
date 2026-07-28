@@ -92,6 +92,134 @@ class WatchLiveMetrics {
       );
 }
 
+/// The user tapped the "+1 set" control on the watch — the watch is a dumb
+/// trigger, it doesn't log anything itself; [LogSessionScreen] logs the next
+/// row from its own current position and acks back (docs/watch/
+/// 43-watch-f5-set-logging-plan.md §2, §4.1). [eventId] is a watch-generated
+/// UUID used for dedup (§4.2) and to correlate the eventual `ackSetLogged`
+/// call.
+class WatchSetLogged {
+  const WatchSetLogged({
+    required this.sessionClientId,
+    required this.eventId,
+    required this.loggedAtEpochMs,
+    this.reps,
+    this.weight,
+  });
+
+  final String sessionClientId;
+  final String eventId;
+  final int loggedAtEpochMs;
+
+  /// What the watch's adjust stepper produced, when the user went through it
+  /// (docs/watch/48-watch-f5b-set-adjust-plan.md §4.1). **Optional and
+  /// backwards-compatible**: F5a's plain one-tap flow sends neither, and the
+  /// phone then logs exactly as it does today (D-F5b.6). [weight] is in kg,
+  /// matching the phone's own workout UI (D-F5b.4).
+  final int? reps;
+  final double? weight;
+
+  /// The pair to log with, or null when the watch didn't send a usable one.
+  /// §4.1 requires reps and weight to travel **together**, so a half-filled
+  /// payload counts as "no values" rather than writing a null over a row's
+  /// planned value — the caller falls back to the plain mark-done path.
+  ({double weight, int reps})? get loggedValues {
+    final r = reps;
+    final w = weight;
+    return (r != null && w != null) ? (weight: w, reps: r) : null;
+  }
+
+  factory WatchSetLogged.fromJson(Map<Object?, Object?> json) => WatchSetLogged(
+        sessionClientId: json['sessionClientId'] as String,
+        eventId: json['eventId'] as String,
+        loggedAtEpochMs: json['loggedAtEpochMs'] as int,
+        reps: json['reps'] as int?,
+        // `as num?`, not `as double?`: a whole-number weight (60) arrives as
+        // an int over the platform channel and would otherwise throw — the
+        // same reason WatchLiveMetrics/WatchWorkoutSummary decode this way.
+        weight: (json['weight'] as num?)?.toDouble(),
+      );
+}
+
+/// One set logged during a standalone (phone-less) session (docs/watch/
+/// 44-watch-f6-standalone-plan.md §4.1) — part of the batch a
+/// [WatchStandaloneSession] carries, unlike [WatchSetLogged]'s one-tap-at-a-time
+/// live event. [reps] is always `standaloneDefaultReps` (10) in F6a — the
+/// watch has no reps input yet (D-F6.8) — but sent per-set already so a
+/// future watch-side stepper (F5b/F6b) won't need a protocol change.
+/// [exerciseIndex] is null in F6a (no plan); F6b resolves it against the
+/// synced template's exercise list.
+class WatchStandaloneSet {
+  const WatchStandaloneSet({
+    required this.loggedAtEpochMs,
+    required this.reps,
+    this.exerciseIndex,
+  });
+
+  final int loggedAtEpochMs;
+  final int reps;
+  final int? exerciseIndex;
+
+  factory WatchStandaloneSet.fromJson(Map<Object?, Object?> json) => WatchStandaloneSet(
+        loggedAtEpochMs: json['loggedAtEpochMs'] as int,
+        reps: json['reps'] as int,
+        exerciseIndex: json['exerciseIndex'] as int?,
+      );
+}
+
+/// A workout the watch ran entirely on its own, phone-less, from start to
+/// finish (docs/watch/44-watch-f6-standalone-plan.md §1, §4.1) — collected
+/// locally on the watch, queued, and delivered once the phone reconnects,
+/// possibly long after it ended. Unlike every other watch event, this one
+/// already describes a *finished* workout — [LogSessionScreen] never has a
+/// live instance for it; the resume-prompt sweep (docs/watch/
+/// 44-watch-f6-standalone-plan.md §2 D-F6.2) creates the session directly.
+///
+/// [standaloneSessionId] becomes the resulting session's `clientId` — the
+/// idempotency key: the watch retries delivery until acked (§4.2), so the
+/// same id can arrive more than once and must be a no-op the second time.
+/// [templateId] is null in F6a (no plan); F6b carries the synced template's
+/// id. [rpe] is whatever the watch's own effort-selector produced (nil if
+/// skipped). [healthWorkoutId] is always null on Android — the watch never
+/// touches Health Connect there, the phone does (D-F6.5).
+class WatchStandaloneSession {
+  const WatchStandaloneSession({
+    required this.standaloneSessionId,
+    this.templateId,
+    required this.startedAtEpochMs,
+    required this.endedAtEpochMs,
+    this.rpe,
+    required this.sets,
+    this.activeCalories,
+    this.averageHeartRate,
+    this.healthWorkoutId,
+  });
+
+  final String standaloneSessionId;
+  final String? templateId;
+  final int startedAtEpochMs;
+  final int endedAtEpochMs;
+  final int? rpe;
+  final List<WatchStandaloneSet> sets;
+  final double? activeCalories;
+  final double? averageHeartRate;
+  final String? healthWorkoutId;
+
+  factory WatchStandaloneSession.fromJson(Map<Object?, Object?> json) => WatchStandaloneSession(
+        standaloneSessionId: json['standaloneSessionId'] as String,
+        templateId: json['templateId'] as String?,
+        startedAtEpochMs: json['startedAtEpochMs'] as int,
+        endedAtEpochMs: json['endedAtEpochMs'] as int,
+        rpe: json['rpe'] as int?,
+        sets: ((json['sets'] as List?) ?? const [])
+            .map((raw) => WatchStandaloneSet.fromJson(Map<Object?, Object?>.from(raw as Map)))
+            .toList(),
+        activeCalories: (json['activeCalories'] as num?)?.toDouble(),
+        averageHeartRate: (json['averageHeartRate'] as num?)?.toDouble(),
+        healthWorkoutId: json['healthWorkoutId'] as String?,
+      );
+}
+
 /// Platform-neutral facade over the phone↔watch workout bridge
 /// (docs/40-watch-app-plan.md §6.1). Mirrors [WorkoutSessionNotifierService]'s
 /// shape and constructor-injection pattern so it can be called side by side
@@ -125,9 +253,9 @@ class WatchWorkoutService {
 
   /// Emits [WatchWorkoutSummary], [WatchStartRejected], [WatchEndRequested],
   /// [WatchStartedOnWatch], [WatchReachabilityChanged], [WatchLiveMetrics],
-  /// or a raw event-name `String` for anything not yet decoded — see
-  /// docs/40-watch-app-plan.md §3. A no-op stream (never emits) when
-  /// [isAvailable] is false.
+  /// [WatchSetLogged], [WatchStandaloneSession], or a raw event-name `String`
+  /// for anything not yet decoded — see docs/40-watch-app-plan.md §3. A no-op
+  /// stream (never emits) when [isAvailable] is false.
   Stream<Object> get events {
     if (!isAvailable) return const Stream.empty();
     return _events ??= _eventChannel.receiveBroadcastStream().map(_decodeEvent);
@@ -148,6 +276,10 @@ class WatchWorkoutService {
         return WatchReachabilityChanged(map['reachable'] as bool);
       case 'liveMetrics':
         return WatchLiveMetrics.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
+      case 'setLogged':
+        return WatchSetLogged.fromJson(map);
+      case 'standaloneSession':
+        return WatchStandaloneSession.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
       default:
         return (map['type'] as String?) ?? 'unknown';
     }
@@ -214,6 +346,51 @@ class WatchWorkoutService {
     if (!isAvailable) return;
     try {
       await _channel.invokeMethod('endWorkout', {'sessionClientId': sessionClientId});
+    } catch (_) {
+      // Best-effort, see class doc.
+    }
+  }
+
+  /// Answers a [WatchSetLogged] event — call exactly once per received
+  /// [eventId], even on a dedup no-op (docs/watch/
+  /// 43-watch-f5-set-logging-plan.md §4.2, §4.3). [accepted] is false when
+  /// there's no matching active session or the phone couldn't log (e.g. the
+  /// session is closing); the watch shows its failed state either way.
+  /// [sessionClientId] is the one the watch tagged the original event with
+  /// (i.e. [WatchSetLogged.sessionClientId], not necessarily this screen's
+  /// current session) — passed through so the native bridge stays stateless
+  /// rather than having to remember the last session it saw (§5.1/S5).
+  Future<void> ackSetLogged({
+    required String sessionClientId,
+    required String eventId,
+    required bool accepted,
+  }) async {
+    if (!isAvailable) return;
+    try {
+      await _channel.invokeMethod('ackSetLogged', {
+        'sessionClientId': sessionClientId,
+        'eventId': eventId,
+        'accepted': accepted,
+      });
+    } catch (_) {
+      // Best-effort, see class doc.
+    }
+  }
+
+  /// Answers a [WatchStandaloneSession] event — call exactly once per
+  /// successfully processed [standaloneSessionId], including on a dedup
+  /// no-op (an already-created session just gets acked again, docs/watch/
+  /// 44-watch-f6-standalone-plan.md §4.2). Unlike [ackSetLogged] there's no
+  /// `accepted: false` — the watch retries an un-acked delivery from its
+  /// pending-session store regardless of why it wasn't acked, so a
+  /// processing failure here should simply not call this at all rather than
+  /// ack a rejection.
+  Future<void> ackStandaloneSession(String standaloneSessionId) async {
+    if (!isAvailable) return;
+    try {
+      await _channel.invokeMethod('ackStandaloneSession', {
+        'standaloneSessionId': standaloneSessionId,
+      });
     } catch (_) {
       // Best-effort, see class doc.
     }

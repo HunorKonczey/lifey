@@ -161,7 +161,15 @@ class WorkoutSessionRepository {
 
   /// Returns the newly generated [WorkoutSession.clientId] so callers can keep
   /// editing the same session (e.g. auto-saving each set without re-creating).
+  ///
+  /// [clientId] is normally left null (a fresh one is generated) — the
+  /// standalone-session processor is the one caller that passes it
+  /// explicitly, using the watch-generated `standaloneSessionId` as the
+  /// session's `clientId` itself so a retried delivery is idempotent by
+  /// construction (docs/watch/44-watch-f6-standalone-plan.md §4.1, D-F6.3;
+  /// call [existsByClientId] first to decide whether to call this at all).
   Future<String> create({
+    String? clientId,
     required DateTime startedAt,
     DateTime? finishedAt,
     required List<PlannedExerciseInput> exercises,
@@ -174,11 +182,11 @@ class WorkoutSessionRepository {
     int? rpe,
     String? feedbackNote,
   }) async {
-    final clientId = newClientId();
+    final resolvedClientId = clientId ?? newClientId();
     await _db.transaction(() async {
       await _db.into(_db.workoutSessions).insert(
             WorkoutSessionsCompanion.insert(
-              clientId: clientId,
+              clientId: resolvedClientId,
               startedAt: Value(startedAt),
               finishedAt: Value(finishedAt),
               activeCalories: Value(activeCalories),
@@ -190,10 +198,10 @@ class WorkoutSessionRepository {
               feedbackNote: Value(feedbackNote),
             ),
           );
-      await _insertChildren(clientId, exercises, sets);
+      await _insertChildren(resolvedClientId, exercises, sets);
     });
     await _outbox.enqueueCreate(
-      clientId: clientId,
+      clientId: resolvedClientId,
       entityType: 'workout_session',
       payload: _payload(
         startedAt: startedAt,
@@ -208,7 +216,20 @@ class WorkoutSessionRepository {
         feedbackNote: feedbackNote,
       ),
     );
-    return clientId;
+    return resolvedClientId;
+  }
+
+  /// Whether a session with this [clientId] already exists locally — the
+  /// idempotency check the standalone-session processor runs before calling
+  /// [create] (docs/watch/44-watch-f6-standalone-plan.md §4.1, D-F6.2): the
+  /// watch retries an un-acked delivery, so the same `standaloneSessionId`
+  /// can arrive more than once and must be a no-op (besides the ack) the
+  /// second time.
+  Future<bool> existsByClientId(String clientId) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.clientId.equals(clientId)))
+        .getSingleOrNull();
+    return row != null;
   }
 
   /// The enrichment fields ([activeCalories], [averageHeartRate],

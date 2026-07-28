@@ -42,6 +42,10 @@ final class WatchBridge: NSObject {
       updateState(call, result: result)
     case "endWorkout":
       endWorkout(call, result: result)
+    case "ackSetLogged":
+      ackSetLogged(call, result: result)
+    case "ackStandaloneSession":
+      ackStandaloneSession(call, result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -122,6 +126,52 @@ final class WatchBridge: NSObject {
     result(nil)
   }
 
+  // Answers a watch `logSet` tap (docs/watch/43-watch-f5-set-logging-plan.md
+  // §4.3, §5.1). Sent as a plain message, not queued via
+  // updateApplicationContext like the state above — an ack has no value once
+  // stale, so if the watch isn't reachable right now it simply times out
+  // watch-side (§7.1) rather than being delivered late.
+  private func ackSetLogged(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+      let sessionClientId = args["sessionClientId"] as? String,
+      let eventId = args["eventId"] as? String,
+      let accepted = args["accepted"] as? Bool
+    else {
+      result(nil)
+      return
+    }
+    if WCSession.default.isReachable {
+      WCSession.default.sendMessage(
+        [
+          "command": "logSetAck", "sessionClientId": sessionClientId, "eventId": eventId,
+          "accepted": accepted,
+        ], replyHandler: nil, errorHandler: nil)
+    }
+    result(nil)
+  }
+
+  // Answers a `standaloneSessionCompleted` delivery (docs/watch/
+  // 44-watch-f6-standalone-plan.md §4.2). No `accepted` field — unlike
+  // ackSetLogged there's no rejection case, the watch's pending-session
+  // store just retries an un-acked delivery regardless of why it wasn't
+  // acked. Also a plain message, not queued: a stale ack has no value, the
+  // watch's own pending-session store (not this ack) is what survives it
+  // being unreachable right now.
+  private func ackStandaloneSession(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+      let standaloneSessionId = args["standaloneSessionId"] as? String
+    else {
+      result(nil)
+      return
+    }
+    if WCSession.default.isReachable {
+      WCSession.default.sendMessage(
+        ["command": "standaloneSessionAck", "standaloneSessionId": standaloneSessionId],
+        replyHandler: nil, errorHandler: nil)
+    }
+    result(nil)
+  }
+
   /// The "last known desired state" snapshot (docs/40-watch-app-plan.md §3,
   /// §D2) — survives the watch being unreachable; delivered whenever it next
   /// connects, unlike `sendMessage`.
@@ -185,10 +235,19 @@ extension WatchBridge: WCSessionDelegate {
     eventSink?(["type": "reachabilityChanged", "reachable": session.isReachable])
   }
 
-  // Watch → phone workout summary (docs/40-watch-app-plan.md §3 "Lezárás",
-  // §5.4). Queued delivery: arrives even if this app wasn't running when the
-  // watch sent it, as long as the delegate was set early — see AppDelegate.
+  // Watch → phone `transferUserInfo` deliveries — workout summary
+  // (docs/40-watch-app-plan.md §3 "Lezárás", §5.4) or a standalone session
+  // (docs/watch/44-watch-f6-standalone-plan.md §4.1). Both are queued:
+  // arrive even if this app wasn't running when the watch sent them, as
+  // long as the delegate was set early — see AppDelegate. Distinguished by
+  // a `type` key: the summary payload never carried one (an older watch
+  // build's queued-but-undelivered summary would still be missing it), so
+  // its *absence* means summary rather than a positive `"summary"` check.
   func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+    if userInfo["type"] as? String == "standaloneSessionCompleted" {
+      eventSink?(["type": "standaloneSession", "payload": userInfo])
+      return
+    }
     guard let sessionClientId = userInfo["sessionClientId"] as? String else { return }
     eventSink?([
       "type": "summary",
@@ -216,6 +275,16 @@ extension WatchBridge: WCSessionDelegate {
       eventSink?(["type": "endRequested", "sessionClientId": sessionClientId, "rpe": message["rpe"]])
     case "startedOnWatch":
       eventSink?(["type": "startedOnWatch", "sessionClientId": sessionClientId])
+    case "logSet":
+      // docs/watch/43-watch-f5-set-logging-plan.md §4.1 — the watch is a
+      // dumb trigger, no exercise/reps/weight on the wire; LogSessionScreen
+      // decides what to log from its own current position.
+      eventSink?([
+        "type": "setLogged",
+        "sessionClientId": sessionClientId,
+        "eventId": message["eventId"],
+        "loggedAtEpochMs": message["loggedAtEpochMs"],
+      ])
     case "liveMetrics":
       eventSink?([
         "type": "liveMetrics",

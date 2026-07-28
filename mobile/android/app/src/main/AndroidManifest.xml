@@ -94,9 +94,12 @@
              first fires the notification itself, the second reschedules the
              repeating alarm after a reboot or app update. -->
         <!-- Wakes even if the Flutter engine isn't running, so a workout
-             summary sent by the watch right as the app was killed still gets
-             buffered (docs/40-watch-app-plan.md §5.4). WatchBridge.kt is the
-             live counterpart used while the engine is up. -->
+             summary or standalone-session delivery sent by the watch right as
+             the app was killed still gets buffered (docs/40-watch-app-plan.md
+             §5.4, docs/watch/44-watch-f6-standalone-plan.md §6/1). Two <data>
+             matches in one filter — Android ORs them, not ANDs — since both
+             paths route to the same service. WatchBridge.kt is the live
+             counterpart used while the engine is up. -->
         <service
             android:name=".PhoneWatchSummaryListenerService"
             android:exported="true">
@@ -106,6 +109,10 @@
                     android:scheme="wear"
                     android:host="*"
                     android:path="/lifey/watch/summary" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:path="/lifey/watch/standaloneSessionCompleted" />
             </intent-filter>
         </service>
         <receiver android:exported="false"

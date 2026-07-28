@@ -21,6 +21,8 @@ class WorkoutSessionState {
     this.restEndsAtEpochMs,
     this.restTotalSeconds,
     this.restRemainingSeconds,
+    this.nextSetWeight,
+    this.nextSetReps,
   });
 
   /// Current (last touched) exercise name; pass a pre-localized fallback
@@ -55,6 +57,19 @@ class WorkoutSessionState {
   /// — the watch anchors it to its own monotonic clock on receipt.
   final int? restRemainingSeconds;
 
+  /// What a watch "+1 set" tap would prefill its adjust stepper with — the
+  /// weight/reps of the row the phone would actually log into
+  /// (docs/watch/48-watch-f5b-set-adjust-plan.md D-F5b.2, §4.2). Null when
+  /// there's nothing to go on (no planned values, no previous performance,
+  /// no earlier done set); the watch then starts from its own default and
+  /// presents it as new data rather than as an adjustment.
+  ///
+  /// Only the watch reads these — the Live Activity / ongoing notification
+  /// ignore them. They are always in **kg**, matching the phone's own
+  /// workout UI, which doesn't convert for `UnitSystem` either (D-F5b.4).
+  final double? nextSetWeight;
+  final int? nextSetReps;
+
   Map<String, dynamic> toJson() => {
         'exerciseName': exerciseName,
         'setsDone': setsDone,
@@ -64,6 +79,8 @@ class WorkoutSessionState {
         'restEndsAtEpochMs': restEndsAtEpochMs,
         'restTotalSeconds': restTotalSeconds,
         'restRemainingSeconds': restRemainingSeconds,
+        'nextSetWeight': nextSetWeight,
+        'nextSetReps': nextSetReps,
       };
 }
 

@@ -32,4 +32,42 @@
     <string name="effort_selector_confirm">Edzés lezárása</string>
     <string name="effort_selector_skip">Kihagyás</string>
     <string name="effort_selector_back">Vissza</string>
+
+    <!-- F5 set logging (docs/watch/43-watch-f5-set-logging-plan.md §3.4) -->
+    <string name="log_set_button">+1 szett</string>
+    <string name="log_set_button_a11y">Egy szett naplózása</string>
+    <string name="log_set_context_format">%1$s · %2$d/%3$d szett</string>
+    <string name="log_set_pending">Naplózás…</string>
+    <string name="log_set_logged">Naplózva</string>
+    <string name="log_set_failed">Nem sikerült — próbáld újra</string>
+    <string name="phone_unreachable">A telefon nem érhető el</string>
+
+    <!-- F6 standalone (docs/watch/44-watch-f6-standalone-plan.md §5) -->
+    <string name="standalone_start_button">Edzés indítása</string>
+    <string name="standalone_start_button_a11y">Edzés indítása az órán</string>
+    <string name="standalone_start_caption">vagy indítsd a telefonon</string>
+    <string name="standalone_picker_title">Indítás</string>
+    <string name="standalone_quick_start">Gyors erőedzés</string>
+    <string name="standalone_quick_caption">Terv nélkül is megy</string>
+    <string name="standalone_empty_hint">A tervek a telefonról szinkronizálódnak</string>
+    <string name="standalone_plan_exercises">%1$d gyakorlat</string>
+    <string name="standalone_badge">Csak óra</string>
+    <string name="active_sets_free_format">%1$d. szett · összesen %2$d ismétlés</string>
+    <string name="sync_pending">Szinkronizálás a telefonra</string>
+    <string name="sync_done">Telefonra szinkronizálva</string>
+    <string name="sync_queue_count">%1$d edzés vár szinkronizálásra</string>
+    <string name="summary_sets_label">szett</string>
+    <string name="summary_title">Edzés mentve</string>
+    <string name="summary_time_label">idő</string>
+    <string name="summary_avg_hr_label">átlag bpm</string>
+    <string name="active_calories_unit">kcal</string>
+
+    <!-- F5b adjust (docs/watch/48-watch-f5b-set-adjust-plan.md §5) -->
+    <string name="log_adjust_title">Módosítás</string>
+    <string name="log_adjust_reps">Ismétlés</string>
+    <string name="log_adjust_weight">Súly</string>
+    <string name="log_adjust_confirm">%1$d ismétlés naplózása</string>
+    <string name="log_adjust_caption_reps">ism. · %1$s kg</string>
+    <string name="log_adjust_caption_weight">kg · %1$d ism.</string>
+    <string name="log_adjust_open_a11y">Ismétlés és súly módosítása</string>
 </resources>

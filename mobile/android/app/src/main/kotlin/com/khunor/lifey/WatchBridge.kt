@@ -15,6 +15,7 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -50,6 +51,8 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "startWorkout" -> startWorkout(call, result)
             "updateState" -> updateState(call, result)
             "endWorkout" -> endWorkout(call, result)
+            "ackSetLogged" -> ackSetLogged(call, result)
+            "ackStandaloneSession" -> ackStandaloneSession(call, result)
             else -> result.notImplemented()
         }
     }
@@ -96,6 +99,47 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
 
         pushState(sessionClientId, title = null, startedAtEpochMs = null, state = null, desiredPhase = "ended")
         sendMessage(COMMAND_END, sessionClientId.toByteArray())
+        result.success(null)
+    }
+
+    /**
+     * Answers a `setLogged` event (docs/watch/43-watch-f5-set-logging-plan.md
+     * §4.3, §5.1). [sessionClientId] is the one the watch tagged the
+     * original `logSet` message with — passed through from Dart rather than
+     * remembered here, keeping this bridge stateless like the rest of it.
+     * Sent as a plain message via [sendMessage] — no `pushState`-style
+     * DataItem fallback, since an ack has no value once stale (the watch
+     * simply times out on its own, §7.1).
+     */
+    private fun ackSetLogged(call: MethodCall, result: MethodChannel.Result) {
+        val args = call.arguments as? Map<*, *> ?: return result.success(null)
+        val sessionClientId = args["sessionClientId"] as? String ?: return result.success(null)
+        val eventId = args["eventId"] as? String ?: return result.success(null)
+        val accepted = args["accepted"] as? Boolean ?: return result.success(null)
+
+        val json =
+            JSONObject().apply {
+                put("sessionClientId", sessionClientId)
+                put("eventId", eventId)
+                put("accepted", accepted)
+            }
+        sendMessage(COMMAND_LOG_SET_ACK, json.toString().toByteArray())
+        result.success(null)
+    }
+
+    /**
+     * Answers a `standaloneSessionCompleted` delivery (docs/watch/
+     * 44-watch-f6-standalone-plan.md §4.2). No `accepted` field — unlike
+     * [ackSetLogged] there's no rejection case, the watch's own
+     * pending-session store just retries an un-acked delivery regardless of
+     * why it wasn't acked.
+     */
+    private fun ackStandaloneSession(call: MethodCall, result: MethodChannel.Result) {
+        val args = call.arguments as? Map<*, *> ?: return result.success(null)
+        val standaloneSessionId = args["standaloneSessionId"] as? String ?: return result.success(null)
+
+        val json = JSONObject().apply { put("standaloneSessionId", standaloneSessionId) }
+        sendMessage(COMMAND_STANDALONE_ACK, json.toString().toByteArray())
         result.success(null)
     }
 
@@ -208,11 +252,18 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "$MESSAGE_PATH_PREFIX/$COMMAND_LIVE_METRICS" -> {
                 emitLiveMetrics(String(messageEvent.data))
             }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_LOG_SET" -> {
+                emitSetLogged(String(messageEvent.data))
+            }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_STANDALONE_SESSION" -> {
+                emitStandaloneSession(String(messageEvent.data))
+            }
             // PhoneWatchSummaryListenerService also receives this same
-            // summary message (manifest-declared, so it fires even if this
-            // MethodChannel-backed listener isn't attached yet) and buffers
-            // it for the next onListen sweep below
-            // (docs/40-watch-app-plan.md §5.4).
+            // summary/standaloneSessionCompleted message (manifest-declared,
+            // so it fires even if this MethodChannel-backed listener isn't
+            // attached yet) and buffers it for the next onListen sweep below
+            // (docs/40-watch-app-plan.md §5.4, docs/watch/
+            // 44-watch-f6-standalone-plan.md §6/1).
         }
     }
 
@@ -272,14 +323,78 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         )
     }
 
+    /**
+     * docs/watch/43-watch-f5-set-logging-plan.md §4.1 — no exercise/reps/
+     * weight on the wire, the watch is a dumb trigger; `LogSessionScreen`
+     * decides what to log from its own current position.
+     */
+    private fun emitSetLogged(logSetJson: String) {
+        val payload = JSONObject(logSetJson)
+        eventSink?.success(
+            mapOf(
+                "type" to "setLogged",
+                "sessionClientId" to payload.optString("sessionClientId"),
+                "eventId" to payload.optString("eventId"),
+                "loggedAtEpochMs" to payload.optLong("loggedAtEpochMs"),
+            ),
+        )
+    }
+
+    /**
+     * docs/watch/44-watch-f6-standalone-plan.md §4.1 — the watch's own
+     * `standaloneSessionId` becomes the resulting session's `clientId`
+     * (idempotency key, D-F6.3); no exercise/reps mapping happens here, that
+     * belongs to the Dart-side processor. `healthWorkoutId` is always null
+     * on Android — the watch never touches Health Connect, the phone does
+     * (D-F6.5), same as [emitSummary].
+     */
+    private fun emitStandaloneSession(standaloneSessionJson: String) {
+        val payload = JSONObject(standaloneSessionJson)
+        val setsArray = payload.optJSONArray("sets") ?: JSONArray()
+        val sets =
+            (0 until setsArray.length()).map { i ->
+                val set = setsArray.getJSONObject(i)
+                mapOf(
+                    "loggedAtEpochMs" to set.optLong("loggedAtEpochMs"),
+                    "reps" to set.optInt("reps"),
+                    "exerciseIndex" to if (set.has("exerciseIndex")) set.optInt("exerciseIndex") else null,
+                )
+            }
+        eventSink?.success(
+            mapOf(
+                "type" to "standaloneSession",
+                "payload" to
+                    mapOf(
+                        "standaloneSessionId" to payload.optString("standaloneSessionId"),
+                        "templateId" to
+                            if (payload.has("templateId")) payload.optString("templateId") else null,
+                        "startedAtEpochMs" to payload.optLong("startedAtEpochMs"),
+                        "endedAtEpochMs" to payload.optLong("endedAtEpochMs"),
+                        "rpe" to if (payload.has("rpe")) payload.optInt("rpe") else null,
+                        "sets" to sets,
+                        "activeCalories" to
+                            if (payload.has("activeCalories")) payload.optDouble("activeCalories") else null,
+                        "averageHeartRate" to
+                            if (payload.has("averageHeartRate")) payload.optDouble("averageHeartRate")
+                            else null,
+                        "healthWorkoutId" to null,
+                    ),
+            ),
+        )
+    }
+
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         eventSink = events
         // The moment Dart starts listening (every cold start — see
-        // WorkoutResumePrompt) is also the sweep point for summaries that
-        // arrived while the Flutter engine wasn't running
-        // (docs/40-watch-app-plan.md §5.4).
+        // WorkoutResumePrompt) is also the sweep point for summaries and
+        // standalone sessions that arrived while the Flutter engine wasn't
+        // running (docs/40-watch-app-plan.md §5.4, docs/watch/
+        // 44-watch-f6-standalone-plan.md §6/1).
         for (buffered in WatchSummaryBuffer.drain(appContext)) {
             emitSummary(buffered)
+        }
+        for (buffered in WatchStandaloneSessionBuffer.drain(appContext)) {
+            emitStandaloneSession(buffered)
         }
     }
 
@@ -302,6 +417,10 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_STARTED_ON_WATCH = "startedOnWatch"
         private const val COMMAND_SUMMARY = "summary"
         private const val COMMAND_LIVE_METRICS = "liveMetrics"
+        private const val COMMAND_LOG_SET = "logSet"
+        private const val COMMAND_LOG_SET_ACK = "logSetAck"
+        private const val COMMAND_STANDALONE_SESSION = "standaloneSessionCompleted"
+        private const val COMMAND_STANDALONE_ACK = "standaloneSessionAck"
     }
 }
 

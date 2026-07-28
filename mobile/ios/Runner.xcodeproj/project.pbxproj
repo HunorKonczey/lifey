@@ -31,6 +31,9 @@
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		80085E511765919A329035F2 /* LifeyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 6E1295B694424A02BE7B0F83 /* LifeyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8F5C79780C88D2D334880F4E /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9579E90AC7DE881411D162D8 /* SummaryView.swift */; };
+		88ED2662CC0E4020525BB1DD /* StandalonePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A28464D6E07EF14CEF283772 /* StandalonePickerView.swift */; };
+		FD1BEC0458A6625490415513 /* StandaloneSessionPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE875E9CE92E980591E3ADF7 /* StandaloneSessionPayload.swift */; };
+		B93497364237CFA11B59135C /* StandaloneSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C787B5203B6EC2585FB7EB69 /* StandaloneSessionStore.swift */; };
 		92D6C4D89BCE9885B1286ACA /* DynamicSizing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F328E47DE6754604F801D76F /* DynamicSizing.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
@@ -148,12 +151,15 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9D91B8274CCBA82E8687CB39 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		A28464D6E07EF14CEF283772 /* StandalonePickerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StandalonePickerView.swift; sourceTree = "<group>"; };
 		A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
 		AB12CD34EF5678901234567 /* AppleMusicBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppleMusicBridge.swift; sourceTree = "<group>"; };
 		ABDF281739DB260B7315FE49 /* TodaySummaryWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TodaySummaryWidget.swift; sourceTree = "<group>"; };
 		B199F30DFF924EE0928C6D21 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B3EC32BB8CB246A8BE328032 /* WorkoutManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
+		BE875E9CE92E980591E3ADF7 /* StandaloneSessionPayload.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StandaloneSessionPayload.swift; sourceTree = "<group>"; };
 		C172D655068797390A33BC32 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C787B5203B6EC2585FB7EB69 /* StandaloneSessionStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StandaloneSessionStore.swift; sourceTree = "<group>"; };
 		C5B4A3928170F6E5D4C3B2A1 /* PushChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PushChannel.swift; sourceTree = "<group>"; };
 		CFF035215C8B3D9E96C6BB53 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D6938B0E06EA4E5FB6C769C8 /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
@@ -216,6 +222,7 @@
 			children = (
 				E42293D98E4942DCB04B165E /* ActiveWorkoutView.swift */,
 				216887D75EC840DFA5F1098B /* IdleView.swift */,
+				A28464D6E07EF14CEF283772 /* StandalonePickerView.swift */,
 				15894AC08BE110C70266202E /* EndingView.swift */,
 				F3DF1BAA0E811718B4315813 /* EffortSelectorView.swift */,
 				9579E90AC7DE881411D162D8 /* SummaryView.swift */,
@@ -348,6 +355,8 @@
 				B3EC32BB8CB246A8BE328032 /* WorkoutManager.swift */,
 				F328E47DE6754604F801D76F /* DynamicSizing.swift */,
 				12F2C6137F4746E0A1818C6D /* PhoneConnector.swift */,
+				BE875E9CE92E980591E3ADF7 /* StandaloneSessionPayload.swift */,
+				C787B5203B6EC2585FB7EB69 /* StandaloneSessionStore.swift */,
 				2FE3F11E4B1E48CF97E6DD86 /* Views */,
 				3CF41998C8934E37E77E6F52 /* Theme */,
 				D6938B0E06EA4E5FB6C769C8 /* Localizable.xcstrings */,
@@ -669,8 +678,11 @@
 				1B0DA9772E564056B0723B13 /* WorkoutManager.swift in Sources */,
 				92D6C4D89BCE9885B1286ACA /* DynamicSizing.swift in Sources */,
 				36AABD05BF944D39BFA79582 /* PhoneConnector.swift in Sources */,
+				FD1BEC0458A6625490415513 /* StandaloneSessionPayload.swift in Sources */,
+				B93497364237CFA11B59135C /* StandaloneSessionStore.swift in Sources */,
 				3BA9433482684EBBA84C44CA /* ActiveWorkoutView.swift in Sources */,
 				15C0D50A4AAE4258A9903997 /* IdleView.swift in Sources */,
+				88ED2662CC0E4020525BB1DD /* StandalonePickerView.swift in Sources */,
 				F4608790FA1570EE9F3CE57B /* EndingView.swift in Sources */,
 				C4CBB17F6045BBECC9D48179 /* EffortSelectorView.swift in Sources */,
 				8F5C79780C88D2D334880F4E /* SummaryView.swift in Sources */,
