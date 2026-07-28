@@ -63,11 +63,27 @@ object SummarySender {
      * dedup (§4.2) and to correlate the eventual `logSetAck` back to this
      * specific tap.
      */
-    suspend fun sendLogSet(context: Context, sessionClientId: String, eventId: String, loggedAtEpochMs: Long) {
+    /**
+     * [reps]/[weight] are what the adjust stepper produced (docs/watch/
+     * 48-watch-f5b-set-adjust-plan.md §4.1) — both null for a plain F5a
+     * one-tap log, and `putOpt` then omits the keys entirely rather than
+     * writing JSON nulls, so the phone's `has()` guard reads them as "no
+     * values" (D-F5b.6).
+     */
+    suspend fun sendLogSet(
+        context: Context,
+        sessionClientId: String,
+        eventId: String,
+        loggedAtEpochMs: Long,
+        reps: Int? = null,
+        weight: Double? = null,
+    ) {
         val payload = JSONObject().apply {
             put("sessionClientId", sessionClientId)
             put("eventId", eventId)
             put("loggedAtEpochMs", loggedAtEpochMs)
+            putOpt("reps", reps)
+            putOpt("weight", weight)
         }
         send(context, "$MESSAGE_PATH_PREFIX/logSet", payload)
     }

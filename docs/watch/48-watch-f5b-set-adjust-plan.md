@@ -1,6 +1,6 @@
 # 48 – F5b terv: Reps/súly állítása a watchról
 
-Státusz: **implementáció folyamatban — S1–S3 kész (a teljes közös Dart-előfeltétel), 2026-07-26.** A terv teljes, minden döntés lezárva; a lépéslista a §13-ban. Innentől a két natív ág **párhuzamosan vihető**: iOS S4–S8, Android S9–S13.
+Státusz: **implementáció folyamatban — S1–S12 kész, 2026-07-26.** A terv teljes, minden döntés lezárva; a lépéslista a §13-ban. Az **iOS-ág teljesen kész** (S4–S8, eszközön visszaigazolva); az **Android-ág is kódszinten teljes** (S9–S12); az S14 regressziós köre lefutott (zöld); hátra: S13 (Android élő kézi végpróba), utána az S14 formális lezárása.
 Az előfeltétel **teljesült**: az F5a kód kész (43-doc §11 S1–S13) **és** a kézi végpróbák (S9 iOS, S14 Android) lefutottak — a fejlesztő 2026-07-26-án eszközön visszaigazolta, hogy az egy-tapos flow működik. A §11 nyitott kérdései **mind eldöntve** (2026-07-26); designer-jóváhagyásra váró tétel nem maradt.
 
 **Az F5b közvetlen kiváltó oka** — az F5a eszközös használata során: ha a gyakorlatnak nincs több kitöltetlen tervezett sora (vagy terv nélkül, ad-hoc került fel), akkor minden watch-tap egy **üres** szettet rögzít. Ez az F5a-ban szándékos és dokumentált viselkedés (43-doc §5.2/4 — a watch nem küld értéket, a telefon azt logolja, ami a sorban van), de a gyakorlatban kevéssé hasznos; ezt a hiányt zárja be ez a terv.
@@ -418,7 +418,7 @@ S1 (kulcsok, közös)
 
 ---
 
-### S4 — iOS/telefon: `logSet` értékek átengedése
+### S4 — iOS/telefon: `logSet` értékek átengedése — **kész, 2026-07-26**
 
 **Fájl:** `mobile/ios/Runner/WatchBridge.swift`
 
@@ -428,7 +428,7 @@ S1 (kulcsok, közös)
 
 ---
 
-### S5 — watchOS: küldés + a prefill fogadása
+### S5 — watchOS: küldés + a prefill fogadása — **kész, 2026-07-26**
 
 **Fájl:** `mobile/ios/LifeyWatch/PhoneConnector.swift`, `WorkoutManager.swift`
 
@@ -440,7 +440,7 @@ S1 (kulcsok, közös)
 
 ---
 
-### S6 — watchOS: `WorkoutManager` adjust-állapotgép
+### S6 — watchOS: `WorkoutManager` adjust-állapotgép — **kész, 2026-07-26**
 
 **Fájl:** `mobile/ios/LifeyWatch/WorkoutManager.swift`
 
@@ -450,7 +450,7 @@ S1 (kulcsok, közös)
 
 ---
 
-### S7 — watchOS: adjust-nézet + long-press reveal
+### S7 — watchOS: adjust-nézet + long-press reveal — **kész, 2026-07-26**
 
 **Fájl:** `mobile/ios/LifeyWatch/Views/ActiveWorkoutView.swift`
 
@@ -460,7 +460,7 @@ S1 (kulcsok, közös)
 
 ---
 
-### S8 — iOS: kézi végpróba
+### S8 — iOS: kézi végpróba — **kész, 2026-07-26** (fejlesztői eszközös visszaigazolás)
 
 **Teendő:** a §9 iOS-listája.
 
@@ -468,7 +468,7 @@ S1 (kulcsok, közös)
 
 ---
 
-### S9 — Android/telefon: `logSet` értékek átengedése
+### S9 — Android/telefon: `logSet` értékek átengedése — **kész, 2026-07-26**
 
 **Fájl:** `mobile/android/app/src/main/kotlin/com/khunor/lifey/WatchBridge.kt`
 
@@ -478,7 +478,7 @@ S1 (kulcsok, közös)
 
 ---
 
-### S10 — Wear: küldés + a prefill fogadása
+### S10 — Wear: küldés + a prefill fogadása — **kész, 2026-07-26**
 
 **Fájlok:** `.../SummarySender.kt`, `.../PhoneListenerService.kt`, `.../SessionStateHolder.kt`
 
@@ -488,7 +488,7 @@ S1 (kulcsok, közös)
 
 ---
 
-### S11 — Wear: adjust-állapotgép + timer/haptika
+### S11 — Wear: adjust-állapotgép + timer/haptika — **kész, 2026-07-26**
 
 **Fájlok:** `.../SessionStateHolder.kt`, `.../ExerciseService.kt`
 
@@ -498,7 +498,7 @@ S1 (kulcsok, közös)
 
 ---
 
-### S12 — Wear: adjust-overlay + long-press
+### S12 — Wear: adjust-overlay + long-press — **kész, 2026-07-26**
 
 **Fájl:** `.../ui/ActiveWorkoutScreen.kt`
 
@@ -516,10 +516,11 @@ S1 (kulcsok, közös)
 
 ---
 
-### S14 — Közös zárás
+### S14 — Közös zárás — **regressziós kör kész, 2026-07-26** (az S13 élő teszt után zárható le teljesen)
 
 **Teendő:**
-- Regressziós kör mindkét platformon: az **F5a egy-tapos útja bitre változatlan** (érték nélkül ugyanaz a sor, ugyanaz az ack-lánc).
-- `docs/watch/40-watch-app-plan.md` F5b-sorának státusza.
-- Ennek a docnak a fejlécében: implementáció kész dátuma + az eszközön hozott finomítások (3 s dismiss, 2,5 kg lépés, tick-haptika erőssége).
+- ✅ **Regressziós kör mindkét platformon.** `flutter test`: **372 zöld / 1 bukó** — a bukó a `stat_chart_data_test.dart` dátumfüggő DST-artefaktja, ami `origin/main`-nel bitre azonos és a watch-munkától független (44-doc §11/7). `flutter analyze` tiszta; `:app:compileDebugKotlin` + `:wear:compileDebugKotlin` → `BUILD SUCCESSFUL`; teljes `LifeyWatch` target `-warnings-as-errors` típusellenőrzés → exit 0; a `Runner` target típusellenőrzésében nincs más hiba, mint a már ismert, F5b-független `WorkoutActivityAttributes` csoport.
+- ✅ **Az F5a egy-tapos útja bitre változatlan**, kódból igazolva: iOS-en a `handleTap()` a paraméter nélküli `workoutManager.logSet()`-et hívja, Wearen a `SummarySender.sendLogSet(...)` hívás `reps`/`weight` nélkül megy — mindkettőn a defaultok `null`-ok, tehát a payload ugyanaz, mint F5a-ban, és a telefon a `_handleRowMarkDone` ágra esik.
+- ✅ **Lokalizációs paritás**: az F5a+F5b 14 kulcsa karakterre egyezik a három fájlban (iOS/HU/EN), az `.xcstrings` érvényes JSON.
+- ⏳ **Hátra:** az S13 (Android élő kézi végpróba) után az eszközön hozott finomítások rögzítése (3 s dismiss, 2,5 kg lépés, tick-haptika erőssége) és a `40-watch-app-plan.md` F5b-sorának „✅ Kész”-re állítása.
 - Ha az F6b-t elkezdjük: a stepper-komponens átvétele a standalone logba (D-F5b.8, 44-doc §13/T5).

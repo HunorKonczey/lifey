@@ -1,6 +1,6 @@
 # 49 – F6b terv: Edzésterv-szinkron a watchra
 
-Státusz: **tervezés — kódolás nem indult.** Az F6a (44-doc) mindkét platformon kódszinten kész (S1–S17), az élő kézi végpróba (S18) és a közös zárás (S19) még nyitott. Az F6b **T5/T6/T7** lépései emiatt, és egy külön ok miatt is (D-F6b.8), **blokkoltak** — lásd §11.
+Státusz: **implementáció folyamatban — T1 kész, T2.1 kész, 2026-07-28.** Az F6a (44-doc) mindkét platformon kódszinten kész (S1–S17), az élő kézi végpróba (S18) és a közös zárás (S19) még nyitott. Az F6b **T5/T6/T7** lépései emiatt, és egy külön ok miatt is (D-F6b.8), **blokkoltak** — lásd §11. A blokkolatlan T1–T4 iterációkra bontva a §12-ben; következő: **T2.2** (pusher controller + app-root bekötés).
 
 Kapcsolódó dokumentumok:
 - [44-watch-f6-standalone-plan.md](44-watch-f6-standalone-plan.md) — az F6a terv és megvalósítás; ennek §13-a adta az eredeti, vázlatos T1–T6 listát, amit ez a doc pontosít és bővít. A D-F6.1–D-F6.9 alapdöntések (watch = mester standalone alatt, a séma nem bővül új mezővel, stb.) **változatlanul érvényesek** F6b-re is.
@@ -300,6 +300,83 @@ T1 (Dart: szerializáció) ─▶ T2 (push-pontok)
 
 ---
 
-## 12. Fejlesztési lépések (T1–T8)
+## 12. Fejlesztési lépések
 
-*(Részletes S-szintű bontás — a 44-doc §12 és a 48-doc §13 mintájára — csak azután íródik meg, hogy a §11/1 designer-döntés megszületett; addig a fenti T-szintű bontás a mérvadó munkaegység.)*
+A **T5–T7** S-szintű bontása csak a §11/1 designer-döntés után íródik meg (addig felelősséggel nem bontható). A **T1–T4** viszont blokkolatlan, ezért iterációkra bontva itt következik — a 44-doc §12 és a 48-doc §13 mintájára: minden iteráció önmagában fordul, tesztelhető, és nem töri a meglévő F6a-viselkedést.
+
+### T1 — Dart: szerializáció és a szolgáltatás-metódus
+
+Három iteráció, szigorúan egymásra épülve. Mindhárom **tiszta Dart**, natív oldal nélkül — a végén a telefon *tudna* szinkronizálni, de még semmi nem hívja meg (a push-pontok a T2 dolga), tehát **viselkedésváltozás nincs**.
+
+#### T1.1 — A „legutóbb használt tervek” szelektor *(tiszta függvény)* — **kész, 2026-07-28**
+
+**Fájlok:** új `mobile/lib/features/workouts/application/watch_template_sync.dart`, új `mobile/test/features/workouts/application/watch_template_sync_test.dart`
+
+**Teendő:** `recentlyUsedTemplateClientIds(List<WorkoutSession> sessionsDesc, {int max = 5})` a D-F6b.1 szerint — a `recommendedTemplateProvider` `predictNextTemplateClientId`-jának egyszerűbb testvére: dedup, `inProgress`-sessionök kihagyása, sorrend-tartás (legutóbb használt elöl), `max`-nál elvágva. Semmi Riverpod, semmi I/O.
+
+**Megvalósítás:** `LinkedHashSet` (a Dart `<String>{}` alapértelmezése) adja a dedupot **és** a beszúrási sorrend megőrzését egyszerre, így egy ismétlődő terv a **frissebb** használatának pozícióját tartja meg, nem csúszik le a régebbihez. A `max`-ra futás a **különböző** tervekre számol (a `Set.length`-re, nem a végigjárt sessionökre) — hat session három tervvel nem vág le semmit.
+
+**Ellenőrzés (elvégezve):** `flutter test .../watch_template_sync_test.dart` → **8/8 zöld**; `flutter analyze` a két új fájlra → **No issues found**. Lefedett ágak: üres history, sorrend-tartás, ismétlődő terv, `templateClientId == null` (üres edzés), futó session kihagyása, `max`-on túli vágás, „különböző tervek számítanak a `max`-ba, nem a sessionök”, egyedi `max`. Viselkedésváltozás nincs — a függvénynek egyelőre nincs hívója (a szerializáló a T1.2, a push-pontok a T2).
+
+#### T1.2 — Payload-modell + a szerializáló — **kész, 2026-07-28**
+
+**Fájlok:** ugyanaz a `watch_template_sync.dart` + teszt
+
+**Teendő:** a §4.1 payload-alakja Dart-modellként (`WatchTemplatePayload`/`WatchTemplateExercisePayload` + `toJson`), és a szerializáló, ami a **D-F6b.4** rest-resolválást (`Exercise.defaultRestSeconds` → `UserSettings.defaultRestSeconds`) és a **D-F6b.6** kettős vágást (max 5 terv, tervenként max 12 gyakorlat) egy helyen végzi. Bemenete kész adat (`List<WorkoutTemplate>`, `List<Exercise>`, `UserSettings`, a T1.1 id-listája) — **nem** olvas repositoryból, hogy a `StandaloneSessionProcessor` S5-ös mintája szerint tesztelhető maradjon.
+
+**Megvalósítás és a menet közben hozott apró döntések:**
+- `restSeconds` a payloadban **nem nullable** — a resolválás küldés előtt megtörténik, mert a watch sem az `Exercises` táblát, sem a `UserSettings`-et nem ismeri (D-F6b.4). A `targetSets` viszont nullable maradt, és a `toJson` **kihagyja**, ha null: mindkét natív híd (`toDataMap()`, `sanitizedForPropertyList`) amúgy is kiszűri a nullokat, tehát az explicit null csak zaj lenne.
+- **Három csendes eldobási ág** (mind normális eset, nem hiba): (1) olyan id, amihez már nincs terv (a user törölte, de a sessionjei még hivatkoznak rá, tehát a T1.1 továbbra is visszaadja); (2) olyan gyakorlat, ami nincs az `exercises` listában (jellemzően folyamatban lévő törlés — az `ExerciseRepository.watchAll` már kiszűri); (3) olyan terv, ami a szűrés után **egyetlen** gyakorlat nélkül maradna — üres tervet indítani az órán zsákutca, arra a „Quick strength” kártya a jobb válasz. Ez a harmadik ág a doc szövegén túli, menet közben hozott döntés.
+- A `maxTemplates` a szerializálóban is ott van, **nem** csak a T1.1 szelektorban: a payload-méret (D-F6b.6 valódi motivációja) *wire*-szintű aggály, tehát a wire-payload építője kell garantálja, bárki is hívja. Az eldobott tervek **nem fogyasztják** a keretet (a `payloads.length`-re számol, nem a végigjárt id-kre) — külön tesztelve.
+- A hosszú terv **vágódik, nem esik ki** — egy 20 gyakorlatos terv is hasznos, a picker `standalone_plan_exercises` száma ilyenkor a levágott hosszt mutatja, ami pontosan az, amit a watch ténylegesen tárol.
+
+**Ellenőrzés (elvégezve):** `flutter test .../watch_template_sync_test.dart` → **19/19 zöld** (8 a T1.1-ből + 11 új); `flutter analyze` a két fájlra → **No issues found**. Lefedve: recency-sorrend győz az ábécés `templates`-listán, per-gyakorlat override, account-default fallback, `toJson` teljes alakja (a `targetSets` kihagyásával együtt), mindhárom eldobási ág, 20→12 vágás, terv-keret túllépése, „eldobott tervek nem fogyasztják a keretet”, üres bemenet. Viselkedésváltozás nincs — a szerializálónak még nincs hívója (a service-metódus a T1.3, a push-pontok a T2).
+
+#### T1.3 — `WatchWorkoutService.syncTemplates(...)` — **kész, 2026-07-28**
+
+**Fájlok:** `mobile/lib/core/watch/watch_workout_service.dart`, `mobile/test/core/watch/watch_workout_service_test.dart`
+
+**Teendő:** új `syncTemplates(List<WatchTemplatePayload> templates)` a `startWorkout`/`updateState` mintájára — `_channel.invokeMethod('syncTemplates', {...})`, `isAvailable`-guard, best-effort `try/catch`. A natív oldalon még **nincs** handler (az a T3) — a `catch` pont ezt nyeli el, ahogy minden más metódusnál is a bevezetés pillanatában.
+
+**Megvalósítás és a menet közben hozott apró döntések:**
+- **A service a tipizált modellt kapja**, nem előre szerializált mapet, és maga hívja a `toJson`-t — pontosan a `startWorkout(state: WorkoutSessionState)` → `'state': state.toJson()` precedense. Ez egy `core/` → `features/` importot jelent (`WatchTemplatePayload`), ami **bevett ebben a kódbázisban** (pl. `core/home_screen_widget/widget_snapshot_writer.dart`, `core/health/step_goal_notifier.dart`), nem réteg-sértés.
+- **Az üres lista is kimegy**, nem ugorjuk át a hívást: pontosan így kapja meg az óra, hogy ürítse a cache-ét, ha a usernek épp az utolsó terve is törlődött. (Ha skippelnénk, az óra örökre a régi listát mutatná.)
+- **`syncedAtEpochMs` a telefon órájáról** — ugyanaz a döntés, mint a D-F6.6-nál a session-időknél: a két eszköz fali órája eltérhet, és a telefon az autoritás arra, mikor publikálta ezt a listát. A metóduson belül generálódik (nem paraméter) — a teszt ezért `greaterThanOrEqualTo(before)`-ral ellenőrzi, nem fix értékkel.
+
+**Ellenőrzés (elvégezve):** `flutter test .../watch_workout_service_test.dart` → **25/25 zöld** (21 meglévő + 4 új: teljes payload + óra-bélyeg, üres lista is kimegy, `isAvailable: false` no-op, `MissingPluginException` elnyelése). `flutter analyze` a három érintett fájlra → **No issues found**. **Teljes regresszió:** `flutter test` → **372 zöld / 1 bukó**, a bukó a 44-doc §11/7-ben már rögzített, F6-tól független `stat_chart_data_test.dart` DST-artefakt (a T1 előtti alapállapot ugyanez az egy bukó volt). Viselkedésváltozás nincs — a metódusnak még nincs hívója (push-pontok: T2), és natív handler sincs hozzá (T3).
+
+**T1 ezzel lezárva**: a telefon *tudna* szinkronizálni (szelektor → szerializáló → csatorna-hívás), de még semmi nem hívja meg.
+
+### T2 — Push-pontok: **reaktív derivált állapot**, nem kézzel elhelyezett hívások
+
+**Megközelítés-váltás a §4.3/§5-höz képest (2026-07-28).** Az eredeti szöveg „push-pontokat” írt elő: app-indulás + terv mentés/módosítás/törlés, a `WorkoutTemplateController` mutációiba kötve. A T1 lezárása után ez **rosszabb megoldásnak látszik**, három okból:
+
+1. **A §4.3 maga is amiatt szorult javításra**, hogy az eredeti T1-vázlat lefelejtette a *törlést* — pontosan az a hibaosztály, amit a kézzel elhelyezett hívások termelnek. Ugyanez a csapda még legalább négyszer ott van: a szerver-pull is módosíthat tervet (`refresh()`/`pullAll()`), egy **gyakorlat átnevezése** megváltoztatja a payload `name` mezőjét, a **rest-beállítás** módosítása a `restSeconds`-öt, egy **befejezett edzés** pedig magát a sorrendet (D-F6b.1 recency). Nyolc-tíz hívási pontot kézzel karbantartani garantáltan elavul.
+2. A kódbázisban **van bevált minta pontosan erre**: a `WidgetSnapshotController` (`core/home_screen_widget/`) ugyanezt a feladatot oldja meg a home-screen widgetre — `ref.listen` a forrás-providerekre, debounce, app-root-on `ref.watch`-csal életben tartva (`app.dart:54`). Az F6b-nek nincs oka ettől eltérni.
+3. Reaktívan az **app-indulás** sem külön eset: a provider első kibocsátása maga a kezdeti push.
+
+**Következmény**: a §4.3 „push-pontok” listája továbbra is *leírja*, mikor kell szinkronizálni — de nem hívási helyekként, hanem a derivált állapot bemeneteiként, amiket a T2.1 provider figyel. A `watchWorkoutEnabled` kapuzás is ide kerül (a payload üres, ha a kapcsoló ki van kapcsolva), nem minden hívási helyre külön.
+
+#### T2.1 — A „mi legyen most az órán” derivált provider — **kész, 2026-07-28**
+
+**Fájlok:** `mobile/lib/features/workouts/application/watch_template_sync.dart`, teszt ugyanott
+
+**Teendő:** `watchTemplateSyncPayloadProvider` — `Provider<List<WatchTemplatePayload>>`, ami a négy forrást (`workoutSessionControllerProvider`, `workoutTemplateControllerProvider`, `exerciseControllerProvider`, `settingsControllerProvider`) figyeli, és a T1.1 + T1.2 függvényeket futtatja rájuk. `watchWorkoutEnabled == false` → üres lista. Bármelyik forrás még tölt (`AsyncValue.value == null`) → üres lista (nem küldünk fél-adatot). **Semmilyen mellékhatás** — ez tisztán derivált állapot, a tényleges push a T2.2.
+
+**Megvalósítás:** a `settings` olvasása **előre került** a másik három elé, hogy a `watchWorkoutEnabled == false` ág azonnal kilépjen — kikapcsolt watch-forgalomnál a provider így a session-/template-/exercise-streamekre rá sem iratkozik. Mindkét üres-lista ág (kapu kikapcsolva, ill. valamelyik forrás tölt) **ugyanazt jelenti a watchnak, mint a „nincs egy terved sem”**: ürítsd a cache-t — ez a T1.3-ban rögzített „az üres lista is kimegy” döntéssel együtt konzisztens.
+
+**Teszt-harness tanulság:** a `ProviderContainer`-es teszteknél nem elég a `settingsControllerProvider.future`-t bevárni — mind a négy forrás külön `Stream`, és a payload csak akkor áll össze, ha mindegyik szállított. A harness ezért egy `settle()` closure-t ad vissza a containerrel együtt, ami **pontosan azokat** a forrásokat várja be, amelyek ténylegesen emittálnak; így a „valamelyik forrás tölt” eset úgy áll ellenőrzés alatt, hogy a **többi már feloldódott** — nem trivális zöld amiatt, hogy még semmi nem érkezett meg.
+
+**Ellenőrzés (elvégezve):** `flutter test .../watch_template_sync_test.dart` → **24/24 zöld** (19 a T1-ből + 5 új); `flutter analyze` a két fájlra → **No issues found**. Lefedve: mind a négy forrás összeépítése (recency-sorrend a sessionökből, név/rest a gyakorlatokból), kikapcsolt `watchWorkoutEnabled`, mindhárom „forrás tölt” ág külön-külön, nincs egyetlen terv sem, és a törölt-de-history-ban-élő terv eldobása végponttól végpontig. Viselkedésváltozás nincs — a providert még senki nem figyeli (az a T2.2).
+
+#### T2.2 — A pusher controller + app-root bekötés
+
+**Fájlok:** új `mobile/lib/core/watch/watch_template_sync_controller.dart` (a `WidgetSnapshotController` mintájára), `mobile/lib/app.dart`, teszt
+
+**Teendő:** `ref.listen` a T2.1 providerre, debounce (a widget-controller 2 s-ához hasonlóan), **dedup** (csak akkor hív `syncTemplates`-et, ha a szerializált payload ténylegesen változott az utoljára kiküldötthöz képest — a widget-writer nem dedupol, mert lokális prefs-be írni ingyen van, egy watch-push viszont nem), majd `WatchWorkoutService.syncTemplates(...)`. `app.dart`-ban egy `ref.watch(...)` sor.
+
+**Ellenőrzés:** `flutter test` — fake service-szel: első kibocsátás push-ol, változatlan újrakibocsátás **nem**, valódi változás igen; `flutter analyze` tiszta.
+
+### T3–T4
+
+*(Iterációkra bontásuk a T2 lezárása után.)*

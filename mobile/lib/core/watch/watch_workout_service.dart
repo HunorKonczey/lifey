@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/workouts/application/watch_template_sync.dart' show WatchTemplatePayload;
 import '../workout_session_notifier/workout_session_notifier_service.dart' show WorkoutSessionState;
 
 /// Enrichment payload a watch app sends back once its side of a workout ends
@@ -393,6 +394,35 @@ class WatchWorkoutService {
       });
     } catch (_) {
       // Best-effort, see class doc.
+    }
+  }
+
+  /// Pushes the user's most recent templates to the watch's standalone picker
+  /// (docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T1.3). Build
+  /// [templates] with `buildWatchTemplateSync` — it owns the truncation and
+  /// rest-resolution rules (D-F6b.4, D-F6b.6) this method deliberately knows
+  /// nothing about.
+  ///
+  /// Fire-and-forget, like every other call here: there's no ack, and a
+  /// missed push simply leaves the watch on its previous cache until the next
+  /// push point (§4.3). An **empty** [templates] list is still sent rather
+  /// than skipped — that's how a watch whose last template was just deleted
+  /// gets told to clear its cache.
+  ///
+  /// [syncedAtEpochMs] is stamped from the *phone's* clock, the same choice
+  /// D-F6.6 made for session times: the two devices' wall clocks can differ,
+  /// and the phone is the authority on when it published this list.
+  Future<void> syncTemplates(List<WatchTemplatePayload> templates) async {
+    if (!isAvailable) return;
+    try {
+      await _channel.invokeMethod('syncTemplates', {
+        'syncedAtEpochMs': DateTime.now().millisecondsSinceEpoch,
+        'templates': [for (final template in templates) template.toJson()],
+      });
+    } catch (_) {
+      // Best-effort, see class doc — on iOS/Android alike the native handler
+      // only lands in T3, so until then this swallows a MissingPluginException
+      // exactly the way every other method here did when it was introduced.
     }
   }
 }

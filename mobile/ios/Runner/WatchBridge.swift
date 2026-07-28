@@ -276,14 +276,20 @@ extension WatchBridge: WCSessionDelegate {
     case "startedOnWatch":
       eventSink?(["type": "startedOnWatch", "sessionClientId": sessionClientId])
     case "logSet":
-      // docs/watch/43-watch-f5-set-logging-plan.md §4.1 — the watch is a
-      // dumb trigger, no exercise/reps/weight on the wire; LogSessionScreen
-      // decides what to log from its own current position.
+      // The watch never says *which* exercise/row to log — LogSessionScreen
+      // decides that from its own current position
+      // (docs/watch/43-watch-f5-set-logging-plan.md §4.1). It may, however,
+      // carry the values the user dialled in on its adjust stepper
+      // (docs/watch/48-watch-f5b-set-adjust-plan.md §4.1): `reps`/`weight`
+      // are absent for a plain F5a one-tap log, and the Dart side treats a
+      // missing (or half-filled) pair as "no values" — D-F5b.6.
       eventSink?([
         "type": "setLogged",
         "sessionClientId": sessionClientId,
         "eventId": message["eventId"],
         "loggedAtEpochMs": message["loggedAtEpochMs"],
+        "reps": message["reps"],
+        "weight": message["weight"],
       ])
     case "liveMetrics":
       eventSink?([

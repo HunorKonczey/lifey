@@ -78,6 +78,11 @@ class ExerciseService : Service() {
     // a confirm/fail haptic + settle-back-to-Ready.
     private var logSetJob: Job? = null
 
+    // The adjust stepper's idle-dismiss timer (docs/watch/
+    // 48-watch-f5b-set-adjust-plan.md D-F5b.7) — same "lives on the service,
+    // not the screen" treatment as the jobs above.
+    private var logAdjustIdleJob: Job? = null
+
     // SUMMARY auto-dismiss for a standalone session (docs/watch/
     // 44-watch-f6-standalone-plan.md D-F6.7, mirrors iOS's
     // scheduleSummaryAutoDismiss) — scheduled here, not the Compose UI, so
@@ -151,6 +156,24 @@ class ExerciseService : Service() {
         // haptic above — see [logSetJob].
         scope.launch {
             SessionStateHolder.logSetState.collect { state -> scheduleLogSetTransition(state) }
+        }
+        // The adjust stepper's idle-dismiss timer and per-step haptic live
+        // here rather than on the Compose screen for the same reason as the
+        // rest/log-set jobs above (docs/watch/48-watch-f5b-set-adjust-plan.md
+        // §6.2): dropping the UI mid-adjust must not strand the timer.
+        scope.launch {
+            var previousValues: Pair<Int, Double>? = null
+            SessionStateHolder.logAdjustState.collect { state ->
+                scheduleLogAdjustIdleDismiss(state)
+                val values = state?.let { it.reps to it.weight }
+                // Tick only on a real value change *within* an open stepper —
+                // not when it opens (previous == null) or closes (values ==
+                // null), and not on a bare field toggle.
+                if (previousValues != null && values != null && values != previousValues) {
+                    vibrateLogAdjustTick()
+                }
+                previousValues = values
+            }
         }
         // Keeps the recovery snapshot current after every locally logged
         // standalone set (docs/watch/44-watch-f6-standalone-plan.md §3.2) —
@@ -228,6 +251,33 @@ class ExerciseService : Service() {
         val vibrator = getSystemService(Vibrator::class.java) ?: return
         // Short double pulse — success (docs/watch/43-watch-f5-set-logging-plan.md §3.2).
         vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 60, 80, 60), -1))
+    }
+
+    /**
+     * Restarted by every stepper interaction, so it measures *idle* time
+     * rather than time-since-open (D-F5b.7). A null state means the stepper
+     * closed — cancelling is then all there is to do.
+     */
+    private fun scheduleLogAdjustIdleDismiss(state: LogAdjustState?) {
+        logAdjustIdleJob?.cancel()
+        if (state == null) return
+        logAdjustIdleJob = scope.launch {
+            delay(LOG_ADJUST_IDLE_DISMISS_MS)
+            SessionStateHolder.onLogAdjustCancelled()
+        }
+    }
+
+    /**
+     * One detent's worth of feedback while dialling a value (§11/5). Wear has
+     * no built-in detent haptic for a *custom* value stepper — the automatic
+     * one belongs to `rotaryScrollableBehavior`, which the adjust view
+     * doesn't use — so unlike watchOS this has to be fired by hand. Kept
+     * deliberately lighter than [vibrateLogSetConfirmed]/[vibrateLogSetFailed]:
+     * the stepper "clicks", the log "confirms".
+     */
+    private fun vibrateLogAdjustTick() {
+        val vibrator = getSystemService(Vibrator::class.java) ?: return
+        vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
     }
 
     private fun vibrateLogSetFailed() {
@@ -545,6 +595,12 @@ class ExerciseService : Service() {
 
         // "+1 set" timing (docs/watch/43-watch-f5-set-logging-plan.md §3.2, §10/4).
         private const val LOG_SET_ACK_TIMEOUT_MS = 5_000L
+
+        /** How long the adjust stepper stays up without any interaction —
+         * **3 s, deliberately longer than the design's 2 s** (§11/3): on a
+         * wrist a single glance away shouldn't cost the half-dialled value,
+         * and the wait costs nothing since the view never logs on its own. */
+        private const val LOG_ADJUST_IDLE_DISMISS_MS = 3_000L
         private const val LOG_SET_CONFIRMED_SETTLE_MS = 1_200L
         private const val LOG_SET_FAILED_SETTLE_MS = 2_500L
 

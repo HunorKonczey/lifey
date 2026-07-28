@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/watch/watch_workout_service.dart';
 import 'package:lifey/core/workout_session_notifier/workout_session_notifier_service.dart';
+import 'package:lifey/features/workouts/application/watch_template_sync.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -236,6 +237,86 @@ void main() {
 
       expect(calls.single.method, 'ackStandaloneSession');
       expect(calls.single.arguments, {'standaloneSessionId': 'standalone-1'});
+    });
+
+    test('syncTemplates sends the serialized templates + a phone-clock stamp', () async {
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WatchWorkoutService(isAvailable: true);
+      final before = DateTime.now().millisecondsSinceEpoch;
+
+      await service.syncTemplates(const [
+        WatchTemplatePayload(
+          templateId: 'push',
+          title: 'Push day',
+          exercises: [
+            WatchTemplateExercisePayload(
+              exerciseId: 'bench',
+              name: 'Bench Press',
+              restSeconds: 90,
+              targetSets: 4,
+            ),
+          ],
+        ),
+      ]);
+
+      expect(calls.single.method, 'syncTemplates');
+      final arguments = calls.single.arguments as Map;
+      expect(arguments['templates'], [
+        {
+          'templateId': 'push',
+          'title': 'Push day',
+          'exercises': [
+            {'exerciseId': 'bench', 'name': 'Bench Press', 'restSeconds': 90, 'targetSets': 4},
+          ],
+        },
+      ]);
+      expect(
+        arguments['syncedAtEpochMs'],
+        allOf(isA<int>(), greaterThanOrEqualTo(before)),
+      );
+    });
+
+    test('syncTemplates sends an empty list rather than skipping the call', () async {
+      // That's how a watch whose last template was just deleted is told to
+      // clear its cache (§4.3).
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WatchWorkoutService(isAvailable: true);
+
+      await service.syncTemplates(const []);
+
+      expect(calls.single.method, 'syncTemplates');
+      expect((calls.single.arguments as Map)['templates'], isEmpty);
+    });
+
+    test('syncTemplates no-ops when unavailable', () async {
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WatchWorkoutService(isAvailable: false);
+
+      await service.syncTemplates(const [
+        WatchTemplatePayload(templateId: 'push', title: 'Push day', exercises: []),
+      ]);
+
+      expect(calls, isEmpty);
+    });
+
+    test('syncTemplates swallows a missing native handler (none exists until T3)', () async {
+      setHandler((call) async {
+        calls.add(call);
+        throw MissingPluginException('No implementation found for syncTemplates');
+      });
+      final service = WatchWorkoutService(isAvailable: true);
+
+      await expectLater(service.syncTemplates(const []), completes);
+      expect(calls.single.method, 'syncTemplates');
     });
   });
 

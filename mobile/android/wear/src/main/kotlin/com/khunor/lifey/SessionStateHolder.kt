@@ -71,6 +71,47 @@ sealed interface LogSetState {
     data object Failed : LogSetState
 }
 
+/** Which of the two values the adjust stepper is editing (docs/watch/
+ * 48-watch-f5b-set-adjust-plan.md 0.2) — one at a time, the other stays
+ * visible in the caption line. */
+enum class LogAdjustField { REPS, WEIGHT }
+
+/**
+ * The live state of the "+1 set" adjust stepper (canvas W 09). Non-null
+ * exactly while the stepper is on screen; null means the plain log page.
+ * Deliberately independent of [LogSetState]: the adjust lives entirely
+ * *before* a tap is committed, and hands over to the existing pending/ack
+ * lifecycle only on confirm — which is also what lets F6b reuse it for the
+ * standalone path without rewriting it (D-F5b.8).
+ *
+ * [interactions] counts every step/toggle. It exists because this state is
+ * consumed by *observing* a `StateFlow` (the idle timer and the tick haptic
+ * live in [ExerciseService], not in the UI — S11), and a `StateFlow`
+ * conflates equal values: stepping while already clamped at a bound would
+ * otherwise produce no emission at all, so the idle timer wouldn't restart
+ * and the view could dismiss itself under an actively rotating finger.
+ */
+data class LogAdjustState(
+    val reps: Int,
+    /** Always kg, matching the phone's own workout UI (D-F5b.4). */
+    val weight: Double,
+    val field: LogAdjustField,
+    val interactions: Int = 0,
+)
+
+/** Stepper steps and bounds (D-F5b.5) — mirrors the watchOS constants. The
+ * reps floor of 1 matches the phone's own validator; weight allows 0 for
+ * bodyweight work. */
+private const val LOG_ADJUST_REPS_STEP = 1
+private const val LOG_ADJUST_WEIGHT_STEP = 2.5
+private const val LOG_ADJUST_REPS_MIN = 1
+private const val LOG_ADJUST_REPS_MAX = 99
+private const val LOG_ADJUST_WEIGHT_MIN = 0.0
+private const val LOG_ADJUST_WEIGHT_MAX = 500.0
+/** Used when the phone sent no prefill at all (D-F5b.2's 4th branch). */
+private const val LOG_ADJUST_DEFAULT_REPS = 10
+private const val LOG_ADJUST_DEFAULT_WEIGHT = 0.0
+
 data class SessionMetadata(
     val sessionClientId: String? = null,
     val title: String? = null,
@@ -95,6 +136,15 @@ data class SessionMetadata(
      * when [restDeadlineElapsedRealtimeMs] is null (docs/40-watch-app-plan.md
      * §12.1 B1). Same always-overwritten treatment. */
     val restTotalSeconds: Int? = null,
+    /** What the F5b adjust stepper should start from — computed by the phone
+     * for the exact row a "+1 set" tap would log into, and re-sent on every
+     * state sync (docs/watch/48-watch-f5b-set-adjust-plan.md D-F5b.2, §4.2).
+     * Null when the phone has nothing to go on; the stepper then starts from
+     * its own default. [nextSetWeight] is in kg (D-F5b.4). Always overwritten
+     * on sync, like the rest fields above — "no prefill any more" is a real
+     * state that has to be able to clear a stale one. */
+    val nextSetReps: Int? = null,
+    val nextSetWeight: Double? = null,
     /** Whether the running session is watch-only (docs/watch/
      * 44-watch-f6-standalone-plan.md §1) rather than phone-mastered —
      * `false` for every pre-F6 flow. Gates [SessionStateHolder.onStateSynced]'s
@@ -158,6 +208,12 @@ object SessionStateHolder {
     private val _logSetState = MutableStateFlow<LogSetState>(LogSetState.Ready)
     val logSetState: StateFlow<LogSetState> = _logSetState
 
+    /** The adjust stepper's live state — non-null exactly while it's on
+     * screen (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1). See
+     * [LogAdjustState]. */
+    private val _logAdjustState = MutableStateFlow<LogAdjustState?>(null)
+    val logAdjustState: StateFlow<LogAdjustState?> = _logAdjustState
+
     /**
      * Emits a `standaloneSessionId` the instant its `standaloneSessionAck`
      * arrives (docs/watch/44-watch-f6-standalone-plan.md §4.2) — lets a
@@ -200,6 +256,8 @@ object SessionStateHolder {
         setsTotal: Int?,
         restRemainingSeconds: Int?,
         restTotalSeconds: Int?,
+        nextSetReps: Int?,
+        nextSetWeight: Double?,
     ) {
         if (_metadata.value.isStandalone) {
             // A phone-mastered session's state can't touch the watch's own
@@ -224,6 +282,8 @@ object SessionStateHolder {
                 setsTotal = setsTotal ?: current.setsTotal,
                 restDeadlineElapsedRealtimeMs = restDeadlineElapsedRealtimeMs,
                 restTotalSeconds = restTotalSeconds,
+                nextSetReps = nextSetReps,
+                nextSetWeight = nextSetWeight,
             )
         }
     }
@@ -356,6 +416,82 @@ object SessionStateHolder {
         _logSetState.value = LogSetState.Ready
     }
 
+    // ── Log-set adjust (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1) ──
+
+    /**
+     * Opens the adjust stepper (revealed by a long-press on the log control
+     * — D-F5b.1). Starts from the phone's prefill for the row a tap would
+     * log into, falling back to a plain default when there's nothing to go
+     * on (D-F5b.2). Same `Ready` gate the plain tap uses, so a still-pending
+     * log can't be adjusted out from under itself.
+     *
+     * Not available in standalone: F6a logs a fixed reps count (D-F6.8) and
+     * binding the stepper there is F6b's job (D-F5b.8).
+     */
+    fun onLogAdjustOpened() {
+        val metadata = _metadata.value
+        if (metadata.isStandalone) return
+        if (_phase.value != SessionPhase.ACTIVE) return
+        if (_logSetState.value != LogSetState.Ready) return
+        if (_logAdjustState.value != null) return
+        _logAdjustState.value = LogAdjustState(
+            reps = metadata.nextSetReps ?: LOG_ADJUST_DEFAULT_REPS,
+            weight = metadata.nextSetWeight ?: LOG_ADJUST_DEFAULT_WEIGHT,
+            field = LogAdjustField.REPS,
+        )
+    }
+
+    /**
+     * One rotary detent = one step of the active field (D-F5b.5). [steps] is
+     * signed. Values are clamped, never wrapped — running off the end should
+     * feel like hitting a stop, not like jumping to the other end.
+     *
+     * The weight step is applied to whatever the prefill was, without
+     * snapping to a 2.5 grid: a previously logged 61 kg steps to 63.5, not
+     * 62.5. Predictable beats tidy — snapping would move the value by an
+     * unrequested amount on the very first detent.
+     */
+    fun onLogAdjustStepped(steps: Int) {
+        val current = _logAdjustState.value ?: return
+        if (steps == 0) return
+        _logAdjustState.value = when (current.field) {
+            LogAdjustField.REPS -> current.copy(
+                reps = (current.reps + steps * LOG_ADJUST_REPS_STEP)
+                    .coerceIn(LOG_ADJUST_REPS_MIN, LOG_ADJUST_REPS_MAX),
+                interactions = current.interactions + 1,
+            )
+            LogAdjustField.WEIGHT -> current.copy(
+                weight = (current.weight + steps * LOG_ADJUST_WEIGHT_STEP)
+                    .coerceIn(LOG_ADJUST_WEIGHT_MIN, LOG_ADJUST_WEIGHT_MAX),
+                interactions = current.interactions + 1,
+            )
+        }
+    }
+
+    /** The Reps ⇄ Weight segment tap (0.2). */
+    fun onLogAdjustFieldToggled() {
+        val current = _logAdjustState.value ?: return
+        _logAdjustState.value = current.copy(
+            field = if (current.field == LogAdjustField.REPS) {
+                LogAdjustField.WEIGHT
+            } else {
+                LogAdjustField.REPS
+            },
+            interactions = current.interactions + 1,
+        )
+    }
+
+    /**
+     * Closes the stepper **without logging** — the back gesture, the idle
+     * timeout ([ExerciseService]) and the confirm button all land here
+     * (D-F5b.7). Confirm reads the values first, then closes and sends
+     * through the normal `onLogSetRequested` + `SummarySender.sendLogSet`
+     * path, so there's no second state machine.
+     */
+    fun onLogAdjustCancelled() {
+        _logAdjustState.value = null
+    }
+
     /**
      * Called by [PhoneListenerService] on a `standaloneSessionAck`
      * (docs/watch/44-watch-f6-standalone-plan.md §4.2) — after
@@ -374,6 +510,7 @@ object SessionStateHolder {
         _metadata.value = SessionMetadata()
         _liveMetrics.value = LiveMetrics()
         _logSetState.value = LogSetState.Ready
+        _logAdjustState.value = null
         _standaloneSummary.value = null
     }
 }

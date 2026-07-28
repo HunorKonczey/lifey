@@ -336,6 +336,13 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                 "sessionClientId" to payload.optString("sessionClientId"),
                 "eventId" to payload.optString("eventId"),
                 "loggedAtEpochMs" to payload.optLong("loggedAtEpochMs"),
+                // The F5b adjust values (docs/watch/48-watch-f5b-set-adjust-plan.md
+                // §4.1) — absent for a plain F5a one-tap log. The `has()` guard
+                // matters: optInt/optDouble return 0 for a missing key, and a
+                // silent 0 kg / 0 reps would look like a deliberate value to the
+                // Dart side instead of "no values" (D-F5b.6).
+                "reps" to if (payload.has("reps")) payload.optInt("reps") else null,
+                "weight" to if (payload.has("weight")) payload.optDouble("weight") else null,
             ),
         )
     }

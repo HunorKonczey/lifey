@@ -87,6 +87,44 @@ private let standaloneDefaultReps = 10
 /// its own fixed-length one on every logged set.
 private let standaloneRestSeconds: TimeInterval = 90
 
+/// Which of the two values the adjust stepper is currently editing
+/// (docs/watch/48-watch-f5b-set-adjust-plan.md 0.2) — one at a time, the
+/// other stays visible in the caption line.
+enum LogAdjustField: Equatable {
+  case reps
+  case weight
+}
+
+/// The live state of the "+1 set" adjust stepper (canvas AW 10). Non-nil
+/// exactly while the stepper is on screen; `nil` means the plain log page.
+/// Deliberately independent of `LogSetState`: the adjust lives entirely
+/// *before* a tap is committed, and hands over to the existing
+/// pending/ack lifecycle only on confirm — which is also what lets F6b
+/// reuse it for the standalone path without rewriting it (D-F5b.8).
+struct LogAdjustState: Equatable {
+  var reps: Int
+  /// Always kg, matching the phone's own workout UI (D-F5b.4).
+  var weight: Double
+  var field: LogAdjustField
+}
+
+/// Stepper steps and bounds (D-F5b.5). The reps floor of 1 matches the
+/// phone's own validator (`> 0`); weight allows 0 for bodyweight work.
+private let logAdjustRepsStep = 1
+private let logAdjustWeightStep = 2.5
+private let logAdjustRepsBounds = 1...99
+private let logAdjustWeightBounds = 0.0...500.0
+/// Used when the phone sent no prefill at all (D-F5b.2's 4th branch) — the
+/// stepper has to start *somewhere*, and this is new data rather than an
+/// adjustment of a known value.
+private let logAdjustDefaultReps = 10
+private let logAdjustDefaultWeight = 0.0
+/// How long the stepper stays up without any interaction before dismissing
+/// itself — **3 s, deliberately longer than the design's 2 s** (§11/3):
+/// on a wrist a single glance away shouldn't cost the half-dialled value,
+/// and the wait costs nothing since the view never logs on its own (0.5).
+private let logAdjustIdleDismissSeconds: TimeInterval = 3
+
 /// Mirrors Android's `SessionStateHolder` + `ExerciseService` combined
 /// (docs/40-watch-app-plan.md §4.3, §5.1/§5.3) — the single in-process
 /// source of truth `ContentView`/`ActiveWorkoutView` and `PhoneConnector`
@@ -147,6 +185,18 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// doesn't flash ghosted on a normally-connected pair.
   @Published private(set) var isPhoneReachable = true
 
+  /// What the F5b adjust stepper should start from — computed by the phone
+  /// for the exact row a "+1 set" tap would log into, and re-sent on every
+  /// state sync (docs/watch/48-watch-f5b-set-adjust-plan.md D-F5b.2, §4.2).
+  /// Nil when the phone has nothing to go on; the stepper then starts from
+  /// its own default. `nextSetWeight` is in kg (D-F5b.4).
+  @Published private(set) var nextSetReps: Int?
+  @Published private(set) var nextSetWeight: Double?
+
+  /// The adjust stepper's live state — non-nil exactly while it's on screen
+  /// (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1). See [LogAdjustState].
+  @Published private(set) var logAdjustState: LogAdjustState?
+
   /// Whether the running session is watch-only (docs/watch/
   /// 44-watch-f6-standalone-plan.md §1) rather than phone-mastered — `false`
   /// for every pre-F6 flow. Gates `logSet()`'s local-vs-remote branch,
@@ -170,6 +220,9 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// Drives `.confirmed`/`.failed` falling back to `.ready` on their own —
   /// see `scheduleLogSetSettle(after:)`.
   private var logSetSettleTask: Task<Void, Never>?
+  /// Restarted by every stepper interaction; dismisses the adjust view when
+  /// it finally elapses — see `scheduleLogAdjustIdleDismiss()`.
+  private var logAdjustIdleTask: Task<Void, Never>?
   /// The `sessionClientId` `sendStartedOnWatch` was already sent for, so a
   /// later `applyStateUpdate` (which fires on every state sync, many times
   /// per session) doesn't resend it — see `notifyStartedOnWatchIfNeeded()`.
@@ -338,7 +391,9 @@ final class WorkoutManager: NSObject, ObservableObject {
     setsDone: Int?,
     setsTotal: Int?,
     restRemainingSeconds: Int?,
-    restTotalSeconds: Int?
+    restTotalSeconds: Int?,
+    nextSetReps: Int?,
+    nextSetWeight: Double?
   ) {
     guard !isStandalone else {
       // A phone-mastered session's state can't touch the watch's own
@@ -361,6 +416,12 @@ final class WorkoutManager: NSObject, ObservableObject {
     self.setsTotal = setsTotal ?? self.setsTotal
     self.restDeadlineUptime = restRemainingSeconds.map { ProcessInfo.processInfo.systemUptime + Double($0) }
     self.restTotalSeconds = restTotalSeconds
+    // Always overwritten, including to nil — like the rest fields above and
+    // for the same reason: the phone recomputes the prefill on every sync,
+    // and "no prefill any more" is a real state that must be able to clear
+    // a stale one (docs/watch/48-watch-f5b-set-adjust-plan.md D-F5b.2).
+    self.nextSetReps = nextSetReps
+    self.nextSetWeight = nextSetWeight
     notifyStartedOnWatchIfNeeded()
   }
 
@@ -371,15 +432,23 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// 43-watch-f5-set-logging-plan.md §3.3), but stays reachable and the
   /// button stays enabled through rest and pause, both of which leave
   /// `phase` at `.active` (pause only touches the sensor session, §3.3).
-  func logSet() {
+  /// [reps]/[weight] are the adjust stepper's values when the tap came
+  /// through it (docs/watch/48-watch-f5b-set-adjust-plan.md §4.1); both nil
+  /// for a plain one-tap log, which keeps F5a's behaviour bit for bit.
+  func logSet(reps: Int? = nil, weight: Double? = nil) {
     guard phase == .active, let sessionClientId, logSetState == .ready else { return }
     // F6 (docs/watch/44-watch-f6-standalone-plan.md §2.1) local-mode branch:
     // confirms immediately instead of going through PhoneConnector — kept
     // as this single branch point rather than scattered UI `if`s.
     if isStandalone {
+      // F5b's values are deliberately *not* threaded into the standalone
+      // path: F6a logs a fixed `standaloneDefaultReps` (D-F6.8), and
+      // rewiring that is F6b's job (D-F5b.8), not this step's. `beginLogAdjust()`
+      // is gated on `!isStandalone` to match, so this branch never sees values.
       beginLocalLogSet()
     } else {
-      beginRemoteLogSet(sessionClientId: sessionClientId, eventId: UUID().uuidString)
+      beginRemoteLogSet(
+        sessionClientId: sessionClientId, eventId: UUID().uuidString, reps: reps, weight: weight)
     }
   }
 
@@ -404,11 +473,14 @@ final class WorkoutManager: NSObject, ObservableObject {
     restTotalSeconds = Int(standaloneRestSeconds)
   }
 
-  private func beginRemoteLogSet(sessionClientId: String, eventId: String) {
+  private func beginRemoteLogSet(
+    sessionClientId: String, eventId: String, reps: Int? = nil, weight: Double? = nil
+  ) {
     logSetState = .pending(eventId)
     let loggedAtEpochMs = Int64(Date().timeIntervalSince1970 * 1000)
     PhoneConnector.shared.sendLogSet(
-      sessionClientId: sessionClientId, eventId: eventId, loggedAtEpochMs: loggedAtEpochMs)
+      sessionClientId: sessionClientId, eventId: eventId, loggedAtEpochMs: loggedAtEpochMs,
+      reps: reps, weight: weight)
 
     logSetTimeoutTask?.cancel()
     logSetTimeoutTask = Task {
@@ -461,6 +533,88 @@ final class WorkoutManager: NSObject, ObservableObject {
       try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
       guard !Task.isCancelled else { return }
       logSetState = .ready
+    }
+  }
+
+  // MARK: - Log-set adjust (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1)
+
+  /// Opens the adjust stepper (revealed by a long-press on the log control —
+  /// D-F5b.1). Starts from the phone's prefill for the row a tap would log
+  /// into, falling back to a plain default when there's nothing to go on
+  /// (D-F5b.2). Same `logSetState == .ready` gate the plain tap uses, so a
+  /// still-pending log can't be adjusted out from under itself.
+  ///
+  /// Not available in standalone: F6a logs a fixed reps count (D-F6.8) and
+  /// binding the stepper there is F6b's job (D-F5b.8).
+  func beginLogAdjust() {
+    guard phase == .active, !isStandalone, logSetState == .ready, logAdjustState == nil else {
+      return
+    }
+    logAdjustState = LogAdjustState(
+      reps: nextSetReps ?? logAdjustDefaultReps,
+      weight: nextSetWeight ?? logAdjustDefaultWeight,
+      field: .reps)
+    scheduleLogAdjustIdleDismiss()
+  }
+
+  /// One crown detent = one step of the active field (D-F5b.5). [steps] is
+  /// signed; the platform's own crown acceleration decides how many arrive.
+  /// Values are clamped, never wrapped — running off the end of the range
+  /// should feel like hitting a stop, not like jumping to the other end.
+  ///
+  /// The weight step is applied to whatever the prefill was, without snapping
+  /// to a 2.5 grid: a previously logged 61 kg steps to 63.5, not 62.5.
+  /// Predictable beats tidy here — snapping would move the value by an
+  /// unrequested amount on the very first detent.
+  func stepLogAdjust(by steps: Int) {
+    guard var state = logAdjustState, steps != 0 else { return }
+    switch state.field {
+    case .reps:
+      let stepped = state.reps + steps * logAdjustRepsStep
+      state.reps = min(max(stepped, logAdjustRepsBounds.lowerBound), logAdjustRepsBounds.upperBound)
+    case .weight:
+      let stepped = state.weight + Double(steps) * logAdjustWeightStep
+      state.weight = min(
+        max(stepped, logAdjustWeightBounds.lowerBound), logAdjustWeightBounds.upperBound)
+    }
+    logAdjustState = state
+    scheduleLogAdjustIdleDismiss()
+  }
+
+  /// The Reps ⇄ Weight segment tap (0.2).
+  func toggleLogAdjustField() {
+    guard var state = logAdjustState else { return }
+    state.field = state.field == .reps ? .weight : .reps
+    logAdjustState = state
+    scheduleLogAdjustIdleDismiss()
+  }
+
+  /// Closes the stepper **without logging** — the back gesture and the
+  /// idle timeout both land here (D-F5b.7).
+  func cancelLogAdjust() {
+    logAdjustIdleTask?.cancel()
+    logAdjustIdleTask = nil
+    logAdjustState = nil
+  }
+
+  /// The "Log {n} reps" button (0.5): closes the stepper and hands the
+  /// values to the normal `logSet()` path, so everything downstream — the
+  /// pending/ack lifecycle, the timeout, the haptics — is the code F5a
+  /// already ships. No second state machine.
+  func confirmLogAdjust() {
+    guard let state = logAdjustState else { return }
+    cancelLogAdjust()
+    logSet(reps: state.reps, weight: state.weight)
+  }
+
+  /// Restarted by every interaction, so the timeout measures *idle* time
+  /// rather than time-since-open (D-F5b.7).
+  private func scheduleLogAdjustIdleDismiss() {
+    logAdjustIdleTask?.cancel()
+    logAdjustIdleTask = Task {
+      try? await Task.sleep(nanoseconds: UInt64(logAdjustIdleDismissSeconds * 1_000_000_000))
+      guard !Task.isCancelled else { return }
+      logAdjustState = nil
     }
   }
 
@@ -631,6 +785,8 @@ final class WorkoutManager: NSObject, ObservableObject {
     setsTotal = nil
     restDeadlineUptime = nil
     restTotalSeconds = nil
+    nextSetReps = nil
+    nextSetWeight = nil
     isPaused = false
     heartRateBpm = nil
     activeCalories = nil
@@ -642,6 +798,9 @@ final class WorkoutManager: NSObject, ObservableObject {
     logSetSettleTask?.cancel()
     logSetSettleTask = nil
     logSetState = .ready
+    logAdjustIdleTask?.cancel()
+    logAdjustIdleTask = nil
+    logAdjustState = nil
   }
 
   /// Overwrites the live standalone session's recovery snapshot — called on

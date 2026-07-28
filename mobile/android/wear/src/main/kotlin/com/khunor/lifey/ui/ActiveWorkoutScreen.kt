@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SignalWifiOff
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,10 +47,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -63,6 +69,7 @@ import androidx.core.content.ContextCompat
 import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
+import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.CompactChip
@@ -72,6 +79,8 @@ import androidx.wear.compose.material.Text
 import com.google.android.gms.wearable.Wearable
 import com.khunor.lifey.ExerciseService
 import com.khunor.lifey.LiveMetrics
+import com.khunor.lifey.LogAdjustField
+import com.khunor.lifey.LogAdjustState
 import com.khunor.lifey.LogSetState
 import com.khunor.lifey.R
 import com.khunor.lifey.SessionStateHolder
@@ -80,6 +89,7 @@ import com.khunor.lifey.ui.theme.LifeyColors
 import com.khunor.lifey.ui.theme.LifeyShapes
 import java.util.UUID
 import kotlin.math.roundToInt
+import java.text.DecimalFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -140,6 +150,7 @@ fun ActiveWorkoutScreen() {
     val metadata by SessionStateHolder.metadata.collectAsState()
     val liveMetrics by SessionStateHolder.liveMetrics.collectAsState()
     val logSetState by SessionStateHolder.logSetState.collectAsState()
+    val logAdjustState by SessionStateHolder.logAdjustState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -253,6 +264,38 @@ fun ActiveWorkoutScreen() {
                     showEffortSelector = false
                 },
                 onBack = { showEffortSelector = false },
+            )
+        } else if (logAdjustState != null) {
+            // The adjust stepper *replaces* the pager rather than layering
+            // over it (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1): both
+            // want the rotary, and swapping means only one rotary binding
+            // exists at a time — no focus fight. `pagerState` survives, so
+            // the pager comes back on the log page exactly where it was.
+            AdjustOverlay(
+                state = logAdjustState!!,
+                isCompact = isCompact,
+                maxWidth = maxWidth,
+                onConfirm = {
+                    val adjust = logAdjustState!!
+                    val currentSessionClientId = metadata.sessionClientId
+                    SessionStateHolder.onLogAdjustCancelled()
+                    if (currentSessionClientId != null) {
+                        // Same send path as the plain tap — the pending/ack
+                        // lifecycle, timeout and haptics are all F5a's code.
+                        val eventId = UUID.randomUUID().toString()
+                        SessionStateHolder.onLogSetRequested(eventId)
+                        scope.launch {
+                            SummarySender.sendLogSet(
+                                context = context,
+                                sessionClientId = currentSessionClientId,
+                                eventId = eventId,
+                                loggedAtEpochMs = System.currentTimeMillis(),
+                                reps = adjust.reps,
+                                weight = adjust.weight,
+                            )
+                        }
+                    }
+                },
             )
         } else {
             HorizontalPager(
@@ -417,6 +460,14 @@ private fun LogPage(
             freeFormatSets = freeFormatSets,
             isCompact = isCompact,
             enabled = canTap,
+            // The adjust stepper is a phone-mastered-only path in F5b —
+            // standalone still logs a fixed reps count (D-F6.8), and binding
+            // the stepper there is F6b's job (D-F5b.8).
+            // `SessionStateHolder.onLogAdjustOpened()` guards this too;
+            // mirrored here so the hint glyph isn't advertised when the long
+            // press would do nothing.
+            adjustEnabled = canTap && !isStandalone,
+            onLongPress = { SessionStateHolder.onLogAdjustOpened() },
             onTap = {
                 val currentSessionClientId = sessionClientId ?: return@LogCircle
                 val now = SystemClock.elapsedRealtime()
@@ -460,7 +511,9 @@ private fun LogCircle(
     freeFormatSets: Pair<Int, Int>?,
     isCompact: Boolean,
     enabled: Boolean,
+    adjustEnabled: Boolean,
     onTap: () -> Unit,
+    onLongPress: () -> Unit,
 ) {
     val backgroundColor = if (logSetState is LogSetState.Confirmed) {
         LifeyColors.primary.copy(alpha = 0.18f)
@@ -478,6 +531,7 @@ private fun LogCircle(
     }
     val contentColor = if (ghosted) LifeyColors.ghostedOnSurface else LifeyColors.primary
     val a11yLabel = stringResource(R.string.log_set_button_a11y)
+    val adjustA11yLabel = stringResource(R.string.log_adjust_open_a11y)
 
     Box(
         modifier = Modifier
@@ -485,7 +539,16 @@ private fun LogCircle(
             .size(diameter)
             .background(backgroundColor, CircleShape)
             .border(3.dp, borderColor, CircleShape)
-            .clickable(enabled = enabled, onClick = onTap)
+            // `combinedClickable` routes the long press to the adjust view
+            // and the tap to the plain log — unlike a naive tap+long-press
+            // pairing, it never fires both (docs/watch/
+            // 48-watch-f5b-set-adjust-plan.md D-F5b.1's implementation trap).
+            .combinedClickable(
+                enabled = enabled,
+                onClick = onTap,
+                onLongClick = if (adjustEnabled) onLongPress else null,
+                onLongClickLabel = adjustA11yLabel,
+            )
             .semantics { contentDescription = a11yLabel },
         contentAlignment = Alignment.Center,
     ) {
@@ -514,13 +577,28 @@ private fun LogCircle(
                 }
             }
         } else {
-            Text(
-                text = stringResource(R.string.log_set_button),
-                style = if (isCompact) MaterialTheme.typography.title2 else MaterialTheme.typography.display3,
-                color = contentColor,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = stringResource(R.string.log_set_button),
+                    style = if (isCompact) MaterialTheme.typography.title2 else MaterialTheme.typography.display3,
+                    color = contentColor,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                )
+                if (adjustEnabled) {
+                    // The long-press affordance (D-F5b.1): a small,
+                    // non-interactive hint in the same secondary brown the
+                    // adjust view uses for its own header, so the two read as
+                    // one side path. Costs no tap area — the whole circle
+                    // stays the target.
+                    Icon(
+                        imageVector = Icons.Filled.Tune,
+                        contentDescription = null,
+                        tint = LifeyColors.secondary,
+                        modifier = Modifier.padding(top = 4.dp).size(if (isCompact) 12.dp else 14.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -626,6 +704,155 @@ private fun LogStatusPill(
             maxLines = 1,
         )
     }
+}
+
+/**
+ * The adjust stepper (canvas W 09, docs/watch/48-watch-f5b-set-adjust-plan.md
+ * §3.3) — reached by long-pressing the log control, never by the one-tap
+ * flow. Replaces the pager while it's up (see [ActiveWorkoutScreen]), so the
+ * rotary drives the value here instead of paging. Tinted
+ * `LifeyColors.secondary` (brown) to mark it as the side path, and nothing is
+ * logged until "Log {n} reps" is tapped (0.5).
+ */
+@Composable
+private fun AdjustOverlay(
+    state: LogAdjustState,
+    isCompact: Boolean,
+    maxWidth: Dp,
+    onConfirm: () -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = maxWidth * SCREEN_PADDING_FRACTION)
+            // Only the rotation's *direction* is used — SessionStateHolder
+            // owns the step size, bounds and clamping (D-F5b.5). Taken from
+            // the sign rather than `toInt()`, which would round a sub-pixel
+            // detent down to 0 and silently swallow slow rotations. One
+            // event = one step, so a fast spin doesn't overshoot a 2.5 kg
+            // grid by ten increments at once. Positive scroll pixels mean
+            // "scrolling down", which reads as decreasing here.
+            .onRotaryScrollEvent { event ->
+                val steps = when {
+                    event.verticalScrollPixels > 0f -> -1
+                    event.verticalScrollPixels < 0f -> 1
+                    else -> 0
+                }
+                if (steps != 0) SessionStateHolder.onLogAdjustStepped(steps)
+                true
+            }
+            .focusRequester(focusRequester)
+            .focusable(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Tune,
+                contentDescription = null,
+                tint = LifeyColors.secondary,
+                modifier = Modifier.size(if (isCompact) 14.dp else 16.dp),
+            )
+            Text(
+                text = stringResource(R.string.log_adjust_title),
+                style = if (isCompact) {
+                    MaterialTheme.typography.caption3
+                } else {
+                    MaterialTheme.typography.caption2
+                },
+                color = LifeyColors.secondary,
+                letterSpacing = 0.5.sp,
+                maxLines = 1,
+            )
+        }
+        Row(
+            modifier = Modifier.padding(top = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            AdjustFieldSegment(
+                label = stringResource(R.string.log_adjust_reps),
+                isActive = state.field == LogAdjustField.REPS,
+                isCompact = isCompact,
+            )
+            AdjustFieldSegment(
+                label = stringResource(R.string.log_adjust_weight),
+                isActive = state.field == LogAdjustField.WEIGHT,
+                isCompact = isCompact,
+            )
+        }
+        Text(
+            text = when (state.field) {
+                LogAdjustField.REPS -> state.reps.toString()
+                LogAdjustField.WEIGHT -> formatWeight(state.weight)
+            },
+            style = if (isCompact) MaterialTheme.typography.display2 else MaterialTheme.typography.display1,
+            color = LifeyColors.onSurface,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        // The value *not* being edited, prefixed by the big number's own unit
+        // — the design's "reps · 60 kg" (0.4). Two keys because the order
+        // flips with the active field (§11/2).
+        Text(
+            text = when (state.field) {
+                LogAdjustField.REPS ->
+                    stringResource(R.string.log_adjust_caption_reps, formatWeight(state.weight))
+                LogAdjustField.WEIGHT ->
+                    stringResource(R.string.log_adjust_caption_weight, state.reps)
+            },
+            style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
+            color = LifeyColors.onSurfaceVariant,
+            maxLines = 1,
+        )
+        Chip(
+            onClick = onConfirm,
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            label = {
+                Text(
+                    text = stringResource(R.string.log_adjust_confirm, state.reps),
+                    color = LifeyColors.onPrimary,
+                    maxLines = 1,
+                )
+            },
+            colors = ChipDefaults.chipColors(
+                backgroundColor = LifeyColors.primary,
+                contentColor = LifeyColors.onPrimary,
+            ),
+        )
+    }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+}
+
+/** One of the Reps/Weight segments (0.2) — tapping either flips the active
+ * field, so both share the same click handler. */
+@Composable
+private fun AdjustFieldSegment(label: String, isActive: Boolean, isCompact: Boolean) {
+    Text(
+        text = label,
+        style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
+        color = if (isActive) LifeyColors.onSurface else LifeyColors.onSurfaceVariant,
+        maxLines = 1,
+        modifier = Modifier
+            .background(
+                color = if (isActive) LifeyColors.containerHighest else Color.Transparent,
+                shape = CircleShape,
+            )
+            .border(
+                width = 1.dp,
+                color = if (isActive) Color.Transparent else LifeyColors.outline,
+                shape = CircleShape,
+            )
+            .clip(CircleShape)
+            .clickable { SessionStateHolder.onLogAdjustFieldToggled() }
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
 }
 
 /** Page 2 of 3 (canvas Wear 02/04): metrics normally, or the rest-hero while
@@ -1115,6 +1342,16 @@ private fun RestHero(
         }
     }
 }
+
+/**
+ * Weight display for the adjust stepper (docs/watch/48-watch-f5b-set-adjust-plan.md
+ * §5): whole numbers stay whole ("60"), anything else gets a single decimal
+ * ("62,5"), and the decimal separator follows the device locale. Kept in one
+ * place rather than formatted inline at each call site.
+ */
+private val weightFormat = DecimalFormat("0.#")
+
+private fun formatWeight(weight: Double): String = weightFormat.format(weight)
 
 private fun formatElapsed(totalMs: Long): String {
     val totalSeconds = totalMs / 1000

@@ -41,20 +41,30 @@ struct ActiveWorkoutView: View {
       let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
 
       ZStack {
-        TabView(selection: $selectedPage) {
-          LogPage(isCompact: isCompact, padding: padding, screenWidth: geometry.size.width).tag(0)
-          MetricsPage(isCompact: isCompact, padding: padding).tag(1)
-          ControlsPage(isCompact: isCompact, padding: padding).tag(2)
-        }
-        .tabViewStyle(.page)
-        .digitalCrownRotation(
-          $crownRotation, from: 0, through: 2, by: 1,
-          sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
-        .onChange(of: crownRotation) { _, newValue in
-          selectedPage = Int(newValue.rounded())
-        }
-        .onChange(of: selectedPage) { _, newValue in
-          crownRotation = Double(newValue)
+        // The adjust stepper *replaces* the pager rather than layering over
+        // it (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1): both want the
+        // digital crown, and swapping the view means only one
+        // `.digitalCrownRotation` binding exists at a time — no focus fight.
+        // `selectedPage` is @State, so the pager comes back on the log page
+        // exactly where it was left.
+        if let adjust = workoutManager.logAdjustState {
+          AdjustPage(state: adjust, isCompact: isCompact, padding: padding)
+        } else {
+          TabView(selection: $selectedPage) {
+            LogPage(isCompact: isCompact, padding: padding, screenWidth: geometry.size.width).tag(0)
+            MetricsPage(isCompact: isCompact, padding: padding).tag(1)
+            ControlsPage(isCompact: isCompact, padding: padding).tag(2)
+          }
+          .tabViewStyle(.page)
+          .digitalCrownRotation(
+            $crownRotation, from: 0, through: 2, by: 1,
+            sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+          .onChange(of: crownRotation) { _, newValue in
+            selectedPage = Int(newValue.rounded())
+          }
+          .onChange(of: selectedPage) { _, newValue in
+            crownRotation = Double(newValue)
+          }
         }
         if showGoFlash {
           GoFlashView()
@@ -271,6 +281,12 @@ private struct LogPage: View {
 
   private var circleDiameter: CGFloat { screenWidth * DynamicSizing.logCircleDiameterFraction }
   private var canTap: Bool { workoutManager.logSetState == .ready && workoutManager.isPhoneReachable }
+  /// The adjust stepper is a phone-mastered-only path in F5b — standalone
+  /// still logs a fixed reps count (D-F6.8), and binding the stepper there
+  /// is F6b's job (D-F5b.8). `WorkoutManager.beginLogAdjust()` guards this
+  /// too; mirrored here so the `tune` hint glyph isn't advertised when the
+  /// gesture would do nothing.
+  private var canAdjust: Bool { canTap && !workoutManager.isStandalone }
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -282,12 +298,24 @@ private struct LogPage: View {
           Spacer()
         }
         Spacer(minLength: 0)
-        Button(action: handleTap) {
-          circleContent
-        }
-        .buttonStyle(.plain)
-        .disabled(!canTap)
-        .accessibilityLabel(Text("log_set_button_a11y"))
+        // Not a `Button`: a Button's action fires *alongside* an attached
+        // long-press, so opening the adjust view would also log a set with
+        // the old values. `ExclusiveGesture` with the long press first makes
+        // the long press win outright (docs/watch/48-watch-f5b-set-adjust-plan.md
+        // D-F5b.1's implementation trap).
+        circleContent
+          .contentShape(Circle())
+          .gesture(
+            ExclusiveGesture(
+              LongPressGesture(minimumDuration: 0.5).onEnded { _ in handleLongPress() },
+              TapGesture().onEnded { handleTap() }
+            )
+          )
+          .accessibilityLabel(Text("log_set_button_a11y"))
+          // VoiceOver can't perform a long press, so the adjust path is
+          // exposed as a named custom action instead of hiding behind the
+          // gesture.
+          .accessibilityAction(named: Text("log_adjust_open_a11y")) { handleLongPress() }
         belowCircleContent
         Spacer(minLength: 0)
       }
@@ -297,10 +325,16 @@ private struct LogPage: View {
   }
 
   private func handleTap() {
+    guard canTap else { return }
     let now = Date()
     if let lastTapAt, now.timeIntervalSince(lastTapAt) < tapDebounceSeconds { return }
     lastTapAt = now
     workoutManager.logSet()
+  }
+
+  private func handleLongPress() {
+    guard canAdjust else { return }
+    workoutManager.beginLogAdjust()
   }
 
   private func elapsedText(now: Date) -> String {
@@ -359,7 +393,19 @@ private struct LogPage: View {
         Circle()
           .fill(LifeyColors.container)
           .overlay(Circle().strokeBorder(LifeyColors.primary.opacity(0.55), lineWidth: 3))
-        logSetButtonLabel(color: LifeyColors.primary)
+        VStack(spacing: 6) {
+          logSetButtonLabel(color: LifeyColors.primary)
+          if canAdjust {
+            // The long-press affordance (D-F5b.1): a small, non-interactive
+            // hint in the same secondary brown the adjust view uses for its
+            // own header, so the two read as one side path. It costs no tap
+            // area — the whole circle stays the target.
+            Image(systemName: "slider.horizontal.3")
+              .font(.system(size: isCompact ? 12 : 14, weight: .semibold))
+              .foregroundColor(LifeyColors.secondary)
+              .accessibilityHidden(true)
+          }
+        }
       }
       .frame(width: circleDiameter, height: circleDiameter)
     }
@@ -389,19 +435,6 @@ private struct LogPage: View {
       .lineLimit(2)
       .minimumScaleFactor(0.7)
       .foregroundColor(color)
-  }
-
-  private func plusOneSetLabel(numberColor: Color, labelColor: Color) -> some View {
-    VStack(spacing: 2) {
-      Text("+1")
-        .font(.system(size: circleDiameter * 0.34, weight: .heavy, design: .rounded))
-        .foregroundColor(numberColor)
-        .monospacedDigit()
-      Text("SET")
-        .font(.system(size: circleDiameter * 0.09, weight: .bold))
-        .foregroundColor(labelColor)
-        .tracking(3)
-    }
   }
 
   @ViewBuilder
@@ -476,6 +509,126 @@ private struct LogPage: View {
 /// log page took the leftmost slot (docs/40-watch-app-plan.md §12.1 B7,
 /// canvas AW 02): elapsed/rest time, exercise/set counter, heart rate and
 /// calories — no controls here, those live on `ControlsPage`.
+/// The adjust stepper (canvas AW 10, docs/watch/48-watch-f5b-set-adjust-plan.md
+/// §3.3) — reached by long-pressing the log control, never by the one-tap
+/// flow. Replaces the pager while it's up (see `ActiveWorkoutView.body`), so
+/// the digital crown drives the value here instead of paging. Everything is
+/// tinted `LifeyColors.secondary` (brown) to mark it as the side path, and
+/// nothing is logged until "Log {n} reps" is tapped (0.5).
+private struct AdjustPage: View {
+  @ObservedObject private var workoutManager = WorkoutManager.shared
+  let state: LogAdjustState
+  let isCompact: Bool
+  let padding: CGFloat
+
+  /// Crown position tracked as a free-running value; only its *delta* is
+  /// used, since `WorkoutManager` owns the steps, bounds and clamping
+  /// (D-F5b.5). A wide range keeps the crown from hitting an end stop.
+  @State private var crownValue: Double = 0
+  @FocusState private var isCrownFocused: Bool
+
+  private var bigValueFont: Font {
+    isCompact ? .system(.largeTitle, design: .rounded) : .system(size: 56, weight: .bold, design: .rounded)
+  }
+
+  var body: some View {
+    VStack(spacing: isCompact ? 6 : 10) {
+      HStack(spacing: 6) {
+        Image(systemName: "slider.horizontal.3")
+          .font(.system(size: isCompact ? 14 : 16))
+          .foregroundColor(LifeyColors.secondary)
+        Text("log_adjust_title")
+          .font(isCompact ? .caption2 : .caption)
+          .foregroundColor(LifeyColors.secondary)
+          .tracking(0.5)
+          .lineLimit(1)
+        Spacer()
+      }
+      HStack(spacing: 6) {
+        fieldSegment(.reps, label: String(localized: "log_adjust_reps"))
+        fieldSegment(.weight, label: String(localized: "log_adjust_weight"))
+      }
+      Text(bigValueText)
+        .font(bigValueFont)
+        .fontWeight(.heavy)
+        .foregroundColor(LifeyColors.onSurface)
+        .monospacedDigit()
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+      Text(captionText)
+        .font(isCompact ? .caption2 : .caption)
+        .foregroundColor(LifeyColors.onSurfaceVariant)
+        .lineLimit(1)
+      Button {
+        workoutManager.confirmLogAdjust()
+      } label: {
+        Text(String(format: String(localized: "log_adjust_confirm"), state.reps))
+          .font(isCompact ? .caption : .body)
+          .fontWeight(.bold)
+          .foregroundColor(LifeyColors.onPrimary)
+          .lineLimit(1)
+          .minimumScaleFactor(0.7)
+          .padding(.horizontal, 16)
+          .padding(.vertical, isCompact ? 8 : 10)
+          .frame(maxWidth: .infinity)
+          .background(LifeyColors.primary)
+          .clipShape(Capsule())
+      }
+      .buttonStyle(.plain)
+    }
+    .padding(.horizontal, padding)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .focusable(true)
+    .focused($isCrownFocused)
+    .digitalCrownRotation(
+      $crownValue, from: -1000, through: 1000, by: 1,
+      sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+    .onChange(of: crownValue) { oldValue, newValue in
+      let steps = Int((newValue - oldValue).rounded())
+      if steps != 0 { workoutManager.stepLogAdjust(by: steps) }
+    }
+    .onAppear { isCrownFocused = true }
+  }
+
+  private func fieldSegment(_ field: LogAdjustField, label: String) -> some View {
+    let isActive = state.field == field
+    return Text(label)
+      .font(isCompact ? .caption2 : .caption)
+      .fontWeight(isActive ? .bold : .regular)
+      .foregroundColor(isActive ? LifeyColors.onSurface : LifeyColors.onSurfaceVariant)
+      .lineLimit(1)
+      .minimumScaleFactor(0.7)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 6)
+      .background(isActive ? LifeyColors.containerHighest : Color.clear)
+      .overlay(
+        Capsule().strokeBorder(isActive ? Color.clear : LifeyColors.outline, lineWidth: 1)
+      )
+      .clipShape(Capsule())
+      .contentShape(Capsule())
+      .onTapGesture { workoutManager.toggleLogAdjustField() }
+  }
+
+  private var bigValueText: String {
+    switch state.field {
+    case .reps: return "\(state.reps)"
+    case .weight: return formatWeight(state.weight)
+    }
+  }
+
+  /// The value *not* currently being edited, prefixed by the big number's own
+  /// unit — the design's "reps · 60 kg" (0.4). Two separate keys because the
+  /// order flips with the active field (§11/2).
+  private var captionText: String {
+    switch state.field {
+    case .reps:
+      return String(format: String(localized: "log_adjust_caption_reps"), formatWeight(state.weight))
+    case .weight:
+      return String(format: String(localized: "log_adjust_caption_weight"), state.reps)
+    }
+  }
+}
+
 private struct MetricsPage: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
@@ -796,6 +949,23 @@ private struct GoFlashView: View {
       }
     }
   }
+}
+
+/// Weight display for the adjust stepper (docs/watch/48-watch-f5b-set-adjust-plan.md
+/// §5): whole numbers stay whole ("60"), anything else gets a single decimal
+/// ("62,5"), and the decimal separator follows the device locale. Kept in one
+/// place rather than formatted inline at each call site, and behind a cached
+/// formatter since view bodies re-render often.
+private let weightFormatter: NumberFormatter = {
+  let formatter = NumberFormatter()
+  formatter.numberStyle = .decimal
+  formatter.minimumFractionDigits = 0
+  formatter.maximumFractionDigits = 1
+  return formatter
+}()
+
+private func formatWeight(_ weight: Double) -> String {
+  weightFormatter.string(from: NSNumber(value: weight)) ?? "\(Int(weight))"
 }
 
 private func formatSeconds(_ totalSeconds: Int) -> String {

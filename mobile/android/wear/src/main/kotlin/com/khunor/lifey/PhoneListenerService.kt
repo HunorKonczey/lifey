@@ -147,6 +147,13 @@ class PhoneListenerService : WearableListenerService() {
                 restRemainingSeconds = state?.takeIf { it.has("restRemainingSeconds") }
                     ?.optInt("restRemainingSeconds"),
                 restTotalSeconds = state?.takeIf { it.has("restTotalSeconds") }?.optInt("restTotalSeconds"),
+                // The F5b adjust prefill (docs/watch/48-watch-f5b-set-adjust-plan.md
+                // §4.2). The phone strips nulls before sending, so "key absent"
+                // is how "no prefill" arrives — and the `has()` guard is what
+                // keeps optInt/optDouble's 0-for-missing from looking like a
+                // real 0 reps / 0 kg prefill.
+                nextSetReps = state?.takeIf { it.has("nextSetReps") }?.optInt("nextSetReps"),
+                nextSetWeight = state?.takeIf { it.has("nextSetWeight") }?.optDouble("nextSetWeight"),
             )
             sessionClientId
         } catch (e: Exception) {
@@ -174,6 +181,13 @@ class PhoneListenerService : WearableListenerService() {
                 restRemainingSeconds = state?.takeIf { it.containsKey("restRemainingSeconds") }
                     ?.getInt("restRemainingSeconds"),
                 restTotalSeconds = state?.takeIf { it.containsKey("restTotalSeconds") }?.getInt("restTotalSeconds"),
+                // Same F5b prefill as the message path above — this DataItem
+                // route is the reconnect fallback, so it has to carry it too,
+                // or a watch that only ever resyncs this way would show a
+                // stale/absent stepper start value.
+                nextSetReps = state?.takeIf { it.containsKey("nextSetReps") }?.getInt("nextSetReps"),
+                nextSetWeight = state?.takeIf { it.containsKey("nextSetWeight") }
+                    ?.getDouble("nextSetWeight"),
             )
 
             // The phone's `end` message may never have reached us while
