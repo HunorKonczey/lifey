@@ -306,8 +306,9 @@ class ExerciseService : Service() {
                 scope.launch { endExercise() }
             }
             ACTION_START_STANDALONE -> {
+                val templateJson = intent.getStringExtra(EXTRA_TEMPLATE_JSON)
                 promoteToForeground()
-                scope.launch { startStandaloneExercise() }
+                scope.launch { startStandaloneExercise(templateJson) }
             }
             ACTION_END_STANDALONE -> {
                 val rpe = if (intent.hasExtra(EXTRA_RPE)) intent.getIntExtra(EXTRA_RPE, 0) else null
@@ -400,24 +401,31 @@ class ExerciseService : Service() {
 
     /**
      * Entry point for the launcher's "Start workout" / picker's "Quick
-     * strength" tap (docs/watch/44-watch-f6-standalone-plan.md §3.1) — no
-     * `sessionClientId` from the phone this time, since there's no
-     * phone-mastered session to hang off: the watch generates its own.
-     * Guarded on `SessionPhase.IDLE` (mirrors iOS's `guard phase == .idle`
-     * in `startStandalone()`) so a double-tap on the picker's "Quick
-     * strength" row — S16 doesn't debounce it, this is where that
+     * strength" **and** synced-template rows (docs/watch/
+     * 44-watch-f6-standalone-plan.md §3.1; docs/watch/
+     * 49-watch-f6b-template-sync-plan.md §3.3, T6) — no `sessionClientId`
+     * from the phone this time, since there's no phone-mastered session to
+     * hang off: the watch generates its own. Guarded on `SessionPhase.IDLE`
+     * (mirrors iOS's `guard phase == .idle` in `startStandalone()`) so a
+     * double-tap on the picker — S16 doesn't debounce it, this is where that
      * protection actually has to live — can't launch two overlapping
      * exercises.
+     *
+     * [templateJson] is the exact JSON `StandaloneSessionStore.templates()`
+     * returned for the tapped row (`MainActivity`'s `onTemplateTapped`), or
+     * `null` for Quick strength — decoded exactly once, here, into the typed
+     * [StandaloneTemplate] the session state holds from then on.
      */
-    private suspend fun startStandaloneExercise() {
+    private suspend fun startStandaloneExercise(templateJson: String?) {
         if (SessionStateHolder.phase.value != SessionPhase.IDLE) return
         val sessionClientId = UUID.randomUUID().toString()
         currentSessionClientId = sessionClientId
+        val template = templateJson?.let { parseStandaloneTemplate(it) }
         val config = buildExerciseConfig()
         try {
             exerciseClient.setUpdateCallback(updateCallback)
             exerciseClient.startExerciseAsync(config).await()
-            SessionStateHolder.onStandaloneStarted(sessionClientId, SystemClock.elapsedRealtime())
+            SessionStateHolder.onStandaloneStarted(sessionClientId, SystemClock.elapsedRealtime(), template)
             saveStandaloneActiveSnapshot()
         } catch (e: Exception) {
             // Another app owns the sensors — unlike startExercise, there's
@@ -492,6 +500,7 @@ class ExerciseService : Service() {
 
             val payload = JSONObject().apply {
                 put("standaloneSessionId", sessionClientId)
+                putOpt("templateId", metadata.standaloneTemplate?.templateId)
                 put("startedAtEpochMs", startedAtEpochMs)
                 put("endedAtEpochMs", nowEpochMs)
                 putOpt("rpe", rpe)
@@ -556,9 +565,12 @@ class ExerciseService : Service() {
 
     /** Overwrites the live standalone session's recovery snapshot — called
      * on start and after every locally logged set (docs/watch/
-     * 44-watch-f6-standalone-plan.md §3.2). Recovery itself (reading this
-     * back after a process death) isn't implemented yet — out of scope for
-     * S15, flagged as an open gap (§10). */
+     * 44-watch-f6-standalone-plan.md §3.2). Recovery *itself* (reading this
+     * back after a process death) still isn't implemented on Wear — an
+     * open, accepted platform asymmetry (44-doc §11/6) — so `template`/
+     * `exerciseIndex` are written here purely for consistency with the rest
+     * of this snapshot (which has always written fields nothing reads back
+     * yet), not because T6 adds a reader. */
     private fun saveStandaloneActiveSnapshot() {
         val metadata = SessionStateHolder.metadata.value
         val sessionClientId = metadata.sessionClientId ?: return
@@ -570,6 +582,8 @@ class ExerciseService : Service() {
         val json = JSONObject().apply {
             put("standaloneSessionId", sessionClientId)
             put("startedAtEpochMs", startedAtEpochMs)
+            put("exerciseIndex", metadata.standaloneExerciseIndex)
+            metadata.standaloneTemplate?.let { put("template", it.toJson()) }
             put(
                 "sets",
                 JSONArray().apply {
@@ -586,6 +600,61 @@ class ExerciseService : Service() {
             )
         }
         StandaloneSessionStore.saveActive(this, json.toString())
+    }
+
+    /**
+     * Decodes the picker row's tapped JSON (docs/watch/
+     * 49-watch-f6b-template-sync-plan.md §4.1, T6) — exactly the shape
+     * `StandaloneSessionStore.templates()` hands back (this app's convention
+     * of keeping the store itself untyped) — into the typed
+     * [StandaloneTemplate] the session state holds from start to end.
+     * Malformed JSON falls back to `null` — a Quick-strength-equivalent
+     * session, not a crash.
+     */
+    private fun parseStandaloneTemplate(json: String): StandaloneTemplate? {
+        return try {
+            val obj = JSONObject(json)
+            val exercisesArray = obj.optJSONArray("exercises") ?: JSONArray()
+            StandaloneTemplate(
+                templateId = obj.getString("templateId"),
+                title = obj.getString("title"),
+                exercises = (0 until exercisesArray.length()).map { i ->
+                    val exercise = exercisesArray.getJSONObject(i)
+                    StandaloneTemplateExercise(
+                        exerciseId = exercise.getString("exerciseId"),
+                        name = exercise.getString("name"),
+                        restSeconds = exercise.getInt("restSeconds"),
+                        targetSets = if (exercise.has("targetSets")) exercise.getInt("targetSets") else null,
+                    )
+                },
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "parseStandaloneTemplate failed to parse payload", e)
+            null
+        }
+    }
+
+    /** The recovery-snapshot counterpart of [parseStandaloneTemplate] —
+     * round-trips a [StandaloneTemplate] back into the same JSON shape it
+     * was decoded from. */
+    private fun StandaloneTemplate.toJson(): JSONObject = JSONObject().apply {
+        put("templateId", templateId)
+        put("title", title)
+        put(
+            "exercises",
+            JSONArray().apply {
+                exercises.forEach { exercise ->
+                    put(
+                        JSONObject().apply {
+                            put("exerciseId", exercise.exerciseId)
+                            put("name", exercise.name)
+                            put("restSeconds", exercise.restSeconds)
+                            putOpt("targetSets", exercise.targetSets)
+                        },
+                    )
+                }
+            },
+        )
     }
 
     companion object {
@@ -615,6 +684,7 @@ class ExerciseService : Service() {
         const val ACTION_START_STANDALONE = "com.khunor.lifey.action.START_STANDALONE_EXERCISE"
         const val ACTION_END_STANDALONE = "com.khunor.lifey.action.END_STANDALONE_EXERCISE"
         const val EXTRA_RPE = "rpe"
+        const val EXTRA_TEMPLATE_JSON = "templateJson"
 
         fun startIntent(context: Context, sessionClientId: String) =
             Intent(context, ExerciseService::class.java).apply {
@@ -627,12 +697,17 @@ class ExerciseService : Service() {
                 action = ACTION_END
             }
 
-        /** Entry point for the launcher/picker "Quick strength" tap (S16) —
-         * no `sessionClientId` extra, `startStandaloneExercise` generates
-         * its own (docs/watch/44-watch-f6-standalone-plan.md §3.1). */
-        fun startStandaloneIntent(context: Context) =
+        /** Entry point for the launcher/picker "Quick strength" tap (S16)
+         * and, since T6, a synced-template row — no `sessionClientId` extra,
+         * `startStandaloneExercise` generates its own (docs/watch/
+         * 44-watch-f6-standalone-plan.md §3.1). [templateJson] is the exact
+         * `StandaloneSessionStore.templates()` JSON for the tapped row,
+         * omitted entirely for Quick strength (docs/watch/
+         * 49-watch-f6b-template-sync-plan.md §3.3, T6). */
+        fun startStandaloneIntent(context: Context, templateJson: String? = null) =
             Intent(context, ExerciseService::class.java).apply {
                 action = ACTION_START_STANDALONE
+                templateJson?.let { putExtra(EXTRA_TEMPLATE_JSON, it) }
             }
 
         /** Entry point for the End button in standalone mode (S17). [rpe] is

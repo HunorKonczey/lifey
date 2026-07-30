@@ -76,6 +76,20 @@ class MainActivity : ComponentActivity() {
                                         ExerciseService.startStandaloneIntent(this@MainActivity),
                                     )
                                 },
+                                onTemplateTapped = { template ->
+                                    // Same re-check-right-before-starting
+                                    // reasoning as the quick-strength branch
+                                    // above (docs/watch/
+                                    // 49-watch-f6b-template-sync-plan.md T6).
+                                    requestSensorPermissionsIfNeeded()
+                                    ContextCompat.startForegroundService(
+                                        this@MainActivity,
+                                        ExerciseService.startStandaloneIntent(
+                                            this@MainActivity,
+                                            templateJson = template.toString(),
+                                        ),
+                                    )
+                                },
                                 onBack = { showStandalonePicker = false },
                             )
                         } else {

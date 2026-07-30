@@ -188,18 +188,25 @@ List<WatchTemplatePayload> buildWatchTemplateSync({
 /// server pull can rewrite templates outright. Watching the data beats
 /// remembering every call site that touches it.
 ///
-/// Yields an empty list — same as "the user has no templates" — in two
-/// cases, both of which correctly tell the watch to clear its cache:
-/// - `watchWorkoutEnabled` is off, the single gate for all watch traffic;
-/// - any source is still loading, so a half-built payload is never sent.
-final watchTemplateSyncPayloadProvider = Provider<List<WatchTemplatePayload>>((ref) {
-  final settings = ref.watch(settingsControllerProvider).value;
-  if (settings == null || !settings.watchWorkoutEnabled) return const [];
+/// **Null means "don't know yet, push nothing"; an empty list means "the
+/// watch should hold nothing".** The distinction matters: at cold start
+/// every source is still loading, and collapsing that to an empty list would
+/// order the watch to wipe a perfectly good cache moments before the real
+/// list arrives. Only these say "clear it", and both are real answers:
+/// - `watchWorkoutEnabled` is off — the single gate for all watch traffic,
+///   so leaving stale plans on the watch would be wrong;
+/// - the sources loaded and there genuinely are no templates to offer.
+final watchTemplateSyncPayloadProvider = Provider<List<WatchTemplatePayload>?>((ref) {
+  final settingsState = ref.watch(settingsControllerProvider);
+  if (settingsState.isLoading) return null;
+  final settings = settingsState.value;
+  if (settings == null) return null;
+  if (!settings.watchWorkoutEnabled) return const [];
 
   final sessions = ref.watch(workoutSessionControllerProvider).value;
   final templates = ref.watch(workoutTemplateControllerProvider).value;
   final exercises = ref.watch(exerciseControllerProvider).value;
-  if (sessions == null || templates == null || exercises == null) return const [];
+  if (sessions == null || templates == null || exercises == null) return null;
 
   return buildWatchTemplateSync(
     templateClientIds: recentlyUsedTemplateClientIds(sessions),

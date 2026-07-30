@@ -24,6 +24,7 @@ object StandaloneSessionStore {
     private const val PREFS_NAME = "lifey_standalone_sessions"
     private const val KEY_PENDING = "pending"
     private const val KEY_ACTIVE = "active"
+    private const val KEY_TEMPLATES = "templates"
 
     /** Queues a just-closed standalone session for delivery — `ExerciseService`
      * (S15) sends it and calls [remove] once the phone acks. */
@@ -78,6 +79,35 @@ object StandaloneSessionStore {
      * think a session is still running. */
     fun clearActive(context: Context) {
         prefs(context).edit().remove(KEY_ACTIVE).apply()
+    }
+
+    // Template cache (docs/watch/49-watch-f6b-template-sync-plan.md §3.1, T4.3)
+
+    /** Overwrites the whole cache with the phone's latest sync — never
+     * merged, since every `templateSync` already carries the complete,
+     * current list (T1.3's "empty list still goes out" decision means an
+     * empty array here correctly clears a stale cache too, not just skips
+     * the write). [templatesJson] is the raw `templates` JSON array as sent
+     * on the wire — stored as-is, not re-parsed into a typed model, matching
+     * this store's existing convention (unlike iOS's `CachedTemplate`,
+     * Android never introduced a typed model for watch↔phone messages). */
+    fun saveTemplates(context: Context, templatesJson: String) {
+        prefs(context).edit().putString(KEY_TEMPLATES, templatesJson).apply()
+    }
+
+    /** The picker's data source — empty if nothing was ever synced, or the
+     * cached JSON failed to parse (a corrupt write, or a future app
+     * version's incompatible shape). Never throws: the picker's F6a
+     * fallback (just the "Quick strength" card) already handles "nothing to
+     * show" correctly. */
+    fun templates(context: Context): List<JSONObject> {
+        val raw = prefs(context).getString(KEY_TEMPLATES, null) ?: return emptyList()
+        return try {
+            val array = JSONArray(raw)
+            (0 until array.length()).map { array.getJSONObject(it) }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     private fun prefs(context: Context) =

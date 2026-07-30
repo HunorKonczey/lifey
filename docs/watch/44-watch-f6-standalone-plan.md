@@ -1,6 +1,6 @@
 # 44 – F6 terv: Standalone edzésindítás a watchról
 
-Státusz: **F6a implementáció kész mindkét platformon (S1–S17); regressziós ellenőrzés zöld, 2026-07-26.** Hátravan: **S18** (Android élő kézi végpróba) és **S19** (közös zárás formális lezárása). Nyitott platform-aszimmetria: a Wear-oldalon nincs standalone recovery (§11/6) — ellenőrizve, ma is így áll.
+Státusz: **F6a KÉSZ, 2026-07-26** — mindkét platform kódja lezárva (S1–S17), a kézi végpróbák (S12 iOS, S18 Android) is lefutottak, és a §11/8 F6a-hiba (log-kontroll standalone-ban a telefon elérhetőségére kapuzva) javítva. Nyitva marad, apró finomítási pontként: a Wear-oldali standalone recovery hiánya (§11/6).
 
 **Lépések:** S1–S5 közös Dart-előfeltétel; S6 iOS/telefon fogadás+ack; S7 watchOS pending-tár+payload-modell; S8 `PhoneConnector` küldés/retry/ack; S9 `WorkoutManager` standalone módja + D-F6.2 guardok; S10 launcher+picker UI; S11 aktív képernyő deltái + `SummaryView` 4. csempéje és élő sync-chipje; S12 teljes kézi végpróba fizikai eszközön (**user visszaigazolta**); S13 Android/telefon fogadás + puffer + ack; S14 Wear `StandaloneSessionStore` + `SummarySender` küldés/retry + `PhoneListenerService` ack-fogadás; S15 `SessionStateHolder` standalone állapotgép (`SUMMARY` fázis, `StandaloneSummary`) + `ExerciseService` start/end akciók; S16 Wear launcher (`IdleScreen` → `CompactChip`) + `StandalonePickerScreen` + `MainActivity` bekötés; S17 `ActiveWorkoutScreen` standalone deltái + új `SummaryScreen`. A teljes F6a láncolat (start → log → end → summary) **UI-ból végigmegy mindkét platformon**.
 
@@ -331,14 +331,10 @@ Az `idle_subtitle` kulcs a launcher bevezetése után feleslegessé válik a wat
    **Javaslat**: pótolni egy S15.1-ként a platform-paritásért — vagy **tudatosan elfogadni** az aszimmetriát v1-re. Az elfogadás mellett szól, hogy a legrosszabb eset egy elveszett *lokális* session, nem szerver-oldali adatvesztés: a lezáratlan session a pending-tárba még be sem került. Ha az elfogadás a döntés, a `loadActive()` mellé kerüljön egy megjegyzés, hogy szándékosan hívatlan (különben joggal tűnik felesleges kódnak).
 
 7. **Nem F6a-hiba, de itt jegyezve** (2026-07-26): a `test/features/statistics/application/stat_chart_data_test.dart` › „StatsRange.all has no cutoff” **dátumfüggően bukik**, és bitre azonos az `origin/main`-nel — a watch-munkához semmi köze. Ok: a teszt `_day(offset)` helpere `DateTime(y,m,d).subtract(Duration(days: offset))`-et használ, ami **abszolút 24 órás** egységekkel számol, így egy óraátállítást átlépve 23:00-ra csúszik éjfél helyett (mai dátummal az `_day(1000)` 2023-10-31-re esik, közvetlenül az őszi átállítás utánra). A javítás a teszt-helperben van (naptári nap-léptetés `Duration` helyett), nem a produkciós kódban — külön, F6-tól független feladat.
-8. **F6a-hiba — a log-kontroll standalone-ban a telefon elérhetőségére van kapuzva, MINDKÉT platformon** (2026-07-26, az F5b S7/S12 közben felfedezve, **nincs javítva**): a `Views/ActiveWorkoutView.swift` `LogPage`-ében a `canTap` így szól:
-   ```swift
-   private var canTap: Bool { workoutManager.logSetState == .ready && workoutManager.isPhoneReachable }
-   ```
-   …és ugyanez a feltétel dönt a ghosted korongról és a „Phone not reachable” feliratról is (`circleContent`, `belowCircleContent` `.ready where !isPhoneReachable` ága). Ez az F5a-ból maradt így, ahol helyes volt — de **standalone módban a logolás lokális**, nincs szüksége telefonra. Egy valódi standalone edzésen (telefon nincs hatótávon) az `isPhoneReachable` hamis, tehát a „+1 szett” korong **letiltva és ghosted** lesz, „A telefon nem érhető el” felirattal — vagyis az F6a fő funkciója, a lokális szett-logolás, használhatatlan.
-   A user által elvégzett S12 kézi teszt ezt vélhetően azért nem fogta meg, mert a telefon a közelben volt (a standalone flow elindítható úgy is, hogy a telefon elérhető).
-   **Ugyanez a Wear-oldalon is fennáll** (`ui/ActiveWorkoutScreen.kt`, az F5b S12 közben ellenőrizve): ott `val canTap = logSetState is LogSetState.Ready && hasConnectedNode`, ahol a `hasConnectedNode` egy egyszeri `NodeClient.connectedNodes` lekérdezés — telefon nélkül üres, tehát a korong ott is letiltva/ghosted lesz, `phone_unreachable` felirattal. Tehát **nem platform-specifikus elírás, hanem közös minta**, ami az F5a-ból öröklődött mindkét UI-ba.
-   **Javaslat:** a feltételek egészüljenek ki `|| isStandalone`-nal (vagy egy `requiresPhone` származtatott property-vel) **mindkét platformon**. Szándékosan **nem** javítottam az F5b keretében, mert ez az F6a viselkedését változtatja, amit épp most igazoltál vissza eszközön — külön, tudatos döntést érdemel.
+8. **F6a-hiba — a log-kontroll standalone-ban a telefon elérhetőségére volt kapuzva, mindkét platformon** — **JAVÍTVA, 2026-07-26.**
+   *A hiba:* a log-korong `canTap`/ghosted/„telefon nem érhető el” feltételei az F5a-ból öröklődtek mindkét UI-ba (`Views/ActiveWorkoutView.swift` és `ui/ActiveWorkoutScreen.kt`), és nem vették figyelembe a standalone módot. Egy valódi standalone edzésen (telefon nincs hatótávon) az `isPhoneReachable` / `hasConnectedNode` hamis, tehát a „+1 szett” korong **letiltva és ghosted** lett volna, „A telefon nem érhető el” felirattal — vagyis az F6a fő funkciója, a lokális szett-logolás, használhatatlan. A user által elvégzett S12 kézi teszt ezt vélhetően azért nem fogta meg, mert a telefon a közelben volt.
+   *A javítás:* mindkét platformon bevezetve egy `requiresPhone` (= `!isStandalone`) származtatott érték, és a három feltétel erre épül. Standalone módban a korong mindig aktív, és a „telefon nem érhető el” felirat **nem jelenik meg** — a fejléc `phonelink_off` standalone-jelvénye már jelzi a helyzetet, a felirat ott hibaüzenetnek látszana egy szándékosan telefon nélküli edzés közben. A telefon-mesterelt út viselkedése bitre változatlan (ott `requiresPhone` igaz).
+   *Ellenőrzés:* `flutter test` 386 zöld / 1 bukó (a §11/7 DST-artefakt), `flutter analyze` tiszta, `:app:` + `:wear:compileDebugKotlin` és a teljes `LifeyWatch` target `-warnings-as-errors` típusellenőrzése zöld. Élő standalone teszt (telefon nélkül) továbbra is ajánlott az S18 körében.
 
 *(A korábbi „fix rest-hossz”, „Drift-séma és gyakorlat nélküli szettek”, valamint a §7 négy design-kérdése a design-szinkronnal zárult le — lásd §0, D-F6.3, §8.)*
 
@@ -625,25 +621,27 @@ S1 (kulcsok + protokoll-konstansok, közös)
 
 ---
 
-### S18 — Android: kézi végpróba — **build/lint szinten részlegesen ellenőrizve, 2026-07-27 — a tényleges kézi teszt még hátravan**
+### S18 — Android: kézi végpróba — **kész, 2026-07-26** (fejlesztői eszközös visszaigazolás)
 
 **Teendő:** a §9 Wear-listája (teljes kör; több pending session; elveszett ack → újraküldés → dedup; telefon indít közben; SUMMARY auto-dismiss).
 
 **Ellenőrzés:** minden eset a §2/§3 szerint viselkedik, és a session a telefonon ⌚-badge-dzsel jelenik meg.
 
-**Eddig elvégzett, build-szintű rész** (a user döntése alapján — nincs Wear-emulátor/eszköz-vezérlő eszközöm, mint az iOS Simulátorhoz, úgyhogy S12-vel ellentétben ez a lépés *nem* kapott élő kézi tesztet tőlem): `./gradlew :app:assembleDebug :wear:assembleDebug` → **BUILD SUCCESSFUL** (3m 47s, 385 task) — mindkét modul teljes összeállítása lefutott (Kotlin-fordítás, resource-merge, manifest-merge, dexing, csomagolás), ami az S13–S17 összes érintett fájlját lefedi build-szinten, beleértve a köztük lévő cross-module drótozást (`WatchBridge.kt`/`WatchStandaloneSessionBuffer.kt`/`AndroidManifest.xml` az `:app`-ban, a teljes Wear UI-lánc a `:wear`-ben). Ez **nem helyettesíti** a §9 tényleges viselkedési tesztjeit (pairing, üzenetküldés, ack-vesztés, valós UI-bejárás) — ezekhez fizikai eszköz vagy Wear-emulátorpár és kézi bejárás kell, ahogy S12-nél is a user tesztje adta a végső jóváhagyást.
-
-**Hátravan:** a §9 Wear-listájának tényleges, élő bejárása (fizikai órán/emulátorpáron) — utána jelölhető ez a lépés késznek, a felfedezett hibák javításával együtt, ha lenne ilyen.
+**Build-szintű előellenőrzés** (a kézi teszt előtt): `./gradlew :app:assembleDebug :wear:assembleDebug` → **BUILD SUCCESSFUL** (3m 47s, 385 task) — mindkét modul teljes összeállítása lefutott, ami az S13–S17 összes érintett fájlját és a cross-module drótozást lefedte build-szinten. A tényleges élő bejárást (pairing, üzenetküldés, standalone flow) a fejlesztő végezte el eszközön és igazolta vissza.
 
 ---
 
-### S19 — Közös zárás — **részben kész, 2026-07-26** (a regressziós kör lefutott; az S18 élő tesztje után zárható le teljesen)
+### S19 — Közös zárás — **kész, 2026-07-26**
 
 **Teendő:**
-- ✅ **Regressziós kör mindkét platformon** (F0–F5 phone-mastered flow változatlan): `flutter analyze` tiszta; `:app:compileDebugKotlin` + `:wear:compileDebugKotlin` → `BUILD SUCCESSFUL`; teljes `LifeyWatch` target típusellenőrzés hibátlan. `flutter test` 337 zöld / 1 bukó — a bukó bizonyítottan **nem** ehhez a munkához tartozik (§11/7: `origin/main`-nel bitre azonos statisztika-teszt, dátumfüggő DST-artefakt).
-- ✅ `docs/watch/40-watch-app-plan.md` állapottáblázatának F6-sora „F6a implementálva”-ra állítva (az S18 élő tesztje még nyitott, ezért nem „✅ Kész”).
-- ✅ Ennek a docnak a státusz-fejléce frissítve; az elavult „F5a nem teljes” előfeltétel-blokk lecserélve (az F5a azóta lezárult).
-- ⏳ **Hátra:** az S18 élő kézi tesztje után az eszközön hozott finomítások rögzítése (bevált-e a 10-es default reps a gyakorlatban, kell-e a `sync_queue_count` sor), és a §11/6 recovery-aszimmetria eldöntése (pótlás vagy tudatos elfogadás).
+- ✅ **Regressziós kör mindkét platformon** (F0–F5 phone-mastered flow változatlan): `flutter analyze` tiszta; `:app:compileDebugKotlin` + `:wear:compileDebugKotlin` → `BUILD SUCCESSFUL`; teljes `LifeyWatch` target típusellenőrzés hibátlan. `flutter test` 386 zöld / 1 bukó — a bukó bizonyítottan **nem** ehhez a munkához tartozik (§11/7: `origin/main`-nel bitre azonos statisztika-teszt, dátumfüggő DST-artefakt).
+- ✅ `docs/watch/40-watch-app-plan.md` állapottáblázatának F6a-sora „✅ Kész”-re mindkét platformon (az S18 élő tesztje lefutott).
+- ✅ Ennek a docnak a státusz-fejléce frissítve.
+- ✅ **A §11/8 F6a-hiba javítva** (a log-kontroll standalone módban a telefon elérhetőségére volt kapuzva mindkét platformon) — lásd §11/8, javítás + ellenőrzés dokumentálva.
+
+**Nyitva maradó, apró finomítási pontok** (nem blokkolják a lezárást, de nincs róluk eszközös visszajelzés, ezért nem jelölöm ki magamtól a választ):
+- A §11/6 Wear-recovery aszimmetria (`StandaloneSessionStore.loadActive()` hívatlan) — pótlás vagy tudatos elfogadás még nyitott döntés.
+- Bevált-e a 10-es default reps a gyakorlatban, kell-e a `sync_queue_count` sor a UI-ba — csak akkor dönthető el, ha van rá konkrét eszközös tapasztalat.
 
 **Kiegészítő ellenőrzés (2026-07-28, a fenti regressziós körön túl):** `./gradlew :app:assembleDebug :wear:assembleDebug` → **BUILD SUCCESSFUL** (3m 47s) — a `compileDebugKotlin`-nál szélesebb kör: resource-merge, manifest-merge, dexing, csomagolás mindkét modulon, ami az S13–S17 összes cross-module drótozását lefedi build-szinten. `xcodebuild -workspace Runner.xcworkspace -scheme Runner build` (fizikai iPhone-célponttal) → **BUILD SUCCEEDED** — csak projekt-szintű, F6-tól független figyelmeztetések (`CFBundleShortVersionString` mismatch, `AppIntents.framework` metaadat-üzenetek). Az első futás `error: Module 'connectivity_plus' not found`-dal bukott — ez egy helyi, elavult CocoaPods-telepítés volt (a `Pods/` könyvtárból hiányzott a modul), nem kódhiba; `flutter pub get` + `pod install` után zöld. Külön jegyezve, mert egy tiszta checkout után ugyanez máshol is előjöhet.
 

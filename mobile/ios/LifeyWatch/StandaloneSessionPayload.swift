@@ -43,7 +43,43 @@ struct StandaloneSessionPayload: Codable, Equatable {
 /// actually ends.
 struct StandaloneActiveSessionMeta: Codable, Equatable {
   let standaloneSessionId: String
-  let templateId: String?
+  /// The **full snapshot**, not just an id (docs/watch/
+  /// 49-watch-f6b-template-sync-plan.md §3.3, T6) — recovery has to restore
+  /// the exact template the session started with, not re-resolve the id
+  /// against whatever the cache holds by the time the app relaunches (which
+  /// could differ if a `templateSync` landed while the process was dead).
+  /// `nil` for a Quick strength session, same as before.
+  let template: CachedTemplate?
+  /// Which exercise new sets currently log against — meaningless (and
+  /// unread) when `template` is nil. Not optional: always 0 for a
+  /// Quick-strength session, just like the live `standaloneExerciseIndex`.
+  var exerciseIndex: Int
   let startedAtEpochMs: Int64
   var sets: [StandaloneSet]
+}
+
+/// One exercise of a synced template, exactly as the phone resolved it
+/// (docs/watch/49-watch-f6b-template-sync-plan.md §4.1, D-F6b.4) —
+/// `restSeconds` is never nil here, unlike `TemplateExercise` on the phone:
+/// the watch knows neither the `Exercises` table nor `UserSettings`, so the
+/// phone always sends a concrete number instead of a nullable override.
+struct CachedTemplateExercise: Codable, Equatable {
+  let exerciseId: String
+  let name: String
+  let restSeconds: Int
+  let targetSets: Int?
+}
+
+/// A template as cached on the watch for the standalone picker
+/// (docs/watch/49-watch-f6b-template-sync-plan.md §3.1, T4.1) — the watch's
+/// own copy of `WatchTemplatePayload` (mobile/lib/features/workouts/
+/// application/watch_template_sync.dart), decoded once out of the
+/// `applicationContext`'s `templates` array and persisted by
+/// `StandaloneSessionStore`. `exercises`' array position is what a
+/// standalone session's `exerciseIndex` refers back to (§4.1) — the watch
+/// never sends `exerciseId` itself on the wire, only the index.
+struct CachedTemplate: Codable, Equatable {
+  let templateId: String
+  let title: String
+  let exercises: [CachedTemplateExercise]
 }

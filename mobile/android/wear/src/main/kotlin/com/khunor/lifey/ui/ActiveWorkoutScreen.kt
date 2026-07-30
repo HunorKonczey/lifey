@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -66,6 +69,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
@@ -77,13 +82,18 @@ import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.google.android.gms.wearable.Wearable
+import com.khunor.lifey.ActiveExerciseDisplay
 import com.khunor.lifey.ExerciseService
 import com.khunor.lifey.LiveMetrics
 import com.khunor.lifey.LogAdjustField
 import com.khunor.lifey.LogAdjustState
 import com.khunor.lifey.LogSetState
 import com.khunor.lifey.R
+import com.khunor.lifey.SessionMetadata
 import com.khunor.lifey.SessionStateHolder
+import com.khunor.lifey.StandaloneSet
+import com.khunor.lifey.StandaloneTemplate
+import com.khunor.lifey.StandaloneTemplateExercise
 import com.khunor.lifey.SummarySender
 import com.khunor.lifey.ui.theme.LifeyColors
 import com.khunor.lifey.ui.theme.LifeyShapes
@@ -126,10 +136,11 @@ private val HEART_RATE_PERMISSIONS = arrayOf(
  * scheduled independently in [com.khunor.lifey.ExerciseService], not here —
  * it needs to fire even while this screen isn't composed).
  *
- * Three swipeable pages, not one scrolling column: [LogPage] (leftmost/
- * default — docs/watch/43-watch-f5-set-logging-plan.md §3.1 decision (b)),
- * [MetricsOrRestPage] (metrics or the rest-hero), and [ControlsPage]
- * (End/Pause). An earlier version put metrics and controls in a single
+ * Three swipeable pages, not one scrolling column: [LogPage] (leftmost —
+ * docs/watch/43-watch-f5-set-logging-plan.md §3.1 decision (b)),
+ * [MetricsOrRestPage] (metrics or the rest-hero — the pager's default, one
+ * swipe/rotary-turn from the log page), and [ControlsPage] (End/Pause). An
+ * earlier version put metrics and controls in a single
  * scrollable `Column`, but on a round display the End chip ended up peeking
  * in at the bottom of *every* metrics/rest view without any scroll gesture,
  * visibly clipped by the bezel — confusing and ugly on real hardware even
@@ -145,6 +156,50 @@ private val HEART_RATE_PERMISSIONS = arrayOf(
  * [com.khunor.lifey.ExerciseService] directly — it only affects the local
  * sensor session, nothing the phone needs to know about.
  */
+/**
+ * See [ActiveExerciseDisplay]'s doc comment. Three branches, in priority
+ * order: (1) a template exercise with a `targetSets` falls back to the
+ * exact phone-mastered `setsDone`/`setsTotal` presentation (§3.4: "van
+ * cél-szettszám!"); (2) a template exercise with none uses the free-format
+ * count+reps line, scoped to that exercise's own sets; (3) Quick strength
+ * (no template at all) keeps F6a's original all-sets free-format behavior
+ * unchanged. Phone-mastered sessions fall through to the final branch,
+ * which reproduces the pre-F6b computation exactly — a superset, not a
+ * behavior change, for that path (docs/watch/
+ * 49-watch-f6b-template-sync-plan.md §3.4). `@Composable` (not a plain
+ * function on [SessionMetadata]) because it needs `stringResource`.
+ */
+@Composable
+private fun activeExerciseDisplay(metadata: SessionMetadata): ActiveExerciseDisplay {
+    val template = metadata.standaloneTemplate
+    val currentExercise = template?.exercises?.getOrNull(metadata.standaloneExerciseIndex)
+    if (currentExercise != null) {
+        val setsForExercise = metadata.standaloneSets.filter { it.exerciseIndex == metadata.standaloneExerciseIndex }
+        val targetSets = currentExercise.targetSets
+        return if (targetSets != null) {
+            ActiveExerciseDisplay(
+                name = currentExercise.name, setsDone = setsForExercise.size, setsTotal = targetSets,
+                freeFormatSets = null,
+            )
+        } else {
+            ActiveExerciseDisplay(
+                name = currentExercise.name, setsDone = null, setsTotal = null,
+                freeFormatSets = setsForExercise.size to setsForExercise.sumOf { it.reps },
+            )
+        }
+    }
+    if (metadata.isStandalone) {
+        return ActiveExerciseDisplay(
+            name = stringResource(R.string.standalone_quick_start), setsDone = null, setsTotal = null,
+            freeFormatSets = metadata.standaloneSets.size to metadata.standaloneSets.sumOf { it.reps },
+        )
+    }
+    return ActiveExerciseDisplay(
+        name = metadata.exerciseName ?: stringResource(R.string.active_default_exercise),
+        setsDone = metadata.setsDone, setsTotal = metadata.setsTotal, freeFormatSets = null,
+    )
+}
+
 @Composable
 fun ActiveWorkoutScreen() {
     val metadata by SessionStateHolder.metadata.collectAsState()
@@ -196,28 +251,21 @@ fun ActiveWorkoutScreen() {
         showGoFlash = false
     }
 
-    val setsDone = metadata.setsDone
-    val setsTotal = metadata.setsTotal
     val resting = restRemainingMs > 0
     val isStandalone = metadata.isStandalone
-    // Standalone's own fallback (docs/watch/44-watch-f6-standalone-plan.md
-    // §3.4/§3.5, mirrors iOS's `restExerciseName`) — F6a never sets
-    // `exerciseName` for a standalone session (no plan), so every page
-    // that would otherwise show `active_default_exercise` shows
-    // `standalone_quick_start` instead.
-    val exerciseName = metadata.exerciseName ?: stringResource(
-        if (isStandalone) R.string.standalone_quick_start else R.string.active_default_exercise,
-    )
-    // No plan/total to report against in standalone (D-F6.3) — count +
-    // combined reps instead of "n of total" (mirrors iOS's identical
-    // `freeFormatSets` computation).
-    val freeFormatSets = if (isStandalone) {
-        metadata.standaloneSets.size to metadata.standaloneSets.sumOf { it.reps }
-    } else {
-        null
-    }
+    // One computation for "current exercise + set progress", shared by every
+    // page below instead of each re-deriving the same three-way branch
+    // (docs/watch/49-watch-f6b-template-sync-plan.md §3.4).
+    val display = activeExerciseDisplay(metadata)
 
-    val pagerState = rememberPagerState(pageCount = { PAGE_COUNT })
+    // Starts on METRICS_PAGE — the calorie/HR/exercise readout is what a
+    // glance should land on; the log-set page is one swipe/rotary-turn away.
+    val pagerState = rememberPagerState(initialPage = METRICS_PAGE, pageCount = { PAGE_COUNT })
+    // Whether ExerciseListScreen is showing instead of the pager (docs/watch/
+    // 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — opened from
+    // ControlsPage's "Gyakorlatok" chip, only ever true during a
+    // template-backed standalone session.
+    var showExerciseList by remember { mutableStateOf(false) }
 
     // Local, watch-only UI step (docs/40-watch-app-plan.md §8.2 decision (b)
     // still holds — nothing here talks to ExerciseService or the phone until
@@ -270,7 +318,7 @@ fun ActiveWorkoutScreen() {
             // over it (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1): both
             // want the rotary, and swapping means only one rotary binding
             // exists at a time — no focus fight. `pagerState` survives, so
-            // the pager comes back on the log page exactly where it was.
+            // the pager comes back exactly where it was.
             AdjustOverlay(
                 state = logAdjustState!!,
                 isCompact = isCompact,
@@ -297,6 +345,19 @@ fun ActiveWorkoutScreen() {
                     }
                 },
             )
+        } else if (showExerciseList && metadata.standaloneTemplate != null) {
+            ExerciseListScreen(
+                template = metadata.standaloneTemplate!!,
+                currentExerciseIndex = metadata.standaloneExerciseIndex,
+                standaloneSets = metadata.standaloneSets,
+                isCompact = isCompact,
+                maxWidth = maxWidth,
+                onSelect = { index ->
+                    SessionStateHolder.onStandaloneExerciseSelected(index)
+                    showExerciseList = false
+                },
+                onBack = { showExerciseList = false },
+            )
         } else {
             HorizontalPager(
                 state = pagerState,
@@ -309,13 +370,13 @@ fun ActiveWorkoutScreen() {
                 when (page) {
                     LOG_PAGE -> LogPage(
                         elapsedMs = elapsedMs,
-                        exerciseName = exerciseName,
-                        setsDone = setsDone,
-                        setsTotal = setsTotal,
+                        exerciseName = display.name,
+                        setsDone = display.setsDone,
+                        setsTotal = display.setsTotal,
                         sessionClientId = metadata.sessionClientId,
                         logSetState = logSetState,
                         isStandalone = isStandalone,
-                        freeFormatSets = freeFormatSets,
+                        freeFormatSets = display.freeFormatSets,
                         isCompact = isCompact,
                         maxWidth = maxWidth,
                     )
@@ -324,21 +385,22 @@ fun ActiveWorkoutScreen() {
                         elapsedMs = elapsedMs,
                         restRemainingMs = restRemainingMs,
                         restTotalSeconds = metadata.restTotalSeconds,
-                        exerciseName = exerciseName,
-                        setsDone = setsDone,
-                        setsTotal = setsTotal,
+                        exerciseName = display.name,
+                        setsDone = display.setsDone,
+                        setsTotal = display.setsTotal,
                         liveMetrics = liveMetrics,
                         isStandalone = isStandalone,
-                        freeFormatSets = freeFormatSets,
+                        freeFormatSets = display.freeFormatSets,
                         isCompact = isCompact,
                         maxWidth = maxWidth,
                     )
                     CONTROLS_PAGE -> ControlsPage(
-                        exerciseName = exerciseName,
-                        setsDone = setsDone,
-                        setsTotal = setsTotal,
+                        exerciseName = display.name,
+                        setsDone = display.setsDone,
+                        setsTotal = display.setsTotal,
                         isPaused = liveMetrics.isPaused,
-                        freeFormatSets = freeFormatSets,
+                        freeFormatSets = display.freeFormatSets,
+                        hasStandaloneTemplate = metadata.standaloneTemplate != null,
                         isCompact = isCompact,
                         onEnd = { showEffortSelector = true },
                         onTogglePause = {
@@ -347,6 +409,7 @@ fun ActiveWorkoutScreen() {
                                 if (paused) ExerciseService.resume(context) else ExerciseService.pause(context)
                             }
                         },
+                        onOpenExerciseList = { showExerciseList = true },
                     )
                 }
             }
@@ -387,7 +450,7 @@ private fun PageDots(pageCount: Int, selectedPage: Int, modifier: Modifier = Mod
 }
 
 /**
- * The leftmost/default page (docs/watch/43-watch-f5-set-logging-plan.md
+ * The leftmost page (docs/watch/43-watch-f5-set-logging-plan.md
  * §3.1 decision (b), canvas W 07/08/10): a single large circular "+1 set"
  * control that fills nearly the whole safe area — a dedicated page turns
  * the entire tap target into one ~5×-minimum circle, with zero mis-tap risk
@@ -433,7 +496,13 @@ private fun LogPage(
     }
 
     var lastTapAtMs by remember { mutableLongStateOf(0L) }
-    val canTap = logSetState is LogSetState.Ready && hasConnectedNode
+    // Standalone logging is local — there is no phone to reach, and gating on
+    // node connectivity would disable the control in exactly the situation
+    // F6a exists for (docs/watch/44-watch-f6-standalone-plan.md §11/8). Only
+    // the phone-mastered path needs a connected node, since that one's tap is
+    // a round-trip.
+    val requiresPhone = !isStandalone
+    val canTap = logSetState is LogSetState.Ready && (hasConnectedNode || !requiresPhone)
 
     Column(
         modifier = Modifier
@@ -450,7 +519,7 @@ private fun LogPage(
         )
         val ghosted = logSetState is LogSetState.Pending ||
             logSetState is LogSetState.Failed ||
-            (logSetState is LogSetState.Ready && !hasConnectedNode)
+            (logSetState is LogSetState.Ready && requiresPhone && !hasConnectedNode)
         LogCircle(
             logSetState = logSetState,
             ghosted = ghosted,
@@ -618,7 +687,10 @@ private fun LogStatusLine(
 ) {
     val captionStyle = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1
     when {
-        logSetState is LogSetState.Ready && !hasConnectedNode -> LogStatusPill(
+        // Not shown in standalone: the header already carries the standalone
+        // badge, and repeating "phone not reachable" there would read as an
+        // error during a deliberately phone-less workout (§11/8).
+        logSetState is LogSetState.Ready && !isStandalone && !hasConnectedNode -> LogStatusPill(
             icon = Icons.Filled.SignalWifiOff,
             text = stringResource(R.string.phone_unreachable),
             tint = LifeyColors.onSurfaceVariant,
@@ -626,17 +698,19 @@ private fun LogStatusLine(
             isCompact = isCompact,
         )
         logSetState is LogSetState.Ready -> {
+            // exerciseName/setsDone/setsTotal already come from
+            // activeExerciseDisplay (docs/watch/49-watch-f6b-template-sync-plan.md
+            // §3.4) — no separate isStandalone branch needed here any more:
+            // Quick strength arrives with setsTotal == null (falls to the
+            // plain-name case below, mirrors iOS's simplified `contextLine`),
+            // a template exercise with a targetSets gets the same "next set
+            // of total" preview a phone-mastered exercise would.
             val nextSet = if (setsDone != null && setsTotal != null) {
                 (setsDone + 1).coerceAtMost(setsTotal)
             } else {
                 null
             }
-            val text = if (isStandalone) {
-                // No plan, so no "next set of total" to preview — just
-                // names the session (docs/watch/44-watch-f6-standalone-
-                // plan.md §3.4, mirrors iOS's `contextLine`).
-                stringResource(R.string.standalone_quick_start)
-            } else if (nextSet != null && setsTotal != null) {
+            val text = if (nextSet != null && setsTotal != null) {
                 stringResource(R.string.log_set_context_format, exerciseName, nextSet, setsTotal)
             } else {
                 exerciseName
@@ -977,9 +1051,14 @@ private fun ControlsPage(
     setsTotal: Int?,
     isPaused: Boolean,
     freeFormatSets: Pair<Int, Int>?,
+    /** Only during a template-backed standalone session (docs/watch/
+     * 49-watch-f6b-template-sync-plan.md §3.5) — quick-strength and
+     * phone-mastered sessions have nothing to switch between. */
+    hasStandaloneTemplate: Boolean,
     isCompact: Boolean,
     onEnd: () -> Unit,
     onTogglePause: () -> Unit,
+    onOpenExerciseList: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -1037,7 +1116,147 @@ private fun ControlsPage(
                     contentColor = LifeyColors.onSurface,
                 ),
             )
+            if (hasStandaloneTemplate) {
+                CompactChip(
+                    onClick = onOpenExerciseList,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.List,
+                            contentDescription = null,
+                            tint = LifeyColors.onSurfaceVariant,
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = stringResource(R.string.standalone_exercise_list_title),
+                            maxLines = 1,
+                        )
+                    },
+                    colors = ChipDefaults.chipColors(
+                        backgroundColor = LifeyColors.container,
+                        contentColor = LifeyColors.onSurfaceVariant,
+                    ),
+                )
+            }
         }
+    }
+}
+
+/**
+ * The "which exercise am I logging against" picker (docs/watch/
+ * 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — opened from
+ * [ControlsPage]'s "Gyakorlatok" chip, only ever shown during a
+ * template-backed standalone session. Replaces the pager the same way the
+ * adjust overlay does (see [ActiveWorkoutScreen]), not a separate
+ * Activity/navigation destination. Visually the exact shape
+ * [com.khunor.lifey.ui.StandalonePickerScreen]'s rows already established
+ * (T4) — a `ScalingLazyColumn` of `surface`-background cards, the selected
+ * one highlighted `containerHigh` — not a new component language.
+ *
+ * Tapping a row **jumps** straight to that exercise, not a "Next" stepper
+ * (D-F6b.8's own reasoning: a one-way Next either silently wraps back to
+ * exercise 1, logging wrong data, or dead-ends at the last exercise with no
+ * way back). No confirmation: this is fully reversible — a mis-tap costs one
+ * more tap to undo, not a lost set. Already-logged sets keep whatever
+ * `exerciseIndex` they were logged with, permanently; selecting here only
+ * changes what the *next* tap counts against.
+ */
+@Composable
+private fun ExerciseListScreen(
+    template: StandaloneTemplate,
+    currentExerciseIndex: Int,
+    standaloneSets: List<StandaloneSet>,
+    isCompact: Boolean,
+    maxWidth: Dp,
+    onSelect: (Int) -> Unit,
+    onBack: () -> Unit,
+) {
+    val listState = rememberScalingLazyListState()
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        ScalingLazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                horizontal = maxWidth * SCREEN_PADDING_FRACTION,
+                vertical = maxWidth * 0.14f,
+            ),
+        ) {
+            item {
+                Text(
+                    text = stringResource(R.string.standalone_exercise_list_title),
+                    style = if (isCompact) MaterialTheme.typography.title3 else MaterialTheme.typography.title2,
+                    color = LifeyColors.onSurface,
+                )
+            }
+            template.exercises.forEachIndexed { index, exercise ->
+                item {
+                    ExerciseListRow(
+                        exercise = exercise,
+                        isCompact = isCompact,
+                        isCurrent = index == currentExerciseIndex,
+                        setsDone = standaloneSets.count { it.exerciseIndex == index },
+                        onTap = { onSelect(index) },
+                    )
+                }
+            }
+        }
+
+        // Top-start corner, out of the ScalingLazyColumn's flow — mirrors
+        // StandalonePickerScreen's identical back affordance.
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = stringResource(R.string.effort_selector_back),
+            tint = LifeyColors.onSurfaceVariant,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+                .clickable(onClick = onBack)
+                .size(20.dp),
+        )
+    }
+}
+
+/** One exercise row — reuses [com.khunor.lifey.ui.StandalonePickerScreen]'s
+ * `TemplateRow` visual language rather than inventing a new one (see
+ * [ExerciseListScreen]'s doc comment), plus the current-exercise highlight
+ * `StandalonePickerScreen` doesn't need. */
+@Composable
+private fun ExerciseListRow(
+    exercise: StandaloneTemplateExercise,
+    isCompact: Boolean,
+    isCurrent: Boolean,
+    setsDone: Int,
+    onTap: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onTap)
+            .background(
+                if (isCurrent) LifeyColors.containerHigh else LifeyColors.surface,
+                LifeyShapes.card,
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = exercise.name,
+            style = if (isCompact) MaterialTheme.typography.body2 else MaterialTheme.typography.title3,
+            color = LifeyColors.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        val targetSets = exercise.targetSets
+        Text(
+            text = if (targetSets != null) {
+                stringResource(R.string.active_sets_format, setsDone, targetSets)
+            } else {
+                stringResource(R.string.standalone_exercise_sets_done, setsDone)
+            },
+            style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
+            color = LifeyColors.onSurfaceVariant,
+            maxLines = 1,
+        )
     }
 }
 

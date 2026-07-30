@@ -14,6 +14,15 @@ final class WatchBridge: NSObject {
   private let healthStore = HKHealthStore()
   private var eventSink: FlutterEventSink?
 
+  /// The application-context dict actually sent to the watch, kept between
+  /// calls (docs/watch/49-watch-f6b-template-sync-plan.md D-F6b.2) —
+  /// `WCSession.applicationContext` is a single global value that
+  /// `updateApplicationContext` **replaces wholesale**, never merges. Every
+  /// writer (session-state pushes here, `templates` once syncTemplates
+  /// lands) must therefore mutate this same dict and resend all of it, or
+  /// one writer's push would silently erase the other's last update.
+  private var lastContext: [String: Any] = [:]
+
   @discardableResult
   static func register(with registrar: FlutterPluginRegistrar) -> WatchBridge {
     let instance = WatchBridge()
@@ -46,6 +55,8 @@ final class WatchBridge: NSObject {
       ackSetLogged(call, result: result)
     case "ackStandaloneSession":
       ackStandaloneSession(call, result: result)
+    case "syncTemplates":
+      syncTemplates(call, result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -172,21 +183,61 @@ final class WatchBridge: NSObject {
     result(nil)
   }
 
+  /// Answers `syncTemplates` (docs/watch/49-watch-f6b-template-sync-plan.md
+  /// §4.1, T3.2) — folds `templates`/`syncedAtEpochMs` into [lastContext]
+  /// (D-F6b.2) alongside whatever session-state keys already live there,
+  /// then resends the whole thing. No `sendMessage` counterpart, unlike the
+  /// session-state pushes above: template sync has no latency-sensitive live
+  /// half, so the queued `updateApplicationContext` delivery — arriving
+  /// whenever the watch next connects — is enough on its own (§4.3).
+  ///
+  /// An empty `templates` array still writes and sends (never skipped) —
+  /// that's how a watch whose last template just got deleted is told to
+  /// clear its cache (T1.3's phone-side decision, enforced here too).
+  private func syncTemplates(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+      let templates = args["templates"] as? [[String: Any]],
+      let syncedAtEpochMs = (args["syncedAtEpochMs"] as? NSNumber)?.int64Value
+    else {
+      result(nil)
+      return
+    }
+    guard WCSession.isSupported() else {
+      result(nil)
+      return
+    }
+    lastContext["templates"] = (sanitizedForPropertyList(templates) as? [Any]) ?? []
+    lastContext["syncedAtEpochMs"] = syncedAtEpochMs
+    try? WCSession.default.updateApplicationContext(lastContext)
+    result(nil)
+  }
+
   /// The "last known desired state" snapshot (docs/40-watch-app-plan.md §3,
   /// §D2) — survives the watch being unreachable; delivered whenever it next
   /// connects, unlike `sendMessage`.
+  ///
+  /// Mutates [lastContext] rather than building a fresh dict per call
+  /// (docs/watch/49-watch-f6b-template-sync-plan.md D-F6b.2/T3.1) — any key
+  /// this function doesn't touch (`templates`/`syncedAtEpochMs`, written by
+  /// [syncTemplates]) carries over untouched into the resend. Matches the
+  /// pre-refactor behavior exactly for the keys it does own:
+  /// `title`/`startedAtEpochMs` are only ever *added*, never removed, when
+  /// the caller passes nil — the original code had no path that deleted
+  /// them either (`endWorkout` passing `state: nil` never cleared a
+  /// previously-set `state` key, and still doesn't).
   private func pushContext(
     sessionClientId: String, title: String?, startedAtEpochMs: Int64?, state: [String: Any]?,
     desiredPhase: String
   ) {
     guard WCSession.isSupported() else { return }
-    var context: [String: Any] = ["sessionClientId": sessionClientId, "desiredPhase": desiredPhase]
-    if let title { context["title"] = title }
-    if let startedAtEpochMs { context["startedAtEpochMs"] = startedAtEpochMs }
+    lastContext["sessionClientId"] = sessionClientId
+    lastContext["desiredPhase"] = desiredPhase
+    if let title { lastContext["title"] = title }
+    if let startedAtEpochMs { lastContext["startedAtEpochMs"] = startedAtEpochMs }
     if let state, let sanitizedState = sanitizedForPropertyList(state) as? [String: Any] {
-      context["state"] = sanitizedState
+      lastContext["state"] = sanitizedState
     }
-    try? WCSession.default.updateApplicationContext(context)
+    try? WCSession.default.updateApplicationContext(lastContext)
   }
 }
 

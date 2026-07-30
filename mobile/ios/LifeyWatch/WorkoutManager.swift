@@ -31,6 +31,22 @@ struct WorkoutSummaryData: Equatable {
 /// its own (docs/40-watch-app-plan.md §12.1 B9: "~6 mp auto-dismiss").
 private let summaryAutoDismissSeconds: TimeInterval = 6
 
+/// What the active screen should show for "current exercise + set progress"
+/// (docs/watch/49-watch-f6b-template-sync-plan.md §3.4) — one place
+/// computing it (`WorkoutManager.activeExerciseDisplay`), shared by
+/// `LogPage`, `MetricsPage` and `RestHeroView`'s caller instead of each
+/// re-deriving the same three-way branch (template-with-`targetSets` /
+/// template-without / phone-mastered vs. Quick strength).
+struct ActiveExerciseDisplay {
+  let name: String
+  let setsDone: Int?
+  let setsTotal: Int?
+  /// Standalone's set-count line when there's no `targetSets` to compare
+  /// against (44-doc §3.4, D-F6.3) — mutually exclusive with
+  /// `setsDone`/`setsTotal` being non-nil.
+  let freeFormatSets: (count: Int, totalReps: Int)?
+}
+
 enum WorkoutPhase: Equatable {
   case idle
   case active
@@ -209,6 +225,20 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// track their set count via `setsDone`/`setsTotal` instead, which the
   /// phone itself owns.
   @Published private(set) var standaloneSets: [StandaloneSet] = []
+  /// The template this standalone session is running against, or `nil` for
+  /// the F6a "Quick strength" flow (docs/watch/49-watch-f6b-template-sync-plan.md
+  /// §3.3, D-F6b.8). A **snapshot** taken at `startStandalone(template:)`,
+  /// not a live reference to `StandaloneSessionStore`'s cache — a
+  /// `templateSync` landing mid-session (D-F6b.2 guarantees it won't even
+  /// try to touch the running session's own state) still must not be able
+  /// to change what a *running* session's gyakorlatnév/restSeconds are,
+  /// which a cache-lookup-by-id would risk.
+  @Published private(set) var standaloneTemplate: CachedTemplate?
+  /// Which of `standaloneTemplate.exercises` new sets log against — always
+  /// 0 and unused outside a template session. Changed only by
+  /// `selectStandaloneExercise(_:)` (§3.5's gyakorlat-lista, wired in T7);
+  /// never overwritten by anything synced from the phone.
+  @Published private(set) var standaloneExerciseIndex = 0
 
   private let store = HKHealthStore()
   private var session: HKWorkoutSession?
@@ -260,15 +290,22 @@ final class WorkoutManager: NSObject, ObservableObject {
   }
 
   /// Entry point for the launcher's "Start workout" / picker's "Quick
-  /// strength" tap (docs/watch/44-watch-f6-standalone-plan.md §3.1) — no
-  /// `HKWorkoutConfiguration` from the phone this time, since there's no
-  /// phone-mastered session to hang off: the watch builds its own
-  /// configuration and generates its own session id. Reuses
-  /// `startSession(configuration:)`'s HealthKit plumbing and
-  /// `start(configuration:)`'s permission gate (§7: "ez az egyetlen
+  /// strength" **and** synced-template rows (docs/watch/
+  /// 44-watch-f6-standalone-plan.md §3.1; docs/watch/
+  /// 49-watch-f6b-template-sync-plan.md §3.3, T6) — no `HKWorkoutConfiguration`
+  /// from the phone this time, since there's no phone-mastered session to
+  /// hang off: the watch builds its own configuration and generates its own
+  /// session id. Reuses `startSession(configuration:)`'s HealthKit plumbing
+  /// and `start(configuration:)`'s permission gate (§7: "ez az egyetlen
   /// kérési pont" — standalone has no prior phone onboarding to have
   /// already asked).
-  func startStandalone() async {
+  ///
+  /// [template] defaults to `nil` (Quick strength, F6a's original single
+  /// call site unaffected); non-nil is `StandalonePickerView`'s already-read
+  /// picker snapshot handed straight through — this function never itself
+  /// reads `StandaloneSessionStore.shared.templates()`, so "which template"
+  /// is decided exactly once, at the tap, not re-resolved here.
+  func startStandalone(template: CachedTemplate? = nil) async {
     guard phase == .idle, HKHealthStore.isHealthDataAvailable() else { return }
     guard await ensureHealthAuthorized() else { return }
 
@@ -279,6 +316,8 @@ final class WorkoutManager: NSObject, ObservableObject {
     isStandalone = true
     sessionClientId = UUID().uuidString
     standaloneSets = []
+    standaloneTemplate = template
+    standaloneExerciseIndex = 0
 
     do {
       try await startSession(configuration: configuration)
@@ -289,9 +328,74 @@ final class WorkoutManager: NSObject, ObservableObject {
       // is out of scope for F6a).
       isStandalone = false
       sessionClientId = nil
+      standaloneTemplate = nil
       return
     }
     saveActiveSnapshot()
+  }
+
+  /// The gyakorlat-lista's tap handler (docs/watch/49-watch-f6b-template-sync-plan.md
+  /// §3.5, D-F6b.8) — changes only which exercise the *next* logged set
+  /// counts against. Never closes a set, starts/skips a rest, or touches a
+  /// set already logged — those keep the `exerciseIndex` they were logged
+  /// with, permanently (§3.5: "a már logolt szettek exerciseIndex-e
+  /// véglegesen az marad"). A no-op outside a template session or for an
+  /// index the snapshot doesn't have — nothing to switch to, and the UI
+  /// that calls this (T7) only ever offers indices that exist.
+  func selectStandaloneExercise(_ index: Int) {
+    guard let standaloneTemplate, index >= 0, index < standaloneTemplate.exercises.count else { return }
+    standaloneExerciseIndex = index
+  }
+
+  /// The exercise the *next* logged set will count against, or `nil` for a
+  /// Quick strength session (docs/watch/49-watch-f6b-template-sync-plan.md
+  /// §3.3/§3.4) — the safe-indexed lookup every view that needs "what
+  /// exercise is this" reads, instead of repeating the bounds check
+  /// `selectStandaloneExercise(_:)` already guarantees can't go stale.
+  var standaloneCurrentExercise: CachedTemplateExercise? {
+    guard let standaloneTemplate, standaloneExerciseIndex < standaloneTemplate.exercises.count else {
+      return nil
+    }
+    return standaloneTemplate.exercises[standaloneExerciseIndex]
+  }
+
+  /// `standaloneSets` filtered to the *current* exercise only (docs/watch/
+  /// 49-watch-f6b-template-sync-plan.md §3.4) — outside a template session
+  /// (Quick strength) every set counts as one pool, matching F6a's original
+  /// behavior exactly (§3.4's `standaloneTemplate == nil` short-circuit).
+  var standaloneSetsForCurrentExercise: [StandaloneSet] {
+    guard standaloneTemplate != nil else { return standaloneSets }
+    return standaloneSets.filter { $0.exerciseIndex == standaloneExerciseIndex }
+  }
+
+  /// See [ActiveExerciseDisplay]'s doc comment. Three branches, in priority
+  /// order: (1) a template exercise with a `targetSets` falls back to the
+  /// exact phone-mastered `setsDone`/`setsTotal` presentation (§3.4: "van
+  /// cél-szettszám!"); (2) a template exercise with none uses the
+  /// free-format count+reps line, scoped to that exercise's own sets; (3)
+  /// Quick strength (no template at all) keeps F6a's original all-sets
+  /// free-format behavior unchanged. Phone-mastered sessions fall through
+  /// to the final `return`, which reproduces the pre-F6b code exactly —
+  /// this getter is a superset, not a behavior change, for that path.
+  var activeExerciseDisplay: ActiveExerciseDisplay {
+    if let currentExercise = standaloneCurrentExercise {
+      let sets = standaloneSetsForCurrentExercise
+      if let targetSets = currentExercise.targetSets {
+        return ActiveExerciseDisplay(
+          name: currentExercise.name, setsDone: sets.count, setsTotal: targetSets, freeFormatSets: nil)
+      }
+      return ActiveExerciseDisplay(
+        name: currentExercise.name, setsDone: nil, setsTotal: nil,
+        freeFormatSets: (sets.count, sets.reduce(0) { $0 + $1.reps }))
+    }
+    if isStandalone {
+      return ActiveExerciseDisplay(
+        name: String(localized: "standalone_quick_start"), setsDone: nil, setsTotal: nil,
+        freeFormatSets: (standaloneSets.count, standaloneSets.reduce(0) { $0 + $1.reps }))
+    }
+    return ActiveExerciseDisplay(
+      name: exerciseName ?? String(localized: "active_default_exercise"),
+      setsDone: setsDone, setsTotal: setsTotal, freeFormatSets: nil)
   }
 
   /// Shared by `start(configuration:)` (phone-mastered) and
@@ -462,15 +566,33 @@ final class WorkoutManager: NSObject, ObservableObject {
       StandaloneSet(
         loggedAtEpochMs: Int64(now.timeIntervalSince1970 * 1000),
         reps: standaloneDefaultReps,
-        exerciseIndex: nil))
+        // nil outside a template session, matching F6a's original
+        // behavior exactly; the current gyakorlat-lista selection
+        // otherwise (docs/watch/49-watch-f6b-template-sync-plan.md §3.3).
+        exerciseIndex: standaloneTemplate != nil ? standaloneExerciseIndex : nil))
     saveActiveSnapshot()
 
     logSetState = .confirmed
     WKInterfaceDevice.current().play(.success)
     scheduleLogSetSettle(after: logSetConfirmedSettleSeconds)
 
-    restDeadlineUptime = ProcessInfo.processInfo.systemUptime + standaloneRestSeconds
-    restTotalSeconds = Int(standaloneRestSeconds)
+    let restSeconds = currentStandaloneRestSeconds
+    restDeadlineUptime = ProcessInfo.processInfo.systemUptime + restSeconds
+    restTotalSeconds = Int(restSeconds)
+  }
+
+  /// The rest length for whichever exercise `standaloneExerciseIndex`
+  /// currently points at (docs/watch/49-watch-f6b-template-sync-plan.md
+  /// §3.3) — the synced, already-resolved `restSeconds` (D-F6b.4) when
+  /// running from a template, the fixed `standaloneRestSeconds` default
+  /// otherwise (44-doc §3.5), or defensively if the index is somehow out of
+  /// range (shouldn't happen — `selectStandaloneExercise` itself validates
+  /// it before ever setting it).
+  private var currentStandaloneRestSeconds: TimeInterval {
+    guard let standaloneTemplate, standaloneExerciseIndex < standaloneTemplate.exercises.count else {
+      return standaloneRestSeconds
+    }
+    return TimeInterval(standaloneTemplate.exercises[standaloneExerciseIndex].restSeconds)
   }
 
   private func beginRemoteLogSet(
@@ -698,7 +820,7 @@ final class WorkoutManager: NSObject, ObservableObject {
 
     let payload = StandaloneSessionPayload(
       standaloneSessionId: sessionClientId,
-      templateId: nil,
+      templateId: standaloneTemplate?.templateId,
       startedAtEpochMs: Int64(startedAt.timeIntervalSince1970 * 1000),
       endedAtEpochMs: Int64(endedAt.timeIntervalSince1970 * 1000),
       rpe: rpe,
@@ -793,6 +915,8 @@ final class WorkoutManager: NSObject, ObservableObject {
     startedAt = nil
     isStandalone = false
     standaloneSets = []
+    standaloneTemplate = nil
+    standaloneExerciseIndex = 0
     logSetTimeoutTask?.cancel()
     logSetTimeoutTask = nil
     logSetSettleTask?.cancel()
@@ -811,7 +935,8 @@ final class WorkoutManager: NSObject, ObservableObject {
     StandaloneSessionStore.shared.saveActive(
       StandaloneActiveSessionMeta(
         standaloneSessionId: sessionClientId,
-        templateId: nil,
+        template: standaloneTemplate,
+        exerciseIndex: standaloneExerciseIndex,
         startedAtEpochMs: Int64(startedAt.timeIntervalSince1970 * 1000),
         sets: standaloneSets))
   }
@@ -834,6 +959,8 @@ final class WorkoutManager: NSObject, ObservableObject {
     builder = recoveredBuilder
     isStandalone = true
     sessionClientId = meta.standaloneSessionId
+    standaloneTemplate = meta.template
+    standaloneExerciseIndex = meta.exerciseIndex
     standaloneSets = meta.sets
     startedAt = Date(timeIntervalSince1970: Double(meta.startedAtEpochMs) / 1000)
     phase = .active

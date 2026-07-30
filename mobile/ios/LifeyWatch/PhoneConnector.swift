@@ -235,7 +235,17 @@ extension PhoneConnector: WCSessionDelegate {
   /// (docs/40-watch-app-plan.md §3 "Kézbesítési garancia") — mirrors
   /// Android's `onDataChanged` check: the phone's `end` message may never
   /// have reached us while unreachable.
+  ///
+  /// `applyTemplateSync` runs first and **unconditionally** — a context that
+  /// only ever carries `templates` (no session has been started from this
+  /// phone yet, the common case right after pairing) has no
+  /// `sessionClientId` at all, and the guard below would otherwise discard
+  /// the whole context, including the templates, before this function got a
+  /// chance to look at it (docs/watch/49-watch-f6b-template-sync-plan.md
+  /// T4.1 — the same guard-ordering class of bug the S8 ack handling fixed).
   private func applyContext(_ context: [String: Any]) {
+    applyTemplateSync(context)
+
     guard !context.isEmpty, let sessionClientId = context["sessionClientId"] as? String else {
       return
     }
@@ -257,6 +267,26 @@ extension PhoneConnector: WCSessionDelegate {
         }
       }
     }
+  }
+
+  /// Decodes `context["templates"]` (docs/watch/49-watch-f6b-template-sync-plan.md
+  /// §4.1, T3.2's `syncTemplates` handler) and overwrites the picker's cache.
+  /// A no-op — not an error — whenever the key is absent, which is every
+  /// context pushed before the phone's first template sync.
+  ///
+  /// The array already passed through `WatchBridge`'s
+  /// `sanitizedForPropertyList` before landing in `applicationContext`, so
+  /// it's guaranteed property-list-safe — round-tripping it through
+  /// `JSONSerialization` back into `Data` is the simplest way to hand it to
+  /// `JSONDecoder`, rather than hand-walking each field the way `applyState`
+  /// does for `state` (that one has no Codable type to decode into; this one
+  /// does).
+  private func applyTemplateSync(_ context: [String: Any]) {
+    guard let rawTemplates = context["templates"] as? [[String: Any]] else { return }
+    guard let data = try? JSONSerialization.data(withJSONObject: rawTemplates),
+      let templates = try? JSONDecoder().decode([CachedTemplate].self, from: data)
+    else { return }
+    StandaloneSessionStore.shared.saveTemplates(templates)
   }
 
   private func applyState(sessionClientId: String, title: String?, state: [String: Any]?) {

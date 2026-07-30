@@ -17,6 +17,10 @@ struct HealthDeniedView: View {
     GeometryReader { geometry in
       let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
       let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
+      // Scrollable: the title/subtitle wrap to several lines in a longer
+      // locale, which pushes the dismiss button off a 41 mm face — and
+      // without a ScrollView it can't be reached at all.
+      ScrollView {
       VStack(spacing: 10) {
         Image(systemName: "waveform.path.ecg")
           .font(.system(size: isCompact ? 38 : 44))
@@ -43,6 +47,12 @@ struct HealthDeniedView: View {
         .clipShape(Capsule())
       }
       .padding(.horizontal, padding)
+      .frame(maxWidth: .infinity)
+      // Keeps the content vertically centred when it fits, exactly as the
+      // pre-scroll fixed-height frame did — the ScrollView only takes over
+      // once the text is genuinely taller than the face.
+      .frame(minHeight: geometry.size.height)
+      }
       .frame(width: geometry.size.width, height: geometry.size.height)
       .background(LifeyColors.trueBlack)
     }

@@ -7,6 +7,8 @@ import '../../settings/domain/user_settings.dart';
 import '../../../l10n/app_localizations.dart';
 import '../data/exercise_repository.dart';
 import '../data/workout_session_repository.dart';
+import '../data/workout_template_repository.dart';
+import '../domain/workout_template.dart';
 
 /// Matches [HealthService.writeStrengthWorkoutAndGetId]'s signature, narrowed
 /// to just that one method — like [WidgetSnapshotWriter]'s save/update-widget
@@ -32,15 +34,18 @@ class StandaloneSessionProcessor {
   StandaloneSessionProcessor({
     required WorkoutSessionRepository sessionRepository,
     required ExerciseRepository exerciseRepository,
+    required WorkoutTemplateRepository templateRepository,
     required WatchWorkoutService watchService,
     required WriteHealthWorkout writeHealthWorkout,
   })  : _sessionRepository = sessionRepository,
         _exerciseRepository = exerciseRepository,
+        _templateRepository = templateRepository,
         _watchService = watchService,
         _writeHealthWorkout = writeHealthWorkout;
 
   final WorkoutSessionRepository _sessionRepository;
   final ExerciseRepository _exerciseRepository;
+  final WorkoutTemplateRepository _templateRepository;
   final WatchWorkoutService _watchService;
   final WriteHealthWorkout _writeHealthWorkout;
 
@@ -64,8 +69,31 @@ class StandaloneSessionProcessor {
     WatchStandaloneSession event, {
     required LanguagePreference language,
   }) async {
-    final title = lookupAppLocalizations(_localeFor(language)).standaloneSessionTitle;
-    final exerciseClientId = await _exerciseRepository.getOrCreateByName(title);
+    final genericTitle = lookupAppLocalizations(_localeFor(language)).standaloneSessionTitle;
+
+    // Resolves to the real, synced template (docs/watch/
+    // 49-watch-f6b-template-sync-plan.md D-F6b.5, T5) whenever the watch
+    // sent one — F6a's `templateId == null` path (and this session's own
+    // fallback below) are unaffected, this is purely additive. `null` here
+    // covers every unresolvable case identically: no `templateId` at all, a
+    // template deleted since the watch cached it, or (via
+    // [_resolvesWithinTemplate] below) an out-of-range `exerciseIndex` — all
+    // of these fall all the way back to the F6a generic-exercise behavior,
+    // never partially.
+    final template =
+        event.templateId == null ? null : await _templateRepository.findByClientId(event.templateId!);
+
+    // Computed once, before any exercise is created — a session can be a
+    // *mix* of template-resolved and unresolved sets (e.g. the plan
+    // shrank after the watch cached it), so the generic exercise is only
+    // fetched/created when at least one set actually needs it, not
+    // unconditionally the way F6a's single-exercise path always did.
+    final needsGenericExercise =
+        template == null || event.sets.any((set) => !_resolvesWithinTemplate(set.exerciseIndex, template));
+    final genericExerciseClientId =
+        needsGenericExercise ? await _exerciseRepository.getOrCreateByName(genericTitle) : null;
+
+    final title = template?.name ?? genericTitle;
 
     final startedAt = DateTime.fromMillisecondsSinceEpoch(event.startedAtEpochMs, isUtc: true);
     final endedAt = DateTime.fromMillisecondsSinceEpoch(event.endedAtEpochMs, isUtc: true);
@@ -84,11 +112,27 @@ class StandaloneSessionProcessor {
       clientId: event.standaloneSessionId,
       startedAt: startedAt,
       finishedAt: endedAt,
-      exercises: [PlannedExerciseInput(exerciseClientId: exerciseClientId)],
+      // The template's *full* exercise list, not just the ones a set was
+      // actually logged against — so the session looks the same on the
+      // phone as the plan it was started from (§5/T5). `WorkoutSessionRepository
+      // .create`/`templateClientId`/`templateName` already existed before F6b
+      // (the normal in-app "start from a template" flow); F6a simply never
+      // populated them.
+      exercises: template != null
+          ? [
+              for (final exercise in template.exercises)
+                PlannedExerciseInput(
+                  exerciseClientId: exercise.exerciseClientId,
+                  targetSets: exercise.targetSets,
+                ),
+            ]
+          : [PlannedExerciseInput(exerciseClientId: genericExerciseClientId!)],
       sets: [
         for (final set in event.sets)
           ExerciseSetInput(
-            exerciseClientId: exerciseClientId,
+            exerciseClientId: _resolvesWithinTemplate(set.exerciseIndex, template)
+                ? template!.exercises[set.exerciseIndex!].exerciseClientId
+                : genericExerciseClientId!,
             reps: set.reps,
             weight: 0,
             performedAt: DateTime.fromMillisecondsSinceEpoch(set.loggedAtEpochMs, isUtc: true),
@@ -97,9 +141,21 @@ class StandaloneSessionProcessor {
       activeCalories: event.activeCalories,
       averageHeartRate: event.averageHeartRate,
       healthWorkoutId: healthWorkoutId,
+      templateClientId: template?.clientId,
       templateName: title,
       rpe: event.rpe,
     );
+  }
+
+  /// Whether [exerciseIndex] points at a real entry in [template]'s exercise
+  /// list — false for a null template, a null index, or an index the plan
+  /// no longer has (shrunk since the watch cached it). Every false case
+  /// falls back to the generic exercise identically; this helper is what
+  /// keeps that fallback condition in exactly one place instead of
+  /// duplicated across the `exercises`/`sets` construction above.
+  bool _resolvesWithinTemplate(int? exerciseIndex, WorkoutTemplate? template) {
+    if (template == null || exerciseIndex == null) return false;
+    return exerciseIndex >= 0 && exerciseIndex < template.exercises.length;
   }
 
   // Matches the fallback in step_goal_notifier.dart / widget_snapshot_writer.dart:
@@ -113,6 +169,7 @@ final standaloneSessionProcessorProvider = Provider<StandaloneSessionProcessor>(
   return StandaloneSessionProcessor(
     sessionRepository: ref.watch(workoutSessionRepositoryProvider),
     exerciseRepository: ref.watch(exerciseRepositoryProvider),
+    templateRepository: ref.watch(workoutTemplateRepositoryProvider),
     watchService: ref.watch(watchWorkoutServiceProvider),
     writeHealthWorkout: ref.watch(healthServiceProvider).writeStrengthWorkoutAndGetId,
   );

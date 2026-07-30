@@ -16,6 +16,9 @@ struct EndingView: View {
     GeometryReader { geometry in
       let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
       let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
+      // Scrollable for the same reason as the other status screens: the
+      // subtitle wraps to several lines in a longer locale.
+      ScrollView {
       VStack(spacing: 8) {
         Image(systemName: "iphone")
           .font(.system(size: isCompact ? 40 : 48))
@@ -37,6 +40,10 @@ struct EndingView: View {
         .padding(.top, 4)
       }
       .padding(.horizontal, padding)
+      .frame(maxWidth: .infinity)
+      // Keeps the content vertically centred when it fits (see HealthDeniedView).
+      .frame(minHeight: geometry.size.height)
+      }
       .frame(width: geometry.size.width, height: geometry.size.height)
       .background(LifeyColors.trueBlack)
     }

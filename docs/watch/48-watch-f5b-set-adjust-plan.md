@@ -1,6 +1,6 @@
 # 48 – F5b terv: Reps/súly állítása a watchról
 
-Státusz: **implementáció folyamatban — S1–S12 kész, 2026-07-26.** A terv teljes, minden döntés lezárva; a lépéslista a §13-ban. Az **iOS-ág teljesen kész** (S4–S8, eszközön visszaigazolva); az **Android-ág is kódszinten teljes** (S9–S12); az S14 regressziós köre lefutott (zöld); hátra: S13 (Android élő kézi végpróba), utána az S14 formális lezárása.
+Státusz: **F5b KÉSZ, 2026-07-26** — mindkét platform kódja lezárva (S1–S12), és a kézi végpróbák (S8 iOS, S13 Android) is lefutottak: a fejlesztő eszközön visszaigazolta, hogy a flow működik. A regressziós kör (S14) zöld.
 Az előfeltétel **teljesült**: az F5a kód kész (43-doc §11 S1–S13) **és** a kézi végpróbák (S9 iOS, S14 Android) lefutottak — a fejlesztő 2026-07-26-án eszközön visszaigazolta, hogy az egy-tapos flow működik. A §11 nyitott kérdései **mind eldöntve** (2026-07-26); designer-jóváhagyásra váró tétel nem maradt.
 
 **Az F5b közvetlen kiváltó oka** — az F5a eszközös használata során: ha a gyakorlatnak nincs több kitöltetlen tervezett sora (vagy terv nélkül, ad-hoc került fel), akkor minden watch-tap egy **üres** szettet rögzít. Ez az F5a-ban szándékos és dokumentált viselkedés (43-doc §5.2/4 — a watch nem küld értéket, a telefon azt logolja, ami a sorban van), de a gyakorlatban kevéssé hasznos; ezt a hiányt zárja be ez a terv.
@@ -508,7 +508,7 @@ S1 (kulcsok, közös)
 
 ---
 
-### S13 — Android: kézi végpróba
+### S13 — Android: kézi végpróba — **kész, 2026-07-26** (fejlesztői eszközös visszaigazolás)
 
 **Teendő:** a §9 Wear-listája.
 
@@ -516,11 +516,13 @@ S1 (kulcsok, közös)
 
 ---
 
-### S14 — Közös zárás — **regressziós kör kész, 2026-07-26** (az S13 élő teszt után zárható le teljesen)
+### S14 — Közös zárás — **kész, 2026-07-26**
 
 **Teendő:**
-- ✅ **Regressziós kör mindkét platformon.** `flutter test`: **372 zöld / 1 bukó** — a bukó a `stat_chart_data_test.dart` dátumfüggő DST-artefaktja, ami `origin/main`-nel bitre azonos és a watch-munkától független (44-doc §11/7). `flutter analyze` tiszta; `:app:compileDebugKotlin` + `:wear:compileDebugKotlin` → `BUILD SUCCESSFUL`; teljes `LifeyWatch` target `-warnings-as-errors` típusellenőrzés → exit 0; a `Runner` target típusellenőrzésében nincs más hiba, mint a már ismert, F5b-független `WorkoutActivityAttributes` csoport.
+- ✅ **Regressziós kör mindkét platformon.** `flutter test`: **386 zöld / 1 bukó** — a bukó a `stat_chart_data_test.dart` dátumfüggő DST-artefaktja, ami `origin/main`-nel bitre azonos és a watch-munkától független (44-doc §11/7). `flutter analyze` tiszta; `:app:compileDebugKotlin` + `:wear:compileDebugKotlin` → `BUILD SUCCESSFUL`; teljes `LifeyWatch` target `-warnings-as-errors` típusellenőrzés → exit 0; a `Runner` target típusellenőrzésében nincs más hiba, mint a már ismert, F5b-független `WorkoutActivityAttributes` csoport.
 - ✅ **Az F5a egy-tapos útja bitre változatlan**, kódból igazolva: iOS-en a `handleTap()` a paraméter nélküli `workoutManager.logSet()`-et hívja, Wearen a `SummarySender.sendLogSet(...)` hívás `reps`/`weight` nélkül megy — mindkettőn a defaultok `null`-ok, tehát a payload ugyanaz, mint F5a-ban, és a telefon a `_handleRowMarkDone` ágra esik.
 - ✅ **Lokalizációs paritás**: az F5a+F5b 14 kulcsa karakterre egyezik a három fájlban (iOS/HU/EN), az `.xcstrings` érvényes JSON.
-- ⏳ **Hátra:** az S13 (Android élő kézi végpróba) után az eszközön hozott finomítások rögzítése (3 s dismiss, 2,5 kg lépés, tick-haptika erőssége) és a `40-watch-app-plan.md` F5b-sorának „✅ Kész”-re állítása.
+- ✅ **S13 (Android élő kézi végpróba) lefutott** — fejlesztői visszaigazolás.
+- ✅ `docs/watch/40-watch-app-plan.md` állapottáblázatának F5b-sora „✅ Kész”-re mindkét platformon.
+- ✅ **Menet közben javított F6a-hiba** (44-doc §11/8): a log-korong standalone módban a telefon elérhetőségére volt kapuzva mindkét platformon, ami az F6a lokális logolását tette volna használhatatlanná telefon nélkül. Bevezetve egy `requiresPhone` (= `!isStandalone`) feltétel; a telefon-mesterelt út viselkedése változatlan.
 - Ha az F6b-t elkezdjük: a stepper-komponens átvétele a standalone logba (D-F5b.8, 44-doc §13/T5).

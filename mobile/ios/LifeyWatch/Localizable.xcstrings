@@ -1,954 +1,985 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "%@" : {
-
-    },
-    "+1" : {
-
-    },
-    "active_calories_unit" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "kcal"
+  "sourceLanguage": "en",
+  "strings": {
+    "%@": {},
+    "active_calories_unit": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kcal"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "kcal"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kcal"
           }
         }
       }
     },
-    "active_default_exercise" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exercise"
+    "active_default_exercise": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exercise"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gyakorlat"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gyakorlat"
           }
         }
       }
     },
-    "active_end_button" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End"
+    "active_end_button": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vége"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vége"
           }
         }
       }
     },
-    "active_header_label" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "STRENGTH"
+    "active_header_label": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STRENGTH"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ERŐEDZÉS"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ERŐEDZÉS"
           }
         }
       }
     },
-    "active_heart_rate_unit" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "bpm"
+    "active_heart_rate_unit": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bpm"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "bpm"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bpm"
           }
         }
       }
     },
-    "active_pause_button" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pause"
+    "active_pause_button": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Szünet"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szünet"
           }
         }
       }
     },
-    "active_paused_indicator" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paused"
+    "active_paused_indicator": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Szüneteltetve"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szüneteltetve"
           }
         }
       }
     },
-    "active_resume_button" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resume"
+    "active_resume_button": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Folytatás"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folytatás"
           }
         }
       }
     },
-    "active_sets_format" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$d/%2$d sets"
+    "active_sets_format": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d/%2$d sets"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$d/%2$d szett"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d/%2$d szett"
           }
         }
       }
     },
-    "active_sets_free_format" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set %1$d · %2$d reps total"
+    "active_sets_free_format": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set %1$d · %2$d reps total"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$d. szett · összesen %2$d ismétlés"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d. szett · összesen %2$d ismétlés"
           }
         }
       }
     },
-    "effort_selector_back" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back"
+    "effort_selector_back": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vissza"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vissza"
           }
         }
       }
     },
-    "effort_selector_confirm" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End workout"
+    "effort_selector_confirm": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End workout"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edzés lezárása"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edzés lezárása"
           }
         }
       }
     },
-    "effort_selector_skip" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skip"
+    "effort_selector_skip": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kihagyás"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kihagyás"
           }
         }
       }
     },
-    "effort_selector_title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "How hard was it?"
+    "effort_selector_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How hard was it?"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Milyen nehéz volt?"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Milyen nehéz volt?"
           }
         }
       }
     },
-    "ending_subtitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saving your workout…"
+    "ending_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving your workout…"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Az edzés mentése…"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Az edzés mentése…"
           }
         }
       }
     },
-    "ending_title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finish on your iPhone"
+    "ending_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish on your iPhone"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fejezd be az iPhone-on"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fejezd be az iPhone-on"
           }
         }
       }
     },
-    "health_denied_button" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Review access"
+    "health_denied_button": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review access"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Engedélyek áttekintése"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engedélyek áttekintése"
           }
         }
       }
     },
-    "health_denied_subtitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lifey needs Health permission to record heart rate and calories"
+    "health_denied_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lifey needs Health permission to record heart rate and calories"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A Lifey Egészség-engedélyre van szüksége a pulzus és a kalóriák rögzítéséhez"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Lifey Egészség-engedélyre van szüksége a pulzus és a kalóriák rögzítéséhez"
           }
         }
       }
     },
-    "health_denied_title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Allow Health access"
+    "health_denied_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Health access"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Engedélyezd az Egészség-hozzáférést"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engedélyezd az Egészség-hozzáférést"
           }
         }
       }
     },
-    "idle_subtitle" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start a workout on your phone"
+    "idle_subtitle": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a workout on your phone"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Indíts edzést a telefonon"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indíts edzést a telefonon"
           }
         }
       }
     },
-    "idle_title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lifey"
+    "idle_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lifey"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lifey"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lifey"
           }
         }
       }
     },
-    "log_adjust_caption_reps" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "reps · %1$@ kg"
+    "log_adjust_caption_reps": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "reps · %1$@ kg"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ism. · %1$@ kg"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ism. · %1$@ kg"
           }
         }
       }
     },
-    "log_adjust_caption_weight" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "kg · %1$d reps"
+    "log_adjust_caption_weight": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kg · %1$d reps"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "kg · %1$d ism."
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kg · %1$d ism."
           }
         }
       }
     },
-    "log_adjust_confirm" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Log %1$d reps"
+    "log_adjust_confirm": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log %1$d reps"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$d ismétlés naplózása"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d ismétlés naplózása"
           }
         }
       }
     },
-    "log_adjust_open_a11y" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adjust reps and weight"
+    "log_adjust_open_a11y": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adjust reps and weight"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ismétlés és súly módosítása"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ismétlés és súly módosítása"
           }
         }
       }
     },
-    "log_adjust_reps" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reps"
+    "log_adjust_reps": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reps"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ismétlés"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ismétlés"
           }
         }
       }
     },
-    "log_adjust_title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adjust"
+    "log_adjust_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adjust"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Módosítás"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Módosítás"
           }
         }
       }
     },
-    "log_adjust_weight" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Weight"
+    "log_adjust_weight": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Súly"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Súly"
           }
         }
       }
     },
-    "log_set_button" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+1 set"
+    "log_set_button": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+1 set"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "+1 szett"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+1 szett"
           }
         }
       }
     },
-    "log_set_button_a11y" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Log one set"
+    "log_set_button_a11y": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log one set"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Egy szett naplózása"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Egy szett naplózása"
           }
         }
       }
     },
-    "log_set_context_format" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · Set %2$d of %3$d"
+    "log_set_context_format": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · Set %2$d of %3$d"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · %2$d/%3$d szett"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$d/%3$d szett"
           }
         }
       }
     },
-    "log_set_failed" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't log — try again"
+    "log_set_failed": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't log — try again"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nem sikerült — próbáld újra"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nem sikerült — próbáld újra"
           }
         }
       }
     },
-    "log_set_logged" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Logged"
+    "log_set_logged": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logged"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Naplózva"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Naplózva"
           }
         }
       }
     },
-    "log_set_pending" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Logging…"
+    "log_set_pending": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logging…"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Naplózás…"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Naplózás…"
           }
         }
       }
     },
-    "phone_unreachable" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Phone not reachable"
+    "phone_unreachable": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phone not reachable"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A telefon nem érhető el"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A telefon nem érhető el"
           }
         }
       }
     },
-    "rest_go_label" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Go!"
+    "rest_go_label": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go!"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mehet!"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehet!"
           }
         }
       }
     },
-    "rest_hero_label" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rest"
+    "rest_hero_label": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rest"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pihenő"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pihenő"
           }
         }
       }
     },
-    "rest_hero_next_format" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Next · %@"
+    "rest_hero_next_format": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next · %@"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Következő · %@"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Következő · %@"
           }
         }
       }
     },
-    "rest_hero_next_with_sets_format" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Next · %1$@ — Set %2$d of %3$d"
+    "rest_hero_next_with_sets_format": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next · %1$@ — Set %2$d of %3$d"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Következő · %1$@ — %2$d/%3$d. szett"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Következő · %1$@ — %2$d/%3$d. szett"
           }
         }
       }
     },
-    "rest_hero_total_format" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "of %@"
+    "rest_hero_total_format": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "of %@"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "/ %@"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "/ %@"
           }
         }
       }
     },
-    "SET" : {
-
-    },
-    "standalone_badge" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Watch only"
+    "standalone_badge": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch only"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Csak óra"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Csak óra"
           }
         }
       }
     },
-    "standalone_empty_hint" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plans sync from your phone"
+    "standalone_empty_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plans sync from your phone"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A tervek a telefonról szinkronizálódnak"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A tervek a telefonról szinkronizálódnak"
           }
         }
       }
     },
-    "standalone_picker_title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start"
+    "standalone_exercise_list_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exercises"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Indítás"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gyakorlatok"
           }
         }
       }
     },
-    "standalone_plan_exercises" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d exercises"
+    "standalone_exercise_sets_done": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d sets"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d gyakorlat"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d szett"
           }
         }
       }
     },
-    "standalone_quick_caption" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No plan needed"
+    "standalone_picker_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terv nélkül is megy"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indítás"
           }
         }
       }
     },
-    "standalone_quick_start" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quick strength"
+    "standalone_plan_exercises": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d exercises"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gyors erőedzés"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d gyakorlat"
           }
         }
       }
     },
-    "standalone_start_button" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start workout"
+    "standalone_quick_caption": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No plan needed"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edzés indítása"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terv nélkül is megy"
           }
         }
       }
     },
-    "standalone_start_button_a11y" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start a workout on the watch"
+    "standalone_quick_start": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick strength"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edzés indítása az órán"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gyors erőedzés"
           }
         }
       }
     },
-    "standalone_start_caption" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "or start on your phone"
+    "standalone_start_button": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start workout"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "vagy indítsd a telefonon"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edzés indítása"
           }
         }
       }
     },
-    "summary_avg_hr_label" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "avg bpm"
+    "standalone_start_button_a11y": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a workout on the watch"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "átlag bpm"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edzés indítása az órán"
           }
         }
       }
     },
-    "summary_saved_to_health" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saved to Health"
+    "standalone_start_caption": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "or start on your phone"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elmentve az Egészség appba"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vagy indítsd a telefonon"
           }
         }
       }
     },
-    "summary_sets_label" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sets"
+    "summary_avg_hr_label": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "avg bpm"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "szett"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "átlag bpm"
           }
         }
       }
     },
-    "summary_time_label" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "time"
+    "summary_saved_to_health": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved to Health"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "idő"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elmentve az Egészség appba"
           }
         }
       }
     },
-    "summary_title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Workout saved"
+    "summary_sets_label": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sets"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edzés mentve"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "szett"
           }
         }
       }
     },
-    "sync_done" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Synced to phone"
+    "summary_time_label": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "time"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Telefonra szinkronizálva"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "idő"
           }
         }
       }
     },
-    "sync_pending" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Will sync to phone"
+    "summary_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workout saved"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Szinkronizálás a telefonra"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edzés mentve"
           }
         }
       }
     },
-    "sync_queue_count" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d sessions waiting to sync"
+    "sync_done": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synced to phone"
           }
         },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d edzés vár szinkronizálásra"
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telefonra szinkronizálva"
+          }
+        }
+      }
+    },
+    "sync_pending": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Will sync to phone"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szinkronizálás a telefonra"
+          }
+        }
+      }
+    },
+    "sync_queue_count": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d sessions waiting to sync"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d edzés vár szinkronizálásra"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

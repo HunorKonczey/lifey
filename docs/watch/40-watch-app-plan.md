@@ -25,9 +25,9 @@ Kapcsolódó dokumentumok:
 | F4 — Pihenő-visszaszámláló+haptika, Settings-kapcsoló, lokalizáció, hibaút | ✅ Kész (Android fele) | ✅ Kész (iOS fele) — lásd 11. fejezet |
 | F4B — Design-parity: a 41-es design F4-scope funkciói, amik nem készültek el (lista: 12. fejezet) | 🔶 Nagyrészt kész — lásd 7.5.9 | ⏸ Nem kezdődött el |
 | F5a — (v2) Set-logolás a watchról („+1 szett”) | ✅ Kész — kód (43-doc §11 S10–S13) + eszközös végpróba (S14), 2026-07-26 | ✅ Kész — kód (43-doc §11 S1–S8) + eszközös végpróba (S9), 2026-07-26 |
-| F5b — (v2) Reps/súly állítása a watchról | 🔶 Implementálva ([48-doc](48-watch-f5b-set-adjust-plan.md) §13 S9–S12), regressziós kör zöld — **élő kézi végpróba (S13) hátravan** | ✅ Kész — kód (48-doc §13 S4–S7) + eszközös végpróba (S8), user visszaigazolva |
-| F6a — (v2) Standalone indítás a watchról | 🔶 Implementálva (44-doc §12 S13–S17), regressziós ellenőrzés zöld — **élő kézi végpróba (S18) hátravan** | ✅ Kész — kód (44-doc §12 S1–S11) + eszközös végpróba (S12), user visszaigazolva |
-| F6b — (v2) Standalone + edzésterv-szinkron a watchra | ⏸ Nem kezdődött el — vázlat: 44-doc §13 (T1–T6) | ⏸ ua. |
+| F5b — (v2) Reps/súly állítása a watchról | ✅ Kész — kód (48-doc §13 S9–S12) + eszközös végpróba (S13), 2026-07-26 | ✅ Kész — kód (48-doc §13 S4–S7) + eszközös végpróba (S8), 2026-07-26 |
+| F6a — (v2) Standalone indítás a watchról | ✅ Kész — kód (44-doc §12 S13–S17) + eszközös végpróba (S18), 2026-07-26 | ✅ Kész — kód (44-doc §12 S1–S11) + eszközös végpróba (S12), 2026-07-26 |
+| F6b — (v2) Standalone + edzésterv-szinkron a watchra | ✅ Implementálva (49-doc T1–T8) + eszközös végpróba, 2026-07-30 — **a teszt talált hibákat, javításuk külön beszélgetésben folyik** | ✅ ua. |
 
 **A terv**: az iOS-fejlesztés F2-től F4-ig 2026-07-16-ra elkészült (Android-dal egy szintre hozva) — a build-ellenőrzés (LifeyWatch target + teljes Runner workspace) zöld, a watchOS-szimulátoros/fizikai eszközös manuális teszt hátravan (11.5). Utána közösen térünk vissza F5/F6-ra, mindkét platformon egyszerre.
 

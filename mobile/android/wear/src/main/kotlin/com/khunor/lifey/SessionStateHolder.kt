@@ -38,6 +38,51 @@ data class StandaloneSet(
     val exerciseIndex: Int? = null,
 )
 
+/** One exercise of a template as the watch received it (docs/watch/
+ * 49-watch-f6b-template-sync-plan.md §4.1, D-F6b.4, T6) — [restSeconds] is
+ * never null here: the watch knows neither the `Exercises` table nor
+ * `UserSettings`, so the phone always resolves it before sending. Mirrors
+ * iOS's `CachedTemplateExercise`. */
+data class StandaloneTemplateExercise(
+    val exerciseId: String,
+    val name: String,
+    val restSeconds: Int,
+    val targetSets: Int? = null,
+)
+
+/**
+ * A template as the watch received it, decoded once (in [ExerciseService])
+ * out of [StandaloneSessionStore]'s untyped JSON — kept as a typed model
+ * from here on, unlike the store itself, because a running session needs to
+ * *reason* about it (which exercise, what rest length), not just relay it.
+ * Mirrors iOS's `CachedTemplate`. [exercises]' array position is what a
+ * logged [StandaloneSet.exerciseIndex] refers back to.
+ */
+data class StandaloneTemplate(
+    val templateId: String,
+    val title: String,
+    val exercises: List<StandaloneTemplateExercise>,
+)
+
+/**
+ * What the active screen should show for "current exercise + set progress"
+ * (docs/watch/49-watch-f6b-template-sync-plan.md §3.4) — mirrors iOS's
+ * `ActiveExerciseDisplay`/`WorkoutManager.activeExerciseDisplay`. Computed by
+ * `ActiveWorkoutScreen.kt`'s `activeExerciseDisplay(metadata)` (a
+ * `@Composable` function, since it needs `stringResource` — this data class
+ * itself stays a plain Kotlin type, matching [StandaloneSet]/
+ * [StandaloneSummary]'s placement here rather than in the UI layer).
+ */
+data class ActiveExerciseDisplay(
+    val name: String,
+    val setsDone: Int?,
+    val setsTotal: Int?,
+    /** Standalone's set-count line when there's no `targetSets` to compare
+     * against (44-doc §3.4, D-F6.3) — mutually exclusive with
+     * `setsDone`/`setsTotal` being non-null. */
+    val freeFormatSets: Pair<Int, Int>?,
+)
+
 /**
  * The closed-out standalone session's stats (docs/watch/
  * 44-watch-f6-standalone-plan.md D-F6.7, canvas AW 15/W 14) — carried
@@ -156,6 +201,20 @@ data class SessionMetadata(
      * phone-mastered sessions track their set count via [setsDone]/
      * [setsTotal] instead, which the phone itself owns. */
     val standaloneSets: List<StandaloneSet> = emptyList(),
+    /** The template this standalone session is running against, or `null`
+     * for the F6a "Quick strength" flow (docs/watch/
+     * 49-watch-f6b-template-sync-plan.md §3.3, D-F6b.8) — a **snapshot**
+     * taken once at start (`ExerciseService.startStandaloneExercise`), not a
+     * live reference to `StandaloneSessionStore`'s cache: a `templateSync`
+     * landing mid-session must not be able to change a *running* session's
+     * gyakorlatnév/restSeconds out from under it. */
+    val standaloneTemplate: StandaloneTemplate? = null,
+    /** Which of [standaloneTemplate]'s exercises new sets log against —
+     * always 0 and unused outside a template session. Changed only by
+     * [SessionStateHolder.onStandaloneExerciseSelected] (§3.5's
+     * gyakorlat-lista, wired in T7); never by anything synced from the
+     * phone. */
+    val standaloneExerciseIndex: Int = 0,
 ) {
     /** [sessionClientId] doubles as the standalone session's own id during
      * standalone mode — reused rather than a separate `standaloneSessionId`
@@ -291,38 +350,81 @@ object SessionStateHolder {
     /**
      * The exercise session actually started measuring, standalone
      * (docs/watch/44-watch-f6-standalone-plan.md §3.1) — the entry point for
-     * the launcher's "Start workout" / picker's "Quick strength" tap, called
-     * by `ExerciseService.startStandaloneExercise` once `startExerciseAsync`
-     * succeeds. [sessionClientId] is the watch's own locally generated id;
-     * no `sendStartedOnWatch` here — there's no phone-mastered session
-     * waiting on that signal.
+     * the launcher's "Start workout" / picker's "Quick strength" **and**
+     * synced-template rows, called by `ExerciseService.startStandaloneExercise`
+     * once `startExerciseAsync` succeeds. [sessionClientId] is the watch's
+     * own locally generated id; no `sendStartedOnWatch` here — there's no
+     * phone-mastered session waiting on that signal.
+     *
+     * [template] defaults to `null` (Quick strength, F6a's original call
+     * sites unaffected) — non-null is `ExerciseService`'s already-decoded
+     * snapshot of whatever the picker row carried (docs/watch/
+     * 49-watch-f6b-template-sync-plan.md §3.3, T6); this function never
+     * itself touches `StandaloneSessionStore`.
      */
-    fun onStandaloneStarted(sessionClientId: String, startedAtElapsedRealtimeMs: Long) {
+    fun onStandaloneStarted(
+        sessionClientId: String,
+        startedAtElapsedRealtimeMs: Long,
+        template: StandaloneTemplate? = null,
+    ) {
         _phase.value = SessionPhase.ACTIVE
         _metadata.update {
-            SessionMetadata(sessionClientId = sessionClientId, isStandalone = true)
+            SessionMetadata(sessionClientId = sessionClientId, isStandalone = true, standaloneTemplate = template)
         }
         _liveMetrics.update { it.copy(startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs) }
+    }
+
+    /**
+     * The gyakorlat-lista's tap handler (docs/watch/
+     * 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — changes only which
+     * exercise the *next* logged set counts against. Never closes a set,
+     * starts/skips a rest, or touches a set already logged — those keep the
+     * `exerciseIndex` they were logged with, permanently (§3.5). A no-op
+     * outside a template session or for an index the snapshot doesn't have —
+     * nothing to switch to, and the UI that calls this (T7) only ever offers
+     * indices that exist.
+     */
+    fun onStandaloneExerciseSelected(index: Int) {
+        _metadata.update { current ->
+            val template = current.standaloneTemplate
+            if (template != null && index in template.exercises.indices) {
+                current.copy(standaloneExerciseIndex = index)
+            } else {
+                current
+            }
+        }
     }
 
     /**
      * The standalone local-mode branch of the "+1 set" tap (docs/watch/
      * 44-watch-f6-standalone-plan.md §2.1, §3.2) — no PENDING/ack
      * round-trip: this tap's set *is* the record (there's no phone to
-     * confirm against), appended immediately, and a fixed-length local rest
-     * starts right away in the same field the phone-synced rest already
-     * uses (`restDeadlineElapsedRealtimeMs`/`restTotalSeconds`), so
+     * confirm against), appended immediately, and a local rest starts right
+     * away in the same field the phone-synced rest already uses
+     * (`restDeadlineElapsedRealtimeMs`/`restTotalSeconds`), so
      * `ExerciseService`'s existing `scheduleRestVibration` collector works
-     * unchanged.
+     * unchanged. The rest length is the current exercise's synced,
+     * already-resolved `restSeconds` (D-F6b.4, docs/watch/
+     * 49-watch-f6b-template-sync-plan.md §3.3) when running from a template,
+     * the fixed `STANDALONE_REST_SECONDS` default otherwise (44-doc §3.5).
      */
     fun onStandaloneSetLogged() {
         val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
         _metadata.update { current ->
+            val template = current.standaloneTemplate
+            val restSeconds = template?.exercises?.getOrNull(current.standaloneExerciseIndex)
+                ?.restSeconds ?: STANDALONE_REST_SECONDS
             current.copy(
                 standaloneSets = current.standaloneSets +
-                    StandaloneSet(loggedAtEpochMs = System.currentTimeMillis(), reps = STANDALONE_DEFAULT_REPS),
-                restDeadlineElapsedRealtimeMs = nowElapsedRealtimeMs + STANDALONE_REST_SECONDS * 1_000L,
-                restTotalSeconds = STANDALONE_REST_SECONDS,
+                    StandaloneSet(
+                        loggedAtEpochMs = System.currentTimeMillis(),
+                        reps = STANDALONE_DEFAULT_REPS,
+                        // null outside a template session, matching F6a's
+                        // original behavior exactly.
+                        exerciseIndex = template?.let { current.standaloneExerciseIndex },
+                    ),
+                restDeadlineElapsedRealtimeMs = nowElapsedRealtimeMs + restSeconds * 1_000L,
+                restTotalSeconds = restSeconds,
             )
         }
     }

@@ -1,7 +1,9 @@
 package com.khunor.lifey.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,10 +13,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
@@ -24,15 +29,19 @@ import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.khunor.lifey.R
+import com.khunor.lifey.StandaloneSessionStore
 import com.khunor.lifey.ui.theme.LifeyColors
+import com.khunor.lifey.ui.theme.LifeyShapes
+import org.json.JSONObject
 
 /**
- * F6a's pre-start picker (docs/watch/44-watch-f6-standalone-plan.md §3.1,
- * §3.3, design canvas W 12) — always the "empty/stale cache" variant in F6a:
- * just the "Quick strength" row + `standalone_empty_hint`, since there's no
- * template sync yet (F6b adds synced-plan rows above the hint). Built as a
- * `ScalingLazyColumn` from the start, even with this little content, so
- * F6b's template rows slot in without restructuring this screen.
+ * The pre-start picker (docs/watch/44-watch-f6-standalone-plan.md §3.1,
+ * §3.3; docs/watch/49-watch-f6b-template-sync-plan.md D-F6b.7, design canvas
+ * W 12). "Quick strength" is always first and always works with zero phone
+ * contact; below it, up to 5 synced templates from
+ * [com.khunor.lifey.StandaloneSessionStore] (title + exercise count) — or,
+ * with an empty/stale cache, just `standalone_empty_hint` (F6a's only
+ * variant, still the fallback here).
  *
  * [onQuickStrengthTapped] starts the standalone exercise directly —
  * debouncing a double-tap is `ExerciseService.startStandaloneExercise`'s
@@ -41,9 +50,34 @@ import com.khunor.lifey.ui.theme.LifeyColors
  * `EffortSelectorScreen`'s own top-start dismiss affordance — not present in
  * the design frame itself, but F6a's picker has exactly one actionable row,
  * so without it a user who opened the picker by mistake would be stuck.
+ *
+ * [onTemplateTapped] receives the tapped row's raw template `JSONObject` —
+ * the same shape [StandaloneSessionStore.templates] returned it in — so
+ * `MainActivity` can pass it straight through to
+ * `ExerciseService.startStandaloneIntent`'s `templateJson` extra without
+ * this screen needing to know anything about that wire shape itself
+ * (docs/watch/49-watch-f6b-template-sync-plan.md §3.3, T6). Unlike
+ * [onQuickStrengthTapped], the actual `startForegroundService` call has to
+ * happen in `MainActivity`, not here — starting the service also needs
+ * `requestSensorPermissionsIfNeeded()`, which needs the `ComponentActivity`
+ * this screen doesn't have.
  */
 @Composable
-fun StandalonePickerScreen(onQuickStrengthTapped: () -> Unit, onBack: () -> Unit) {
+fun StandalonePickerScreen(
+    onQuickStrengthTapped: () -> Unit,
+    onBack: () -> Unit,
+    onTemplateTapped: (JSONObject) -> Unit,
+) {
+    val context = LocalContext.current
+    // Read once per composition, not observed live — matches
+    // StandaloneSessionStore's existing "read is a point-in-time snapshot"
+    // contract everywhere else it's used (SummarySender's pending-count,
+    // the summary screen's sync chip). A sync landing while this exact
+    // screen is already showing updates on the next time it's opened, not
+    // instantly — an acceptable staleness window for a picker the user only
+    // glances at before tapping something.
+    val templates = remember { StandaloneSessionStore.templates(context) }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = isCompactScreen(maxWidth)
         val listState = rememberScalingLazyListState()
@@ -86,14 +120,26 @@ fun StandalonePickerScreen(onQuickStrengthTapped: () -> Unit, onBack: () -> Unit
                     ),
                 )
             }
-            item {
-                Text(
-                    text = stringResource(R.string.standalone_empty_hint),
-                    style = MaterialTheme.typography.caption2,
-                    color = LifeyColors.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            if (templates.isEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.standalone_empty_hint),
+                        style = MaterialTheme.typography.caption2,
+                        color = LifeyColors.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            } else {
+                templates.forEach { template ->
+                    item {
+                        TemplateRow(
+                            template = template,
+                            isCompact = isCompact,
+                            onTap = { onTemplateTapped(template) },
+                        )
+                    }
+                }
             }
         }
 
@@ -108,6 +154,44 @@ fun StandalonePickerScreen(onQuickStrengthTapped: () -> Unit, onBack: () -> Unit
                 .padding(8.dp)
                 .clickable(onClick = onBack)
                 .size(20.dp),
+        )
+    }
+}
+
+/**
+ * One synced-template row (canvas W 12) — plain `surface` background,
+ * unlike the quick-strength [Chip]'s highlighted `containerHigh` treatment
+ * (D-F6b.7: quick-strength is the one always-works option, these are
+ * secondary). No icon, matching the canvas exactly — just title + the
+ * existing `standalone_plan_exercises` count string (added in F6a's S1,
+ * unused until now). [template] is the raw `JSONObject` `StandaloneSessionStore
+ * .templates()` returns (this store's convention, unlike iOS's typed
+ * `CachedTemplate`) — read here with `opt*`, matching every other
+ * JSON-decode site in this app rather than introducing a data class for a
+ * single call site.
+ */
+@Composable
+private fun TemplateRow(template: JSONObject, isCompact: Boolean, onTap: () -> Unit) {
+    val exerciseCount = template.optJSONArray("exercises")?.length() ?: 0
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onTap)
+            .background(LifeyColors.surface, LifeyShapes.card)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = template.optString("title"),
+            style = if (isCompact) MaterialTheme.typography.body2 else MaterialTheme.typography.body1,
+            color = LifeyColors.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringResource(R.string.standalone_plan_exercises, exerciseCount),
+            style = MaterialTheme.typography.caption2,
+            color = LifeyColors.onSurfaceVariant,
+            maxLines = 1,
         )
     }
 }

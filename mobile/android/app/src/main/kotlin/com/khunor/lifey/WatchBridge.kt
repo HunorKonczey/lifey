@@ -53,6 +53,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "endWorkout" -> endWorkout(call, result)
             "ackSetLogged" -> ackSetLogged(call, result)
             "ackStandaloneSession" -> ackStandaloneSession(call, result)
+            "syncTemplates" -> syncTemplates(call, result)
             else -> result.notImplemented()
         }
     }
@@ -144,6 +145,30 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
     }
 
     /**
+     * Answers `syncTemplates` (docs/watch/49-watch-f6b-template-sync-plan.md
+     * §4.1, T3.3) — unlike the session-state pushes above, no context-merge
+     * hazard exists here (D-F6b.3): [pushTemplates] writes its own
+     * independent [TEMPLATES_PATH] `DataItem`, which the Data Layer never
+     * conflates with [pushState]'s `STATE_PATH` one. Message first
+     * (primary), `DataItem` as the reconnect fallback — the same D-F6.9
+     * split every other command here already follows.
+     *
+     * An empty `templates` list still goes out (T1.3's phone-side decision,
+     * enforced here too) — that's how a watch whose last template was just
+     * deleted is told to clear its cache.
+     */
+    private fun syncTemplates(call: MethodCall, result: MethodChannel.Result) {
+        val args = call.arguments as? Map<*, *> ?: return result.success(null)
+        @Suppress("UNCHECKED_CAST")
+        val templates = args["templates"] as? List<Map<*, *>> ?: return result.success(null)
+        val syncedAtEpochMs = (args["syncedAtEpochMs"] as? Number)?.toLong() ?: return result.success(null)
+
+        pushTemplates(syncedAtEpochMs, templates)
+        sendMessage(COMMAND_TEMPLATE_SYNC, templateSyncMessagePayload(syncedAtEpochMs, templates))
+        result.success(null)
+    }
+
+    /**
      * The message payload for start/state (docs/40-watch-app-plan.md §3,
      * §D2 adjusted): carries the full state JSON directly, rather than only
      * `sessionClientId` with the watch expected to pick up the rest from the
@@ -162,6 +187,20 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                 s.forEach { (key, value) -> if (value != null) stateJson.put(key, value) }
                 put("state", stateJson)
             }
+        }
+        return json.toString().toByteArray()
+    }
+
+    /**
+     * [templates] arrives from Flutter as a `List<Map<*, *>>` with a nested
+     * `exercises` list per entry (docs/watch/49-watch-f6b-template-sync-plan.md
+     * §4.1) — unlike [stateMessagePayload]'s flat field-by-field build, this
+     * needs a genuinely recursive JSON conversion ([toJsonValue]).
+     */
+    private fun templateSyncMessagePayload(syncedAtEpochMs: Long, templates: List<Map<*, *>>): ByteArray {
+        val json = JSONObject().apply {
+            put("syncedAtEpochMs", syncedAtEpochMs)
+            put("templates", templates.toJsonValue())
         }
         return json.toString().toByteArray()
     }
@@ -193,6 +232,34 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                 Log.d(TAG, "pushState OK (desiredPhase=$desiredPhase, sessionClientId=$sessionClientId)")
             } catch (e: Exception) {
                 Log.w(TAG, "pushState FAILED (desiredPhase=$desiredPhase)", e)
+            }
+        }
+    }
+
+    /**
+     * The template-sync counterpart of [pushState] — an **independent**
+     * `DataItem` at [TEMPLATES_PATH] (D-F6b.3), not a key inside the state
+     * one. Unlike iOS's single `applicationContext` (D-F6b.2), the Data
+     * Layer's per-path `DataItem`s never collide, so no merge step is needed
+     * here — this can freely overwrite its own path on every call.
+     */
+    private fun pushTemplates(syncedAtEpochMs: Long, templates: List<Map<*, *>>) {
+        executor.execute {
+            val putDataMapRequest =
+                PutDataMapRequest.create(TEMPLATES_PATH).apply {
+                    dataMap.putLong("syncedAtEpochMs", syncedAtEpochMs)
+                    // DataMap has no array-of-maps type, so the nested
+                    // exercises-per-template shape travels as a JSON string
+                    // rather than a native structure (D-F6b.3's one open
+                    // implementation choice, now resolved).
+                    dataMap.putString("templatesJson", (templates.toJsonValue() as JSONArray).toString())
+                }
+            val putDataRequest = putDataMapRequest.asPutDataRequest().setUrgent()
+            try {
+                Tasks.await(dataClient.putDataItem(putDataRequest))
+                Log.d(TAG, "pushTemplates OK (${templates.size} template(s))")
+            } catch (e: Exception) {
+                Log.w(TAG, "pushTemplates FAILED", e)
             }
         }
     }
@@ -416,6 +483,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val WATCH_CAPABILITY = "lifey_watch_workout"
         private const val MESSAGE_PATH_PREFIX = "/lifey/watch"
         private const val STATE_PATH = "$MESSAGE_PATH_PREFIX/state"
+        private const val TEMPLATES_PATH = "$MESSAGE_PATH_PREFIX/templates"
         private const val COMMAND_START = "start"
         private const val COMMAND_STATE = "state"
         private const val COMMAND_END = "end"
@@ -428,6 +496,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_LOG_SET_ACK = "logSetAck"
         private const val COMMAND_STANDALONE_SESSION = "standaloneSessionCompleted"
         private const val COMMAND_STANDALONE_ACK = "standaloneSessionAck"
+        private const val COMMAND_TEMPLATE_SYNC = "templateSync"
     }
 }
 
@@ -443,4 +512,25 @@ private fun Map<String, Any?>.toDataMap(): DataMap {
         }
     }
     return map
+}
+
+/**
+ * Recursively rebuilds a Flutter MethodChannel-decoded value (nested
+ * `Map`/`List`/primitives) as an `org.json` tree — [toDataMap] only handles
+ * one flat level, which a template's nested `exercises` list doesn't fit
+ * (docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T3.3). A null map
+ * value is dropped rather than written as `JSONObject.NULL` — matching
+ * [stateMessagePayload]'s `if (value != null)` guard — since the Dart-side
+ * `toJson()` already omits absent optionals rather than sending them as
+ * null; this only guards against ever actually seeing one.
+ */
+private fun Any?.toJsonValue(): Any = when (this) {
+    null -> JSONObject.NULL
+    is Map<*, *> -> JSONObject().apply {
+        this@toJsonValue.forEach { (key, value) ->
+            if (value != null) put(key.toString(), value.toJsonValue())
+        }
+    }
+    is List<*> -> JSONArray().apply { this@toJsonValue.forEach { put(it.toJsonValue()) } }
+    else -> this
 }

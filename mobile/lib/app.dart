@@ -11,6 +11,7 @@ import 'core/push/weigh_in_reminder_tap_handler.dart';
 import 'core/router/app_router.dart';
 import 'core/sync/connectivity_sync_controller.dart';
 import 'core/theme/app_theme.dart';
+import 'core/watch/watch_template_sync_controller.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'features/settings/application/settings_controller.dart';
 import 'features/settings/domain/user_settings.dart';
@@ -52,6 +53,8 @@ class LifeyApp extends ConsumerWidget {
     ref.watch(weighInReminderRefresherProvider);
     // Keeps the home screen widget snapshot in sync (iOS + Android).
     ref.watch(widgetSnapshotControllerProvider);
+    // Keeps the watch's standalone-picker template cache in sync (F6b).
+    ref.watch(watchTemplateSyncControllerProvider);
 
     final router = ref.watch(appRouterProvider);
     final settings = ref.watch(settingsControllerProvider).value;

@@ -37,6 +37,11 @@ struct SummaryView: View {
     GeometryReader { geometry in
       let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
       let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
+      // Scrollable: the standalone variant stacks a checkmark, title, a 2×2
+      // tile grid, the "saved to Health" pill, the sync chip and (with more
+      // than one queued session) a count line — taller than a 41 mm face,
+      // and without a ScrollView the bottom rows are simply unreachable.
+      ScrollView {
       VStack(spacing: 8) {
         Image(systemName: "checkmark.circle.fill")
           .font(.system(size: isCompact ? 44 : 52))
@@ -94,6 +99,10 @@ struct SummaryView: View {
         }
       }
       .padding(.horizontal, padding)
+      .frame(maxWidth: .infinity)
+      // Keeps the content vertically centred when it fits (see HealthDeniedView).
+      .frame(minHeight: geometry.size.height)
+      }
       .frame(width: geometry.size.width, height: geometry.size.height)
       .background(LifeyColors.trueBlack)
     }

@@ -418,7 +418,7 @@ void main() {
       );
       await harness.settle();
 
-      final result = harness.container.read(watchTemplateSyncPayloadProvider);
+      final result = harness.container.read(watchTemplateSyncPayloadProvider)!;
 
       // Recency order from the sessions, names/rest from the exercises.
       expect(result.map((t) => t.templateId), ['push', 'legs']);
@@ -443,19 +443,22 @@ void main() {
       expect(harness.container.read(watchTemplateSyncPayloadProvider), isEmpty);
     });
 
-    test('sends nothing while any source is still loading', () async {
-      // Never push a half-built payload.
+    test('is null — not empty — while any source is still loading', () async {
+      // Null keeps the watch's existing cache; an empty list would order it
+      // wiped, which at cold start would throw away a good cache.
       for (final harness in [
         buildContainer(sessions: null),
         buildContainer(templates: null),
         buildContainer(exercises: null),
       ]) {
         await harness.settle();
-        expect(harness.container.read(watchTemplateSyncPayloadProvider), isEmpty);
+        expect(harness.container.read(watchTemplateSyncPayloadProvider), isNull);
       }
     });
 
-    test('is empty when the user has no templates at all', () async {
+    test('is empty — not null — when the user has no templates at all', () async {
+      // A real answer: there is nothing to offer, so the watch should hold
+      // nothing either.
       final harness = buildContainer();
       await harness.settle();
 
@@ -473,7 +476,7 @@ void main() {
       await harness.settle();
 
       expect(
-        harness.container.read(watchTemplateSyncPayloadProvider).map((t) => t.templateId),
+        harness.container.read(watchTemplateSyncPayloadProvider)!.map((t) => t.templateId),
         ['push'],
       );
     });

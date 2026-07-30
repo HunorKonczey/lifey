@@ -20,6 +20,7 @@ final class StandaloneSessionStore {
   private let queue = DispatchQueue(label: "com.khunor.lifey.standaloneSessionStore")
   private let pendingURL: URL
   private let activeURL: URL
+  private let templatesURL: URL
 
   private init() {
     let directory = FileManager.default.urls(
@@ -28,6 +29,7 @@ final class StandaloneSessionStore {
     try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     pendingURL = directory.appendingPathComponent("standalone_sessions_pending.json")
     activeURL = directory.appendingPathComponent("standalone_session_active.json")
+    templatesURL = directory.appendingPathComponent("standalone_templates.json")
   }
 
   // MARK: - Pending queue (docs/watch/44-watch-f6-standalone-plan.md §3.2, §4.1)
@@ -95,6 +97,30 @@ final class StandaloneSessionStore {
   func clearActive() {
     queue.sync {
       try? FileManager.default.removeItem(at: activeURL)
+    }
+  }
+
+  // MARK: - Template cache (docs/watch/49-watch-f6b-template-sync-plan.md §3.1, T4.1)
+
+  /// Overwrites the whole cache with the phone's latest sync — never merged,
+  /// since every `templateSync` already carries the complete, current list
+  /// (T1.3's phone-side "empty list still goes out" decision means an empty
+  /// array here correctly clears a stale cache too, not just skips the write).
+  func saveTemplates(_ templates: [CachedTemplate]) {
+    queue.sync {
+      guard let data = try? JSONEncoder().encode(templates) else { return }
+      try? data.write(to: templatesURL, options: .atomic)
+    }
+  }
+
+  /// The picker's data source — empty if nothing was ever synced, or if the
+  /// cache file failed to decode (a corrupt write, or a future app version's
+  /// incompatible shape). Never throws: the picker's F6a fallback (just the
+  /// "Quick strength" card) already handles "nothing to show" correctly.
+  func templates() -> [CachedTemplate] {
+    queue.sync {
+      guard let data = try? Data(contentsOf: templatesURL) else { return [] }
+      return (try? JSONDecoder().decode([CachedTemplate].self, from: data)) ?? []
     }
   }
 }

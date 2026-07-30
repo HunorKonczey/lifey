@@ -10,6 +10,8 @@ import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/standalone_session_processor.dart';
 import 'package:lifey/features/workouts/data/exercise_repository.dart';
 import 'package:lifey/features/workouts/data/workout_session_repository.dart';
+import 'package:lifey/features/workouts/data/workout_template_repository.dart';
+import 'package:lifey/features/workouts/domain/workout_template.dart';
 
 /// [StandaloneSessionProcessor] turns a finished watch-only session into a
 /// normal, already-closed [WorkoutSession] (docs/watch/
@@ -23,6 +25,7 @@ void main() {
   late AppDatabase db;
   late WorkoutSessionRepository sessionRepository;
   late ExerciseRepository exerciseRepository;
+  late WorkoutTemplateRepository templateRepository;
   late WatchWorkoutService watchService;
   final ackCalls = <MethodCall>[];
   const channel = MethodChannel('lifey/watch');
@@ -33,6 +36,7 @@ void main() {
       WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10),
       WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 10),
     ],
+    String? templateId,
     int? rpe,
     double? activeCalories,
     double? averageHeartRate,
@@ -40,6 +44,7 @@ void main() {
   }) =>
       WatchStandaloneSession(
         standaloneSessionId: standaloneSessionId,
+        templateId: templateId,
         startedAtEpochMs: 1783075200000,
         endedAtEpochMs: 1783078800000,
         rpe: rpe,
@@ -61,6 +66,7 @@ void main() {
     return StandaloneSessionProcessor(
       sessionRepository: sessionRepository,
       exerciseRepository: exerciseRepository,
+      templateRepository: templateRepository,
       watchService: watchService,
       writeHealthWorkout: writeHealthWorkout ?? defaultWriteHealthWorkout,
     );
@@ -70,6 +76,7 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     sessionRepository = WorkoutSessionRepository(db, OutboxWriter(db, _NoopSyncEngine(db, Dio())));
     exerciseRepository = ExerciseRepository(db, OutboxWriter(db, _NoopSyncEngine(db, Dio())));
+    templateRepository = WorkoutTemplateRepository(db, OutboxWriter(db, _NoopSyncEngine(db, Dio())));
     ackCalls.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
       channel,
@@ -240,6 +247,157 @@ void main() {
     final row = await db.select(db.workoutSessions).getSingle();
     expect(row.rpe, 7);
     expect(row.averageHeartRate, 126);
+  });
+
+  group('template resolution (docs/watch/49-watch-f6b-template-sync-plan.md D-F6b.5, T5)', () {
+    Future<String> makeExercise(String name) => exerciseRepository.create(name);
+
+    Future<String> makeTemplate(String name, List<TemplateExercise> exercises) =>
+        templateRepository.create(name: name, exercises: exercises);
+
+    test('resolves exerciseIndex to the real template exercises, not the generic one', () async {
+      final benchId = await makeExercise('Bench Press');
+      final squatId = await makeExercise('Back Squat');
+      final templateId = await makeTemplate('Push day', [
+        TemplateExercise(exerciseClientId: benchId, targetSets: 4),
+        TemplateExercise(exerciseClientId: squatId),
+      ]);
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleEvent(
+          templateId: templateId,
+          sets: const [
+            WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10, exerciseIndex: 0),
+            WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 10, exerciseIndex: 1),
+            WatchStandaloneSet(loggedAtEpochMs: 1783075380000, reps: 10, exerciseIndex: 0),
+          ],
+        ),
+        language: LanguagePreference.english,
+      );
+
+      // No generic "Quick strength" exercise created — every set resolved.
+      final exercises = await db.select(db.exercises).get();
+      expect(exercises.map((e) => e.name), unorderedEquals(['Bench Press', 'Back Squat']));
+
+      final sets = await db.select(db.exerciseSets).get();
+      expect(sets, hasLength(3));
+      expect(sets.where((s) => s.exerciseClientId == benchId), hasLength(2));
+      expect(sets.where((s) => s.exerciseClientId == squatId), hasLength(1));
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.templateClientId, templateId);
+      expect(row.templateName, 'Push day');
+    });
+
+    test('the session carries the template\'s full planned exercise list, including targetSets', () async {
+      final benchId = await makeExercise('Bench Press');
+      final flyId = await makeExercise('Cable Fly');
+      final templateId = await makeTemplate('Push day', [
+        TemplateExercise(exerciseClientId: benchId, targetSets: 4),
+        TemplateExercise(exerciseClientId: flyId),
+      ]);
+      final processor = buildProcessor();
+
+      // Logs against exercise 0 only — exercise 1 (fly) never gets a set.
+      await processor.process(
+        sampleEvent(
+          templateId: templateId,
+          sets: const [WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10, exerciseIndex: 0)],
+        ),
+        language: LanguagePreference.english,
+      );
+
+      // Planned list mirrors the template regardless of what was actually
+      // logged — the session looks the same on the phone as the plan.
+      final plannedLinks = await (db.select(db.workoutSessionExercises)).get();
+      expect(plannedLinks, hasLength(2));
+      final byExerciseId = {for (final l in plannedLinks) l.exerciseClientId: l};
+      expect(byExerciseId[benchId]?.targetSets, 4);
+      expect(byExerciseId[flyId]?.targetSets, isNull);
+    });
+
+    test('falls back to the generic exercise when templateId is null (F6a path, unaffected)', () async {
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleEvent(templateId: null),
+        language: LanguagePreference.english,
+      );
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.templateClientId, isNull);
+      expect(row.templateName, 'Quick strength');
+      final exercises = await db.select(db.exercises).get();
+      expect(exercises.single.name, 'Quick strength');
+    });
+
+    test('falls back to the generic exercise when the template was deleted', () async {
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleEvent(templateId: 'never-existed'),
+        language: LanguagePreference.english,
+      );
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.templateClientId, isNull);
+      expect(row.templateName, 'Quick strength');
+    });
+
+    test('an exerciseIndex past the end of a since-shrunk template falls back per-set', () async {
+      final benchId = await makeExercise('Bench Press');
+      final templateId = await makeTemplate('Push day', [
+        TemplateExercise(exerciseClientId: benchId),
+      ]);
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleEvent(
+          templateId: templateId,
+          sets: const [
+            WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10, exerciseIndex: 0),
+            // The watch cached a longer template than the phone now has.
+            WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 10, exerciseIndex: 3),
+          ],
+        ),
+        language: LanguagePreference.english,
+      );
+
+      final exercises = await db.select(db.exercises).get();
+      expect(exercises.map((e) => e.name), unorderedEquals(['Bench Press', 'Quick strength']));
+
+      final sets = await db.select(db.exerciseSets).get();
+      final generic = exercises.firstWhere((e) => e.name == 'Quick strength');
+      expect(sets.where((s) => s.exerciseClientId == benchId), hasLength(1));
+      expect(sets.where((s) => s.exerciseClientId == generic.clientId), hasLength(1));
+
+      // The session is still template-linked — only the one unresolvable
+      // set fell back, not the whole session.
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.templateClientId, templateId);
+    });
+
+    test('a null exerciseIndex against a valid template falls back to the generic exercise', () async {
+      final benchId = await makeExercise('Bench Press');
+      final templateId = await makeTemplate('Push day', [
+        TemplateExercise(exerciseClientId: benchId),
+      ]);
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleEvent(
+          templateId: templateId,
+          sets: const [WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10)],
+        ),
+        language: LanguagePreference.english,
+      );
+
+      final exercises = await db.select(db.exercises).get();
+      final generic = exercises.firstWhere((e) => e.name == 'Quick strength');
+      final sets = await db.select(db.exerciseSets).get();
+      expect(sets.single.exerciseClientId, generic.clientId);
+    });
   });
 }
 

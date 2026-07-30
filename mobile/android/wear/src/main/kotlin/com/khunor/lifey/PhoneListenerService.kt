@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
+import com.google.android.gms.wearable.DataItem
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Node
@@ -13,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -63,6 +65,9 @@ class PhoneListenerService : WearableListenerService() {
             }
             "$MESSAGE_PATH_PREFIX/standaloneSessionAck" -> {
                 applyStandaloneSessionAck(messageEvent.data)
+            }
+            "$MESSAGE_PATH_PREFIX/templateSync" -> {
+                applyTemplateSyncMessage(messageEvent.data)
             }
         }
     }
@@ -123,6 +128,36 @@ class PhoneListenerService : WearableListenerService() {
     }
 
     /**
+     * Decodes `WatchBridge.kt`'s `templateSyncMessagePayload()`
+     * (docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T3.3) and
+     * overwrites the picker's cache. No guard-ordering hazard here unlike
+     * iOS's `applyContext` (T4.1's fix, D-F6b.2) — this is its own message
+     * path, entirely independent of the state-sync branches above (D-F6b.3).
+     */
+    private fun applyTemplateSyncMessage(data: ByteArray) {
+        try {
+            val json = JSONObject(String(data))
+            val templates = json.optJSONArray("templates") ?: JSONArray()
+            StandaloneSessionStore.saveTemplates(this, templates.toString())
+        } catch (e: Exception) {
+            Log.w(TAG, "applyTemplateSyncMessage failed to parse payload", e)
+        }
+    }
+
+    /**
+     * The reconnect-fallback counterpart of [applyTemplateSyncMessage] —
+     * decodes `WatchBridge.kt`'s [pushTemplates] `DataItem` ([TEMPLATES_PATH],
+     * D-F6b.3). `templatesJson` already arrives as a JSON array string (the
+     * `DataMap` has no native array-of-maps type — see `WatchBridge.kt`'s own
+     * doc comment on this), so it's stored as-is, same as the message path.
+     */
+    private fun applyTemplateSyncDataItem(dataItem: DataItem) {
+        val map = DataMapItem.fromDataItem(dataItem).dataMap
+        val templatesJson = map.getString("templatesJson") ?: return
+        StandaloneSessionStore.saveTemplates(this, templatesJson)
+    }
+
+    /**
      * Decodes the JSON `WatchBridge.kt`'s `stateMessagePayload()` builds and
      * applies it to [SessionStateHolder] — the primary state-sync path, not
      * [onDataChanged]'s DataItem: that sync between two paired devices' Play
@@ -167,6 +202,14 @@ class PhoneListenerService : WearableListenerService() {
         for (event in dataEvents) {
             Log.d(TAG, "  event type=${event.type} path=${event.dataItem.uri.path}")
             if (event.type != DataEvent.TYPE_CHANGED) continue
+
+            // TEMPLATES_PATH is its own independent DataItem (D-F6b.3, T3.3)
+            // — handled and skipped here before the STATE_PATH-only guard
+            // below, which the rest of this loop body still assumes.
+            if (event.dataItem.uri.path == TEMPLATES_PATH) {
+                applyTemplateSyncDataItem(event.dataItem)
+                continue
+            }
             if (event.dataItem.uri.path != STATE_PATH) continue
 
             val map = DataMapItem.fromDataItem(event.dataItem).dataMap
@@ -210,5 +253,10 @@ class PhoneListenerService : WearableListenerService() {
         private const val TAG = "LifeyPhoneListener"
         const val MESSAGE_PATH_PREFIX = "/lifey/watch"
         const val STATE_PATH = "$MESSAGE_PATH_PREFIX/state"
+        // Kept manually in sync with WatchBridge.kt's identically-named
+        // constant in the :app module (docs/watch/49-watch-f6b-template-sync-plan.md
+        // T4.3) — same pattern STATE_PATH above already follows across the
+        // two modules.
+        const val TEMPLATES_PATH = "$MESSAGE_PATH_PREFIX/templates"
     }
 }

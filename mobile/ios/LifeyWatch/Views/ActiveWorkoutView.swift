@@ -14,8 +14,8 @@ private let goFlashHoldSeconds: TimeInterval = 1.3
 /// §12.1 B7, mirrors the Apple Workout app's own paging pattern and canvas
 /// frames AW 02–04, extended by AW 08/09/11 — docs/watch/
 /// 43-watch-f5-set-logging-plan.md §3.1 decision (b)): the log-set page
-/// (leftmost/default — a wrist-raise mid-set lands directly on it), the
-/// metrics page (elapsed time, heart rate, calories, current exercise/set
+/// (leftmost — one swipe/crown-turn from the default), the metrics page
+/// (default — elapsed time, heart rate, calories, current exercise/set
 /// counter, rest-timer countdown), and a separate controls page
 /// (Pause/Resume + End) — deliberately three single-purpose pages rather
 /// than cramming buttons under the metrics on one screen. Styling (§12.1 B6)
@@ -28,12 +28,20 @@ private let goFlashHoldSeconds: TimeInterval = 1.3
 struct ActiveWorkoutView: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   @State private var showGoFlash = false
-  @State private var selectedPage = 0
+  /// Starts on the metrics page (tag 1) — the calorie/HR/exercise readout is
+  /// what a glance should land on; the log-set page is one swipe away.
+  @State private var selectedPage = 1
   /// Mirrors `selectedPage` as a `Double` for `.digitalCrownRotation`, which
   /// needs its own continuous binding rather than the page `Int` itself —
   /// kept in sync with `selectedPage` in both directions so a crown turn and
-  /// a swipe agree on where the "next" turn should land.
-  @State private var crownRotation: Double = 0
+  /// a swipe agree on where the "next" turn should land. Must start equal to
+  /// `selectedPage`, since `onChange(of:)` doesn't fire for the initial value.
+  @State private var crownRotation: Double = 1
+  /// Whether `ExerciseListView` is showing instead of the pager (docs/watch/
+  /// 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — opened from
+  /// `ControlsPage`'s "Gyakorlatok" chip, only ever true during a
+  /// template-backed standalone session.
+  @State private var showExerciseList = false
 
   var body: some View {
     GeometryReader { geometry in
@@ -45,15 +53,20 @@ struct ActiveWorkoutView: View {
         // it (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1): both want the
         // digital crown, and swapping the view means only one
         // `.digitalCrownRotation` binding exists at a time — no focus fight.
-        // `selectedPage` is @State, so the pager comes back on the log page
-        // exactly where it was left.
+        // `selectedPage` is @State, so the pager comes back exactly where it
+        // was left.
         if let adjust = workoutManager.logAdjustState {
           AdjustPage(state: adjust, isCompact: isCompact, padding: padding)
+        } else if showExerciseList {
+          ExerciseListView(
+            isCompact: isCompact, padding: padding, onBack: { showExerciseList = false })
         } else {
           TabView(selection: $selectedPage) {
             LogPage(isCompact: isCompact, padding: padding, screenWidth: geometry.size.width).tag(0)
             MetricsPage(isCompact: isCompact, padding: padding).tag(1)
-            ControlsPage(isCompact: isCompact, padding: padding).tag(2)
+            ControlsPage(
+              isCompact: isCompact, padding: padding, onOpenExerciseList: { showExerciseList = true }
+            ).tag(2)
           }
           .tabViewStyle(.page)
           .digitalCrownRotation(
@@ -252,7 +265,7 @@ private struct ExerciseCard: View {
   }
 }
 
-/// The leftmost/default `TabView` page (docs/watch/
+/// The leftmost `TabView` page (docs/watch/
 /// 43-watch-f5-set-logging-plan.md §3.1 decision (b), canvas AW 08/09/11): a
 /// single large circular "+1 SET" control that fills nearly the whole safe
 /// area — a dedicated page turns the entire tap target into one ~5×-minimum
@@ -280,7 +293,15 @@ private struct LogPage: View {
   private let tapDebounceSeconds: TimeInterval = 0.3
 
   private var circleDiameter: CGFloat { screenWidth * DynamicSizing.logCircleDiameterFraction }
-  private var canTap: Bool { workoutManager.logSetState == .ready && workoutManager.isPhoneReachable }
+  /// Standalone logging is local — there is no phone to reach, and gating on
+  /// reachability would disable the control in exactly the situation F6a
+  /// exists for (docs/watch/44-watch-f6-standalone-plan.md §11/8). Only the
+  /// phone-mastered path needs a reachable phone, since that one's tap is a
+  /// round-trip.
+  private var requiresPhone: Bool { !workoutManager.isStandalone }
+  private var canTap: Bool {
+    workoutManager.logSetState == .ready && (workoutManager.isPhoneReachable || !requiresPhone)
+  }
   /// The adjust stepper is a phone-mastered-only path in F5b — standalone
   /// still logs a fixed reps count (D-F6.8), and binding the stepper there
   /// is F6b's job (D-F5b.8). `WorkoutManager.beginLogAdjust()` guards this
@@ -359,23 +380,22 @@ private struct LogPage: View {
           Image(systemName: "checkmark")
             .font(checkmarkFont)
             .foregroundColor(LifeyColors.primary)
-          if workoutManager.isStandalone {
-            // No plan/total to report against (docs/watch/
-            // 44-watch-f6-standalone-plan.md §3.4) — reuses
-            // active_sets_free_format (count + combined reps) rather than a
-            // bare "Set n" label, matching the exercise card's own line
-            // instead of introducing a third, narrower string just for
-            // this confirmed-state readout.
+          // Mirrors ExerciseCard's own free-format-vs-n/of/total branch
+          // (docs/watch/49-watch-f6b-template-sync-plan.md §3.4) — both read
+          // off the same WorkoutManager.activeExerciseDisplay, so the
+          // confirmed circle never disagrees with the exercise card below it.
+          if let freeFormatSets = workoutManager.activeExerciseDisplay.freeFormatSets {
             Text(
               String(
                 format: String(localized: "active_sets_free_format"),
-                workoutManager.standaloneSets.count,
-                workoutManager.standaloneSets.reduce(0) { $0 + $1.reps })
+                freeFormatSets.count, freeFormatSets.totalReps)
             )
             .font(isCompact ? .body : .title3)
             .fontWeight(.bold)
             .foregroundColor(LifeyColors.onSurface)
-          } else if let setsDone = workoutManager.setsDone, let setsTotal = workoutManager.setsTotal {
+          } else if let setsDone = workoutManager.activeExerciseDisplay.setsDone,
+            let setsTotal = workoutManager.activeExerciseDisplay.setsTotal
+          {
             Text(String(format: String(localized: "active_sets_format"), setsDone, setsTotal))
               .font(isCompact ? .body : .title3)
               .fontWeight(.bold)
@@ -386,7 +406,7 @@ private struct LogPage: View {
       .frame(width: circleDiameter, height: circleDiameter)
     case .pending, .failed:
       ghostedCircle
-    case .ready where !workoutManager.isPhoneReachable:
+    case .ready where requiresPhone && !workoutManager.isPhoneReachable:
       ghostedCircle
     case .ready:
       ZStack {
@@ -440,7 +460,10 @@ private struct LogPage: View {
   @ViewBuilder
   private var belowCircleContent: some View {
     switch workoutManager.logSetState {
-    case .ready where !workoutManager.isPhoneReachable:
+    // Not shown in standalone: the header already carries the standalone
+    // badge, and repeating "phone not reachable" there would read as an
+    // error during a deliberately phone-less workout (§11/8).
+    case .ready where requiresPhone && !workoutManager.isPhoneReachable:
       logStatusPill(
         icon: "wifi.slash", text: String(localized: "phone_unreachable"),
         tint: LifeyColors.onSurfaceVariant, background: LifeyColors.container)
@@ -489,26 +512,27 @@ private struct LogPage: View {
   /// `setsDone` itself (which would read one set behind what a tap is about
   /// to log).
   private var contextLine: String {
-    if workoutManager.isStandalone {
-      // No plan, so no "next set of total" to preview — just names the
-      // session (docs/watch/44-watch-f6-standalone-plan.md §3.4), matching
-      // the exercise card's own title below.
-      return String(localized: "standalone_quick_start")
-    }
-    let exerciseName = workoutManager.exerciseName ?? String(localized: "active_default_exercise")
-    guard let setsDone = workoutManager.setsDone, let setsTotal = workoutManager.setsTotal else {
-      return exerciseName
+    // Reuses WorkoutManager.activeExerciseDisplay for all three cases
+    // (Quick strength / template / phone-mastered) — for the latter two
+    // this reproduces the pre-F6b logic exactly; a template exercise with a
+    // targetSets now also gets the "next set of total" preview, matching
+    // the phone-mastered format it's borrowing (docs/watch/
+    // 49-watch-f6b-template-sync-plan.md §3.4).
+    let display = workoutManager.activeExerciseDisplay
+    guard let setsDone = display.setsDone, let setsTotal = display.setsTotal else {
+      return display.name
     }
     return String(
-      format: String(localized: "log_set_context_format"), exerciseName,
+      format: String(localized: "log_set_context_format"), display.name,
       min(setsDone + 1, setsTotal), setsTotal)
   }
 }
 
-/// Middle `TabView` page — `LogPage`'s original AW 02–04 home before the F5
-/// log page took the leftmost slot (docs/40-watch-app-plan.md §12.1 B7,
-/// canvas AW 02): elapsed/rest time, exercise/set counter, heart rate and
-/// calories — no controls here, those live on `ControlsPage`.
+/// Middle `TabView` page and the pager's default (`selectedPage = 1` above)
+/// — `LogPage`'s original AW 02–04 home before the F5 log page took the
+/// leftmost slot (docs/40-watch-app-plan.md §12.1 B7, canvas AW 02): elapsed/
+/// rest time, exercise/set counter, heart rate and calories — no controls
+/// here, those live on `ControlsPage`.
 /// The adjust stepper (canvas AW 10, docs/watch/48-watch-f5b-set-adjust-plan.md
 /// §3.3) — reached by long-pressing the log control, never by the one-tap
 /// flow. Replaces the pager while it's up (see `ActiveWorkoutView.body`), so
@@ -642,12 +666,17 @@ private struct MetricsPage: View {
       Group {
         if let remainingSeconds = restRemainingSeconds() {
           VStack(spacing: 4) {
+            // Same activeExerciseDisplay as the other pages — the "Next"
+            // line now names the current template exercise (not a generic
+            // fallback) and gets a real set count when it has a targetSets
+            // (docs/watch/49-watch-f6b-template-sync-plan.md §3.4).
+            let display = workoutManager.activeExerciseDisplay
             RestHeroView(
               remainingSeconds: remainingSeconds,
               totalSeconds: workoutManager.restTotalSeconds,
-              exerciseName: restExerciseName,
-              setsDone: workoutManager.setsDone,
-              setsTotal: workoutManager.setsTotal,
+              exerciseName: display.name,
+              setsDone: display.setsDone,
+              setsTotal: display.setsTotal,
               isCompact: isCompact)
           }
         } else {
@@ -683,19 +712,13 @@ private struct MetricsPage: View {
             }
             .padding(.top, 4)
             Spacer(minLength: 4)
-            if workoutManager.isStandalone {
-              ExerciseCard(
-                exerciseName: String(localized: "standalone_quick_start"), setsDone: nil, setsTotal: nil,
-                isCompact: isCompact,
-                freeFormatSets: (
-                  workoutManager.standaloneSets.count,
-                  workoutManager.standaloneSets.reduce(0) { $0 + $1.reps }
-                ))
-            } else {
-              ExerciseCard(
-                exerciseName: workoutManager.exerciseName ?? String(localized: "active_default_exercise"),
-                setsDone: workoutManager.setsDone, setsTotal: workoutManager.setsTotal, isCompact: isCompact)
-            }
+            // One call site for all three cases (Quick strength / template /
+            // phone-mastered) — see WorkoutManager.activeExerciseDisplay's
+            // doc comment (docs/watch/49-watch-f6b-template-sync-plan.md §3.4).
+            let display = workoutManager.activeExerciseDisplay
+            ExerciseCard(
+              exerciseName: display.name, setsDone: display.setsDone, setsTotal: display.setsTotal,
+              isCompact: isCompact, freeFormatSets: display.freeFormatSets)
           }
         }
       }
@@ -707,16 +730,6 @@ private struct MetricsPage: View {
   private func elapsedText(now: Date) -> String {
     guard let startedAt = workoutManager.startedAt else { return "00:00" }
     return formatSeconds(Int(max(0, now.timeIntervalSince(startedAt))))
-  }
-
-  /// `RestHeroView`'s "Next · <name>" label — standalone has no plan/exercise
-  /// name, so the fallback is `standalone_quick_start` rather than the
-  /// generic `active_default_exercise` (docs/watch/
-  /// 44-watch-f6-standalone-plan.md §3.5).
-  private var restExerciseName: String {
-    workoutManager.exerciseName
-      ?? String(
-        localized: workoutManager.isStandalone ? "standalone_quick_start" : "active_default_exercise")
   }
 
   /// Seconds left in the current rest, computed against this device's own
@@ -742,6 +755,11 @@ private struct ControlsPage: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
   let padding: CGFloat
+  /// Opens `ExerciseListView` in place of the pager (docs/watch/
+  /// 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — only ever called
+  /// from the chip below, which itself only shows during a template-backed
+  /// standalone session.
+  let onOpenExerciseList: () -> Void
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -780,6 +798,28 @@ private struct ControlsPage: View {
               workoutManager.pause()
             }
           }
+        }
+        // Only during a template-backed session (docs/watch/
+        // 49-watch-f6b-template-sync-plan.md §3.5) — quick-strength and
+        // phone-mastered sessions have nothing to switch between.
+        if workoutManager.standaloneTemplate != nil {
+          Button(action: onOpenExerciseList) {
+            HStack(spacing: 6) {
+              Image(systemName: "list.bullet")
+                .font(.system(size: isCompact ? 12 : 14))
+              Text("standalone_exercise_list_title")
+                .font(isCompact ? .caption2 : .caption)
+                .fontWeight(.semibold)
+                .lineLimit(1)
+            }
+            .foregroundColor(LifeyColors.onSurfaceVariant)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+          }
+          .buttonStyle(.plain)
+          .background(LifeyColors.container)
+          .clipShape(Capsule())
+          .padding(.top, 10)
         }
         Spacer()
       }
@@ -823,6 +863,106 @@ private struct ControlButton: View {
       }
     }
     .buttonStyle(.plain)
+  }
+}
+
+/// The "which exercise am I logging against" picker (docs/watch/
+/// 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — opened from
+/// `ControlsPage`'s "Gyakorlatok" chip, only ever shown during a
+/// template-backed standalone session. Replaces the pager the same way
+/// `AdjustPage` does (see `ActiveWorkoutView.body`), not a sheet/modal —
+/// this app has no other modal presentation, and the pager coming right
+/// back underneath once this closes matches `AdjustPage`'s own precedent.
+/// Visually the exact shape `StandalonePickerView`'s rows already
+/// established (T4) — a scrolling list of `surface`-background cards, the
+/// selected one highlighted `containerHigh` — not a new component language.
+///
+/// Tapping a row **jumps** straight to that exercise, not a "Next" stepper
+/// (D-F6b.8's own reasoning: a one-way Next either silently wraps back to
+/// exercise 1, logging wrong data, or dead-ends at the last exercise with
+/// no way back). No confirmation: this is fully reversible — a mis-tap
+/// costs one more tap to undo, not a lost set. Already-logged sets keep
+/// whatever `exerciseIndex` they were logged with, permanently; selecting
+/// here only changes what the *next* tap counts against.
+private struct ExerciseListView: View {
+  @ObservedObject private var workoutManager = WorkoutManager.shared
+  let isCompact: Bool
+  let padding: CGFloat
+  let onBack: () -> Void
+
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: isCompact ? 10 : 14) {
+        HStack(spacing: 6) {
+          Button(action: onBack) {
+            Image(systemName: "chevron.left")
+              .font(.system(size: 14, weight: .semibold))
+              .foregroundColor(LifeyColors.onSurfaceVariant)
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel(Text("effort_selector_back"))
+          Text("standalone_exercise_list_title")
+            .font(isCompact ? .title3 : .title2)
+            .fontWeight(.heavy)
+            .foregroundColor(LifeyColors.onSurface)
+          Spacer(minLength: 0)
+        }
+        if let template = workoutManager.standaloneTemplate {
+          ForEach(Array(template.exercises.enumerated()), id: \.offset) { index, exercise in
+            ExerciseListRow(
+              exercise: exercise, isCompact: isCompact,
+              isCurrent: index == workoutManager.standaloneExerciseIndex,
+              setsDone: workoutManager.standaloneSets.filter { $0.exerciseIndex == index }.count
+            ) {
+              workoutManager.selectStandaloneExercise(index)
+              onBack()
+            }
+          }
+        }
+      }
+      .padding(.horizontal, padding)
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+}
+
+/// One exercise row (canvas-less — see `ExerciseListView`'s doc comment for
+/// why this reuses `StandalonePickerView`'s `TemplateRow` visual language
+/// rather than inventing a new one).
+private struct ExerciseListRow: View {
+  let exercise: CachedTemplateExercise
+  let isCompact: Bool
+  let isCurrent: Bool
+  let setsDone: Int
+  let onTap: () -> Void
+
+  var body: some View {
+    Button(action: onTap) {
+      VStack(alignment: .leading, spacing: 1) {
+        Text(exercise.name)
+          .font(.body)
+          .fontWeight(.bold)
+          .foregroundColor(LifeyColors.onSurface)
+          .lineLimit(1)
+          .truncationMode(.tail)
+        if let targetSets = exercise.targetSets {
+          Text(String(format: String(localized: "active_sets_format"), setsDone, targetSets))
+            .font(.caption2)
+            .foregroundColor(LifeyColors.onSurfaceVariant)
+        } else {
+          Text(String(format: String(localized: "standalone_exercise_sets_done"), setsDone))
+            .font(.caption2)
+            .foregroundColor(LifeyColors.onSurfaceVariant)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 14)
+    }
+    .buttonStyle(.plain)
+    .background(isCurrent ? LifeyColors.containerHigh : LifeyColors.surface)
+    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
   }
 }
 
