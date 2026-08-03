@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.SignalWifiOff
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
@@ -147,6 +148,11 @@ private const val LOG_ADJUST_ROTARY_STEP_DP = 24f
  * the two buttons are fixed-size, every dp reclaimed goes to the number
  * between them. Mirrors iOS's `-padding * 0.6` on the same row. */
 private const val ADJUST_ROW_WIDTH_FRACTION = 0.936f
+
+/** How long the standalone badge shows its "syncing" glyph after a tap —
+ * see [HeaderChip]'s own comment for why this is a fixed duration rather
+ * than real progress. Mirrors iOS's `adoptionRetryFeedbackSeconds`. */
+private const val ADOPTION_RETRY_FEEDBACK_MS = 1_500L
 
 /** Re-requested by the "allow sensors" chip (§12.1 B13) — the same pair
  * [com.khunor.lifey.ExerciseService.startExercise] checks before adding
@@ -308,8 +314,8 @@ fun ActiveWorkoutScreen() {
     val pagerState = rememberPagerState(initialPage = METRICS_PAGE, pageCount = { PAGE_COUNT })
     // Whether ExerciseListScreen is showing instead of the pager (docs/watch/
     // 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — opened from
-    // ControlsPage's "Gyakorlatok" chip, only ever true during a
-    // template-backed standalone session.
+    // the "Gyakorlatok" chip on either the log or the controls page, only
+    // ever true during a template-backed standalone session.
     var showExerciseList by remember { mutableStateOf(false) }
 
     // Local, watch-only UI step (docs/40-watch-app-plan.md §8.2 decision (b)
@@ -430,6 +436,8 @@ fun ActiveWorkoutScreen() {
                         isStandalone = isStandalone,
                         showsStandaloneBadge = showsStandaloneBadge,
                         freeFormatSets = display.freeFormatSets,
+                        hasStandaloneTemplate = metadata.standaloneTemplate != null,
+                        onOpenExerciseList = { showExerciseList = true },
                         isCompact = isCompact,
                         maxWidth = maxWidth,
                     )
@@ -534,6 +542,14 @@ private fun LogPage(
      * adoption. See the top-level `showsStandaloneBadge` computation. */
     showsStandaloneBadge: Boolean,
     freeFormatSets: Pair<Int, Int>?,
+    /** Whether to offer the exercise-list chip under the status line — true
+     * only during a template-backed standalone session, same gate
+     * [ControlsPage] uses for its own copy of it. */
+    hasStandaloneTemplate: Boolean,
+    /** Opens the exercise list in place of the pager — the same callback
+     * [ControlsPage] gets, so both entry points land on one screen and one
+     * piece of state. */
+    onOpenExerciseList: () -> Unit,
     isCompact: Boolean,
     maxWidth: Dp,
 ) {
@@ -637,6 +653,16 @@ private fun LogPage(
             isStandalone = isStandalone,
             isCompact = isCompact,
         )
+        // Directly under the "<exercise> · Set 2 of 2" line — that line is
+        // where the user notices they've finished an exercise, so the way to
+        // switch belongs next to it, not two swipes away on [ControlsPage].
+        // The Column is centre-arranged, so the two circles above simply ride
+        // up to make room; nothing here is pinned to the dial.
+        if (hasStandaloneTemplate) {
+            Box(modifier = Modifier.padding(top = if (isCompact) 6.dp else 8.dp)) {
+                ExerciseListChip(onClick = onOpenExerciseList)
+            }
+        }
     }
 }
 
@@ -1296,36 +1322,52 @@ private fun ControlsPage(
                 ),
             )
             if (hasStandaloneTemplate) {
-                CompactChip(
-                    onClick = onOpenExerciseList,
-                    icon = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.List,
-                            contentDescription = null,
-                            tint = LifeyColors.onSurfaceVariant,
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = stringResource(R.string.standalone_exercise_list_title),
-                            maxLines = 1,
-                        )
-                    },
-                    colors = ChipDefaults.chipColors(
-                        backgroundColor = LifeyColors.container,
-                        contentColor = LifeyColors.onSurfaceVariant,
-                    ),
-                )
+                ExerciseListChip(onClick = onOpenExerciseList)
             }
         }
     }
 }
 
 /**
+ * The "Gyakorlatok" chip that opens [ExerciseListScreen] (docs/watch/
+ * 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8). Shown on both
+ * [ControlsPage] and [LogPage] — the log page is where the user actually
+ * notices they're on the wrong exercise ("Set 2 of 2" sits right above it),
+ * so making them swipe two pages to fix it was the wrong place to hide it.
+ * One composable rather than two copies, so the two pages can't drift apart.
+ * Only ever rendered during a template-backed standalone session; a
+ * quick-strength or phone-mastered one has nothing to switch between.
+ * Mirrors iOS's `ExerciseListChip`.
+ */
+@Composable
+private fun ExerciseListChip(onClick: () -> Unit) {
+    CompactChip(
+        onClick = onClick,
+        icon = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.List,
+                contentDescription = null,
+                tint = LifeyColors.onSurfaceVariant,
+            )
+        },
+        label = {
+            Text(
+                text = stringResource(R.string.standalone_exercise_list_title),
+                maxLines = 1,
+            )
+        },
+        colors = ChipDefaults.chipColors(
+            backgroundColor = LifeyColors.container,
+            contentColor = LifeyColors.onSurfaceVariant,
+        ),
+    )
+}
+
+/**
  * The "which exercise am I logging against" picker (docs/watch/
  * 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — opened from
- * [ControlsPage]'s "Gyakorlatok" chip, only ever shown during a
- * template-backed standalone session. Replaces the pager the same way the
+ * [ExerciseListChip], on either [LogPage] or [ControlsPage]; only ever
+ * shown during a template-backed standalone session. Replaces the pager the same way the
  * adjust overlay does (see [ActiveWorkoutScreen]), not a separate
  * Activity/navigation destination. Visually the exact shape
  * [com.khunor.lifey.ui.StandalonePickerScreen]'s rows already established
@@ -1485,11 +1527,43 @@ private fun HeaderChip(
             // copy of its own ("mode, not alarm"), so every page's header
             // carries it consistently rather than singling out the
             // STRENGTH-label page alone (mirrors iOS's identical `HeaderChip`).
+            //
+            // It doubles as a "sync with my phone now" button: the state it
+            // reports (this workout has no phone behind it) is exactly the one
+            // the user wants to act on, so a separate control would be
+            // busywork. Most useful when the phone app simply wasn't running
+            // at start — one tap sends the whole snapshot, already-logged sets
+            // included, and the phone opens the workout.
+            val context = LocalContext.current
+            val scope = rememberCoroutineScope()
+            var isSyncing by remember { mutableStateOf(false) }
+            val a11yLabel = stringResource(R.string.standalone_sync_retry_a11y)
             Icon(
-                imageVector = Icons.Filled.PhonelinkOff,
-                contentDescription = stringResource(R.string.standalone_badge),
+                imageVector = if (isSyncing) Icons.Filled.Sync else Icons.Filled.PhonelinkOff,
+                contentDescription = null,
                 tint = LifeyColors.standaloneIndicator,
-                modifier = Modifier.size(if (isCompact) 14.dp else 16.dp),
+                modifier = Modifier
+                    // `clickable` ahead of `padding`, so the padding counts
+                    // as part of the tap target rather than sitting outside
+                    // it — the glyph itself is only 14–16 dp, too small to
+                    // hit reliably on a wrist.
+                    .clickable(enabled = !isSyncing) {
+                        scope.launch {
+                            isSyncing = true
+                            SummarySender.sendAdoptionRequestIfNeeded(context)
+                            // The send itself usually returns in well under a
+                            // frame, so hold the glyph long enough for the tap
+                            // to have visibly done something. What a
+                            // *successful* sync looks like is this badge
+                            // disappearing (the phone's adoptionAck flips
+                            // `isAdopted`), not this spinner.
+                            delay(ADOPTION_RETRY_FEEDBACK_MS)
+                            isSyncing = false
+                        }
+                    }
+                    .semantics { contentDescription = a11yLabel }
+                    .padding(vertical = 6.dp, horizontal = 4.dp)
+                    .size(if (isCompact) 14.dp else 16.dp),
             )
         }
     }

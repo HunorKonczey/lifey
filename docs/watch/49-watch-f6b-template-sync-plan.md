@@ -717,3 +717,31 @@ A fenti csak akkor működik, ha a telefon elérhető és adoptálta a sessiont 
 **Mellékhatás, szándékosan:** Quick strength (terv nélküli) sessionben nincs `previousSets`, de a (2) ág így is javít a korábbi viselkedésen — egy sorozatnyi tap a munkasúlyon marad, ahelyett hogy mindegyik 10 ism. / súly nélkül menne.
 
 **Amit ez *nem* old meg:** a telefonon látszó üres set-sorok száma a terv `targetSets` értékéből jön (`LogSessionScreen._rebuildBlocks`: `targetSets - kész szettek`). Ha egy terv-gyakorlathoz nincs megadva cél-szettszám, akkor gyakorlatonként egyetlen üres sor jelenik meg — ugyanúgy, ahogy a telefonról indított, ugyanabból a tervből induló edzésnél is. Ez nem a tükrözés hibája; a tervben megadott cél-szettszám a bemenete.
+
+---
+
+## Utólagos kiegészítés: automatikus gyakorlat-léptetés + gyakorlat-gomb a log oldalon
+
+Két külön, egymástól független apró feature, mindkettő csak a **standalone** (órán futó) sessiont érinti — a telefon-mesterelt út egyikhez sem változott.
+
+### 1. Automatikus léptetés a cél-szettszám elérésekor
+
+**A jelentett hiba:** ha egy gyakorlathoz 2 szett volt kijelölve és mindkettőt lelogoltam, a következő tap **ugyanoda** vett fel egy harmadik szettet. Kézzel, a gyakorlat-listából kiválasztva a következőt jól logolt — ennek automatikusnak kell lennie.
+
+**Miért csak órán állt fenn:** a telefon-mesterelt út ezt eleve jól csinálja. A `selectWatchSetLogTarget` (b) szabálya szerint, ha az aktuális blokkban nincs több nyitott sor, az első olyan blokkot választja, amiben van. A standalone ág viszont a `standaloneExerciseIndex`-et **kizárólag** a kézi választáskor mozgatta (`selectStandaloneExercise` / `onStandaloneExerciseSelected`).
+
+**A megoldás:** minden lokálisan logolt szett után, ha az aktuális gyakorlat elérte a saját `targetSets`-ét, az index a következő **be nem fejezett** gyakorlatra ugrik — iOS `WorkoutManager.advanceStandaloneExerciseIfComplete()`, Wear `SessionMetadata.advancedStandaloneExerciseIndex`.
+
+- A cél kiválasztása szándékosan **ugyanaz a szabály**, mint a telefoné: az első befejezetlen gyakorlat elölről végigpásztázva, nem egyszerűen `index + 1` — így egy korábban átugrott vagy félbehagyott gyakorlat nem marad árván.
+- „Befejezett" = `logolt >= targetSets`; **null `targetSets` egy szettnek számít**, mert a telefon is pontosan ezt csinálja egy terv nélküli gyakorlattal (`_rebuildBlocks` egyetlen sort ad neki) — enélkül a léptetés örökké visszapattanna egy cél nélküli gyakorlatra.
+- Csak szett-logolás után fut le, tehát a **kézi választás megmarad** addig, amíg annak a gyakorlatnak van hátra szettje.
+- Ha minden gyakorlat kész, az index marad — a további tapek az aktuálisba mennek, ahogy a telefon (c) szabálya is teszi.
+- iOS-en a léptetés a recovery-snapshot mentése **előtt** fut, hogy egy folyamathalál után is ugyanarra a gyakorlatra térjen vissza.
+
+### 2. Gyakorlat-gomb a „+1 szett" oldalon
+
+A gyakorlat-listát eddig csak a vezérlő-lap (End/Pause) „Gyakorlatok" chipje nyitotta, két lapozásra a log oldaltól — pedig a felhasználó pont ott veszi észre, hogy rossz gyakorlaton áll, mert ott van a „Set 2 of 2" sor.
+
+- A chip kiemelve közös komponensbe (iOS `ExerciseListChip`, Wear `ExerciseListChip`), és most **mindkét lap** ezt használja, ugyanazzal a `onOpenExerciseList` callbackkel — tehát egy képernyő, egy állapot (`showExerciseList`), a két lap nem tud elcsúszni egymástól.
+- A log oldalon közvetlenül a státusz-sor (`<gyakorlat> · Set 2 of 2`) alá kerül. A két korong nem lett kisebb: az iOS oldali `VStack` térköze 10/16 → 8/12, a Wear `Column` pedig középre rendezett, tehát magától felfelé csúszik a tartalom.
+- Ugyanaz a megjelenés és ugyanaz a viselkedés, mint a vezérlő-lapon; továbbra is csak terv-alapú standalone sessionben látszik (quick strength és phone-mastered esetben nincs mire váltani).

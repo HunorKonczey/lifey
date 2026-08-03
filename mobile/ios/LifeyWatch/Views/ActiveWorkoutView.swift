@@ -40,8 +40,8 @@ struct ActiveWorkoutView: View {
   @State private var crownRotation: Double = 1
   /// Whether `ExerciseListView` is showing instead of the pager (docs/watch/
   /// 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — opened from
-  /// `ControlsPage`'s "Gyakorlatok" chip, only ever true during a
-  /// template-backed standalone session.
+  /// the "Gyakorlatok" chip on either the log or the controls page, only ever
+  /// true during a template-backed standalone session.
   @State private var showExerciseList = false
 
   var body: some View {
@@ -63,7 +63,10 @@ struct ActiveWorkoutView: View {
             isCompact: isCompact, padding: padding, onBack: { showExerciseList = false })
         } else {
           TabView(selection: $selectedPage) {
-            LogPage(isCompact: isCompact, padding: padding, screenWidth: geometry.size.width).tag(0)
+            LogPage(
+              isCompact: isCompact, padding: padding, screenWidth: geometry.size.width,
+              onOpenExerciseList: { showExerciseList = true }
+            ).tag(0)
             MetricsPage(isCompact: isCompact, padding: padding).tag(1)
             ControlsPage(
               isCompact: isCompact, padding: padding, onOpenExerciseList: { showExerciseList = true }
@@ -125,6 +128,7 @@ struct ActiveWorkoutView: View {
 /// one bit of letter-spacing tracking the design calls for (41-watch-design-
 /// prompt.md §1: "uppercase labels tracked +0.5") is applied here directly.
 private struct HeaderChip: View {
+  @ObservedObject private var workoutManager = WorkoutManager.shared
   let icon: String
   let label: String
   let isCompact: Bool
@@ -146,10 +150,22 @@ private struct HeaderChip: View {
         .tracking(0.5)
         .lineLimit(1)
       if isStandalone {
-        Image(systemName: "iphone.slash")
+        // The badge doubles as a "sync with my phone now" button — the state
+        // it reports (this workout has no phone behind it) is exactly the one
+        // the user wants to act on, so making them hunt for a separate
+        // control would be busywork. Most useful when the phone app simply
+        // wasn't running at start: one tap sends the whole snapshot,
+        // already-logged sets included, and the phone opens the workout.
+        // Tap target padded out to something findable on a wrist — the glyph
+        // itself is ~16pt.
+        Image(systemName: workoutManager.isRetryingAdoption ? "arrow.triangle.2.circlepath" : "iphone.slash")
           .font(.system(size: isCompact ? 14 : 16))
           .foregroundColor(LifeyColors.standaloneIndicator)
-          .accessibilityLabel(Text("standalone_badge"))
+          .padding(.vertical, 6)
+          .padding(.horizontal, 4)
+          .contentShape(Rectangle())
+          .onTapGesture { workoutManager.retryAdoption() }
+          .accessibilityLabel(Text("standalone_sync_retry_a11y"))
       }
     }
   }
@@ -287,6 +303,10 @@ private struct LogPage: View {
   let isCompact: Bool
   let padding: CGFloat
   let screenWidth: CGFloat
+  /// Opens `ExerciseListView` in place of the pager — the same callback
+  /// `ControlsPage` gets, so both entry points land on one screen and one
+  /// piece of state (`ActiveWorkoutView.showExerciseList`).
+  let onOpenExerciseList: () -> Void
 
   /// 300 ms tap-debounce (docs/watch/43-watch-f5-set-logging-plan.md §4.2) —
   /// belt-and-braces alongside `logSet()`'s own `logSetState == .ready`
@@ -314,7 +334,9 @@ private struct LogPage: View {
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
-      VStack(spacing: isCompact ? 10 : 16) {
+      // Tightened from 10/16 to make room for the exercise-list chip below
+      // without shrinking either circle — the whole stack simply rides up.
+      VStack(spacing: isCompact ? 8 : 12) {
         HStack {
           HeaderChip(
             icon: "dumbbell", label: elapsedText(now: context.date), isCompact: isCompact,
@@ -333,6 +355,14 @@ private struct LogPage: View {
             .accessibilityLabel(Text("log_adjust_open_a11y"))
         }
         belowCircleContent
+        // Directly under the "<exercise> · Set 2 of 2" line — that line is
+        // where the user notices they've finished an exercise, so the way to
+        // switch belongs next to it, not two swipes away on `ControlsPage`.
+        // The two circles above ride up by the page's own spacing to make
+        // room; nothing here is pinned to the dial.
+        if workoutManager.standaloneTemplate != nil {
+          ExerciseListChip(isCompact: isCompact, action: onOpenExerciseList)
+        }
         Spacer(minLength: 0)
       }
       .padding(.horizontal, padding)
@@ -890,23 +920,8 @@ private struct ControlsPage: View {
         // 49-watch-f6b-template-sync-plan.md §3.5) — quick-strength and
         // phone-mastered sessions have nothing to switch between.
         if workoutManager.standaloneTemplate != nil {
-          Button(action: onOpenExerciseList) {
-            HStack(spacing: 6) {
-              Image(systemName: "list.bullet")
-                .font(.system(size: isCompact ? 12 : 14))
-              Text("standalone_exercise_list_title")
-                .font(isCompact ? .caption2 : .caption)
-                .fontWeight(.semibold)
-                .lineLimit(1)
-            }
-            .foregroundColor(LifeyColors.onSurfaceVariant)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-          }
-          .buttonStyle(.plain)
-          .background(LifeyColors.container)
-          .clipShape(Capsule())
-          .padding(.top, 10)
+          ExerciseListChip(isCompact: isCompact, action: onOpenExerciseList)
+            .padding(.top, 10)
         }
         Spacer()
       }
@@ -918,6 +933,38 @@ private struct ControlsPage: View {
   private func elapsedText(now: Date) -> String {
     guard let startedAt = workoutManager.startedAt else { return "00:00" }
     return formatSeconds(Int(max(0, now.timeIntervalSince(startedAt))))
+  }
+}
+
+/// The "Gyakorlatok" chip that opens `ExerciseListView` (docs/watch/
+/// 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8). Shown on both
+/// `ControlsPage` and `LogPage` — the log page is where the user actually
+/// notices they're on the wrong exercise ("Set 2 of 2" sits right above it),
+/// so making them swipe two pages to fix it was the wrong place to hide it.
+/// One view rather than two copies, so the two pages can't drift apart.
+/// Only ever rendered during a template-backed standalone session; a
+/// quick-strength or phone-mastered one has nothing to switch between.
+private struct ExerciseListChip: View {
+  let isCompact: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 6) {
+        Image(systemName: "list.bullet")
+          .font(.system(size: isCompact ? 12 : 14))
+        Text("standalone_exercise_list_title")
+          .font(isCompact ? .caption2 : .caption)
+          .fontWeight(.semibold)
+          .lineLimit(1)
+      }
+      .foregroundColor(LifeyColors.onSurfaceVariant)
+      .padding(.horizontal, 14)
+      .padding(.vertical, 6)
+    }
+    .buttonStyle(.plain)
+    .background(LifeyColors.container)
+    .clipShape(Capsule())
   }
 }
 
@@ -955,8 +1002,8 @@ private struct ControlButton: View {
 
 /// The "which exercise am I logging against" picker (docs/watch/
 /// 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — opened from
-/// `ControlsPage`'s "Gyakorlatok" chip, only ever shown during a
-/// template-backed standalone session. Replaces the pager the same way
+/// `ExerciseListChip`, on either `LogPage` or `ControlsPage`; only ever
+/// shown during a template-backed standalone session. Replaces the pager the same way
 /// `AdjustPage` does (see `ActiveWorkoutView.body`), not a sheet/modal —
 /// this app has no other modal presentation, and the pager coming right
 /// back underneath once this closes matches `AdjustPage`'s own precedent.

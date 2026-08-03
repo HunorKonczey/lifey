@@ -76,4 +76,5 @@
     <!-- F6b exercise list (docs/watch/49-watch-f6b-template-sync-plan.md §3.5, §7) -->
     <string name="standalone_exercise_list_title">Exercises</string>
     <string name="standalone_exercise_sets_done">%1$d sets</string>
+    <string name="standalone_sync_retry_a11y">Sync this workout to the phone</string>
 </resources>

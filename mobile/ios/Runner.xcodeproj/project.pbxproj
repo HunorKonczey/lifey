@@ -43,6 +43,7 @@
 		BC23DE45FA6789012345678 /* AppleMusicBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB12CD34EF5678901234567 /* AppleMusicBridge.swift */; };
 		C4CBB17F6045BBECC9D48179 /* EffortSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3DF1BAA0E811718B4315813 /* EffortSelectorView.swift */; };
 		C8A78426AFA51BB4732CF623 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FC6BDA7ED6930FFA22BC04D /* WatchBridge.swift */; };
+		7D40DF07B89147C7A24BE080 /* WatchEventBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ECFE8A4C5AD411A9E96D4AE /* WatchEventBuffer.swift */; };
 		D97F898928CF63CA3FE80A18 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 47901D32BBEDE3C033E2A26B /* Pods_Runner.framework */; };
 		E2C15FF9F2D08196F7D9430B /* LifeyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B869FA4F27F4942A50F51F6 /* LifeyWatchApp.swift */; };
 		E4E728B9F8538B015C8F9150 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CA01381F208E459209B7674 /* ContentView.swift */; };
@@ -141,6 +142,7 @@
 		7B869FA4F27F4942A50F51F6 /* LifeyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyWatchApp.swift; sourceTree = "<group>"; };
 		7E57CFB32E5D75AEE74B5ACB /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		8FC6BDA7ED6930FFA22BC04D /* WatchBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
+		3ECFE8A4C5AD411A9E96D4AE /* WatchEventBuffer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchEventBuffer.swift; sourceTree = "<group>"; };
 		9579E90AC7DE881411D162D8 /* SummaryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SummaryView.swift; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
@@ -314,6 +316,7 @@
 				EDB98529ABD178C01B5DCBF9 /* LiveActivityChannel.swift */,
 				C5B4A3928170F6E5D4C3B2A1 /* PushChannel.swift */,
 				8FC6BDA7ED6930FFA22BC04D /* WatchBridge.swift */,
+				3ECFE8A4C5AD411A9E96D4AE /* WatchEventBuffer.swift */,
 				AB12CD34EF5678901234567 /* AppleMusicBridge.swift */,
 			);
 			path = Runner;
@@ -703,6 +706,7 @@
 				A1B2C3D4E5F60718293A4B5C /* PushChannel.swift in Sources */,
 				5A350FF24DF1393842091E5D /* WorkoutActivityAttributes.swift in Sources */,
 				C8A78426AFA51BB4732CF623 /* WatchBridge.swift in Sources */,
+				7D40DF07B89147C7A24BE080 /* WatchEventBuffer.swift in Sources */,
 				BC23DE45FA6789012345678 /* AppleMusicBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

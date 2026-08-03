@@ -329,6 +329,49 @@ data class SessionMetadata(
             if (last != null) return StandalonePrefill(reps = last.reps, weight = last.weight)
             return StandalonePrefill(reps = STANDALONE_DEFAULT_REPS, weight = null)
         }
+
+    /**
+     * Whether the template exercise at [index] has had every set it planned
+     * for. A null `targetSets` counts as **one** set rather than "never
+     * complete" — that's what the phone effectively does with a plan-less
+     * exercise (`LogSessionScreen._rebuildBlocks` gives it a single row), and
+     * without it [advancedStandaloneExerciseIndex] would bounce back to a
+     * target-less exercise forever.
+     */
+    private fun isStandaloneExerciseComplete(index: Int): Boolean {
+        val exercise = standaloneTemplate?.exercises?.getOrNull(index) ?: return false
+        val logged = standaloneSets.count { it.exerciseIndex == index }
+        return logged >= (exercise.targetSets ?: 1)
+    }
+
+    /**
+     * [standaloneExerciseIndex] moved on once the current exercise has all
+     * the sets its plan asked for, so a tap after "Set 2 of 2" starts the
+     * *next* exercise instead of piling a third set onto the finished one —
+     * the watch-standalone counterpart of what the phone-mastered path has
+     * always done (`selectWatchSetLogTarget`'s rule (b): the first block with
+     * a not-done row). Same destination rule as that function, deliberately:
+     * the first incomplete exercise scanning from the top, not simply
+     * `index + 1`, so an exercise skipped or left half-finished earlier is
+     * picked back up rather than stranded.
+     *
+     * Only ever read right after a set is logged, so a manual pick from the
+     * exercise list ([SessionStateHolder.onStandaloneExerciseSelected]) still
+     * holds for as long as that exercise has sets left. Returns the index
+     * unchanged outside a template session (nothing to advance through), when
+     * the current exercise has no `targetSets` (no way to know it's
+     * finished), and when every exercise is complete — that last case keeps
+     * logging into the current one, matching `selectWatchSetLogTarget`'s own
+     * rule (c).
+     */
+    val advancedStandaloneExerciseIndex: Int
+        get() {
+            val exercises = standaloneTemplate?.exercises ?: return standaloneExerciseIndex
+            if (standaloneCurrentExercise?.targetSets == null) return standaloneExerciseIndex
+            if (!isStandaloneExerciseComplete(standaloneExerciseIndex)) return standaloneExerciseIndex
+            return exercises.indices.firstOrNull { !isStandaloneExerciseComplete(it) }
+                ?: standaloneExerciseIndex
+        }
 }
 
 /** See [SessionMetadata.standalonePrefill]. */
@@ -595,6 +638,9 @@ object SessionStateHolder {
                 restDeadlineElapsedRealtimeMs = nowElapsedRealtimeMs + restSeconds * 1_000L,
                 restTotalSeconds = restSeconds,
             )
+                // Read off the *updated* copy, so the set just appended counts
+                // towards the target it may have completed.
+                .let { it.copy(standaloneExerciseIndex = it.advancedStandaloneExerciseIndex) }
         }
         // Unlike the phone-mastered path there's no ack to wait for, but the
         // state still needs to move so ExerciseService's

@@ -320,15 +320,15 @@ extension WatchBridge: WCSessionDelegate {
   // *absence* means summary rather than a positive `"summary"` check.
   func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
     if userInfo["type"] as? String == "standaloneSessionCompleted" {
-      eventSink?(["type": "standaloneSession", "payload": userInfo])
+      bufferOrEmit(["type": "standaloneSession", "payload": userInfo])
       return
     }
     if userInfo["type"] as? String == "standaloneSessionAdopted" {
-      eventSink?(["type": "standaloneSessionAdopted", "payload": userInfo])
+      bufferOrEmit(["type": "standaloneSessionAdopted", "payload": userInfo])
       return
     }
     guard let sessionClientId = userInfo["sessionClientId"] as? String else { return }
-    eventSink?([
+    bufferOrEmit([
       "type": "summary",
       "payload": [
         "sessionClientId": sessionClientId,
@@ -337,6 +337,24 @@ extension WatchBridge: WCSessionDelegate {
         "healthWorkoutId": userInfo["healthWorkoutId"],
       ],
     ])
+  }
+
+  /// `transferUserInfo` is a *queued* delivery: it survives this app being
+  /// closed and lands whenever it next runs — including a background launch
+  /// where `WCSession` wakes us up before Flutter has attached the
+  /// `EventChannel`. Emitting into a nil `eventSink` at that moment silently
+  /// dropped the payload, which is precisely the "I started the workout on
+  /// my watch while the phone app was closed, and it never showed up" case.
+  /// Persist instead, and let `onListen` drain it — the same treatment
+  /// Android has always given these three payloads via its own
+  /// `SharedPreferences` buffers (`WatchSummaryBuffer` and friends), so this
+  /// closes a platform gap rather than inventing a mechanism.
+  private func bufferOrEmit(_ event: [String: Any]) {
+    guard let eventSink else {
+      WatchEventBuffer.add(event)
+      return
+    }
+    eventSink(event)
   }
 
   // Watch → phone signals: "another app owns the exercise" and "user
@@ -392,6 +410,13 @@ extension WatchBridge: FlutterStreamHandler {
     -> FlutterError?
   {
     eventSink = events
+    // The moment Dart starts listening is also the sweep point for
+    // `transferUserInfo` deliveries that landed while it wasn't — see
+    // `bufferOrEmit`. Mirrors `WatchBridge.kt`'s own `onListen` drain of its
+    // three `SharedPreferences` buffers.
+    for buffered in WatchEventBuffer.drain() {
+      events(buffered)
+    }
     return nil
   }
 

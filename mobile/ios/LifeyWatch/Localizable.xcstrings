@@ -882,6 +882,22 @@
         }
       }
     },
+    "standalone_sync_retry_a11y" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync this workout to the phone"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edzés szinkronizálása a telefonra"
+          }
+        }
+      }
+    },
     "summary_avg_hr_label" : {
       "extractionState" : "stale",
       "localizations" : {

@@ -102,6 +102,10 @@ private let standaloneDefaultReps = 10
 /// §3.5 — standalone has no phone-driven rest timer, so the watch starts
 /// its own fixed-length one on every logged set.
 private let standaloneRestSeconds: TimeInterval = 90
+/// How long the standalone badge shows its "syncing" glyph after a tap — see
+/// `WorkoutManager.isRetryingAdoption` for why this is a fixed duration
+/// rather than real progress.
+private let adoptionRetryFeedbackSeconds: TimeInterval = 1.5
 
 /// Which of the two values the adjust stepper is currently editing
 /// (docs/watch/48-watch-f5b-set-adjust-plan.md 0.2) — one at a time, the
@@ -253,6 +257,14 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// Once adopted, the phone IS tracking the session live, so the icon
   /// implying otherwise would be actively misleading.
   var showsStandaloneBadge: Bool { isStandalone && !isAdopted }
+
+  /// True for a moment after the standalone badge is tapped
+  /// (`retryAdoption()`), so the glyph can acknowledge the tap. Purely
+  /// cosmetic: `transferUserInfo` hands the payload to the OS immediately
+  /// and answers nothing, so there is no real "sending" progress to show —
+  /// what a successful sync actually looks like is `isAdopted` flipping and
+  /// the badge disappearing altogether.
+  @Published private(set) var isRetryingAdoption = false
   /// The metrics page's header label: the template/session name when one is
   /// available (`standaloneTemplate.title` for a template-backed standalone
   /// session, `title` for a phone-mastered one — never both at once, since
@@ -301,6 +313,8 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// Restarted by every stepper interaction; dismisses the adjust view when
   /// it finally elapses — see `scheduleLogAdjustIdleDismiss()`.
   private var logAdjustIdleTask: Task<Void, Never>?
+  /// Clears `isRetryingAdoption` — see `retryAdoption()`.
+  private var adoptionRetryTask: Task<Void, Never>?
   /// The `sessionClientId` `sendStartedOnWatch` was already sent for, so a
   /// later `applyStateUpdate` (which fires on every state sync, many times
   /// per session) doesn't resend it — see `notifyStartedOnWatchIfNeeded()`.
@@ -407,6 +421,45 @@ final class WorkoutManager: NSObject, ObservableObject {
   func selectStandaloneExercise(_ index: Int) {
     guard let standaloneTemplate, index >= 0, index < standaloneTemplate.exercises.count else { return }
     standaloneExerciseIndex = index
+  }
+
+  /// Whether the template exercise at [index] has had every set it planned
+  /// for. A `targetSets` of nil counts as **one** set rather than "never
+  /// complete" — that's what the phone effectively does with a plan-less
+  /// exercise (`LogSessionScreen._rebuildBlocks` gives it a single row), and
+  /// without it `advanceStandaloneExerciseIfComplete` would bounce back to a
+  /// target-less exercise forever.
+  private func standaloneExerciseIsComplete(_ index: Int) -> Bool {
+    guard let standaloneTemplate, index < standaloneTemplate.exercises.count else { return false }
+    let logged = standaloneSets.filter { $0.exerciseIndex == index }.count
+    return logged >= (standaloneTemplate.exercises[index].targetSets ?? 1)
+  }
+
+  /// Moves `standaloneExerciseIndex` on once the current exercise has all the
+  /// sets its plan asked for, so a tap after "Set 2 of 2" starts the *next*
+  /// exercise instead of piling a third set onto the finished one — the
+  /// watch-standalone counterpart of what the phone-mastered path has always
+  /// done (`selectWatchSetLogTarget`'s rule (b): the first block with a
+  /// not-done row). Same destination rule as that function, deliberately:
+  /// the first incomplete exercise scanning from the top, not simply
+  /// `index + 1`, so an exercise skipped or left half-finished earlier is
+  /// picked back up rather than stranded.
+  ///
+  /// Only ever fires right after a set is logged, so a manual pick from the
+  /// exercise list (`selectStandaloneExercise`) still holds for as long as
+  /// that exercise has sets left. No-op outside a template session (nothing
+  /// to advance through), when the current exercise has no `targetSets` (no
+  /// way to know it's finished), and when every exercise is complete — that
+  /// last case keeps logging into the current one, matching
+  /// `selectWatchSetLogTarget`'s own rule (c).
+  private func advanceStandaloneExerciseIfComplete() {
+    guard let standaloneTemplate, standaloneCurrentExercise?.targetSets != nil,
+      standaloneExerciseIsComplete(standaloneExerciseIndex)
+    else { return }
+    for index in standaloneTemplate.exercises.indices where !standaloneExerciseIsComplete(index) {
+      standaloneExerciseIndex = index
+      return
+    }
   }
 
   /// The exercise the *next* logged set will count against, or `nil` for a
@@ -686,6 +739,9 @@ final class WorkoutManager: NSObject, ObservableObject {
         // behavior exactly; the current gyakorlat-lista selection
         // otherwise (docs/watch/49-watch-f6b-template-sync-plan.md §3.3).
         exerciseIndex: standaloneTemplate != nil ? standaloneExerciseIndex : nil))
+    // Before the snapshot save below, so a session recovered after process
+    // death comes back pointing at the same exercise the user would see now.
+    advanceStandaloneExerciseIfComplete()
     saveActiveSnapshot()
     // Live bridging: keeps an already-adopted phone mirror in sync with
     // every set as it's logged, not just at start/end — a no-op if the
@@ -996,9 +1052,46 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// the existing running row rather than duplicating it. Never affects
   /// `logSet()`'s local-vs-remote branch — see `isAdopted`'s doc comment.
   func sendAdoptionRequestIfNeeded() {
-    guard isStandalone, isPhoneReachable, let sessionClientId, let startedAt else {
-      return
+    guard isPhoneReachable else { return }
+    sendAdoptionRequest()
+  }
+
+  /// The user tapping the standalone badge (`HeaderChip`) — "the phone app
+  /// wasn't running when I started this; it is now, please catch up".
+  ///
+  /// Deliberately **not** gated on `isPhoneReachable`, unlike
+  /// `sendAdoptionRequestIfNeeded()`: `WCSession.isReachable` is false
+  /// exactly when the phone app isn't running, which is the situation this
+  /// button exists for. The underlying `transferUserInfo` is a *queued*
+  /// delivery — it survives the counterpart app being closed and lands when
+  /// it next launches (with `Runner/WatchBridge.swift`'s buffer covering the
+  /// case where it arrives before Dart is listening) — so sending anyway is
+  /// correct here, where the user has explicitly asked for it, rather than
+  /// on every automatic trigger, which would pile up a queue of stale
+  /// snapshots against a phone that may be switched off.
+  ///
+  /// One tap covers everything the phone needs: the same snapshot carries
+  /// the session id, its start time and **every set logged so far**, so
+  /// `StandaloneSessionProcessor.processAdoption` creates the running mirror
+  /// and fills in the already-logged sets in one go.
+  func retryAdoption() {
+    guard isStandalone, !isRetryingAdoption else { return }
+    isRetryingAdoption = true
+    WKInterfaceDevice.current().play(.click)
+    sendAdoptionRequest()
+    adoptionRetryTask?.cancel()
+    adoptionRetryTask = Task { [weak self] in
+      try? await Task.sleep(nanoseconds: UInt64(adoptionRetryFeedbackSeconds * 1_000_000_000))
+      guard !Task.isCancelled else { return }
+      self?.isRetryingAdoption = false
     }
+  }
+
+  /// Builds and hands the snapshot to `PhoneConnector` — the shared body of
+  /// `sendAdoptionRequestIfNeeded()` (automatic, reachability-gated) and
+  /// `retryAdoption()` (manual, ungated).
+  private func sendAdoptionRequest() {
+    guard isStandalone, let sessionClientId, let startedAt else { return }
     let activeCaloriesTotal = builder?.statistics(for: Self.activeEnergyType)?
       .sumQuantity()?.doubleValue(for: .kilocalorie())
     let averageHeartRate = builder?.statistics(for: Self.heartRateType)?
@@ -1102,6 +1195,9 @@ final class WorkoutManager: NSObject, ObservableObject {
     logAdjustIdleTask?.cancel()
     logAdjustIdleTask = nil
     logAdjustState = nil
+    adoptionRetryTask?.cancel()
+    adoptionRetryTask = nil
+    isRetryingAdoption = false
   }
 
   /// Overwrites the live standalone session's recovery snapshot — called on
