@@ -704,6 +704,7 @@
       }
     },
     "standalone_badge" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
