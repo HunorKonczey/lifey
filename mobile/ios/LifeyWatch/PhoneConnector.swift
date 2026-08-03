@@ -147,6 +147,26 @@ final class PhoneConnector: NSObject {
     }
   }
 
+  // MARK: - Live bridging (watch-started session adopted by the phone)
+
+  /// Queues a running-session snapshot for delivery — same `transferUserInfo`
+  /// queued-delivery guarantee as `sendStandaloneSession`, tagged with a
+  /// different `type` so `Runner/WatchBridge.swift` can tell "still running"
+  /// apart from "finished". `WorkoutManager.sendAdoptionRequestIfNeeded()` is
+  /// the only caller — it already gates on reachability/not-yet-adopted, so
+  /// this itself has no retry/queue of its own the way
+  /// `flushPendingStandaloneSessions()` does (an adoption snapshot going
+  /// stale before delivery isn't a correctness problem the way a lost
+  /// finished-session payload would be — the next reachability-regain or
+  /// logged set simply sends a fresher one).
+  func sendStandaloneAdoption(_ payload: StandaloneAdoptionPayload) {
+    guard WCSession.isSupported(), var dictionary = propertyListDictionary(from: payload) else {
+      return
+    }
+    dictionary["type"] = "standaloneSessionAdopted"
+    WCSession.default.transferUserInfo(dictionary)
+  }
+
   /// `transferUserInfo` needs a plain property-list `[String: Any]`, not a
   /// `Codable` value directly — bridges via `JSONEncoder`/`JSONSerialization`
   /// rather than building the dictionary by hand. Synthesized `Encodable`
@@ -154,8 +174,10 @@ final class PhoneConnector: NSObject {
   /// JSON `null`), which matters here: a property list has no null value,
   /// and `transferUserInfo` would silently drop the whole payload if one
   /// slipped through (the same pitfall `Runner/WatchBridge.swift`'s
-  /// `sanitizedForPropertyList` exists for on the phone side).
-  private func propertyListDictionary(from payload: StandaloneSessionPayload) -> [String: Any]? {
+  /// `sanitizedForPropertyList` exists for on the phone side). Generic over
+  /// both standalone payload shapes (finished/still-running) rather than
+  /// duplicated per type.
+  private func propertyListDictionary<T: Encodable>(from payload: T) -> [String: Any]? {
     guard let data = try? JSONEncoder().encode(payload) else { return nil }
     return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
   }
@@ -171,7 +193,10 @@ extension PhoneConnector: WCSessionDelegate {
     // Picks up a context pushed before this delegate was set (e.g. the
     // phone's `startWorkout` call raced `handle(_:)`'s app launch).
     applyContext(session.receivedApplicationContext)
-    Task { @MainActor in WorkoutManager.shared.applyReachabilityChanged(session.isReachable) }
+    Task { @MainActor in
+      WorkoutManager.shared.applyReachabilityChanged(session.isReachable)
+      if session.isReachable { WorkoutManager.shared.sendAdoptionRequestIfNeeded() }
+    }
     flushPendingStandaloneSessions()
   }
 
@@ -181,9 +206,15 @@ extension PhoneConnector: WCSessionDelegate {
   /// `Runner/WatchBridge.swift` already uses for the opposite direction.
   /// Also the standalone queue's retry trigger: reachability regained is
   /// exactly when a previously-queued `transferUserInfo` is newly likely to
-  /// land (docs/watch/44-watch-f6-standalone-plan.md §4.1).
+  /// land (docs/watch/44-watch-f6-standalone-plan.md §4.1) — and, for live
+  /// bridging, exactly when a not-yet-adopted standalone session should
+  /// (re-)send its adoption snapshot (`sendAdoptionRequestIfNeeded()` is a
+  /// no-op once already adopted or if this isn't a standalone session).
   func sessionReachabilityDidChange(_ session: WCSession) {
-    Task { @MainActor in WorkoutManager.shared.applyReachabilityChanged(session.isReachable) }
+    Task { @MainActor in
+      WorkoutManager.shared.applyReachabilityChanged(session.isReachable)
+      if session.isReachable { WorkoutManager.shared.sendAdoptionRequestIfNeeded() }
+    }
     if session.isReachable {
       flushPendingStandaloneSessions()
     }
@@ -207,20 +238,36 @@ extension PhoneConnector: WCSessionDelegate {
         userInfo: ["standaloneSessionId": standaloneSessionId])
       return
     }
+    // Same standaloneSessionId-keyed shape as standaloneSessionAck above —
+    // an adoption ack isn't tied to any single phone-mastered session either.
+    if message["command"] as? String == "adoptionAck" {
+      guard let standaloneSessionId = message["standaloneSessionId"] as? String else { return }
+      Task { @MainActor in
+        WorkoutManager.shared.applyAdoptionAck(standaloneSessionId: standaloneSessionId)
+      }
+      return
+    }
     guard let sessionClientId = message["sessionClientId"] as? String else { return }
     switch message["command"] as? String {
     case "state":
       applyState(
         sessionClientId: sessionClientId, title: nil, state: message["state"] as? [String: Any])
     case "end":
-      // Guarded so a stray `end` for a phone-mastered session can't close
-      // a running standalone session — finishAndSendSummary() itself
-      // already refuses `isStandalone`, but skipping the call entirely
-      // here avoids the pointless HKWorkoutSession round-trip
-      // (docs/watch/44-watch-f6-standalone-plan.md D-F6.2).
+      // A stray `end` for a phone-mastered session must not be able to
+      // close a running standalone session that was never adopted — but
+      // once adopted, the phone genuinely does know about it and ending
+      // from either side should work (live bridging). Routes to
+      // `endStandalone` rather than `finishAndSendSummary()` for any
+      // standalone session, adopted or not (D-F6.2's original guard,
+      // widened by one case).
       Task { @MainActor in
-        guard !WorkoutManager.shared.isStandalone else { return }
-        await WorkoutManager.shared.finishAndSendSummary()
+        let manager = WorkoutManager.shared
+        if manager.isStandalone {
+          guard manager.isAdopted else { return }
+          await manager.endStandalone(rpe: nil)
+        } else {
+          await manager.finishAndSendSummary()
+        }
       }
     case "logSetAck":
       guard let eventId = message["eventId"] as? String, let accepted = message["accepted"] as? Bool
@@ -254,16 +301,18 @@ extension PhoneConnector: WCSessionDelegate {
       state: context["state"] as? [String: Any])
     if context["desiredPhase"] as? String == "ended" {
       Task { @MainActor in
-        // Same standalone guard as the "end" message case above
-        // (docs/watch/44-watch-f6-standalone-plan.md D-F6.2) — this
-        // delivery-guarantee fallback is keyed only on phase, not
-        // sessionClientId, so without it a stray phone-mastered
-        // desiredPhase:"ended" could otherwise close a running standalone
-        // session.
-        guard !WorkoutManager.shared.isStandalone else { return }
-        let phase = WorkoutManager.shared.phase
-        if phase == .active || phase == .ending {
-          await WorkoutManager.shared.finishAndSendSummary()
+        // Same standalone/adopted guard as the "end" message case above
+        // (docs/watch/44-watch-f6-standalone-plan.md D-F6.2, widened for
+        // live bridging) — this delivery-guarantee fallback is keyed only
+        // on phase, not sessionClientId, so without it a stray phone-
+        // mastered desiredPhase:"ended" could otherwise close a running,
+        // not-yet-adopted standalone session.
+        let manager = WorkoutManager.shared
+        if manager.isStandalone {
+          guard manager.isAdopted, manager.phase == .active else { return }
+          await manager.endStandalone(rpe: nil)
+        } else if manager.phase == .active || manager.phase == .ending {
+          await manager.finishAndSendSummary()
         }
       }
     }

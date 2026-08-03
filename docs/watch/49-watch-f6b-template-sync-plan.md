@@ -688,3 +688,32 @@ Ez **bizonyítottan visszafelé kompatibilis**: mindkét platformon a phone-mast
 - `xcodebuild -workspace Runner.xcworkspace -scheme Runner -destination 'generic/platform=iOS' build` → **BUILD SUCCEEDED**, nulla figyelmeztetés/hiba.
 
 **Élő kézi végpróba: elvégezte a user, fizikai eszközön.** A §8 tesztlistáját ő futtatta végig — a kódolási munka ezzel innentől ennek a doknak a hatókörén kívülre kerül. **A teszt hibákat talált** — ezek javítása **egy külön beszélgetésben** történik, nem ebben a sessionben, és nem ennek a doknak a T-lépései alatt. Ez a doc tehát az F6b **tervezését és az első implementációs kört** zárja le, nem azt állítja, hogy a funkció hibátlanul működik éles használatban.
+
+---
+
+## Utólagos kiegészítés: előző edzés prefill standalone sessionben
+
+**A jelentett hiba:** órán indított edzésnél sem a `+1` tap, sem az adjust stepper nem az előző edzés súlyával/ismétlésszámával indult — a stepper mindig 10 ism. / 0 kg-ról nyílt, a sima tap pedig súly nélkül logolt (a telefon oldalán ebből lett a 0 kg). **Telefonról indítva ugyanez tökéletesen működött**, ami a felhasználó megfogalmazásában a lényeg: „a telefonos indítás legyen a jó verzió".
+
+**Az ok:** a `nextSetReps`/`nextSetWeight` prefillt (48-doc D-F5b.2) kizárólag a telefon tolja ki minden state-syncben — standalone sessionben viszont a watch a mester, és három egymást erősítő ok miatt ez az érték sosem ért oda: (1) a tükör-képernyő nem hívott `_persist`-et, tehát nem futott `_updateSessionNotifier` sem; (2) a `watchMastered` ág kifejezetten kihagyta az `updateState` pusht; (3) a watch `applyStateUpdate`/`onStateSynced` D-F6.2 miatt standalone alatt *minden* telefon-státuszt eldobott.
+
+### A megoldás fő ága: a telefon ugyanazt a prefillt tolja ki az adoptált sessionre is
+
+Mivel a telefon a live bridging óta amúgy is élő tükröt vezet a watch-indított edzésről, ugyanaz a `watchSetPrefill(_blocks, current)` számítás áll rendelkezésre, mint a telefon-indított útnál — csak ki kellett engedni:
+
+- **`LogSessionScreen._applyWatchMirror`**: az előző-teljesítmény betöltése **után** (láncolva, nem párhuzamosan — a prefill az `ExerciseBlock.previousSets`-ből számol) meghívja az `_updateSessionNotifier()`-t, tehát minden órán logolt szett után frissül a Live Activity **és** kimegy az `updateState`.
+- **`_updateSessionNotifier`**: a `watchMastered` kizárás megszűnt. A `startWorkout` továbbra is ki van hagyva — az azt kérné az órától, hogy indítson egy sessiont, amit épp futtat.
+- **Watch, mindkét platform**: standalone alatt egyező `sessionClientId` esetén (= a saját sessionünk telefonos tükre) a state-sync **csak** a `nextSetReps`/`nextSetWeight` mezőt veszi át, minden mást eldob. Eltérő id-nél változatlanul `startRejected` (D-F6.2). Így a két indítási út ugyanazon a mezőn, ugyanabból a számításból kapja a prefillt.
+
+### A tartalék ág: `previousSets` a template-syncben
+
+A fenti csak akkor működik, ha a telefon elérhető és adoptálta a sessiont — a standalone viszont pont a telefon nélküli esetre való. Ezért a `templateSync` payload gyakorlatonként viszi az előző edzés szettjeit is, offline tartaléknak:
+
+- **`WatchTemplateExercisePayload.previousSets`** (`watch_template_sync.dart`): `{weight, reps}` lista, súly szerint csökkenő, max. `watchTemplateSyncMaxPreviousSets` (6) elem; üresen ki sem kerül a JSON-be. A feloldás (`previousSetsFor`) szabályról szabályra ugyanaz, mint a `WorkoutSessionRepository.getPreviousPerformance`-é — előbb az azonos templatből indított legutóbbi befejezett session, aztán bármelyik —, hogy a watch prefillje és a telefon saját prefillje ne tudjon elcsúszni egymástól. **Nem** repository-hívásból: a `watchTemplateSyncPayloadProvider` amúgy is a teljes session-listát figyeli, így a payload négy reaktív triggeréből egyik sem indít 60 új lekérdezést.
+- **Natív oldal:** nulla változás — mindkét híd rekurzívan konvertál (`sanitizedForPropertyList`, `toJsonValue`), a beágyazott lista magától átmegy.
+- **Watch:** `CachedTemplateExercise.previousSets` (opcionális, hogy régi cache is dekódolódjon) / `StandaloneTemplateExercise.previousSets` (üres default, ua. okból). A közös feloldás egy helyen él — iOS `WorkoutManager.standalonePrefill`, Wear `SessionMetadata.standalonePrefill` —, és pontosan a telefon prioritási sorrendjét követi: **(0) a telefon által kitolt `nextSetReps`/`nextSetWeight`, ha van** (lásd a fő ágat — ez nyer, mert a telefon látja a teljes előzményt és a valódi cél-sort), (1) különben a `previousSets` pozíció szerinti eleme (az előző edzés *n*-edik szettje az mostani *n*-edikhez), (2) különben az ebben a sessionben ehhez a gyakorlathoz utoljára logolt szett, (3) különben a `STANDALONE_DEFAULT_REPS` / nincs súly. Két hívási pont használja: a sima `+1` (`beginLocalLogSet` / `onStandaloneSetLogged`) és a stepper nyitása (`beginLogAdjust` / `onLogAdjustOpened`).
+- A Wear recovery-snapshot is round-trippeli a mezőt, különben egy folyamathalál után a session elveszítené a prefilljét.
+
+**Mellékhatás, szándékosan:** Quick strength (terv nélküli) sessionben nincs `previousSets`, de a (2) ág így is javít a korábbi viselkedésen — egy sorozatnyi tap a munkasúlyon marad, ahelyett hogy mindegyik 10 ism. / súly nélkül menne.
+
+**Amit ez *nem* old meg:** a telefonon látszó üres set-sorok száma a terv `targetSets` értékéből jön (`LogSessionScreen._rebuildBlocks`: `targetSets - kész szettek`). Ha egy terv-gyakorlathoz nincs megadva cél-szettszám, akkor gyakorlatonként egyetlen üres sor jelenik meg — ugyanúgy, ahogy a telefonról indított, ugyanabból a tervből induló edzésnél is. Ez nem a tükrözés hibája; a tervben megadott cél-szettszám a bemenete.

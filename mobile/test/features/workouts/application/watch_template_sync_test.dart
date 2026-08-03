@@ -362,6 +362,169 @@ void main() {
     });
   });
 
+  group('previousSets (the watch\'s own "+1"/stepper prefill)', () {
+    /// A finished session that actually logged something, unlike the shared
+    /// [session] helper above (which only ever needs a templateClientId).
+    WorkoutSession sessionWithSets(
+      String clientId, {
+      String? templateClientId,
+      required DateTime startedAt,
+      bool inProgress = false,
+      required List<({String exerciseClientId, double weight, int reps})> sets,
+    }) {
+      return WorkoutSession(
+        clientId: clientId,
+        templateClientId: templateClientId,
+        startedAt: startedAt,
+        finishedAt: inProgress ? null : startedAt.add(const Duration(hours: 1)),
+        exercises: const [],
+        sets: [
+          for (final set in sets)
+            ExerciseSet(
+              exerciseClientId: set.exerciseClientId,
+              exerciseName: set.exerciseClientId,
+              reps: set.reps,
+              weight: set.weight,
+              performedAt: startedAt,
+            ),
+        ],
+      );
+    }
+
+    List<Map<String, Object?>> exercisePayloads(List<WorkoutSession> sessionsDesc) {
+      final result = buildWatchTemplateSync(
+        templateClientIds: ['push'],
+        templates: [
+          template('push', name: 'Push day', exercises: const [
+            TemplateExercise(exerciseClientId: 'bench', targetSets: 3),
+          ]),
+        ],
+        exercises: [exercise('bench', name: 'Bench Press')],
+        settings: settings,
+        sessionsDesc: sessionsDesc,
+      );
+      return [
+        for (final payload in result.single.toJson()['exercises']! as List)
+          payload as Map<String, Object?>,
+      ];
+    }
+
+    test('sends the last session\'s sets for the exercise, heaviest first', () {
+      final payloads = exercisePayloads([
+        sessionWithSets(
+          'newest',
+          templateClientId: 'push',
+          startedAt: DateTime.utc(2026, 7, 28, 9),
+          sets: const [
+            (exerciseClientId: 'bench', weight: 60, reps: 10),
+            (exerciseClientId: 'bench', weight: 80, reps: 6),
+            // A different exercise in the same session is not this
+            // exercise's history.
+            (exerciseClientId: 'squat', weight: 100, reps: 5),
+          ],
+        ),
+      ]);
+
+      expect(payloads.single['previousSets'], [
+        {'weight': 80.0, 'reps': 6},
+        {'weight': 60.0, 'reps': 10},
+      ]);
+    });
+
+    test('prefers the last session started from the same template', () {
+      final payloads = exercisePayloads([
+        sessionWithSets(
+          'newest-other-template',
+          templateClientId: 'full-body',
+          startedAt: DateTime.utc(2026, 7, 28, 9),
+          sets: const [(exerciseClientId: 'bench', weight: 50, reps: 12)],
+        ),
+        sessionWithSets(
+          'older-same-template',
+          templateClientId: 'push',
+          startedAt: DateTime.utc(2026, 7, 21, 9),
+          sets: const [(exerciseClientId: 'bench', weight: 80, reps: 6)],
+        ),
+      ]);
+
+      expect(payloads.single['previousSets'], [
+        {'weight': 80.0, 'reps': 6},
+      ]);
+    });
+
+    test('falls back to any template when this one has no history yet', () {
+      final payloads = exercisePayloads([
+        sessionWithSets(
+          'other-template',
+          templateClientId: 'full-body',
+          startedAt: DateTime.utc(2026, 7, 28, 9),
+          sets: const [(exerciseClientId: 'bench', weight: 50, reps: 12)],
+        ),
+      ]);
+
+      expect(payloads.single['previousSets'], [
+        {'weight': 50.0, 'reps': 12},
+      ]);
+    });
+
+    test('skips a session that is still running', () {
+      // Quite possibly the standalone session asking for this prefill — a
+      // workout is not its own history.
+      final payloads = exercisePayloads([
+        sessionWithSets(
+          'running-now',
+          templateClientId: 'push',
+          startedAt: DateTime.utc(2026, 7, 28, 9),
+          inProgress: true,
+          sets: const [(exerciseClientId: 'bench', weight: 20, reps: 20)],
+        ),
+        sessionWithSets(
+          'last-finished',
+          templateClientId: 'push',
+          startedAt: DateTime.utc(2026, 7, 21, 9),
+          sets: const [(exerciseClientId: 'bench', weight: 80, reps: 6)],
+        ),
+      ]);
+
+      expect(payloads.single['previousSets'], [
+        {'weight': 80.0, 'reps': 6},
+      ]);
+    });
+
+    test('caps the list, keeping the heaviest sets', () {
+      final payloads = buildWatchTemplateSync(
+        templateClientIds: ['push'],
+        templates: [
+          template('push', exercises: const [TemplateExercise(exerciseClientId: 'bench')]),
+        ],
+        exercises: [exercise('bench')],
+        settings: settings,
+        maxPreviousSets: 2,
+        sessionsDesc: [
+          sessionWithSets(
+            'newest',
+            templateClientId: 'push',
+            startedAt: DateTime.utc(2026, 7, 28, 9),
+            sets: const [
+              (exerciseClientId: 'bench', weight: 60, reps: 10),
+              (exerciseClientId: 'bench', weight: 80, reps: 6),
+              (exerciseClientId: 'bench', weight: 70, reps: 8),
+            ],
+          ),
+        ],
+      ).single.exercises;
+
+      expect(
+        [for (final set in payloads.single.previousSets) (set.weight, set.reps)],
+        [(80.0, 6), (70.0, 8)],
+      );
+    });
+
+    test('omits the key entirely when the exercise has no history', () {
+      expect(exercisePayloads(const []).single.containsKey('previousSets'), isFalse);
+    });
+  });
+
   group('watchTemplateSyncPayloadProvider', () {
     /// Passing null for any of the three lists leaves that source loading —
     /// its stream never emits. [settle] awaits exactly the sources that *do*

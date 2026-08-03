@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  a{color:#586E38;} a:hover{color:#3f5228;}
+  .mi{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  .fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+  @keyframes tdot{0%,60%,100%{opacity:.25;transform:translateY(0);}30%{opacity:1;transform:translateY(-3px);}}
+  @keyframes shimmer{0%{opacity:.55;}50%{opacity:1;}100%{opacity:.55;}}
+</style>
+</helmet>
+<div style="min-width:100%;min-height:100vh;width:max-content;padding:48px;background:#e7e5df;font-family:'Plus Jakarta Sans',sans-serif;">
+
+  <div style="display:flex;align-items:center;gap:16px;max-width:1300px;margin-bottom:8px;">
+    <div style="width:54px;height:54px;border-radius:16px;background:#6E9A6A;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:30px;">chat_bubble</span></div>
+    <div>
+      <div style="font-size:34px;font-weight:800;color:#1c1d18;letter-spacing:-0.8px;">Lifey — Edző ↔ kliens chat</div>
+      <div style="font-size:16px;font-weight:500;color:#6a6a60;">Mobil kliens · mobil edző · web edző — egy token-készlet, egy buborék-nyelv. Optimista küldés négy állapottal, archív szál olvasható.</div>
+    </div>
+  </div>
+  <div style="font-size:13px;font-weight:600;color:#8a8a7e;margin:0 0 36px 70px;">Olvasatlan = primary (nem riasztás) · hiba = #E08A52 · szerepkör csak három ponton látszik: fejléc, „Új beszélgetés", üres állapot szövege. Nincs új token.</div>
+
+  <!-- ============ ROW A · MOBIL KLIENS ============ -->
+  <div style="display:flex;gap:36px;align-items:flex-start;margin-bottom:56px;">
+
+    <!-- A1 entry panel -->
+    <div style="flex:none;width:430px;" data-screen-label="A1 · Belépő + badge">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A1 · Belépő <span style="font-weight:500;color:#8a8a7e;">— dashboard fejléc-ikon, nincs 6. nav-ág</span></div>
+      <div style="background:#161611;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:18px;">
+        <div style="background:rgba(34,36,27,.92);border-radius:24px;height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;box-shadow:0 8px 22px rgba(0,0,0,.30);">
+          <div style="display:flex;align-items:center;gap:11px;"><div style="width:40px;height:40px;border-radius:50%;background:rgba(157,174,107,.18);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#9DAE6B;">A</div><div><div style="font-size:15px;font-weight:800;color:#F1F0E4;">Szia, Anna!</div><div style="font-size:11.5px;font-weight:600;color:#A8A899;">Csütörtök · aug. 3.</div></div></div>
+          <div style="display:flex;gap:8px;">
+            <div style="position:relative;width:40px;height:40px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">chat_bubble</span><span style="position:absolute;top:5px;right:5px;min-width:16px;height:16px;border-radius:8px;background:#9DAE6B;color:#161611;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid rgba(34,36,27,1);">3</span></div>
+            <div style="width:40px;height:40px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">notifications</span></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div style="text-align:center;"><div style="width:44px;height:44px;margin:0 auto;border-radius:14px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:23px;">chat_bubble</span></div><div style="font-size:10.5px;font-weight:700;color:#F1F0E4;margin-top:8px;">Nyugalmi</div><div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">nincs badge</div></div>
+          <div style="text-align:center;"><div style="position:relative;width:44px;height:44px;margin:0 auto;border-radius:14px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#F1F0E4;"><span class="mi" style="font-size:23px;">chat_bubble</span><span style="position:absolute;top:5px;right:5px;min-width:17px;height:17px;border-radius:9px;background:#9DAE6B;color:#161611;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #161611;">1</span></div><div style="font-size:10.5px;font-weight:700;color:#F1F0E4;margin-top:8px;">1 jegyű</div><div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">szám ≤ 9</div></div>
+          <div style="text-align:center;"><div style="position:relative;width:44px;height:44px;margin:0 auto;border-radius:14px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#F1F0E4;"><span class="mi" style="font-size:23px;">chat_bubble</span><span style="position:absolute;top:5px;right:2px;min-width:22px;height:17px;border-radius:9px;background:#9DAE6B;color:#161611;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #161611;">9+</span></div><div style="font-size:10.5px;font-weight:700;color:#F1F0E4;margin-top:8px;">9 fölött</div><div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">„9+"</div></div>
+        </div>
+        <div style="height:1px;background:#2A2C20;"></div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:10px;">Másodlagos belépő — „Edzőim" sor</div>
+          <div style="background:#22241B;border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#C49A6C;">KM</div>
+            <div style="flex:1;"><div style="font-size:15px;font-weight:800;color:#F1F0E4;">Kovács Máté</div><div style="font-size:12px;font-weight:600;color:#A8A899;">Edződ · 2024 januárja óta</div></div>
+            <div style="display:flex;align-items:center;gap:6px;background:rgba(157,174,107,.16);border-radius:12px;padding:9px 13px;color:#9DAE6B;"><span class="mi" style="font-size:18px;">chat_bubble</span><span style="font-size:12.5px;font-weight:800;">Üzenet</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#FFFFFF;border-radius:24px;padding:16px;margin-top:12px;box-shadow:0 1px 3px rgba(0,0,0,.09);">
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9a9a8c;margin-bottom:10px;">Light · EN</div>
+        <div style="background:#F3F2E8;border:1px solid #e6e5dc;border-radius:20px;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 11px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(88,110,56,.14);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#586E38;">A</div><div style="font-size:14px;font-weight:800;color:#1c1d18;">Hi, Anna!</div></div>
+          <div style="position:relative;width:38px;height:38px;border-radius:12px;background:#FFFFFF;border:1px solid #e6e5dc;display:flex;align-items:center;justify-content:center;color:#6a6a60;"><span class="mi" style="font-size:21px;">chat_bubble</span><span style="position:absolute;top:4px;right:4px;min-width:16px;height:16px;border-radius:8px;background:#586E38;color:#F3F2E8;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #F3F2E8;">3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A2 conversation list phone (client, 1 element) -->
+    <div style="flex:none;" data-screen-label="A2 · Beszélgetés-lista · kliens · sötét HU">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A2 · Beszélgetés-lista, kliens <span style="font-weight:500;color:#8a8a7e;">— sötét · HU · egy-elemű eset</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:58px;background:rgba(34,36,27,.92);backdrop-filter:blur(12px);border-radius:24px;display:flex;align-items:center;gap:10px;padding:0 12px;z-index:40;box-shadow:0 8px 22px rgba(0,0,0,.30);">
+            <div style="width:40px;height:40px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">arrow_back</span></div>
+            <div style="font-size:17px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Üzenetek</div>
+          </div>
+          <div style="position:absolute;top:136px;left:0;right:0;bottom:0;padding:8px 16px;display:flex;flex-direction:column;gap:12px;">
+            <div style="background:#22241B;border-radius:20px;padding:14px;display:flex;align-items:center;gap:13px;">
+              <div style="width:50px;height:50px;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#C49A6C;">KM</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Kovács Máté</div><div style="font-size:13.5px;font-weight:600;color:#F1F0E4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rendben, akkor maradunk 62,5 kg-on még…</div></div>
+              <div style="text-align:right;flex:none;"><div style="font-size:11.5px;font-weight:700;color:#9DAE6B;">14:32</div><div style="width:9px;height:9px;border-radius:50%;background:#9DAE6B;margin:7px 0 0 auto;"></div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;">
+              <span class="mi" style="font-size:18px;color:#777264;">verified</span>
+              <span style="font-size:12.5px;font-weight:600;color:#A8A899;">Máté az edződ 2024 januárja óta · 148 közös edzés</span>
+            </div>
+            <div style="margin-top:auto;padding-bottom:28px;">
+              <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:9px;">Olvasott sor (összevetésül)</div>
+              <div style="background:#22241B;border-radius:20px;padding:14px;display:flex;align-items:center;gap:13px;opacity:.92;">
+                <div style="width:50px;height:50px;border-radius:50%;background:rgba(110,154,106,.18);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#6E9A6A;">SR</div>
+                <div style="flex:1;min-width:0;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;">Simon Réka</div><div style="font-size:13.5px;font-weight:500;color:#A8A899;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Te: Köszönöm a mai órát!</div></div>
+                <div style="text-align:right;flex:none;"><div style="font-size:11.5px;font-weight:600;color:#777264;">Tegnap</div></div>
+              </div>
+              <div style="font-size:11px;font-weight:500;color:#777264;margin-top:8px;padding:0 4px;">Olvasatlan: erősebb szövegszín + primary pötty + primary idő. Nem kap külön hátteret.</div>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A3 thread phone dark HU -->
+    <div style="flex:none;" data-screen-label="A3 · Szál · sötét HU">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A3 · Szál <span style="font-weight:500;color:#8a8a7e;">— sötét · HU · csoportosítás + 4 állapot + nap-chip</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:58px;background:rgba(34,36,27,.92);backdrop-filter:blur(12px);border-radius:24px;display:flex;align-items:center;gap:10px;padding:0 12px;z-index:40;box-shadow:0 8px 22px rgba(0,0,0,.30);">
+            <div style="width:40px;height:40px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">arrow_back</span></div>
+            <div style="width:38px;height:38px;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#C49A6C;">KM</div>
+            <div style="flex:1;"><div style="font-size:15.5px;font-weight:800;color:#F1F0E4;letter-spacing:-0.2px;">Kovács Máté</div><div style="font-size:11px;font-weight:600;color:#9DAE6B;">online</div></div>
+            <div style="width:40px;height:40px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">more_vert</span></div>
+          </div>
+          <div style="position:absolute;top:132px;left:0;right:0;bottom:96px;padding:10px 16px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;">
+            <div style="align-self:center;background:#22241B;border-radius:10px;padding:5px 12px;font-size:11px;font-weight:700;color:#A8A899;margin-bottom:8px;">Tegnap</div>
+            <div style="display:flex;align-items:flex-end;gap:8px;max-width:78%;">
+              <div style="width:28px;flex:none;"></div>
+              <div style="background:#22241B;border-radius:18px 18px 18px 18px;padding:10px 13px;font-size:14.5px;font-weight:500;color:#F1F0E4;line-height:1.45;">Szia Anna! Láttam a tegnapi naplód — a fekvenyomás szépen fejlődik.</div>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:8px;max-width:78%;">
+              <div style="width:28px;height:28px;flex:none;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#C49A6C;">KM</div>
+              <div>
+                <div style="background:#22241B;border-radius:18px 18px 18px 6px;padding:10px 13px;font-size:14.5px;font-weight:500;color:#F1F0E4;line-height:1.45;">Jövő héten emelünk, ha a 3. szett is stabil marad.</div>
+                <div style="font-size:10.5px;font-weight:600;color:#777264;margin:4px 0 0 4px;">18:04</div>
+              </div>
+            </div>
+            <div style="align-self:flex-end;max-width:78%;margin-top:8px;">
+              <div style="background:rgba(157,174,107,.20);border-radius:18px 18px 6px 18px;padding:10px 13px;font-size:14.5px;font-weight:500;color:#F1F0E4;line-height:1.45;">Köszi! A 3. szett még nehéz volt, de megvolt mind a 8 ismétlés.</div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:4px 4px 0 0;"><span style="font-size:10.5px;font-weight:600;color:#777264;">18:10</span><span class="mi fill" style="font-size:14px;color:#9DAE6B;">done_all</span></div>
+            </div>
+            <div style="align-self:center;background:#22241B;border-radius:10px;padding:5px 12px;font-size:11px;font-weight:700;color:#A8A899;margin:10px 0 8px;">Ma</div>
+            <div style="display:flex;align-items:flex-end;gap:8px;max-width:78%;">
+              <div style="width:28px;height:28px;flex:none;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#C49A6C;">KM</div>
+              <div>
+                <div style="background:#22241B;border-radius:18px 18px 18px 6px;padding:10px 13px;font-size:14.5px;font-weight:500;color:#F1F0E4;line-height:1.45;">Rendben, akkor maradunk 62,5 kg-on még egy hétig.</div>
+                <div style="font-size:10.5px;font-weight:600;color:#777264;margin:4px 0 0 4px;">14:32</div>
+              </div>
+            </div>
+            <div style="align-self:center;font-size:12.5px;font-weight:500;font-style:italic;color:#777264;padding:6px 0;">Az üzenetet törölték</div>
+            <div style="align-self:flex-end;max-width:78%;">
+              <div style="background:rgba(157,174,107,.20);border-radius:18px 18px 18px 18px;padding:10px 13px;font-size:14.5px;font-weight:500;color:#F1F0E4;line-height:1.45;">Oké, hangzik jól!</div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:4px 4px 0 0;"><span style="font-size:10.5px;font-weight:600;color:#777264;">14:40</span><span class="mi" style="font-size:14px;color:#A8A899;">done_all</span></div>
+            </div>
+            <div style="align-self:flex-end;max-width:78%;">
+              <div style="background:rgba(157,174,107,.20);border-radius:18px 18px 6px 18px;padding:10px 13px;font-size:14.5px;font-weight:500;color:#F1F0E4;line-height:1.45;">A vállamban éreztem egy kis feszülést, figyeljek valamire?</div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:4px 4px 0 0;"><span style="font-size:10.5px;font-weight:600;color:#777264;">14:41</span><span class="mi" style="font-size:14px;color:#A8A899;">schedule</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;padding:8px 4px 0;">
+              <span style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#A8A899;animation:tdot 1.2s infinite;"></span><span style="width:5px;height:5px;border-radius:50%;background:#A8A899;animation:tdot 1.2s .2s infinite;"></span><span style="width:5px;height:5px;border-radius:50%;background:#A8A899;animation:tdot 1.2s .4s infinite;"></span></span>
+              <span style="font-size:11px;font-weight:600;color:#A8A899;">Máté gépel…</span>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:24px;left:12px;right:12px;display:flex;align-items:flex-end;gap:9px;z-index:45;">
+            <div style="flex:1;background:rgba(42,44,32,.92);backdrop-filter:blur(12px);border-radius:24px;padding:14px 16px;box-shadow:0 10px 28px rgba(0,0,0,.4);font-size:14.5px;font-weight:500;color:#F1F0E4;">Rendben, köszi<span style="display:inline-block;width:2px;height:16px;background:#9DAE6B;margin-left:2px;vertical-align:text-bottom;"></span></div>
+            <div style="width:48px;height:48px;flex:none;border-radius:17px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;box-shadow:0 10px 28px rgba(0,0,0,.4);"><span class="mi fill" style="font-size:23px;">send</span></div>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ============ ROW A2 · OFFLINE + NYELV ============ -->
+  <div style="display:flex;gap:36px;align-items:flex-start;margin-bottom:56px;">
+
+    <!-- A4 light EN thread with offline -->
+    <div style="flex:none;" data-screen-label="A4 · Szál offline · világos EN">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A4 · Offline szál <span style="font-weight:500;color:#8a8a7e;">— light · EN · a composer offline sem tiltott</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#F3F2E8;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#1c1d18;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi" style="font-size:17px;">signal_cellular_off</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:58px;background:rgba(255,255,255,.90);backdrop-filter:blur(12px);border-radius:24px;display:flex;align-items:center;gap:10px;padding:0 12px;z-index:40;box-shadow:0 8px 22px rgba(28,29,24,.10);border:1px solid #e6e5dc;">
+            <div style="width:40px;height:40px;border-radius:13px;background:#ECEBDE;display:flex;align-items:center;justify-content:center;color:#6a6a60;"><span class="mi" style="font-size:22px;">arrow_back</span></div>
+            <div style="width:38px;height:38px;border-radius:50%;background:rgba(196,154,108,.20);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#8a6a44;">KM</div>
+            <div style="flex:1;"><div style="font-size:15.5px;font-weight:800;color:#1c1d18;letter-spacing:-0.2px;">Kovács Máté</div></div>
+            <div style="width:40px;height:40px;border-radius:13px;background:#ECEBDE;display:flex;align-items:center;justify-content:center;color:#6a6a60;"><span class="mi" style="font-size:22px;">more_vert</span></div>
+          </div>
+          <div style="position:absolute;top:128px;left:12px;right:12px;background:rgba(224,138,82,.14);border:1px solid rgba(224,138,82,.4);border-radius:14px;padding:9px 13px;display:flex;align-items:center;gap:9px;z-index:35;">
+            <span class="mi" style="font-size:19px;color:#b05f2c;">cloud_off</span>
+            <span style="font-size:12.5px;font-weight:600;color:#1c1d18;">No connection — your messages will send once you're back online.</span>
+          </div>
+          <div style="position:absolute;top:180px;left:0;right:0;bottom:96px;padding:10px 16px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;">
+            <div style="align-self:center;background:#ECEBDE;border-radius:10px;padding:5px 12px;font-size:11px;font-weight:700;color:#6a6a60;margin-bottom:8px;">Today</div>
+            <div style="display:flex;align-items:flex-end;gap:8px;max-width:78%;">
+              <div style="width:28px;height:28px;flex:none;border-radius:50%;background:rgba(196,154,108,.20);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#8a6a44;">KM</div>
+              <div>
+                <div style="background:#FFFFFF;border:1px solid #e6e5dc;border-radius:18px 18px 18px 6px;padding:10px 13px;font-size:14.5px;font-weight:500;color:#1c1d18;line-height:1.45;">How did the shoulder feel today?</div>
+                <div style="font-size:10.5px;font-weight:600;color:#9a9a8c;margin:4px 0 0 4px;">14:05</div>
+              </div>
+            </div>
+            <div style="align-self:flex-end;max-width:78%;margin-top:8px;">
+              <div style="background:rgba(88,110,56,.13);border-radius:18px 18px 18px 18px;padding:10px 13px;font-size:14.5px;font-weight:500;color:#1c1d18;line-height:1.45;">All good, no pain during warm-up.</div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:4px 4px 0 0;"><span style="font-size:10.5px;font-weight:600;color:#9a9a8c;">14:12</span><span class="mi fill" style="font-size:14px;color:#586E38;">done_all</span></div>
+            </div>
+            <div style="align-self:flex-end;max-width:78%;">
+              <div style="background:rgba(88,110,56,.13);border-radius:18px 18px 6px 18px;padding:10px 13px;font-size:14.5px;font-weight:500;color:#1c1d18;line-height:1.45;">Finished all 4 sets at 62.5 kg.</div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:4px 4px 0 0;"><span style="font-size:10.5px;font-weight:600;color:#9a9a8c;">14:41</span><span class="mi" style="font-size:14px;color:#6a6a60;">schedule</span></div>
+            </div>
+            <div style="align-self:flex-end;max-width:78%;">
+              <div style="background:rgba(88,110,56,.13);border-radius:18px 18px 6px 18px;padding:10px 13px;font-size:14.5px;font-weight:500;color:#1c1d18;line-height:1.45;">Should I add weight next week?</div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;margin:4px 4px 0 0;"><span style="font-size:10.5px;font-weight:600;color:#9a9a8c;">14:41</span><span class="mi" style="font-size:14px;color:#6a6a60;">schedule</span></div>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:24px;left:12px;right:12px;display:flex;align-items:flex-end;gap:9px;z-index:45;">
+            <div style="flex:1;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid #e6e5dc;border-radius:24px;padding:14px 16px;box-shadow:0 10px 28px rgba(28,29,24,.12);font-size:14.5px;font-weight:500;color:#9a9a8c;">Message…</div>
+            <div style="width:48px;height:48px;flex:none;border-radius:17px;background:#ECEBDE;display:flex;align-items:center;justify-content:center;color:#b9b8ab;"><span class="mi fill" style="font-size:23px;">send</span></div>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(28,29,24,.35);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A5 bubble language panel -->
+    <div style="flex:none;width:460px;" data-screen-label="A5 · Buborék-nyelv">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A5 · Buborék-nyelv <span style="font-weight:500;color:#8a8a7e;">— állapot-ikonok · hiba · hosszan nyomás · archív</span></div>
+      <div style="background:#161611;border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:18px;">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Állapot-ikonok — csak saját üzeneten, az idő mellett</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+            <div style="text-align:center;background:#22241B;border-radius:16px;padding:14px 8px;"><span class="mi" style="font-size:22px;color:#A8A899;">schedule</span><div style="font-size:11px;font-weight:700;color:#F1F0E4;margin-top:8px;">Küldés alatt</div><div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">offline is</div></div>
+            <div style="text-align:center;background:#22241B;border-radius:16px;padding:14px 8px;"><span class="mi" style="font-size:22px;color:#A8A899;">check</span><div style="font-size:11px;font-weight:700;color:#F1F0E4;margin-top:8px;">Elküldve</div><div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">szerveren</div></div>
+            <div style="text-align:center;background:#22241B;border-radius:16px;padding:14px 8px;"><span class="mi" style="font-size:22px;color:#A8A899;">done_all</span><div style="font-size:11px;font-weight:700;color:#F1F0E4;margin-top:8px;">Kézbesítve</div><div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">eszközön</div></div>
+            <div style="text-align:center;background:#22241B;border-radius:16px;padding:14px 8px;"><span class="mi fill" style="font-size:22px;color:#9DAE6B;">done_all</span><div style="font-size:11px;font-weight:700;color:#F1F0E4;margin-top:8px;">Olvasva</div><div style="font-size:9.5px;font-weight:500;color:#A8A899;margin-top:2px;">fill + primary</div></div>
+          </div>
+          <div style="font-size:11px;font-weight:500;color:#777264;margin-top:9px;">Ikon + forma hordozza, nem csak szín. Felolvasva: „{feladó}, {idő}: {szöveg}, {állapot}".</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Sikertelen küldés</div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+            <div style="max-width:85%;">
+              <div style="background:rgba(157,174,107,.20);border-radius:18px 18px 6px 18px;padding:10px 13px;font-size:14px;font-weight:500;color:#F1F0E4;">Holnap 8-kor jó lesz?</div>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;margin:4px 4px 0 0;"><span style="font-size:10.5px;font-weight:600;color:#777264;">14:44</span><span class="mi fill" style="font-size:15px;color:#E08A52;">error</span></div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div style="display:flex;align-items:center;gap:6px;background:rgba(157,174,107,.16);border-radius:12px;padding:8px 13px;color:#9DAE6B;"><span class="mi" style="font-size:17px;">refresh</span><span style="font-size:12.5px;font-weight:800;">Újraküldés</span></div>
+              <div style="display:flex;align-items:center;gap:6px;background:#22241B;border-radius:12px;padding:8px 13px;color:#E08A52;"><span class="mi" style="font-size:17px;">delete</span><span style="font-size:12.5px;font-weight:800;">Törlés</span></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Hosszan nyomás menü</div>
+          <div style="display:flex;align-items:flex-start;gap:14px;">
+            <div style="background:rgba(157,174,107,.20);border-radius:18px 18px 6px 18px;padding:10px 13px;font-size:14px;font-weight:500;color:#F1F0E4;outline:2px solid #9DAE6B;outline-offset:2px;flex:1;">Köszi! A 3. szett még nehéz volt…</div>
+            <div style="background:#2A2C20;border-radius:16px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.5);width:170px;flex:none;">
+              <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:11px;color:#F1F0E4;"><span class="mi" style="font-size:19px;color:#A8A899;">content_copy</span><span style="font-size:13px;font-weight:700;">Másolás</span></div>
+              <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:11px;color:#F1F0E4;"><span class="mi" style="font-size:19px;color:#A8A899;">refresh</span><span style="font-size:13px;font-weight:700;">Újraküldés</span></div>
+              <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:11px;color:#E08A52;"><span class="mi" style="font-size:19px;">delete</span><span style="font-size:13px;font-weight:700;">Törlés</span></div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:500;color:#777264;margin-top:9px;">A buborék szövege kijelölhető/másolható. Újraküldés csak hibás üzeneten aktív.</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Archív szál — composer helyén</div>
+          <div style="background:#22241B;border-radius:24px;padding:14px 16px;display:flex;align-items:center;gap:11px;opacity:.85;">
+            <span class="mi" style="font-size:21px;color:#777264;">lock</span>
+            <span style="font-size:13px;font-weight:600;color:#A8A899;">A kapcsolat lezárult — a beszélgetés csak olvasható.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A5b states panel -->
+    <div style="flex:none;width:430px;" data-screen-label="A5b · Skeleton · üres · hiba">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">A5b · Skeleton · üres · hiba <span style="font-weight:500;color:#8a8a7e;">— minden képernyőhöz kötelező</span></div>
+      <div style="background:#161611;border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:18px;">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Skeleton — lista (3 sor-váz)</div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="background:#22241B;border-radius:18px;padding:13px;display:flex;align-items:center;gap:12px;animation:shimmer 1.4s infinite;"><div style="width:44px;height:44px;border-radius:50%;background:#2A2C20;"></div><div style="flex:1;"><div style="width:45%;height:12px;border-radius:6px;background:#2A2C20;"></div><div style="width:75%;height:10px;border-radius:5px;background:#2A2C20;margin-top:8px;"></div></div></div>
+            <div style="background:#22241B;border-radius:18px;padding:13px;display:flex;align-items:center;gap:12px;animation:shimmer 1.4s .2s infinite;"><div style="width:44px;height:44px;border-radius:50%;background:#2A2C20;"></div><div style="flex:1;"><div style="width:55%;height:12px;border-radius:6px;background:#2A2C20;"></div><div style="width:65%;height:10px;border-radius:5px;background:#2A2C20;margin-top:8px;"></div></div></div>
+            <div style="background:#22241B;border-radius:18px;padding:13px;display:flex;align-items:center;gap:12px;animation:shimmer 1.4s .4s infinite;"><div style="width:44px;height:44px;border-radius:50%;background:#2A2C20;"></div><div style="flex:1;"><div style="width:40%;height:12px;border-radius:6px;background:#2A2C20;"></div><div style="width:70%;height:10px;border-radius:5px;background:#2A2C20;margin-top:8px;"></div></div></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Skeleton — szál (váltakozó buborék-vázak)</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="align-self:flex-start;width:62%;height:38px;border-radius:18px 18px 18px 6px;background:#22241B;animation:shimmer 1.4s infinite;"></div>
+            <div style="align-self:flex-end;width:48%;height:38px;border-radius:18px 18px 6px 18px;background:#2A2C20;animation:shimmer 1.4s .2s infinite;"></div>
+            <div style="align-self:flex-start;width:40%;height:38px;border-radius:18px 18px 18px 6px;background:#22241B;animation:shimmer 1.4s .4s infinite;"></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Üres szál</div>
+          <div style="background:#22241B;border-radius:20px;padding:28px 20px;text-align:center;">
+            <div style="width:64px;height:64px;margin:0 auto;border-radius:22px;background:rgba(157,174,107,.14);display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi" style="font-size:32px;">forum</span></div>
+            <div style="font-size:15px;font-weight:800;color:#F1F0E4;margin-top:14px;">Még nincs üzenet</div>
+            <div style="font-size:12.5px;font-weight:500;color:#A8A899;margin-top:5px;">Írj elsőként — Máté értesítést kap róla.</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Hiba</div>
+          <div style="background:#22241B;border-radius:20px;padding:18px;display:flex;align-items:center;gap:13px;">
+            <div style="width:44px;height:44px;flex:none;border-radius:15px;background:rgba(224,138,82,.16);display:flex;align-items:center;justify-content:center;color:#E08A52;"><span class="mi" style="font-size:24px;">error</span></div>
+            <div style="flex:1;"><div style="font-size:13.5px;font-weight:800;color:#F1F0E4;">Nem sikerült betölteni</div><div style="font-size:12px;font-weight:500;color:#A8A899;margin-top:2px;">Ellenőrizd a kapcsolatot.</div></div>
+            <div style="display:flex;align-items:center;gap:6px;background:rgba(157,174,107,.16);border-radius:12px;padding:9px 13px;color:#9DAE6B;"><span class="mi" style="font-size:17px;">refresh</span><span style="font-size:12.5px;font-weight:800;">Újra</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ============ ROW B · MOBIL EDZŐ ============ -->
+  <div style="display:flex;gap:36px;align-items:flex-start;margin-bottom:56px;">
+
+    <!-- B1 trainer list phone dark HU -->
+    <div style="flex:none;" data-screen-label="B1 · Klienseim lista · edző · sötét HU">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">B1 · Edzői lista + keresés + FAB <span style="font-weight:500;color:#8a8a7e;">— sötét · HU · sűrűbb ritmus, kinyitott kereső</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#161611;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#F1F0E4;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:58px;background:rgba(34,36,27,.92);backdrop-filter:blur(12px);border-radius:24px;display:flex;align-items:center;gap:10px;padding:0 12px;z-index:40;box-shadow:0 8px 22px rgba(0,0,0,.30);">
+            <div style="width:40px;height:40px;border-radius:13px;background:#161611;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:22px;">arrow_back</span></div>
+            <div style="flex:1;font-size:17px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Klienseim</div>
+            <div style="width:40px;height:40px;border-radius:13px;background:rgba(157,174,107,.16);display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi" style="font-size:22px;">search</span></div>
+          </div>
+          <div style="position:absolute;top:130px;left:16px;right:16px;background:#22241B;border-radius:16px;padding:11px 14px;display:flex;align-items:center;gap:10px;z-index:35;">
+            <span class="mi" style="font-size:20px;color:#A8A899;">search</span>
+            <span style="flex:1;font-size:14px;font-weight:500;color:#F1F0E4;">esz<span style="display:inline-block;width:2px;height:15px;background:#9DAE6B;margin-left:1px;vertical-align:text-bottom;"></span></span>
+            <span class="mi" style="font-size:19px;color:#777264;">close</span>
+          </div>
+          <div style="position:absolute;top:186px;left:0;right:0;bottom:0;padding:6px 16px;display:flex;flex-direction:column;gap:7px;">
+            <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;">
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(110,154,106,.18);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#6E9A6A;">TE</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Tóth Eszter</div><div style="font-size:12.5px;font-weight:600;color:#F1F0E4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sikerült a 100 kg-os guggolás!</div></div>
+              <div style="text-align:right;flex:none;"><div style="font-size:11px;font-weight:700;color:#9DAE6B;">9:12</div><div style="width:9px;height:9px;border-radius:50%;background:#9DAE6B;margin:6px 0 0 auto;"></div></div>
+            </div>
+            <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;opacity:.92;">
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#C49A6C;">SE</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Szalai Eszter</div><div style="font-size:12.5px;font-weight:500;color:#A8A899;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Te: Küldtem egy új programot</div></div>
+              <div style="font-size:11px;font-weight:600;color:#777264;">Tegnap</div>
+            </div>
+            <div style="height:1px;background:#22241B;margin:6px 4px;"></div>
+            <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;padding:0 4px 3px;">Keresés nélkül — a teljes lista sűrű ritmusa</div>
+            <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;">
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(157,174,107,.18);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#9DAE6B;">NP</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Nagy Petra</div><div style="font-size:12.5px;font-weight:600;color:#F1F0E4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">A vállamban éreztem egy kis feszülést…</div></div>
+              <div style="text-align:right;flex:none;"><div style="font-size:11px;font-weight:700;color:#9DAE6B;">14:41</div><div style="width:9px;height:9px;border-radius:50%;background:#9DAE6B;margin:6px 0 0 auto;"></div></div>
+            </div>
+            <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;opacity:.92;">
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(110,154,106,.18);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#6E9A6A;">SD</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Szabó Dániel</div><div style="font-size:12.5px;font-weight:500;color:#A8A899;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rendben, holnap találkozunk!</div></div>
+              <div style="font-size:11px;font-weight:600;color:#777264;">Kedd</div>
+            </div>
+            <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;opacity:.92;">
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#C49A6C;">HB</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Horváth Bence</div><div style="font-size:12.5px;font-weight:500;color:#A8A899;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Te: Emeljünk 5 kg-ot a felhúzáson</div></div>
+              <div style="display:flex;align-items:center;gap:7px;flex:none;"><span class="mi" style="font-size:17px;color:#777264;">notifications_off</span><span style="font-size:11px;font-weight:600;color:#777264;">Kedd</span></div>
+            </div>
+            <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;opacity:.6;">
+              <div style="width:44px;height:44px;border-radius:50%;background:#2A2C20;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#777264;">KL</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#A8A899;">Kiss Luca</div><div style="font-size:12.5px;font-weight:500;color:#777264;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Köszönök mindent!</div></div>
+              <div style="background:#2A2C20;border-radius:8px;padding:4px 9px;font-size:10.5px;font-weight:800;color:#A8A899;flex:none;">Lezárt</div>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:26px;right:18px;width:60px;height:60px;border-radius:22px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;box-shadow:0 12px 30px rgba(0,0,0,.45);z-index:45;"><span class="mi fill" style="font-size:27px;">add_comment</span></div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(241,240,228,.45);z-index:60;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B2 new conversation sheet light EN -->
+    <div style="flex:none;" data-screen-label="B2 · Új beszélgetés lap · világos EN">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">B2 · „Új beszélgetés" alsó lap <span style="font-weight:500;color:#8a8a7e;">— light · EN · csak szál nélküli kliensek</span></div>
+      <div style="width:414px;height:868px;background:#0c0d09;border-radius:56px;padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.28);">
+        <div style="position:relative;width:390px;height:844px;background:#F3F2E8;border-radius:44px;overflow:hidden;">
+          <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:120px;height:33px;background:#0c0d09;border-radius:20px;z-index:60;"></div>
+          <div style="position:absolute;inset:0;background:rgba(22,22,17,.5);z-index:30;"></div>
+          <div style="position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;z-index:50;color:#1c1d18;"><span style="font-size:15px;font-weight:700;">9:41</span><span style="display:flex;gap:6px;align-items:center;"><span class="mi fill" style="font-size:17px;">network_cell</span><span class="mi fill" style="font-size:17px;">wifi</span><span class="mi fill" style="font-size:19px;">battery_full</span></span></div>
+          <div style="position:absolute;top:62px;left:12px;right:12px;height:58px;background:rgba(255,255,255,.90);border-radius:24px;display:flex;align-items:center;gap:10px;padding:0 12px;border:1px solid #e6e5dc;">
+            <div style="width:40px;height:40px;border-radius:13px;background:#ECEBDE;display:flex;align-items:center;justify-content:center;color:#6a6a60;"><span class="mi" style="font-size:22px;">arrow_back</span></div>
+            <div style="font-size:17px;font-weight:800;color:#1c1d18;">My clients</div>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#F3F2E8;border-radius:32px 32px 44px 44px;padding:12px 16px 30px;z-index:40;box-shadow:0 -16px 44px rgba(0,0,0,.3);">
+            <div style="width:44px;height:5px;border-radius:3px;background:#d5d4c8;margin:2px auto 16px;"></div>
+            <div style="font-size:18px;font-weight:800;color:#1c1d18;letter-spacing:-0.3px;">New conversation</div>
+            <div style="font-size:12.5px;font-weight:500;color:#6a6a60;margin-top:3px;">Clients without a thread yet</div>
+            <div style="background:#FFFFFF;border:1px solid #e6e5dc;border-radius:16px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-top:14px;">
+              <span class="mi" style="font-size:20px;color:#9a9a8c;">search</span>
+              <span style="font-size:14px;font-weight:500;color:#9a9a8c;">Search clients…</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px;">
+              <div style="background:#FFFFFF;border:1px solid #e6e5dc;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(88,110,56,.14);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#586E38;">NP</div>
+                <div style="flex:1;"><div style="font-size:14.5px;font-weight:800;color:#1c1d18;">Nagy Petra</div><div style="font-size:12px;font-weight:500;color:#6a6a60;">petra.nagy@gmail.com</div></div>
+                <span class="mi" style="font-size:21px;color:#9a9a8c;">chevron_right</span>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #e6e5dc;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(196,154,108,.20);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#8a6a44;">VG</div>
+                <div style="flex:1;"><div style="font-size:14.5px;font-weight:800;color:#1c1d18;">Varga Gergő</div><div style="font-size:12px;font-weight:500;color:#6a6a60;">gergo.varga@icloud.com</div></div>
+                <span class="mi" style="font-size:21px;color:#9a9a8c;">chevron_right</span>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #e6e5dc;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(110,154,106,.16);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#4a7a46;">FL</div>
+                <div style="flex:1;"><div style="font-size:14.5px;font-weight:800;color:#1c1d18;">Fekete Lili</div><div style="font-size:12px;font-weight:500;color:#6a6a60;">lili.fekete@gmail.com</div></div>
+                <span class="mi" style="font-size:21px;color:#9a9a8c;">chevron_right</span>
+              </div>
+            </div>
+            <div style="background:#ECEBDE;border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:10px;margin-top:14px;">
+              <span class="mi" style="font-size:20px;color:#586E38;">check_circle</span>
+              <span style="font-size:12.5px;font-weight:600;color:#1c1d18;">Üres állapot: „Minden kliensednek van már szála."</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B3 panel: dual role + empty -->
+    <div style="flex:none;width:430px;" data-screen-label="B3 · Kettős szerep + üres állapotok">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">B3 · Kettős szerep + üres állapot <span style="font-weight:500;color:#8a8a7e;">— vegyes lista, szöveges címke, nem színkód</span></div>
+      <div style="background:#161611;border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:18px;">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">(b) Vegyes lista — saját edző a tetején</div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;">
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(157,174,107,.18);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#9DAE6B;">BG</div>
+              <div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Balogh Gábor</span><span style="border:1px solid #3C3E32;border-radius:7px;padding:2px 7px;font-size:9.5px;font-weight:800;letter-spacing:.5px;color:#A8A899;">EDZŐD</span></div><div style="font-size:12.5px;font-weight:500;color:#A8A899;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">A jövő heti terved feltöltve.</div></div>
+              <div style="font-size:11px;font-weight:600;color:#777264;">8:20</div>
+            </div>
+            <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;">
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(110,154,106,.18);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#6E9A6A;">TE</div>
+              <div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Tóth Eszter</span><span style="border:1px solid #3C3E32;border-radius:7px;padding:2px 7px;font-size:9.5px;font-weight:800;letter-spacing:.5px;color:#777264;">KLIENSED</span></div><div style="font-size:12.5px;font-weight:600;color:#F1F0E4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sikerült a 100 kg-os guggolás!</div></div>
+              <div style="text-align:right;flex:none;"><div style="font-size:11px;font-weight:700;color:#9DAE6B;">9:12</div><div style="width:9px;height:9px;border-radius:50%;background:#9DAE6B;margin:6px 0 0 auto;"></div></div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:500;color:#777264;margin-top:9px;">Egy „Edződ" sornál nincs külön szekció — a címke azonosít. A „Kliensed" címke csak vegyes listán jelenik meg.</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">(a) Tiszta edzői lista — címke nélkül</div>
+          <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#C49A6C;">SD</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Szabó Dániel</div><div style="font-size:12.5px;font-weight:500;color:#A8A899;">Rendben, holnap találkozunk!</div></div>
+            <div style="font-size:11px;font-weight:600;color:#777264;">Kedd</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Üres edzői lista</div>
+          <div style="background:#22241B;border-radius:20px;padding:28px 20px;text-align:center;">
+            <div style="width:64px;height:64px;margin:0 auto;border-radius:22px;background:rgba(196,154,108,.14);display:flex;align-items:center;justify-content:center;color:#C49A6C;"><span class="mi" style="font-size:32px;">group</span></div>
+            <div style="font-size:15px;font-weight:800;color:#F1F0E4;margin-top:14px;">Még nincs kliensed</div>
+            <div style="font-size:12.5px;font-weight:500;color:#A8A899;margin-top:5px;">Amint kliensed lesz, itt tudsz vele beszélgetést kezdeni.</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Keresés — nyugalmi vs. kinyitva</div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <div style="width:40px;height:40px;flex:none;border-radius:13px;background:rgba(157,174,107,.16);display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi" style="font-size:22px;">search</span></div>
+            <span class="mi" style="font-size:18px;color:#777264;">arrow_forward</span>
+            <div style="flex:1;background:#22241B;border-radius:14px;padding:10px 13px;display:flex;align-items:center;gap:9px;"><span class="mi" style="font-size:19px;color:#A8A899;">search</span><span style="font-size:13px;font-weight:500;color:#A8A899;">Keresés név szerint…</span><span class="mi" style="font-size:18px;color:#777264;margin-left:auto;">close</span></div>
+          </div>
+          <div style="font-size:11px;font-weight:500;color:#777264;margin-top:9px;">Koppintásra nyílik a fejléc alatt, nem állandó elem. 10 sor alatt nem jelenik meg a kereső-ikon.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ============ ROW C · WEB EDZŐ ============ -->
+  <div style="display:flex;gap:36px;align-items:flex-start;margin-bottom:56px;">
+
+    <!-- C1 web frame -->
+    <div style="flex:none;" data-screen-label="C1 · Web /chat · két hasáb">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">C1 · Web `/chat` — két hasáb <span style="font-weight:500;color:#8a8a7e;">— sötét · HU · [EDZŐ] chip tertiary · buborék-nyelv azonos a mobillal</span></div>
+      <div style="width:1480px;height:820px;background:#161611;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden;display:flex;">
+        <!-- sidebar -->
+        <div style="width:248px;flex:none;background:#2A2C20;margin:14px 0 14px 14px;border-radius:24px;padding:20px 14px;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;gap:11px;padding:4px 8px 22px;">
+            <div style="width:36px;height:36px;border-radius:12px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:20px;">fitness_center</span></div>
+            <div style="font-size:17px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Lifey</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;color:#A8A899;"><span class="mi" style="font-size:21px;">dashboard</span><span style="font-size:13.5px;font-weight:700;">Áttekintés</span></div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;color:#A8A899;"><span class="mi" style="font-size:21px;">group</span><span style="font-size:13.5px;font-weight:700;">Kliensek</span></div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;color:#A8A899;"><span class="mi" style="font-size:21px;">event</span><span style="font-size:13.5px;font-weight:700;">Naptár</span></div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;background:rgba(157,174,107,.16);color:#9DAE6B;"><span class="mi fill" style="font-size:21px;">chat_bubble</span><span style="font-size:13.5px;font-weight:800;">Chat</span><span style="margin-left:auto;min-width:20px;height:20px;border-radius:10px;background:#9DAE6B;color:#161611;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 6px;">3</span></div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;color:#A8A899;"><span class="mi" style="font-size:21px;">bar_chart</span><span style="font-size:13.5px;font-weight:700;">Statisztika</span></div>
+          </div>
+          <div style="margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 8px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;color:#C49A6C;">KM</div>
+            <div><div style="font-size:12.5px;font-weight:800;color:#F1F0E4;">Kovács Máté</div><div style="font-size:10.5px;font-weight:600;color:#777264;">mate@lifey.app</div></div>
+          </div>
+        </div>
+        <!-- main -->
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+          <div style="height:64px;flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;margin:14px 14px 0;background:#1C1E16;border-radius:20px;">
+            <div style="font-size:16px;font-weight:800;color:#F1F0E4;letter-spacing:-0.2px;">Chat</div>
+            <div style="border:1px solid rgba(110,154,106,.5);background:rgba(110,154,106,.14);border-radius:9px;padding:4px 10px;font-size:10.5px;font-weight:800;letter-spacing:.8px;color:#6E9A6A;">EDZŐ</div>
+            <div style="margin-left:auto;font-size:11.5px;font-weight:600;color:#777264;">Fül-cím olvasatlannál: <span style="color:#A8A899;font-weight:700;">(3) Lifey</span></div>
+          </div>
+          <div style="flex:1;display:flex;gap:14px;padding:14px;min-height:0;">
+            <!-- conversation list column -->
+            <div style="width:340px;flex:none;background:#1C1E16;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:7px;overflow:hidden;">
+              <div style="background:#22241B;border-radius:13px;padding:10px 13px;display:flex;align-items:center;gap:9px;margin-bottom:5px;"><span class="mi" style="font-size:19px;color:#A8A899;">search</span><span style="font-size:13px;font-weight:500;color:#777264;">Keresés…</span></div>
+              <div style="background:rgba(157,174,107,.12);border:1px solid rgba(157,174,107,.35);border-radius:16px;padding:11px 12px;display:flex;align-items:center;gap:11px;">
+                <div style="width:42px;height:42px;border-radius:50%;background:rgba(157,174,107,.18);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#9DAE6B;">NP</div>
+                <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:800;color:#F1F0E4;">Nagy Petra</div><div style="font-size:12px;font-weight:600;color:#F1F0E4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">A vállamban éreztem egy kis feszülést…</div></div>
+                <div style="text-align:right;flex:none;"><div style="font-size:10.5px;font-weight:700;color:#9DAE6B;">14:41</div><div style="width:8px;height:8px;border-radius:50%;background:#9DAE6B;margin:6px 0 0 auto;"></div></div>
+              </div>
+              <div style="border-radius:16px;padding:11px 12px;display:flex;align-items:center;gap:11px;">
+                <div style="width:42px;height:42px;border-radius:50%;background:rgba(110,154,106,.18);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#6E9A6A;">TE</div>
+                <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:800;color:#F1F0E4;">Tóth Eszter</div><div style="font-size:12px;font-weight:600;color:#F1F0E4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sikerült a 100 kg-os guggolás!</div></div>
+                <div style="text-align:right;flex:none;"><div style="font-size:10.5px;font-weight:700;color:#9DAE6B;">9:12</div><div style="width:8px;height:8px;border-radius:50%;background:#9DAE6B;margin:6px 0 0 auto;"></div></div>
+              </div>
+              <!-- hover row with ⋯ -->
+              <div style="background:#22241B;border-radius:16px;padding:11px 12px;display:flex;align-items:center;gap:11px;position:relative;">
+                <div style="width:42px;height:42px;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#C49A6C;">SD</div>
+                <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:800;color:#F1F0E4;">Szabó Dániel</div><div style="font-size:12px;font-weight:500;color:#A8A899;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rendben, holnap találkozunk!</div></div>
+                <div style="width:30px;height:30px;border-radius:10px;background:#2A2C20;display:flex;align-items:center;justify-content:center;color:#A8A899;flex:none;"><span class="mi" style="font-size:19px;">more_horiz</span></div>
+                <div style="position:absolute;right:-8px;top:52px;background:#2A2C20;border-radius:14px;padding:5px;box-shadow:0 12px 30px rgba(0,0,0,.5);width:180px;z-index:10;">
+                  <div style="display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:10px;color:#F1F0E4;"><span class="mi" style="font-size:18px;color:#A8A899;">notifications_off</span><span style="font-size:12.5px;font-weight:700;">Némítás</span></div>
+                  <div style="display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:10px;color:#F1F0E4;"><span class="mi" style="font-size:18px;color:#A8A899;">person</span><span style="font-size:12.5px;font-weight:700;">Kliens megnyitása</span></div>
+                </div>
+              </div>
+              <div style="border-radius:16px;padding:11px 12px;display:flex;align-items:center;gap:11px;">
+                <div style="width:42px;height:42px;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#C49A6C;">HB</div>
+                <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:800;color:#F1F0E4;">Horváth Bence</div><div style="font-size:12px;font-weight:500;color:#A8A899;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Te: Emeljünk 5 kg-ot a felhúzáson</div></div>
+                <div style="display:flex;align-items:center;gap:6px;flex:none;"><span class="mi" style="font-size:16px;color:#777264;">notifications_off</span><span style="font-size:10.5px;font-weight:600;color:#777264;">Kedd</span></div>
+              </div>
+              <div style="border-radius:16px;padding:11px 12px;display:flex;align-items:center;gap:11px;opacity:.55;">
+                <div style="width:42px;height:42px;border-radius:50%;background:#2A2C20;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#777264;">KL</div>
+                <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:800;color:#A8A899;">Kiss Luca</div><div style="font-size:12px;font-weight:500;color:#777264;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Köszönök mindent!</div></div>
+                <div style="background:#2A2C20;border-radius:7px;padding:3px 8px;font-size:10px;font-weight:800;color:#A8A899;flex:none;">Lezárt</div>
+              </div>
+            </div>
+            <!-- thread column -->
+            <div style="flex:1;background:#1C1E16;border-radius:20px;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
+              <div style="height:66px;flex:none;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid #22241B;">
+                <div style="width:40px;height:40px;border-radius:50%;background:rgba(157,174,107,.18);display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#9DAE6B;">NP</div>
+                <div style="flex:1;"><div style="font-size:15px;font-weight:800;color:#F1F0E4;">Nagy Petra</div><div style="font-size:11px;font-weight:600;color:#9DAE6B;">online</div></div>
+                <div style="width:38px;height:38px;border-radius:12px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#A8A899;"><span class="mi" style="font-size:21px;">more_vert</span></div>
+              </div>
+              <div style="flex:1;padding:20px 24px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;min-height:0;">
+                <div style="align-self:center;background:#22241B;border-radius:10px;padding:5px 12px;font-size:11px;font-weight:700;color:#A8A899;margin-bottom:8px;">Ma</div>
+                <div style="display:flex;align-items:flex-end;gap:9px;max-width:620px;">
+                  <div style="width:30px;height:30px;flex:none;border-radius:50%;background:rgba(157,174,107,.18);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#9DAE6B;">NP</div>
+                  <div>
+                    <div style="background:#22241B;border-radius:18px 18px 18px 6px;padding:11px 15px;font-size:14.5px;font-weight:500;color:#F1F0E4;line-height:1.5;">A vállamban éreztem egy kis feszülést a nyomó gyakorlatoknál, figyeljek valamire a holnapi edzésen?</div>
+                    <div style="font-size:10.5px;font-weight:600;color:#777264;margin:4px 0 0 4px;">14:41</div>
+                  </div>
+                </div>
+                <div style="align-self:flex-end;max-width:620px;margin-top:8px;">
+                  <div style="background:rgba(157,174,107,.20);border-radius:18px 18px 18px 18px;padding:11px 15px;font-size:14.5px;font-weight:500;color:#F1F0E4;line-height:1.5;">Semmi vész — holnap kezdjünk hosszabb vállkörös bemelegítéssel.</div>
+                  <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:4px 4px 0 0;"><span style="font-size:10.5px;font-weight:600;color:#777264;">14:48</span><span class="mi fill" style="font-size:14px;color:#9DAE6B;">done_all</span></div>
+                </div>
+                <div style="align-self:flex-end;max-width:620px;">
+                  <div style="background:rgba(157,174,107,.20);border-radius:18px 18px 6px 18px;padding:11px 15px;font-size:14.5px;font-weight:500;color:#F1F0E4;line-height:1.5;">Ha a feszülés fájdalomba fordul, azonnal állj le és írj.</div>
+                  <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:4px 4px 0 0;"><span style="font-size:10.5px;font-weight:600;color:#777264;">14:48</span><span class="mi" style="font-size:14px;color:#A8A899;">done_all</span></div>
+                </div>
+              </div>
+              <div style="flex:none;padding:0 20px 16px;">
+                <div style="display:flex;align-items:flex-end;gap:9px;">
+                  <div style="flex:1;background:#22241B;border-radius:18px;padding:13px 16px;font-size:14px;font-weight:500;color:#F1F0E4;">Rendben, szólok<span style="display:inline-block;width:2px;height:15px;background:#9DAE6B;margin-left:2px;vertical-align:text-bottom;"></span></div>
+                  <div style="width:46px;height:46px;flex:none;border-radius:15px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:22px;">send</span></div>
+                </div>
+                <div style="font-size:10.5px;font-weight:600;color:#777264;margin:7px 4px 0;">Enter — küldés · Shift+Enter — új sor</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C2 panel -->
+    <div style="flex:none;width:430px;" data-screen-label="C2 · Web finomságok">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">C2 · Web finomságok <span style="font-weight:500;color:#8a8a7e;">— üres jobb hasáb · viselkedés-jegyzet</span></div>
+      <div style="background:#161611;border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:18px;">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Jobb hasáb kiválasztás nélkül</div>
+          <div style="background:#1C1E16;border-radius:20px;padding:44px 20px;text-align:center;">
+            <div style="width:72px;height:72px;margin:0 auto;border-radius:24px;background:rgba(157,174,107,.12);display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi" style="font-size:38px;">forum</span></div>
+            <div style="font-size:16px;font-weight:800;color:#F1F0E4;margin-top:16px;">Válassz beszélgetést</div>
+            <div style="font-size:12.5px;font-weight:500;color:#A8A899;margin-top:5px;">A bal oldali listából nyiss meg egy szálat.</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Viselkedés-jegyzet</div>
+          <div style="display:flex;flex-direction:column;gap:11px;">
+            <div style="display:flex;align-items:flex-start;gap:11px;"><div style="width:28px;height:28px;flex:none;border-radius:9px;background:rgba(157,174,107,.16);display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi" style="font-size:16px;">width_normal</span></div><div style="font-size:12px;font-weight:500;color:#A8A899;line-height:1.5;"><b style="color:#F1F0E4;">Buborék max-szélesség:</b> ~65ch olvasási szélesség fölött nem nyúlik, akkor sem, ha a hasáb szélesebb.</div></div>
+            <div style="display:flex;align-items:flex-start;gap:11px;"><div style="width:28px;height:28px;flex:none;border-radius:9px;background:rgba(196,154,108,.16);display:flex;align-items:center;justify-content:center;color:#C49A6C;"><span class="mi" style="font-size:16px;">tab</span></div><div style="font-size:12px;font-weight:500;color:#A8A899;line-height:1.5;"><b style="color:#F1F0E4;">Fül-cím:</b> olvasatlan üzenetnél a böngészőfül címe „(3) Lifey" formára vált. Web push nincs az első kiadásban.</div></div>
+            <div style="display:flex;align-items:flex-start;gap:11px;"><div style="width:28px;height:28px;flex:none;border-radius:9px;background:rgba(110,154,106,.16);display:flex;align-items:center;justify-content:center;color:#6E9A6A;"><span class="mi" style="font-size:16px;">devices</span></div><div style="font-size:12px;font-weight:500;color:#A8A899;line-height:1.5;"><b style="color:#F1F0E4;">Tablet alatt:</b> a két hasáb egymás után csúszik (lista → szál, vissza-gombbal) — a mobil viselkedés, nem külön minta.</div></div>
+            <div style="display:flex;align-items:flex-start;gap:11px;"><div style="width:28px;height:28px;flex:none;border-radius:9px;background:rgba(157,174,107,.16);display:flex;align-items:center;justify-content:center;color:#9DAE6B;"><span class="mi" style="font-size:16px;">keyboard</span></div><div style="font-size:12px;font-weight:500;color:#A8A899;line-height:1.5;"><b style="color:#F1F0E4;">Enter = küldés,</b> Shift+Enter = új sor; a súgó-sor halványan a composer alatt, csak fókuszban.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ============ ROW D · KÖZÖS RENDSZER-ELEMEK ============ -->
+  <div style="display:flex;gap:36px;align-items:flex-start;margin-bottom:56px;">
+
+    <!-- D1 push previews -->
+    <div style="flex:none;width:460px;" data-screen-label="D1 · Push-értesítés">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">D1 · Push-értesítés előnézet <span style="font-weight:500;color:#8a8a7e;">— cím = feladó · törzs ~120 kar. · összevonás</span></div>
+      <div style="background:#161611;border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:18px;">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">iOS — zárolt képernyő</div>
+          <div style="background:rgba(42,44,32,.85);backdrop-filter:blur(12px);border-radius:20px;padding:13px 15px;display:flex;gap:12px;">
+            <div style="width:38px;height:38px;flex:none;border-radius:9px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:21px;">fitness_center</span></div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:13.5px;font-weight:800;color:#F1F0E4;">Kovács Máté</span><span style="font-size:11px;font-weight:600;color:#A8A899;">most</span></div>
+              <div style="font-size:13px;font-weight:500;color:#F1F0E4;line-height:1.4;margin-top:2px;">Rendben, akkor maradunk 62,5 kg-on még egy hétig. A bemelegítést viszont…</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Android — heads-up</div>
+          <div style="background:#2A2C20;border-radius:20px;padding:13px 15px;">
+            <div style="display:flex;align-items:center;gap:8px;"><div style="width:18px;height:18px;border-radius:5px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:12px;">fitness_center</span></div><span style="font-size:11px;font-weight:700;color:#A8A899;">Lifey · most</span></div>
+            <div style="font-size:13.5px;font-weight:800;color:#F1F0E4;margin-top:7px;">Kovács Máté</div>
+            <div style="font-size:13px;font-weight:500;color:#A8A899;line-height:1.4;margin-top:2px;">Rendben, akkor maradunk 62,5 kg-on még egy hétig. A bemelegítést viszont…</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Összevont — 60 mp-en belül</div>
+          <div style="background:rgba(42,44,32,.85);border-radius:20px;padding:13px 15px;display:flex;gap:12px;">
+            <div style="width:38px;height:38px;flex:none;border-radius:9px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:21px;">fitness_center</span></div>
+            <div style="flex:1;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:13.5px;font-weight:800;color:#F1F0E4;">Kovács Máté</span><span style="font-size:11px;font-weight:600;color:#A8A899;">most</span></div>
+              <div style="font-size:13px;font-weight:500;color:#F1F0E4;margin-top:2px;">3 új üzenet</div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:500;color:#777264;margin-top:9px;">HU/EN kulcsok: `push.newMessages` = „{n} új üzenet" / "{n} new messages". Push csak akkor, ha a címzett nem látja a szálat.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D2 mute + archive -->
+    <div style="flex:none;width:430px;" data-screen-label="D2 · Némítás + archív">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">D2 · Némítás és archív <span style="font-weight:500;color:#8a8a7e;">— fejléc-menü · lista-jelek</span></div>
+      <div style="background:#161611;border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:18px;">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Szál fejléc-menü + időtartam-választó</div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <div style="background:#2A2C20;border-radius:16px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.5);flex:1;">
+              <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:11px;color:#F1F0E4;"><span class="mi" style="font-size:19px;color:#A8A899;">notifications_off</span><span style="font-size:13px;font-weight:700;">Némítás</span><span class="mi" style="font-size:17px;color:#777264;margin-left:auto;">chevron_right</span></div>
+              <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:11px;color:#F1F0E4;"><span class="mi" style="font-size:19px;color:#A8A899;">person</span><span style="font-size:13px;font-weight:700;">Kliens megnyitása</span></div>
+            </div>
+            <div style="background:#2A2C20;border-radius:16px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.5);width:150px;flex:none;">
+              <div style="padding:9px 12px;font-size:13px;font-weight:700;color:#F1F0E4;border-radius:11px;">1 órára</div>
+              <div style="padding:9px 12px;font-size:13px;font-weight:700;color:#F1F0E4;border-radius:11px;">8 órára</div>
+              <div style="padding:9px 12px;font-size:13px;font-weight:700;color:#F1F0E4;border-radius:11px;background:rgba(157,174,107,.14);color:#9DAE6B;">1 hétre</div>
+              <div style="padding:9px 12px;font-size:13px;font-weight:700;color:#F1F0E4;border-radius:11px;">Amíg vissza nem kapcsolom</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Lista-jelek</div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;">
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(196,154,108,.18);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#C49A6C;">HB</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#F1F0E4;">Horváth Bence</div><div style="font-size:12.5px;font-weight:500;color:#A8A899;">Némított szál</div></div>
+              <span class="mi" style="font-size:18px;color:#777264;">notifications_off</span>
+            </div>
+            <div style="background:#22241B;border-radius:18px;padding:11px 13px;display:flex;align-items:center;gap:12px;opacity:.6;">
+              <div style="width:44px;height:44px;border-radius:50%;background:#2A2C20;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#777264;">KL</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14.5px;font-weight:800;color:#A8A899;">Kiss Luca</div><div style="font-size:12.5px;font-weight:500;color:#777264;">Archív szál</div></div>
+              <div style="background:#2A2C20;border-radius:8px;padding:4px 9px;font-size:10.5px;font-weight:800;color:#A8A899;">Lezárt</div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:500;color:#777264;margin-top:9px;">Némítás a badge-számolást nem érinti a listán, csak a pusht. Archív sor: halványabb tónus + „Lezárt" címke, a szál olvasható.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D3+D4 panel -->
+    <div style="flex:none;width:430px;" data-screen-label="D3–D4 · Gépelés + rendszerüzenet">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">D3–D4 · Gépelés-jelző · rendszerüzenet <span style="font-weight:500;color:#8a8a7e;">— későbbi fázis, de kész minta</span></div>
+      <div style="background:#161611;border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:18px;">
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">D3 · Gépelés-jelző — composer fölött</div>
+          <div style="background:#1C1E16;border-radius:20px;padding:14px 16px;">
+            <div style="display:flex;align-items:center;gap:7px;padding-bottom:10px;">
+              <span style="display:flex;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#A8A899;animation:tdot 1.2s infinite;"></span><span style="width:5px;height:5px;border-radius:50%;background:#A8A899;animation:tdot 1.2s .2s infinite;"></span><span style="width:5px;height:5px;border-radius:50%;background:#A8A899;animation:tdot 1.2s .4s infinite;"></span></span>
+              <span style="font-size:11px;font-weight:600;color:#A8A899;">Petra gépel…</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;">
+              <div style="flex:1;background:#22241B;border-radius:16px;padding:11px 14px;font-size:13px;font-weight:500;color:#777264;">Üzenet…</div>
+              <div style="width:40px;height:40px;flex:none;border-radius:13px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#777264;"><span class="mi fill" style="font-size:19px;">send</span></div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:500;color:#777264;margin-top:9px;">Fix magasságú sáv — megjelenésekor sosem tolja el ugrásszerűen a folyamot. `labelSmall`, halvány.</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">D4 · Rendszerüzenet a folyamban</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="align-self:center;display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:12px;background:rgba(157,174,107,.08);border:1px solid rgba(157,174,107,.2);">
+              <span class="mi" style="font-size:16px;color:#9DAE6B;">assignment</span>
+              <span style="font-size:12px;font-weight:600;color:#A8A899;">Új program lett hozzád rendelve — „Felsőtest 2.0"</span>
+            </div>
+            <div style="align-self:center;display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:12px;background:rgba(157,174,107,.08);border:1px solid rgba(157,174,107,.2);">
+              <span class="mi" style="font-size:16px;color:#9DAE6B;">handshake</span>
+              <span style="font-size:12px;font-weight:600;color:#A8A899;">Máté mostantól az edződ</span>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:500;color:#777264;margin-top:9px;">Középre igazítva, buborék nélkül, ikonnal. Első kiadásban nem használt, de a minta rögzített.</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#777264;margin-bottom:12px;">Composer — állapotok</div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <div style="display:flex;align-items:center;gap:9px;">
+              <div style="flex:1;background:#2A2C20;border-radius:16px;padding:11px 14px;font-size:13px;font-weight:500;color:#777264;">Üzenet…</div>
+              <div style="width:40px;height:40px;flex:none;border-radius:13px;background:#22241B;display:flex;align-items:center;justify-content:center;color:#777264;"><span class="mi fill" style="font-size:19px;">send</span></div>
+              <span style="font-size:10.5px;font-weight:600;color:#777264;width:64px;">üres → tiltott</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;">
+              <div style="flex:1;background:#2A2C20;border-radius:16px;padding:11px 14px;font-size:13px;font-weight:500;color:#F1F0E4;line-height:1.45;">Több soros szöveg magasodik,<br>max ~5 sorig, utána belül gördül</div>
+              <div style="width:40px;height:40px;flex:none;border-radius:13px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;"><span class="mi fill" style="font-size:19px;">send</span></div>
+              <span style="font-size:10.5px;font-weight:600;color:#777264;width:64px;">aktív</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Token card -->
+    <div style="flex:none;width:430px;" data-screen-label="Token-használat">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">Token-használat <span style="font-weight:500;color:#8a8a7e;">— nincs új token</span></div>
+      <div style="background:#FFFFFF;border-radius:24px;padding:22px;box-shadow:0 1px 3px rgba(0,0,0,.09);display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:11px;"><div style="width:34px;height:34px;flex:none;border-radius:10px;background:#9DAE6B;"></div><div style="font-size:12px;font-weight:500;color:#6a6a60;line-height:1.4;"><b style="color:#1c1d18;">primary</b> #9DAE6B / #586E38 — olvasatlan badge + pötty, olvasva-pipa, küldés-gomb, saját buborék tónusa (.20/.13)</div></div>
+        <div style="display:flex;align-items:center;gap:11px;"><div style="width:34px;height:34px;flex:none;border-radius:10px;background:#22241B;"></div><div style="font-size:12px;font-weight:500;color:#6a6a60;line-height:1.4;"><b style="color:#1c1d18;">surface-container-high</b> #22241B / #FFFFFF — másik fél buboréka, sorok, nap-chip</div></div>
+        <div style="display:flex;align-items:center;gap:11px;"><div style="width:34px;height:34px;flex:none;border-radius:10px;background:#6E9A6A;"></div><div style="font-size:12px;font-weight:500;color:#6a6a60;line-height:1.4;"><b style="color:#1c1d18;">tertiary</b> #6E9A6A — csak a web [EDZŐ] chip; a chat maga nem szerep-színez</div></div>
+        <div style="display:flex;align-items:center;gap:11px;"><div style="width:34px;height:34px;flex:none;border-radius:10px;background:#E08A52;"></div><div style="font-size:12px;font-weight:500;color:#6a6a60;line-height:1.4;"><b style="color:#1c1d18;">error</b> #E08A52 — sikertelen küldés ikonja, offline sáv tónusa; sosem olvasatlan-jel</div></div>
+        <div style="display:flex;align-items:center;gap:11px;"><div style="width:34px;height:34px;flex:none;border-radius:10px;background:#A8A899;"></div><div style="font-size:12px;font-weight:500;color:#6a6a60;line-height:1.4;"><b style="color:#1c1d18;">onSurfaceVariant</b> #A8A899 / #6a6a60 — időbélyeg, állapot-ikonok (kivéve olvasva), gépelés-jelző</div></div>
+        <div style="height:1px;background:#ECEBDE;"></div>
+        <div style="font-size:12px;font-weight:500;color:#6a6a60;line-height:1.55;"><b style="color:#1c1d18;">Radius:</b> buborék 18, „farok"-sarok 6 · composer lg 24 · sor 18 · chip 10.<br><b style="color:#1c1d18;">Rés a jelzésben:</b> a rendszernek nincs dedikált „offline/figyelmeztetés" tokene — az offline sáv az error tónus 14%-át használja; ha zavaró, warning token bevezetése külön döntés.<br><b style="color:#1c1d18;">Felolvasás:</b> „{feladó}, {idő}: {szöveg}, {állapot}" — a pipákhoz szöveges megfelelő tartozik.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

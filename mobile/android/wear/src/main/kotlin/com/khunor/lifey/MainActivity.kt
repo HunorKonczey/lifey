@@ -49,6 +49,17 @@ class MainActivity : ComponentActivity() {
         // running case, this covers "the phone only reappeared after the
         // watch app was already closed and reopened".
         lifecycleScope.launch { SummarySender.flushPending(applicationContext) }
+        // Same idea for live bridging: a still-running, not-yet-adopted
+        // standalone session (ExerciseService survived as a foreground
+        // service while just this Activity was closed/reopened) retries its
+        // adoption snapshot here too.
+        lifecycleScope.launch { SummarySender.sendAdoptionRequestIfNeeded(applicationContext) }
+        // Reattaches to a still-running standalone exercise after a process
+        // death/reboot (docs/watch/44-watch-f6-standalone-plan.md §3.2,
+        // §11/6) — mirrors the two retries above, but for the *running*
+        // session itself rather than a queued/pending one. A no-op in the
+        // overwhelmingly common case (nothing to recover).
+        lifecycleScope.launch { ExerciseService.recoverIfNeeded(applicationContext) }
         setContent {
             LifeyTheme {
                 val phase by SessionStateHolder.phase.collectAsState()

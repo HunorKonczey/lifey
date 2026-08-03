@@ -30,11 +30,15 @@ private const val STANDALONE_DEFAULT_REPS = 10
 private const val STANDALONE_REST_SECONDS = 90
 
 /** One set logged during a standalone session (docs/watch/
- * 44-watch-f6-standalone-plan.md §4.1) — [exerciseIndex] is null in F6a (no
- * plan); F6b resolves it against the synced template's exercise list. */
+ * 44-watch-f6-standalone-plan.md §4.1) — [reps]/[weight] default to
+ * [STANDALONE_DEFAULT_REPS]/`null` unless the F5b adjust stepper was used
+ * (now wired up for standalone too). [exerciseIndex] is null outside a
+ * template session; F6b resolves it against the synced template's exercise
+ * list. */
 data class StandaloneSet(
     val loggedAtEpochMs: Long,
     val reps: Int,
+    val weight: Double? = null,
     val exerciseIndex: Int? = null,
 )
 
@@ -48,6 +52,22 @@ data class StandaloneTemplateExercise(
     val name: String,
     val restSeconds: Int,
     val targetSets: Int? = null,
+    /**
+     * What was logged for this exercise the last time it was trained,
+     * heaviest first, as the phone resolved it (`previousSetsFor` in
+     * `watch_template_sync.dart`) — a standalone session's stand-in for the
+     * `nextSetReps`/`nextSetWeight` prefill a phone-mastered session gets on
+     * every state sync (48-doc D-F5b.2). Without it the watch could only log
+     * a hardcoded 10 reps with no weight. Defaults to empty so a cache
+     * written by an older build still parses.
+     */
+    val previousSets: List<StandalonePreviousSet> = emptyList(),
+)
+
+/** One set of [StandaloneTemplateExercise.previousSets]. */
+data class StandalonePreviousSet(
+    val weight: Double,
+    val reps: Int,
 )
 
 /**
@@ -142,7 +162,29 @@ data class LogAdjustState(
     val weight: Double,
     val field: LogAdjustField,
     val interactions: Int = 0,
-)
+) {
+    /** Whether a −/+ tap on the active field would still move the value —
+     * drives the disabled/ghosted look of the stepper's two buttons. The
+     * rotary has no equivalent need (it just clamps silently against a stop),
+     * so these exist purely so a *button* can show it's at the end of its
+     * range instead of looking tappable and doing nothing. Kept here rather
+     * than in the UI so the bounds stay in one place, next to
+     * [SessionStateHolder.onLogAdjustStepped]'s own clamping. */
+    // `this.field`, not a bare `field` — inside a property getter that
+    // identifier is Kotlin's backing-field keyword, not this data class's own
+    // `field` property.
+    val canDecrement: Boolean
+        get() = when (this.field) {
+            LogAdjustField.REPS -> reps > LOG_ADJUST_REPS_MIN
+            LogAdjustField.WEIGHT -> weight > LOG_ADJUST_WEIGHT_MIN
+        }
+
+    val canIncrement: Boolean
+        get() = when (this.field) {
+            LogAdjustField.REPS -> reps < LOG_ADJUST_REPS_MAX
+            LogAdjustField.WEIGHT -> weight < LOG_ADJUST_WEIGHT_MAX
+        }
+}
 
 /** Stepper steps and bounds (D-F5b.5) — mirrors the watchOS constants. The
  * reps floor of 1 matches the phone's own validator; weight allows 0 for
@@ -195,6 +237,15 @@ data class SessionMetadata(
      * `false` for every pre-F6 flow. Gates [SessionStateHolder.onStateSynced]'s
      * phone-state rejection (D-F6.2) and which end path applies. */
     val isStandalone: Boolean = false,
+    /** Whether the phone has acknowledged a live-bridging adoption request
+     * for this standalone session ([SessionStateHolder.onAdoptionAcked]) —
+     * meaningless outside [isStandalone]. Deliberately does **not** change
+     * how sets are logged: that stays watch-local/instant always for a
+     * standalone session, adopted or not (the whole reliability point of
+     * F6). It only relaxes the phone-originated `end` message's guard in
+     * [PhoneListenerService], so an adopted session can be ended from either
+     * side. */
+    val isAdopted: Boolean = false,
     /** The standalone session's own set log — the only record of it until
      * `ExerciseService.endStandaloneExercise` queues it (docs/watch/
      * 44-watch-f6-standalone-plan.md §3.1). Empty outside standalone mode;
@@ -221,7 +272,70 @@ data class SessionMetadata(
      * field (mirrors iOS's `WorkoutManager.sessionClientId`), so every
      * existing call site reading this field already picks it up. */
     val standaloneSessionId: String? get() = if (isStandalone) sessionClientId else null
+
+    /** The exercise new sets currently log against, or `null` for a Quick
+     * strength session — the safe-indexed lookup, so callers don't repeat
+     * the bounds check. Mirrors iOS's `standaloneCurrentExercise`. */
+    val standaloneCurrentExercise: StandaloneTemplateExercise?
+        get() = standaloneTemplate?.exercises?.getOrNull(standaloneExerciseIndex)
+
+    /** [standaloneSets] narrowed to the current exercise. Outside a template
+     * session (Quick strength) every set is one pool, matching F6a exactly.
+     * Mirrors iOS's `standaloneSetsForCurrentExercise`. */
+    val standaloneSetsForCurrentExercise: List<StandaloneSet>
+        get() = if (standaloneTemplate == null) {
+            standaloneSets
+        } else {
+            standaloneSets.filter { it.exerciseIndex == standaloneExerciseIndex }
+        }
+
+    /**
+     * What the *next* standalone set should default to for the current
+     * exercise — the standalone counterpart of the phone-pushed
+     * [nextSetReps]/[nextSetWeight] (48-doc D-F5b.2), which a phone-less
+     * session never receives. Same priority order the phone uses for its own
+     * "+1" prefill (`LogSessionScreen._handleAddSet`,
+     * `StandaloneSessionProcessor._resolveWeights`), so a set logged here and
+     * the row the phone would have produced agree:
+     *
+     * 0. what the phone last pushed for this session, once it has adopted it
+     *    (live bridging) — the *same* `watchSetPrefill` computation a
+     *    phone-started session receives, so both paths behave identically,
+     *    which is the whole point. It wins because the phone sees the real
+     *    history and the real row the set will land in; the watch only
+     *    approximates that from the cached template. Repushed after every set
+     *    the watch logs, so it doesn't lag — but it does freeze if the phone
+     *    goes out of range, which is what the fallbacks below are for;
+     * 1. the positional entry from the synced template's [previousSets] — the
+     *    last workout's *n*-th set of this exercise, for the *n*-th set about
+     *    to be logged now;
+     * 2. otherwise the last set already logged for this exercise in *this*
+     *    session (a run of taps stays at the working weight);
+     * 3. otherwise [STANDALONE_DEFAULT_REPS] and no weight — a Quick strength
+     *    session with no history, i.e. F6a's original behavior.
+     */
+    val standalonePrefill: StandalonePrefill
+        get() {
+            if (nextSetReps != null) {
+                return StandalonePrefill(reps = nextSetReps, weight = nextSetWeight)
+            }
+            val sets = standaloneSetsForCurrentExercise
+            val previousSets = standaloneCurrentExercise?.previousSets ?: emptyList()
+            if (sets.size < previousSets.size) {
+                val hint = previousSets[sets.size]
+                return StandalonePrefill(reps = hint.reps, weight = hint.weight)
+            }
+            val last = sets.lastOrNull()
+            if (last != null) return StandalonePrefill(reps = last.reps, weight = last.weight)
+            return StandalonePrefill(reps = STANDALONE_DEFAULT_REPS, weight = null)
+        }
 }
+
+/** See [SessionMetadata.standalonePrefill]. */
+data class StandalonePrefill(
+    val reps: Int,
+    val weight: Double?,
+)
 
 data class LiveMetrics(
     val heartRateBpm: Double? = null,
@@ -319,14 +433,25 @@ object SessionStateHolder {
         nextSetWeight: Double?,
     ) {
         if (_metadata.value.isStandalone) {
-            // A phone-mastered session's state can't touch the watch's own
-            // standalone session (docs/watch/44-watch-f6-standalone-plan.md
-            // D-F6.2). During standalone, `sessionClientId` here always
-            // holds the watch's own locally generated id, so any state
-            // arriving from the phone necessarily belongs to a *different*
-            // session — [PhoneListenerService]'s `/start` handling is what
-            // turns this into an explicit `sendStartRejected` (it has
+            // A *different* session's state can't touch the watch's own
+            // standalone one (docs/watch/44-watch-f6-standalone-plan.md
+            // D-F6.2) — [PhoneListenerService]'s `/start` handling is what
+            // turns that case into an explicit `sendStartRejected` (it has
             // access to `SummarySender`, this object doesn't).
+            if (sessionClientId != _metadata.value.sessionClientId) return
+            // Matching id = the phone's live mirror of *this* session (live
+            // bridging), pushing state for the workout the watch is running.
+            // Take the prefill and nothing else: those two fields are the
+            // phone answering "what should the next set default to", which
+            // it can answer better than the watch (it holds the full
+            // history) — and taking them here is what finally makes a
+            // watch-started session prefill exactly like a phone-started
+            // one. Everything else stays watch-owned: the exercise/set
+            // counters and the rest timer all describe the session the watch
+            // itself drives, and the phone's copy is at best a sync behind.
+            _metadata.update { current ->
+                current.copy(nextSetReps = nextSetReps, nextSetWeight = nextSetWeight)
+            }
             return
         }
         val restDeadlineElapsedRealtimeMs = restRemainingSeconds?.let {
@@ -375,6 +500,44 @@ object SessionStateHolder {
     }
 
     /**
+     * Reattaches to a still-running standalone exercise after a process
+     * death/reboot (docs/watch/44-watch-f6-standalone-plan.md §3.2, §11/6 —
+     * mirrors iOS's `WorkoutManager.recoverStandaloneSessionIfNeeded()`).
+     * Called by `ExerciseService.recoverStandaloneExercise()` once it has
+     * confirmed (via Health Services' `getCurrentExerciseInfoAsync`) that
+     * *this app's own* exercise is still tracked in progress and re-attached
+     * its update callback — this only restores the state the fresh process
+     * lost, it never touches the exercise session itself.
+     *
+     * Unlike [onStandaloneStarted], every field the running session had
+     * accumulated is restored in one shot — [exerciseIndex] and [sets] don't
+     * default to empty here, since a recovered session is never new. A
+     * no-op outside [SessionPhase.IDLE]: if this process already has a live
+     * view of a session (recovered or otherwise), a second recovery call
+     * must not clobber it.
+     */
+    fun onStandaloneRecovered(
+        sessionClientId: String,
+        startedAtElapsedRealtimeMs: Long,
+        template: StandaloneTemplate?,
+        exerciseIndex: Int,
+        sets: List<StandaloneSet>,
+    ) {
+        if (_phase.value != SessionPhase.IDLE) return
+        _phase.value = SessionPhase.ACTIVE
+        _metadata.update {
+            SessionMetadata(
+                sessionClientId = sessionClientId,
+                isStandalone = true,
+                standaloneTemplate = template,
+                standaloneExerciseIndex = exerciseIndex,
+                standaloneSets = sets,
+            )
+        }
+        _liveMetrics.update { it.copy(startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs) }
+    }
+
+    /**
      * The gyakorlat-lista's tap handler (docs/watch/
      * 49-watch-f6b-template-sync-plan.md §3.5, D-F6b.8) — changes only which
      * exercise the *next* logged set counts against. Never closes a set,
@@ -408,17 +571,23 @@ object SessionStateHolder {
      * 49-watch-f6b-template-sync-plan.md §3.3) when running from a template,
      * the fixed `STANDALONE_REST_SECONDS` default otherwise (44-doc §3.5).
      */
-    fun onStandaloneSetLogged() {
+    fun onStandaloneSetLogged(reps: Int? = null, weight: Double? = null) {
         val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
         _metadata.update { current ->
             val template = current.standaloneTemplate
-            val restSeconds = template?.exercises?.getOrNull(current.standaloneExerciseIndex)
-                ?.restSeconds ?: STANDALONE_REST_SECONDS
+            val restSeconds = current.standaloneCurrentExercise?.restSeconds ?: STANDALONE_REST_SECONDS
+            // A plain tap takes whatever `standalonePrefill` resolved (last
+            // workout's matching set, or this session's working weight)
+            // instead of the bare STANDALONE_DEFAULT_REPS/no-weight it used
+            // to log — that's what made every "+1" set land on the phone as
+            // 0 kg.
+            val prefill = current.standalonePrefill
             current.copy(
                 standaloneSets = current.standaloneSets +
                     StandaloneSet(
                         loggedAtEpochMs = System.currentTimeMillis(),
-                        reps = STANDALONE_DEFAULT_REPS,
+                        reps = reps ?: prefill.reps,
+                        weight = weight ?: prefill.weight,
                         // null outside a template session, matching F6a's
                         // original behavior exactly.
                         exerciseIndex = template?.let { current.standaloneExerciseIndex },
@@ -427,6 +596,12 @@ object SessionStateHolder {
                 restTotalSeconds = restSeconds,
             )
         }
+        // Unlike the phone-mastered path there's no ack to wait for, but the
+        // state still needs to move so ExerciseService's
+        // scheduleLogSetTransition collector fires the confirm haptic/settle
+        // it already does for a phone-acked tap (it reacts to any
+        // LogSetState change, not just ones from the remote path).
+        _logSetState.value = LogSetState.Confirmed
     }
 
     /**
@@ -521,24 +696,29 @@ object SessionStateHolder {
     // ── Log-set adjust (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1) ──
 
     /**
-     * Opens the adjust stepper (revealed by a long-press on the log control
-     * — D-F5b.1). Starts from the phone's prefill for the row a tap would
+     * Opens the adjust stepper ([AdjustCircle]'s dedicated button, next to
+     * the log control — D-F5b.1). Starts from the phone's prefill for the row a tap would
      * log into, falling back to a plain default when there's nothing to go
-     * on (D-F5b.2). Same `Ready` gate the plain tap uses, so a still-pending
+     * on (D-F5b.2) — standalone sessions have no phone prefill, so they
+     * always take the default (`nextSetReps`/`nextSetWeight` are only ever
+     * set by a phone-synced `state` message, which standalone never
+     * receives). Same `Ready` gate the plain tap uses, so a still-pending
      * log can't be adjusted out from under itself.
-     *
-     * Not available in standalone: F6a logs a fixed reps count (D-F6.8) and
-     * binding the stepper there is F6b's job (D-F5b.8).
      */
     fun onLogAdjustOpened() {
         val metadata = _metadata.value
-        if (metadata.isStandalone) return
         if (_phase.value != SessionPhase.ACTIVE) return
         if (_logSetState.value != LogSetState.Ready) return
         if (_logAdjustState.value != null) return
+        // Standalone has no phone prefill to read (nextSetReps/nextSetWeight
+        // only ever arrive via onStateSynced), so it resolves its own from
+        // the synced template's history — see
+        // [SessionMetadata.standalonePrefill]. Before this, the stepper
+        // always opened on 10 reps / 0 kg in standalone.
+        val prefill = if (metadata.isStandalone) metadata.standalonePrefill else null
         _logAdjustState.value = LogAdjustState(
-            reps = metadata.nextSetReps ?: LOG_ADJUST_DEFAULT_REPS,
-            weight = metadata.nextSetWeight ?: LOG_ADJUST_DEFAULT_WEIGHT,
+            reps = prefill?.reps ?: metadata.nextSetReps ?: LOG_ADJUST_DEFAULT_REPS,
+            weight = prefill?.weight ?: metadata.nextSetWeight ?: LOG_ADJUST_DEFAULT_WEIGHT,
             field = LogAdjustField.REPS,
         )
     }
@@ -603,6 +783,23 @@ object SessionStateHolder {
      */
     fun onStandaloneSessionAcked(standaloneSessionId: String) {
         _standaloneSessionAcked.tryEmit(standaloneSessionId)
+    }
+
+    /**
+     * Called by [PhoneListenerService] on an `adoptionAck` (live bridging) —
+     * the phone created (or already had) the live mirror row for
+     * [standaloneSessionId]. Guarded against a stale ack for a
+     * since-ended/since-replaced session, same shape as [onLogSetAck]'s
+     * eventId check.
+     */
+    fun onAdoptionAcked(standaloneSessionId: String) {
+        _metadata.update { current ->
+            if (current.isStandalone && current.standaloneSessionId == standaloneSessionId) {
+                current.copy(isAdopted = true)
+            } else {
+                current
+            }
+        }
     }
 
     /** Back to idle — both once a real exercise's notification is fully torn

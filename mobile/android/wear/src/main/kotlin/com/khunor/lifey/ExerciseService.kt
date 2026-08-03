@@ -23,6 +23,7 @@ import androidx.health.services.client.data.Availability
 import androidx.health.services.client.data.DataType
 import androidx.health.services.client.data.ExerciseConfig
 import androidx.health.services.client.data.ExerciseLapSummary
+import androidx.health.services.client.data.ExerciseTrackedStatus
 import androidx.health.services.client.data.ExerciseType
 import androidx.health.services.client.data.ExerciseUpdate
 import java.util.UUID
@@ -182,12 +183,21 @@ class ExerciseService : Service() {
         // `StandaloneSessionStore` writes. Harmlessly no-ops via
         // [saveStandaloneActiveSnapshot]'s own guards outside standalone
         // mode, including the first (empty-list) emission every flow
-        // collector gets on subscribe.
+        // collector gets on subscribe. Also re-sends the live-bridging
+        // adoption snapshot on the same trigger — a real set-count change,
+        // not the initial empty-list emission every collector gets on
+        // subscribe (that one's already covered by the explicit call right
+        // after `SessionStateHolder.onStandaloneStarted` in
+        // [startStandaloneExercise]) — so an already-adopted phone mirror
+        // stays in sync with every set as it lands, not just at start/end.
         scope.launch {
             SessionStateHolder.metadata
                 .map { it.standaloneSets }
                 .distinctUntilChanged()
-                .collect { saveStandaloneActiveSnapshot() }
+                .collect {
+                    saveStandaloneActiveSnapshot()
+                    SummarySender.sendAdoptionRequestIfNeeded(this@ExerciseService)
+                }
         }
     }
 
@@ -315,6 +325,10 @@ class ExerciseService : Service() {
                 promoteToForeground()
                 scope.launch { endStandaloneExercise(rpe) }
             }
+            ACTION_RECOVER_STANDALONE -> {
+                promoteToForeground()
+                scope.launch { recoverStandaloneExercise() }
+            }
             else -> stopSelf()
         }
         return START_NOT_STICKY
@@ -427,6 +441,12 @@ class ExerciseService : Service() {
             exerciseClient.startExerciseAsync(config).await()
             SessionStateHolder.onStandaloneStarted(sessionClientId, SystemClock.elapsedRealtime(), template)
             saveStandaloneActiveSnapshot()
+            // Live bridging: if a phone is already connected at the exact
+            // moment the session starts, ask it to join in right away. If
+            // not, PhoneListenerService.onPeerConnected retries this the
+            // moment the phone reconnects, so a workout started out of
+            // range still gets adopted as soon as the phone comes back.
+            SummarySender.sendAdoptionRequestIfNeeded(this)
         } catch (e: Exception) {
             // Another app owns the sensors — unlike startExercise, there's
             // no phone waiting on a sessionClientId to reject against here,
@@ -512,6 +532,7 @@ class ExerciseService : Service() {
                                 JSONObject().apply {
                                     put("loggedAtEpochMs", set.loggedAtEpochMs)
                                     put("reps", set.reps)
+                                    putOpt("weight", set.weight)
                                     putOpt("exerciseIndex", set.exerciseIndex)
                                 },
                             )
@@ -565,12 +586,8 @@ class ExerciseService : Service() {
 
     /** Overwrites the live standalone session's recovery snapshot — called
      * on start and after every locally logged set (docs/watch/
-     * 44-watch-f6-standalone-plan.md §3.2). Recovery *itself* (reading this
-     * back after a process death) still isn't implemented on Wear — an
-     * open, accepted platform asymmetry (44-doc §11/6) — so `template`/
-     * `exerciseIndex` are written here purely for consistency with the rest
-     * of this snapshot (which has always written fields nothing reads back
-     * yet), not because T6 adds a reader. */
+     * 44-watch-f6-standalone-plan.md §3.2). Read back by
+     * [recoverStandaloneExercise] after a process death/reboot (§11/6). */
     private fun saveStandaloneActiveSnapshot() {
         val metadata = SessionStateHolder.metadata.value
         val sessionClientId = metadata.sessionClientId ?: return
@@ -592,6 +609,7 @@ class ExerciseService : Service() {
                             JSONObject().apply {
                                 put("loggedAtEpochMs", set.loggedAtEpochMs)
                                 put("reps", set.reps)
+                                putOpt("weight", set.weight)
                                 putOpt("exerciseIndex", set.exerciseIndex)
                             },
                         )
@@ -601,6 +619,88 @@ class ExerciseService : Service() {
         }
         StandaloneSessionStore.saveActive(this, json.toString())
     }
+
+    /**
+     * Reattaches to a still-running standalone exercise after a process
+     * death/reboot (docs/watch/44-watch-f6-standalone-plan.md §3.2, §11/6 —
+     * mirrors iOS's `WorkoutManager.recoverStandaloneSessionIfNeeded()`).
+     * Triggered by [recoverIfNeeded] via a fresh [ACTION_RECOVER_STANDALONE]
+     * intent, once that companion check has already confirmed (via Health
+     * Services' `getCurrentExerciseInfoAsync`) that *this app's own*
+     * exercise is still tracked in progress — this method itself trusts
+     * that and just re-attaches + restores state, it doesn't re-check.
+     *
+     * Deliberately does **not** call `startExerciseAsync` — the exercise is
+     * already running at the Health Services level; only this (fresh)
+     * process's callback registration and in-memory/`SessionStateHolder`
+     * view of it were lost. `heartRateSum`/`heartRateSamples`/
+     * `activeCaloriesTotal` start over at zero here, same as any fresh
+     * instance — the eventual summary's average HR/calories cover the
+     * post-recovery portion of the workout only, an accepted gap (there's
+     * no API to recover Health Services' own running totals).
+     */
+    private suspend fun recoverStandaloneExercise() {
+        val snapshot = StandaloneSessionStore.loadActive(this)
+        if (snapshot == null || SessionStateHolder.phase.value != SessionPhase.IDLE) {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return
+        }
+        val sessionClientId = snapshot.optString("standaloneSessionId").ifEmpty { null }
+        val startedAtEpochMs = if (snapshot.has("startedAtEpochMs")) {
+            snapshot.optLong("startedAtEpochMs")
+        } else {
+            null
+        }
+        if (sessionClientId == null || startedAtEpochMs == null) {
+            // A corrupt/partial snapshot — nothing sane to recover into.
+            StandaloneSessionStore.clearActive(this)
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return
+        }
+        currentSessionClientId = sessionClientId
+        exerciseClient.setUpdateCallback(updateCallback)
+
+        val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
+        val nowEpochMs = System.currentTimeMillis()
+        val startedAtElapsedRealtimeMs = nowElapsedRealtimeMs - (nowEpochMs - startedAtEpochMs)
+        val template = snapshot.optJSONObject("template")?.let { parseStandaloneTemplate(it.toString()) }
+        val exerciseIndex = snapshot.optInt("exerciseIndex", 0)
+        val sets = parseStandaloneSets(snapshot.optJSONArray("sets") ?: JSONArray())
+
+        SessionStateHolder.onStandaloneRecovered(
+            sessionClientId = sessionClientId,
+            startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs,
+            template = template,
+            exerciseIndex = exerciseIndex,
+            sets = sets,
+        )
+        // Live bridging picks back up from here too, same as a fresh start —
+        // a phone that reconnects after this recovery still adopts the
+        // session live rather than only seeing it once it ends.
+        SummarySender.sendAdoptionRequestIfNeeded(this)
+    }
+
+    /** The recovery-snapshot counterpart of [saveStandaloneActiveSnapshot]'s
+     * `sets` array — decodes it back into typed [StandaloneSet]s. Malformed
+     * entries are skipped individually rather than failing the whole list,
+     * since a partially-recovered set history is far better than none. */
+    private fun parseStandaloneSets(array: JSONArray): List<StandaloneSet> =
+        (0 until array.length()).mapNotNull { i ->
+            try {
+                val obj = array.getJSONObject(i)
+                StandaloneSet(
+                    loggedAtEpochMs = obj.getLong("loggedAtEpochMs"),
+                    reps = obj.getInt("reps"),
+                    weight = if (obj.has("weight")) obj.getDouble("weight") else null,
+                    exerciseIndex = if (obj.has("exerciseIndex")) obj.getInt("exerciseIndex") else null,
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "parseStandaloneSets skipped a malformed entry", e)
+                null
+            }
+        }
 
     /**
      * Decodes the picker row's tapped JSON (docs/watch/
@@ -620,11 +720,19 @@ class ExerciseService : Service() {
                 title = obj.getString("title"),
                 exercises = (0 until exercisesArray.length()).map { i ->
                     val exercise = exercisesArray.getJSONObject(i)
+                    val previousArray = exercise.optJSONArray("previousSets") ?: JSONArray()
                     StandaloneTemplateExercise(
                         exerciseId = exercise.getString("exerciseId"),
                         name = exercise.getString("name"),
                         restSeconds = exercise.getInt("restSeconds"),
                         targetSets = if (exercise.has("targetSets")) exercise.getInt("targetSets") else null,
+                        previousSets = (0 until previousArray.length()).map { j ->
+                            val previous = previousArray.getJSONObject(j)
+                            StandalonePreviousSet(
+                                weight = previous.getDouble("weight"),
+                                reps = previous.getInt("reps"),
+                            )
+                        },
                     )
                 },
             )
@@ -650,6 +758,22 @@ class ExerciseService : Service() {
                             put("name", exercise.name)
                             put("restSeconds", exercise.restSeconds)
                             putOpt("targetSets", exercise.targetSets)
+                            // Round-tripped too, or a session recovered after
+                            // process death would lose its prefill and drop
+                            // back to the bare default mid-workout.
+                            put(
+                                "previousSets",
+                                JSONArray().apply {
+                                    exercise.previousSets.forEach { previous ->
+                                        put(
+                                            JSONObject().apply {
+                                                put("weight", previous.weight)
+                                                put("reps", previous.reps)
+                                            },
+                                        )
+                                    }
+                                },
+                            )
                         },
                     )
                 }
@@ -683,6 +807,7 @@ class ExerciseService : Service() {
 
         const val ACTION_START_STANDALONE = "com.khunor.lifey.action.START_STANDALONE_EXERCISE"
         const val ACTION_END_STANDALONE = "com.khunor.lifey.action.END_STANDALONE_EXERCISE"
+        const val ACTION_RECOVER_STANDALONE = "com.khunor.lifey.action.RECOVER_STANDALONE_EXERCISE"
         const val EXTRA_RPE = "rpe"
         const val EXTRA_TEMPLATE_JSON = "templateJson"
 
@@ -744,6 +869,41 @@ class ExerciseService : Service() {
             } catch (e: Exception) {
                 Log.w(TAG, "resumeExercise failed", e)
             }
+        }
+
+        private fun recoverStandaloneIntent(context: Context) =
+            Intent(context, ExerciseService::class.java).apply { action = ACTION_RECOVER_STANDALONE }
+
+        /**
+         * Checked once from `MainActivity.onCreate()` (docs/watch/
+         * 44-watch-f6-standalone-plan.md §3.2, §11/6) — mirrors iOS's
+         * `LifeyWatchApp` calling `recoverStandaloneSessionIfNeeded()` at
+         * launch. A no-op unless **all** of: this process's own
+         * [SessionStateHolder] still thinks nothing is running (a fresh
+         * process after death/reboot, not just a re-opened Activity while
+         * [ExerciseService] is alive and already reflects the real state);
+         * Health Services confirms *this app's own* exercise — not another
+         * app's, not none — is still tracked in progress
+         * (`getCurrentExerciseInfoAsync`, the standard Health Services
+         * pattern for exactly this "app process died mid-exercise" case);
+         * and a recovery snapshot actually exists to recover *into*. Starting
+         * [ExerciseService] with [ACTION_RECOVER_STANDALONE] does the actual
+         * re-attach + state restore ([recoverStandaloneExercise]) — kept
+         * there rather than here so the Health Services client handle used
+         * to re-register the update callback is the same long-lived one the
+         * rest of the session's lifecycle already uses.
+         */
+        suspend fun recoverIfNeeded(context: Context) {
+            if (SessionStateHolder.phase.value != SessionPhase.IDLE) return
+            if (StandaloneSessionStore.loadActive(context) == null) return
+            val info = try {
+                HealthServices.getClient(context).exerciseClient.getCurrentExerciseInfoAsync().await()
+            } catch (e: Exception) {
+                Log.w(TAG, "getCurrentExerciseInfoAsync failed", e)
+                return
+            }
+            if (info.exerciseTrackedStatus != ExerciseTrackedStatus.OWNED_EXERCISE_IN_PROGRESS) return
+            ContextCompat.startForegroundService(context, recoverStandaloneIntent(context))
         }
     }
 }

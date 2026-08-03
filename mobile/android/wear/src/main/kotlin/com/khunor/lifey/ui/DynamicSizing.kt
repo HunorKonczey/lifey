@@ -21,6 +21,14 @@ internal const val SCREEN_PADDING_FRACTION = 0.08f
  * iOS's `DynamicSizing.logCircleDiameterFraction`. */
 internal const val LOG_CIRCLE_DIAMETER_FRACTION = 236f / 452f
 
+/** The log page's two side-by-side buttons ("+1" and the adjust stepper
+ * launcher), each as a fraction of screen width — sized so a pair fits
+ * within the page's own horizontal padding with a comfortable gap, while
+ * staying well above the 48dp minimum tap target (170dp on the 452dp
+ * reference screen ⇒ ~75dp even on the compact size class). Mirrors iOS's
+ * `DynamicSizing.logButtonPairDiameterFraction`. */
+internal const val LOG_BUTTON_PAIR_DIAMETER_FRACTION = 170f / 452f
+
 /** Below this, treat the display as the compact (~1.2"/41 mm) size class. */
 internal val COMPACT_SCREEN_WIDTH: Dp = 200.dp
 

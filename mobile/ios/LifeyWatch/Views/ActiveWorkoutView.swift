@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 /// Below this many seconds remaining, the rest ring switches to
 /// `LifeyColors.negative` (docs/40-watch-app-plan.md §12.1 B1, mirrors
@@ -266,17 +267,21 @@ private struct ExerciseCard: View {
 }
 
 /// The leftmost `TabView` page (docs/watch/
-/// 43-watch-f5-set-logging-plan.md §3.1 decision (b), canvas AW 08/09/11): a
-/// single large circular "+1 SET" control that fills nearly the whole safe
-/// area — a dedicated page turns the entire tap target into one ~5×-minimum
-/// circle, with zero mis-tap risk near End/Pause (that's why `MetricsPage`
-/// stays deliberately button-free, §12.1 B4/B6 heritage). `WorkoutManager
+/// 43-watch-f5-set-logging-plan.md §3.1 decision (b), canvas AW 08/09/11):
+/// two same-sized circular controls side by side — "+1" on the left, the
+/// adjust stepper's launcher on the right (replaces the original single
+/// big circle + long-press-to-adjust design: the long press went
+/// undiscovered in practice, so a plain-tap-reachable second button
+/// replaces it entirely — no more `LongPressGesture`). `WorkoutManager
 /// .logSetState` (docs/watch/43-watch-f5-set-logging-plan.md §3.2) drives
-/// four visuals — `.ready` (primary ring + context line), `.pending`
-/// (ghosted + "Logging…"), `.confirmed` (check + "Set n of total" + "Logged"
-/// pill), `.failed` (ghosted + red toast) — plus a fifth, independent
-/// ghosted state when `WorkoutManager.isPhoneReachable` is false: a tap
-/// can't even start a `.pending` round-trip with no phone to answer it.
+/// the "+1" circle's four visuals — `.ready` (primary ring + context line),
+/// `.pending` (ghosted + "Logging…"), `.confirmed` (check + "Set n of
+/// total" + "Logged" pill), `.failed` (ghosted + red toast) — plus a
+/// fifth, independent ghosted state when `WorkoutManager.isPhoneReachable`
+/// is false: a tap can't even start a `.pending` round-trip with no phone
+/// to answer it. The adjust button shares the same `.ready`-only enabled
+/// gate (`canAdjust`), since it starts the same `logSetState` round trip
+/// once confirmed.
 private struct LogPage: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
@@ -292,7 +297,7 @@ private struct LogPage: View {
   @State private var lastTapAt: Date?
   private let tapDebounceSeconds: TimeInterval = 0.3
 
-  private var circleDiameter: CGFloat { screenWidth * DynamicSizing.logCircleDiameterFraction }
+  private var buttonDiameter: CGFloat { screenWidth * DynamicSizing.logButtonPairDiameterFraction }
   /// Standalone logging is local — there is no phone to reach, and gating on
   /// reachability would disable the control in exactly the situation F6a
   /// exists for (docs/watch/44-watch-f6-standalone-plan.md §11/8). Only the
@@ -302,12 +307,10 @@ private struct LogPage: View {
   private var canTap: Bool {
     workoutManager.logSetState == .ready && (workoutManager.isPhoneReachable || !requiresPhone)
   }
-  /// The adjust stepper is a phone-mastered-only path in F5b — standalone
-  /// still logs a fixed reps count (D-F6.8), and binding the stepper there
-  /// is F6b's job (D-F5b.8). `WorkoutManager.beginLogAdjust()` guards this
-  /// too; mirrored here so the `tune` hint glyph isn't advertised when the
-  /// gesture would do nothing.
-  private var canAdjust: Bool { canTap && !workoutManager.isStandalone }
+  /// The adjust stepper is available in standalone too (its values just log
+  /// locally like a plain tap does, via `WorkoutManager.beginLocalLogSet`) —
+  /// gated on `canTap` alone, same as the plain tap itself.
+  private var canAdjust: Bool { canTap }
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -315,28 +318,20 @@ private struct LogPage: View {
         HStack {
           HeaderChip(
             icon: "dumbbell", label: elapsedText(now: context.date), isCompact: isCompact,
-            isStandalone: workoutManager.isStandalone)
+            isStandalone: workoutManager.showsStandaloneBadge)
           Spacer()
         }
         Spacer(minLength: 0)
-        // Not a `Button`: a Button's action fires *alongside* an attached
-        // long-press, so opening the adjust view would also log a set with
-        // the old values. `ExclusiveGesture` with the long press first makes
-        // the long press win outright (docs/watch/48-watch-f5b-set-adjust-plan.md
-        // D-F5b.1's implementation trap).
-        circleContent
-          .contentShape(Circle())
-          .gesture(
-            ExclusiveGesture(
-              LongPressGesture(minimumDuration: 0.5).onEnded { _ in handleLongPress() },
-              TapGesture().onEnded { handleTap() }
-            )
-          )
-          .accessibilityLabel(Text("log_set_button_a11y"))
-          // VoiceOver can't perform a long press, so the adjust path is
-          // exposed as a named custom action instead of hiding behind the
-          // gesture.
-          .accessibilityAction(named: Text("log_adjust_open_a11y")) { handleLongPress() }
+        HStack(spacing: isCompact ? 10 : 14) {
+          circleContent
+            .contentShape(Circle())
+            .onTapGesture { handleTap() }
+            .accessibilityLabel(Text("log_set_button_a11y"))
+          adjustButtonContent
+            .contentShape(Circle())
+            .onTapGesture { handleAdjustTap() }
+            .accessibilityLabel(Text("log_adjust_open_a11y"))
+        }
         belowCircleContent
         Spacer(minLength: 0)
       }
@@ -353,7 +348,7 @@ private struct LogPage: View {
     workoutManager.logSet()
   }
 
-  private func handleLongPress() {
+  private func handleAdjustTap() {
     guard canAdjust else { return }
     workoutManager.beginLogAdjust()
   }
@@ -363,10 +358,11 @@ private struct LogPage: View {
     return formatSeconds(Int(max(0, now.timeIntervalSince(startedAt))))
   }
 
-  private var checkmarkFont: Font { isCompact ? .system(size: 40, weight: .bold) : .system(size: 48, weight: .bold) }
-  /// The "+1 set" wordmark's font — same visual weight as `RestHeroView`'s
-  /// countdown number, this page's closest equivalent focal point.
-  private var logSetButtonFont: Font { isCompact ? .system(.title2, design: .rounded) : .system(.largeTitle, design: .rounded) }
+  private var checkmarkFont: Font { isCompact ? .system(size: 24, weight: .bold) : .system(size: 28, weight: .bold) }
+  /// The "+1 set" wordmark's font — sized for the smaller of the two
+  /// side-by-side buttons (was the page's single hero circle before the
+  /// two-button redesign).
+  private var logSetButtonFont: Font { isCompact ? .system(.callout, design: .rounded) : .system(.title3, design: .rounded) }
 
   @ViewBuilder
   private var circleContent: some View {
@@ -376,7 +372,7 @@ private struct LogPage: View {
         Circle()
           .fill(LifeyColors.primary.opacity(0.18))
           .overlay(Circle().strokeBorder(LifeyColors.primary, lineWidth: 3))
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
           Image(systemName: "checkmark")
             .font(checkmarkFont)
             .foregroundColor(LifeyColors.primary)
@@ -390,20 +386,24 @@ private struct LogPage: View {
                 format: String(localized: "active_sets_free_format"),
                 freeFormatSets.count, freeFormatSets.totalReps)
             )
-            .font(isCompact ? .body : .title3)
+            .font(isCompact ? .caption2 : .caption)
             .fontWeight(.bold)
             .foregroundColor(LifeyColors.onSurface)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
           } else if let setsDone = workoutManager.activeExerciseDisplay.setsDone,
             let setsTotal = workoutManager.activeExerciseDisplay.setsTotal
           {
             Text(String(format: String(localized: "active_sets_format"), setsDone, setsTotal))
-              .font(isCompact ? .body : .title3)
+              .font(isCompact ? .caption2 : .caption)
               .fontWeight(.bold)
               .foregroundColor(LifeyColors.onSurface)
+              .lineLimit(1)
+              .minimumScaleFactor(0.7)
           }
         }
       }
-      .frame(width: circleDiameter, height: circleDiameter)
+      .frame(width: buttonDiameter, height: buttonDiameter)
     case .pending, .failed:
       ghostedCircle
     case .ready where requiresPhone && !workoutManager.isPhoneReachable:
@@ -413,21 +413,9 @@ private struct LogPage: View {
         Circle()
           .fill(LifeyColors.container)
           .overlay(Circle().strokeBorder(LifeyColors.primary.opacity(0.55), lineWidth: 3))
-        VStack(spacing: 6) {
-          logSetButtonLabel(color: LifeyColors.primary)
-          if canAdjust {
-            // The long-press affordance (D-F5b.1): a small, non-interactive
-            // hint in the same secondary brown the adjust view uses for its
-            // own header, so the two read as one side path. It costs no tap
-            // area — the whole circle stays the target.
-            Image(systemName: "slider.horizontal.3")
-              .font(.system(size: isCompact ? 12 : 14, weight: .semibold))
-              .foregroundColor(LifeyColors.secondary)
-              .accessibilityHidden(true)
-          }
-        }
+        logSetButtonLabel(color: LifeyColors.primary)
       }
-      .frame(width: circleDiameter, height: circleDiameter)
+      .frame(width: buttonDiameter, height: buttonDiameter)
     }
   }
 
@@ -439,7 +427,35 @@ private struct LogPage: View {
       logSetButtonLabel(color: LifeyColors.ghostedOnSurface)
     }
     .opacity(0.75)
-    .frame(width: circleDiameter, height: circleDiameter)
+    .frame(width: buttonDiameter, height: buttonDiameter)
+  }
+
+  /// The right-hand button that opens the adjust stepper (`AdjustPage`) —
+  /// same enabled/ghosted split as `circleContent`'s `.ready`/ghosted cases,
+  /// tinted `secondary` (brown) to read as the side path, matching
+  /// `AdjustPage`'s own header tint.
+  private var adjustButtonContent: some View {
+    ZStack {
+      Circle()
+        .fill(LifeyColors.container)
+        .overlay(
+          Circle().strokeBorder(
+            (canAdjust ? LifeyColors.secondary : LifeyColors.outline).opacity(canAdjust ? 0.55 : 1),
+            lineWidth: 3)
+        )
+      VStack(spacing: 4) {
+        Image(systemName: "slider.horizontal.3")
+          .font(.system(size: isCompact ? 20 : 24, weight: .semibold))
+        Text(String(localized: "log_adjust_title"))
+          .font(isCompact ? .caption2 : .caption)
+          .fontWeight(.bold)
+          .lineLimit(1)
+          .minimumScaleFactor(0.7)
+      }
+      .foregroundColor(canAdjust ? LifeyColors.secondary : LifeyColors.ghostedOnSurface)
+    }
+    .frame(width: buttonDiameter, height: buttonDiameter)
+    .opacity(canAdjust ? 1 : 0.75)
   }
 
   /// `log_set_button` ("+1 set" / "+1 szett", §3.4) as a single localized
@@ -534,7 +550,8 @@ private struct LogPage: View {
 /// rest time, exercise/set counter, heart rate and calories — no controls
 /// here, those live on `ControlsPage`.
 /// The adjust stepper (canvas AW 10, docs/watch/48-watch-f5b-set-adjust-plan.md
-/// §3.3) — reached by long-pressing the log control, never by the one-tap
+/// §3.3) — reached by tapping the dedicated adjust button next to the log
+/// control (`LogPage`'s `adjustButtonContent`), never by the one-tap "+1"
 /// flow. Replaces the pager while it's up (see `ActiveWorkoutView.body`), so
 /// the digital crown drives the value here instead of paging. Everything is
 /// tinted `LifeyColors.secondary` (brown) to mark it as the side path, and
@@ -572,13 +589,36 @@ private struct AdjustPage: View {
         fieldSegment(.reps, label: String(localized: "log_adjust_reps"))
         fieldSegment(.weight, label: String(localized: "log_adjust_weight"))
       }
-      Text(bigValueText)
-        .font(bigValueFont)
-        .fontWeight(.heavy)
-        .foregroundColor(LifeyColors.onSurface)
-        .monospacedDigit()
-        .lineLimit(1)
-        .minimumScaleFactor(0.6)
+      // −  value  + (docs/watch/48-watch-f5b-set-adjust-plan.md §3.3
+      // follow-up): the crown alone left the stepper undiscoverable by touch,
+      // so both buttons sit permanently either side of the number, one step
+      // per tap through the same `stepLogAdjust(by:)` the crown drives — so
+      // clamping and the idle-timer reset come along unchanged. The number
+      // takes the remaining width rather than hugging the buttons, so the two
+      // tap targets stay put instead of shifting as its digit count changes.
+      HStack(spacing: isCompact ? 6 : 10) {
+        stepButton(
+          systemName: "minus", steps: -1, enabled: state.canDecrement,
+          a11yLabel: String(localized: "log_adjust_decrement_a11y"))
+        Text(bigValueText)
+          .font(bigValueFont)
+          .fontWeight(.heavy)
+          .foregroundColor(LifeyColors.onSurface)
+          .monospacedDigit()
+          .lineLimit(1)
+          .minimumScaleFactor(0.5)
+          .frame(maxWidth: .infinity)
+        stepButton(
+          systemName: "plus", steps: 1, enabled: state.canIncrement,
+          a11yLabel: String(localized: "log_adjust_increment_a11y"))
+      }
+      // The one row that reaches back into the screen padding (~60% of it, on
+      // both sides): it sits at the vertical center of the dial, where the
+      // round screen is at its widest and that safety margin isn't earning
+      // anything — and with the buttons fixed-size, every point reclaimed
+      // goes to the number between them. Mirrors Android's
+      // `ADJUST_ROW_WIDTH_FRACTION`.
+      .padding(.horizontal, -padding * 0.6)
       Text(captionText)
         .font(isCompact ? .caption2 : .caption)
         .foregroundColor(LifeyColors.onSurfaceVariant)
@@ -604,14 +644,61 @@ private struct AdjustPage: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .focusable(true)
     .focused($isCrownFocused)
+    // `.high`, not `.low` — this is a discrete 1-detent-per-step control, so
+    // it needs the crown's most direct 1:1 mapping. `.low` required several
+    // physical detents to accumulate a whole `crownValue` unit, and since
+    // that accumulation isn't perfectly linear, the number of detents needed
+    // per step varied — the exact "one scroll should be one jump, but isn't
+    // consistent" symptom reported in practice.
     .digitalCrownRotation(
       $crownValue, from: -1000, through: 1000, by: 1,
-      sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+      sensitivity: .high, isContinuous: false, isHapticFeedbackEnabled: true)
     .onChange(of: crownValue) { oldValue, newValue in
       let steps = Int((newValue - oldValue).rounded())
-      if steps != 0 { workoutManager.stepLogAdjust(by: steps) }
+      if steps != 0 {
+        workoutManager.stepLogAdjust(by: steps)
+      } else {
+        // A sub-unit crown movement that didn't round to a whole step still
+        // counts as activity — resets the idle-dismiss timer on its own so
+        // the screen can't disappear mid-turn just because no individual
+        // delta happened to cross a rounding boundary.
+        workoutManager.noteLogAdjustActivity()
+      }
     }
     .onAppear { isCrownFocused = true }
+  }
+
+  /// One of the stepper's two −/+ buttons. A tap gesture on a shaped `ZStack`
+  /// rather than a `Button` — matching `LogPage`'s own circles — because this
+  /// page holds the crown focus (`isCrownFocused`) and a focusable `Button`
+  /// inside it would compete for that focus. Ghosted (not hidden) once the
+  /// active field sits at the end of its range, so the row keeps its shape at
+  /// a bound. `.click` replaces the haptic the crown gets for free from
+  /// `isHapticFeedbackEnabled`, mirroring Android's per-step tick.
+  private func stepButton(systemName: String, steps: Int, enabled: Bool, a11yLabel: String)
+    -> some View
+  {
+    let diameter: CGFloat = isCompact ? 40 : 48
+    return ZStack {
+      Circle()
+        .fill(LifeyColors.container)
+        .overlay(
+          Circle().strokeBorder(
+            enabled ? LifeyColors.secondary.opacity(0.55) : LifeyColors.outline, lineWidth: 2)
+        )
+      Image(systemName: systemName)
+        .font(.system(size: isCompact ? 18 : 22, weight: .bold))
+        .foregroundColor(enabled ? LifeyColors.secondary : LifeyColors.ghostedOnSurface)
+    }
+    .frame(width: diameter, height: diameter)
+    .opacity(enabled ? 1 : 0.5)
+    .contentShape(Circle())
+    .onTapGesture {
+      guard enabled else { return }
+      WKInterfaceDevice.current().play(.click)
+      workoutManager.stepLogAdjust(by: steps)
+    }
+    .accessibilityLabel(Text(a11yLabel))
   }
 
   private func fieldSegment(_ field: LogAdjustField, label: String) -> some View {
@@ -686,8 +773,8 @@ private struct MetricsPage: View {
           // the middle.
           VStack(alignment: .leading, spacing: isCompact ? 4 : 6) {
             HeaderChip(
-              icon: "dumbbell", label: String(localized: "active_header_label"), isCompact: isCompact,
-              isStandalone: workoutManager.isStandalone)
+              icon: "dumbbell", label: workoutManager.activeHeaderLabel, isCompact: isCompact,
+              isStandalone: workoutManager.showsStandaloneBadge)
             Text(elapsedText(now: context.date))
               .font(heroFont)
               .fontWeight(.bold)
@@ -767,7 +854,7 @@ private struct ControlsPage: View {
         HStack {
           HeaderChip(
             icon: "dumbbell", label: elapsedText(now: context.date), isCompact: isCompact,
-            isStandalone: workoutManager.isStandalone)
+            isStandalone: workoutManager.showsStandaloneBadge)
           Spacer()
         }
         Spacer()
@@ -1009,7 +1096,7 @@ private struct RestHeroView: View {
     VStack(spacing: 4) {
       HeaderChip(
         icon: "timer", label: String(localized: "rest_hero_label"), isCompact: isCompact,
-        isStandalone: workoutManager.isStandalone)
+        isStandalone: workoutManager.showsStandaloneBadge)
       GeometryReader { barGeometry in
         ZStack(alignment: .leading) {
           RoundedRectangle(cornerRadius: LifeyShapes.cardLarge)

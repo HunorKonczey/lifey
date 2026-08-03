@@ -113,6 +113,10 @@
                     android:scheme="wear"
                     android:host="*"
                     android:path="/lifey/watch/standaloneSessionCompleted" />
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:path="/lifey/watch/standaloneSessionAdopted" />
             </intent-filter>
         </service>
         <receiver android:exported="false"

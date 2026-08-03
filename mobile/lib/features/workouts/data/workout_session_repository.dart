@@ -232,6 +232,21 @@ class WorkoutSessionRepository {
     return row != null;
   }
 
+  /// Null if no session with this [clientId] exists yet; otherwise whether it
+  /// already has a [WorkoutSession.finishedAt] — the three-way check the
+  /// standalone-session processor needs to tell "doesn't exist yet (create)"
+  /// apart from "exists but still running (was adopted mid-workout, now
+  /// needs finishing)" and "exists and already finished (dedup, no-op)"
+  /// (docs/watch/44-watch-f6-standalone-plan.md §4.2, extended for live
+  /// adoption).
+  Future<bool?> isFinishedByClientId(String clientId) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.clientId.equals(clientId)))
+        .getSingleOrNull();
+    if (row == null) return null;
+    return row.finishedAt != null;
+  }
+
   /// The enrichment fields ([activeCalories], [averageHeartRate],
   /// [healthWorkoutId], [rpe], [feedbackNote]) use [Value] so "not my field"
   /// and "clear this field" stay distinct: an absent field keeps whatever the

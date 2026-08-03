@@ -70,6 +70,8 @@
     <string name="log_adjust_caption_reps">reps · %1$s kg</string>
     <string name="log_adjust_caption_weight">kg · %1$d reps</string>
     <string name="log_adjust_open_a11y">Adjust reps and weight</string>
+    <string name="log_adjust_decrement_a11y">Decrease</string>
+    <string name="log_adjust_increment_a11y">Increase</string>
 
     <!-- F6b exercise list (docs/watch/49-watch-f6b-template-sync-plan.md §3.5, §7) -->
     <string name="standalone_exercise_list_title">Exercises</string>

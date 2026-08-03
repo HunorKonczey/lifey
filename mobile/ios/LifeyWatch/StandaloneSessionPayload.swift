@@ -2,14 +2,15 @@ import Foundation
 
 /// One set logged during a standalone (phone-less) session — part of the
 /// batch a `StandaloneSessionPayload` carries at the end
-/// (docs/watch/44-watch-f6-standalone-plan.md §4.1). `reps` is always
-/// `standaloneDefaultReps` (10) in F6a — the watch has no reps input yet
-/// (D-F6.8) — but carried per-set already so a future watch-side stepper
-/// (F5b/F6b) won't need a protocol change. `exerciseIndex` is nil in F6a (no
-/// plan); F6b resolves it against the synced template's exercise list.
+/// (docs/watch/44-watch-f6-standalone-plan.md §4.1). `reps`/`weight` default
+/// to `standaloneDefaultReps`/`nil` unless the F5b adjust stepper was used
+/// (now wired up for standalone too — `WorkoutManager.beginLocalLogSet()`).
+/// `exerciseIndex` is nil outside a template session; F6b resolves it
+/// against the synced template's exercise list.
 struct StandaloneSet: Codable, Equatable {
   let loggedAtEpochMs: Int64
   let reps: Int
+  let weight: Double?
   let exerciseIndex: Int?
 }
 
@@ -32,6 +33,25 @@ struct StandaloneSessionPayload: Codable, Equatable {
   let activeCalories: Double?
   let averageHeartRate: Double?
   let healthWorkoutId: String?
+}
+
+/// The live-bridging counterpart of `StandaloneSessionPayload` — a snapshot
+/// of a watch-started session that is still *running*, sent as soon as the
+/// phone is (or becomes) reachable so it can mirror the workout live instead
+/// of only importing it once it ends (`WorkoutManager
+/// .sendAdoptionRequestIfNeeded()`). No `endedAtEpochMs`/`rpe`/
+/// `healthWorkoutId` — the workout isn't over. `standaloneSessionId` is the
+/// same id the eventual `StandaloneSessionPayload` will carry when it
+/// finishes, which is what lets the phone's processor recognize "this
+/// session already has a running row, finish it" instead of creating a
+/// duplicate.
+struct StandaloneAdoptionPayload: Codable, Equatable {
+  let standaloneSessionId: String
+  let templateId: String?
+  let startedAtEpochMs: Int64
+  let sets: [StandaloneSet]
+  let activeCalories: Double?
+  let averageHeartRate: Double?
 }
 
 /// The in-progress standalone session's own metadata, kept up to date on
@@ -68,6 +88,21 @@ struct CachedTemplateExercise: Codable, Equatable {
   let name: String
   let restSeconds: Int
   let targetSets: Int?
+  /// What was logged for this exercise the last time it was trained,
+  /// heaviest first, as the phone resolved it (`previousSetsFor` in
+  /// `watch_template_sync.dart`) — a standalone session's stand-in for the
+  /// `nextSetReps`/`nextSetWeight` prefill a phone-mastered session receives
+  /// on every state sync (48-doc D-F5b.2). Without it the watch could only
+  /// open its stepper on a hardcoded 10 reps / no weight. Optional rather
+  /// than a defaulted array so a cache written by an older build (no such
+  /// key) still decodes instead of throwing the whole template list away.
+  let previousSets: [CachedPreviousSet]?
+}
+
+/// One set of [CachedTemplateExercise.previousSets].
+struct CachedPreviousSet: Codable, Equatable {
+  let weight: Double
+  let reps: Int
 }
 
 /// A template as cached on the watch for the standalone picker

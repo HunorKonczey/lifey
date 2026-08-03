@@ -16,6 +16,13 @@ enum DynamicSizing {
   /// §12.1 B4.
   static let logCircleDiameterFraction: CGFloat = 244.0 / 396.0
 
+  /// The log page's two side-by-side buttons ("+1" and the adjust stepper
+  /// launcher), each as a fraction of screen width — sized so a pair fits
+  /// within the page's own horizontal padding with a comfortable gap, while
+  /// staying well above the 48pt minimum tap target (150pt on the 396pt
+  /// reference screen ⇒ ~66pt even on the compact size class).
+  static let logButtonPairDiameterFraction: CGFloat = 150.0 / 396.0
+
   /// Below this, treat the display as the compact (~40/41mm, ~162–176pt
   /// wide) size class rather than regular (~45/49mm, ~198–205pt wide).
   static let compactScreenWidth: CGFloat = 190

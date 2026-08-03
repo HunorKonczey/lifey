@@ -192,7 +192,8 @@ Változatlanul az F5a §3.3 szabályai: csak `ACTIVE` fázisban; pause és rest 
 
 - **Fejléc**: `tune` ikon + `log_adjust_title`, `LifeyColors.secondary` (barna) — a „mellékút” jelölése (0.1).
 - **Szegmens-pár**: `log_adjust_reps` / `log_adjust_weight`, az aktív kitöltött háttérrel.
-- **Nagy szám**: az aktív mező értéke, tabuláris számokkal.
+- **Nagy szám**: az aktív mező értéke, tabuláris számokkal, **egy `−` és egy `+` körgombbal a két oldalán** (utólagos döntés, lásd alább).
+- **`−` / `+` gombok** (utólagos döntés, a crown/rotary **mellé**, nem helyette): a stepper eredetileg kizárólag koronával/rotaryval volt állítható, ami tapintással felfedezhetetlen maradt. A két gomb fixen a szám bal és jobb oldalán ül, tapanként **egy lépés**, ugyanazon a `stepLogAdjust(by:)` / `onLogAdjustStepped(steps)` úton, mint a korona — így a clamp, a tétlenség-timer újraindítása és a tick-haptika változatlanul jár hozzá. A gomb **kiszürkül** (nem tűnik el), ha az aktív mező a saját tartománya végén áll (`LogAdjustState.canDecrement/canIncrement`), így a sor nem rendeződik át egy határon. A szám a köztük maradó **teljes szélességet** megkapja, hogy a két találati felület sose mozduljon el a számjegyek számának változásától — cserébe ez az egy sor ~60%-ban belóg a képernyő-padding zónába (a tárcsa függőleges közepén, ahol a kerek kijelző a legszélesebb).
 - **Caption**: a nagy szám **mértékegysége + a másik érték**, kis szedéssel. A design „12” fölé „reps · 60 kg”-ot ír (0.4), tehát a szerkezet aszimmetrikus: reps-módban `log_adjust_caption_reps` („reps · 60 kg”), súly-módban `log_adjust_caption_weight` („kg · 12 reps”) — ezért két kulcs, nem egy (§11/2).
 - **Primary gomb**: `log_adjust_confirm` a **reps** értékével paraméterezve („Log 12 reps”) — a design szerint akkor is, ha épp a súlyt szerkeszti.
 
@@ -247,6 +248,8 @@ A canvas „F5/F6 string keys” táblája a mérvadó. Androidon `values/string
 | `log_adjust_caption_reps` | `reps · %1$s kg` | `ism. · %1$s kg` | **eldöntve (§11/2)** — a caption, amikor a **reps** az aktív mező |
 | `log_adjust_caption_weight` | `kg · %1$d reps` | `kg · %1$d ism.` | **eldöntve (§11/2)** — a caption, amikor a **súly** az aktív |
 | `log_adjust_open_a11y` | `Adjust reps and weight` | `Ismétlés és súly módosítása` | **eldöntve** — a long-press akció accessibility-címkéje |
+| `log_adjust_decrement_a11y` | `Decrease` | `Csökkentés` | utólag — a `−` gomb accessibility-címkéje (§3.3) |
+| `log_adjust_increment_a11y` | `Increase` | `Növelés` | utólag — a `+` gomb accessibility-címkéje (§3.3) |
 
 > ⚠️ **String-paraméter platform-különbség** (a `log_adjust_caption_reps` érinti): a súly **előre formázott stringként** megy be, és a formátum-jelölő **platformonként más** — Androidon `%1$s`, iOS-en `%1$@`. A táblázat az Android-alakot mutatja. Ez nem új szabály: a meglévő `rest_hero_next_with_sets_format` és az F5a `log_set_context_format` is pontosan így van (iOS `%1$@`, Android `%1$s`). Az `%1$d` (int) viszont **mindkét platformon azonos**, tehát a `log_adjust_confirm` és a `log_adjust_caption_weight` sora betű szerint egyezik.
 

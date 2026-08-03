@@ -1,6 +1,6 @@
 # 44 – F6 terv: Standalone edzésindítás a watchról
 
-Státusz: **F6a KÉSZ, 2026-07-26** — mindkét platform kódja lezárva (S1–S17), a kézi végpróbák (S12 iOS, S18 Android) is lefutottak, és a §11/8 F6a-hiba (log-kontroll standalone-ban a telefon elérhetőségére kapuzva) javítva. Nyitva marad, apró finomítási pontként: a Wear-oldali standalone recovery hiánya (§11/6).
+Státusz: **F6a KÉSZ, 2026-07-26** — mindkét platform kódja lezárva (S1–S17), a kézi végpróbák (S12 iOS, S18 Android) is lefutottak, a §11/8 F6a-hiba (log-kontroll standalone-ban a telefon elérhetőségére kapuzva) javítva, és a §11/6 platform-aszimmetria (Wear-oldali standalone recovery hiánya) pótolva. Élő teszt a recovery-re (folyamat kilövése + újranyitás) még nem futott.
 
 **Lépések:** S1–S5 közös Dart-előfeltétel; S6 iOS/telefon fogadás+ack; S7 watchOS pending-tár+payload-modell; S8 `PhoneConnector` küldés/retry/ack; S9 `WorkoutManager` standalone módja + D-F6.2 guardok; S10 launcher+picker UI; S11 aktív képernyő deltái + `SummaryView` 4. csempéje és élő sync-chipje; S12 teljes kézi végpróba fizikai eszközön (**user visszaigazolta**); S13 Android/telefon fogadás + puffer + ack; S14 Wear `StandaloneSessionStore` + `SummarySender` küldés/retry + `PhoneListenerService` ack-fogadás; S15 `SessionStateHolder` standalone állapotgép (`SUMMARY` fázis, `StandaloneSummary`) + `ExerciseService` start/end akciók; S16 Wear launcher (`IdleScreen` → `CompactChip`) + `StandalonePickerScreen` + `MainActivity` bekötés; S17 `ActiveWorkoutScreen` standalone deltái + új `SummaryScreen`. A teljes F6a láncolat (start → log → end → summary) **UI-ból végigmegy mindkét platformon**.
 
@@ -112,13 +112,15 @@ A design AW 15 / W 14 mindkét platformon summary-t rajzol. Mai kód:
 - **Wear**: a `SessionPhase` ma `IDLE | ACTIVE | ERROR`, az `ExerciseService.endExercise()` a végén `SessionStateHolder.reset()`-tel egyenesen IDLE-be esik — **nincs summary-képernyő**. Az F6a-hoz fel kell venni a `SUMMARY` fázist + `SummaryScreen`-t (auto-dismiss ~6 s, az iOS `summaryAutoDismissSeconds` értékével). Ez az F6a Wear-ágának legnagyobb, nem nyilvánvaló tétele — a 42-es doc D1.3/A5 „a Wear ENDING/SUMMARY pár nincs megtervezve” megjegyzése itt évül el.
 - ENDING fázis standalone-ban egyik platformon **sincs** — nincs kire várni, az End megerősítés után egyből zárás + summary.
 
-### D-F6.8 — Reps a standalone szettekben: fix default 10 (nem 0) — **eldöntve 2026-07-25**
+### D-F6.8 — Reps a standalone szettekben: fix default 10 (nem 0) — **eldöntve 2026-07-25, eszközön megerősítve 2026-07-26**
 
 A design „Set 4 · 32 reps total” sora reps-et feltételez, a backend pedig **eldobja** a `reps <= 0` szetteket (`WorkoutSessionServiceImpl.replaceSets` / `isComplete`: `reps != null && reps > 0 && weight != null && weight >= 0`). A `reps = 0` tehát lokálisan látszó, de a szerver-körút után eltűnő szetteket eredményezne — ez kizárt út.
 
 **A döntés:** minden lokálisan logolt szett **fix `standaloneDefaultReps = 10`** ismétléssel és `weight = 0` súllyal jön létre; a user a telefonon pontosít. Az alternatíva (a watch lokális crown/rotary stepperrel kéri be a reps-et, az F5b design AW 10 / W 09 kontrollja) azért nem az F6a útja, mert a lapozó crown/rotary-val ütközik (43-as doc §12, feloldatlan).
 
 A konstans **egy helyen** éljen platformonként (`WorkoutManager.swift`, ill. `SessionStateHolder.kt`), hogy az F5b bekötésekor egyetlen hívási pont cserélődjön. A protokoll **szettenként visz `reps` mezőt már most** (§4.1), hogy a stepper bevezetése ne bontson protokollt. A `weight = 0` mellékhatása: a generikus gyakorlat PR-baseline-ja 0 kg-os szetteket is lát — mivel a baseline maximumot néz (`PrBaseline.fromSets`), ez nem torzít, és csak erre az egy gyakorlatra vonatkozik.
+
+**Eszközös visszaigazolás (2026-07-26):** a 10-es default a gyakorlatban jónak bizonyult, marad változtatás nélkül.
 
 ### D-F6.9 — Wear átvitel: üzenet + lokális pending-tár, nem DataItem
 
@@ -327,8 +329,11 @@ Az `idle_subtitle` kulcs a launcher bevezetése után feleslegessé válik a wat
 **Nyitott (F6b-ig nem blokkol):**
 
 5. **Template-lista mérete/frissítése** (§4.3): elég-e az 5 legutóbbi terv és a két push-pont? A Data Layer üzenet-limit ~100 KB — bőven belefér, de a serializáláskor mérjük meg.
-6. **Wear-oldali standalone recovery** (S15, 2026-07-26 felfedezve; **2026-07-26 újraellenőrizve — továbbra is fennáll**): az iOS-ágon az S9 explicit `recoverStandaloneSessionIfNeeded()`-t épített (`HKHealthStore.recoverActiveWorkoutSession` + a mentett aktív-snapshot visszaolvasása), amit a `LifeyWatchApp` indulásakor hív. A Wear-oldalon ez **nincs implementálva**, és ez a kódból közvetlenül látszik: a `StandaloneSessionStore.loadActive(context)` **létezik, de az egész Wear-modulban egyetlen hívója sincs** — az `ExerciseService.saveActive`-tal írt recovery-snapshotot tehát semmi nem olvassa vissza folyamathalál után (a metódus gyakorlatilag holt kód). Health Services `ExerciseClient`-nek van a futó exercise lekérdezésére szolgáló API-ja, amivel ez pótolható lenne egy `ExerciseService.onCreate()`-ből induló ellenőrzéssel.
-   **Javaslat**: pótolni egy S15.1-ként a platform-paritásért — vagy **tudatosan elfogadni** az aszimmetriát v1-re. Az elfogadás mellett szól, hogy a legrosszabb eset egy elveszett *lokális* session, nem szerver-oldali adatvesztés: a lezáratlan session a pending-tárba még be sem került. Ha az elfogadás a döntés, a `loadActive()` mellé kerüljön egy megjegyzés, hogy szándékosan hívatlan (különben joggal tűnik felesleges kódnak).
+6. **Wear-oldali standalone recovery** (S15, 2026-07-26 felfedezve) — **PÓTOLVA, 2026-07-26.**
+   *A hiány:* az iOS-ágon az S9 explicit `recoverStandaloneSessionIfNeeded()`-t épített (`HKHealthStore.recoverActiveWorkoutSession` + a mentett aktív-snapshot visszaolvasása), amit a `LifeyWatchApp` indulásakor hív. A Wear-oldalon ez nem volt implementálva: a `StandaloneSessionStore.loadActive(context)` létezett, de senki nem hívta — az `ExerciseService.saveStandaloneActiveSnapshot()`-tal írt recovery-snapshotot semmi nem olvasta vissza folyamathalál után.
+   *A pótlás:* Health Services `ExerciseClient.getCurrentExerciseInfoAsync()` — a szabványos Health Services minta pontosan erre az esetre ("az app folyamata meghalt, fut-e még a *saját* exercise-em") — `ExerciseTrackedStatus.OWNED_EXERCISE_IN_PROGRESS`-t ad vissza, ha igen. Az új `ExerciseService.recoverIfNeeded(context)` companion suspend fun ezt ellenőrzi (csak akkor, ha a `SessionStateHolder` friss/üres **és** van mentett aktív snapshot), és ha mindhárom feltétel teljesül, egy új `ACTION_RECOVER_STANDALONE` intenttel elindítja a service-t. A service-példányon belüli `recoverStandaloneExercise()` **nem hívja újra a `startExerciseAsync`-et** (az exercise már fut Health Services szinten) — csak `setUpdateCallback`-kel újra csatlakozik az élő frissítésekhez, és a mentett JSON-ból (`parseStandaloneSets` az új dekóder, a `parseStandaloneTemplate` mintájára) visszaállítja a `SessionStateHolder`-t egy új `onStandaloneRecovered(...)` metóduson keresztül (iOS `recoverStandaloneSessionIfNeeded()`-jének megfelelője).
+   A trigger `MainActivity.onCreate()`-ben ül, a meglévő `flushPending`/`sendAdoptionRequestIfNeeded` újrapróbálkozások mellett — mindhárom "az app friss indulásakor pótoljuk, ami a halott folyamat alatt kimaradt" mintát követi.
+   *Ellenőrzés:* `:wear:compileDebugKotlin` + `:app:compileDebugKotlin` → `BUILD SUCCESSFUL`. Élő teszt (folyamat kilövése standalone session közben, majd az app újranyitása) továbbra sem futott le — ehhez fizikai eszköz vagy emulátor kell, ugyanúgy, ahogy az S12/S18 többi esete is a fejlesztő kézi tesztjére támaszkodott.
 
 7. **Nem F6a-hiba, de itt jegyezve** (2026-07-26): a `test/features/statistics/application/stat_chart_data_test.dart` › „StatsRange.all has no cutoff” **dátumfüggően bukik**, és bitre azonos az `origin/main`-nel — a watch-munkához semmi köze. Ok: a teszt `_day(offset)` helpere `DateTime(y,m,d).subtract(Duration(days: offset))`-et használ, ami **abszolút 24 órás** egységekkel számol, így egy óraátállítást átlépve 23:00-ra csúszik éjfél helyett (mai dátummal az `_day(1000)` 2023-10-31-re esik, közvetlenül az őszi átállítás utánra). A javítás a teszt-helperben van (naptári nap-léptetés `Duration` helyett), nem a produkciós kódban — külön, F6-tól független feladat.
 8. **F6a-hiba — a log-kontroll standalone-ban a telefon elérhetőségére volt kapuzva, mindkét platformon** — **JAVÍTVA, 2026-07-26.**
@@ -638,10 +643,12 @@ S1 (kulcsok + protokoll-konstansok, közös)
 - ✅ `docs/watch/40-watch-app-plan.md` állapottáblázatának F6a-sora „✅ Kész”-re mindkét platformon (az S18 élő tesztje lefutott).
 - ✅ Ennek a docnak a státusz-fejléce frissítve.
 - ✅ **A §11/8 F6a-hiba javítva** (a log-kontroll standalone módban a telefon elérhetőségére volt kapuzva mindkét platformon) — lásd §11/8, javítás + ellenőrzés dokumentálva.
+- ✅ **A §11/6 Wear-recovery aszimmetria pótolva** — `ExerciseService.recoverIfNeeded(context)` + `recoverStandaloneExercise()` + `SessionStateHolder.onStandaloneRecovered(...)`, `MainActivity.onCreate()`-ből indítva, a Health Services `getCurrentExerciseInfoAsync()` szabványos mintájával. Lásd §11/6, javítás + ellenőrzés dokumentálva. Élő teszt (folyamat kilövése + újranyitás közben fut-e még a session) hátravan.
 
-**Nyitva maradó, apró finomítási pontok** (nem blokkolják a lezárást, de nincs róluk eszközös visszajelzés, ezért nem jelölöm ki magamtól a választ):
-- A §11/6 Wear-recovery aszimmetria (`StandaloneSessionStore.loadActive()` hívatlan) — pótlás vagy tudatos elfogadás még nyitott döntés.
-- Bevált-e a 10-es default reps a gyakorlatban, kell-e a `sync_queue_count` sor a UI-ba — csak akkor dönthető el, ha van rá konkrét eszközös tapasztalat.
+- ✅ **10-es default reps eszközön megerősítve** (2026-07-26) — jónak bizonyult, marad; lásd D-F6.8.
+
+**Nyitva maradó, apró finomítási pont** (nem blokkolja a lezárást, de nincs róla eszközös visszajelzés, ezért nem jelölöm ki magamtól a választ):
+- Kell-e a `sync_queue_count` sor a UI-ba — csak akkor dönthető el, ha van rá konkrét eszközös tapasztalat (jelenleg nem panaszolta a user, de nem is erősítette meg explicit).
 
 **Kiegészítő ellenőrzés (2026-07-28, a fenti regressziós körön túl):** `./gradlew :app:assembleDebug :wear:assembleDebug` → **BUILD SUCCESSFUL** (3m 47s) — a `compileDebugKotlin`-nál szélesebb kör: resource-merge, manifest-merge, dexing, csomagolás mindkét modulon, ami az S13–S17 összes cross-module drótozását lefedi build-szinten. `xcodebuild -workspace Runner.xcworkspace -scheme Runner build` (fizikai iPhone-célponttal) → **BUILD SUCCEEDED** — csak projekt-szintű, F6-tól független figyelmeztetések (`CFBundleShortVersionString` mismatch, `AppIntents.framework` metaadat-üzenetek). Az első futás `error: Module 'connectivity_plus' not found`-dal bukott — ez egy helyi, elavult CocoaPods-telepítés volt (a `Pods/` könyvtárból hiányzott a modul), nem kódhiba; `flutter pub get` + `pod install` után zöld. Külön jegyezve, mert egy tiszta checkout után ugyanez máshol is előjöhet.
 
@@ -667,3 +674,21 @@ S1 (kulcsok + protokoll-konstansok, közös)
 1. **Crown/rotary** (43-as doc §12): a lapozás foglalja a forgatást mindkét platformon — ezért nincs reps-stepper az F6a-ban (D-F6.8). Ha az F5b feloldja, a standalone log automatikusan örökli. **Az F5b terve megvan:** [48-watch-f5b-set-adjust-plan.md](48-watch-f5b-set-adjust-plan.md) — a feloldás D-F5b.1, és a D-F5b.8 kifejezetten előírja, hogy a stepper-komponens ne kösse magát a remote állapotgéphez, hogy az F6b újraírás nélkül átvehesse.
 2. **Wear SUMMARY fázis** (D-F6.7): új fázis a `SessionStateHolder`-ben, amit a `MainActivity` `when (phase)` ága ma kimerítően kezel — a fordító kikényszeríti az új ág megírását, de az `ExerciseService.endExercise` mai „reset → IDLE” útját is át kell vezetni, hogy a phone-mastered vég ne kerüljön véletlenül SUMMARY-ba (v1-ben az ott továbbra sem jelenik meg).
 3. **`didReceiveUserInfo` típusszétválasztás** (S6): a mai summary-payload nem hord `type` kulcsot — a szétválasztás a kulcs **hiányára** épül, ezért a summary-payloadot nem szabad utólag `type`-pal ellátni anélkül, hogy a régi watch-buildekkel való kompatibilitást átgondolnánk.
+
+---
+
+## 15. Élő tükrözés a telefonon (utólagos hibajavítás)
+
+A live bridging watch→telefon fele (adoption-snapshot minden logolt szett után) kész volt, a telefon-oldali **megjelenítés** viszont nem követte: a `LogSessionScreen` a `_blocks`-ot egyetlen alkalommal, `initState`-ben építi fel a DB-sorból, és semmi nem olvasta újra. A tünetek, amiket a fejlesztő jelzett:
+
+1. Órán indított edzés közben logolt szettek **nem jelentek meg** a telefonon — a `StandaloneSessionProcessor` végig frissítette a sort, csak a nyitott képernyő mutatta a fagyott, adopció-pillanatbeli másolatot.
+2. Az órán lezárt edzés után a telefon **nyitva maradt** a már befejezett sessionön: a standalone vég nem `endRequested`-et küld (azt csak a phone-mastered ág használja), hanem a záró `standaloneSession` payloadot, amit a képernyő addig egyáltalán nem figyelt.
+3. A sima „+1" tapre logolt szett **0 kg-mal** mentődött, mert csak az F5b stepper küld súlyt, és az `exercise_sets.weight` NOT NULL.
+
+**A javítás:**
+
+- **`LogSessionScreen.watchMastered`** (új konstruktor-flag) + `_startWatchMirror()`: a képernyő „tükör-módba" kapcsol, és a `workoutSessionControllerProvider`-re iratkozik fel (`ref.listenManual`), nem magára a watch-eseményre — a DB-írás a `WorkoutResumePrompt` saját listenerében, aszinkron történik ugyanazon a broadcast streamen, tehát az eseményre reagálva versenyeznénk vele. A flaget az adopciós push adja meg (`workout_resume_prompt.dart`), de bármelyik ide illő watch-esemény (`WatchStandaloneAdoption` / `WatchStandaloneSession`) is bekapcsolja — így hidegindítás után is önmagát javítja, legkésőbb a következő szettnél.
+- **Teljes csere, nem merge** (`_rebuildBlocks`, kiemelve az `initState`-ből): a watch a teljes szettlistát küldi újra minden alkalommal, tehát ezen az oldalon nincs mit megőrizni vele szemben.
+- **`_closeFromWatchMirror`**: `finishedAt`-et látva leállítja a tickereket/zenét/értesítést és kilép — de **nem ír** (a záró payload feldolgozása már megírta a sort, rpe-vel és health-id-vel együtt), és **nem küld `endWorkout`-ot** az órára (az óra magától zárt).
+- **Nincs `startWorkout`/`updateState` push tükrözött sessionre**: az óra épp ezt az edzést futtatja. Ehhez tartozik a Wear-oldali `PhoneListenerService` javítása is: a `start` üzenetet csak akkor utasítja el `startRejected`-del, ha **más** `sessionClientId`-re jön — a saját standalone sessionjének id-jével érkező start a telefon adoptált tükrének a bejelentkezése, nem ütközés (a watchOS `applyStateUpdate` már eleve így különböztette meg).
+- **Súly-visszaesés `StandaloneSessionProcessor._resolveWeights`-ben**, a telefon saját „+1" prefill-szabályát tükrözve (`LogSessionScreen._handleAddSet`): (1) az adott gyakorlat előző edzésének pozíció szerinti szettje, (2) különben az ebben a sessionben korábban logolt súly továbbvitele, (3) és csak végső esetben 0 (testsúlyos). A stepperrel megadott súlyt (a szándékos 0-t is) soha nem írja felül. Az `excludeSessionClientId` maga a tükör-sor, hogy egy adoption-újraküldés ne a saját korábbi becslését olvassa vissza „előzményként".

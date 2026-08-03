@@ -55,6 +55,8 @@ final class WatchBridge: NSObject {
       ackSetLogged(call, result: result)
     case "ackStandaloneSession":
       ackStandaloneSession(call, result: result)
+    case "ackAdoption":
+      ackAdoption(call, result: result)
     case "syncTemplates":
       syncTemplates(call, result: result)
     default:
@@ -183,6 +185,27 @@ final class WatchBridge: NSObject {
     result(nil)
   }
 
+  // Answers a `standaloneSessionAdopted` delivery (live bridging — the
+  // watch-started session is still running, this just confirms the phone
+  // created its live mirror row). Same "always ack, even on a dedup
+  // no-op" contract as ackStandaloneSession, for the same reason: the
+  // watch retries an un-acked adoption snapshot on reconnect/cold start
+  // regardless of why it wasn't acked.
+  private func ackAdoption(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+      let standaloneSessionId = args["standaloneSessionId"] as? String
+    else {
+      result(nil)
+      return
+    }
+    if WCSession.default.isReachable {
+      WCSession.default.sendMessage(
+        ["command": "adoptionAck", "standaloneSessionId": standaloneSessionId],
+        replyHandler: nil, errorHandler: nil)
+    }
+    result(nil)
+  }
+
   /// Answers `syncTemplates` (docs/watch/49-watch-f6b-template-sync-plan.md
   /// §4.1, T3.2) — folds `templates`/`syncedAtEpochMs` into [lastContext]
   /// (D-F6b.2) alongside whatever session-state keys already live there,
@@ -287,16 +310,21 @@ extension WatchBridge: WCSessionDelegate {
   }
 
   // Watch → phone `transferUserInfo` deliveries — workout summary
-  // (docs/40-watch-app-plan.md §3 "Lezárás", §5.4) or a standalone session
-  // (docs/watch/44-watch-f6-standalone-plan.md §4.1). Both are queued:
-  // arrive even if this app wasn't running when the watch sent them, as
-  // long as the delegate was set early — see AppDelegate. Distinguished by
-  // a `type` key: the summary payload never carried one (an older watch
-  // build's queued-but-undelivered summary would still be missing it), so
-  // its *absence* means summary rather than a positive `"summary"` check.
+  // (docs/40-watch-app-plan.md §3 "Lezárás", §5.4), a finished standalone
+  // session (docs/watch/44-watch-f6-standalone-plan.md §4.1), or a still-
+  // running standalone session being adopted live. All queued: arrive even
+  // if this app wasn't running when the watch sent them, as long as the
+  // delegate was set early — see AppDelegate. Distinguished by a `type`
+  // key: the summary payload never carried one (an older watch build's
+  // queued-but-undelivered summary would still be missing it), so its
+  // *absence* means summary rather than a positive `"summary"` check.
   func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
     if userInfo["type"] as? String == "standaloneSessionCompleted" {
       eventSink?(["type": "standaloneSession", "payload": userInfo])
+      return
+    }
+    if userInfo["type"] as? String == "standaloneSessionAdopted" {
+      eventSink?(["type": "standaloneSessionAdopted", "payload": userInfo])
       return
     }
     guard let sessionClientId = userInfo["sessionClientId"] as? String else { return }

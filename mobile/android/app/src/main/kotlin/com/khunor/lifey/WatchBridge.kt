@@ -53,6 +53,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "endWorkout" -> endWorkout(call, result)
             "ackSetLogged" -> ackSetLogged(call, result)
             "ackStandaloneSession" -> ackStandaloneSession(call, result)
+            "ackAdoption" -> ackAdoption(call, result)
             "syncTemplates" -> syncTemplates(call, result)
             else -> result.notImplemented()
         }
@@ -141,6 +142,23 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
 
         val json = JSONObject().apply { put("standaloneSessionId", standaloneSessionId) }
         sendMessage(COMMAND_STANDALONE_ACK, json.toString().toByteArray())
+        result.success(null)
+    }
+
+    /**
+     * Answers a `standaloneSessionAdopted` delivery (live bridging — the
+     * watch-started session is still running, this just confirms the phone
+     * created its live mirror row). Same "always ack, even on a dedup
+     * no-op" contract as [ackStandaloneSession], for the same reason: the
+     * watch retries an un-acked adoption snapshot on reconnect/cold start
+     * regardless of why it wasn't acked.
+     */
+    private fun ackAdoption(call: MethodCall, result: MethodChannel.Result) {
+        val args = call.arguments as? Map<*, *> ?: return result.success(null)
+        val standaloneSessionId = args["standaloneSessionId"] as? String ?: return result.success(null)
+
+        val json = JSONObject().apply { put("standaloneSessionId", standaloneSessionId) }
+        sendMessage(COMMAND_ADOPTION_ACK, json.toString().toByteArray())
         result.success(null)
     }
 
@@ -325,12 +343,15 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "$MESSAGE_PATH_PREFIX/$COMMAND_STANDALONE_SESSION" -> {
                 emitStandaloneSession(String(messageEvent.data))
             }
-            // PhoneWatchSummaryListenerService also receives this same
-            // summary/standaloneSessionCompleted message (manifest-declared,
-            // so it fires even if this MethodChannel-backed listener isn't
-            // attached yet) and buffers it for the next onListen sweep below
-            // (docs/40-watch-app-plan.md §5.4, docs/watch/
-            // 44-watch-f6-standalone-plan.md §6/1).
+            "$MESSAGE_PATH_PREFIX/$COMMAND_STANDALONE_ADOPTED" -> {
+                emitStandaloneAdoption(String(messageEvent.data))
+            }
+            // PhoneWatchSummaryListenerService also receives these same
+            // summary/standaloneSessionCompleted/standaloneSessionAdopted
+            // messages (manifest-declared, so it fires even if this
+            // MethodChannel-backed listener isn't attached yet) and buffers
+            // them for the next onListen sweep below (docs/40-watch-app-plan.md
+            // §5.4, docs/watch/44-watch-f6-standalone-plan.md §6/1).
         }
     }
 
@@ -431,6 +452,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                 mapOf(
                     "loggedAtEpochMs" to set.optLong("loggedAtEpochMs"),
                     "reps" to set.optInt("reps"),
+                    "weight" to if (set.has("weight")) set.optDouble("weight") else null,
                     "exerciseIndex" to if (set.has("exerciseIndex")) set.optInt("exerciseIndex") else null,
                 )
             }
@@ -457,18 +479,63 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         )
     }
 
+    /**
+     * The live-bridging counterpart of [emitStandaloneSession]: a watch-
+     * started session that is still *running* — same set-mapping shape, no
+     * `endedAtEpochMs`/`rpe`/`healthWorkoutId` (the workout isn't over).
+     * `standaloneSessionId` is the same id [emitStandaloneSession] will
+     * eventually carry when it finishes, which is what lets the Dart-side
+     * processor recognize "this session already has a running row, finish
+     * it" instead of creating a duplicate.
+     */
+    private fun emitStandaloneAdoption(adoptionJson: String) {
+        val payload = JSONObject(adoptionJson)
+        val setsArray = payload.optJSONArray("sets") ?: JSONArray()
+        val sets =
+            (0 until setsArray.length()).map { i ->
+                val set = setsArray.getJSONObject(i)
+                mapOf(
+                    "loggedAtEpochMs" to set.optLong("loggedAtEpochMs"),
+                    "reps" to set.optInt("reps"),
+                    "weight" to if (set.has("weight")) set.optDouble("weight") else null,
+                    "exerciseIndex" to if (set.has("exerciseIndex")) set.optInt("exerciseIndex") else null,
+                )
+            }
+        eventSink?.success(
+            mapOf(
+                "type" to "standaloneSessionAdopted",
+                "payload" to
+                    mapOf(
+                        "standaloneSessionId" to payload.optString("standaloneSessionId"),
+                        "templateId" to
+                            if (payload.has("templateId")) payload.optString("templateId") else null,
+                        "startedAtEpochMs" to payload.optLong("startedAtEpochMs"),
+                        "sets" to sets,
+                        "activeCalories" to
+                            if (payload.has("activeCalories")) payload.optDouble("activeCalories") else null,
+                        "averageHeartRate" to
+                            if (payload.has("averageHeartRate")) payload.optDouble("averageHeartRate")
+                            else null,
+                    ),
+            ),
+        )
+    }
+
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         eventSink = events
         // The moment Dart starts listening (every cold start — see
-        // WorkoutResumePrompt) is also the sweep point for summaries and
-        // standalone sessions that arrived while the Flutter engine wasn't
-        // running (docs/40-watch-app-plan.md §5.4, docs/watch/
-        // 44-watch-f6-standalone-plan.md §6/1).
+        // WorkoutResumePrompt) is also the sweep point for summaries,
+        // standalone sessions and standalone adoptions that arrived while the
+        // Flutter engine wasn't running (docs/40-watch-app-plan.md §5.4,
+        // docs/watch/44-watch-f6-standalone-plan.md §6/1).
         for (buffered in WatchSummaryBuffer.drain(appContext)) {
             emitSummary(buffered)
         }
         for (buffered in WatchStandaloneSessionBuffer.drain(appContext)) {
             emitStandaloneSession(buffered)
+        }
+        for (buffered in WatchAdoptionBuffer.drain(appContext)) {
+            emitStandaloneAdoption(buffered)
         }
     }
 
@@ -496,6 +563,8 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_LOG_SET_ACK = "logSetAck"
         private const val COMMAND_STANDALONE_SESSION = "standaloneSessionCompleted"
         private const val COMMAND_STANDALONE_ACK = "standaloneSessionAck"
+        private const val COMMAND_STANDALONE_ADOPTED = "standaloneSessionAdopted"
+        private const val COMMAND_ADOPTION_ACK = "adoptionAck"
         private const val COMMAND_TEMPLATE_SYNC = "templateSync"
     }
 }

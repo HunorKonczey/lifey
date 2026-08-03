@@ -9,7 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -21,12 +20,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.filled.HeartBroken
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.SignalWifiOff
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Tune
@@ -42,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,12 +59,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.PhonelinkOff
@@ -98,7 +103,9 @@ import com.khunor.lifey.SummarySender
 import com.khunor.lifey.ui.theme.LifeyColors
 import com.khunor.lifey.ui.theme.LifeyShapes
 import java.util.UUID
+import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.math.sign
 import java.text.DecimalFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -120,6 +127,26 @@ private const val PAGE_COUNT = 3
  * [LogSetState.Ready]; this just also swallows a double-tap landing in the
  * same frame, before that state change has propagated back to `.clickable`. */
 private const val LOG_SET_TAP_DEBOUNCE_MS = 300L
+
+/** How many dp of accumulated rotary scroll count as one adjust-stepper
+ * step. Wear's rotary input reports continuous pixel deltas, not discrete
+ * detents — firing a step on every single [onRotaryScrollEvent] (the
+ * previous approach) meant a physical rotation could produce a wildly
+ * different number of steps depending on how many small events the OS
+ * happened to batch it into, which read as "inconsistent" in practice.
+ * Accumulating to a fixed dp threshold before firing exactly one step (and
+ * carrying the remainder forward, not discarding it) makes one rotation
+ * consistently equal one step regardless of event granularity. */
+private const val LOG_ADJUST_ROTARY_STEP_DP = 24f
+
+/** Width of the adjust stepper's −/value/+ row, as a fraction of the screen
+ * — deliberately wider than the [SCREEN_PADDING_FRACTION] inset the rest of
+ * that column keeps (0.84), reaching ~60% of the way into it on both sides.
+ * That row sits at the vertical center of the dial, where the round screen
+ * is at its widest and the safety margin isn't earning anything — and since
+ * the two buttons are fixed-size, every dp reclaimed goes to the number
+ * between them. Mirrors iOS's `-padding * 0.6` on the same row. */
+private const val ADJUST_ROW_WIDTH_FRACTION = 0.936f
 
 /** Re-requested by the "allow sensors" chip (§12.1 B13) — the same pair
  * [com.khunor.lifey.ExerciseService.startExercise] checks before adding
@@ -253,6 +280,24 @@ fun ActiveWorkoutScreen() {
 
     val resting = restRemainingMs > 0
     val isStandalone = metadata.isStandalone
+    // Whether HeaderChip's "not connected" badge should show — a genuinely
+    // disconnected standalone session, not one the phone has already joined
+    // (live bridging). Once adopted, the phone IS tracking the session live,
+    // so the icon implying otherwise would be actively misleading. Kept
+    // separate from `isStandalone` itself, which still gates real logic
+    // (e.g. LogPage's requiresPhone) that must stay true regardless of
+    // adoption — set-logging stays watch-local always (D-F6's guarantee).
+    val showsStandaloneBadge = isStandalone && !metadata.isAdopted
+    // The metrics page's header label: the template/session name when one is
+    // available (`standaloneTemplate.title` for a template-backed standalone
+    // session, `title` for a phone-mastered one — never both at once, since
+    // `title` is never set for standalone, D-F6.2), the generic
+    // active_header_label ("STRENGTH"/"ERŐ") otherwise (Quick strength, or no
+    // name at all). HeaderChip's own `maxLines = 1` + `TextOverflow.Ellipsis`
+    // already truncates a too-long name with a trailing "…".
+    val activeHeaderLabel = metadata.standaloneTemplate?.title?.takeIf { it.isNotBlank() }
+        ?: metadata.title?.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.active_header_label)
     // One computation for "current exercise + set progress", shared by every
     // page below instead of each re-deriving the same three-way branch
     // (docs/watch/49-watch-f6b-template-sync-plan.md §3.4).
@@ -327,7 +372,14 @@ fun ActiveWorkoutScreen() {
                     val adjust = logAdjustState!!
                     val currentSessionClientId = metadata.sessionClientId
                     SessionStateHolder.onLogAdjustCancelled()
-                    if (currentSessionClientId != null) {
+                    if (isStandalone) {
+                        // No phone to round-trip against — logs straight to
+                        // the local set list, same as the plain tap.
+                        SessionStateHolder.onStandaloneSetLogged(
+                            reps = adjust.reps,
+                            weight = adjust.weight,
+                        )
+                    } else if (currentSessionClientId != null) {
                         // Same send path as the plain tap — the pending/ack
                         // lifecycle, timeout and haptics are all F5a's code.
                         val eventId = UUID.randomUUID().toString()
@@ -376,6 +428,7 @@ fun ActiveWorkoutScreen() {
                         sessionClientId = metadata.sessionClientId,
                         logSetState = logSetState,
                         isStandalone = isStandalone,
+                        showsStandaloneBadge = showsStandaloneBadge,
                         freeFormatSets = display.freeFormatSets,
                         isCompact = isCompact,
                         maxWidth = maxWidth,
@@ -389,7 +442,8 @@ fun ActiveWorkoutScreen() {
                         setsDone = display.setsDone,
                         setsTotal = display.setsTotal,
                         liveMetrics = liveMetrics,
-                        isStandalone = isStandalone,
+                        isStandalone = showsStandaloneBadge,
+                        headerLabel = activeHeaderLabel,
                         freeFormatSets = display.freeFormatSets,
                         isCompact = isCompact,
                         maxWidth = maxWidth,
@@ -451,17 +505,19 @@ private fun PageDots(pageCount: Int, selectedPage: Int, modifier: Modifier = Mod
 
 /**
  * The leftmost page (docs/watch/43-watch-f5-set-logging-plan.md
- * §3.1 decision (b), canvas W 07/08/10): a single large circular "+1 set"
- * control that fills nearly the whole safe area — a dedicated page turns
- * the entire tap target into one ~5×-minimum circle, with zero mis-tap risk
- * near End/Pause (that's why [MetricsOrRestPage] stays deliberately
- * button-free — same B4/B6 heritage as the metrics page's own layout).
- * [logSetState] (docs/watch/43-watch-f5-set-logging-plan.md §3.2) drives
- * four visuals: Ready (primary ring + context line), Pending (ghosted +
- * "Logging…"), Confirmed (check + "Set n of total" + "Logged" pill), Failed
- * (ghosted + red toast) — plus a fifth, independent ghosted state when
- * [hasConnectedNode] is false: a tap can't even start a Pending round-trip
- * with no phone node to answer it. Mirrors iOS's `LogPage`.
+ * §3.1 decision (b), canvas W 07/08/10): two same-sized circular controls
+ * side by side — "+1" on the left, the adjust stepper's launcher on the
+ * right (replaces the original single big circle + long-press-to-adjust
+ * design: the long press went undiscovered in practice, so a
+ * plain-tap-reachable second button replaces it entirely — no more
+ * `combinedClickable`). [logSetState] (docs/watch/43-watch-f5-set-logging-plan.md
+ * §3.2) drives the "+1" circle's four visuals: Ready (primary ring +
+ * context line), Pending (ghosted + "Logging…"), Confirmed (check + "Set n
+ * of total" + "Logged" pill), Failed (ghosted + red toast) — plus a fifth,
+ * independent ghosted state when [hasConnectedNode] is false: a tap can't
+ * even start a Pending round-trip with no phone node to answer it. The
+ * adjust button shares the same Ready-only enabled gate, since it starts
+ * the same round trip once confirmed. Mirrors iOS's `LogPage`.
  */
 @Composable
 private fun LogPage(
@@ -472,6 +528,11 @@ private fun LogPage(
     sessionClientId: String?,
     logSetState: LogSetState,
     isStandalone: Boolean,
+    /** Whether HeaderChip's "not connected" badge should show — distinct
+     * from [isStandalone] itself, which this page also uses for real logic
+     * ([requiresPhone]) that must stay true regardless of live-bridging
+     * adoption. See the top-level `showsStandaloneBadge` computation. */
+    showsStandaloneBadge: Boolean,
     freeFormatSets: Pair<Int, Int>?,
     isCompact: Boolean,
     maxWidth: Dp,
@@ -514,46 +575,59 @@ private fun LogPage(
         HeaderChip(
             icon = Icons.Filled.FitnessCenter,
             label = formatElapsed(elapsedMs),
-            isStandalone = isStandalone,
+            isStandalone = showsStandaloneBadge,
             isCompact = isCompact,
         )
         val ghosted = logSetState is LogSetState.Pending ||
             logSetState is LogSetState.Failed ||
             (logSetState is LogSetState.Ready && requiresPhone && !hasConnectedNode)
-        LogCircle(
-            logSetState = logSetState,
-            ghosted = ghosted,
-            diameter = maxWidth * LOG_CIRCLE_DIAMETER_FRACTION,
-            setsDone = setsDone,
-            setsTotal = setsTotal,
-            freeFormatSets = freeFormatSets,
-            isCompact = isCompact,
-            enabled = canTap,
-            // The adjust stepper is a phone-mastered-only path in F5b —
-            // standalone still logs a fixed reps count (D-F6.8), and binding
-            // the stepper there is F6b's job (D-F5b.8).
-            // `SessionStateHolder.onLogAdjustOpened()` guards this too;
-            // mirrored here so the hint glyph isn't advertised when the long
-            // press would do nothing.
-            adjustEnabled = canTap && !isStandalone,
-            onLongPress = { SessionStateHolder.onLogAdjustOpened() },
-            onTap = {
-                val currentSessionClientId = sessionClientId ?: return@LogCircle
-                val now = SystemClock.elapsedRealtime()
-                if (now - lastTapAtMs < LOG_SET_TAP_DEBOUNCE_MS) return@LogCircle
-                lastTapAtMs = now
-                val eventId = UUID.randomUUID().toString()
-                SessionStateHolder.onLogSetRequested(eventId)
-                scope.launch {
-                    SummarySender.sendLogSet(
-                        context = context,
-                        sessionClientId = currentSessionClientId,
-                        eventId = eventId,
-                        loggedAtEpochMs = System.currentTimeMillis(),
-                    )
-                }
-            },
-        )
+        val buttonDiameter = maxWidth * LOG_BUTTON_PAIR_DIAMETER_FRACTION
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(if (isCompact) 10.dp else 14.dp),
+        ) {
+            LogCircle(
+                logSetState = logSetState,
+                ghosted = ghosted,
+                diameter = buttonDiameter,
+                setsDone = setsDone,
+                setsTotal = setsTotal,
+                freeFormatSets = freeFormatSets,
+                isCompact = isCompact,
+                enabled = canTap,
+                onTap = {
+                    val now = SystemClock.elapsedRealtime()
+                    if (now - lastTapAtMs < LOG_SET_TAP_DEBOUNCE_MS) return@LogCircle
+                    lastTapAtMs = now
+                    if (isStandalone) {
+                        // No phone to round-trip against — logs straight to
+                        // the local set list (docs/watch/
+                        // 44-watch-f6-standalone-plan.md §2.1, §3.2).
+                        SessionStateHolder.onStandaloneSetLogged()
+                        return@LogCircle
+                    }
+                    val currentSessionClientId = sessionClientId ?: return@LogCircle
+                    val eventId = UUID.randomUUID().toString()
+                    SessionStateHolder.onLogSetRequested(eventId)
+                    scope.launch {
+                        SummarySender.sendLogSet(
+                            context = context,
+                            sessionClientId = currentSessionClientId,
+                            eventId = eventId,
+                            loggedAtEpochMs = System.currentTimeMillis(),
+                        )
+                    }
+                },
+            )
+            AdjustCircle(
+                diameter = buttonDiameter,
+                isCompact = isCompact,
+                // The adjust stepper works the same way in standalone as
+                // phone-mastered now — both log through LogCircle's own
+                // isStandalone branch above.
+                enabled = canTap,
+                onTap = { SessionStateHolder.onLogAdjustOpened() },
+            )
+        }
         LogStatusLine(
             logSetState = logSetState,
             hasConnectedNode = hasConnectedNode,
@@ -580,9 +654,7 @@ private fun LogCircle(
     freeFormatSets: Pair<Int, Int>?,
     isCompact: Boolean,
     enabled: Boolean,
-    adjustEnabled: Boolean,
     onTap: () -> Unit,
-    onLongPress: () -> Unit,
 ) {
     val backgroundColor = if (logSetState is LogSetState.Confirmed) {
         LifeyColors.primary.copy(alpha = 0.18f)
@@ -600,7 +672,6 @@ private fun LogCircle(
     }
     val contentColor = if (ghosted) LifeyColors.ghostedOnSurface else LifeyColors.primary
     val a11yLabel = stringResource(R.string.log_set_button_a11y)
-    val adjustA11yLabel = stringResource(R.string.log_adjust_open_a11y)
 
     Box(
         modifier = Modifier
@@ -608,16 +679,7 @@ private fun LogCircle(
             .size(diameter)
             .background(backgroundColor, CircleShape)
             .border(3.dp, borderColor, CircleShape)
-            // `combinedClickable` routes the long press to the adjust view
-            // and the tap to the plain log — unlike a naive tap+long-press
-            // pairing, it never fires both (docs/watch/
-            // 48-watch-f5b-set-adjust-plan.md D-F5b.1's implementation trap).
-            .combinedClickable(
-                enabled = enabled,
-                onClick = onTap,
-                onLongClick = if (adjustEnabled) onLongPress else null,
-                onLongClickLabel = adjustA11yLabel,
-            )
+            .clickable(enabled = enabled, onClick = onTap)
             .semantics { contentDescription = a11yLabel },
         contentAlignment = Alignment.Center,
     ) {
@@ -627,47 +689,80 @@ private fun LogCircle(
                     imageVector = Icons.Filled.Check,
                     contentDescription = null,
                     tint = LifeyColors.primary,
-                    modifier = Modifier.size(if (isCompact) 40.dp else 48.dp),
+                    modifier = Modifier.size(if (isCompact) 24.dp else 28.dp),
                 )
                 if (freeFormatSets != null) {
                     Text(
                         text = stringResource(
                             R.string.active_sets_free_format, freeFormatSets.first, freeFormatSets.second,
                         ),
-                        style = if (isCompact) MaterialTheme.typography.body2 else MaterialTheme.typography.title3,
+                        style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
                         color = LifeyColors.onSurface,
+                        maxLines = 1,
                     )
                 } else if (setsDone != null && setsTotal != null) {
                     Text(
                         text = stringResource(R.string.active_sets_format, setsDone, setsTotal),
-                        style = if (isCompact) MaterialTheme.typography.body2 else MaterialTheme.typography.title3,
+                        style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
                         color = LifeyColors.onSurface,
+                        maxLines = 1,
                     )
                 }
             }
         } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = stringResource(R.string.log_set_button),
-                    style = if (isCompact) MaterialTheme.typography.title2 else MaterialTheme.typography.display3,
-                    color = contentColor,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                )
-                if (adjustEnabled) {
-                    // The long-press affordance (D-F5b.1): a small,
-                    // non-interactive hint in the same secondary brown the
-                    // adjust view uses for its own header, so the two read as
-                    // one side path. Costs no tap area — the whole circle
-                    // stays the target.
-                    Icon(
-                        imageVector = Icons.Filled.Tune,
-                        contentDescription = null,
-                        tint = LifeyColors.secondary,
-                        modifier = Modifier.padding(top = 4.dp).size(if (isCompact) 12.dp else 14.dp),
-                    )
-                }
-            }
+            Text(
+                text = stringResource(R.string.log_set_button),
+                style = if (isCompact) MaterialTheme.typography.title3 else MaterialTheme.typography.title2,
+                color = contentColor,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
+    }
+}
+
+/** The right-hand button that opens the adjust stepper — same enabled/
+ * ghosted split as [LogCircle]'s Ready/ghosted states, tinted `secondary`
+ * (brown) to read as the side path, matching the adjust screen's own header
+ * tint. Mirrors iOS's `adjustButtonContent`. */
+@Composable
+private fun AdjustCircle(
+    diameter: Dp,
+    isCompact: Boolean,
+    enabled: Boolean,
+    onTap: () -> Unit,
+) {
+    val contentColor = if (enabled) LifeyColors.secondary else LifeyColors.ghostedOnSurface
+    val borderColor = if (enabled) LifeyColors.secondary.copy(alpha = 0.55f) else LifeyColors.outline
+    val a11yLabel = stringResource(R.string.log_adjust_open_a11y)
+
+    Box(
+        modifier = Modifier
+            .padding(top = if (isCompact) 8.dp else 12.dp)
+            .size(diameter)
+            .background(LifeyColors.container, CircleShape)
+            .border(3.dp, borderColor, CircleShape)
+            .clickable(enabled = enabled, onClick = onTap)
+            .semantics { contentDescription = a11yLabel }
+            .alpha(if (enabled) 1f else 0.75f),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Filled.Tune,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(if (isCompact) 20.dp else 24.dp),
+            )
+            Text(
+                text = stringResource(R.string.log_adjust_title),
+                style = if (isCompact) MaterialTheme.typography.caption2 else MaterialTheme.typography.caption1,
+                fontWeight = FontWeight.Bold,
+                color = contentColor,
+                maxLines = 1,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }
@@ -782,8 +877,9 @@ private fun LogStatusPill(
 
 /**
  * The adjust stepper (canvas W 09, docs/watch/48-watch-f5b-set-adjust-plan.md
- * §3.3) — reached by long-pressing the log control, never by the one-tap
- * flow. Replaces the pager while it's up (see [ActiveWorkoutScreen]), so the
+ * §3.3) — reached by tapping the dedicated adjust button next to the log
+ * control ([AdjustCircle]), never by the one-tap "+1" flow. Replaces the
+ * pager while it's up (see [ActiveWorkoutScreen]), so the
  * rotary drives the value here instead of paging. Tinted
  * `LifeyColors.secondary` (brown) to mark it as the side path, and nothing is
  * logged until "Log {n} reps" is tapped (0.5).
@@ -796,25 +892,27 @@ private fun AdjustOverlay(
     onConfirm: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
+    val stepThresholdPx = with(LocalDensity.current) { LOG_ADJUST_ROTARY_STEP_DP.dp.toPx() }
+    var rotaryAccumulatorPx by remember { mutableFloatStateOf(0f) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = maxWidth * SCREEN_PADDING_FRACTION)
-            // Only the rotation's *direction* is used — SessionStateHolder
-            // owns the step size, bounds and clamping (D-F5b.5). Taken from
-            // the sign rather than `toInt()`, which would round a sub-pixel
-            // detent down to 0 and silently swallow slow rotations. One
-            // event = one step, so a fast spin doesn't overshoot a 2.5 kg
-            // grid by ten increments at once. Positive scroll pixels mean
-            // "scrolling down", which reads as decreasing here.
+            // Accumulates raw scroll pixels and fires exactly one step per
+            // LOG_ADJUST_ROTARY_STEP_DP crossed, carrying the remainder
+            // forward — see that constant's doc comment for why a
+            // one-step-per-raw-event mapping was inconsistent. SessionStateHolder
+            // still owns the step size, bounds and clamping (D-F5b.5); this
+            // only decides *how often* to call it. Positive scroll pixels
+            // mean "scrolling down", which reads as decreasing here.
             .onRotaryScrollEvent { event ->
-                val steps = when {
-                    event.verticalScrollPixels > 0f -> -1
-                    event.verticalScrollPixels < 0f -> 1
-                    else -> 0
+                rotaryAccumulatorPx += event.verticalScrollPixels
+                while (abs(rotaryAccumulatorPx) >= stepThresholdPx) {
+                    val step = if (rotaryAccumulatorPx > 0) -1 else 1
+                    SessionStateHolder.onLogAdjustStepped(step)
+                    rotaryAccumulatorPx -= stepThresholdPx * sign(rotaryAccumulatorPx)
                 }
-                if (steps != 0) SessionStateHolder.onLogAdjustStepped(steps)
                 true
             }
             .focusRequester(focusRequester)
@@ -860,16 +958,54 @@ private fun AdjustOverlay(
                 isCompact = isCompact,
             )
         }
-        Text(
-            text = when (state.field) {
-                LogAdjustField.REPS -> state.reps.toString()
-                LogAdjustField.WEIGHT -> formatWeight(state.weight)
-            },
-            style = if (isCompact) MaterialTheme.typography.display2 else MaterialTheme.typography.display1,
-            color = LifeyColors.onSurface,
-            maxLines = 1,
-            modifier = Modifier.padding(top = 4.dp),
-        )
+        // −  value  + (docs/watch/48-watch-f5b-set-adjust-plan.md §3.3
+        // follow-up): the rotary alone left the stepper undiscoverable-by-
+        // touch, so both buttons sit permanently either side of the number,
+        // one step per tap through the same [SessionStateHolder.onLogAdjustStepped]
+        // the rotary drives — so clamping, the idle-timer reset and the tick
+        // haptic all come along unchanged. The number takes `weight(1f)`
+        // rather than hugging the buttons, so the two tap targets stay put
+        // instead of shifting as the value's digit count changes.
+        Row(
+            // `requiredWidth`, so this one row can overflow the screen
+            // padding the rest of the column keeps — see
+            // [ADJUST_ROW_WIDTH_FRACTION]. The enclosing Column centers it,
+            // so the overflow is split evenly across both sides.
+            modifier = Modifier
+                .requiredWidth(maxWidth * ADJUST_ROW_WIDTH_FRACTION)
+                .padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AdjustStepButton(
+                icon = Icons.Filled.Remove,
+                a11yLabel = stringResource(R.string.log_adjust_decrement_a11y),
+                enabled = state.canDecrement,
+                isCompact = isCompact,
+                onClick = { SessionStateHolder.onLogAdjustStepped(-1) },
+            )
+            Text(
+                text = when (state.field) {
+                    LogAdjustField.REPS -> state.reps.toString()
+                    LogAdjustField.WEIGHT -> formatWeight(state.weight)
+                },
+                // One step down from the pre-button display1/display2 pair —
+                // the number no longer has the full width to itself, and at
+                // the old size a 3-digit weight collided with the buttons on
+                // the compact size class.
+                style = if (isCompact) MaterialTheme.typography.display3 else MaterialTheme.typography.display2,
+                color = LifeyColors.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                modifier = Modifier.weight(1f),
+            )
+            AdjustStepButton(
+                icon = Icons.Filled.Add,
+                a11yLabel = stringResource(R.string.log_adjust_increment_a11y),
+                enabled = state.canIncrement,
+                isCompact = isCompact,
+                onClick = { SessionStateHolder.onLogAdjustStepped(1) },
+            )
+        }
         // The value *not* being edited, prefixed by the big number's own unit
         // — the design's "reps · 60 kg" (0.4). Two keys because the order
         // flips with the active field (§11/2).
@@ -902,6 +1038,44 @@ private fun AdjustOverlay(
     }
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+}
+
+/** One of the stepper's two −/+ buttons. Sized above the 48 dp tap-target
+ * minimum on the regular size class and as close to it as the compact dial
+ * allows once the number between them keeps its own width; tinted
+ * `secondary` (brown) like the rest of the adjust screen, and ghosted (not
+ * hidden) once the active field sits at the end of its range, so the control
+ * stays in place instead of the row reflowing at a bound. Mirrors iOS's
+ * `AdjustPage.stepButton`. */
+@Composable
+private fun AdjustStepButton(
+    icon: ImageVector,
+    a11yLabel: String,
+    enabled: Boolean,
+    isCompact: Boolean,
+    onClick: () -> Unit,
+) {
+    val tint = if (enabled) LifeyColors.secondary else LifeyColors.ghostedOnSurface
+    val borderColor = if (enabled) LifeyColors.secondary.copy(alpha = 0.55f) else LifeyColors.outline
+
+    Box(
+        modifier = Modifier
+            .size(if (isCompact) 44.dp else 52.dp)
+            .alpha(if (enabled) 1f else 0.5f)
+            .background(LifeyColors.container, CircleShape)
+            .border(2.dp, borderColor, CircleShape)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, onClick = onClick)
+            .semantics { contentDescription = a11yLabel },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(if (isCompact) 20.dp else 24.dp),
+        )
+    }
 }
 
 /** One of the Reps/Weight segments (0.2) — tapping either flips the active
@@ -943,6 +1117,11 @@ private fun MetricsOrRestPage(
     setsTotal: Int?,
     liveMetrics: LiveMetrics,
     isStandalone: Boolean,
+    /** The template/session name in place of the generic "STRENGTH" label,
+     * when one is available — see the top-level `activeHeaderLabel`
+     * computation's doc comment. Only used on the non-resting branch below;
+     * the rest-hero keeps its own "REST" label regardless. */
+    headerLabel: String,
     freeFormatSets: Pair<Int, Int>?,
     isCompact: Boolean,
     maxWidth: Dp,
@@ -976,7 +1155,7 @@ private fun MetricsOrRestPage(
         } else {
             HeaderChip(
                 icon = Icons.Filled.FitnessCenter,
-                label = stringResource(R.string.active_header_label),
+                label = headerLabel,
                 isStandalone = isStandalone,
                 isCompact = isCompact,
             )
@@ -1291,6 +1470,14 @@ private fun HeaderChip(
             color = LifeyColors.primary,
             letterSpacing = 0.5.sp,
             maxLines = 1,
+            // A template name can run long, unlike the fixed "STRENGTH"/"REST"
+            // labels this chip otherwise shows — `weight(fill = false)` gives
+            // Text a bounded width to truncate against (a bare `Row` child
+            // would otherwise just overflow, since nothing constrains it),
+            // while still leaving room for the trailing standalone icon and
+            // not force-expanding for a short label.
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
         if (isStandalone) {
             // Standalone mode indicator (docs/watch/44-watch-f6-standalone-

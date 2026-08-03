@@ -38,9 +38,24 @@ class PhoneListenerService : WearableListenerService() {
                 // *also* start a second, phone-mastered exercise on top of
                 // a running standalone one, and rejects if so (the reverse
                 // of the existing "another app owns the sensors" conflict).
+                //
+                // A start naming the standalone session's *own* id isn't
+                // that conflict: it's the phone re-announcing the session it
+                // adopted from this watch (live bridging — its mirror screen
+                // starts its notifier on open). Ignore it silently rather
+                // than rejecting, or the phone shows the user a "the watch
+                // didn't mirror your workout" warning about the very workout
+                // the watch is running. Mirrors the same `sessionClientId !=
+                // self.sessionClientId` condition watchOS's
+                // `WorkoutManager.applyStateUpdate` already used.
                 val sessionClientId = applyStateMessage(messageEvent.data) ?: return
-                if (SessionStateHolder.metadata.value.isStandalone) {
-                    scope.launch { SummarySender.sendStartRejected(this@PhoneListenerService, sessionClientId) }
+                val metadata = SessionStateHolder.metadata.value
+                if (metadata.isStandalone) {
+                    if (sessionClientId != metadata.sessionClientId) {
+                        scope.launch {
+                            SummarySender.sendStartRejected(this@PhoneListenerService, sessionClientId)
+                        }
+                    }
                     return
                 }
                 ContextCompat.startForegroundService(this, ExerciseService.startIntent(this, sessionClientId))
@@ -53,11 +68,24 @@ class PhoneListenerService : WearableListenerService() {
                 applyStateMessage(messageEvent.data)
             }
             "$MESSAGE_PATH_PREFIX/end" -> {
-                // A stray end for a phone-mastered session can't close a
-                // running standalone one (D-F6.2) — the watch's own End
-                // button drives ExerciseService.endStandaloneExercise
-                // instead (S17), through a different intent action.
-                if (SessionStateHolder.metadata.value.isStandalone) return
+                // A stray end for a not-yet-adopted standalone session can't
+                // close it (D-F6.2) — the watch's own End button drives
+                // ExerciseService.endStandaloneExercise instead (S17),
+                // through a different intent action. Once adopted (live
+                // bridging), the phone genuinely does know about the session
+                // and ending from either side should work — routed to the
+                // same endStandaloneIntent the watch's own End button uses,
+                // not the phone-mastered endIntent.
+                val metadata = SessionStateHolder.metadata.value
+                if (metadata.isStandalone) {
+                    if (metadata.isAdopted) {
+                        ContextCompat.startForegroundService(
+                            this,
+                            ExerciseService.endStandaloneIntent(this, rpe = null),
+                        )
+                    }
+                    return
+                }
                 ContextCompat.startForegroundService(this, ExerciseService.endIntent(this))
             }
             "$MESSAGE_PATH_PREFIX/logSetAck" -> {
@@ -65,6 +93,9 @@ class PhoneListenerService : WearableListenerService() {
             }
             "$MESSAGE_PATH_PREFIX/standaloneSessionAck" -> {
                 applyStandaloneSessionAck(messageEvent.data)
+            }
+            "$MESSAGE_PATH_PREFIX/adoptionAck" -> {
+                applyAdoptionAck(messageEvent.data)
             }
             "$MESSAGE_PATH_PREFIX/templateSync" -> {
                 applyTemplateSyncMessage(messageEvent.data)
@@ -83,6 +114,11 @@ class PhoneListenerService : WearableListenerService() {
      */
     override fun onPeerConnected(peer: Node) {
         scope.launch { SummarySender.flushPending(applicationContext) }
+        // Live bridging: reachability regained is exactly when a not-yet-
+        // adopted standalone session should (re-)send its adoption snapshot
+        // — sendAdoptionRequestIfNeeded is a no-op once already adopted or
+        // if this isn't a standalone session.
+        scope.launch { SummarySender.sendAdoptionRequestIfNeeded(applicationContext) }
     }
 
     override fun onDestroy() {
@@ -124,6 +160,21 @@ class PhoneListenerService : WearableListenerService() {
             SessionStateHolder.onStandaloneSessionAcked(standaloneSessionId)
         } catch (e: Exception) {
             Log.w(TAG, "applyStandaloneSessionAck failed to parse payload", e)
+        }
+    }
+
+    /**
+     * Decodes `WatchBridge.kt`'s `ackAdoption` JSON (live bridging) and
+     * applies it — the phone confirmed it created (or already had) the live
+     * mirror row for this standalone session.
+     */
+    private fun applyAdoptionAck(data: ByteArray) {
+        try {
+            val json = JSONObject(String(data))
+            val standaloneSessionId = json.optString("standaloneSessionId").ifEmpty { null } ?: return
+            SessionStateHolder.onAdoptionAcked(standaloneSessionId)
+        } catch (e: Exception) {
+            Log.w(TAG, "applyAdoptionAck failed to parse payload", e)
         }
     }
 
@@ -236,15 +287,24 @@ class PhoneListenerService : WearableListenerService() {
             // The phone's `end` message may never have reached us while
             // unreachable — this DataItem resync, once we reconnect, is the
             // delivery guarantee's fallback (docs/40-watch-app-plan.md §3
-            // "Kézbesítési garancia"). Same standalone guard as the "end"
-            // message case above (D-F6.2) — this fallback is keyed only on
-            // phase, not sessionClientId, so without it a stray
-            // phone-mastered desiredPhase:"ended" could otherwise close a
-            // running standalone session.
-            if (map.getString("desiredPhase") == "ended" && SessionStateHolder.phase.value == SessionPhase.ACTIVE &&
-                !SessionStateHolder.metadata.value.isStandalone
-            ) {
-                ContextCompat.startForegroundService(this, ExerciseService.endIntent(this))
+            // "Kézbesítési garancia"). Same standalone/adopted guard as the
+            // "end" message case above (D-F6.2, widened for live bridging)
+            // — this fallback is keyed only on phase, not sessionClientId,
+            // so without it a stray phone-mastered desiredPhase:"ended"
+            // could otherwise close a running, not-yet-adopted standalone
+            // session.
+            if (map.getString("desiredPhase") == "ended" && SessionStateHolder.phase.value == SessionPhase.ACTIVE) {
+                val metadata = SessionStateHolder.metadata.value
+                if (metadata.isStandalone) {
+                    if (metadata.isAdopted) {
+                        ContextCompat.startForegroundService(
+                            this,
+                            ExerciseService.endStandaloneIntent(this, rpe = null),
+                        )
+                    }
+                } else {
+                    ContextCompat.startForegroundService(this, ExerciseService.endIntent(this))
+                }
             }
         }
     }

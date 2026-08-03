@@ -1,10 +1,12 @@
 package com.khunor.lifey
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.tasks.await
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -132,6 +134,59 @@ object SummarySender {
         for (payload in StandaloneSessionStore.all(context)) {
             sendStandaloneSession(context, payload.toString())
         }
+    }
+
+    /**
+     * Sends a running-session snapshot so the phone can create (before
+     * adopted) or update (after) its live mirror row — called right after a
+     * standalone session starts ([ExerciseService.startStandaloneExercise]),
+     * on every reconnect ([PhoneListenerService.onPeerConnected]), and after
+     * every locally logged set ([SessionStateHolder.onStandaloneSetLogged]),
+     * so the phone's mirror never goes stale waiting for the workout to end.
+     * Deliberately **not** gated on `isAdopted` — once adopted this is what
+     * keeps the phone's set list in sync as new sets land; the phone-side
+     * processor merges a resend into the existing running row rather than
+     * duplicating it. A no-op if the current session isn't standalone or
+     * hasn't recorded a start time yet — so callers can invoke this
+     * unconditionally at every trigger point without their own gating.
+     * Reads live from [SessionStateHolder] rather than a persisted queue
+     * (unlike [flushPending]/[sendStandaloneSession]) since there's nothing
+     * to persist yet — the session is still running.
+     */
+    suspend fun sendAdoptionRequestIfNeeded(context: Context) {
+        val metadata = SessionStateHolder.metadata.value
+        if (!metadata.isStandalone) return
+        val sessionClientId = metadata.sessionClientId ?: return
+        val startedAtElapsedRealtimeMs =
+            SessionStateHolder.liveMetrics.value.startedAtElapsedRealtimeMs ?: return
+        val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
+        val nowEpochMs = System.currentTimeMillis()
+        val startedAtEpochMs = nowEpochMs - (nowElapsedRealtimeMs - startedAtElapsedRealtimeMs)
+        val liveMetrics = SessionStateHolder.liveMetrics.value
+
+        val payload = JSONObject().apply {
+            put("standaloneSessionId", sessionClientId)
+            putOpt("templateId", metadata.standaloneTemplate?.templateId)
+            put("startedAtEpochMs", startedAtEpochMs)
+            put(
+                "sets",
+                JSONArray().apply {
+                    metadata.standaloneSets.forEach { set ->
+                        put(
+                            JSONObject().apply {
+                                put("loggedAtEpochMs", set.loggedAtEpochMs)
+                                put("reps", set.reps)
+                                putOpt("weight", set.weight)
+                                putOpt("exerciseIndex", set.exerciseIndex)
+                            },
+                        )
+                    }
+                },
+            )
+            putOpt("activeCalories", liveMetrics.activeCalories)
+            putOpt("averageHeartRate", liveMetrics.heartRateBpm)
+        }
+        send(context, "$MESSAGE_PATH_PREFIX/standaloneSessionAdopted", payload)
     }
 
     private suspend fun send(context: Context, path: String, payload: Any) {

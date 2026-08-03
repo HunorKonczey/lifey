@@ -128,6 +128,67 @@ void main() {
     expect(ackCalls.single.arguments, {'standaloneSessionId': 'standalone-1'});
   });
 
+  test('carries the working weight forward to a set the stepper was not used for', () async {
+    final processor = buildProcessor();
+
+    await processor.process(
+      sampleEvent(
+        sets: const [
+          WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 8, weight: 62.5),
+          WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 10),
+        ],
+      ),
+      language: LanguagePreference.english,
+    );
+
+    final sets = await db.select(db.exerciseSets).get();
+    expect(sets, hasLength(2));
+    final adjusted = sets.singleWhere((s) => s.reps == 8);
+    expect(adjusted.weight, 62.5);
+    // A plain "+1" tap carries no weight of its own; it used to be persisted
+    // as a literal 0 kg even mid-session at a known working weight.
+    final plain = sets.singleWhere((s) => s.reps == 10);
+    expect(plain.weight, 62.5);
+  });
+
+  test('seeds a weightless set from the last session that trained the exercise', () async {
+    final processor = buildProcessor();
+    // A previous standalone session at 80/85 kg for the same generic
+    // exercise — the positional hint each of this session's sets should pick
+    // up, exactly like the phone's own "+1" prefill does.
+    await processor.process(
+      sampleEvent(
+        standaloneSessionId: 'standalone-earlier',
+        sets: const [
+          WatchStandaloneSet(loggedAtEpochMs: 1782975260000, reps: 8, weight: 85),
+          WatchStandaloneSet(loggedAtEpochMs: 1782975320000, reps: 8, weight: 80),
+        ],
+      ),
+      language: LanguagePreference.english,
+    );
+
+    await processor.process(
+      sampleEvent(
+        sets: const [
+          WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10),
+          WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 11),
+          // Past the end of the hints — carries the previous row forward.
+          WatchStandaloneSet(loggedAtEpochMs: 1783075380000, reps: 12),
+        ],
+      ),
+      language: LanguagePreference.english,
+    );
+
+    final sets = await (db.select(db.exerciseSets)
+          ..where((t) => t.sessionClientId.equals('standalone-1')))
+        .get();
+    expect(sets, hasLength(3));
+    // getPreviousPerformance sorts by weight descending.
+    expect(sets.singleWhere((s) => s.reps == 10).weight, 85);
+    expect(sets.singleWhere((s) => s.reps == 11).weight, 80);
+    expect(sets.singleWhere((s) => s.reps == 12).weight, 80);
+  });
+
   test('resolves the Hungarian title when language is hungarian', () async {
     final processor = buildProcessor();
 
@@ -397,6 +458,151 @@ void main() {
       final generic = exercises.firstWhere((e) => e.name == 'Quick strength');
       final sets = await db.select(db.exerciseSets).get();
       expect(sets.single.exerciseClientId, generic.clientId);
+    });
+  });
+
+  group('live bridging (watch-started session adopted mid-workout)', () {
+    Future<String> makeExercise(String name) => exerciseRepository.create(name);
+
+    Future<String> makeTemplate(String name, List<TemplateExercise> exercises) =>
+        templateRepository.create(name: name, exercises: exercises);
+
+    WatchStandaloneAdoption sampleAdoptionEvent({
+      String standaloneSessionId = 'standalone-1',
+      List<WatchStandaloneSet> sets = const [
+        WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10),
+      ],
+      String? templateId,
+      double? activeCalories,
+      double? averageHeartRate,
+    }) =>
+        WatchStandaloneAdoption(
+          standaloneSessionId: standaloneSessionId,
+          templateId: templateId,
+          startedAtEpochMs: 1783075200000,
+          sets: sets,
+          activeCalories: activeCalories,
+          averageHeartRate: averageHeartRate,
+        );
+
+    test('creates a running (not-yet-finished) mirror session and acks adoption', () async {
+      final processor = buildProcessor();
+
+      await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.clientId, 'standalone-1');
+      expect(row.finishedAt, isNull);
+      final sets = await db.select(db.exerciseSets).get();
+      expect(sets, hasLength(1));
+
+      expect(ackCalls, hasLength(1));
+      expect(ackCalls.single.method, 'ackAdoption');
+      expect(ackCalls.single.arguments, {'standaloneSessionId': 'standalone-1'});
+    });
+
+    test('a resent adoption for an already-adopted session refreshes its set list, not a duplicate row', () async {
+      final processor = buildProcessor();
+      await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+      ackCalls.clear();
+
+      // The watch resends this snapshot after every set it logs (live sync,
+      // not just at the initial handshake) — a resend with more sets than
+      // last time must update the existing running row's set list, not
+      // leave it stale or create a second session.
+      await processor.processAdoption(
+        sampleAdoptionEvent(sets: const [
+          WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10),
+          WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 10),
+        ]),
+        language: LanguagePreference.english,
+      );
+
+      final sessions = await db.select(db.workoutSessions).get();
+      expect(sessions, hasLength(1));
+      expect(sessions.single.finishedAt, isNull);
+      final sets = await db.select(db.exerciseSets).get();
+      expect(sets, hasLength(2));
+      expect(ackCalls, hasLength(1));
+      expect(ackCalls.single.method, 'ackAdoption');
+    });
+
+    test('the final event finishes an already-adopted session instead of creating a duplicate', () async {
+      final processor = buildProcessor();
+      await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+
+      await processor.process(
+        sampleEvent(
+          sets: const [
+            WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10),
+            WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 12, weight: 40),
+          ],
+          rpe: 7,
+        ),
+        language: LanguagePreference.english,
+      );
+
+      final sessions = await db.select(db.workoutSessions).get();
+      expect(sessions, hasLength(1));
+      expect(sessions.single.finishedAt, isNotNull);
+      expect(sessions.single.rpe, 7);
+
+      final sets = await db.select(db.exerciseSets).get();
+      expect(sets, hasLength(2));
+
+      expect(ackCalls, hasLength(2));
+      expect(ackCalls[0].method, 'ackAdoption');
+      expect(ackCalls[1].method, 'ackStandaloneSession');
+    });
+
+    test('a late adoption resend after the session already finished is a no-op besides the ack', () async {
+      final processor = buildProcessor();
+      await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+      await processor.process(sampleEvent(rpe: 7), language: LanguagePreference.english);
+      ackCalls.clear();
+
+      // A resend that raced behind the final event and arrived late must not
+      // reopen (clear finishedAt on) an already-closed session.
+      await processor.processAdoption(
+        sampleAdoptionEvent(sets: const [
+          WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10),
+        ]),
+        language: LanguagePreference.english,
+      );
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.finishedAt, isNotNull);
+      expect(row.rpe, 7);
+      expect(ackCalls, hasLength(1));
+      expect(ackCalls.single.method, 'ackAdoption');
+    });
+
+    test('adoption and the final event resolve template exercises the same way', () async {
+      final benchId = await makeExercise('Bench Press');
+      final templateId = await makeTemplate('Push day', [
+        TemplateExercise(exerciseClientId: benchId),
+      ]);
+      final processor = buildProcessor();
+      await processor.processAdoption(
+        sampleAdoptionEvent(
+          templateId: templateId,
+          sets: const [WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10, exerciseIndex: 0)],
+        ),
+        language: LanguagePreference.english,
+      );
+
+      await processor.process(
+        sampleEvent(
+          templateId: templateId,
+          sets: const [WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10, exerciseIndex: 0)],
+        ),
+        language: LanguagePreference.english,
+      );
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.templateClientId, templateId);
+      final sets = await db.select(db.exerciseSets).get();
+      expect(sets.single.exerciseClientId, benchId);
     });
   });
 }

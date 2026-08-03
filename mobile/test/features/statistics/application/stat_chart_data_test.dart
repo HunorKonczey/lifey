@@ -22,8 +22,12 @@ import 'package:lifey/shared/widgets/charts/time_series_chart.dart';
 /// calendar dates, so the suite never goes stale or flakes around a fixed
 /// date. [offset] is days back from today's local midnight.
 final _now = DateTime.now();
-DateTime _day(int offset) =>
-    DateTime(_now.year, _now.month, _now.day).subtract(Duration(days: offset));
+/// Calendar arithmetic rather than `subtract(Duration(days:))` — the same
+/// reason [StatsRange.cutoff] uses it: an exact 24 h × n duration drifts an
+/// hour off local midnight across a DST change, which for a large [offset]
+/// produced a date the provider's own local-midnight bucketing could never
+/// return.
+DateTime _day(int offset) => DateTime(_now.year, _now.month, _now.day - offset);
 
 Meal _meal(
   DateTime dateTime, {

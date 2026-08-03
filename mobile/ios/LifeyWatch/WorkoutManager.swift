@@ -122,6 +122,26 @@ struct LogAdjustState: Equatable {
   /// Always kg, matching the phone's own workout UI (D-F5b.4).
   var weight: Double
   var field: LogAdjustField
+
+  /// Whether a −/+ tap on the active field would still move the value —
+  /// drives the disabled/ghosted look of the stepper's two buttons. The crown
+  /// has no equivalent need (it just clamps silently against a stop), so these
+  /// exist purely so a *button* can show it's at the end of its range instead
+  /// of looking tappable and doing nothing. Kept next to `stepLogAdjust`'s own
+  /// clamping so the bounds stay in one place.
+  var canDecrement: Bool {
+    switch field {
+    case .reps: return reps > logAdjustRepsBounds.lowerBound
+    case .weight: return weight > logAdjustWeightBounds.lowerBound
+    }
+  }
+
+  var canIncrement: Bool {
+    switch field {
+    case .reps: return reps < logAdjustRepsBounds.upperBound
+    case .weight: return weight < logAdjustWeightBounds.upperBound
+    }
+  }
 }
 
 /// Stepper steps and bounds (D-F5b.5). The reps floor of 1 matches the
@@ -219,6 +239,34 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// `applyStateUpdate`'s phone-state rejection (D-F6.2), and which of
   /// `finishAndSendSummary()`/`endStandalone(rpe:)` `requestEnd(rpe:)` calls.
   @Published private(set) var isStandalone = false
+  /// Whether the phone has acknowledged a live-bridging adoption request for
+  /// this standalone session (`sendAdoptionRequestIfNeeded()`/
+  /// `applyAdoptionAck(standaloneSessionId:)`) — meaningless outside
+  /// `isStandalone`. Deliberately does **not** flip `logSet()`'s local-vs-
+  /// remote branch: set-logging stays watch-local/instant always for a
+  /// standalone session, adopted or not (the whole reliability point of F6).
+  /// It only relaxes the phone-originated `"end"` command's guard, so an
+  /// adopted session can be ended from either side.
+  @Published private(set) var isAdopted = false
+  /// Whether `HeaderChip`'s "not connected" badge should show — a genuinely
+  /// disconnected standalone session, not one the phone has already joined.
+  /// Once adopted, the phone IS tracking the session live, so the icon
+  /// implying otherwise would be actively misleading.
+  var showsStandaloneBadge: Bool { isStandalone && !isAdopted }
+  /// The metrics page's header label: the template/session name when one is
+  /// available (`standaloneTemplate.title` for a template-backed standalone
+  /// session, `title` for a phone-mastered one — never both at once, since
+  /// `title` is never set for standalone, D-F6.2), the generic
+  /// `active_header_label` ("STRENGTH"/"ERŐ") otherwise (Quick strength, or
+  /// no name at all). `HeaderChip`'s own `.lineLimit(1)` already truncates a
+  /// too-long name with a trailing "…" (SwiftUI's default truncation mode).
+  var activeHeaderLabel: String {
+    let name = standaloneTemplate?.title ?? title
+    if let name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      return name
+    }
+    return String(localized: "active_header_label")
+  }
   /// The standalone session's own set log — the only record of it until
   /// `endStandalone(rpe:)` queues it (docs/watch/44-watch-f6-standalone-plan.md
   /// §3.1). Unused (`[]`) outside standalone mode; phone-mastered sessions
@@ -318,6 +366,14 @@ final class WorkoutManager: NSObject, ObservableObject {
     standaloneSets = []
     standaloneTemplate = template
     standaloneExerciseIndex = 0
+    // A leftover prefill from an earlier session in this process would
+    // otherwise win over this session's own resolution (see
+    // `standalonePrefill`) until the phone adopts this one and pushes a
+    // fresh value. `reset()` clears these too; this is the belt to its
+    // braces, since `startStandalone` is reachable from `.idle` without a
+    // reset having necessarily run in between.
+    nextSetReps = nil
+    nextSetWeight = nil
 
     do {
       try await startSession(configuration: configuration)
@@ -332,6 +388,12 @@ final class WorkoutManager: NSObject, ObservableObject {
       return
     }
     saveActiveSnapshot()
+    // Live bridging (docs/watch's watch-phone live-bridging work): if the
+    // phone is already reachable at the exact moment the session starts,
+    // ask it to join in right away. If not, `sessionReachabilityDidChange`
+    // retries this the moment the phone reconnects, so a workout started
+    // out of range still gets adopted as soon as the phone comes back.
+    sendAdoptionRequestIfNeeded()
   }
 
   /// The gyakorlat-lista's tap handler (docs/watch/49-watch-f6b-template-sync-plan.md
@@ -357,6 +419,46 @@ final class WorkoutManager: NSObject, ObservableObject {
       return nil
     }
     return standaloneTemplate.exercises[standaloneExerciseIndex]
+  }
+
+  /// What the *next* standalone set should default to for the current
+  /// exercise — the standalone counterpart of the phone-pushed
+  /// `nextSetReps`/`nextSetWeight` (docs/watch/48-watch-f5b-set-adjust-plan.md
+  /// D-F5b.2), which a phone-less session never receives. Same priority order
+  /// the phone uses for its own "+1" prefill
+  /// (`LogSessionScreen._handleAddSet`, `StandaloneSessionProcessor
+  /// ._resolveWeights`), so a set logged here and the row the phone would
+  /// have produced agree:
+  ///
+  /// 0. what the phone last pushed for this session, once it has adopted it
+  ///    (live bridging) — the *same* `watchSetPrefill` computation a
+  ///    phone-started session receives, so both paths behave identically,
+  ///    which is the whole point. It wins because the phone sees the real
+  ///    history and the real row the set will land in; the watch only ever
+  ///    approximates that from the cached template. Recomputed and repushed
+  ///    after every set the watch logs, so it doesn't lag behind — but it
+  ///    does freeze if the phone goes out of range, which is what the
+  ///    watch-side fallbacks below are for;
+  /// 1. the positional entry from the synced template's `previousSets` — the
+  ///    last workout's *n*-th set of this exercise, for the *n*-th set about
+  ///    to be logged now;
+  /// 2. otherwise the last set already logged for this exercise in *this*
+  ///    session (a run of taps stays at the working weight);
+  /// 3. otherwise `standaloneDefaultReps` and no weight — a Quick strength
+  ///    session with no history, i.e. exactly F6a's original behavior.
+  var standalonePrefill: (reps: Int, weight: Double?) {
+    if let nextSetReps {
+      return (reps: nextSetReps, weight: nextSetWeight)
+    }
+    let sets = standaloneSetsForCurrentExercise
+    if let previousSets = standaloneCurrentExercise?.previousSets, sets.count < previousSets.count {
+      let hint = previousSets[sets.count]
+      return (reps: hint.reps, weight: hint.weight)
+    }
+    if let last = sets.last {
+      return (reps: last.reps, weight: last.weight)
+    }
+    return (reps: standaloneDefaultReps, weight: nil)
   }
 
   /// `standaloneSets` filtered to the *current* exercise only (docs/watch/
@@ -500,17 +602,26 @@ final class WorkoutManager: NSObject, ObservableObject {
     nextSetWeight: Double?
   ) {
     guard !isStandalone else {
-      // A phone-mastered session's state can't touch the watch's own
-      // standalone session (docs/watch/44-watch-f6-standalone-plan.md
-      // D-F6.2). During standalone, `self.sessionClientId` holds the
-      // watch's own locally generated id, so any context/state arriving
-      // here necessarily belongs to a *different* (phone) session — which
-      // doubles as "a phone tried to start while standalone is active",
-      // rejected the same way the existing "another app owns the sensors"
-      // conflict is (§5.3).
+      // A *different* session's state can't touch the watch's own standalone
+      // one (docs/watch/44-watch-f6-standalone-plan.md D-F6.2) — that's a
+      // phone trying to start while standalone is active, rejected the same
+      // way the existing "another app owns the sensors" conflict is (§5.3).
       if sessionClientId != self.sessionClientId {
         PhoneConnector.shared.sendStartRejected(sessionClientId: sessionClientId)
+        return
       }
+      // Matching id = the phone's live mirror of *this* session (live
+      // bridging), pushing state for the workout the watch is running. Take
+      // the prefill and nothing else: those two fields are the phone
+      // answering "what should the next set default to", which the watch
+      // cannot compute as well as the phone can (it holds the full history)
+      // — and taking them here is what finally makes a watch-started session
+      // prefill exactly like a phone-started one. Everything else stays
+      // watch-owned: `exerciseName`/`setsDone`/`setsTotal` and the rest
+      // timer all describe the session the watch itself is driving, and the
+      // phone's copy of them is at best a sync behind.
+      self.nextSetReps = nextSetReps
+      self.nextSetWeight = nextSetWeight
       return
     }
     self.sessionClientId = sessionClientId
@@ -545,11 +656,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     // confirms immediately instead of going through PhoneConnector — kept
     // as this single branch point rather than scattered UI `if`s.
     if isStandalone {
-      // F5b's values are deliberately *not* threaded into the standalone
-      // path: F6a logs a fixed `standaloneDefaultReps` (D-F6.8), and
-      // rewiring that is F6b's job (D-F5b.8), not this step's. `beginLogAdjust()`
-      // is gated on `!isStandalone` to match, so this branch never sees values.
-      beginLocalLogSet()
+      beginLocalLogSet(reps: reps, weight: weight)
     } else {
       beginRemoteLogSet(
         sessionClientId: sessionClientId, eventId: UUID().uuidString, reps: reps, weight: weight)
@@ -559,18 +666,32 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// The standalone local-mode branch (docs/watch/44-watch-f6-standalone-plan.md
   /// §2.1, §3.2) — no PENDING/ack round-trip: this tap's set *is* the record
   /// (there's no phone to confirm against), so it's appended and CONFIRMED
-  /// immediately, and a fixed-length local rest starts right away.
-  private func beginLocalLogSet() {
+  /// immediately, and a fixed-length local rest starts right away. [reps]/
+  /// [weight] mirror `beginRemoteLogSet`'s own parameters — nil for a plain
+  /// one-tap log (falls back to `standaloneDefaultReps`/no weight), set when
+  /// the F5b adjust stepper was used instead.
+  private func beginLocalLogSet(reps: Int? = nil, weight: Double? = nil) {
     let now = Date()
+    // A plain tap takes whatever `standalonePrefill` resolved (last
+    // workout's matching set, or this session's working weight) instead of
+    // the bare `standaloneDefaultReps`/no-weight it used to log — that's
+    // what made every "+1" set land on the phone as 0 kg.
+    let prefill = standalonePrefill
     standaloneSets.append(
       StandaloneSet(
         loggedAtEpochMs: Int64(now.timeIntervalSince1970 * 1000),
-        reps: standaloneDefaultReps,
+        reps: reps ?? prefill.reps,
+        weight: weight ?? prefill.weight,
         // nil outside a template session, matching F6a's original
         // behavior exactly; the current gyakorlat-lista selection
         // otherwise (docs/watch/49-watch-f6b-template-sync-plan.md §3.3).
         exerciseIndex: standaloneTemplate != nil ? standaloneExerciseIndex : nil))
     saveActiveSnapshot()
+    // Live bridging: keeps an already-adopted phone mirror in sync with
+    // every set as it's logged, not just at start/end — a no-op if the
+    // phone isn't reachable right now, retried the next time it is (see
+    // `sendAdoptionRequestIfNeeded`'s own doc comment).
+    sendAdoptionRequestIfNeeded()
 
     logSetState = .confirmed
     WKInterfaceDevice.current().play(.success)
@@ -660,21 +781,27 @@ final class WorkoutManager: NSObject, ObservableObject {
 
   // MARK: - Log-set adjust (docs/watch/48-watch-f5b-set-adjust-plan.md §3.1)
 
-  /// Opens the adjust stepper (revealed by a long-press on the log control —
-  /// D-F5b.1). Starts from the phone's prefill for the row a tap would log
+  /// Opens the adjust stepper (`LogPage`'s dedicated adjust button, next to
+  /// the log control — D-F5b.1). Starts from the phone's prefill for the row a tap would log
   /// into, falling back to a plain default when there's nothing to go on
-  /// (D-F5b.2). Same `logSetState == .ready` gate the plain tap uses, so a
-  /// still-pending log can't be adjusted out from under itself.
-  ///
-  /// Not available in standalone: F6a logs a fixed reps count (D-F6.8) and
-  /// binding the stepper there is F6b's job (D-F5b.8).
+  /// (D-F5b.2) — standalone sessions have no phone prefill, so they always
+  /// take the default (`nextSetReps`/`nextSetWeight` are only ever set by
+  /// `applyStateUpdate`, which standalone never receives). Same
+  /// `logSetState == .ready` gate the plain tap uses, so a still-pending log
+  /// can't be adjusted out from under itself.
   func beginLogAdjust() {
-    guard phase == .active, !isStandalone, logSetState == .ready, logAdjustState == nil else {
+    guard phase == .active, logSetState == .ready, logAdjustState == nil else {
       return
     }
+    // Standalone has no phone prefill to read (`nextSetReps`/`nextSetWeight`
+    // are only ever set by `applyStateUpdate`), so it resolves its own from
+    // the synced template's history — see `standalonePrefill`. Before this,
+    // the stepper always opened on 10 reps / 0 kg in standalone, which is
+    // the "nincs töltve az előző edzés számaival" report.
+    let prefill = isStandalone ? standalonePrefill : nil
     logAdjustState = LogAdjustState(
-      reps: nextSetReps ?? logAdjustDefaultReps,
-      weight: nextSetWeight ?? logAdjustDefaultWeight,
+      reps: prefill?.reps ?? nextSetReps ?? logAdjustDefaultReps,
+      weight: prefill?.weight ?? nextSetWeight ?? logAdjustDefaultWeight,
       field: .reps)
     scheduleLogAdjustIdleDismiss()
   }
@@ -700,6 +827,16 @@ final class WorkoutManager: NSObject, ObservableObject {
         max(stepped, logAdjustWeightBounds.lowerBound), logAdjustWeightBounds.upperBound)
     }
     logAdjustState = state
+    scheduleLogAdjustIdleDismiss()
+  }
+
+  /// Resets the idle-dismiss timer without changing any value — called for a
+  /// crown delta too small to round to a whole step, so actively turning the
+  /// crown never lets the idle timeout fire out from under the user just
+  /// because no individual delta happened to cross a rounding boundary
+  /// (D-F5b.7). A no-op once the stepper is already closed.
+  func noteLogAdjustActivity() {
+    guard logAdjustState != nil else { return }
     scheduleLogAdjustIdleDismiss()
   }
 
@@ -846,6 +983,45 @@ final class WorkoutManager: NSObject, ObservableObject {
     scheduleSummaryAutoDismiss()
   }
 
+  // MARK: - Live bridging (watch-started session adopted by the phone)
+
+  /// Sends a running-session snapshot so the phone can create (before
+  /// `isAdopted`) or update (after) its live mirror row — called right after
+  /// a standalone session starts, on every reachability-regain transition
+  /// (`PhoneConnector.sessionReachabilityDidChange`), and after every locally
+  /// logged set (`beginLocalLogSet`), so the phone's mirror never goes stale
+  /// waiting for the workout to end. Deliberately **not** gated on
+  /// `!isAdopted` — once adopted this is what keeps the phone's set list in
+  /// sync as new sets land; the phone-side processor merges a resend into
+  /// the existing running row rather than duplicating it. Never affects
+  /// `logSet()`'s local-vs-remote branch — see `isAdopted`'s doc comment.
+  func sendAdoptionRequestIfNeeded() {
+    guard isStandalone, isPhoneReachable, let sessionClientId, let startedAt else {
+      return
+    }
+    let activeCaloriesTotal = builder?.statistics(for: Self.activeEnergyType)?
+      .sumQuantity()?.doubleValue(for: .kilocalorie())
+    let averageHeartRate = builder?.statistics(for: Self.heartRateType)?
+      .averageQuantity()?.doubleValue(for: HKUnit(from: "count/min"))
+    let payload = StandaloneAdoptionPayload(
+      standaloneSessionId: sessionClientId,
+      templateId: standaloneTemplate?.templateId,
+      startedAtEpochMs: Int64(startedAt.timeIntervalSince1970 * 1000),
+      sets: standaloneSets,
+      activeCalories: activeCaloriesTotal,
+      averageHeartRate: averageHeartRate)
+    PhoneConnector.shared.sendStandaloneAdoption(payload)
+  }
+
+  /// Called by `PhoneConnector` on an `adoptionAck` reply — the phone
+  /// created (or already had) the live mirror row for [standaloneSessionId].
+  /// Guarded against a stale ack for a since-ended/since-replaced session,
+  /// same shape as `applyLogSetAck`'s eventId check.
+  func applyAdoptionAck(standaloneSessionId: String) {
+    guard isStandalone, sessionClientId == standaloneSessionId else { return }
+    isAdopted = true
+  }
+
   /// The real end, triggered by `PhoneConnector` once the phone's `end`
   /// command (or its `desiredPhase: "ended"` delivery-guarantee fallback,
   /// docs/40-watch-app-plan.md §3 "Kézbesítési garancia") arrives. Runs from
@@ -914,6 +1090,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     activeCalories = nil
     startedAt = nil
     isStandalone = false
+    isAdopted = false
     standaloneSets = []
     standaloneTemplate = nil
     standaloneExerciseIndex = 0

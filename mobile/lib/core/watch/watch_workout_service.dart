@@ -145,25 +145,29 @@ class WatchSetLogged {
 /// One set logged during a standalone (phone-less) session (docs/watch/
 /// 44-watch-f6-standalone-plan.md §4.1) — part of the batch a
 /// [WatchStandaloneSession] carries, unlike [WatchSetLogged]'s one-tap-at-a-time
-/// live event. [reps] is always `standaloneDefaultReps` (10) in F6a — the
-/// watch has no reps input yet (D-F6.8) — but sent per-set already so a
-/// future watch-side stepper (F5b/F6b) won't need a protocol change.
-/// [exerciseIndex] is null in F6a (no plan); F6b resolves it against the
-/// synced template's exercise list.
+/// live event. [reps]/[weight] default to `standaloneDefaultReps`/`null`
+/// unless the watch-side F5b adjust stepper was used (now wired up for
+/// standalone too). [exerciseIndex] is null outside a template session; F6b
+/// resolves it against the synced template's exercise list.
 class WatchStandaloneSet {
   const WatchStandaloneSet({
     required this.loggedAtEpochMs,
     required this.reps,
+    this.weight,
     this.exerciseIndex,
   });
 
   final int loggedAtEpochMs;
   final int reps;
+  final double? weight;
   final int? exerciseIndex;
 
   factory WatchStandaloneSet.fromJson(Map<Object?, Object?> json) => WatchStandaloneSet(
         loggedAtEpochMs: json['loggedAtEpochMs'] as int,
         reps: json['reps'] as int,
+        // `as num?`, not `as double?`: a whole-number weight (60) arrives as
+        // an int on the Android side of the bridge.
+        weight: (json['weight'] as num?)?.toDouble(),
         exerciseIndex: json['exerciseIndex'] as int?,
       );
 }
@@ -221,6 +225,50 @@ class WatchStandaloneSession {
       );
 }
 
+/// A watch-started (standalone) session that is still **running**, sent as
+/// soon as the phone is (or becomes) reachable — the watch→phone half of
+/// "starting on the watch should make the phone join in too", not just
+/// import the workout after the fact. Same idea as [WatchStandaloneSession]
+/// but a snapshot mid-flight: no `endedAtEpochMs`, [sets] is whatever has
+/// been logged *so far* and may be resent with more sets as the workout
+/// continues. [standaloneSessionId] is the same id the eventual
+/// [WatchStandaloneSession] will carry when the workout finishes — that's
+/// what lets [StandaloneSessionProcessor] recognize "this session already
+/// has a running row, finish it" instead of creating a duplicate.
+///
+/// The watch still logs every set locally/instantly regardless of whether
+/// adoption succeeded (docs/watch/44-watch-f6-standalone-plan.md's
+/// reliability guarantee is unchanged) — adoption only gives the phone a
+/// live, visible mirror of the session and the ability to end it too.
+class WatchStandaloneAdoption {
+  const WatchStandaloneAdoption({
+    required this.standaloneSessionId,
+    this.templateId,
+    required this.startedAtEpochMs,
+    required this.sets,
+    this.activeCalories,
+    this.averageHeartRate,
+  });
+
+  final String standaloneSessionId;
+  final String? templateId;
+  final int startedAtEpochMs;
+  final List<WatchStandaloneSet> sets;
+  final double? activeCalories;
+  final double? averageHeartRate;
+
+  factory WatchStandaloneAdoption.fromJson(Map<Object?, Object?> json) => WatchStandaloneAdoption(
+        standaloneSessionId: json['standaloneSessionId'] as String,
+        templateId: json['templateId'] as String?,
+        startedAtEpochMs: json['startedAtEpochMs'] as int,
+        sets: ((json['sets'] as List?) ?? const [])
+            .map((raw) => WatchStandaloneSet.fromJson(Map<Object?, Object?>.from(raw as Map)))
+            .toList(),
+        activeCalories: (json['activeCalories'] as num?)?.toDouble(),
+        averageHeartRate: (json['averageHeartRate'] as num?)?.toDouble(),
+      );
+}
+
 /// Platform-neutral facade over the phone↔watch workout bridge
 /// (docs/40-watch-app-plan.md §6.1). Mirrors [WorkoutSessionNotifierService]'s
 /// shape and constructor-injection pattern so it can be called side by side
@@ -254,9 +302,10 @@ class WatchWorkoutService {
 
   /// Emits [WatchWorkoutSummary], [WatchStartRejected], [WatchEndRequested],
   /// [WatchStartedOnWatch], [WatchReachabilityChanged], [WatchLiveMetrics],
-  /// [WatchSetLogged], [WatchStandaloneSession], or a raw event-name `String`
-  /// for anything not yet decoded — see docs/40-watch-app-plan.md §3. A no-op
-  /// stream (never emits) when [isAvailable] is false.
+  /// [WatchSetLogged], [WatchStandaloneSession], [WatchStandaloneAdoption],
+  /// or a raw event-name `String` for anything not yet decoded — see
+  /// docs/40-watch-app-plan.md §3. A no-op stream (never emits) when
+  /// [isAvailable] is false.
   Stream<Object> get events {
     if (!isAvailable) return const Stream.empty();
     return _events ??= _eventChannel.receiveBroadcastStream().map(_decodeEvent);
@@ -281,6 +330,8 @@ class WatchWorkoutService {
         return WatchSetLogged.fromJson(map);
       case 'standaloneSession':
         return WatchStandaloneSession.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
+      case 'standaloneSessionAdopted':
+        return WatchStandaloneAdoption.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
       default:
         return (map['type'] as String?) ?? 'unknown';
     }
@@ -390,6 +441,22 @@ class WatchWorkoutService {
     if (!isAvailable) return;
     try {
       await _channel.invokeMethod('ackStandaloneSession', {
+        'standaloneSessionId': standaloneSessionId,
+      });
+    } catch (_) {
+      // Best-effort, see class doc.
+    }
+  }
+
+  /// Answers a [WatchStandaloneAdoption] event — same "always ack, even on a
+  /// dedup no-op" contract as [ackStandaloneSession], for the same reason:
+  /// the watch retries an un-acked adoption snapshot (on reconnect/cold
+  /// start) regardless of why it wasn't acked, so a processing failure here
+  /// should simply not call this rather than ack a rejection.
+  Future<void> ackAdoption(String standaloneSessionId) async {
+    if (!isAvailable) return;
+    try {
+      await _channel.invokeMethod('ackAdoption', {
         'standaloneSessionId': standaloneSessionId,
       });
     } catch (_) {

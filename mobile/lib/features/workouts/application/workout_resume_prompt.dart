@@ -17,19 +17,32 @@ import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
 import '../presentation/log_session_screen.dart';
 
-Future<WorkoutSession?> _findActiveSession(Ref ref) async {
+/// [clientId] narrows the search to one specific session — used right after
+/// adopting a watch-started session, where the caller already knows which
+/// id it wants rather than "any" in-progress one (the plain [_check]/
+/// [openActiveWorkoutSession] use, which assumes at most one is ever
+/// running).
+Future<WorkoutSession?> _findActiveSession(Ref ref, {String? clientId}) async {
   final sessions = await ref.read(workoutSessionRepositoryProvider).watchAll().first;
-  return sessions.where((s) => s.inProgress).firstOrNull;
+  return sessions
+      .where((s) => s.inProgress && (clientId == null || s.clientId == clientId))
+      .firstOrNull;
 }
 
 /// Pushes [LogSessionScreen] for [active] via the root navigator, unless a
 /// live one is already mounted (see [isLogSessionScreenOpen] — reconstructing
 /// a second instance from persisted DB state would clobber any not-yet-saved
 /// edits the live one is holding).
-Future<void> _pushSessionScreen(NavigatorState navigator, WorkoutSession active) async {
+Future<void> _pushSessionScreen(
+  NavigatorState navigator,
+  WorkoutSession active, {
+  bool watchMastered = false,
+}) async {
   if (isLogSessionScreenOpen) return;
   await navigator.push(
-    MaterialPageRoute(builder: (_) => LogSessionScreen(session: active)),
+    MaterialPageRoute(
+      builder: (_) => LogSessionScreen(session: active, watchMastered: watchMastered),
+    ),
   );
 }
 
@@ -94,6 +107,36 @@ class WorkoutResumePrompt {
       final language =
           _ref.read(settingsControllerProvider).value?.language ?? LanguagePreference.system;
       await _ref.read(standaloneSessionProcessorProvider).process(event, language: language);
+      return;
+    }
+    if (event is WatchStandaloneAdoption) {
+      final language =
+          _ref.read(settingsControllerProvider).value?.language ?? LanguagePreference.system;
+      await _ref.read(standaloneSessionProcessorProvider).processAdoption(event, language: language);
+      // Mirrors _check()'s cold-start resume: if the app is already alive
+      // (foreground, or merely backgrounded — the widget tree/navigator
+      // survives that), jump straight into the newly-adopted session so its
+      // own LogSessionScreen.initState starts the live notification/Live
+      // Activity the normal way (its existing "in-progress session missing
+      // its notifier" re-attach path above in this file's initState
+      // equivalent) — deliberately not calling WorkoutSessionNotifierService
+      // directly here, to avoid duplicating LogSessionScreen's
+      // WorkoutSessionState-from-blocks construction outside a mounted
+      // screen. If the process was fully killed (no navigator yet), nothing
+      // is lost — the adoption already landed durably in the local DB, and
+      // this same provider's _check() cold-start sweep picks it up and
+      // pushes it the next time the app launches.
+      final navigator = rootNavigatorKey.currentState;
+      if (navigator != null) {
+        final adopted = await _findActiveSession(_ref, clientId: event.standaloneSessionId);
+        // `watchMastered`: the watch owns this session and keeps resending
+        // its whole set list, so the screen mirrors the row instead of
+        // holding the copy it builds on open (see
+        // LogSessionScreen.watchMastered).
+        if (adopted != null) {
+          await _pushSessionScreen(navigator, adopted, watchMastered: true);
+        }
+      }
       return;
     }
     if (event is! WatchWorkoutSummary) return;
