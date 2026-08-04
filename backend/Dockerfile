@@ -29,7 +29,14 @@ EXPOSE 8080
 # heap + metaspace + thread stacks + code cache + other native, so the heap
 # cap has to sit well below the limit, not at it. Override JAVA_OPTS in the
 # Render environment to retune on a bigger plan without rebuilding.
-ENV JAVA_OPTS="-Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m"
+#
+# Metaspace is the binding constraint here, not the heap. The Firebase Admin
+# SDK (gRPC + protobuf + the Google API client) loads a very large number of
+# classes when `firebaseApp` is created, and a 96m cap died with
+# `OutOfMemoryError: Metaspace` mid-startup. Give metaspace the larger share
+# and keep the heap modest — this app's biggest transient allocation is a
+# decoded upload image (multipart is capped at 10MB), not steady-state data.
+ENV JAVA_OPTS="-Xms64m -Xmx192m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m"
 # Neither Render nor Railway has a secret-file mount, so push credentials are
 # supplied as base64-encoded env vars and decoded to a file here on startup.
 # Each block is a no-op when its *_B64 var is unset, so a deploy with push

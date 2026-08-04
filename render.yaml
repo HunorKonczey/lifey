@@ -39,10 +39,11 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       # Render's Free and Starter instances both cap at 512 MB. Heap + metaspace
-      # must leave room for thread stacks, code cache and other native memory —
-      # see the Dockerfile comment for the full reasoning.
+      # must leave room for thread stacks, code cache and other native memory.
+      # Metaspace gets the larger share because the Firebase Admin SDK loads a
+      # lot of classes — see the Dockerfile comment for the full reasoning.
       - key: JAVA_OPTS
-        value: -Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m
+        value: -Xms64m -Xmx192m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m
       # Set in the dashboard (Environment tab). Values never live in git.
       - key: SPRING_DATASOURCE_URL
         sync: false
