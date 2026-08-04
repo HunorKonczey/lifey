@@ -266,6 +266,25 @@ data class SessionMetadata(
      * gyakorlat-lista, wired in T7); never by anything synced from the
      * phone. */
     val standaloneExerciseIndex: Int = 0,
+    /** What the phone reports for the exercise at [phoneSetsExerciseIndex]:
+     * how many sets its copy of this session has for it, and how many its
+     * plan holds. Both null until a state sync names an exercise this watch
+     * agrees is the current one.
+     *
+     * A watch-started session is logged into from *both* sides — the phone's
+     * mirror screen stays editable — but only the phone's row holds both
+     * halves; [standaloneSets] is this watch's own half alone. Without these
+     * the counter on the wrist silently ignored every set logged on the
+     * phone, and [advancedStandaloneExerciseIndex] kept offering an exercise
+     * that was already finished there. */
+    val phoneSetsDone: Int? = null,
+    val phoneSetsTotal: Int? = null,
+    /** Which exercise the two values above are about — the phone echoes back
+     * the index this watch sent it (`currentExerciseIndex` in the adoption
+     * payload), so a count computed for a different exercise is never applied
+     * to the current one. Null whenever the phone had nothing matching to
+     * say. */
+    val phoneSetsExerciseIndex: Int? = null,
 ) {
     /** [sessionClientId] doubles as the standalone session's own id during
      * standalone mode — reused rather than a separate `standaloneSessionId`
@@ -340,8 +359,24 @@ data class SessionMetadata(
      */
     private fun isStandaloneExerciseComplete(index: Int): Boolean {
         val exercise = standaloneTemplate?.exercises?.getOrNull(index) ?: return false
-        val logged = standaloneSets.count { it.exerciseIndex == index }
-        return logged >= (exercise.targetSets ?: 1)
+        return standaloneSetsDoneAt(index) >= (exercise.targetSets ?: 1)
+    }
+
+    /**
+     * How many sets this session has for the exercise at [index], counting
+     * the ones logged on the phone's mirror screen — see [phoneSetsDone].
+     *
+     * The larger of the two counts, not the phone's: its copy is at best one
+     * sync behind, so right after a tap on the wrist this watch's own list is
+     * the higher (and correct) one, and taking the phone's would make the
+     * counter visibly jump backwards. The phone's is higher exactly when it
+     * knows about sets this watch never logged, which is the case this exists
+     * for. Mirrors iOS's `standaloneSetsDone(at:)`.
+     */
+    fun standaloneSetsDoneAt(index: Int): Int {
+        val own = standaloneSets.count { it.exerciseIndex == index }
+        if (index != phoneSetsExerciseIndex || phoneSetsDone == null) return own
+        return maxOf(own, phoneSetsDone)
     }
 
     /**
@@ -474,6 +509,7 @@ object SessionStateHolder {
         restTotalSeconds: Int?,
         nextSetReps: Int?,
         nextSetWeight: Double?,
+        setsDoneExerciseIndex: Int?,
     ) {
         if (_metadata.value.isStandalone) {
             // A *different* session's state can't touch the watch's own
@@ -492,8 +528,25 @@ object SessionStateHolder {
             // one. Everything else stays watch-owned: the exercise/set
             // counters and the rest timer all describe the session the watch
             // itself drives, and the phone's copy is at best a sync behind.
+            // The set counts come along too, but only when the phone says
+            // which exercise they are about *and* it's the one this watch is
+            // logging into. The phone's row is the only place both sides'
+            // sets meet (its mirror screen stays editable), so this is the
+            // one thing it genuinely knows better — unlike the exercise name
+            // and the rest timer, which describe the session the watch itself
+            // drives and stay watch-owned. [standaloneSetsDoneAt] is what
+            // reconciles the phone's number with this watch's own.
+            val matchesCurrent =
+                setsDoneExerciseIndex != null &&
+                    setsDoneExerciseIndex == _metadata.value.standaloneExerciseIndex
             _metadata.update { current ->
-                current.copy(nextSetReps = nextSetReps, nextSetWeight = nextSetWeight)
+                current.copy(
+                    nextSetReps = nextSetReps,
+                    nextSetWeight = nextSetWeight,
+                    phoneSetsExerciseIndex = if (matchesCurrent) setsDoneExerciseIndex else null,
+                    phoneSetsDone = if (matchesCurrent) setsDone else null,
+                    phoneSetsTotal = if (matchesCurrent) setsTotal else null,
+                )
             }
             return
         }

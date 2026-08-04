@@ -105,6 +105,7 @@ void main() {
           'restRemainingSeconds': null,
           'nextSetWeight': null,
           'nextSetReps': null,
+          'setsDoneExerciseIndex': null,
         },
       });
     });
@@ -142,6 +143,7 @@ void main() {
           'restRemainingSeconds': 47,
           'nextSetWeight': null,
           'nextSetReps': null,
+          'setsDoneExerciseIndex': null,
         },
       });
     });
@@ -167,6 +169,33 @@ void main() {
       final state = (calls.single.arguments as Map)['state'] as Map;
       expect(state['nextSetWeight'], 62.5);
       expect(state['nextSetReps'], 6);
+    });
+
+    test('updateState tags the set counts with the exercise the watch named', () async {
+      // A watch-started session logs sets on both devices, but only the phone
+      // sees both halves — the index is what lets the watch tell that this
+      // count is about the exercise it is logging into.
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WatchWorkoutService(isAvailable: true);
+
+      await service.updateState(
+        sessionClientId: 'session-1',
+        state: const WorkoutSessionState(
+          exerciseName: 'Guggolás',
+          setsDone: 3,
+          setsTotal: 4,
+          totalSetsDone: 6,
+          setsDoneExerciseIndex: 1,
+        ),
+      );
+
+      final state = (calls.single.arguments as Map)['state'] as Map;
+      expect(state['setsDoneExerciseIndex'], 1);
+      expect(state['setsDone'], 3);
+      expect(state['setsTotal'], 4);
     });
 
     test('endWorkout sends sessionClientId', () async {
@@ -582,6 +611,74 @@ void main() {
       expect(session.activeCalories, isNull);
       expect(session.averageHeartRate, isNull);
       expect(session.healthWorkoutId, isNull);
+    });
+
+    test('decodes a standaloneSessionAdopted event, including the watch\'s current exercise',
+        () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'standaloneSessionAdopted',
+              'payload': {
+                'standaloneSessionId': 'standalone-3',
+                'templateId': 'template-1',
+                'startedAtEpochMs': 1783075200000,
+                'sets': [
+                  {'loggedAtEpochMs': 1783075260000, 'reps': 10, 'weight': 60, 'exerciseIndex': 0},
+                ],
+                'activeCalories': 88.0,
+                'averageHeartRate': 118.0,
+                'currentExerciseIndex': 1,
+              },
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final event = await service.events.first;
+
+      expect(event, isA<WatchStandaloneAdoption>());
+      final adoption = event as WatchStandaloneAdoption;
+      expect(adoption.standaloneSessionId, 'standalone-3');
+      expect(adoption.templateId, 'template-1');
+      expect(adoption.startedAtEpochMs, 1783075200000);
+      expect(adoption.sets, hasLength(1));
+      expect(adoption.sets.first.exerciseIndex, 0);
+      expect(adoption.activeCalories, 88.0);
+      expect(adoption.averageHeartRate, 118.0);
+      // The set above was logged against exercise 0; the watch has already
+      // moved on to exercise 1 for the next one.
+      expect(adoption.currentExerciseIndex, 1);
+    });
+
+    test('an adoption without a current exercise (quick start, or an older watch build) decodes',
+        () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'standaloneSessionAdopted',
+              'payload': {
+                'standaloneSessionId': 'standalone-4',
+                'startedAtEpochMs': 1783075200000,
+                'sets': <Object?>[],
+              },
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final event = await service.events.first;
+
+      final adoption = event as WatchStandaloneAdoption;
+      expect(adoption.currentExerciseIndex, isNull);
+      expect(adoption.templateId, isNull);
+      expect(adoption.sets, isEmpty);
     });
 
     test('an unknown event type falls back to its raw type string', () async {

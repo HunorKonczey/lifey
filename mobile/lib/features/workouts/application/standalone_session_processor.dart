@@ -10,6 +10,7 @@ import '../data/exercise_repository.dart';
 import '../data/workout_session_repository.dart';
 import '../data/workout_template_repository.dart';
 import '../domain/workout_template.dart';
+import 'watch_session_merge.dart';
 
 /// Matches [HealthService.writeStrengthWorkoutAndGetId]'s signature, narrowed
 /// to just that one method — like [WidgetSnapshotWriter]'s save/update-widget
@@ -68,14 +69,22 @@ class StandaloneSessionProcessor {
   ///   (the watch's own retry-until-acked, docs/watch/
   ///   44-watch-f6-standalone-plan.md §4.2, D-F6.2) — no DB write, only acks
   ///   again.
-  Future<void> process(WatchStandaloneSession event, {required LanguagePreference language}) async {
-    final alreadyFinished = await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
-    if (alreadyFinished == null) {
-      await _createSession(event, language: language);
-    } else if (alreadyFinished == false) {
-      await _finishAdoptedSession(event, language: language);
-    }
-    await _watchService.ackStandaloneSession(event.standaloneSessionId);
+  Future<void> process(WatchStandaloneSession event, {required LanguagePreference language}) {
+    return _serialized(() async {
+      final alreadyFinished =
+          await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
+      if (alreadyFinished == null) {
+        // A create that loses to a row appearing underneath it finishes that
+        // row instead — see [_createOrElse].
+        await _createOrElse(
+          () => _createSession(event, language: language),
+          () => _finishAdoptedSession(event, language: language),
+        );
+      } else if (alreadyFinished == false) {
+        await _finishAdoptedSession(event, language: language);
+      }
+      await _watchService.ackStandaloneSession(event.standaloneSessionId);
+    });
   }
 
   /// The live-bridging counterpart of [process]: a watch-started session
@@ -94,14 +103,69 @@ class StandaloneSessionProcessor {
   Future<void> processAdoption(
     WatchStandaloneAdoption event, {
     required LanguagePreference language,
-  }) async {
-    final alreadyFinished = await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
-    if (alreadyFinished == null) {
-      await _createRunningSession(event, language: language);
-    } else if (alreadyFinished == false) {
-      await _refreshRunningSession(event, language: language);
+  }) {
+    return _serialized(() async {
+      final alreadyFinished =
+          await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
+      if (alreadyFinished == null) {
+        await _createOrElse(
+          () => _createRunningSession(event, language: language),
+          () => _refreshRunningSession(event, language: language),
+        );
+      } else if (alreadyFinished == false) {
+        await _refreshRunningSession(event, language: language);
+      }
+      await _watchService.ackAdoption(event.standaloneSessionId);
+    });
+  }
+
+  /// Tail of the queue every [process]/[processAdoption] call runs on.
+  Future<void> _queue = Future<void>.value();
+
+  /// Runs [create], falling back to [update] if the row turned out to exist
+  /// after all — the session's clientId is its primary key, so that surfaces
+  /// as a failed insert rather than as a "no rows affected".
+  ///
+  /// Belt to [_serialized]'s braces. That queue is what actually prevents two
+  /// deliveries from racing, but the fallback is what keeps a lost race from
+  /// costing the *whole* delivery: without it the create throws, the ack never
+  /// runs, and a finished workout stays on the phone as a running one until
+  /// the watch happens to retry. A create is never the only correct answer for
+  /// an event whose row already exists — updating it is.
+  Future<void> _createOrElse(
+    Future<void> Function() create,
+    Future<void> Function() update,
+  ) async {
+    try {
+      await create();
+    } catch (_) {
+      await update();
     }
-    await _watchService.ackAdoption(event.standaloneSessionId);
+  }
+
+  /// Runs [action] after every call already queued here has finished.
+  ///
+  /// Both entry points are "look at the row, then write it" — safe one at a
+  /// time, but not concurrently, and concurrently is exactly how they arrive.
+  /// The watch's deliveries are *queued* transports: while the phone app isn't
+  /// running they pile up (`WatchEventBuffer` on iOS), and the moment Dart
+  /// starts listening the whole backlog is emitted in one go. `Stream.listen`
+  /// doesn't await an async handler, so a session's adoption and its
+  /// completion would then run at the same time — both seeing "this session
+  /// doesn't exist yet", both taking the create branch, and the second one
+  /// dying on the primary-key conflict *before* it could ack. The visible
+  /// result was a workout that had already ended on the watch sitting on the
+  /// phone as still running, until some later retry happened to arrive alone.
+  ///
+  /// Serializing also fixes the ordering: the completion now always sees the
+  /// row the adoption created, so it finishes it instead of trying to create
+  /// it again.
+  Future<void> _serialized(Future<void> Function() action) {
+    final queued = _queue.then((_) => action());
+    // Keep the chain alive after a failure — a single bad payload must not
+    // wedge every later delivery behind a rejected future.
+    _queue = queued.catchError((_) {});
+    return queued;
   }
 
   Future<void> _createSession(
@@ -190,15 +254,41 @@ class StandaloneSessionProcessor {
       language: language,
     );
     final startedAt = DateTime.fromMillisecondsSinceEpoch(event.startedAtEpochMs, isUtc: true);
+    final merged = await _mergeWithStoredContent(event.standaloneSessionId, resolved);
 
     await _sessionRepository.update(
       event.standaloneSessionId,
       startedAt: startedAt,
       finishedAt: null,
-      exercises: resolved.exercises,
-      sets: resolved.sets,
+      exercises: merged.exercises,
+      sets: merged.sets,
       activeCalories: Value(event.activeCalories),
       averageHeartRate: Value(event.averageHeartRate),
+    );
+  }
+
+  /// Folds whatever is already on the session's row into the watch's version of
+  /// it — see [mergeWatchSessionContent] for the rules and for why a straight
+  /// replace was wrong. A row that has vanished (deleted between the event
+  /// arriving and this write) leaves the watch's version untouched.
+  Future<MergedWatchSessionContent> _mergeWithStoredContent(
+    String sessionClientId,
+    ({
+      WorkoutTemplate? template,
+      List<PlannedExerciseInput> exercises,
+      List<ExerciseSetInput> sets,
+      String title,
+    }) resolved,
+  ) async {
+    final stored = await _sessionRepository.findByClientId(sessionClientId);
+    if (stored == null) {
+      return MergedWatchSessionContent(exercises: resolved.exercises, sets: resolved.sets);
+    }
+    return mergeWatchSessionContent(
+      existingExercises: stored.exercises,
+      existingSets: stored.sets,
+      watchExercises: resolved.exercises,
+      watchSets: resolved.sets,
     );
   }
 
@@ -222,6 +312,11 @@ class StandaloneSessionProcessor {
     );
     final startedAt = DateTime.fromMillisecondsSinceEpoch(event.startedAtEpochMs, isUtc: true);
     final endedAt = DateTime.fromMillisecondsSinceEpoch(event.endedAtEpochMs, isUtc: true);
+    // Merged for the same reason the running refresh is: this is the last
+    // write the session gets, so a phone-logged set that isn't kept here is
+    // gone for good — including one logged after the watch's final tap, which
+    // no earlier refresh ever saw.
+    final merged = await _mergeWithStoredContent(event.standaloneSessionId, resolved);
 
     final healthWorkoutId = event.healthWorkoutId ??
         await _writeHealthWorkout(
@@ -235,8 +330,8 @@ class StandaloneSessionProcessor {
       event.standaloneSessionId,
       startedAt: startedAt,
       finishedAt: endedAt,
-      exercises: resolved.exercises,
-      sets: resolved.sets,
+      exercises: merged.exercises,
+      sets: merged.sets,
       activeCalories: Value(event.activeCalories),
       averageHeartRate: Value(event.averageHeartRate),
       healthWorkoutId: Value(healthWorkoutId),

@@ -248,6 +248,7 @@ class WatchStandaloneAdoption {
     required this.sets,
     this.activeCalories,
     this.averageHeartRate,
+    this.currentExerciseIndex,
   });
 
   final String standaloneSessionId;
@@ -256,6 +257,20 @@ class WatchStandaloneAdoption {
   final List<WatchStandaloneSet> sets;
   final double? activeCalories;
   final double? averageHeartRate;
+
+  /// Which of [templateId]'s exercises the watch will log its *next* set
+  /// against — same index space as [WatchStandaloneSet.exerciseIndex], but
+  /// about the future rather than a set already logged. Only the watch knows
+  /// it: it moves on by itself once an exercise has all its planned sets,
+  /// whereas the phone's own "current exercise" rule ([LogSessionScreen
+  /// ._currentExerciseBlock]) still names the exercise of the last logged
+  /// set. The phone needs it because the prefill it pushes back
+  /// (`nextSetReps`/`nextSetWeight`) is what the watch's stepper opens on.
+  ///
+  /// Null for a Quick strength session (no plan to index into), and also
+  /// absent from a watch build that predates this field — treated the same,
+  /// falling back to the phone's own rule.
+  final int? currentExerciseIndex;
 
   factory WatchStandaloneAdoption.fromJson(Map<Object?, Object?> json) => WatchStandaloneAdoption(
         standaloneSessionId: json['standaloneSessionId'] as String,
@@ -266,6 +281,7 @@ class WatchStandaloneAdoption {
             .toList(),
         activeCalories: (json['activeCalories'] as num?)?.toDouble(),
         averageHeartRate: (json['averageHeartRate'] as num?)?.toDouble(),
+        currentExerciseIndex: (json['currentExerciseIndex'] as num?)?.toInt(),
       );
 }
 

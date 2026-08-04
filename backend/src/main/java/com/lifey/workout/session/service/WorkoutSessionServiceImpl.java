@@ -7,6 +7,7 @@ import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.session.*;
 import com.lifey.workout.session.dto.ExerciseSetRequest;
+import com.lifey.workout.session.dto.PlannedExerciseRequest;
 import com.lifey.workout.session.dto.WorkoutSessionRequest;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
 import com.lifey.workout.template.WorkoutTemplate;
@@ -22,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -98,7 +101,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             session.setTemplate(template);
             session.setTemplateName(template.getName());
         }
-        replacePlannedExercises(session, request.exerciseIds());
+        replacePlannedExercises(session, request);
         replaceSets(session, request.sets());
         return WorkoutSessionMapper.toResponse(sessionRepository.save(session));
     }
@@ -113,7 +116,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         session.setHealthWorkoutId(request.healthWorkoutId());
         session.setRpe(request.rpe());
         session.setFeedbackNote(request.feedbackNote());
-        replacePlannedExercises(session, request.exerciseIds());
+        replacePlannedExercises(session, request);
         replaceSets(session, request.sets());
         // Sets/planned exercises are child rows with no delta feed of their own
         // (docs/16 §2.3) — a child-only edit could leave every WorkoutSession
@@ -137,16 +140,44 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     /**
      * Rebuilds the session's planned-exercise list from the request, resolving each
      * {@code exerciseId}. Relies on {@code orphanRemoval} to delete dropped links.
+     *
+     * <p>Reads {@code plannedExercises} when the client sent it (it carries each
+     * exercise's {@code targetSets}) and falls back to the bare
+     * {@code exerciseIds} otherwise — see {@code WorkoutSessionRequest
+     * .plannedExercises}. On that fallback the session's existing targetSets are
+     * carried over rather than cleared, so a client that doesn't know about the
+     * field (the web app, an older mobile build) can edit a session without
+     * silently erasing the plan another client recorded.
      */
-    private void replacePlannedExercises(WorkoutSession session, List<Long> exerciseIds) {
+    private void replacePlannedExercises(WorkoutSession session, WorkoutSessionRequest request) {
+        // What this session already plans, by exercise. Only read on the
+        // fallback path: a client that doesn't know about targetSets isn't
+        // saying "clear the plan", it simply has nothing to say about it, so
+        // its update must not wipe a count another client recorded.
+        Map<Long, Integer> existingTargetSets = session.getPlannedExercises().stream()
+                .filter(link -> link.getTargetSets() != null)
+                .collect(Collectors.toMap(
+                        link -> link.getExercise().getId(),
+                        WorkoutSessionExercise::getTargetSets,
+                        (first, duplicate) -> first));
+
+        List<PlannedExerciseRequest> planned = request.plannedExercises() != null
+                ? request.plannedExercises()
+                : request.exerciseIds().stream()
+                        .map(exerciseId -> new PlannedExerciseRequest(
+                                exerciseId, existingTargetSets.get(exerciseId)))
+                        .toList();
+
         session.getPlannedExercises().clear();
-        for (Long exerciseId : exerciseIds) {
+        for (PlannedExerciseRequest entry : planned) {
+            Long exerciseId = entry.exerciseId();
             Exercise exercise = exerciseRepository.findByIdAndUserId(exerciseId, currentUserProvider.getUserId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exercise not found: " + exerciseId));
 
             WorkoutSessionExercise link = new WorkoutSessionExercise();
             link.setWorkoutSession(session);
             link.setExercise(exercise);
+            link.setTargetSets(entry.targetSets());
             session.getPlannedExercises().add(link);
         }
     }

@@ -300,6 +300,25 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// never overwritten by anything synced from the phone.
   @Published private(set) var standaloneExerciseIndex = 0
 
+  /// What the phone reports for the exercise at `phoneSetsExerciseIndex`:
+  /// how many sets its copy of this session has for it, and how many its plan
+  /// holds. Both `nil` until a state sync names an exercise this watch agrees
+  /// is the current one.
+  ///
+  /// A watch-started session is logged into from *both* sides — the phone's
+  /// mirror screen stays editable — but only the phone's row holds both
+  /// halves; `standaloneSets` is the watch's own half alone. Without this the
+  /// counter on the wrist silently ignored every set logged on the phone, and
+  /// the auto-advance below kept offering an exercise that was already
+  /// finished there.
+  @Published private(set) var phoneSetsDone: Int?
+  @Published private(set) var phoneSetsTotal: Int?
+  /// Which exercise the two values above are about — the phone echoes back
+  /// the index this watch sent it (`currentExerciseIndex` in the adoption
+  /// payload), so a value computed for a different exercise is never applied
+  /// to the current one. `nil` whenever the phone had nothing matching to say.
+  private var phoneSetsExerciseIndex: Int?
+
   private let store = HKHealthStore()
   private var session: HKWorkoutSession?
   private var builder: HKLiveWorkoutBuilder?
@@ -388,6 +407,9 @@ final class WorkoutManager: NSObject, ObservableObject {
     // reset having necessarily run in between.
     nextSetReps = nil
     nextSetWeight = nil
+    phoneSetsExerciseIndex = nil
+    phoneSetsDone = nil
+    phoneSetsTotal = nil
 
     do {
       try await startSession(configuration: configuration)
@@ -402,12 +424,23 @@ final class WorkoutManager: NSObject, ObservableObject {
       return
     }
     saveActiveSnapshot()
-    // Live bridging (docs/watch's watch-phone live-bridging work): if the
-    // phone is already reachable at the exact moment the session starts,
-    // ask it to join in right away. If not, `sessionReachabilityDidChange`
-    // retries this the moment the phone reconnects, so a workout started
-    // out of range still gets adopted as soon as the phone comes back.
-    sendAdoptionRequestIfNeeded()
+    // Live bridging (docs/watch's watch-phone live-bridging work): ask the
+    // phone to join in, right now and **regardless of reachability** — unlike
+    // the per-set resends below, which stay gated.
+    //
+    // `WCSession.isReachable` is false exactly when the phone app isn't
+    // running, which is the most ordinary way to start a workout from the
+    // wrist: phone in a pocket, app closed. `transferUserInfo` is a *queued*
+    // delivery, though — it survives that and lands when the app next runs
+    // (`Runner/WatchEventBuffer.swift` covers even a background launch), so
+    // there was never a transport reason to hold this one back. Skipping it
+    // meant the phone learned nothing about the session until either a
+    // reachability change or a logged set happened to re-trigger it, and if
+    // neither did, not until the user tapped the badge by hand.
+    //
+    // Exactly one snapshot is sent this way, at start: that's what makes the
+    // session known, and the gated resends keep it fresh from there.
+    sendAdoptionRequest()
   }
 
   /// The gyakorlat-lista's tap handler (docs/watch/49-watch-f6b-template-sync-plan.md
@@ -431,8 +464,22 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// target-less exercise forever.
   private func standaloneExerciseIsComplete(_ index: Int) -> Bool {
     guard let standaloneTemplate, index < standaloneTemplate.exercises.count else { return false }
-    let logged = standaloneSets.filter { $0.exerciseIndex == index }.count
-    return logged >= (standaloneTemplate.exercises[index].targetSets ?? 1)
+    return standaloneSetsDone(at: index) >= (standaloneTemplate.exercises[index].targetSets ?? 1)
+  }
+
+  /// How many sets this session has for the exercise at [index], counting the
+  /// ones logged on the phone's mirror screen — see `phoneSetsDone`.
+  ///
+  /// The larger of the two counts, not the phone's: its copy is at best one
+  /// sync behind, so right after a tap on the wrist the watch's own list is
+  /// the higher (and correct) one, and taking the phone's would make the
+  /// counter visibly jump backwards. The phone's is higher exactly when it
+  /// knows about sets this watch never logged, which is the case this exists
+  /// for.
+  func standaloneSetsDone(at index: Int) -> Int {
+    let own = standaloneSets.filter { $0.exerciseIndex == index }.count
+    guard index == phoneSetsExerciseIndex, let phoneSetsDone else { return own }
+    return max(own, phoneSetsDone)
   }
 
   /// Moves `standaloneExerciseIndex` on once the current exercise has all the
@@ -535,13 +582,23 @@ final class WorkoutManager: NSObject, ObservableObject {
   var activeExerciseDisplay: ActiveExerciseDisplay {
     if let currentExercise = standaloneCurrentExercise {
       let sets = standaloneSetsForCurrentExercise
-      if let targetSets = currentExercise.targetSets {
+      // Both counts include what the phone logged into this same session; see
+      // `standaloneSetsDone(at:)` and `phoneSetsTotal`.
+      let setsDone = standaloneSetsDone(at: standaloneExerciseIndex)
+      let targetSets =
+        (standaloneExerciseIndex == phoneSetsExerciseIndex ? phoneSetsTotal : nil)
+        ?? currentExercise.targetSets
+      if let targetSets {
         return ActiveExerciseDisplay(
-          name: currentExercise.name, setsDone: sets.count, setsTotal: targetSets, freeFormatSets: nil)
+          name: currentExercise.name, setsDone: setsDone, setsTotal: targetSets,
+          freeFormatSets: nil)
       }
+      // No target to count towards: the set count still includes the phone's,
+      // but the rep total can only sum the sets this watch itself logged — it
+      // never receives the others' reps.
       return ActiveExerciseDisplay(
         name: currentExercise.name, setsDone: nil, setsTotal: nil,
-        freeFormatSets: (sets.count, sets.reduce(0) { $0 + $1.reps }))
+        freeFormatSets: (setsDone, sets.reduce(0) { $0 + $1.reps }))
     }
     if isStandalone {
       return ActiveExerciseDisplay(
@@ -652,7 +709,8 @@ final class WorkoutManager: NSObject, ObservableObject {
     restRemainingSeconds: Int?,
     restTotalSeconds: Int?,
     nextSetReps: Int?,
-    nextSetWeight: Double?
+    nextSetWeight: Double?,
+    setsDoneExerciseIndex: Int?
   ) {
     guard !isStandalone else {
       // A *different* session's state can't touch the watch's own standalone
@@ -665,16 +723,29 @@ final class WorkoutManager: NSObject, ObservableObject {
       }
       // Matching id = the phone's live mirror of *this* session (live
       // bridging), pushing state for the workout the watch is running. Take
-      // the prefill and nothing else: those two fields are the phone
-      // answering "what should the next set default to", which the watch
-      // cannot compute as well as the phone can (it holds the full history)
-      // — and taking them here is what finally makes a watch-started session
-      // prefill exactly like a phone-started one. Everything else stays
-      // watch-owned: `exerciseName`/`setsDone`/`setsTotal` and the rest
-      // timer all describe the session the watch itself is driving, and the
-      // phone's copy of them is at best a sync behind.
+      // the prefill: those two fields are the phone answering "what should
+      // the next set default to", which the watch cannot compute as well as
+      // the phone can (it holds the full history) — and taking them here is
+      // what finally makes a watch-started session prefill exactly like a
+      // phone-started one.
       self.nextSetReps = nextSetReps
       self.nextSetWeight = nextSetWeight
+      // And the set counts, but only when the phone says which exercise they
+      // are about *and* it's the one this watch is logging into. The phone's
+      // row is the only place both sides' sets meet (its mirror screen stays
+      // editable), so this is the one thing it genuinely knows better —
+      // unlike `exerciseName` and the rest timer, which describe the session
+      // the watch itself drives and stay watch-owned. `standaloneSetsDone(at:)`
+      // is what reconciles the phone's number with this watch's own.
+      if let setsDoneExerciseIndex, setsDoneExerciseIndex == standaloneExerciseIndex {
+        phoneSetsExerciseIndex = setsDoneExerciseIndex
+        phoneSetsDone = setsDone
+        phoneSetsTotal = setsTotal
+      } else {
+        phoneSetsExerciseIndex = nil
+        phoneSetsDone = nil
+        phoneSetsTotal = nil
+      }
       return
     }
     self.sessionClientId = sessionClientId
@@ -1102,7 +1173,9 @@ final class WorkoutManager: NSObject, ObservableObject {
       startedAtEpochMs: Int64(startedAt.timeIntervalSince1970 * 1000),
       sets: standaloneSets,
       activeCalories: activeCaloriesTotal,
-      averageHeartRate: averageHeartRate)
+      averageHeartRate: averageHeartRate,
+      // Only meaningful within a plan — see the field's doc comment.
+      currentExerciseIndex: standaloneTemplate == nil ? nil : standaloneExerciseIndex)
     PhoneConnector.shared.sendStandaloneAdoption(payload)
   }
 
@@ -1187,6 +1260,9 @@ final class WorkoutManager: NSObject, ObservableObject {
     standaloneSets = []
     standaloneTemplate = nil
     standaloneExerciseIndex = 0
+    phoneSetsExerciseIndex = nil
+    phoneSetsDone = nil
+    phoneSetsTotal = nil
     logSetTimeoutTask?.cancel()
     logSetTimeoutTask = nil
     logSetSettleTask?.cancel()

@@ -352,7 +352,10 @@ extension PhoneConnector: WCSessionDelegate {
         // §4.2). The phone strips nulls before sending, so "key absent"
         // is how "no prefill" arrives — `as? NSNumber` yields nil either way.
         nextSetReps: (state?["nextSetReps"] as? NSNumber)?.intValue,
-        nextSetWeight: (state?["nextSetWeight"] as? NSNumber)?.doubleValue)
+        nextSetWeight: (state?["nextSetWeight"] as? NSNumber)?.doubleValue,
+        // Which exercise `setsDone`/`setsTotal` are about, for a watch-started
+        // session the phone has adopted — see `WorkoutManager.phoneSetsDone`.
+        setsDoneExerciseIndex: (state?["setsDoneExerciseIndex"] as? NSNumber)?.intValue)
     }
   }
 }

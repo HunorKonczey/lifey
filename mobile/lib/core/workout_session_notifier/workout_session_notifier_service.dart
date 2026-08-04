@@ -23,6 +23,7 @@ class WorkoutSessionState {
     this.restRemainingSeconds,
     this.nextSetWeight,
     this.nextSetReps,
+    this.setsDoneExerciseIndex,
   });
 
   /// Current (last touched) exercise name; pass a pre-localized fallback
@@ -70,6 +71,24 @@ class WorkoutSessionState {
   final double? nextSetWeight;
   final int? nextSetReps;
 
+  /// Which exercise [setsDone]/[setsTotal] describe, as the **watch's** own
+  /// index into its cached template (see
+  /// [WatchStandaloneAdoption.currentExerciseIndex]) — non-null only for a
+  /// watch-mastered session whose current exercise the watch itself named.
+  ///
+  /// A watch-started session logs its sets locally and knows nothing about the
+  /// ones logged on the phone's mirror screen, so its own counter under-counts
+  /// them. The phone's row holds both halves, so it can report the real number
+  /// — but only usefully if the watch can tell *which* exercise the number is
+  /// about: the two sides pick "current exercise" by different rules and can
+  /// legitimately disagree for a moment. The watch takes the count only when
+  /// this index matches the exercise it is about to log into, and ignores it
+  /// otherwise rather than showing a confidently wrong number.
+  ///
+  /// Ignored by the Live Activity / ongoing notification, like the prefill
+  /// fields above.
+  final int? setsDoneExerciseIndex;
+
   Map<String, dynamic> toJson() => {
         'exerciseName': exerciseName,
         'setsDone': setsDone,
@@ -81,7 +100,46 @@ class WorkoutSessionState {
         'restRemainingSeconds': restRemainingSeconds,
         'nextSetWeight': nextSetWeight,
         'nextSetReps': nextSetReps,
+        'setsDoneExerciseIndex': setsDoneExerciseIndex,
       };
+}
+
+/// Why [WorkoutSessionNotifierService.start] didn't produce an indicator, when
+/// it didn't — the difference between "ask again later" and "don't bother".
+enum WorkoutSessionNotifierStatus {
+  /// The Live Activity / ongoing notification is up.
+  started,
+
+  /// A transient refusal: retry at the next opportunity. The one that
+  /// actually happens is iOS refusing to *start* a Live Activity while the
+  /// app is in the background (`ActivityAuthorizationError.visibility`) —
+  /// which is precisely the situation a workout driven from the watch
+  /// creates, since the phone can be persisting sets with its screen off.
+  retryable,
+
+  /// A refusal that won't change while this workout runs: Live Activities
+  /// switched off in Settings, Android's notification permission denied,
+  /// or a platform/OS version without either mechanism. Retrying would just
+  /// be asking the same question repeatedly.
+  unavailable,
+}
+
+/// [WorkoutSessionNotifierService.start]'s outcome. Callers need more than
+/// the iOS activity id it used to return: on Android there is no id at all,
+/// so "did it actually start?" was unanswerable there — and a caller that
+/// assumes it did will never retry, leaving the workout with no indicator
+/// for its whole duration.
+class WorkoutSessionNotifierStart {
+  const WorkoutSessionNotifierStart(this.status, {this.activityId});
+
+  final WorkoutSessionNotifierStatus status;
+
+  /// The native Live Activity id on iOS; always null on Android (no such
+  /// concept) and on any non-[WorkoutSessionNotifierStatus.started] result.
+  final String? activityId;
+
+  bool get started => status == WorkoutSessionNotifierStatus.started;
+  bool get shouldRetry => status == WorkoutSessionNotifierStatus.retryable;
 }
 
 /// Platform-neutral facade over both "ongoing workout indicator" mechanisms:
@@ -152,16 +210,20 @@ class WorkoutSessionNotifierService {
   String? _androidTitle;
   DateTime? _androidStartedAt;
 
-  /// Starts tracking [sessionClientId]. Returns the native activity id on
-  /// iOS, or null on Android/no-op (Android has no activity id concept).
-  Future<String?> start({
+  /// Starts tracking [sessionClientId] — see [WorkoutSessionNotifierStart]
+  /// for what the result means and why a bare activity id wasn't enough.
+  /// Never throws: a platform refusal is reported, not raised, since the
+  /// workout itself is unaffected by there being no indicator.
+  Future<WorkoutSessionNotifierStart> start({
     required String sessionClientId,
     required String title,
     required DateTime startedAt,
     required String startedLabel,
     required WorkoutSessionState state,
   }) async {
-    if (!isAvailable) return null;
+    if (!isAvailable) {
+      return const WorkoutSessionNotifierStart(WorkoutSessionNotifierStatus.unavailable);
+    }
 
     if (_useAndroid) {
       _androidTitle = title;
@@ -169,17 +231,41 @@ class WorkoutSessionNotifierService {
       final granted = await _requestAndroidPermission();
       // Denied → the service silently no-ops; the workout itself is
       // unaffected (docs/25-android-widget-ongoing-notification-plan.md).
-      if (!granted) return null;
+      // Not retryable: the permission dialog is a one-shot, and re-asking on
+      // every resume would be nagging rather than recovery.
+      if (!granted) {
+        return const WorkoutSessionNotifierStart(WorkoutSessionNotifierStatus.unavailable);
+      }
       await _renderAndroidNotification(state, startedLabel);
-      return null;
+      return const WorkoutSessionNotifierStart(WorkoutSessionNotifierStatus.started);
     }
 
-    return _channel.invokeMethod<String>('start', {
-      'sessionClientId': sessionClientId,
-      'title': title,
-      'startedAtEpochMs': startedAt.millisecondsSinceEpoch,
-      'state': state.toJson(),
-    });
+    try {
+      final activityId = await _channel.invokeMethod<String>('start', {
+        'sessionClientId': sessionClientId,
+        'title': title,
+        'startedAtEpochMs': startedAt.millisecondsSinceEpoch,
+        'state': state.toJson(),
+      });
+      // A null id without an error is the iOS < 16.2 branch (no ActivityKit
+      // `ActivityContent`) — nothing to retry into.
+      if (activityId == null) {
+        return const WorkoutSessionNotifierStart(WorkoutSessionNotifierStatus.unavailable);
+      }
+      return WorkoutSessionNotifierStart(
+        WorkoutSessionNotifierStatus.started,
+        activityId: activityId,
+      );
+    } on PlatformException catch (e) {
+      // LiveActivityChannel.swift's error codes: only `start_failed` (the
+      // ActivityKit request itself was refused — backgrounded app, budget)
+      // can succeed on a later attempt.
+      return WorkoutSessionNotifierStart(e.code == 'start_failed'
+          ? WorkoutSessionNotifierStatus.retryable
+          : WorkoutSessionNotifierStatus.unavailable);
+    } on MissingPluginException {
+      return const WorkoutSessionNotifierStart(WorkoutSessionNotifierStatus.unavailable);
+    }
   }
 
   /// Updates the running session's content state. No-ops (native side) if

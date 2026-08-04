@@ -577,6 +577,204 @@ void main() {
       expect(ackCalls.single.method, 'ackAdoption');
     });
 
+    /// While the phone app isn't running, the watch's deliveries queue up
+    /// (`WatchEventBuffer` on iOS) and the whole backlog is emitted at once the
+    /// moment Dart starts listening. `Stream.listen` doesn't await an async
+    /// handler, so these arrive genuinely concurrently — which is how a
+    /// finished workout ended up sitting on the phone as still running.
+    group('a backlog delivered in one go', () {
+      test('adoption + completion together still finish the session', () async {
+        final processor = buildProcessor();
+
+        // Deliberately not awaited in between — this is what the drain does.
+        final adoption =
+            processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+        final completion = processor.process(sampleEvent(), language: LanguagePreference.english);
+        await Future.wait([adoption, completion]);
+
+        final row = await db.select(db.workoutSessions).getSingle();
+        expect(row.finishedAt, isNotNull,
+            reason: 'the completion must land on the row the adoption created');
+        // Neither delivery may be lost: an unacked one is retried by the watch
+        // for as long as it takes, which is what used to paper over this.
+        expect(ackCalls.map((c) => c.method), containsAll(['ackAdoption', 'ackStandaloneSession']));
+      });
+
+      test('completion before adoption (reverse order) also ends up finished', () async {
+        final processor = buildProcessor();
+
+        final completion = processor.process(sampleEvent(), language: LanguagePreference.english);
+        final adoption =
+            processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+        await Future.wait([completion, adoption]);
+
+        final row = await db.select(db.workoutSessions).getSingle();
+        // The late adoption must not reopen an already-closed session.
+        expect(row.finishedAt, isNotNull);
+      });
+
+      test('two adoptions together create a single row', () async {
+        final processor = buildProcessor();
+
+        await Future.wait([
+          processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english),
+          processor.processAdoption(
+            sampleAdoptionEvent(sets: const [
+              WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10),
+              WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 10),
+            ]),
+            language: LanguagePreference.english,
+          ),
+        ]);
+
+        expect(await db.select(db.workoutSessions).get(), hasLength(1));
+        expect(await db.select(db.exerciseSets).get(), hasLength(2));
+      });
+    });
+
+    /// A watch-started session's mirror screen stays editable on the phone, so
+    /// sets get logged there too — and the watch's snapshot knows nothing about
+    /// them. Writing it straight over the row (as this used to) deleted them.
+    group('sets logged on the phone during a watch-mastered session', () {
+      /// What LogSessionScreen's autosave writes: the whole session as the
+      /// screen currently holds it — the watch's set plus one logged here.
+      Future<void> logOnPhone({
+        required String exerciseClientId,
+        required int atEpochMs,
+        int reps = 12,
+        double weight = 40,
+      }) async {
+        final stored = await sessionRepository.findByClientId('standalone-1');
+        // The screen persists one planned entry per block it shows, so logging
+        // into an exercise the session didn't plan means it was added there
+        // too ("+ Add exercise").
+        final planned = [
+          for (final e in stored!.exercises)
+            PlannedExerciseInput(exerciseClientId: e.exerciseClientId, targetSets: e.targetSets),
+        ];
+        if (!planned.any((e) => e.exerciseClientId == exerciseClientId)) {
+          planned.add(PlannedExerciseInput(exerciseClientId: exerciseClientId, targetSets: 1));
+        }
+        await sessionRepository.update(
+          'standalone-1',
+          startedAt: stored.startedAt!,
+          finishedAt: null,
+          exercises: planned,
+          sets: [
+            for (final s in stored.sets)
+              ExerciseSetInput(
+                exerciseClientId: s.exerciseClientId,
+                reps: s.reps,
+                weight: s.weight,
+                performedAt: s.performedAt,
+              ),
+            ExerciseSetInput(
+              exerciseClientId: exerciseClientId,
+              reps: reps,
+              weight: weight,
+              performedAt: DateTime.fromMillisecondsSinceEpoch(atEpochMs, isUtc: true),
+            ),
+          ],
+        );
+      }
+
+      test('survives the next set logged on the watch', () async {
+        final processor = buildProcessor();
+        await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+        final exerciseClientId =
+            (await db.select(db.exercises).getSingle()).clientId;
+
+        await logOnPhone(exerciseClientId: exerciseClientId, atEpochMs: 1783075290000);
+
+        // The watch taps again and resends its own list, which has never heard
+        // of the phone's set.
+        await processor.processAdoption(
+          sampleAdoptionEvent(sets: const [
+            WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10),
+            WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 10),
+          ]),
+          language: LanguagePreference.english,
+        );
+
+        final sets = await db.select(db.exerciseSets).get()
+          ..sort((a, b) => a.performedAt.compareTo(b.performedAt));
+        expect(sets, hasLength(3));
+        expect(sets[1].reps, 12, reason: 'the phone-logged set, still there');
+        expect(sets[1].weight, 40);
+      });
+
+      test('survives the workout being ended on the watch', () async {
+        // The last write a session gets: a set logged after the watch's final
+        // tap is only ever seen by this one.
+        final processor = buildProcessor();
+        await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+        final exerciseClientId =
+            (await db.select(db.exercises).getSingle()).clientId;
+
+        await logOnPhone(exerciseClientId: exerciseClientId, atEpochMs: 1783075290000);
+
+        await processor.process(
+          sampleEvent(sets: const [
+            WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10),
+          ]),
+          language: LanguagePreference.english,
+        );
+
+        final row = await db.select(db.workoutSessions).getSingle();
+        expect(row.finishedAt, isNotNull);
+        final sets = await db.select(db.exerciseSets).get();
+        expect(sets, hasLength(2));
+        expect(sets.where((s) => s.reps == 12), hasLength(1));
+      });
+
+      test('a resend does not duplicate the watch\'s own sets', () async {
+        final processor = buildProcessor();
+        await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+
+        await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+
+        expect(await db.select(db.exerciseSets).get(), hasLength(1));
+      });
+
+      test('an exercise added on the phone is not dropped', () async {
+        final benchId = await makeExercise('Bench Press');
+        final templateId = await makeTemplate('Push day', [
+          TemplateExercise(exerciseClientId: benchId, targetSets: 3),
+        ]);
+        final curlId = await makeExercise('Curl');
+        final processor = buildProcessor();
+        await processor.processAdoption(
+          sampleAdoptionEvent(
+            templateId: templateId,
+            sets: const [
+              WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10, exerciseIndex: 0),
+            ],
+          ),
+          language: LanguagePreference.english,
+        );
+
+        await logOnPhone(exerciseClientId: curlId, atEpochMs: 1783075290000);
+
+        await processor.processAdoption(
+          sampleAdoptionEvent(
+            templateId: templateId,
+            sets: const [
+              WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10, exerciseIndex: 0),
+              WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 10, exerciseIndex: 0),
+            ],
+          ),
+          language: LanguagePreference.english,
+        );
+
+        // Without the exercise link the session screen can't render the curl
+        // set at all, even though the merge kept the set itself.
+        final links = await db.select(db.workoutSessionExercises).get();
+        expect(links.map((l) => l.exerciseClientId), containsAll([benchId, curlId]));
+        final sets = await db.select(db.exerciseSets).get();
+        expect(sets.where((s) => s.exerciseClientId == curlId), hasLength(1));
+      });
+    });
+
     test('adoption and the final event resolve template exercises the same way', () async {
       final benchId = await makeExercise('Bench Press');
       final templateId = await makeTemplate('Push day', [

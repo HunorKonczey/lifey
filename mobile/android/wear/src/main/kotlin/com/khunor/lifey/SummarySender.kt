@@ -185,6 +185,17 @@ object SummarySender {
             )
             putOpt("activeCalories", liveMetrics.activeCalories)
             putOpt("averageHeartRate", liveMetrics.heartRateBpm)
+            // Which exercise the *next* set counts against, in the same index
+            // space as a set's own `exerciseIndex`. The watch advances this on
+            // its own once an exercise is complete (SessionStateHolder's
+            // advance rule), while the phone's "exercise of the most recent
+            // set" rule still points at the finished one — so without this the
+            // prefill the phone pushes back describes the wrong exercise. Null
+            // outside a template session, where there's no plan to index into.
+            putOpt(
+                "currentExerciseIndex",
+                metadata.standaloneTemplate?.let { metadata.standaloneExerciseIndex },
+            )
         }
         send(context, "$MESSAGE_PATH_PREFIX/standaloneSessionAdopted", payload)
     }

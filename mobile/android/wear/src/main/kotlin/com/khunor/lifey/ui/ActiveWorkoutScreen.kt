@@ -208,16 +208,24 @@ private fun activeExerciseDisplay(metadata: SessionMetadata): ActiveExerciseDisp
     val currentExercise = template?.exercises?.getOrNull(metadata.standaloneExerciseIndex)
     if (currentExercise != null) {
         val setsForExercise = metadata.standaloneSets.filter { it.exerciseIndex == metadata.standaloneExerciseIndex }
-        val targetSets = currentExercise.targetSets
+        // Both counts include what the phone logged into this same session —
+        // see SessionMetadata.standaloneSetsDoneAt / phoneSetsTotal.
+        val setsDone = metadata.standaloneSetsDoneAt(metadata.standaloneExerciseIndex)
+        val targetSets =
+            metadata.phoneSetsTotal.takeIf { metadata.phoneSetsExerciseIndex == metadata.standaloneExerciseIndex }
+                ?: currentExercise.targetSets
         return if (targetSets != null) {
             ActiveExerciseDisplay(
-                name = currentExercise.name, setsDone = setsForExercise.size, setsTotal = targetSets,
+                name = currentExercise.name, setsDone = setsDone, setsTotal = targetSets,
                 freeFormatSets = null,
             )
         } else {
+            // No target to count towards: the set count still includes the
+            // phone's, but the rep total can only sum the sets this watch
+            // itself logged — it never receives the others' reps.
             ActiveExerciseDisplay(
                 name = currentExercise.name, setsDone = null, setsTotal = null,
-                freeFormatSets = setsForExercise.size to setsForExercise.sumOf { it.reps },
+                freeFormatSets = setsDone to setsForExercise.sumOf { it.reps },
             )
         }
     }

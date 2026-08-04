@@ -282,4 +282,50 @@ void _prefillTests() {
       expect(prefill.reps, 5);
     });
   });
+
+  group('watchCurrentBlock — az óra saját aktuális gyakorlata', () {
+    final bench = _block('ex-bench', doneRows: [true, true, true]);
+    final squat = _block('ex-squat', doneRows: [false, false]);
+    const templateIds = ['ex-bench', 'ex-squat'];
+
+    test('az óra indexe nyer a telefon "utoljára logolt" szabálya felett', () {
+      // A telefon szerint a bench az aktuális (ott volt az utolsó szett), az
+      // óra viszont már továbblépett a squatra — ez a hiba lényege.
+      expect(watchCurrentBlock([bench, squat], templateIds, 1), squat);
+    });
+
+    test('a session gyakorlat-sorrendje eltérhet a template-étől', () {
+      // Feloldás exerciseClientId szerint, nem pozíció szerint.
+      expect(watchCurrentBlock([squat, bench], templateIds, 0), bench);
+    });
+
+    test('index nélkül (telefonról indított edzés) nincs felülbírálás', () {
+      expect(watchCurrentBlock([bench, squat], templateIds, null), isNull);
+    });
+
+    test('betöltetlen template esetén nincs felülbírálás', () {
+      expect(watchCurrentBlock([bench, squat], const [], 1), isNull);
+    });
+
+    test('a tervből kiesett indexre nem tippel', () {
+      expect(watchCurrentBlock([bench, squat], templateIds, 5), isNull);
+      expect(watchCurrentBlock([bench, squat], templateIds, -1), isNull);
+    });
+
+    test('a session-ben nem szereplő gyakorlatra nem tippel', () {
+      expect(watchCurrentBlock([bench], templateIds, 1), isNull);
+    });
+
+    test('a prefill az óra gyakorlatához tartozik, nem a befejezetthez', () {
+      final benchDone = _blockWithRows('ex-bench', rows: [_row(weight: 80, reps: 5, done: true)]);
+      final squatOpen = _blockWithRows('ex-squat', rows: [_row(weight: 100, reps: 6)]);
+      final blocks = [benchDone, squatOpen];
+
+      final current = watchCurrentBlock(blocks, templateIds, 1);
+      final prefill = watchSetPrefill(blocks, current);
+
+      expect(prefill!.weight, 100);
+      expect(prefill.reps, 6);
+    });
+  });
 }

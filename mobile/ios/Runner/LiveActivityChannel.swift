@@ -71,10 +71,22 @@ final class LiveActivityChannel: NSObject {
     ActivityContent(state: state, staleDate: Date().addingTimeInterval(4 * 3600))
   }
 
+  /// Reports failures to Dart instead of swallowing them as `nil`, so
+  /// `WorkoutSessionNotifierService` can tell "ask again in a moment" apart
+  /// from "never going to work". The one that matters is `start_failed`:
+  /// ActivityKit refuses to *start* an activity while the app is in the
+  /// background (`ActivityAuthorizationError.visibility`), which is exactly
+  /// what happens when a set logged on the watch creates the session while
+  /// the phone sits in a pocket. That used to be indistinguishable from
+  /// success, so the workout ran to the end with no Live Activity and the
+  /// phone never tried again.
   @available(iOS 16.2, *)
   private func start(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-      result(nil)
+      result(
+        FlutterError(
+          code: "activities_disabled",
+          message: "Live Activities are turned off for this app", details: nil))
       return
     }
     guard let args = call.arguments as? [String: Any],
@@ -84,7 +96,8 @@ final class LiveActivityChannel: NSObject {
       let stateDict = args["state"] as? [String: Any],
       let state = contentState(from: stateDict)
     else {
-      result(nil)
+      result(
+        FlutterError(code: "invalid_args", message: "Malformed start arguments", details: nil))
       return
     }
 
@@ -110,7 +123,11 @@ final class LiveActivityChannel: NSObject {
         attributes: attributes, content: activityContent(state))
       result(activity.id)
     } catch {
-      result(nil)
+      // Retryable by contract with the Dart side — see this function's doc
+      // comment. The message is carried through for logging only; Dart keys
+      // off the code.
+      result(
+        FlutterError(code: "start_failed", message: "\(error)", details: nil))
     }
   }
 

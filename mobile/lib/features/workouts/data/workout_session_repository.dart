@@ -126,7 +126,24 @@ class WorkoutSessionRepository {
           ..where((t) => t.serverId.equals(serverId)))
         .getSingleOrNull();
     if (row == null) return null;
+    return _loadAggregate(row);
+  }
 
+  /// The [clientId] counterpart of [findByServerId] — a one-shot read of a
+  /// single session with its planned exercises and sets. Used by the
+  /// standalone-session processor, which has to see what's already on the row
+  /// before it writes the watch's version over it (a watch-mastered session
+  /// can also be logged into from the phone, and the watch's payload doesn't
+  /// know about those sets).
+  Future<WorkoutSession?> findByClientId(String clientId) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.clientId.equals(clientId)))
+        .getSingleOrNull();
+    if (row == null) return null;
+    return _loadAggregate(row);
+  }
+
+  Future<WorkoutSession> _loadAggregate(WorkoutSessionRow row) async {
     final exerciseNames = {
       for (final e in await _db.select(_db.exercises).get()) e.clientId: e.name,
     };
@@ -488,6 +505,21 @@ class WorkoutSessionRepository {
         'finishedAt': finishedAt.toUtc().toIso8601String(),
       'exerciseIds':
           exercises.map((e) => clientRef(e.exerciseClientId)).toList(),
+      // The same planned exercises, but carrying each one's targetSets — how
+      // many set rows the session plans for it. Sent *alongside* the bare
+      // `exerciseIds` above rather than replacing it: the field is additive on
+      // the backend (which still requires exerciseIds, and which older server
+      // builds don't know about at all), so sending both is what keeps this
+      // payload valid against either. Without it, targetSets never left the
+      // device and every pull brought the session back with its
+      // planned-but-not-yet-logged rows gone.
+      'plannedExercises': [
+        for (final e in exercises)
+          {
+            'exerciseId': clientRef(e.exerciseClientId),
+            if (e.targetSets != null) 'targetSets': e.targetSets,
+          },
+      ],
       'sets': sets
           .map((s) => {
                 'exerciseId': clientRef(s.exerciseClientId),

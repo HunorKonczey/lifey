@@ -17,7 +17,10 @@ public final class WorkoutSessionMapper {
 
     public static WorkoutSessionResponse toResponse(WorkoutSession session) {
         List<ExerciseSummary> exercises = session.getPlannedExercises().stream()
-                .map(link -> new ExerciseSummary(link.getExercise().getId(), link.getExercise().getName()))
+                .map(link -> new ExerciseSummary(
+                        link.getExercise().getId(),
+                        link.getExercise().getName(),
+                        link.getTargetSets()))
                 .toList();
 
         List<ExerciseSetResponse> sets = session.getSets().stream()

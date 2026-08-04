@@ -16,6 +16,7 @@ import 'workout_session_controller.dart';
 import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
 import '../presentation/log_session_screen.dart';
+import '../presentation/open_workout_screens.dart';
 
 /// [clientId] narrows the search to one specific session — used right after
 /// adopting a watch-started session, where the caller already knows which
@@ -30,15 +31,21 @@ Future<WorkoutSession?> _findActiveSession(Ref ref, {String? clientId}) async {
 }
 
 /// Pushes [LogSessionScreen] for [active] via the root navigator, unless a
-/// live one is already mounted (see [isLogSessionScreenOpen] — reconstructing
-/// a second instance from persisted DB state would clobber any not-yet-saved
-/// edits the live one is holding).
+/// live one for **that same session** is already mounted (see
+/// [isWorkoutScreenOpenFor] — reconstructing a second instance from persisted
+/// DB state would clobber any not-yet-saved edits the live one is holding).
+///
+/// Keyed on the session, not on "any screen is open": a screen showing some
+/// other workout — or a template-started one that hasn't created its session
+/// row yet — is not this session and must not suppress it. That's what kept
+/// a watch-started workout from ever getting its screen (and therefore its
+/// Live Activity) while a template screen happened to be open.
 Future<void> _pushSessionScreen(
   NavigatorState navigator,
   WorkoutSession active, {
   bool watchMastered = false,
 }) async {
-  if (isLogSessionScreenOpen) return;
+  if (isWorkoutScreenOpenFor(active.clientId)) return;
   await navigator.push(
     MaterialPageRoute(
       builder: (_) => LogSessionScreen(session: active, watchMastered: watchMastered),
@@ -53,10 +60,14 @@ Future<void> _pushSessionScreen(
 /// both of which should reopen the running workout regardless of what screen
 /// the app happens to be showing. Returns whether a session is active (and
 /// thus already showing or just opened) — the router falls back to the
-/// dashboard when this is false. Does nothing beyond that check if a live
-/// [LogSessionScreen] is already mounted (see [isLogSessionScreenOpen]).
+/// dashboard when this is false.
+///
+/// The active session is resolved first, and only *then* checked against the
+/// open screens ([_pushSessionScreen]): "some workout screen is open" used to
+/// be treated as "the running workout is already showing", which is wrong
+/// whenever the open screen belongs to a different session than the one that
+/// is actually running.
 Future<bool> openActiveWorkoutSession(Ref ref) async {
-  if (isLogSessionScreenOpen) return true;
   final navigator = rootNavigatorKey.currentState;
   if (navigator == null) return false;
   final active = await _findActiveSession(ref);

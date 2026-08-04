@@ -81,6 +81,43 @@ WatchSetLogTarget? selectWatchSetLogTarget(
   return WatchSetLogTarget(blockIndex: blocks.indexOf(fallback), needsNewRow: true);
 }
 
+/// The block a **watch-mastered** session's next set will count against, as
+/// reported by the watch itself: [currentExerciseIndex] indexes into
+/// [templateExerciseIds] (the session's template in plan order), which then
+/// resolves to one of [blocks] by exercise — not by position, since a
+/// session's exercise list can be ordered differently from the template's
+/// after a server round-trip.
+///
+/// Null — meaning "fall back to the phone's own current-exercise rule" —
+/// for every phone-mastered session (no index at all), a Quick strength
+/// session (no plan to index into), a template that hasn't loaded yet, an
+/// index the plan no longer has (it shrank since the watch cached it), and an
+/// exercise this session doesn't actually contain. Deliberately all-or-
+/// nothing: a half-resolved guess would point the prefill at an arbitrary
+/// exercise, which is the exact failure this exists to fix.
+///
+/// Needed because the two devices disagree about "current" by design: the
+/// phone's rule is "the exercise of the most recently logged set"
+/// ([LogSessionScreen._currentExerciseBlock]), while the watch moves on to
+/// the next exercise the moment one has all its planned sets. Between those
+/// two moments the phone was publishing a prefill — and a Live Activity
+/// exercise name — for the exercise the user had just finished.
+ExerciseBlock? watchCurrentBlock(
+  List<ExerciseBlock> blocks,
+  List<String> templateExerciseIds,
+  int? currentExerciseIndex,
+) {
+  final index = currentExerciseIndex;
+  if (index == null || index < 0 || index >= templateExerciseIds.length) {
+    return null;
+  }
+  final exerciseClientId = templateExerciseIds[index];
+  for (final block in blocks) {
+    if (block.exerciseClientId == exerciseClientId) return block;
+  }
+  return null;
+}
+
 /// The weight/reps a watch-side adjust stepper should start from
 /// (docs/watch/48-watch-f5b-set-adjust-plan.md D-F5b.2) — always computed by
 /// the phone, never guessed on the watch. Both fields are non-null: a

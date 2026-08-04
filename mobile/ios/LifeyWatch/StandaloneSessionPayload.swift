@@ -52,6 +52,17 @@ struct StandaloneAdoptionPayload: Codable, Equatable {
   let sets: [StandaloneSet]
   let activeCalories: Double?
   let averageHeartRate: Double?
+  /// Which of the template's exercises the *next* set will count against —
+  /// `standaloneExerciseIndex`, i.e. the same index space `StandaloneSet
+  /// .exerciseIndex` uses. Unlike a set's index this describes the future,
+  /// and the watch is the only one who knows it: it advances on its own once
+  /// an exercise has all its planned sets (`advanceStandaloneExerciseIfComplete`),
+  /// while the phone's own rule ("the exercise of the most recently logged
+  /// set") still points at the finished one. Without it the phone computed
+  /// its `nextSetReps`/`nextSetWeight` prefill — which the watch prefers over
+  /// its own (`standalonePrefill`) — against the wrong exercise entirely.
+  /// `nil` for a Quick strength session, where there's no plan to index into.
+  let currentExerciseIndex: Int?
 }
 
 /// The in-progress standalone session's own metadata, kept up to date on

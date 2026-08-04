@@ -240,6 +240,11 @@ class PhoneListenerService : WearableListenerService() {
                 // real 0 reps / 0 kg prefill.
                 nextSetReps = state?.takeIf { it.has("nextSetReps") }?.optInt("nextSetReps"),
                 nextSetWeight = state?.takeIf { it.has("nextSetWeight") }?.optDouble("nextSetWeight"),
+                // Which exercise setsDone/setsTotal are about, for a
+                // watch-started session the phone has adopted — see
+                // SessionMetadata.phoneSetsDone.
+                setsDoneExerciseIndex = state?.takeIf { it.has("setsDoneExerciseIndex") }
+                    ?.optInt("setsDoneExerciseIndex"),
             )
             sessionClientId
         } catch (e: Exception) {
@@ -282,6 +287,8 @@ class PhoneListenerService : WearableListenerService() {
                 nextSetReps = state?.takeIf { it.containsKey("nextSetReps") }?.getInt("nextSetReps"),
                 nextSetWeight = state?.takeIf { it.containsKey("nextSetWeight") }
                     ?.getDouble("nextSetWeight"),
+                setsDoneExerciseIndex = state?.takeIf { it.containsKey("setsDoneExerciseIndex") }
+                    ?.getInt("setsDoneExerciseIndex"),
             )
 
             // The phone's `end` message may never have reached us while

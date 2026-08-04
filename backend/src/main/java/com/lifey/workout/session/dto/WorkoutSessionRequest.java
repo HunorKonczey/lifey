@@ -56,6 +56,20 @@ public record WorkoutSessionRequest(
         Integer rpe,
 
         /* Optional free-text note captured alongside rpe. */
-        String feedbackNote
+        String feedbackNote,
+
+        /*
+         * The same planned exercises as exerciseIds, but each with the number of
+         * sets the session plans for it. Optional and additive: a client that
+         * doesn't send it (the web app, and any mobile build older than this
+         * field) keeps working exactly as before, and a client that does send it
+         * still sends exerciseIds too, so nothing has to guess which list is
+         * authoritative — when this one is present it simply wins.
+         *
+         * Exists because targetSets used to live only in the mobile client's
+         * local cache: the session came back from the server without it, and the
+         * planned-but-not-yet-logged set rows vanished on every pull.
+         */
+        List<@Valid PlannedExerciseRequest> plannedExercises
 ) {
 }
