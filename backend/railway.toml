@@ -1,3 +1,8 @@
+# SUPERSEDED by ../render.yaml — the backend now deploys to Render (see
+# devops/deploy-backend-render.md). Kept only so the old Railway service can be
+# brought back as a rollback path during the migration window; delete this file
+# (and the Railway project) once Render has been stable for a couple of weeks.
+
 [build]
 builder = "dockerfile"
 dockerfilePath = "Dockerfile"

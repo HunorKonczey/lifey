@@ -16,7 +16,7 @@ The base URL is resolved automatically (`lib/core/network/api_config.dart`):
 |-------------------------|-----------------------------------------------------------------|
 | Android emulator        | `http://10.0.2.2:8080/api/v1`                                    |
 | Web                     | `http://localhost:8080/api/v1`                                   |
-| iOS — **any** target (simulator or physical) | the deployed Railway backend, `https://lifey-production-7aa5.up.railway.app/api/v1` |
+| iOS — **any** target (simulator or physical) | the deployed backend (`ApiConfig._productionUrl`) |
 | Physical Android device, or a local backend on iOS | pass `--dart-define=API_BASE_URL=…` to override |
 
 iOS defaults to the deployed backend because a physical iPhone can't reach
@@ -99,7 +99,7 @@ cd mobile
 flutter devices        # confirm the simulator shows up
 flutter run            # pick the simulator
 ```
-By default this hits the deployed Railway backend (see the table above). To
+By default this hits the deployed backend (see the table above). To
 point the simulator at a backend running on your Mac instead:
 ```bash
 flutter run --dart-define=API_BASE_URL=http://localhost:8080/api/v1
@@ -163,7 +163,7 @@ flutter run --release -d <device-id>
 - `--release` is recommended for a phone you're just using day-to-day
   (faster, no attached debug session needed). Drop it if you want to set
   breakpoints / hot reload from the Mac.
-- No `--dart-define` needed — iOS already defaults to the deployed Railway
+- No `--dart-define` needed — iOS already defaults to the deployed
   backend. Only add `--dart-define=API_BASE_URL=...` if you want this
   build to talk to a *different* backend instead — e.g. one running
   locally on the Mac, reached over the LAN (the phone can't use

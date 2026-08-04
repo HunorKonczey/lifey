@@ -31,7 +31,7 @@ Pushy" means, plus a manual on-device verification pass (M6).
 ## Backend configuration
 
 Bound from `lifey.push.apns.*` (`application.yml`). Set on the **backend** host
-(Railway → Variables):
+(Render → service → Environment):
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -70,16 +70,16 @@ both at once — match it to the build you're testing.
 5. Ensure the App ID `com.khunor.lifey` has **Push Notifications** enabled
    (Identifiers → your App ID → Capabilities).
 
-### Getting the key onto Railway
+### Getting the key onto the host
 
 The backend reads a **file path** (`PUSH_APNS_KEY_PATH`), so the `.p8` has to
 exist in the container's filesystem — but it must **never be committed**.
-**Railway has no secret-file / config-file upload** (only Variables and
-Volumes), so the file is materialized at startup: store the key **base64-encoded
-in a (sealed) Variable** and let the Docker `ENTRYPOINT` decode it to a file.
-Full mechanism (encode command + `ENTRYPOINT` snippet, shared with the Firebase
-JSON) in
-[deploy-backend-railway.md → Secret files](deploy-backend-railway.md#secret-files-apns-p8-firebase-json).
+**Render has no secret-file mount** (only environment variables and, on paid
+plans, persistent disks), so the file is materialized at startup: store the key
+**base64-encoded in an environment variable** and let the Docker `ENTRYPOINT`
+decode it to a file. Full mechanism (encode command + `ENTRYPOINT` snippet,
+shared with the Firebase JSON) in
+[deploy-backend-render.md → Secret files](deploy-backend-render.md#secret-files-apns-p8-firebase-json).
 
 Then set:
 ```

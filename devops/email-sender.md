@@ -1,8 +1,8 @@
 # Email Sender — Resend
 
 Lifey sends transactional email through the **Resend** HTTPS API
-(`https://api.resend.com/emails`). SMTP is deliberately avoided: PaaS hosts like
-Railway commonly block outbound SMTP ports, and the Resend API goes over 443.
+(`https://api.resend.com/emails`). SMTP is deliberately avoided: PaaS hosts
+commonly block outbound SMTP ports, and the Resend API goes over 443.
 
 Implementation: `com.lifey.mail` — `ResendMailService` (the sender),
 `MailProperties` (config binding), `MailLanguageResolver` (per-recipient
@@ -26,7 +26,7 @@ the request that triggered it.
 ## Configuration
 
 Bound from `lifey.mail.*` (see `application.yml`). Set these on the **backend**
-host (Railway → service → Variables):
+host (Render → service → Environment):
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -52,7 +52,7 @@ host (Railway → service → Variables):
      Wait for Resend to mark the domain **Verified**, then set
      `MAIL_FROM=no-reply@yourdomain.com`. Only a verified domain delivers to
      arbitrary recipients and stays out of spam.
-3. **Set the backend env vars** (Railway):
+3. **Set the backend env vars** (Render):
    ```
    MAIL_ENABLED=true
    RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx

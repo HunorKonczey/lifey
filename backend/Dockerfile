@@ -21,17 +21,19 @@ USER app
 EXPOSE 8080
 # Without an explicit cap, the JVM sizes its default heap off the host's
 # *full* visible memory when the platform doesn't enforce a hard cgroup
-# limit (Railway's free tier just kills the container on overuse instead of
-# constraining it at the OS level) — so it creeps toward however much RAM
-# the underlying machine has, not the plan's actual allowance. Bounding it
-# explicitly keeps total RSS (heap + metaspace + threads + native) well
-# under a 1 GB plan; override JAVA_OPTS in Railway's env vars to retune
-# without rebuilding.
-ENV JAVA_OPTS="-Xms128m -Xmx384m -XX:MaxMetaspaceSize=128m"
-# Railway has no secret-file mount, so push credentials are supplied as
-# base64-encoded (sealed) env Variables and decoded to a file here on startup.
+# limit — so it creeps toward however much RAM the underlying machine has,
+# not the plan's actual allowance, and the platform kills the container on
+# overuse rather than constraining it.
+#
+# Sized for Render's 512 MB instances (both Free and Starter): total RSS is
+# heap + metaspace + thread stacks + code cache + other native, so the heap
+# cap has to sit well below the limit, not at it. Override JAVA_OPTS in the
+# Render environment to retune on a bigger plan without rebuilding.
+ENV JAVA_OPTS="-Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m"
+# Neither Render nor Railway has a secret-file mount, so push credentials are
+# supplied as base64-encoded env vars and decoded to a file here on startup.
 # Each block is a no-op when its *_B64 var is unset, so a deploy with push
-# disabled boots exactly as before. See devops/deploy-backend-railway.md.
+# disabled boots exactly as before. See devops/deploy-backend-render.md.
 ENTRYPOINT ["sh", "-c", "\
   if [ -n \"$PUSH_FCM_CREDENTIALS_B64\" ]; then echo \"$PUSH_FCM_CREDENTIALS_B64\" | base64 -d > \"${PUSH_FCM_CREDENTIALS_PATH:-/tmp/firebase.json}\"; fi; \
   if [ -n \"$PUSH_APNS_KEY_B64\" ]; then echo \"$PUSH_APNS_KEY_B64\" | base64 -d > \"${PUSH_APNS_KEY_PATH:-/tmp/apns.p8}\"; fi; \

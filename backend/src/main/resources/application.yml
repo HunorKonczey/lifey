@@ -10,13 +10,24 @@ spring:
       # app's and Postgres' side, not worth it for a low-traffic free-tier
       # deployment with a capped heap.
       maximum-pool-size: 5
-      # Let the pool shrink to zero connections when idle, and do it well
-      # within Railway's ~10-minute Serverless inactivity window — a pool
-      # that always keeps a connection open to Postgres is itself outbound
-      # traffic, which stops the service from ever being seen as idle and
-      # put to sleep.
-      # minimum-idle: 0
-      # idle-timeout: 60000
+      # The next three exist for Neon, whose compute suspends after a few
+      # minutes with no open connections and resumes on the next one.
+      #
+      # An always-warm pool would defeat that entirely — the compute would
+      # never see an idle moment and never scale to zero. Worse, a connection
+      # held across a suspend comes back dead, and the borrowing request is
+      # the one that finds out. So: let the pool drain to nothing when the
+      # app is quiet (minimum-idle 0), retire idle connections quickly
+      # (idle-timeout), and cap absolute connection age below any plausible
+      # server-side idle cutoff (max-lifetime) so recycling is our decision
+      # rather than something we discover mid-request.
+      #
+      # Cost: a request arriving into an empty pool pays one connection
+      # handshake, plus Neon's resume (~a few hundred ms) if the compute had
+      # suspended. Acceptable for this traffic level.
+      minimum-idle: 0
+      idle-timeout: 60000
+      max-lifetime: 240000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -42,7 +53,7 @@ spring:
     locations: classpath:db/migration
 
 server:
-  # Railway (and most PaaS hosts) assign the container a port at runtime via
+  # Render (and most PaaS hosts) assign the container a port at runtime via
   # $PORT and route their public proxy to it — the app must bind to that, not
   # a fixed port. Falls back to 8080 for local/dev where $PORT isn't set.
   port: ${PORT:8080}

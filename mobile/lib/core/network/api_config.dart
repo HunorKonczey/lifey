@@ -14,6 +14,11 @@ class ApiConfig {
 
   /// The deployed backend — the default everywhere except web/Android
   /// emulator (which assume a local backend during development there).
+  ///
+  /// TODO(render-migration): still the old Railway host, which stays up as the
+  /// rollback path. Flip this to `https://<service>.onrender.com/api/v1` at
+  /// cutover — the value is compiled in, so it needs a new app build, not just
+  /// a redeploy. See devops/deploy-backend-render.md → Post-creation checklist.
   static const String _productionUrl = 'https://lifey-production-7aa5.up.railway.app/api/v1';
 
   static String get baseUrl {

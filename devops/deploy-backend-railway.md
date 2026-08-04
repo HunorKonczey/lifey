@@ -1,7 +1,14 @@
-# Deploy — Backend on Railway
+# Deploy — Backend on Railway *(superseded)*
 
-The Spring Boot backend runs on **Railway** as a Docker service, next to a managed
-**PostgreSQL 16** database. Current production URL:
+> **This is not the current setup.** The backend moved to Render, and the database
+> to Neon — see **[deploy-backend-render.md](deploy-backend-render.md)**. This
+> document is retained only for the migration's rollback window: it describes how
+> the Railway service was wired, so it can be brought back if the move has to be
+> reversed. Delete it (and the Railway project) once Render has been stable for a
+> couple of weeks. Everything below describes the **old** deployment.
+
+The Spring Boot backend ran on **Railway** as a Docker service, next to a managed
+**PostgreSQL 16** database. Its URL:
 `https://lifey-production-7aa5.up.railway.app`.
 
 Build config lives in the repo:

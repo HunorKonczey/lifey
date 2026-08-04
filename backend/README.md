@@ -22,13 +22,13 @@ from `../.env.example`) — `docker-compose` reads it automatically for the vars
 | `MAIL_FROM`                                         | `onboarding@resend.dev` | Sender address — Resend's shared test domain until a real domain is verified                                                                                             |
 | `MAIL_ENABLED`                                      | `true`                  | When `false` (or when `RESEND_API_KEY` is missing/invalid), mail sends fail silently and are only logged — registration/password-reset requests never fail because of it |
 
-None of these are committed. Local values go in `.env` (gitignored); deployment values are set on the host (Railway env
-vars, etc.).
+None of these are committed. Local values go in `.env` (gitignored); deployment values are set on the host — see
+[`../devops/deploy-backend-render.md`](../devops/deploy-backend-render.md) for the full production variable list.
 
 ## Setting up Resend
 
 Transactional email (welcome mail, password reset codes) goes out via the [Resend](https://resend.com) HTTPS API rather
-than SMTP — PaaS hosts like Railway commonly block outbound SMTP ports, but the API goes over 443.
+than SMTP — PaaS hosts commonly block outbound SMTP ports, but the API goes over 443.
 
 1. Sign up at [resend.com](https://resend.com) (no credit card required) and create an API key.
 2. Put it in `RESEND_API_KEY` in your local `.env` or the deployment's env vars.
