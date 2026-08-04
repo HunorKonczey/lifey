@@ -106,6 +106,7 @@ void main() {
           'nextSetWeight': null,
           'nextSetReps': null,
           'setsDoneExerciseIndex': null,
+          'setsDonePerExercise': null,
         },
       });
     });
@@ -144,6 +145,7 @@ void main() {
           'nextSetWeight': null,
           'nextSetReps': null,
           'setsDoneExerciseIndex': null,
+          'setsDonePerExercise': null,
         },
       });
     });
@@ -196,6 +198,32 @@ void main() {
       expect(state['setsDoneExerciseIndex'], 1);
       expect(state['setsDone'], 3);
       expect(state['setsTotal'], 4);
+    });
+
+    test('updateState carries the whole plan\'s set counts, not just the current one',
+        () async {
+      // The watch decides when to move on by scanning its plan for the first
+      // unfinished exercise, and it can only see its own sets — so it needs a
+      // count per exercise, not just for the one it is on.
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WatchWorkoutService(isAvailable: true);
+
+      await service.updateState(
+        sessionClientId: 'session-1',
+        state: const WorkoutSessionState(
+          exerciseName: 'Guggolás',
+          setsDone: 1,
+          totalSetsDone: 4,
+          setsDoneExerciseIndex: 2,
+          setsDonePerExercise: [3, 0, 1],
+        ),
+      );
+
+      final state = (calls.single.arguments as Map)['state'] as Map;
+      expect(state['setsDonePerExercise'], [3, 0, 1]);
     });
 
     test('endWorkout sends sessionClientId', () async {

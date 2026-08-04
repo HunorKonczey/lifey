@@ -375,6 +375,15 @@ private struct LogPage: View {
     let now = Date()
     if let lastTapAt, now.timeIntervalSince(lastTapAt) < tapDebounceSeconds { return }
     lastTapAt = now
+    // Nothing known to log for this exercise — no planned values, no history,
+    // no earlier set this session (`WorkoutManager.hasLogSetPrefill`). A plain
+    // tap would record a set with nothing in it, so open the stepper on the
+    // defaults and let the user dial in the first values; every later tap for
+    // this exercise then has that set to carry forward.
+    guard workoutManager.hasLogSetPrefill else {
+      workoutManager.beginLogAdjust()
+      return
+    }
     workoutManager.logSet()
   }
 

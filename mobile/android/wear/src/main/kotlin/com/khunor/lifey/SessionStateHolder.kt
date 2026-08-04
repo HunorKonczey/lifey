@@ -285,6 +285,15 @@ data class SessionMetadata(
      * to the current one. Null whenever the phone had nothing matching to
      * say. */
     val phoneSetsExerciseIndex: Int? = null,
+    /** The phone's set count for **every** exercise of the plan, in this
+     * watch's own index order (see `WorkoutSessionState.setsDonePerExercise`).
+     *
+     * [phoneSetsDone] above only describes the current exercise, which is
+     * enough to render its counter but not to decide when to move on:
+     * [advancedStandaloneExerciseIndex] judges *every* exercise, and from this
+     * watch's own set list every exercise finished on the phone still looks
+     * unfinished — so it kept hopping between already-finished ones. */
+    val phoneSetsDonePerExercise: List<Int>? = null,
 ) {
     /** [sessionClientId] doubles as the standalone session's own id during
      * standalone mode — reused rather than a separate `standaloneSessionId`
@@ -374,9 +383,15 @@ data class SessionMetadata(
      * for. Mirrors iOS's `standaloneSetsDone(at:)`.
      */
     fun standaloneSetsDoneAt(index: Int): Int {
-        val own = standaloneSets.count { it.exerciseIndex == index }
-        if (index != phoneSetsExerciseIndex || phoneSetsDone == null) return own
-        return maxOf(own, phoneSetsDone)
+        var best = standaloneSets.count { it.exerciseIndex == index }
+        phoneSetsDonePerExercise?.getOrNull(index)?.let { best = maxOf(best, it) }
+        // The single-exercise value can be a sync fresher than the array (it is
+        // recomputed for the exercise this watch named), so it still gets a
+        // look in.
+        if (index == phoneSetsExerciseIndex && phoneSetsDone != null) {
+            best = maxOf(best, phoneSetsDone)
+        }
+        return best
     }
 
     /**
@@ -510,6 +525,7 @@ object SessionStateHolder {
         nextSetReps: Int?,
         nextSetWeight: Double?,
         setsDoneExerciseIndex: Int?,
+        setsDonePerExercise: List<Int>?,
     ) {
         if (_metadata.value.isStandalone) {
             // A *different* session's state can't touch the watch's own
@@ -543,10 +559,20 @@ object SessionStateHolder {
                 current.copy(
                     nextSetReps = nextSetReps,
                     nextSetWeight = nextSetWeight,
+                    // Index-keyed, so unlike the three below it needs no
+                    // agreement about which exercise is current.
+                    phoneSetsDonePerExercise = setsDonePerExercise,
                     phoneSetsExerciseIndex = if (matchesCurrent) setsDoneExerciseIndex else null,
                     phoneSetsDone = if (matchesCurrent) setsDone else null,
                     phoneSetsTotal = if (matchesCurrent) setsTotal else null,
                 )
+                    // A set logged on the phone can be the one that completes
+                    // this exercise, and until now only a tap on the wrist ever
+                    // re-evaluated that ([onStandaloneSetLogged]) — so the watch
+                    // sat on a finished exercise offering to add yet another set
+                    // to it. Read off the *updated* copy, so the phone's count
+                    // counts towards the target it may have completed.
+                    .let { it.copy(standaloneExerciseIndex = it.advancedStandaloneExerciseIndex) }
             }
             return
         }
@@ -804,6 +830,25 @@ object SessionStateHolder {
      * receives). Same `Ready` gate the plain tap uses, so a still-pending
      * log can't be adjusted out from under itself.
      */
+    /**
+     * Whether a plain one-tap log has any idea what to record.
+     *
+     * For a phone-mastered session that's the prefill the phone publishes on
+     * every state sync (the row's planned values, else this exercise's last
+     * workout at that position, else its last logged set here); standalone
+     * resolves the same chain locally. False means there is genuinely nothing
+     * to go on for this exercise — a first-ever exercise with an empty plan —
+     * and the tap would otherwise record a set with no weight and no reps.
+     * `LogPage` sends the user to the adjust stepper instead, so they dial in
+     * the first values rather than getting an empty row.
+     */
+    val hasLogSetPrefill: Boolean
+        get() {
+            val metadata = _metadata.value
+            if (metadata.isStandalone) return metadata.standalonePrefill.weight != null
+            return metadata.nextSetReps != null && metadata.nextSetWeight != null
+        }
+
     fun onLogAdjustOpened() {
         val metadata = _metadata.value
         if (_phase.value != SessionPhase.ACTIVE) return

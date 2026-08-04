@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -575,6 +576,108 @@ void main() {
       expect(row.rpe, 7);
       expect(ackCalls, hasLength(1));
       expect(ackCalls.single.method, 'ackAdoption');
+    });
+
+    /// Ending a watch-started workout from the *phone* stamps finishedAt
+    /// immediately, so the watch's final payload — the only carrier of the
+    /// health metrics and the HealthKit workout id — lands on a session that is
+    /// already closed. That branch used to ack and write nothing.
+    group('the final payload arriving after the phone already closed the session', () {
+      /// What LogSessionScreen's Finish button leaves behind.
+      Future<void> finishOnPhone() async {
+        final stored = await sessionRepository.findByClientId('standalone-1');
+        await sessionRepository.update(
+          'standalone-1',
+          startedAt: stored!.startedAt!,
+          finishedAt: DateTime.fromMillisecondsSinceEpoch(1783078000000, isUtc: true),
+          exercises: [
+            for (final e in stored.exercises)
+              PlannedExerciseInput(exerciseClientId: e.exerciseClientId, targetSets: e.targetSets),
+          ],
+          sets: [
+            for (final s in stored.sets)
+              ExerciseSetInput(
+                exerciseClientId: s.exerciseClientId,
+                reps: s.reps,
+                weight: s.weight,
+                performedAt: s.performedAt,
+              ),
+          ],
+          rpe: const Value(6),
+        );
+      }
+
+      test('still applies the calories, heart rate and health workout id', () async {
+        final processor = buildProcessor();
+        await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+        await finishOnPhone();
+
+        await processor.process(
+          sampleEvent(
+            activeCalories: 412,
+            averageHeartRate: 129,
+            healthWorkoutId: 'hk-uuid-9',
+          ),
+          language: LanguagePreference.english,
+        );
+
+        final row = await db.select(db.workoutSessions).getSingle();
+        expect(row.activeCalories, 412);
+        expect(row.averageHeartRate, 129);
+        // Drives the ⌚ badge in the sessions list and on the details screen
+        // (WorkoutSession.enrichedFromWatch) — without it there is no sign
+        // anywhere that the watch measured this workout.
+        expect(row.healthWorkoutId, 'hk-uuid-9');
+      });
+
+      test('keeps what the phone already decided', () async {
+        final processor = buildProcessor();
+        await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+        await finishOnPhone();
+        final finishedAt = (await db.select(db.workoutSessions).getSingle()).finishedAt;
+
+        await processor.process(sampleEvent(rpe: 9), language: LanguagePreference.english);
+
+        final row = await db.select(db.workoutSessions).getSingle();
+        // The phone closed the session and collected its own rating; the
+        // watch's effort selector never ran for this one.
+        expect(row.finishedAt, finishedAt);
+        expect(row.rpe, 6);
+      });
+
+      test('a set the watch never managed to deliver still lands', () async {
+        final processor = buildProcessor();
+        await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+        await finishOnPhone();
+
+        await processor.process(
+          sampleEvent(sets: const [
+            WatchStandaloneSet(loggedAtEpochMs: 1783075260000, reps: 10),
+            WatchStandaloneSet(loggedAtEpochMs: 1783075320000, reps: 10),
+          ]),
+          language: LanguagePreference.english,
+        );
+
+        expect(await db.select(db.exerciseSets).get(), hasLength(2));
+      });
+
+      test('a plain retry of an already-applied payload writes nothing new', () async {
+        final processor = buildProcessor();
+        await processor.process(
+          sampleEvent(activeCalories: 412, healthWorkoutId: 'hk-uuid-9'),
+          language: LanguagePreference.english,
+        );
+        final before = await db.select(db.workoutSessions).getSingle();
+
+        await processor.process(
+          sampleEvent(activeCalories: 412, healthWorkoutId: 'hk-uuid-9'),
+          language: LanguagePreference.english,
+        );
+
+        final after = await db.select(db.workoutSessions).getSingle();
+        expect(after, before);
+        expect(ackCalls.where((c) => c.method == 'ackStandaloneSession'), hasLength(2));
+      });
     });
 
     /// While the phone app isn't running, the watch's deliveries queue up

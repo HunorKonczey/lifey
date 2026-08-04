@@ -202,7 +202,11 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             title?.let { put("title", it) }
             state?.let { s ->
                 val stateJson = JSONObject()
-                s.forEach { (key, value) -> if (value != null) stateJson.put(key, value) }
+                // `toJsonValue()` rather than the raw value: a state field can
+                // now be a list (`setsDonePerExercise`), which JSONObject.put
+                // would otherwise store as an object and serialize as its
+                // toString() — a quoted "[1, 2]" string the watch can't read.
+                s.forEach { (key, value) -> if (value != null) stateJson.put(key, value.toJsonValue()) }
                 put("state", stateJson)
             }
         }
@@ -578,6 +582,13 @@ private fun Map<String, Any?>.toDataMap(): DataMap {
             is Long -> map.putLong(key, value)
             is Double -> map.putDouble(key, value)
             is Boolean -> map.putBoolean(key, value)
+            // Only int lists occur (`setsDonePerExercise`); anything else in a
+            // list is dropped rather than guessed at, same as an unhandled
+            // scalar type above.
+            is List<*> -> map.putIntegerArrayList(
+                key,
+                ArrayList(value.filterIsInstance<Int>()),
+            )
         }
     }
     return map

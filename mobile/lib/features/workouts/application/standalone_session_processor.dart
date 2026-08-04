@@ -65,10 +65,11 @@ class StandaloneSessionProcessor {
   /// - exists but not finished (was adopted, this is it finishing) →
   ///   [_finishAdoptedSession] updates the existing row instead of creating
   ///   a duplicate.
-  /// - exists and already finished → a retried, already-processed delivery
-  ///   (the watch's own retry-until-acked, docs/watch/
-  ///   44-watch-f6-standalone-plan.md §4.2, D-F6.2) — no DB write, only acks
-  ///   again.
+  /// - exists and already finished → [_enrichFinishedSession]. Usually a
+  ///   retried, already-processed delivery (the watch's own
+  ///   retry-until-acked, docs/watch/44-watch-f6-standalone-plan.md §4.2,
+  ///   D-F6.2) that changes nothing — but *not always*, which is why this
+  ///   branch can't simply ack and walk away any more; see that method.
   Future<void> process(WatchStandaloneSession event, {required LanguagePreference language}) {
     return _serialized(() async {
       final alreadyFinished =
@@ -82,6 +83,8 @@ class StandaloneSessionProcessor {
         );
       } else if (alreadyFinished == false) {
         await _finishAdoptedSession(event, language: language);
+      } else {
+        await _enrichFinishedSession(event, language: language);
       }
       await _watchService.ackStandaloneSession(event.standaloneSessionId);
     });
@@ -336,6 +339,88 @@ class StandaloneSessionProcessor {
       averageHeartRate: Value(event.averageHeartRate),
       healthWorkoutId: Value(healthWorkoutId),
       rpe: Value(event.rpe),
+    );
+  }
+
+  /// Applies what the watch's final payload carries to a session that is
+  /// **already closed** — without reopening it or moving the times the phone
+  /// wrote.
+  ///
+  /// This branch used to ack and write nothing, on the assumption that an
+  /// already-finished row means "I've seen this delivery before". That holds
+  /// for the watch's own retries, but not for the case that closes the session
+  /// from the *other* side: ending a watch-started workout on the **phone**
+  /// stamps `finishedAt` immediately, and the watch's final payload — the only
+  /// thing that ever carries `activeCalories`, `averageHeartRate` and the
+  /// HealthKit workout id — then arrived to a finished row and was dropped on
+  /// the floor. The session ended up with no health metrics at all and no ⌚
+  /// badge anywhere (that badge is exactly `healthWorkoutId != null`, see
+  /// [WorkoutSession.enrichedFromWatch]), which is what the user sees as "the
+  /// data never came back from the watch".
+  ///
+  /// What the phone already has wins, field by field: it closed the session,
+  /// so its `finishedAt`, its rating and any health workout it was already
+  /// paired with are the deliberate values (the same rule
+  /// `WorkoutResumePrompt` applies to a `WatchWorkoutSummary`). The payload
+  /// only fills in blanks — and its sets are merged in, so a set the watch
+  /// logged but never managed to deliver before the phone ended the workout
+  /// still lands.
+  ///
+  /// Writes nothing when it would change nothing, so the watch's
+  /// retry-until-acked deliveries stay the no-ops they were.
+  Future<void> _enrichFinishedSession(
+    WatchStandaloneSession event, {
+    required LanguagePreference language,
+  }) async {
+    final stored = await _sessionRepository.findByClientId(event.standaloneSessionId);
+    if (stored == null || stored.startedAt == null) return;
+
+    final resolved = await _resolveExercisesAndSets(
+      sessionClientId: event.standaloneSessionId,
+      templateId: event.templateId,
+      sets: event.sets,
+      language: language,
+    );
+    final merged = mergeWatchSessionContent(
+      existingExercises: stored.exercises,
+      existingSets: stored.sets,
+      watchExercises: resolved.exercises,
+      watchSets: resolved.sets,
+    );
+
+    final activeCalories = stored.activeCalories ?? event.activeCalories;
+    final averageHeartRate = stored.averageHeartRate ?? event.averageHeartRate;
+    final rpe = stored.rpe ?? event.rpe;
+    // Android's watch never writes to Health Connect — the phone does, once it
+    // has the metrics (D-F6.5). Only worth doing if this session isn't paired
+    // with a health workout yet.
+    final healthWorkoutId = stored.healthWorkoutId ??
+        event.healthWorkoutId ??
+        await _writeHealthWorkout(
+          start: stored.startedAt!,
+          end: stored.finishedAt ?? DateTime.now(),
+          activeCalories: activeCalories,
+          title: stored.templateName ?? resolved.title,
+        );
+
+    final unchanged = merged.sets.length == stored.sets.length &&
+        merged.exercises.length == stored.exercises.length &&
+        activeCalories == stored.activeCalories &&
+        averageHeartRate == stored.averageHeartRate &&
+        rpe == stored.rpe &&
+        healthWorkoutId == stored.healthWorkoutId;
+    if (unchanged) return;
+
+    await _sessionRepository.update(
+      event.standaloneSessionId,
+      startedAt: stored.startedAt!,
+      finishedAt: stored.finishedAt,
+      exercises: merged.exercises,
+      sets: merged.sets,
+      activeCalories: Value(activeCalories),
+      averageHeartRate: Value(averageHeartRate),
+      healthWorkoutId: Value(healthWorkoutId),
+      rpe: Value(rpe),
     );
   }
 

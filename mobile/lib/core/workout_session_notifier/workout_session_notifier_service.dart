@@ -24,6 +24,7 @@ class WorkoutSessionState {
     this.nextSetWeight,
     this.nextSetReps,
     this.setsDoneExerciseIndex,
+    this.setsDonePerExercise,
   });
 
   /// Current (last touched) exercise name; pass a pre-localized fallback
@@ -89,6 +90,23 @@ class WorkoutSessionState {
   /// fields above.
   final int? setsDoneExerciseIndex;
 
+  /// How many sets are logged for **every** exercise of the watch's plan, in
+  /// its own index order — the phone's row is the only place the two devices'
+  /// sets meet, so this is the only complete answer that exists.
+  ///
+  /// [setsDoneExerciseIndex] above covers the exercise the watch is on right
+  /// now, which is enough to render "2/3" — but not enough to decide when to
+  /// move on. The watch picks its next exercise by scanning its plan for the
+  /// first one that isn't finished yet, and judged from its own set list every
+  /// exercise the user completed *on the phone* still looks unfinished. It
+  /// would jump back to one, be told it was complete after all, jump to the
+  /// next, and so on — visibly hopping between already-finished exercises.
+  ///
+  /// Null outside a watch-mastered session, and whenever the plan's exercise
+  /// order isn't known here; the watch then falls back to counting its own
+  /// sets, exactly as it did before.
+  final List<int>? setsDonePerExercise;
+
   Map<String, dynamic> toJson() => {
         'exerciseName': exerciseName,
         'setsDone': setsDone,
@@ -101,6 +119,7 @@ class WorkoutSessionState {
         'nextSetWeight': nextSetWeight,
         'nextSetReps': nextSetReps,
         'setsDoneExerciseIndex': setsDoneExerciseIndex,
+        'setsDonePerExercise': setsDonePerExercise,
       };
 }
 

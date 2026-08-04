@@ -268,6 +268,37 @@ void _prefillTests() {
       expect(prefill.reps, 7);
     });
 
+    test('egy tervezett üres sorra is van prefill — ez tölti ki az egy-koppintásos logot', () {
+      // Az egy-koppintásos log korábban csak a doneAt-et bélyegezte rá a
+      // tervezett (mindig üres) sorra, így érték nélküli szett keletkezett,
+      // amit a mentés aztán el is dobott. A cél-sorra feloldott prefill az,
+      // amit a telefon ilyenkor beír.
+      final block = _blockWithRows(
+        'a',
+        rows: [_row(weight: 60, reps: 8, done: true), _row()],
+        previousSets: const [
+          PreviousSetHint(weight: 60, reps: 8),
+          PreviousSetHint(weight: 62.5, reps: 6),
+        ],
+      );
+
+      final target = selectWatchSetLogTarget([block], block);
+      final prefill = watchSetPrefill([block], block);
+
+      expect(target!.rowIndex, 1, reason: 'a tervezett üres sor a cél');
+      expect(prefill, isNotNull, reason: 'van mit beírni — nem maradhat üres a sor');
+      expect(prefill!.weight, 62.5);
+      expect(prefill.reps, 6);
+    });
+
+    test('semmi előzmény és semmi kész sor → nincs prefill (az óra az adjustot nyitja)', () {
+      // Ez az egyetlen eset, amikor az egy-koppintásos log nem tud mit
+      // beírni — ilyenkor az órán a "+1" gomb a steppert nyitja meg helyette.
+      final block = _blockWithRows('a', rows: [_row(), _row()]);
+
+      expect(watchSetPrefill([block], block), isNull);
+    });
+
     test('a prefill ugyanarra a sorra vonatkozik, amit a logolás célozna', () {
       final current = _blockWithRows('current', rows: [_row(weight: 50, reps: 8, done: true)]);
       final other = _blockWithRows('other', rows: [_row(weight: 70, reps: 5)]);

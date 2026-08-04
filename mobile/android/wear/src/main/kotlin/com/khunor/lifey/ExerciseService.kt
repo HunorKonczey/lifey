@@ -192,7 +192,12 @@ class ExerciseService : Service() {
         // stays in sync with every set as it lands, not just at start/end.
         scope.launch {
             SessionStateHolder.metadata
-                .map { it.standaloneSets }
+                // The current exercise counts as a change too, not just the set
+                // list: [SessionStateHolder.onStateSynced] can move it on its
+                // own when a set logged on the phone completes the exercise, and
+                // that new position has to be persisted for recovery and told to
+                // the phone just like a locally logged set's would be.
+                .map { it.standaloneSets to it.standaloneExerciseIndex }
                 .distinctUntilChanged()
                 .collect {
                     saveStandaloneActiveSnapshot()

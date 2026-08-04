@@ -355,7 +355,11 @@ extension PhoneConnector: WCSessionDelegate {
         nextSetWeight: (state?["nextSetWeight"] as? NSNumber)?.doubleValue,
         // Which exercise `setsDone`/`setsTotal` are about, for a watch-started
         // session the phone has adopted — see `WorkoutManager.phoneSetsDone`.
-        setsDoneExerciseIndex: (state?["setsDoneExerciseIndex"] as? NSNumber)?.intValue)
+        setsDoneExerciseIndex: (state?["setsDoneExerciseIndex"] as? NSNumber)?.intValue,
+        // Plain array of ints over the wire; `compactMap` so a malformed entry
+        // costs that entry rather than the whole payload.
+        setsDonePerExercise: (state?["setsDonePerExercise"] as? [Any])?
+          .compactMap { ($0 as? NSNumber)?.intValue })
     }
   }
 }

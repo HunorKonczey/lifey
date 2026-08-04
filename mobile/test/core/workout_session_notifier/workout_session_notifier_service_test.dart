@@ -99,6 +99,7 @@ void main() {
           'nextSetWeight': null,
           'nextSetReps': null,
           'setsDoneExerciseIndex': null,
+          'setsDonePerExercise': null,
         },
       });
     });
@@ -211,6 +212,7 @@ void main() {
           'nextSetWeight': null,
           'nextSetReps': null,
           'setsDoneExerciseIndex': null,
+          'setsDonePerExercise': null,
         },
       });
     });
@@ -263,6 +265,7 @@ void main() {
           'nextSetWeight': null,
           'nextSetReps': null,
           'setsDoneExerciseIndex': null,
+          'setsDonePerExercise': null,
         },
       });
     });

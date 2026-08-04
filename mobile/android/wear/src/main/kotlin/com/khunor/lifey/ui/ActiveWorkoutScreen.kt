@@ -622,6 +622,17 @@ private fun LogPage(
                     val now = SystemClock.elapsedRealtime()
                     if (now - lastTapAtMs < LOG_SET_TAP_DEBOUNCE_MS) return@LogCircle
                     lastTapAtMs = now
+                    // Nothing known to log for this exercise — no planned
+                    // values, no history, no earlier set this session (see
+                    // [SessionStateHolder.hasLogSetPrefill]). A plain tap would
+                    // record a set with nothing in it, so open the stepper on
+                    // the defaults and let the user dial in the first values;
+                    // every later tap for this exercise then has that set to
+                    // carry forward.
+                    if (!SessionStateHolder.hasLogSetPrefill) {
+                        SessionStateHolder.onLogAdjustOpened()
+                        return@LogCircle
+                    }
                     if (isStandalone) {
                         // No phone to round-trip against — logs straight to
                         // the local set list (docs/watch/

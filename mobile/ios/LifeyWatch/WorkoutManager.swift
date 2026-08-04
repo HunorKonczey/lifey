@@ -313,6 +313,17 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// finished there.
   @Published private(set) var phoneSetsDone: Int?
   @Published private(set) var phoneSetsTotal: Int?
+  /// The phone's set count for **every** exercise of the plan, in this
+  /// watch's own index order (see `WorkoutSessionState.setsDonePerExercise`).
+  ///
+  /// `phoneSetsDone` above only describes the current exercise, which is
+  /// enough to render its counter but not to decide when the session should
+  /// move on: `advanceStandaloneExerciseIfComplete()` judges *every* exercise,
+  /// and from this watch's own set list every exercise finished on the phone
+  /// still looks unfinished. It kept jumping back into those, being told they
+  /// were complete after all, then jumping on — visibly hopping between
+  /// already-finished exercises.
+  @Published private(set) var phoneSetsDonePerExercise: [Int]?
   /// Which exercise the two values above are about — the phone echoes back
   /// the index this watch sent it (`currentExerciseIndex` in the adoption
   /// payload), so a value computed for a different exercise is never applied
@@ -410,6 +421,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     phoneSetsExerciseIndex = nil
     phoneSetsDone = nil
     phoneSetsTotal = nil
+    phoneSetsDonePerExercise = nil
 
     do {
       try await startSession(configuration: configuration)
@@ -477,9 +489,16 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// knows about sets this watch never logged, which is the case this exists
   /// for.
   func standaloneSetsDone(at index: Int) -> Int {
-    let own = standaloneSets.filter { $0.exerciseIndex == index }.count
-    guard index == phoneSetsExerciseIndex, let phoneSetsDone else { return own }
-    return max(own, phoneSetsDone)
+    var best = standaloneSets.filter { $0.exerciseIndex == index }.count
+    if let phoneSetsDonePerExercise, index >= 0, index < phoneSetsDonePerExercise.count {
+      best = max(best, phoneSetsDonePerExercise[index])
+    }
+    // The single-exercise value can be a sync fresher than the array (it is
+    // recomputed for the exercise this watch named), so it still gets a look in.
+    if index == phoneSetsExerciseIndex, let phoneSetsDone {
+      best = max(best, phoneSetsDone)
+    }
+    return best
   }
 
   /// Moves `standaloneExerciseIndex` on once the current exercise has all the
@@ -499,14 +518,21 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// way to know it's finished), and when every exercise is complete — that
   /// last case keeps logging into the current one, matching
   /// `selectWatchSetLogTarget`'s own rule (c).
-  private func advanceStandaloneExerciseIfComplete() {
+  /// Returns whether it actually moved on, so a caller that isn't already
+  /// persisting/publishing the session can do so — [beginLocalLogSet] does
+  /// both right after this anyway, the phone-driven call site in
+  /// `applyStateUpdate` doesn't.
+  @discardableResult
+  private func advanceStandaloneExerciseIfComplete() -> Bool {
     guard let standaloneTemplate, standaloneCurrentExercise?.targetSets != nil,
       standaloneExerciseIsComplete(standaloneExerciseIndex)
-    else { return }
+    else { return false }
     for index in standaloneTemplate.exercises.indices where !standaloneExerciseIsComplete(index) {
+      guard index != standaloneExerciseIndex else { return false }
       standaloneExerciseIndex = index
-      return
+      return true
     }
+    return false
   }
 
   /// The exercise the *next* logged set will count against, or `nil` for a
@@ -710,7 +736,8 @@ final class WorkoutManager: NSObject, ObservableObject {
     restTotalSeconds: Int?,
     nextSetReps: Int?,
     nextSetWeight: Double?,
-    setsDoneExerciseIndex: Int?
+    setsDoneExerciseIndex: Int?,
+    setsDonePerExercise: [Int]?
   ) {
     guard !isStandalone else {
       // A *different* session's state can't touch the watch's own standalone
@@ -737,10 +764,26 @@ final class WorkoutManager: NSObject, ObservableObject {
       // unlike `exerciseName` and the rest timer, which describe the session
       // the watch itself drives and stay watch-owned. `standaloneSetsDone(at:)`
       // is what reconciles the phone's number with this watch's own.
+      // Index-keyed, so unlike the pair below it needs no agreement about
+      // which exercise is current — it describes all of them.
+      phoneSetsDonePerExercise = setsDonePerExercise
       if let setsDoneExerciseIndex, setsDoneExerciseIndex == standaloneExerciseIndex {
         phoneSetsExerciseIndex = setsDoneExerciseIndex
         phoneSetsDone = setsDone
         phoneSetsTotal = setsTotal
+        // A set logged on the phone can be the one that completes this
+        // exercise, and until now only a tap on the wrist ever re-evaluated
+        // that (`beginLocalLogSet`) — so the watch sat on a finished exercise
+        // offering to add yet another set to it. Now that the count includes
+        // the phone's sets, the same rule can run here.
+        if advanceStandaloneExerciseIfComplete() {
+          // Persist the new position (a process death must recover into the
+          // exercise the user sees) and tell the phone about it, so its
+          // prefill and its next state push describe the same exercise this
+          // watch just moved to.
+          saveActiveSnapshot()
+          sendAdoptionRequestIfNeeded()
+        }
       } else {
         phoneSetsExerciseIndex = nil
         phoneSetsDone = nil
@@ -916,6 +959,24 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// `applyStateUpdate`, which standalone never receives). Same
   /// `logSetState == .ready` gate the plain tap uses, so a still-pending log
   /// can't be adjusted out from under itself.
+  /// Whether a plain one-tap log has any idea what to record.
+  ///
+  /// For a phone-mastered session that's the prefill the phone publishes on
+  /// every state sync (the row's planned values, else this exercise's last
+  /// workout at that position, else its last logged set here); standalone
+  /// resolves the same chain locally. False means there is genuinely nothing
+  /// to go on for this exercise — a first-ever exercise with an empty plan —
+  /// and the tap would otherwise record a set with no weight and no reps.
+  /// `LogPage` sends the user to the adjust stepper instead, so they dial in
+  /// the first values rather than getting an empty row.
+  var hasLogSetPrefill: Bool {
+    if isStandalone {
+      let prefill = standalonePrefill
+      return prefill.weight != nil
+    }
+    return nextSetReps != nil && nextSetWeight != nil
+  }
+
   func beginLogAdjust() {
     guard phase == .active, logSetState == .ready, logAdjustState == nil else {
       return
@@ -1263,6 +1324,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     phoneSetsExerciseIndex = nil
     phoneSetsDone = nil
     phoneSetsTotal = nil
+    phoneSetsDonePerExercise = nil
     logSetTimeoutTask?.cancel()
     logSetTimeoutTask = nil
     logSetSettleTask?.cancel()

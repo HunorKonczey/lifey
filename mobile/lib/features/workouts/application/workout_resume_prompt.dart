@@ -44,11 +44,16 @@ Future<void> _pushSessionScreen(
   NavigatorState navigator,
   WorkoutSession active, {
   bool watchMastered = false,
+  int? watchCurrentExerciseIndex,
 }) async {
   if (isWorkoutScreenOpenFor(active.clientId)) return;
   await navigator.push(
     MaterialPageRoute(
-      builder: (_) => LogSessionScreen(session: active, watchMastered: watchMastered),
+      builder: (_) => LogSessionScreen(
+        session: active,
+        watchMastered: watchMastered,
+        watchCurrentExerciseIndex: watchCurrentExerciseIndex,
+      ),
     ),
   );
 }
@@ -145,7 +150,17 @@ class WorkoutResumePrompt {
         // holding the copy it builds on open (see
         // LogSessionScreen.watchMastered).
         if (adopted != null) {
-          await _pushSessionScreen(navigator, adopted, watchMastered: true);
+          // Handed over rather than waited for: the screen starts listening
+          // only once it's mounted, so this very snapshot — the one that
+          // opened it — is the only place its exercise index can come from
+          // until the watch logs its next set (see
+          // LogSessionScreen.watchCurrentExerciseIndex).
+          await _pushSessionScreen(
+            navigator,
+            adopted,
+            watchMastered: true,
+            watchCurrentExerciseIndex: event.currentExerciseIndex,
+          );
         }
       }
       return;
