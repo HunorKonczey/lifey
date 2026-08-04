@@ -149,4 +149,4 @@ From `mobile/`:
 ## Related
 
 - Push (APNs) capability + backend: [push-notifications-ios.md](push-notifications-ios.md).
-- Backend the app talks to: [deploy-backend-railway.md](deploy-backend-railway.md).
+- Backend the app talks to: [deploy-backend-render.md](deploy-backend-render.md).

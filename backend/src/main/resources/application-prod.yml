@@ -1,5 +1,5 @@
 # Production-only overrides. Activate by setting SPRING_PROFILES_ACTIVE=prod
-# on the deployment (e.g. as a Railway env var).
+# on the deployment (it is set in render.yaml for the Render service).
 #
 # Swagger UI and the OpenAPI spec are dev/internal tooling — disabling both
 # means /swagger-ui.html and /v3/api-docs return 404 in production, so the API

@@ -1,22 +1,22 @@
 # Lifey Web — Deployment
 
 The web frontend is a standalone Next.js app that talks to the existing Spring Boot
-backend (already deployed on **Railway** at
-`https://lifey-production-7aa5.up.railway.app/api/v1`). The web is deployed as its
-**own service** — it is never bundled with the backend.
+backend (deployed on **Render** — see
+[`devops/deploy-backend-render.md`](../devops/deploy-backend-render.md) for its URL).
+The web is deployed as its **own service** — it is never bundled with the backend.
 
 Two supported targets:
 
 - **Vercel** — recommended (native Next.js, zero-config, edge CDN). *Planned target.*
-- **Railway** — a second service next to the backend (uses the included `Dockerfile`).
+- **Render** — a second service next to the backend (uses the included `Dockerfile`).
 
 ---
 
 ## 0. Backend prerequisites (do this once, regardless of host)
 
 The web and API live on **different domains**, so the request is cross-origin **and**
-cross-site (Railway's `*.up.railway.app` subdomains are separate sites). Set these
-environment variables on the **backend** Railway service, then redeploy it:
+cross-site (`*.vercel.app` and `*.onrender.com` are separate sites). Set these
+environment variables on the **backend** Render service, then redeploy it:
 
 ```
 CORS_ALLOWED_ORIGINS=https://<your-web-domain>     # e.g. https://lifey-web.vercel.app
@@ -40,7 +40,7 @@ web origin (no wildcard) because credentials are sent.
    Vercel auto-detects Next.js — leave Build/Output settings as default.
 3. **Environment Variables** (Project → Settings → Environment Variables):
    ```
-   NEXT_PUBLIC_API_BASE_URL = https://lifey-production-7aa5.up.railway.app/api/v1
+   NEXT_PUBLIC_API_BASE_URL = https://<backend>.onrender.com/api/v1
    ```
    Add it for **Production** (and Preview if you want PR previews to work — but note the
    backend CORS must then also allow the preview domain).
@@ -53,26 +53,24 @@ web origin (no wildcard) because credentials are sent.
 
 ---
 
-## Option B — Railway (second service next to the backend)
+## Option B — Render (second service next to the backend)
 
-1. In the **same Railway project** as the backend: **New → GitHub Repo** (or "Empty
-   Service" → connect repo).
+1. Render → **New → Web Service** → connect the Lifey repo.
 2. **Service settings:**
+   - **Runtime:** Docker (the repo includes [`web/Dockerfile`](Dockerfile), a
+     multi-stage standalone build)
    - **Root Directory:** `web`
-   - **Builder:** Dockerfile (the repo includes [`web/Dockerfile`](Dockerfile), a
-     multi-stage standalone build). Railway will use it automatically when root is `web`.
-3. **Build arg / variables:** `NEXT_PUBLIC_*` must exist at **build time**. Set as a
-   service variable AND pass it as a Docker build arg:
+3. **Build arg / variables:** `NEXT_PUBLIC_*` must exist at **build time**, not just
+   at runtime:
    ```
-   NEXT_PUBLIC_API_BASE_URL = https://lifey-production-7aa5.up.railway.app/api/v1
+   NEXT_PUBLIC_API_BASE_URL = https://<backend>.onrender.com/api/v1
    ```
-   The Dockerfile already declares `ARG NEXT_PUBLIC_API_BASE_URL`; Railway forwards
-   service variables as build args. If a build doesn't pick it up, add it explicitly
-   under the service's **Build → Build Args**.
-4. **Networking:** generate a public domain for the web service (Settings → Networking →
-   Generate Domain). The container listens on `$PORT` / `3000` (the Dockerfile binds
-   `0.0.0.0`).
-5. Put the generated web domain into the backend's `CORS_ALLOWED_ORIGINS` (step 0),
+   The Dockerfile declares `ARG NEXT_PUBLIC_API_BASE_URL`. Render does **not**
+   automatically forward environment variables into the Docker build — add it under
+   the service's **Settings → Docker Build Arguments** as well.
+4. **Networking:** Render assigns `https://<service>.onrender.com` and injects `$PORT`.
+   The container listens on `$PORT` / `3000` and binds `0.0.0.0`, so nothing to configure.
+5. Put the assigned web domain into the backend's `CORS_ALLOWED_ORIGINS` (step 0),
    redeploy the backend.
 
 ---
@@ -110,7 +108,7 @@ CI having already gone green. `feature/**` pushes get instant, ungated preview d
 > name — it can't distinguish a Deploy-Hook-triggered build from a plain git-push build
 > (both see the same branch/commit), so it ends up skipping both or neither.
 
-Railway (if used) still deploys on push to `main` independently of CI.
+Render (if used for the web too) likewise deploys on push to `main` independently of CI.
 
 ---
 
@@ -118,7 +116,7 @@ Railway (if used) still deploys on push to `main` independently of CI.
 
 | Where | Variable | Example | Notes |
 |---|---|---|---|
-| Web | `NEXT_PUBLIC_API_BASE_URL` | `https://lifey-production-7aa5.up.railway.app/api/v1` | Build-time, inlined |
+| Web | `NEXT_PUBLIC_API_BASE_URL` | `https://<backend>.onrender.com/api/v1` | Build-time, inlined |
 | Backend | `CORS_ALLOWED_ORIGINS` | `https://lifey-web.vercel.app` | Exact origin(s), comma-separated |
 | Backend | `COOKIE_SECURE` | `true` | Required for `SameSite=None` |
 | Backend | `COOKIE_SAME_SITE` | `None` | Cross-site refresh cookie |

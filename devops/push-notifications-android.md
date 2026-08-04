@@ -57,11 +57,11 @@ and release Android builds within the same Firebase project.
 2. **Generate new private key** → downloads a JSON file. ⚠️ **Treat as a secret**
    — it can send push on your behalf and access other project resources. Store in
    the vault; never commit.
-3. Get it onto Railway the same way as the APNs key. **Railway has no file-mount**
-   — store the JSON **base64-encoded in a (sealed) Variable** and let the Docker
-   `ENTRYPOINT` decode it to a file on startup. Full mechanism (encode command +
-   `ENTRYPOINT` snippet) in
-   [deploy-backend-railway.md → Secret files](deploy-backend-railway.md#secret-files-apns-p8-firebase-json).
+3. Get it onto the backend host the same way as the APNs key. **Render has no
+   file-mount** — store the JSON **base64-encoded in an environment variable** and
+   let the Docker `ENTRYPOINT` decode it to a file on startup. Full mechanism
+   (encode command + `ENTRYPOINT` snippet) in
+   [deploy-backend-render.md → Secret files](deploy-backend-render.md#secret-files-apns-p8-firebase-json).
 4. Set on the backend service:
    ```
    PUSH_FCM_ENABLED=true

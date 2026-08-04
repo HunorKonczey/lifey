@@ -5,17 +5,21 @@ self-contained: setup steps, environment variables, verification, troubleshootin
 and routine maintenance (key rotation, etc.).
 
 Written for the person doing the deploy/ops — assumes you have the relevant
-console access (Railway, Vercel, Apple Developer, Google Play, Firebase, Resend)
-but not that you remember how any of it was wired.
+console access (Render, Neon, Vercel, Apple Developer, Google Play, Firebase,
+Resend) but not that you remember how any of it was wired.
 
 ## Topology at a glance
 
 | Component | Tech | Host | Public URL |
 |---|---|---|---|
-| Backend API | Spring Boot 4.1 (Java 24) | Railway (Docker) | `https://lifey-production-7aa5.up.railway.app` |
-| Web admin | Next.js 16 | Vercel (primary) / Railway | *assigned by host* |
-| Database | PostgreSQL 16 | Railway (managed) | private |
+| Backend API | Spring Boot 4.1 (Java 24) | Render (Docker Web Service) | `https://<service>.onrender.com` — fill in once created |
+| Web admin | Next.js 16 | Vercel | *assigned by host* |
+| Database | PostgreSQL (serverless) | Neon | private |
 | Mobile | Flutter (`com.khunor.lifey`) | App Store / Google Play | — |
+
+> Migrated off Railway (app + managed Postgres) in August 2026. The Railway
+> project stays up briefly as a rollback path; see
+> [deploy-backend-render.md](deploy-backend-render.md) → *Cutover from Railway*.
 
 Identifiers reused across every doc:
 
@@ -32,7 +36,8 @@ Identifiers reused across every doc:
 - [push-notifications-android.md](push-notifications-android.md) — FCM setup & operation (backend + app)
 
 ### Deployment
-- [deploy-backend-railway.md](deploy-backend-railway.md) — backend on Railway
+- [deploy-backend-render.md](deploy-backend-render.md) — backend on Render + Neon Postgres **(current)**
+- [deploy-backend-railway.md](deploy-backend-railway.md) — *superseded*, kept for the rollback window
 - [deploy-web-vercel.md](deploy-web-vercel.md) — web admin on Vercel (and Railway fallback)
 - [deploy-ios-appstore.md](deploy-ios-appstore.md) — iOS build & App Store submission (incl. widget/Live Activity capabilities)
 - [deploy-android-playstore.md](deploy-android-playstore.md) — Android build & Play Store submission
@@ -56,7 +61,7 @@ Full details in each doc; this is the "where does X live" map.
 
 | Variable | Component | Doc |
 |---|---|---|
-| `SPRING_DATASOURCE_*`, `JWT_SECRET`, `PORT`, `JAVA_OPTS` | Backend | [backend](deploy-backend-railway.md) |
+| `SPRING_DATASOURCE_*`, `JWT_SECRET`, `SPRING_PROFILES_ACTIVE`, `PORT`, `JAVA_OPTS` | Backend | [backend](deploy-backend-render.md) |
 | `CORS_ALLOWED_ORIGINS`, `COOKIE_SECURE`, `COOKIE_SAME_SITE` | Backend | [web](deploy-web-vercel.md) |
 | `MAIL_ENABLED`, `RESEND_API_KEY`, `MAIL_FROM` | Backend | [email](email-sender.md) |
 | `PUSH_APNS_*` | Backend | [ios push](push-notifications-ios.md) |

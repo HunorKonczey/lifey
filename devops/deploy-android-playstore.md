@@ -147,4 +147,4 @@ sideload, but Play only accepts the `.aab`.)
 
 - Android push (FCM) — still to be integrated app-side:
   [push-notifications-android.md](push-notifications-android.md).
-- Backend the app talks to: [deploy-backend-railway.md](deploy-backend-railway.md).
+- Backend the app talks to: [deploy-backend-render.md](deploy-backend-render.md).

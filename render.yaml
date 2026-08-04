@@ -1,0 +1,93 @@
+# Render Blueprint — Lifey backend API.
+#
+# Optional: the service can equally well be created by hand in the Render
+# dashboard (New > Web Service > Docker). This file exists so the service's
+# shape stays version-controlled and reviewable; if you create the service
+# manually, mirror these settings there.
+#
+# To use it as a Blueprint: Render > New > Blueprint > pick this repo. Render
+# reads this file from the repo root.
+#
+# Secrets are deliberately NOT in here (`sync: false` = "prompt me / set in the
+# dashboard, never store the value in git"). Full runbook:
+# devops/deploy-backend-render.md
+services:
+  - type: web
+    name: lifey-api
+    runtime: docker
+    # Paths are relative to the repo root, not to rootDir — this is a monorepo,
+    # the Spring app lives under backend/.
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    # Keep this in the SAME region as the Neon project. A JPA workload does many
+    # small round-trips; a cross-region hop adds latency to every one of them.
+    region: frankfurt
+    # NOT `free`: a free Render service spins down after ~15 minutes without
+    # inbound traffic, and a spun-down container runs no @Scheduled work. This
+    # app has four scheduled jobs (workout reminders every 15 min, the Monday
+    # trainer report, and two nightly cleanups) that would simply never fire.
+    # See "Plan choice" in devops/deploy-backend-render.md.
+    plan: starter
+    branch: main
+    autoDeploy: true
+    # Public, unauthenticated endpoint (see SecurityConfig.PUBLIC_ENDPOINTS), so
+    # the probe gets a 200 instead of a 401 from the JWT filter. Render gates the
+    # deploy on it: a bad datasource fails the health check and the previous
+    # version keeps serving.
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      # Render's Free and Starter instances both cap at 512 MB. Heap + metaspace
+      # must leave room for thread stacks, code cache and other native memory —
+      # see the Dockerfile comment for the full reasoning.
+      - key: JAVA_OPTS
+        value: -Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m
+      # Set in the dashboard (Environment tab). Values never live in git.
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAME_SITE
+        value: None
+      - key: TRAINER_INVITE_PUBLIC_BASE_URL
+        sync: false
+      # Feature integrations — see the matching devops/*.md doc for each group.
+      - key: MAIL_ENABLED
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: OAUTH_GOOGLE_CLIENT_IDS
+        sync: false
+      - key: TRAINER_INVITE_EMAIL_ENABLED
+        sync: false
+      - key: PUSH_FCM_ENABLED
+        sync: false
+      - key: PUSH_FCM_CREDENTIALS_B64
+        sync: false
+      - key: PUSH_FCM_CREDENTIALS_PATH
+        value: /tmp/firebase.json
+      - key: PUSH_APNS_ENABLED
+        sync: false
+      - key: PUSH_APNS_KEY_B64
+        sync: false
+      - key: PUSH_APNS_KEY_PATH
+        value: /tmp/apns.p8
+      - key: PUSH_APNS_KEY_ID
+        sync: false
+      - key: PUSH_APNS_TEAM_ID
+        sync: false
+      - key: PUSH_APNS_BUNDLE_ID
+        value: com.khunor.lifey
+      - key: PUSH_APNS_SANDBOX
+        sync: false

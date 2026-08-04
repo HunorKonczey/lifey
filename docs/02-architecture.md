@@ -48,7 +48,7 @@ Modules:
 
 Technology:
 
-* PostgreSQL
+* PostgreSQL (Neon serverless in production)
 
 Schema migrations:
 
@@ -65,11 +65,13 @@ Components:
 * Spring Boot
 * PostgreSQL
 
-Future Production:
+Production:
 
-* VPS deployment
-* Reverse proxy
-* HTTPS
+* Backend: Render, Docker Web Service (HTTPS and reverse proxy provided by the platform)
+* Database: Neon (serverless PostgreSQL)
+* Web admin: Vercel
+
+Runbooks live in `devops/` — see [deploy-backend-render.md](../devops/deploy-backend-render.md).
 
 ## API Style
 

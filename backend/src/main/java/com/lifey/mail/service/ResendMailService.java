@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
 /**
  * Sends mail through the Resend HTTPS API (https://api.resend.com/emails), or
  * just logs when {@code lifey.mail.enabled=false} (default without a
- * {@code RESEND_API_KEY}). Used instead of SMTP because PaaS hosts like
- * Railway commonly block outbound SMTP ports; the Resend API goes over 443.
+ * {@code RESEND_API_KEY}). Used instead of SMTP because PaaS hosts commonly
+ * block outbound SMTP ports; the Resend API goes over 443.
  * Every send runs on the {@code mailTaskExecutor} (see {@link MailConfig})
  * and failures are caught here so a bounced email never fails the request
  * that triggered it.

@@ -1,10 +1,11 @@
 # Deploy — Web Admin on Vercel
 
-The web admin is a standalone **Next.js 16** app that talks to the Railway
-backend. It is deployed as its **own service** — never bundled with the backend.
+The web admin is a standalone **Next.js 16** app that talks to the backend on
+Render ([deploy-backend-render.md](deploy-backend-render.md)). It is deployed as
+its **own service** — never bundled with the backend.
 
 - **Primary target: Vercel** (native Next.js, zero-config, edge CDN).
-- **Fallback: Railway** as a second service, using [`web/Dockerfile`](../web/Dockerfile).
+- **Fallback: Render** as a second service, using [`web/Dockerfile`](../web/Dockerfile).
 
 > The full step-by-step walkthrough (with the post-deploy checklist) lives in
 > [`web/DEPLOY.md`](../web/DEPLOY.md) next to the code. **That file is the
@@ -14,11 +15,11 @@ backend. It is deployed as its **own service** — never bundled with the backen
 ## The one thing that always bites: cross-site cookies
 
 Web and API are on **different domains**, so requests are cross-origin **and**
-cross-site (`*.vercel.app` and `*.up.railway.app` are separate sites). The
+cross-site (`*.vercel.app` and `*.onrender.com` are separate sites). The
 refresh token is an httpOnly cookie, and a browser only sends a cross-site cookie
 when it's `SameSite=None; Secure`.
 
-Set these on the **backend** (Railway) and redeploy it:
+Set these on the **backend** (Render) and redeploy it:
 ```
 CORS_ALLOWED_ORIGINS=https://<your-web-domain>   # exact origin, no wildcard; comma-separated for multiple
 COOKIE_SECURE=true
@@ -35,7 +36,7 @@ so no wildcard is allowed). For PR previews, add the preview domain too, e.g.
    auto-detects Next.js; leave build/output at defaults.
 3. **Environment variable:**
    ```
-   NEXT_PUBLIC_API_BASE_URL = https://lifey-production-7aa5.up.railway.app/api/v1
+   NEXT_PUBLIC_API_BASE_URL = https://<backend>.onrender.com/api/v1
    ```
    Set for **Production** (and Preview if you want PR previews — then the backend
    CORS must also allow the preview domain).
@@ -49,7 +50,7 @@ so no wildcard is allowed). For PR previews, add the preview domain too, e.g.
 
 | Where | Variable | Example | Notes |
 |---|---|---|---|
-| Web | `NEXT_PUBLIC_API_BASE_URL` | `https://lifey-production-7aa5.up.railway.app/api/v1` | Build-time, inlined into the client bundle. |
+| Web | `NEXT_PUBLIC_API_BASE_URL` | `https://<backend>.onrender.com/api/v1` | Build-time, inlined into the client bundle. |
 | Backend | `CORS_ALLOWED_ORIGINS` | `https://lifey-web.vercel.app` | Exact origin(s), comma-separated. |
 | Backend | `COOKIE_SECURE` | `true` | Required for `SameSite=None`. |
 | Backend | `COOKIE_SAME_SITE` | `None` | Cross-site refresh cookie. |
@@ -79,10 +80,11 @@ Open the deployed URL and confirm:
 If login works but a refresh logs you out, the cross-site cookie isn't being sent
 — re-check `COOKIE_SECURE=true` and `COOKIE_SAME_SITE=None` on the backend.
 
-## Railway fallback
+## Render fallback
 
-If hosting the web on Railway instead of Vercel: second service, **Root Directory
-`web`**, Dockerfile builder. `NEXT_PUBLIC_API_BASE_URL` must be passed as a
-**build arg** (the Dockerfile declares `ARG NEXT_PUBLIC_API_BASE_URL`); Railway
-forwards service variables as build args. Full steps in
+If hosting the web on Render instead of Vercel: second Web Service, **Docker
+runtime**, **Root Directory `web`**. `NEXT_PUBLIC_API_BASE_URL` must be passed as
+a **build arg** (the Dockerfile declares `ARG NEXT_PUBLIC_API_BASE_URL`) — on
+Render that means adding it under **Settings → Docker Build Arguments**, not only
+as an environment variable. Full steps in
 [`web/DEPLOY.md`](../web/DEPLOY.md) → Option B.
