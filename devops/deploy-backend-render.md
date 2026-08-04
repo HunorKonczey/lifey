@@ -28,11 +28,19 @@ Build config lives in the repo:
   the probe passes the JWT filter. Only the health endpoint is exposed over HTTP;
   nothing else from actuator. Render **gates deploys on it** — a broken datasource
   fails the health check and the previous version keeps serving.
-- Heap: `JAVA_OPTS=-Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m`. Render's Free and
+- Memory: `JAVA_OPTS=-Xms64m -Xmx192m -XX:MaxMetaspaceSize=192m
+  -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m`. Render's Free and
   Starter instances are both 512 MB, and total RSS is heap + metaspace + thread
-  stacks + code cache + native — so the cap sits well below the limit rather than
-  at it. Override `JAVA_OPTS` in the Render environment to retune on a bigger plan
-  without a rebuild.
+  stacks + code cache + native — so the caps sit well below the limit rather than
+  at it. **Metaspace, not heap, is the binding constraint**: the Firebase Admin SDK
+  loads a very large number of classes when `firebaseApp` is built, and it gets the
+  larger share for that reason. Override `JAVA_OPTS` in the Render environment to
+  retune without a rebuild.
+
+  This is a tight fit. If the service starts getting OOM-killed under load, or
+  startup regularly brushes the port-scan timeout, the answer is a bigger instance
+  rather than further shaving — at 2 GB, `-Xmx768m -XX:MaxMetaspaceSize=256m` and
+  no other flags is a comfortable setting.
 - The filesystem is **ephemeral**. Nothing depends on it: images are `bytea`
   columns in Postgres, and the push credential files are regenerated from env vars
   at every start (see [Secret files](#secret-files-apns-p8-firebase-json)).
@@ -163,7 +171,7 @@ source database.
 ### Tuning (optional)
 | Variable | Default | Purpose |
 |---|---|---|
-| `JAVA_OPTS` | `-Xms96m -Xmx256m -XX:MaxMetaspaceSize=96m` | JVM heap/metaspace, sized for a 512 MB instance. Raise on a bigger plan. |
+| `JAVA_OPTS` | `-Xms64m -Xmx192m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m` | JVM memory caps, sized for a 512 MB instance. Raise on a bigger plan. |
 | `JWT_ACCESS_TTL` / `JWT_REFRESH_TTL` | `7d` / `30d` | Token lifetimes. |
 | `STARTER_CATALOG_ENABLED` | `true` | Seed new users with a starter exercise catalog. Already **off** in the `prod` profile. |
 | `JOB_*_CRON` | see `application.yml` | Schedules for the four background jobs. |
@@ -292,8 +300,19 @@ unwilling to lose — after that the move is one-way.
   `?sslmode=require` and that the username is Neon's role, not the database name.
 - **Migrations hang or time out:** you're on the Neon `-pooler` endpoint. Flyway's
   advisory lock needs the direct one.
-- **Container killed / OOM:** lower `JAVA_OPTS` heap or move to a bigger instance;
-  the 512 MB limit is enforced by killing the process.
+- **`OutOfMemoryError: Metaspace` during startup** (typically while creating
+  `firebaseApp`, the biggest class-loading moment in the boot): `MaxMetaspaceSize`
+  is too low. This is *not* a heap problem — raising `-Xmx` makes it worse by
+  leaving less room. Raise `-XX:MaxMetaspaceSize` and drop `-Xmx` by the same amount.
+- **Container killed / OOM (no Java stack trace, just a restart):** that's the heap
+  or native side hitting the 512 MB instance limit. Lower `-Xmx` or move to a bigger
+  instance; the limit is enforced by killing the process.
+- **`Port scan timeout reached, no open ports detected`:** Spring binds the port at
+  the *end* of context refresh, so this means startup never finished — scroll up for
+  the real exception. If startup did finish but only after several minutes, the
+  instance is CPU-starved; a bigger instance is the fix (`-XX:TieredStopAtLevel=1`
+  shortens startup at the cost of steady-state throughput, if you'd rather trade
+  that way).
 - **First request after a quiet period fails or is very slow:** on a Free plan
   that's the service spinning back up (see [Plan choice](#plan-choice)); on any plan
   a few hundred ms of it is Neon resuming its compute.
