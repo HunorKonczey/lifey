@@ -97,7 +97,6 @@ import com.khunor.lifey.LogSetState
 import com.khunor.lifey.R
 import com.khunor.lifey.SessionMetadata
 import com.khunor.lifey.SessionStateHolder
-import com.khunor.lifey.StandaloneSet
 import com.khunor.lifey.StandaloneTemplate
 import com.khunor.lifey.StandaloneTemplateExercise
 import com.khunor.lifey.SummarySender
@@ -415,7 +414,9 @@ fun ActiveWorkoutScreen() {
             ExerciseListScreen(
                 template = metadata.standaloneTemplate!!,
                 currentExerciseIndex = metadata.standaloneExerciseIndex,
-                standaloneSets = metadata.standaloneSets,
+                setsDonePerExercise = List(metadata.standaloneTemplate!!.exercises.size) {
+                    metadata.standaloneSetsDoneAt(it)
+                },
                 isCompact = isCompact,
                 maxWidth = maxWidth,
                 onSelect = { index ->
@@ -1405,7 +1406,15 @@ private fun ExerciseListChip(onClick: () -> Unit) {
 private fun ExerciseListScreen(
     template: StandaloneTemplate,
     currentExerciseIndex: Int,
-    standaloneSets: List<StandaloneSet>,
+    /**
+     * How many sets each exercise has, by plan index — resolved by the caller
+     * through [SessionMetadata.standaloneSetsDoneAt], not counted from this
+     * watch's own set list. A watch-started workout is logged into from the
+     * phone too, and only the phone's row holds both halves: counting locally
+     * showed a lower number here than the phone had, and a different one than
+     * the active page, which already reconciles the two.
+     */
+    setsDonePerExercise: List<Int>,
     isCompact: Boolean,
     maxWidth: Dp,
     onSelect: (Int) -> Unit,
@@ -1435,7 +1444,7 @@ private fun ExerciseListScreen(
                         exercise = exercise,
                         isCompact = isCompact,
                         isCurrent = index == currentExerciseIndex,
-                        setsDone = standaloneSets.count { it.exerciseIndex == index },
+                        setsDone = setsDonePerExercise.getOrElse(index) { 0 },
                         onTap = { onSelect(index) },
                     )
                 }

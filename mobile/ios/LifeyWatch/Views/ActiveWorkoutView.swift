@@ -1055,7 +1055,13 @@ private struct ExerciseListView: View {
             ExerciseListRow(
               exercise: exercise, isCompact: isCompact,
               isCurrent: index == workoutManager.standaloneExerciseIndex,
-              setsDone: workoutManager.standaloneSets.filter { $0.exerciseIndex == index }.count
+              // `standaloneSetsDone(at:)`, not a count of this watch's own set
+              // list: a watch-started workout is logged into from the phone
+              // too, and only the phone's row holds both halves. Counting
+              // locally showed a lower number here than the phone had — and a
+              // different number than the active page, which already reconciles
+              // the two.
+              setsDone: workoutManager.standaloneSetsDone(at: index)
             ) {
               workoutManager.selectStandaloneExercise(index)
               onBack()
