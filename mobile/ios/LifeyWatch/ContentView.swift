@@ -6,11 +6,21 @@ import SwiftUI
 /// not here.
 struct ContentView: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
+  /// Whether `StandalonePickerView` is showing instead of the launcher,
+  /// while `phase == .idle` (docs/watch/44-watch-f6-standalone-plan.md
+  /// §3.1) — pure UI navigation, so it stays local here rather than on
+  /// `WorkoutManager` (unlike `showEffortSelector` below, which the
+  /// manager's own business logic needs to read and drive).
+  @State private var showStandalonePicker = false
 
   var body: some View {
     switch workoutManager.phase {
     case .idle:
-      IdleView()
+      if showStandalonePicker {
+        StandalonePickerView(onBack: { showStandalonePicker = false })
+      } else {
+        IdleView(onStartTapped: { showStandalonePicker = true })
+      }
     case .active:
       if workoutManager.showEffortSelector {
         EffortSelectorView()

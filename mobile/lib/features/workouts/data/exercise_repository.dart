@@ -26,7 +26,9 @@ class ExerciseRepository {
     });
   }
 
-  Future<void> create(
+  /// Returns the newly generated [Exercise.clientId] — [getOrCreateByName]
+  /// needs it to resolve a lookup miss into a usable id.
+  Future<String> create(
     String name, {
     String? category,
     String? equipment,
@@ -55,6 +57,19 @@ class ExerciseRepository {
         'defaultRestSeconds': defaultRestSeconds,
       },
     );
+    return clientId;
+  }
+
+  /// Looks up an exercise by exact [name] match and returns its `clientId`;
+  /// creates one via [create] if none exists yet. Used by the standalone
+  /// (phone-less) workout processor to resolve its generic placeholder
+  /// exercise (the `standaloneSessionTitle` text) without duplicating it on
+  /// every synced session (docs/watch/44-watch-f6-standalone-plan.md D-F6.3).
+  Future<String> getOrCreateByName(String name) async {
+    final existing =
+        await (_db.select(_db.exercises)..where((t) => t.name.equals(name))).getSingleOrNull();
+    if (existing != null) return existing.clientId;
+    return create(name);
   }
 
   Future<void> update(

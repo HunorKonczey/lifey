@@ -54,4 +54,17 @@ object LifeyColors {
     val onError = Color(0xFF1C0008)
     val errorContainer = Color(0xFF8C1D2F)
     val onErrorContainer = Color(0xFFFFB3BF)
+
+    /** Dimmed content color for a ghosted/inert control — the log-set
+     * control's pending and phone-unreachable states (canvas W 08/W 10,
+     * docs/watch/43-watch-f5-set-logging-plan.md §3.2/§4.4). Mirrors iOS's
+     * `LifeyColors.ghostedOnSurface`, added there first (S8) with a note to
+     * add the identical hex here once Wear's own log-lap (S13) needed it. */
+    val ghostedOnSurface = Color(0xFF46463E)
+
+    /** The `phonelink_off` header glyph's quiet tint (docs/watch/
+     * 44-watch-f6-standalone-plan.md §3.4, canvas W 13's "mode, not alarm" —
+     * no chip/background of its own). Mirrors iOS's `LifeyColors
+     * .standaloneIndicator`, added there first (S11). */
+    val standaloneIndicator = Color(0xFF777264)
 }

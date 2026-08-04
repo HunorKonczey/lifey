@@ -49,4 +49,28 @@ enum LifeyColors {
   static let calories = Color(hex: 0xE0_91_5A)
   static let positive = Color(hex: 0x9D_AE_6B)
   static let negative = Color(hex: 0xE0_8A_52)
+
+  // 2.5 Error — added for the F5 log-set "failed" toast (docs/watch/
+  // 43-watch-f5-set-logging-plan.md §3.2); mirrors Android's `LifeyColors.kt`,
+  // which already has this section.
+  static let error = Color(hex: 0xCF_66_79)
+  static let onError = Color(hex: 0x1C_00_08)
+  static let errorContainer = Color(hex: 0x8C_1D_2F)
+  static let onErrorContainer = Color(hex: 0xFF_B3_BF)
+
+  /// Dimmed content color for a ghosted/inert control — the log-set
+  /// control's pending and phone-unreachable states (canvas AW 09/AW 11,
+  /// docs/watch/43-watch-f5-set-logging-plan.md §3.2/§4.4). Not yet in
+  /// Android's `LifeyColors.kt` since Wear's own log-lap ships later (S13)
+  /// — add the identical hex there when it does.
+  static let ghostedOnSurface = Color(hex: 0x46_46_3E)
+
+  /// The standalone mode indicator's own muted tone — canvas AW 14/W 13
+  /// explicitly calls for something quieter than `onSurfaceVariant`
+  /// (docs/watch/44-watch-f6-standalone-plan.md §3.4: "mode, not alarm —
+  /// muted `777264`"), since it's a passive glyph next to the header label,
+  /// not informational text. Not yet in Android's `LifeyColors.kt` since
+  /// Wear's own active-screen delta ships later (S17) — add the identical
+  /// hex there when it does.
+  static let standaloneIndicator = Color(hex: 0x77_72_64)
 }

@@ -9,11 +9,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.khunor.lifey.ui.ActiveWorkoutScreen
 import com.khunor.lifey.ui.ErrorScreen
 import com.khunor.lifey.ui.IdleScreen
+import com.khunor.lifey.ui.StandalonePickerScreen
+import com.khunor.lifey.ui.SummaryScreen
 import com.khunor.lifey.ui.theme.LifeyTheme
+import kotlinx.coroutines.launch
 
 /**
  * Compose host, switching between [IdleScreen], [ActiveWorkoutScreen], and
@@ -36,13 +43,73 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestSensorPermissionsIfNeeded()
+        // App-start retry for any standalone session still queued from a
+        // previous run (docs/watch/44-watch-f6-standalone-plan.md §4.1) —
+        // `PhoneListenerService.onPeerConnected` covers the reconnect-while-
+        // running case, this covers "the phone only reappeared after the
+        // watch app was already closed and reopened".
+        lifecycleScope.launch { SummarySender.flushPending(applicationContext) }
+        // Same idea for live bridging: a still-running, not-yet-adopted
+        // standalone session (ExerciseService survived as a foreground
+        // service while just this Activity was closed/reopened) retries its
+        // adoption snapshot here too.
+        lifecycleScope.launch { SummarySender.sendAdoptionRequestIfNeeded(applicationContext) }
+        // Reattaches to a still-running standalone exercise after a process
+        // death/reboot (docs/watch/44-watch-f6-standalone-plan.md §3.2,
+        // §11/6) — mirrors the two retries above, but for the *running*
+        // session itself rather than a queued/pending one. A no-op in the
+        // overwhelmingly common case (nothing to recover).
+        lifecycleScope.launch { ExerciseService.recoverIfNeeded(applicationContext) }
         setContent {
             LifeyTheme {
                 val phase by SessionStateHolder.phase.collectAsState()
+                // Whether StandalonePickerScreen is showing instead of the
+                // launcher, while phase == IDLE (docs/watch/
+                // 44-watch-f6-standalone-plan.md §3.1) — pure UI navigation,
+                // so it stays local here rather than on SessionStateHolder
+                // (mirrors iOS's identical S10 call: `showEffortSelector`-
+                // style manager state is for things the business logic
+                // itself needs to read/drive, this isn't one of them).
+                var showStandalonePicker by remember { mutableStateOf(false) }
                 when (phase) {
-                    SessionPhase.IDLE -> IdleScreen()
+                    SessionPhase.IDLE -> {
+                        if (showStandalonePicker) {
+                            StandalonePickerScreen(
+                                onQuickStrengthTapped = {
+                                    // Re-checks/re-prompts right before the
+                                    // action that needs it, not just once at
+                                    // cold start — catches a user who denied
+                                    // on first launch and is only now trying
+                                    // to actually start a workout.
+                                    requestSensorPermissionsIfNeeded()
+                                    ContextCompat.startForegroundService(
+                                        this@MainActivity,
+                                        ExerciseService.startStandaloneIntent(this@MainActivity),
+                                    )
+                                },
+                                onTemplateTapped = { template ->
+                                    // Same re-check-right-before-starting
+                                    // reasoning as the quick-strength branch
+                                    // above (docs/watch/
+                                    // 49-watch-f6b-template-sync-plan.md T6).
+                                    requestSensorPermissionsIfNeeded()
+                                    ContextCompat.startForegroundService(
+                                        this@MainActivity,
+                                        ExerciseService.startStandaloneIntent(
+                                            this@MainActivity,
+                                            templateJson = template.toString(),
+                                        ),
+                                    )
+                                },
+                                onBack = { showStandalonePicker = false },
+                            )
+                        } else {
+                            IdleScreen(onStartTapped = { showStandalonePicker = true })
+                        }
+                    }
                     SessionPhase.ACTIVE -> ActiveWorkoutScreen()
                     SessionPhase.ERROR -> ErrorScreen()
+                    SessionPhase.SUMMARY -> SummaryScreen()
                 }
             }
         }

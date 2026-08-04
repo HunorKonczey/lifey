@@ -24,4 +24,13 @@ public class WorkoutSessionExercise extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "exercise_id", nullable = false)
     private Exercise exercise;
+
+    /**
+     * How many sets this session plans for the exercise — the client renders it
+     * as that many set rows, logged ones plus still-blank ones. Nullable: an
+     * exercise added ad hoc has no plan, and neither does any row written
+     * before this column existed (see V63).
+     */
+    @Column(name = "target_sets")
+    private Integer targetSets;
 }

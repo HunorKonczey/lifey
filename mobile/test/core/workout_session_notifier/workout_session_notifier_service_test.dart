@@ -30,7 +30,7 @@ void main() {
       });
       final service = WorkoutSessionNotifierService(isAvailable: false, useAndroidBranch: false);
 
-      final id = await service.start(
+      final result = await service.start(
         sessionClientId: 'session-1',
         title: 'Edzés',
         startedAt: DateTime(2026, 7, 10, 8),
@@ -51,7 +51,9 @@ void main() {
       await service.end();
       await service.endAll();
 
-      expect(id, isNull);
+      expect(result.started, isFalse);
+      expect(result.status, WorkoutSessionNotifierStatus.unavailable);
+      expect(result.activityId, isNull);
       expect(calls, isEmpty);
     });
 
@@ -62,7 +64,7 @@ void main() {
       });
       final service = WorkoutSessionNotifierService(isAvailable: true, useAndroidBranch: false);
 
-      final id = await service.start(
+      final result = await service.start(
         sessionClientId: 'session-1',
         title: 'Edzés',
         startedAt: DateTime.fromMillisecondsSinceEpoch(1783075200000),
@@ -76,7 +78,9 @@ void main() {
         ),
       );
 
-      expect(id, 'native-activity-id');
+      expect(result.activityId, 'native-activity-id');
+      expect(result.started, isTrue);
+      expect(result.shouldRetry, isFalse);
       expect(calls, hasLength(1));
       expect(calls.single.method, 'start');
       expect(calls.single.arguments, {
@@ -92,8 +96,86 @@ void main() {
           'restEndsAtEpochMs': null,
           'restTotalSeconds': null,
           'restRemainingSeconds': null,
+          'nextSetWeight': null,
+          'nextSetReps': null,
+          'setsDoneExerciseIndex': null,
+          'setsDonePerExercise': null,
         },
       });
+    });
+
+    test('a refused ActivityKit request is retryable, never a silent success', () async {
+      // LiveActivityChannel throws this when Activity.request fails — most
+      // often because the app is in the background, which is exactly when a
+      // set logged on the watch persists the session.
+      setHandler((call) async {
+        calls.add(call);
+        throw PlatformException(code: 'start_failed', message: 'visibility');
+      });
+      final service = WorkoutSessionNotifierService(isAvailable: true, useAndroidBranch: false);
+
+      final result = await service.start(
+        sessionClientId: 'session-1',
+        title: 'Edzés',
+        startedAt: DateTime(2026, 7, 10, 8),
+        startedLabel: 'Kezdés',
+        state: const WorkoutSessionState(exerciseName: 'x', setsDone: 0, totalSetsDone: 0),
+      );
+
+      expect(result.started, isFalse);
+      expect(result.shouldRetry, isTrue);
+      expect(calls, hasLength(1));
+    });
+
+    test('Live Activities switched off is not retried', () async {
+      setHandler((call) async {
+        throw PlatformException(code: 'activities_disabled');
+      });
+      final service = WorkoutSessionNotifierService(isAvailable: true, useAndroidBranch: false);
+
+      final result = await service.start(
+        sessionClientId: 'session-1',
+        title: 'Edzés',
+        startedAt: DateTime(2026, 7, 10, 8),
+        startedLabel: 'Kezdés',
+        state: const WorkoutSessionState(exerciseName: 'x', setsDone: 0, totalSetsDone: 0),
+      );
+
+      expect(result.status, WorkoutSessionNotifierStatus.unavailable);
+      expect(result.shouldRetry, isFalse);
+    });
+
+    test('an OS without ActivityKit content (null id, no error) is not retried', () async {
+      setHandler((call) async => null);
+      final service = WorkoutSessionNotifierService(isAvailable: true, useAndroidBranch: false);
+
+      final result = await service.start(
+        sessionClientId: 'session-1',
+        title: 'Edzés',
+        startedAt: DateTime(2026, 7, 10, 8),
+        startedLabel: 'Kezdés',
+        state: const WorkoutSessionState(exerciseName: 'x', setsDone: 0, totalSetsDone: 0),
+      );
+
+      expect(result.status, WorkoutSessionNotifierStatus.unavailable);
+      expect(result.activityId, isNull);
+    });
+
+    test('a missing native handler is swallowed, not rethrown', () async {
+      setHandler((call) async {
+        throw MissingPluginException('no handler');
+      });
+      final service = WorkoutSessionNotifierService(isAvailable: true, useAndroidBranch: false);
+
+      final result = await service.start(
+        sessionClientId: 'session-1',
+        title: 'Edzés',
+        startedAt: DateTime(2026, 7, 10, 8),
+        startedLabel: 'Kezdés',
+        state: const WorkoutSessionState(exerciseName: 'x', setsDone: 0, totalSetsDone: 0),
+      );
+
+      expect(result.status, WorkoutSessionNotifierStatus.unavailable);
     });
 
     test('update sends sessionClientId + state', () async {
@@ -127,6 +209,10 @@ void main() {
           'restEndsAtEpochMs': null,
           'restTotalSeconds': null,
           'restRemainingSeconds': null,
+          'nextSetWeight': null,
+          'nextSetReps': null,
+          'setsDoneExerciseIndex': null,
+          'setsDonePerExercise': null,
         },
       });
     });
@@ -176,6 +262,10 @@ void main() {
           'restEndsAtEpochMs': 1783075350000,
           'restTotalSeconds': null,
           'restRemainingSeconds': null,
+          'nextSetWeight': null,
+          'nextSetReps': null,
+          'setsDoneExerciseIndex': null,
+          'setsDonePerExercise': null,
         },
       });
     });
@@ -233,7 +323,7 @@ void main() {
         },
       );
 
-      final id = await service.start(
+      final result = await service.start(
         sessionClientId: 'session-1',
         title: 'Push Day',
         startedAt: DateTime(2026, 7, 10, 18, 5),
@@ -241,9 +331,38 @@ void main() {
         state: const WorkoutSessionState(exerciseName: 'Bench Press', setsDone: 0, totalSetsDone: 0),
       );
 
-      expect(id, isNull);
+      expect(result.started, isFalse);
+      expect(result.status, WorkoutSessionNotifierStatus.unavailable);
       expect(permissionCalls, 0);
       expect(showCalls, 0);
+    });
+
+    test('start reports success once the notification is shown', () async {
+      final service = WorkoutSessionNotifierService(
+        isAvailable: true,
+        useAndroidBranch: true,
+        requestAndroidPermission: () async => true,
+        showAndroidNotification: ({
+          required title,
+          required body,
+          required subText,
+          required whenEpochMs,
+          bool chronometerCountDown = false,
+        }) async {},
+      );
+
+      final result = await service.start(
+        sessionClientId: 'session-1',
+        title: 'Push Day',
+        startedAt: DateTime(2026, 7, 10, 18, 5),
+        startedLabel: 'Started',
+        state: const WorkoutSessionState(exerciseName: 'Bench Press', setsDone: 0, totalSetsDone: 0),
+      );
+
+      // Android has no activity id, so "started" is the only signal callers
+      // get — before this it was indistinguishable from a denied permission.
+      expect(result.started, isTrue);
+      expect(result.activityId, isNull);
     });
 
     test('start requests permission and, when denied, never shows the notification', () async {
@@ -263,7 +382,7 @@ void main() {
         },
       );
 
-      final id = await service.start(
+      final result = await service.start(
         sessionClientId: 'session-1',
         title: 'Push Day',
         startedAt: DateTime(2026, 7, 10, 18, 5),
@@ -271,7 +390,8 @@ void main() {
         state: const WorkoutSessionState(exerciseName: 'Bench Press', setsDone: 0, totalSetsDone: 0),
       );
 
-      expect(id, isNull);
+      expect(result.started, isFalse);
+      expect(result.status, WorkoutSessionNotifierStatus.unavailable);
       expect(showCalls, 0);
     });
 

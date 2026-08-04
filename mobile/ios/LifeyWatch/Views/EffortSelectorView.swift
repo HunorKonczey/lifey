@@ -24,6 +24,10 @@ struct EffortSelectorView: View {
       let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
       let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
       ZStack(alignment: .topLeading) {
+        // Scrollable: title + stepper + confirm + skip already fills a
+        // 41 mm face, and a title that wraps to two lines pushes Skip off
+        // the bottom where nothing could reach it.
+        ScrollView {
         VStack(spacing: 8) {
           Text("effort_selector_title")
             .font(isCompact ? .caption : .body)
@@ -59,6 +63,12 @@ struct EffortSelectorView: View {
           .padding(.top, 2)
         }
         .padding(.horizontal, padding)
+        .frame(maxWidth: .infinity)
+        // Keeps the stepper vertically centred when it does fit, matching
+        // the pre-scroll layout — the ScrollView only takes over once the
+        // content is genuinely taller than the face.
+        .frame(minHeight: geometry.size.height)
+        }
         .frame(width: geometry.size.width, height: geometry.size.height)
 
         Button(action: { workoutManager.cancelEffortSelection() }) {

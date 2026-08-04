@@ -15,6 +15,7 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -50,6 +51,10 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "startWorkout" -> startWorkout(call, result)
             "updateState" -> updateState(call, result)
             "endWorkout" -> endWorkout(call, result)
+            "ackSetLogged" -> ackSetLogged(call, result)
+            "ackStandaloneSession" -> ackStandaloneSession(call, result)
+            "ackAdoption" -> ackAdoption(call, result)
+            "syncTemplates" -> syncTemplates(call, result)
             else -> result.notImplemented()
         }
     }
@@ -100,6 +105,88 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
     }
 
     /**
+     * Answers a `setLogged` event (docs/watch/43-watch-f5-set-logging-plan.md
+     * §4.3, §5.1). [sessionClientId] is the one the watch tagged the
+     * original `logSet` message with — passed through from Dart rather than
+     * remembered here, keeping this bridge stateless like the rest of it.
+     * Sent as a plain message via [sendMessage] — no `pushState`-style
+     * DataItem fallback, since an ack has no value once stale (the watch
+     * simply times out on its own, §7.1).
+     */
+    private fun ackSetLogged(call: MethodCall, result: MethodChannel.Result) {
+        val args = call.arguments as? Map<*, *> ?: return result.success(null)
+        val sessionClientId = args["sessionClientId"] as? String ?: return result.success(null)
+        val eventId = args["eventId"] as? String ?: return result.success(null)
+        val accepted = args["accepted"] as? Boolean ?: return result.success(null)
+
+        val json =
+            JSONObject().apply {
+                put("sessionClientId", sessionClientId)
+                put("eventId", eventId)
+                put("accepted", accepted)
+            }
+        sendMessage(COMMAND_LOG_SET_ACK, json.toString().toByteArray())
+        result.success(null)
+    }
+
+    /**
+     * Answers a `standaloneSessionCompleted` delivery (docs/watch/
+     * 44-watch-f6-standalone-plan.md §4.2). No `accepted` field — unlike
+     * [ackSetLogged] there's no rejection case, the watch's own
+     * pending-session store just retries an un-acked delivery regardless of
+     * why it wasn't acked.
+     */
+    private fun ackStandaloneSession(call: MethodCall, result: MethodChannel.Result) {
+        val args = call.arguments as? Map<*, *> ?: return result.success(null)
+        val standaloneSessionId = args["standaloneSessionId"] as? String ?: return result.success(null)
+
+        val json = JSONObject().apply { put("standaloneSessionId", standaloneSessionId) }
+        sendMessage(COMMAND_STANDALONE_ACK, json.toString().toByteArray())
+        result.success(null)
+    }
+
+    /**
+     * Answers a `standaloneSessionAdopted` delivery (live bridging — the
+     * watch-started session is still running, this just confirms the phone
+     * created its live mirror row). Same "always ack, even on a dedup
+     * no-op" contract as [ackStandaloneSession], for the same reason: the
+     * watch retries an un-acked adoption snapshot on reconnect/cold start
+     * regardless of why it wasn't acked.
+     */
+    private fun ackAdoption(call: MethodCall, result: MethodChannel.Result) {
+        val args = call.arguments as? Map<*, *> ?: return result.success(null)
+        val standaloneSessionId = args["standaloneSessionId"] as? String ?: return result.success(null)
+
+        val json = JSONObject().apply { put("standaloneSessionId", standaloneSessionId) }
+        sendMessage(COMMAND_ADOPTION_ACK, json.toString().toByteArray())
+        result.success(null)
+    }
+
+    /**
+     * Answers `syncTemplates` (docs/watch/49-watch-f6b-template-sync-plan.md
+     * §4.1, T3.3) — unlike the session-state pushes above, no context-merge
+     * hazard exists here (D-F6b.3): [pushTemplates] writes its own
+     * independent [TEMPLATES_PATH] `DataItem`, which the Data Layer never
+     * conflates with [pushState]'s `STATE_PATH` one. Message first
+     * (primary), `DataItem` as the reconnect fallback — the same D-F6.9
+     * split every other command here already follows.
+     *
+     * An empty `templates` list still goes out (T1.3's phone-side decision,
+     * enforced here too) — that's how a watch whose last template was just
+     * deleted is told to clear its cache.
+     */
+    private fun syncTemplates(call: MethodCall, result: MethodChannel.Result) {
+        val args = call.arguments as? Map<*, *> ?: return result.success(null)
+        @Suppress("UNCHECKED_CAST")
+        val templates = args["templates"] as? List<Map<*, *>> ?: return result.success(null)
+        val syncedAtEpochMs = (args["syncedAtEpochMs"] as? Number)?.toLong() ?: return result.success(null)
+
+        pushTemplates(syncedAtEpochMs, templates)
+        sendMessage(COMMAND_TEMPLATE_SYNC, templateSyncMessagePayload(syncedAtEpochMs, templates))
+        result.success(null)
+    }
+
+    /**
      * The message payload for start/state (docs/40-watch-app-plan.md §3,
      * §D2 adjusted): carries the full state JSON directly, rather than only
      * `sessionClientId` with the watch expected to pick up the rest from the
@@ -115,9 +202,27 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             title?.let { put("title", it) }
             state?.let { s ->
                 val stateJson = JSONObject()
-                s.forEach { (key, value) -> if (value != null) stateJson.put(key, value) }
+                // `toJsonValue()` rather than the raw value: a state field can
+                // now be a list (`setsDonePerExercise`), which JSONObject.put
+                // would otherwise store as an object and serialize as its
+                // toString() — a quoted "[1, 2]" string the watch can't read.
+                s.forEach { (key, value) -> if (value != null) stateJson.put(key, value.toJsonValue()) }
                 put("state", stateJson)
             }
+        }
+        return json.toString().toByteArray()
+    }
+
+    /**
+     * [templates] arrives from Flutter as a `List<Map<*, *>>` with a nested
+     * `exercises` list per entry (docs/watch/49-watch-f6b-template-sync-plan.md
+     * §4.1) — unlike [stateMessagePayload]'s flat field-by-field build, this
+     * needs a genuinely recursive JSON conversion ([toJsonValue]).
+     */
+    private fun templateSyncMessagePayload(syncedAtEpochMs: Long, templates: List<Map<*, *>>): ByteArray {
+        val json = JSONObject().apply {
+            put("syncedAtEpochMs", syncedAtEpochMs)
+            put("templates", templates.toJsonValue())
         }
         return json.toString().toByteArray()
     }
@@ -149,6 +254,34 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                 Log.d(TAG, "pushState OK (desiredPhase=$desiredPhase, sessionClientId=$sessionClientId)")
             } catch (e: Exception) {
                 Log.w(TAG, "pushState FAILED (desiredPhase=$desiredPhase)", e)
+            }
+        }
+    }
+
+    /**
+     * The template-sync counterpart of [pushState] — an **independent**
+     * `DataItem` at [TEMPLATES_PATH] (D-F6b.3), not a key inside the state
+     * one. Unlike iOS's single `applicationContext` (D-F6b.2), the Data
+     * Layer's per-path `DataItem`s never collide, so no merge step is needed
+     * here — this can freely overwrite its own path on every call.
+     */
+    private fun pushTemplates(syncedAtEpochMs: Long, templates: List<Map<*, *>>) {
+        executor.execute {
+            val putDataMapRequest =
+                PutDataMapRequest.create(TEMPLATES_PATH).apply {
+                    dataMap.putLong("syncedAtEpochMs", syncedAtEpochMs)
+                    // DataMap has no array-of-maps type, so the nested
+                    // exercises-per-template shape travels as a JSON string
+                    // rather than a native structure (D-F6b.3's one open
+                    // implementation choice, now resolved).
+                    dataMap.putString("templatesJson", (templates.toJsonValue() as JSONArray).toString())
+                }
+            val putDataRequest = putDataMapRequest.asPutDataRequest().setUrgent()
+            try {
+                Tasks.await(dataClient.putDataItem(putDataRequest))
+                Log.d(TAG, "pushTemplates OK (${templates.size} template(s))")
+            } catch (e: Exception) {
+                Log.w(TAG, "pushTemplates FAILED", e)
             }
         }
     }
@@ -208,11 +341,21 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "$MESSAGE_PATH_PREFIX/$COMMAND_LIVE_METRICS" -> {
                 emitLiveMetrics(String(messageEvent.data))
             }
-            // PhoneWatchSummaryListenerService also receives this same
-            // summary message (manifest-declared, so it fires even if this
+            "$MESSAGE_PATH_PREFIX/$COMMAND_LOG_SET" -> {
+                emitSetLogged(String(messageEvent.data))
+            }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_STANDALONE_SESSION" -> {
+                emitStandaloneSession(String(messageEvent.data))
+            }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_STANDALONE_ADOPTED" -> {
+                emitStandaloneAdoption(String(messageEvent.data))
+            }
+            // PhoneWatchSummaryListenerService also receives these same
+            // summary/standaloneSessionCompleted/standaloneSessionAdopted
+            // messages (manifest-declared, so it fires even if this
             // MethodChannel-backed listener isn't attached yet) and buffers
-            // it for the next onListen sweep below
-            // (docs/40-watch-app-plan.md §5.4).
+            // them for the next onListen sweep below (docs/40-watch-app-plan.md
+            // §5.4, docs/watch/44-watch-f6-standalone-plan.md §6/1).
         }
     }
 
@@ -272,14 +415,131 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         )
     }
 
+    /**
+     * docs/watch/43-watch-f5-set-logging-plan.md §4.1 — no exercise/reps/
+     * weight on the wire, the watch is a dumb trigger; `LogSessionScreen`
+     * decides what to log from its own current position.
+     */
+    private fun emitSetLogged(logSetJson: String) {
+        val payload = JSONObject(logSetJson)
+        eventSink?.success(
+            mapOf(
+                "type" to "setLogged",
+                "sessionClientId" to payload.optString("sessionClientId"),
+                "eventId" to payload.optString("eventId"),
+                "loggedAtEpochMs" to payload.optLong("loggedAtEpochMs"),
+                // The F5b adjust values (docs/watch/48-watch-f5b-set-adjust-plan.md
+                // §4.1) — absent for a plain F5a one-tap log. The `has()` guard
+                // matters: optInt/optDouble return 0 for a missing key, and a
+                // silent 0 kg / 0 reps would look like a deliberate value to the
+                // Dart side instead of "no values" (D-F5b.6).
+                "reps" to if (payload.has("reps")) payload.optInt("reps") else null,
+                "weight" to if (payload.has("weight")) payload.optDouble("weight") else null,
+            ),
+        )
+    }
+
+    /**
+     * docs/watch/44-watch-f6-standalone-plan.md §4.1 — the watch's own
+     * `standaloneSessionId` becomes the resulting session's `clientId`
+     * (idempotency key, D-F6.3); no exercise/reps mapping happens here, that
+     * belongs to the Dart-side processor. `healthWorkoutId` is always null
+     * on Android — the watch never touches Health Connect, the phone does
+     * (D-F6.5), same as [emitSummary].
+     */
+    private fun emitStandaloneSession(standaloneSessionJson: String) {
+        val payload = JSONObject(standaloneSessionJson)
+        val setsArray = payload.optJSONArray("sets") ?: JSONArray()
+        val sets =
+            (0 until setsArray.length()).map { i ->
+                val set = setsArray.getJSONObject(i)
+                mapOf(
+                    "loggedAtEpochMs" to set.optLong("loggedAtEpochMs"),
+                    "reps" to set.optInt("reps"),
+                    "weight" to if (set.has("weight")) set.optDouble("weight") else null,
+                    "exerciseIndex" to if (set.has("exerciseIndex")) set.optInt("exerciseIndex") else null,
+                )
+            }
+        eventSink?.success(
+            mapOf(
+                "type" to "standaloneSession",
+                "payload" to
+                    mapOf(
+                        "standaloneSessionId" to payload.optString("standaloneSessionId"),
+                        "templateId" to
+                            if (payload.has("templateId")) payload.optString("templateId") else null,
+                        "startedAtEpochMs" to payload.optLong("startedAtEpochMs"),
+                        "endedAtEpochMs" to payload.optLong("endedAtEpochMs"),
+                        "rpe" to if (payload.has("rpe")) payload.optInt("rpe") else null,
+                        "sets" to sets,
+                        "activeCalories" to
+                            if (payload.has("activeCalories")) payload.optDouble("activeCalories") else null,
+                        "averageHeartRate" to
+                            if (payload.has("averageHeartRate")) payload.optDouble("averageHeartRate")
+                            else null,
+                        "healthWorkoutId" to null,
+                    ),
+            ),
+        )
+    }
+
+    /**
+     * The live-bridging counterpart of [emitStandaloneSession]: a watch-
+     * started session that is still *running* — same set-mapping shape, no
+     * `endedAtEpochMs`/`rpe`/`healthWorkoutId` (the workout isn't over).
+     * `standaloneSessionId` is the same id [emitStandaloneSession] will
+     * eventually carry when it finishes, which is what lets the Dart-side
+     * processor recognize "this session already has a running row, finish
+     * it" instead of creating a duplicate.
+     */
+    private fun emitStandaloneAdoption(adoptionJson: String) {
+        val payload = JSONObject(adoptionJson)
+        val setsArray = payload.optJSONArray("sets") ?: JSONArray()
+        val sets =
+            (0 until setsArray.length()).map { i ->
+                val set = setsArray.getJSONObject(i)
+                mapOf(
+                    "loggedAtEpochMs" to set.optLong("loggedAtEpochMs"),
+                    "reps" to set.optInt("reps"),
+                    "weight" to if (set.has("weight")) set.optDouble("weight") else null,
+                    "exerciseIndex" to if (set.has("exerciseIndex")) set.optInt("exerciseIndex") else null,
+                )
+            }
+        eventSink?.success(
+            mapOf(
+                "type" to "standaloneSessionAdopted",
+                "payload" to
+                    mapOf(
+                        "standaloneSessionId" to payload.optString("standaloneSessionId"),
+                        "templateId" to
+                            if (payload.has("templateId")) payload.optString("templateId") else null,
+                        "startedAtEpochMs" to payload.optLong("startedAtEpochMs"),
+                        "sets" to sets,
+                        "activeCalories" to
+                            if (payload.has("activeCalories")) payload.optDouble("activeCalories") else null,
+                        "averageHeartRate" to
+                            if (payload.has("averageHeartRate")) payload.optDouble("averageHeartRate")
+                            else null,
+                    ),
+            ),
+        )
+    }
+
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         eventSink = events
         // The moment Dart starts listening (every cold start — see
-        // WorkoutResumePrompt) is also the sweep point for summaries that
-        // arrived while the Flutter engine wasn't running
-        // (docs/40-watch-app-plan.md §5.4).
+        // WorkoutResumePrompt) is also the sweep point for summaries,
+        // standalone sessions and standalone adoptions that arrived while the
+        // Flutter engine wasn't running (docs/40-watch-app-plan.md §5.4,
+        // docs/watch/44-watch-f6-standalone-plan.md §6/1).
         for (buffered in WatchSummaryBuffer.drain(appContext)) {
             emitSummary(buffered)
+        }
+        for (buffered in WatchStandaloneSessionBuffer.drain(appContext)) {
+            emitStandaloneSession(buffered)
+        }
+        for (buffered in WatchAdoptionBuffer.drain(appContext)) {
+            emitStandaloneAdoption(buffered)
         }
     }
 
@@ -294,6 +554,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val WATCH_CAPABILITY = "lifey_watch_workout"
         private const val MESSAGE_PATH_PREFIX = "/lifey/watch"
         private const val STATE_PATH = "$MESSAGE_PATH_PREFIX/state"
+        private const val TEMPLATES_PATH = "$MESSAGE_PATH_PREFIX/templates"
         private const val COMMAND_START = "start"
         private const val COMMAND_STATE = "state"
         private const val COMMAND_END = "end"
@@ -302,6 +563,13 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_STARTED_ON_WATCH = "startedOnWatch"
         private const val COMMAND_SUMMARY = "summary"
         private const val COMMAND_LIVE_METRICS = "liveMetrics"
+        private const val COMMAND_LOG_SET = "logSet"
+        private const val COMMAND_LOG_SET_ACK = "logSetAck"
+        private const val COMMAND_STANDALONE_SESSION = "standaloneSessionCompleted"
+        private const val COMMAND_STANDALONE_ACK = "standaloneSessionAck"
+        private const val COMMAND_STANDALONE_ADOPTED = "standaloneSessionAdopted"
+        private const val COMMAND_ADOPTION_ACK = "adoptionAck"
+        private const val COMMAND_TEMPLATE_SYNC = "templateSync"
     }
 }
 
@@ -314,7 +582,35 @@ private fun Map<String, Any?>.toDataMap(): DataMap {
             is Long -> map.putLong(key, value)
             is Double -> map.putDouble(key, value)
             is Boolean -> map.putBoolean(key, value)
+            // Only int lists occur (`setsDonePerExercise`); anything else in a
+            // list is dropped rather than guessed at, same as an unhandled
+            // scalar type above.
+            is List<*> -> map.putIntegerArrayList(
+                key,
+                ArrayList(value.filterIsInstance<Int>()),
+            )
         }
     }
     return map
+}
+
+/**
+ * Recursively rebuilds a Flutter MethodChannel-decoded value (nested
+ * `Map`/`List`/primitives) as an `org.json` tree — [toDataMap] only handles
+ * one flat level, which a template's nested `exercises` list doesn't fit
+ * (docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T3.3). A null map
+ * value is dropped rather than written as `JSONObject.NULL` — matching
+ * [stateMessagePayload]'s `if (value != null)` guard — since the Dart-side
+ * `toJson()` already omits absent optionals rather than sending them as
+ * null; this only guards against ever actually seeing one.
+ */
+private fun Any?.toJsonValue(): Any = when (this) {
+    null -> JSONObject.NULL
+    is Map<*, *> -> JSONObject().apply {
+        this@toJsonValue.forEach { (key, value) ->
+            if (value != null) put(key.toString(), value.toJsonValue())
+        }
+    }
+    is List<*> -> JSONArray().apply { this@toJsonValue.forEach { put(it.toJsonValue()) } }
+    else -> this
 }

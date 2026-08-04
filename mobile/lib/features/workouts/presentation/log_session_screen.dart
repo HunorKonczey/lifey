@@ -27,6 +27,10 @@ import '../domain/exercise.dart';
 import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
+import 'open_workout_screens.dart';
+import 'session_row_plan.dart';
+import 'watch_mirror_signature.dart';
+import 'watch_set_log_decision.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
 import 'widgets/exercise_session_card.dart';
 import 'widgets/music_sticky_button.dart';
@@ -41,22 +45,43 @@ import 'widgets/workout_success_dialog.dart';
 /// a session close. The *count* of rows (done + blank) is persisted as each
 /// exercise's targetSets (see [_buildPlanned]), so a blank row added ad-hoc
 /// still regenerates the next time the session is opened.
-/// True while a [LogSessionScreen] showing an in-progress (unfinished)
-/// session is mounted anywhere in the nav stack. Read by
-/// `workout_resume_prompt.dart`'s Live Activity/Dynamic Island/Android
-/// notification tap handling: it must NOT push a second `LogSessionScreen`
-/// on top of an already-live one, since a fresh instance is reconstructed
-/// from the last *persisted* DB state only — any not-yet-flushed in-memory
-/// edit (e.g. a weight/reps value being typed into the compact set editor,
-/// not yet submitted) would be silently dropped, and the duplicate's stale
-/// state would overwrite the correct Live Activity/notification content.
-bool isLogSessionScreenOpen = false;
-
+///
+/// While it shows a running session it registers itself in
+/// [openWorkoutScreens] — that's how `workout_resume_prompt.dart` knows not
+/// to push a *second* screen for the same session (see
+/// [isWorkoutScreenOpenFor]).
 class LogSessionScreen extends ConsumerStatefulWidget {
-  const LogSessionScreen({super.key, this.session, this.template});
+  const LogSessionScreen({
+    super.key,
+    this.session,
+    this.template,
+    this.watchMastered = false,
+    this.watchCurrentExerciseIndex,
+  });
 
   final WorkoutSession? session;
   final WorkoutTemplate? template;
+
+  /// True when [session] is the phone's live mirror of a workout running on
+  /// the watch (docs/watch/44-watch-f6-standalone-plan.md, live bridging) —
+  /// passed by `workout_resume_prompt.dart` when it opens a session it just
+  /// adopted. See [_LogSessionScreenState._watchMastered] for what changes;
+  /// leaving it false is never wrong for long, since the watch's next
+  /// adoption snapshot flips it on anyway.
+  final bool watchMastered;
+
+  /// The exercise the watch says it is logging into, from the very adoption
+  /// snapshot that caused this screen to be opened
+  /// ([WatchStandaloneAdoption.currentExerciseIndex]).
+  ///
+  /// The screen only starts listening for watch events once it is mounted, so
+  /// without this hand-off it would know nothing about the watch's position
+  /// until the *next* snapshot — i.e. until the watch logged another set. A
+  /// set logged here on the phone before that point could not be reported
+  /// back to the watch at all, because the counts are only usable with the
+  /// exercise they belong to (see
+  /// [WorkoutSessionState.setsDoneExerciseIndex]).
+  final int? watchCurrentExerciseIndex;
 
   @override
   ConsumerState<LogSessionScreen> createState() => _LogSessionScreenState();
@@ -80,13 +105,44 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   /// or once a brand-new session has been created via the first [_persist].
   String? _sessionClientId;
 
-  /// Whether this screen instance has started (or re-attached to) the
-  /// session notifier (Live Activity on iOS, ongoing notification on
-  /// Android) for the current session — see [_persist] and the "Session
-  /// notifier" section below. Distinct from [_sessionClientId] being set:
-  /// a session can exist in the DB (e.g. a resumed in-progress session)
+  /// This screen's entry in [openWorkoutScreens] while it shows a running
+  /// session; null for a finished one. Its `sessionClientId` is kept in step
+  /// with [_sessionClientId] — including the moment a template-started
+  /// workout first gets one, in [_persist].
+  OpenWorkoutScreen? _openScreen;
+
+  /// Whether the session notifier (Live Activity on iOS, ongoing notification
+  /// on Android) is actually up for this session — see [_persist] and the
+  /// "Session notifier" section below. Distinct from [_sessionClientId] being
+  /// set: a session can exist in the DB (e.g. a resumed in-progress session)
   /// before this screen has (re-)started its notifier.
+  ///
+  /// Set from the platform's *answer* ([WorkoutSessionNotifierStart]), not
+  /// optimistically before the call: a refused start (iOS won't create a Live
+  /// Activity while the app is backgrounded — the normal case when a set
+  /// logged on the watch is what created the session) used to flip this
+  /// anyway, after which every later call took the `update` branch against an
+  /// activity that never existed, and the workout ran to the end with no
+  /// indicator at all.
   bool _sessionNotifierStarted = false;
+
+  /// A start attempt is in flight — keeps a retry ([didChangeAppLifecycleState])
+  /// and a concurrent [_persist] from firing two.
+  bool _startingSessionNotifier = false;
+
+  /// The platform refused for a reason that won't change while this workout
+  /// runs (Live Activities switched off, notification permission denied, an
+  /// OS without either) — stop retrying rather than asking on every resume.
+  bool _sessionNotifierUnavailable = false;
+
+  /// Whether the watch has been asked to start its own session. Tracked
+  /// separately from [_sessionNotifierStarted] because the two are
+  /// independent best-effort pushes that now succeed and fail on their own:
+  /// a Live Activity retry must not re-send `startWorkout` (the watch rejects
+  /// a second start and the phone would show a spurious "the watch didn't
+  /// mirror this" message), and a *failed* Live Activity must not stop
+  /// [_persistFinished] from telling the watch to close its session.
+  bool _watchStartPushed = false;
 
   /// Whether this screen instance has (re-)activated the music controller
   /// (docs/music/46-workout-music-controls-plan.md §3.3) — same shape as
@@ -101,6 +157,23 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   /// One block per planned exercise. Each block's rows are either done
   /// (doneAt set → will be persisted) or plan (doneAt null → UI only).
   final List<ExerciseBlock> _blocks = [];
+
+  /// exerciseClientId → the set count the session's originating template
+  /// plans for, used only where the session's own stored count is missing —
+  /// see [_loadTemplatePlan] / [_rebuildBlocks]. Empty until that load
+  /// resolves (and for a session with no template at all).
+  Map<String, int> _templateTargetSets = const {};
+
+  /// The template's exercises in plan order — the index space the watch's
+  /// [WatchStandaloneAdoption.currentExerciseIndex] refers to. Loaded
+  /// alongside [_templateTargetSets]; empty until then.
+  List<String> _templateExerciseIds = const [];
+
+  /// The last exercise index the watch reported for a watch-mastered session
+  /// (see [WatchStandaloneAdoption.currentExerciseIndex]). Resolved lazily in
+  /// [_watchCurrentBlock] rather than stored as a clientId, so an adoption
+  /// that arrives before [_loadTemplatePlan] finishes isn't simply dropped.
+  int? _watchCurrentExerciseIndex;
 
   bool _saving = false;
   // Set when an edit arrives while a save is already in flight, so that
@@ -156,6 +229,34 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   // [_onWatchEvent].
   StreamSubscription<Object>? _watchEventsSubscription;
 
+  /// Last 8 `WatchSetLogged.eventId`s already handled — retried deliveries of
+  /// the same tap (transport retry, not a second real tap) ack `true` again
+  /// without logging twice (docs/watch/43-watch-f5-set-logging-plan.md §4.2).
+  final List<String> _recentWatchSetEventIds = [];
+
+  /// Whether this screen is showing a **watch-mastered** session — one the
+  /// user started on the watch and the phone only adopted a live mirror of
+  /// (docs/watch/44-watch-f6-standalone-plan.md, live bridging). Those work
+  /// the opposite way round from a phone-started session: the watch logs
+  /// every set locally and resends its whole set list, which
+  /// [StandaloneSessionProcessor] writes into this session's row — so this
+  /// screen has to *re-read* that row instead of trusting the [_blocks] it
+  /// built once in [initState]. Without it the phone sat frozen on however
+  /// the session looked when it was adopted, and stayed open on a workout the
+  /// watch had already finished. Set by [_startWatchMirror], only ever from a
+  /// watch event naming this screen's own session.
+  bool _watchMastered = false;
+  ProviderSubscription? _watchMirrorSubscription;
+
+  /// [watchMirrorSignature] of the row [_applyWatchMirror] last rebuilt from,
+  /// so an emission that doesn't actually change this session is skipped.
+  /// Null until the first one is applied — the mirror always runs once.
+  String? _mirroredSignature;
+
+  /// Guards [_closeFromWatchMirror] against re-entry — the mirror keeps
+  /// emitting after the finishing write lands.
+  bool _closingFromWatchMirror = false;
+
   bool get _isEditing => widget.session != null;
 
   /// "Edzés indítása az órán" Settings kapcsoló (docs/40-watch-app-plan.md
@@ -182,40 +283,19 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     _finishedAt = session?.finishedAt;
     _rpe = session?.rpe;
     _feedbackNote = session?.feedbackNote;
+    // Set here, not in the deferred [_startWatchMirror] below: the session
+    // notifier is started from this same initState (a frame earlier than the
+    // mirror attaches), and it reads this to decide whether to push a
+    // `startWorkout` at the watch.
+    _watchMastered = widget.watchMastered;
+    _watchCurrentExerciseIndex = widget.watchCurrentExerciseIndex;
 
-    if (_finishedAt == null) isLogSessionScreenOpen = true;
+    if (_finishedAt == null) _openScreen = openWorkoutScreen(session?.clientId);
     if (_finishedAt == null) _activateMusic();
 
     if (session != null) {
       _sessionClientId = session.clientId;
-      // Group persisted sets by exercise, sorted by performedAt.
-      final setsByEx = <String, List<ExerciseSet>>{};
-      for (final s in session.sets) {
-        setsByEx.putIfAbsent(s.exerciseClientId, () => []).add(s);
-      }
-      for (final sets in setsByEx.values) {
-        sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
-      }
-      // Build one block per SessionExercise, preserving plan order.
-      for (final se in session.exercises) {
-        final doneSets = setsByEx[se.exerciseClientId] ?? [];
-        final rows = <SetRow>[
-          for (final s in doneSets)
-            SetRow(weight: s.weight, reps: s.reps, doneAt: s.performedAt),
-        ];
-        final remaining = (se.targetSets ?? 0) - doneSets.length;
-        if (remaining > 0) {
-          rows.addAll(List.generate(remaining, (_) => SetRow()));
-        } else if (doneSets.isEmpty) {
-          rows.add(SetRow());
-        }
-        _blocks.add(ExerciseBlock(
-          exerciseClientId: se.exerciseClientId,
-          exerciseName: se.exerciseName,
-          targetSets: se.targetSets,
-          rows: rows,
-        ));
-      }
+      _rebuildBlocks(session);
     } else if (widget.template != null) {
       for (final te in widget.template!.exercises) {
         // Name resolved at render time from the catalog (TemplateExercise has no name).
@@ -245,11 +325,23 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       // session. Deferred a frame, same as WorkoutResumePrompt, since this
       // can run during initState before ancestor InheritedWidgets are
       // guaranteed ready for AppLocalizations.of(context).
-      _sessionNotifierStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) unawaited(_startSessionNotifier());
       });
     }
+
+    // Attaching the mirror is deferred a frame rather than done inline: its
+    // immediate first read calls setState, which isn't allowed while
+    // initState is still running.
+    if (_watchMastered) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startWatchMirror();
+      });
+    }
+
+    // Only for an existing session: a brand-new one built from
+    // widget.template already carries the template's counts on its blocks.
+    if (session != null) unawaited(_loadTemplatePlan());
 
     if (session != null && session.isUpcoming) {
       unawaited(_startScheduledSession(session));
@@ -257,6 +349,105 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       unawaited(_loadPreviousPerformance(_blocks));
       unawaited(_loadPrBaselines(_blocks));
     }
+  }
+
+  /// (Re)builds [_blocks] from a persisted session — one block per
+  /// [SessionExercise] in plan order, its done rows first (in `performedAt`
+  /// order) followed by however many blank rows the plan still has left.
+  /// Factored out of [initState] so the watch mirror ([_applyWatchMirror])
+  /// can rerun it against a refreshed row; replaces whatever was there, so
+  /// callers wrap it in `setState` when the screen is already built.
+  void _rebuildBlocks(WorkoutSession session) {
+    final setsByEx = <String, List<ExerciseSet>>{};
+    for (final s in session.sets) {
+      setsByEx.putIfAbsent(s.exerciseClientId, () => []).add(s);
+    }
+    for (final sets in setsByEx.values) {
+      sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
+    }
+    _blocks.clear();
+    for (final se in session.exercises) {
+      final doneSets = setsByEx[se.exerciseClientId] ?? [];
+      final rows = <SetRow>[
+        for (final s in doneSets)
+          SetRow(weight: s.weight, reps: s.reps, doneAt: s.performedAt),
+      ];
+      // The plan size and the blank rows that follow the logged ones — see
+      // [planSessionRows] for why a null `targetSets` can't be taken at face
+      // value, and why a running session always keeps one row open. Any blank
+      // row it opens here is written back as this exercise's targetSets by
+      // the next persist ([_buildPlanned]), so the gap closes itself rather
+      // than reappearing on the next rebuild.
+      final plan = planSessionRows(
+        storedTargetSets: se.targetSets,
+        templateTargetSets: _templateTargetSets[se.exerciseClientId],
+        doneSets: doneSets.length,
+        sessionFinished: _finishedAt != null,
+      );
+      rows.addAll(List.generate(plan.blankRows, (_) => SetRow()));
+      _blocks.add(ExerciseBlock(
+        exerciseClientId: se.exerciseClientId,
+        exerciseName: se.exerciseName,
+        targetSets: plan.targetSets,
+        rows: rows,
+      ));
+    }
+  }
+
+  /// Loads what this screen needs from the session's originating template:
+  /// the exercise order (which the watch's `currentExerciseIndex` indexes
+  /// into — see [_watchCurrentBlock]) and each exercise's set count.
+  ///
+  /// The counts are a fallback for [_rebuildBlocks]'s `targetSets` — the
+  /// recovery half of the same client-only-state problem described there, for
+  /// sessions whose stored count was already lost before this build (a `null`
+  /// that's now sitting in the local DB can't be un-lost by fixing the write
+  /// path alone).
+  ///
+  /// Fire-and-forget from [initState], like [_loadPreviousPerformance]: the
+  /// blocks are already built by the time it resolves, so it tops them up in
+  /// place instead of calling [_rebuildBlocks] again — a rebuild would drop
+  /// whatever the user has done in the meantime. Any *later* rebuild (the
+  /// watch mirror's) then picks the map up directly.
+  ///
+  /// Deliberately doesn't persist the topped-up rows: a watch-mastered
+  /// session must not be written from this screen (see [_applyWatchMirror]),
+  /// and for every other session the next real edit persists the corrected
+  /// count anyway.
+  Future<void> _loadTemplatePlan() async {
+    final templateClientId = _templateClientId;
+    if (templateClientId == null) return;
+    final template = await ref
+        .read(workoutTemplateRepositoryProvider)
+        .findByClientId(templateClientId);
+    if (template == null || !mounted) return;
+    // Set before the early return below: the watch's `currentExerciseIndex`
+    // is resolved against this list, and a template whose exercises carry no
+    // targetSets at all is still perfectly indexable.
+    _templateExerciseIds = [
+      for (final te in template.exercises) te.exerciseClientId,
+    ];
+    final targetSetsByExercise = {
+      for (final te in template.exercises)
+        if (te.targetSets != null) te.exerciseClientId: te.targetSets!,
+    };
+    if (targetSetsByExercise.isEmpty) return;
+    _templateTargetSets = targetSetsByExercise;
+    setState(() {
+      for (final block in _blocks) {
+        if (block.targetSets != null) continue;
+        final target = targetSetsByExercise[block.exerciseClientId];
+        if (target == null) continue;
+        block.targetSets = target;
+        // Tops up to `target` *rows* (not target-minus-done): the block may
+        // already carry the single blank row [_rebuildBlocks] opens when it
+        // knows no plan at all.
+        final missing = target - block.rows.length;
+        if (missing > 0) {
+          block.rows.addAll(List.generate(missing, (_) => SetRow()));
+        }
+      }
+    });
   }
 
   /// "Kezdés" on an upcoming (trainer-scheduled) session: loads its planned
@@ -303,10 +494,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    isLogSessionScreenOpen = false;
+    final openScreen = _openScreen;
+    if (openScreen != null) closeWorkoutScreen(openScreen);
     _ticker?.cancel();
     _hrTicker?.cancel();
     unawaited(_watchEventsSubscription?.cancel());
+    _watchMirrorSubscription?.close();
     _deactivateMusic();
     super.dispose();
   }
@@ -323,8 +516,18 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   /// time a transport button is tapped.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _musicActivated) {
-      unawaited(_musicController?.refresh());
+    if (state != AppLifecycleState.resumed) return;
+    if (_musicActivated) unawaited(_musicController?.refresh());
+    // The retry point for a refused Live Activity: iOS only lets an app
+    // *start* one while it's in the foreground, and the start attempt can
+    // easily have happened in the background — a set logged on the watch
+    // persists (and thus creates the session) with the phone's screen off.
+    // Coming back to the foreground is exactly when that can succeed, and
+    // without this the workout kept running with no indicator until the app
+    // was restarted. No-ops once started, once refused permanently, or
+    // before there's a session to attach to (see [_startSessionNotifier]).
+    if (_finishedAt == null && _sessionClientId != null) {
+      unawaited(_startSessionNotifier());
     }
   }
 
@@ -401,6 +604,213 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
             _watchActiveCalories = event.activeCalories;
           }
         });
+      case WatchSetLogged():
+        _handleWatchSetLogged(event);
+      // Both halves of the watch-mastered (standalone) flow: the running
+      // snapshot the watch resends after every set it logs, and the final
+      // payload it sends when the user ends the workout on the wrist. Either
+      // one naming this session means the watch — not this screen — is the
+      // source of truth for it, so switch to mirroring the DB row the
+      // processor writes. Neither is handled inline here: the write happens
+      // asynchronously in WorkoutResumePrompt's own listener on this same
+      // broadcast stream, so reacting to the event itself would race it.
+      case WatchStandaloneAdoption():
+        if (event.standaloneSessionId != _sessionClientId) return;
+        final index = event.currentExerciseIndex;
+        final movedOn = index != null && index != _watchCurrentExerciseIndex;
+        if (index != null) _watchCurrentExerciseIndex = index;
+        _startWatchMirror();
+        // A snapshot can report a new current exercise without carrying a new
+        // set (the watch re-sends on reconnect too), and the mirror
+        // deliberately skips those — but the prefill this pushes back is
+        // per-exercise, so it would otherwise stay pointed at the previous
+        // one until the next set landed.
+        if (movedOn && _finishedAt == null && _sessionNotifierStarted) {
+          unawaited(_updateSessionNotifier());
+        }
+      case WatchStandaloneSession():
+        if (event.standaloneSessionId != _sessionClientId) return;
+        _startWatchMirror();
+    }
+  }
+
+  /// Switches this screen into mirror mode for a watch-mastered session (see
+  /// [_watchMastered]) and attaches the listener that keeps it in sync —
+  /// idempotent, so the adoption snapshot arriving after every logged set
+  /// only ever attaches one.
+  void _startWatchMirror() {
+    _watchMastered = true;
+    if (_watchMirrorSubscription != null) return;
+    _watchMirrorSubscription = ref.listenManual(
+      workoutSessionControllerProvider,
+      (_, next) => _applyWatchMirror(next.value),
+      // The write that prompted this may already have landed — don't wait for
+      // the *next* set to catch up with the one that just arrived.
+      fireImmediately: true,
+    );
+  }
+
+  /// Re-reads this session's row and rebuilds the screen from it. Deliberately
+  /// a full replace rather than a merge: on a watch-mastered session the
+  /// watch's set list is authoritative (it resends all of it, every time), so
+  /// there is nothing on this side worth preserving against it.
+  ///
+  /// Which is also why it must only run when the row's *content* actually
+  /// changed — see [watchMirrorSignature]: the stream behind it re-emits on
+  /// unrelated database traffic too, and rebuilding then threw away the
+  /// screen's state (and re-pushed it to the watch) for nothing.
+  void _applyWatchMirror(List<WorkoutSession>? sessions) {
+    if (!mounted || sessions == null) return;
+    final clientId = _sessionClientId;
+    if (clientId == null) return;
+    WorkoutSession? mirrored;
+    for (final candidate in sessions) {
+      if (candidate.clientId == clientId) {
+        mirrored = candidate;
+        break;
+      }
+    }
+    if (mirrored == null) return;
+    final session = mirrored;
+    final signature = watchMirrorSignature(session);
+    if (signature == _mirroredSignature) return;
+    _mirroredSignature = signature;
+    setState(() {
+      _startedAt = session.startedAt ?? _startedAt;
+      _rpe = session.rpe ?? _rpe;
+      _rebuildBlocks(session);
+    });
+    // The set that just landed is the newest one, so the rest timer restarts
+    // against it exactly as it would for a set logged on this screen.
+    _syncRestEphemeralState();
+    unawaited(_rescheduleRestNotification());
+    // Chained, not fired in parallel: the state push below carries
+    // `watchSetPrefill(_blocks, …)`, which reads `ExerciseBlock.previousSets`
+    // — pushing before this future completes would send a prefill computed
+    // against a block whose history hasn't loaded yet.
+    unawaited(_loadPreviousPerformance(_blocks).then((_) {
+      if (mounted && session.finishedAt == null) unawaited(_updateSessionNotifier());
+    }));
+    unawaited(_loadPrBaselines(_blocks));
+    if (session.finishedAt != null) unawaited(_closeFromWatchMirror(session));
+  }
+
+  /// The watch ended a watch-mastered session. Its final
+  /// [WatchStandaloneSession] already wrote `finishedAt` (with the rpe and
+  /// health-workout id) into the row this screen mirrors, so — unlike
+  /// [_finishWorkoutFromWatch] — there is nothing left to persist here, and
+  /// writing anyway would push this screen's copy back over the processor's
+  /// authoritative one. This only tears down the running-session machinery
+  /// and leaves, the way the Finish button does. It also never calls
+  /// `endWorkout` on the watch: the watch closed its own session before
+  /// sending this.
+  Future<void> _closeFromWatchMirror(WorkoutSession session) async {
+    if (_closingFromWatchMirror) return;
+    _closingFromWatchMirror = true;
+    _finishedAt = session.finishedAt;
+    _ticker?.cancel();
+    _ticker = null;
+    _hrTicker?.cancel();
+    _hrTicker = null;
+    _deactivateMusic();
+    // Sees _finishedAt set and cancels, same as _persistFinished's call.
+    unawaited(_rescheduleRestNotification());
+    if (_sessionNotifierStarted) {
+      _sessionNotifierStarted = false;
+      unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
+    }
+    if (!mounted) return;
+    await _maybeShowWorkoutSuccess();
+    if (!mounted) return;
+    _navigateToDashboard();
+  }
+
+  /// The watch is a dumb trigger — it doesn't choose which exercise/set gets
+  /// logged, only that "the next one" should be (docs/watch/
+  /// 43-watch-f5-set-logging-plan.md §2, §5.2/3–4). The actual guard/dedup/
+  /// row-selection decision lives in [decideWatchSetLog], a pure function,
+  /// so it stays unit-testable without mounting this screen; logging itself
+  /// goes through the exact same [_handleRowMarkDone]/[_handleAddSet] paths
+  /// the phone's own "+" button uses, so rest-start/state-sync/autosave all
+  /// fire the same way.
+  void _handleWatchSetLogged(WatchSetLogged event) {
+    // Resolved once and reused below: the row this tap lands in and the values
+    // it should carry have to be worked out against the *same* current block,
+    // and both before anything is mutated.
+    final currentBlock = _currentExerciseBlock();
+    final decision = decideWatchSetLog(
+      eventSessionClientId: event.sessionClientId,
+      currentSessionClientId: _sessionClientId,
+      sessionFinished: _finishedAt != null,
+      saving: _saving,
+      eventId: event.eventId,
+      recentEventIds: _recentWatchSetEventIds,
+      blocks: _blocks,
+      currentBlock: currentBlock,
+    );
+
+    switch (decision.action) {
+      case WatchSetLogAction.reject:
+        unawaited(ref.read(watchWorkoutServiceProvider).ackSetLogged(
+              sessionClientId: event.sessionClientId,
+              eventId: event.eventId,
+              accepted: false,
+            ));
+      case WatchSetLogAction.dedupe:
+        unawaited(ref.read(watchWorkoutServiceProvider).ackSetLogged(
+              sessionClientId: event.sessionClientId,
+              eventId: event.eventId,
+              accepted: true,
+            ));
+      case WatchSetLogAction.log:
+        final target = decision.target!;
+        final blockIndex = target.blockIndex;
+        // Resolved *before* anything is mutated: it answers "what should the
+        // row this tap lands in hold", and appending a row would move that
+        // position. Same function — and therefore the same answer — as the
+        // prefill this screen publishes to the watch's adjust stepper
+        // (docs/watch/48-watch-f5b-set-adjust-plan.md D-F5b.2): the row's own
+        // planned values, else what this exercise did at that position in the
+        // last workout, else the last set already logged for it here.
+        final prefill = watchSetPrefill(_blocks, currentBlock);
+        final int rowIndex;
+        if (target.needsNewRow) {
+          _handleAddSet(blockIndex, prefillFromPrevious: true);
+          rowIndex = _blocks[blockIndex].rows.length - 1;
+        } else {
+          rowIndex = target.rowIndex!;
+        }
+        // F5b (docs/watch/48-watch-f5b-set-adjust-plan.md D-F5b.3): a tap that
+        // came through the watch's adjust stepper carries reps+weight, and
+        // goes through _handleRowEdit — which writes the values *and* stamps
+        // doneAt, so rest/PR/autosave all fire exactly as they do for the
+        // phone's own compact editor.
+        //
+        // A plain one-tap log carries no values, and used to only stamp
+        // `doneAt` on the row. Planned rows are created blank, so that logged
+        // a *done but empty* set — one that `_buildSets` then drops entirely
+        // for having no reps/weight, i.e. the tap left nothing behind but an
+        // empty row. It now writes the same prefill the watch would have
+        // opened its stepper on, so a one-tap log records what the user is
+        // actually lifting. With nothing at all to go on it still falls back
+        // to the bare mark-done (the watch offers the stepper instead in that
+        // case — see `LogPage.handleTap`).
+        final values = event.loggedValues ??
+            (prefill == null ? null : (weight: prefill.weight, reps: prefill.reps));
+        if (values != null) {
+          _handleRowEdit(blockIndex, rowIndex, values.weight, values.reps);
+        } else {
+          _handleRowMarkDone(blockIndex, rowIndex);
+        }
+        _recentWatchSetEventIds.add(event.eventId);
+        if (_recentWatchSetEventIds.length > 8) {
+          _recentWatchSetEventIds.removeAt(0);
+        }
+        unawaited(ref.read(watchWorkoutServiceProvider).ackSetLogged(
+              sessionClientId: event.sessionClientId,
+              eventId: event.eventId,
+              accepted: true,
+            ));
     }
   }
 
@@ -812,7 +1222,27 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
           block.rows.length < block.previousSets.length) {
         hint = block.previousSets[block.rows.length];
       }
-      block.rows.add(SetRow(weight: hint?.weight, reps: hint?.reps));
+      var weight = hint?.weight;
+      var reps = hint?.reps;
+      // No plan for this position and no prior-session hint either — this is
+      // the watch "+1" tap's empty-row report: with nothing to go on, the
+      // row used to stay genuinely blank (null weight, null reps) once
+      // marked done. Instead, carry the weight forward from the last set
+      // already logged for this exercise *this session* (so a run of
+      // watch taps stays at the same working weight rather than reading as
+      // 0), and default reps to 1 rather than leaving it null — a visible
+      // placeholder the user can correct, never nothing at all.
+      if (prefillFromPrevious && hint == null) {
+        for (var i = block.rows.length - 1; i >= 0; i--) {
+          final row = block.rows[i];
+          if (row.isDone && row.weight != null) {
+            weight = row.weight;
+            break;
+          }
+        }
+        reps = 1;
+      }
+      block.rows.add(SetRow(weight: weight, reps: reps));
     });
     _autoSave();
   }
@@ -901,7 +1331,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       // added via "+ Add set" before any set is marked done) live only in
       // memory and are silently dropped if the screen is torn down and
       // rebuilt from the last persisted DB state (e.g. resuming via the Live
-      // Activity/notification tap — see isLogSessionScreenOpen above).
+      // Activity/notification tap — see [isWorkoutScreenOpenFor]).
       if (_startedAt == null) {
         _startedAt = DateTime.now();
         if (_finishedAt == null) {
@@ -924,6 +1354,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
         rpe: _rpe,
         feedbackNote: _feedbackNote,
       );
+      // This screen now owns a real session: claim it in the registry so a
+      // Live Activity/notification tap reopens *this* screen instead of
+      // rebuilding a second one from the row just written.
+      _openScreen?.sessionClientId = _sessionClientId;
     } else {
       await notifier.updateSession(
         existingId,
@@ -939,14 +1373,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     // Session notifier (Live Activity / ongoing notification): the first
     // successful persist of a running session starts it, every one after
     // that updates it. Never touches a finished session — _persistFinished
-    // ends it explicitly instead.
+    // ends it explicitly instead. A persist whose start was refused stays on
+    // this branch, so every later set is another retry (alongside the
+    // foreground one in [didChangeAppLifecycleState]).
     if (_finishedAt == null && mounted) {
-      if (!_sessionNotifierStarted) {
-        _sessionNotifierStarted = true;
-        unawaited(_startSessionNotifier());
-      } else {
-        unawaited(_updateSessionNotifier());
-      }
+      // Always push the state — the watch half of it must reach the wrist on
+      // every logged set even when the indicator itself never came up (see
+      // [_updateSessionNotifier]). Kicking off a start attempt as well is
+      // what makes every persist a retry point for a refused Live Activity.
+      if (!_sessionNotifierStarted) unawaited(_startSessionNotifier());
+      unawaited(_updateSessionNotifier());
     }
   }
 
@@ -958,8 +1394,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   /// first block with remaining (not-yet-done) sets — the plan's "current
   /// exercise" rule for the session notifier. Null only when there are no
   /// blocks at all.
+  ///
+  /// On a watch-mastered session the watch's own answer wins over that rule —
+  /// see [_watchCurrentBlock].
   ExerciseBlock? _currentExerciseBlock() {
     if (_blocks.isEmpty) return null;
+    final watchCurrent = _watchCurrentBlock();
+    if (watchCurrent != null) return watchCurrent;
     ExerciseBlock? mostRecent;
     DateTime? mostRecentAt;
     for (final block in _blocks) {
@@ -979,10 +1420,39 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     );
   }
 
+  /// The block the *watch* says its next set will count against, on a
+  /// watch-mastered session (see
+  /// [WatchStandaloneAdoption.currentExerciseIndex]). Null for every
+  /// phone-mastered session, for a Quick strength one (no plan), and
+  /// whenever the reported index can't be resolved — a template that hasn't
+  /// loaded yet, or one that shrank since the watch cached it. Every one of
+  /// those falls back to [_currentExerciseBlock]'s own rule rather than
+  /// guessing.
+  ///
+  /// This matters because "current exercise" drives what the phone publishes
+  /// back: the `nextSetWeight`/`nextSetReps` prefill the watch's stepper
+  /// opens on, and the exercise name/counts on the Live Activity. The phone's
+  /// own rule is "the exercise of the most recently logged set", which lags a
+  /// full exercise behind on the watch's flow — the watch moves on as soon as
+  /// an exercise has all its planned sets, so at that moment the phone was
+  /// still describing the finished one.
+  ExerciseBlock? _watchCurrentBlock() =>
+      watchCurrentBlock(_blocks, _templateExerciseIds, _watchCurrentExerciseIndex);
+
   WorkoutSessionState _sessionState(AppLocalizations l10n) {
     final current = _currentExerciseBlock();
+    // Only tag the counts with the watch's exercise index when `current` is
+    // actually the block that index resolved to — otherwise they describe the
+    // phone's own choice of current exercise, and the watch must not read them
+    // as being about its own (see [WorkoutSessionState.setsDoneExerciseIndex]).
+    final watchCurrent = _watchCurrentBlock();
     final totalSetsDone = _blocks.fold<int>(
         0, (sum, b) => sum + b.rows.where((r) => r.isDone).length);
+    // What a watch "+1 set" tap would start its adjust stepper from — resolved
+    // against the same row the tap would log into (docs/watch/
+    // 48-watch-f5b-set-adjust-plan.md D-F5b.2). Recomputed on every state sync,
+    // so the watch is at most one sync behind.
+    final prefill = watchSetPrefill(_blocks, current);
     return WorkoutSessionState(
       exerciseName: (current != null && current.exerciseName.isNotEmpty)
           ? current.exerciseName
@@ -1000,7 +1470,37 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       restEndsAtEpochMs: _currentRestEndsAtEpochMs(),
       restTotalSeconds: _currentRestTotalSeconds(),
       restRemainingSeconds: _currentRestRemainingSeconds(),
+      nextSetWeight: prefill?.weight,
+      nextSetReps: prefill?.reps,
+      setsDoneExerciseIndex:
+          (watchCurrent != null && identical(watchCurrent, current))
+              ? _watchCurrentExerciseIndex
+              : null,
+      setsDonePerExercise: _watchSetsDonePerExercise(),
     );
+  }
+
+  /// Done-set counts for the whole plan, in the watch's index order — see
+  /// [WorkoutSessionState.setsDonePerExercise] for why the current exercise's
+  /// count alone wasn't enough.
+  ///
+  /// Null unless this is a watch-mastered session whose template order is
+  /// known: that order *is* the watch's index space (both sides read the same
+  /// synced template), and it's the only thing that makes the positions mean
+  /// the same on both devices. An exercise the plan has but this session has
+  /// no block for counts as 0 rather than being skipped, so the positions
+  /// stay aligned.
+  List<int>? _watchSetsDonePerExercise() {
+    if (!_watchMastered || _templateExerciseIds.isEmpty) return null;
+    final doneByExercise = <String, int>{};
+    for (final block in _blocks) {
+      doneByExercise[block.exerciseClientId] =
+          block.rows.where((r) => r.isDone).length;
+    }
+    return [
+      for (final exerciseClientId in _templateExerciseIds)
+        doneByExercise[exerciseClientId] ?? 0,
+    ];
   }
 
   String _sessionTitle(AppLocalizations l10n) =>
@@ -1008,41 +1508,90 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       widget.template?.name ??
       l10n.liveActivityDefaultTitle;
 
+  /// Brings up the Live Activity / ongoing notification, and (once) tells the
+  /// watch to start its own session. Safe to call repeatedly — it's the retry
+  /// entry point as well as the first attempt: no-ops while one is in flight,
+  /// once the indicator is up, once the platform has refused for good, and
+  /// before there's a session/start time to describe.
   Future<void> _startSessionNotifier() async {
     if (!mounted) return;
+    final sessionClientId = _sessionClientId;
+    final startedAt = _startedAt;
+    if (sessionClientId == null || startedAt == null || _finishedAt != null) return;
+
     final l10n = AppLocalizations.of(context)!;
     final state = _sessionState(l10n);
-    await ref.read(workoutSessionNotifierServiceProvider).start(
-          sessionClientId: _sessionClientId!,
-          title: _sessionTitle(l10n),
-          startedAt: _startedAt!,
-          startedLabel: l10n.startedLabel,
-          state: state,
-        );
+
     // Best-effort, alongside (not instead of) the Live Activity/ongoing
-    // notification above — see docs/40-watch-app-plan.md §6.2.
-    if (_watchEnabled) {
+    // notification below — see docs/40-watch-app-plan.md §6.2 — and gated
+    // only on its own latch: whether the phone's indicator started, was
+    // refused, or is switched off entirely says nothing about whether the
+    // watch should mirror this workout. Sent once per screen, so a retry of
+    // the indicator doesn't ask the watch to start a second session. Skipped
+    // for a watch-mastered session: the watch is already running this exact
+    // workout, so asking it to start one would at best be ignored (both
+    // platforms reject a phone start during standalone) and at worst read as
+    // a conflict.
+    if (_watchEnabled && !_watchMastered && !_watchStartPushed) {
+      _watchStartPushed = true;
       unawaited(ref.read(watchWorkoutServiceProvider).startWorkout(
-            sessionClientId: _sessionClientId!,
+            sessionClientId: sessionClientId,
             title: _sessionTitle(l10n),
-            startedAt: _startedAt!,
+            startedAt: startedAt,
             state: state,
           ));
     }
+
+    if (_startingSessionNotifier ||
+        _sessionNotifierStarted ||
+        _sessionNotifierUnavailable) {
+      return;
+    }
+    _startingSessionNotifier = true;
+    try {
+      final result = await ref.read(workoutSessionNotifierServiceProvider).start(
+            sessionClientId: sessionClientId,
+            title: _sessionTitle(l10n),
+            startedAt: startedAt,
+            startedLabel: l10n.startedLabel,
+            state: state,
+          );
+      _sessionNotifierStarted = result.started;
+      // A retryable refusal leaves both flags false: the next persisted set
+      // and the next foreground both try again.
+      _sessionNotifierUnavailable =
+          result.status == WorkoutSessionNotifierStatus.unavailable;
+    } finally {
+      _startingSessionNotifier = false;
+    }
   }
 
+  /// Pushes the current state to both surfaces. The indicator update no-ops
+  /// natively when there's nothing showing (iOS finds no activity, Android has
+  /// no notification to re-render), so this is safe to call whether or not
+  /// [_startSessionNotifier] ever succeeded — and it has to be, because the
+  /// watch push below must not be collateral damage of a Live Activity that
+  /// was refused or switched off.
   Future<void> _updateSessionNotifier() async {
     if (!mounted) return;
+    final sessionClientId = _sessionClientId;
+    if (sessionClientId == null) return;
     final l10n = AppLocalizations.of(context)!;
     final state = _sessionState(l10n);
     await ref.read(workoutSessionNotifierServiceProvider).update(
-          sessionClientId: _sessionClientId!,
+          sessionClientId: sessionClientId,
           startedLabel: l10n.startedLabel,
           state: state,
         );
+    // Pushed for a watch-mastered session too — unlike `startWorkout`, which
+    // would ask the watch to start a session it is already running. This is
+    // how the watch-started path gets the `nextSetWeight`/`nextSetReps`
+    // prefill and (for the exercise it named) the real set counts, which
+    // include the sets logged here on the phone — its own list has no idea
+    // about those. See `WorkoutSessionState.setsDoneExerciseIndex`.
     if (_watchEnabled) {
       unawaited(ref.read(watchWorkoutServiceProvider).updateState(
-            sessionClientId: _sessionClientId!,
+            sessionClientId: sessionClientId,
             state: state,
           ));
     }
@@ -1110,9 +1659,17 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     if (_sessionNotifierStarted) {
       _sessionNotifierStarted = false;
       unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
-      // The watch answers asynchronously with a summary on
-      // WatchWorkoutService.events, handled by WorkoutResumePrompt — not here
-      // (docs/40-watch-app-plan.md §3 "Lezárás").
+    }
+    // Keyed on the watch having a session for this id, not on the indicator:
+    // the two are independent (see [_watchStartPushed]), and a Live Activity
+    // that never came up must not leave the watch's own session running
+    // forever. `_watchMastered` counts too — the phone never sent that one a
+    // `startWorkout` (the watch started it), but ending the workout here still
+    // has to close it on the wrist, which is exactly what the watch's
+    // adopted-standalone `end` handler does. The watch answers asynchronously
+    // with a summary on WatchWorkoutService.events, handled by
+    // WorkoutResumePrompt — not here (docs/40-watch-app-plan.md §3 "Lezárás").
+    if (_watchStartPushed || _watchMastered) {
       unawaited(ref.read(watchWorkoutServiceProvider).endWorkout(_sessionClientId!));
     }
   }

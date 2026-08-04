@@ -798,12 +798,20 @@ class PullEngine {
       trainerCommentAt:
           Value(trainerCommentAtRaw != null ? DateTime.parse(trainerCommentAtRaw) : null),
     );
-    final plannedExerciseIds = await _mapServerIds(
-      'exercises',
-      ((json['exercises'] as List<dynamic>? ?? const []))
-          .map((e) => (e as Map<String, dynamic>)['exerciseId'] as int)
-          .toList(),
-    );
+    // Planned exercises, each with the set count the server holds for it.
+    // Resolved to local clientIds here, dropping any dangling reference (an
+    // exercise this device hasn't pulled — shouldn't happen given [pullAll]'s
+    // ordering, but is safely skipped rather than crashing the pull).
+    final plannedExercises = <({String exerciseClientId, int? targetSets})>[];
+    for (final entry in (json['exercises'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>()) {
+      final exerciseClientId = await _localClientId('exercises', entry['exerciseId'] as int);
+      if (exerciseClientId == null) continue;
+      plannedExercises.add((
+        exerciseClientId: exerciseClientId,
+        targetSets: (entry['targetSets'] as num?)?.toInt(),
+      ));
+    }
     final setsJson = (json['sets'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
     // Transacted so a crash partway through can't leave this session's
     // row updated but its exercise links / sets deleted-and-not-reinserted.
@@ -817,15 +825,40 @@ class PullEngine {
             );
       }
 
+      // `targetSets` — how many rows (done + still blank) an exercise plans
+      // for in this session — is what [LogSessionScreen._rebuildBlocks]
+      // derives the blank rows from (`targetSets - doneSets.length`), so a
+      // pull that dropped it rebuilt the session with its
+      // planned-but-not-yet-logged rows gone.
+      //
+      // The server now stores and returns it, and its answer wins. This local
+      // snapshot is the fallback for the cases where it can't answer: a
+      // backend older than the column, and — the common one — a session whose
+      // count was already lost by an earlier build of this app and hasn't been
+      // re-sent since. Keyed by exerciseClientId (not by position) so a
+      // server-side reorder can't misattribute a count; first link wins if a
+      // session somehow lists the same exercise twice.
+      final preservedTargetSets = <String, int>{};
+      for (final link in await (_db.select(_db.workoutSessionExercises)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .get()) {
+        final targetSets = link.targetSets;
+        if (targetSets != null) {
+          preservedTargetSets.putIfAbsent(link.exerciseClientId, () => targetSets);
+        }
+      }
+
       await (_db.delete(_db.workoutSessionExercises)
             ..where((t) => t.sessionClientId.equals(clientId)))
           .go();
-      for (final exerciseClientId in plannedExerciseIds) {
+      for (final planned in plannedExercises) {
         await _db.into(_db.workoutSessionExercises).insert(
               WorkoutSessionExercisesCompanion.insert(
                 clientId: newClientId(),
                 sessionClientId: clientId,
-                exerciseClientId: exerciseClientId,
+                exerciseClientId: planned.exerciseClientId,
+                targetSets: Value(
+                    planned.targetSets ?? preservedTargetSets[planned.exerciseClientId]),
               ),
             );
       }
@@ -1128,19 +1161,6 @@ class PullEngine {
       page++;
     }
     return items;
-  }
-
-  /// Maps a list of server ids in [table] to their local clientIds, in
-  /// order, dropping any that aren't known locally (a dangling reference to
-  /// an entity that hasn't been pulled — shouldn't happen given [pullAll]'s
-  /// ordering, but is safely skipped rather than crashing the pull).
-  Future<List<String>> _mapServerIds(String table, List<int> serverIds) async {
-    final clientIds = <String>[];
-    for (final serverId in serverIds) {
-      final clientId = await _localClientId(table, serverId);
-      if (clientId != null) clientIds.add(clientId);
-    }
-    return clientIds;
   }
 
   Future<String?> _localClientId(String table, int serverId) async {

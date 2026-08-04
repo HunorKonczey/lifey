@@ -39,7 +39,13 @@ class ExerciseBlock {
   final String exerciseClientId;
   String
       exerciseName; // may be filled from catalog after construction (template case)
-  final int? targetSets;
+
+  /// How many sets this exercise plans for, when known. Mutable for the same
+  /// reason [exerciseName] is: it can arrive after construction — a session
+  /// rebuilt from a row whose `targetSets` a server round-trip dropped gets
+  /// it back from the originating template (see
+  /// [LogSessionScreen._loadTemplateTargetSets]).
+  int? targetSets;
   final List<SetRow> rows;
 
   /// Muscle-group code (e.g. "CHEST"), filled from the catalog at the same

@@ -1351,6 +1351,9 @@
     "watchMeasuringPillLabel": "Measuring",
     "@watchMeasuringPillLabel": {"description": "Label on the small header pill shown while a paired watch is actively measuring the current workout"},
 
+    "standaloneSessionTitle": "Quick strength",
+    "@standaloneSessionTitle": {"description": "Session-card title for a workout started standalone on the watch, no phone involved (docs/watch/44-watch-f6-standalone-plan.md D-F6.3) — matches the watch's own standalone_quick_start string"},
+
     "restTimerNotificationTitle": "Rest over",
     "@restTimerNotificationTitle": {"description": "Title of the local notification fired when the rest timer between sets ends"},
 

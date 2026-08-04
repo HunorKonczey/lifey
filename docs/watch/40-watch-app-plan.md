@@ -12,6 +12,7 @@ Kapcsolódó dokumentumok:
 - [43-watch-f5-set-logging-plan.md](43-watch-f5-set-logging-plan.md) — az F5 (set-logolás a watchról) részletes terve
 - [44-watch-f6-standalone-plan.md](44-watch-f6-standalone-plan.md) — az F6 (standalone indítás) részletes funkcionális terve (a §7-ben előírt „külön tervezés”)
 - [45-watch-f5-f6-design-prompt.md](45-watch-f5-f6-design-prompt.md) — az F5/F6 canvas-bővítés önhordó design-promptja (a 12.5-ben jelzett hiányzó F5/F6-frame-ekhez)
+- [48-watch-f5b-set-adjust-plan.md](48-watch-f5b-set-adjust-plan.md) — az F5b (reps/súly állítása a watchról, AW 10 / W 09 design) részletes terve; az F5a után indítható
 
 ## Implementációs állapot (2026-07-16)
 
@@ -23,8 +24,10 @@ Kapcsolódó dokumentumok:
 | F3 — Wear OS MVP | ✅ Kész | n/a (iOS-nek nincs külön F3-a, az F2 a natív MVP) |
 | F4 — Pihenő-visszaszámláló+haptika, Settings-kapcsoló, lokalizáció, hibaút | ✅ Kész (Android fele) | ✅ Kész (iOS fele) — lásd 11. fejezet |
 | F4B — Design-parity: a 41-es design F4-scope funkciói, amik nem készültek el (lista: 12. fejezet) | 🔶 Nagyrészt kész — lásd 7.5.9 | ⏸ Nem kezdődött el |
-| F5 — (v2) Set-logolás a watchról | ⏸ Nem kezdődött el — csak azután, hogy iOS is F4-en áll | ⏸ ua. |
-| F6 — (v2) Standalone indítás a watchról | ⏸ ua. | ⏸ ua. |
+| F5a — (v2) Set-logolás a watchról („+1 szett”) | ✅ Kész — kód (43-doc §11 S10–S13) + eszközös végpróba (S14), 2026-07-26 | ✅ Kész — kód (43-doc §11 S1–S8) + eszközös végpróba (S9), 2026-07-26 |
+| F5b — (v2) Reps/súly állítása a watchról | ✅ Kész — kód (48-doc §13 S9–S12) + eszközös végpróba (S13), 2026-07-26 | ✅ Kész — kód (48-doc §13 S4–S7) + eszközös végpróba (S8), 2026-07-26 |
+| F6a — (v2) Standalone indítás a watchról | ✅ Kész — kód (44-doc §12 S13–S17) + eszközös végpróba (S18), 2026-07-26 | ✅ Kész — kód (44-doc §12 S1–S11) + eszközös végpróba (S12), 2026-07-26 |
+| F6b — (v2) Standalone + edzésterv-szinkron a watchra | ✅ Implementálva (49-doc T1–T8) + eszközös végpróba, 2026-07-30 — **a teszt talált hibákat, javításuk külön beszélgetésben folyik** | ✅ ua. |
 
 **A terv**: az iOS-fejlesztés F2-től F4-ig 2026-07-16-ra elkészült (Android-dal egy szintre hozva) — a build-ellenőrzés (LifeyWatch target + teljes Runner workspace) zöld, a watchOS-szimulátoros/fizikai eszközös manuális teszt hátravan (11.5). Utána közösen térünk vissza F5/F6-ra, mindkét platformon egyszerre.
 

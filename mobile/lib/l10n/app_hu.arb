@@ -470,6 +470,7 @@
     "watchWorkoutToggleLabel": "Edzés indítása az órán",
     "watchStartRejectedMessage": "Az órán már fut egy másik edzés",
     "watchMeasuringPillLabel": "Mérés",
+    "standaloneSessionTitle": "Gyors erőedzés",
     "restTimerNotificationTitle": "Vége a pihenőnek",
     "restTimerNotificationBody": "Ideje a következő szettnek",
     "finishWorkoutButton": "Edzés befejezése",

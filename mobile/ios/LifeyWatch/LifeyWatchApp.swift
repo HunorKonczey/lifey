@@ -20,6 +20,12 @@ final class AppDelegate: NSObject, WKApplicationDelegate {
     // As early as possible, so a `transferUserInfo`/applicationContext
     // already queued by the phone isn't missed.
     PhoneConnector.shared.activate()
+    // Reattaches to a standalone session still running after a process
+    // death/reboot (docs/watch/44-watch-f6-standalone-plan.md §3.2) — a
+    // no-op if none is active, which is the common case.
+    Task { @MainActor in
+      await WorkoutManager.shared.recoverStandaloneSessionIfNeeded()
+    }
   }
 
   func handle(_ workoutConfiguration: HKWorkoutConfiguration) {

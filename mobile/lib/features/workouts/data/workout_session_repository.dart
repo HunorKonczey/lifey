@@ -126,7 +126,24 @@ class WorkoutSessionRepository {
           ..where((t) => t.serverId.equals(serverId)))
         .getSingleOrNull();
     if (row == null) return null;
+    return _loadAggregate(row);
+  }
 
+  /// The [clientId] counterpart of [findByServerId] — a one-shot read of a
+  /// single session with its planned exercises and sets. Used by the
+  /// standalone-session processor, which has to see what's already on the row
+  /// before it writes the watch's version over it (a watch-mastered session
+  /// can also be logged into from the phone, and the watch's payload doesn't
+  /// know about those sets).
+  Future<WorkoutSession?> findByClientId(String clientId) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.clientId.equals(clientId)))
+        .getSingleOrNull();
+    if (row == null) return null;
+    return _loadAggregate(row);
+  }
+
+  Future<WorkoutSession> _loadAggregate(WorkoutSessionRow row) async {
     final exerciseNames = {
       for (final e in await _db.select(_db.exercises).get()) e.clientId: e.name,
     };
@@ -161,7 +178,15 @@ class WorkoutSessionRepository {
 
   /// Returns the newly generated [WorkoutSession.clientId] so callers can keep
   /// editing the same session (e.g. auto-saving each set without re-creating).
+  ///
+  /// [clientId] is normally left null (a fresh one is generated) — the
+  /// standalone-session processor is the one caller that passes it
+  /// explicitly, using the watch-generated `standaloneSessionId` as the
+  /// session's `clientId` itself so a retried delivery is idempotent by
+  /// construction (docs/watch/44-watch-f6-standalone-plan.md §4.1, D-F6.3;
+  /// call [existsByClientId] first to decide whether to call this at all).
   Future<String> create({
+    String? clientId,
     required DateTime startedAt,
     DateTime? finishedAt,
     required List<PlannedExerciseInput> exercises,
@@ -174,11 +199,11 @@ class WorkoutSessionRepository {
     int? rpe,
     String? feedbackNote,
   }) async {
-    final clientId = newClientId();
+    final resolvedClientId = clientId ?? newClientId();
     await _db.transaction(() async {
       await _db.into(_db.workoutSessions).insert(
             WorkoutSessionsCompanion.insert(
-              clientId: clientId,
+              clientId: resolvedClientId,
               startedAt: Value(startedAt),
               finishedAt: Value(finishedAt),
               activeCalories: Value(activeCalories),
@@ -190,10 +215,10 @@ class WorkoutSessionRepository {
               feedbackNote: Value(feedbackNote),
             ),
           );
-      await _insertChildren(clientId, exercises, sets);
+      await _insertChildren(resolvedClientId, exercises, sets);
     });
     await _outbox.enqueueCreate(
-      clientId: clientId,
+      clientId: resolvedClientId,
       entityType: 'workout_session',
       payload: _payload(
         startedAt: startedAt,
@@ -208,7 +233,35 @@ class WorkoutSessionRepository {
         feedbackNote: feedbackNote,
       ),
     );
-    return clientId;
+    return resolvedClientId;
+  }
+
+  /// Whether a session with this [clientId] already exists locally — the
+  /// idempotency check the standalone-session processor runs before calling
+  /// [create] (docs/watch/44-watch-f6-standalone-plan.md §4.1, D-F6.2): the
+  /// watch retries an un-acked delivery, so the same `standaloneSessionId`
+  /// can arrive more than once and must be a no-op (besides the ack) the
+  /// second time.
+  Future<bool> existsByClientId(String clientId) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.clientId.equals(clientId)))
+        .getSingleOrNull();
+    return row != null;
+  }
+
+  /// Null if no session with this [clientId] exists yet; otherwise whether it
+  /// already has a [WorkoutSession.finishedAt] — the three-way check the
+  /// standalone-session processor needs to tell "doesn't exist yet (create)"
+  /// apart from "exists but still running (was adopted mid-workout, now
+  /// needs finishing)" and "exists and already finished (dedup, no-op)"
+  /// (docs/watch/44-watch-f6-standalone-plan.md §4.2, extended for live
+  /// adoption).
+  Future<bool?> isFinishedByClientId(String clientId) async {
+    final row = await (_db.select(_db.workoutSessions)
+          ..where((t) => t.clientId.equals(clientId)))
+        .getSingleOrNull();
+    if (row == null) return null;
+    return row.finishedAt != null;
   }
 
   /// The enrichment fields ([activeCalories], [averageHeartRate],
@@ -452,6 +505,21 @@ class WorkoutSessionRepository {
         'finishedAt': finishedAt.toUtc().toIso8601String(),
       'exerciseIds':
           exercises.map((e) => clientRef(e.exerciseClientId)).toList(),
+      // The same planned exercises, but carrying each one's targetSets — how
+      // many set rows the session plans for it. Sent *alongside* the bare
+      // `exerciseIds` above rather than replacing it: the field is additive on
+      // the backend (which still requires exerciseIds, and which older server
+      // builds don't know about at all), so sending both is what keeps this
+      // payload valid against either. Without it, targetSets never left the
+      // device and every pull brought the session back with its
+      // planned-but-not-yet-logged rows gone.
+      'plannedExercises': [
+        for (final e in exercises)
+          {
+            'exerciseId': clientRef(e.exerciseClientId),
+            if (e.targetSets != null) 'targetSets': e.targetSets,
+          },
+      ],
       'sets': sets
           .map((s) => {
                 'exerciseId': clientRef(s.exerciseClientId),

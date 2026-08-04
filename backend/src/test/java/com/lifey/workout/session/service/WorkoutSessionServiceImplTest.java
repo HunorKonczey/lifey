@@ -12,6 +12,7 @@ import com.lifey.workout.session.WorkoutSession;
 import com.lifey.workout.session.WorkoutSessionExercise;
 import com.lifey.workout.session.WorkoutSessionRepository;
 import com.lifey.workout.session.dto.ExerciseSetRequest;
+import com.lifey.workout.session.dto.PlannedExerciseRequest;
 import com.lifey.workout.session.dto.ExerciseSummary;
 import com.lifey.workout.session.dto.WorkoutSessionRequest;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
@@ -34,6 +35,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -105,7 +107,7 @@ class WorkoutSessionServiceImplTest {
         Instant performedAt = Instant.parse("2026-06-18T05:05:00Z");
         WorkoutSessionRequest request = new WorkoutSessionRequest(started, null,
                 List.of(1L, 4L), List.of(new ExerciseSetRequest(1L, 10, 60.0, performedAt)),
-                450.0, 132.0, "HK-UUID-1", null, null, null);
+                450.0, 132.0, "HK-UUID-1", null, null, null, null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -125,11 +127,120 @@ class WorkoutSessionServiceImplTest {
     }
 
     @Test
+    void create_persistsTheTargetSetsEachPlannedExerciseCarries() {
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 2L));
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(1L, 4L), List.of(),
+                null, null, null, null, null, null,
+                List.of(new PlannedExerciseRequest(1L, 3), new PlannedExerciseRequest(4L, null)));
+
+        WorkoutSessionResponse result = service.create(request);
+
+        // Without this the client's still-blank set rows can't survive a round
+        // trip — it rebuilds them as targetSets minus the sets already logged.
+        assertThat(result.exercises())
+                .extracting(ExerciseSummary::exerciseId, ExerciseSummary::targetSets)
+                .containsExactly(tuple(1L, 3), tuple(4L, null));
+    }
+
+    @Test
+    void create_fallsBackToTheBareExerciseIdsWhenTheClientSendsNoPlan() {
+        // The web app and any mobile build older than plannedExercises: still
+        // accepted, with "no plan recorded" rather than a rejected request.
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 2L));
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(1L), List.of(),
+                null, null, null, null, null, null, null);
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.exercises())
+                .extracting(ExerciseSummary::exerciseId, ExerciseSummary::targetSets)
+                .containsExactly(tuple(1L, null));
+    }
+
+    @Test
+    void create_prefersPlannedExercisesOverExerciseIdsWhenBothAreSent() {
+        // The mobile client sends both (exerciseIds stays required for older
+        // servers), so the structured list has to be the one that wins.
+        when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 2L));
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(1L), List.of(),
+                null, null, null, null, null, null,
+                List.of(new PlannedExerciseRequest(4L, 5)));
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.exercises())
+                .extracting(ExerciseSummary::exerciseId, ExerciseSummary::targetSets)
+                .containsExactly(tuple(4L, 5));
+    }
+
+    @Test
+    void update_replacesTheStoredTargetSets() {
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        WorkoutSessionExercise link = new WorkoutSessionExercise();
+        link.setWorkoutSession(existing);
+        link.setExercise(exercise(1L, "Bench Press"));
+        link.setTargetSets(3);
+        existing.getPlannedExercises().add(link);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(1L), List.of(),
+                null, null, null, null, null, null,
+                List.of(new PlannedExerciseRequest(1L, 5)));
+
+        WorkoutSessionResponse result = service.update(3L, request);
+
+        // A set added ad hoc mid-workout grows the plan; the next pull has to
+        // see 5, not the 3 it started with.
+        assertThat(result.exercises())
+                .extracting(ExerciseSummary::targetSets)
+                .containsExactly(5);
+    }
+
+    @Test
+    void update_keepsTheStoredTargetSetsWhenTheClientSendsNoPlan() {
+        // The web app (and any older mobile build) PUTs bare exerciseIds. That
+        // isn't "clear the plan" — it's a client with nothing to say about it,
+        // so the count another client recorded has to survive the edit.
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        WorkoutSessionExercise link = new WorkoutSessionExercise();
+        link.setWorkoutSession(existing);
+        link.setExercise(exercise(1L, "Bench Press"));
+        link.setTargetSets(4);
+        existing.getPlannedExercises().add(link);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+        when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null,
+                List.of(1L), List.of(),
+                null, null, null, null, null, null, null);
+
+        WorkoutSessionResponse result = service.update(3L, request);
+
+        assertThat(result.exercises())
+                .extracting(ExerciseSummary::targetSets)
+                .containsExactly(4);
+    }
+
+    @Test
     void create_allowsAnEmptySessionWithNoPlannedExercisesOrSets() {
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -155,7 +266,7 @@ class WorkoutSessionServiceImplTest {
                         new ExerciseSetRequest(1L, 10, -5.0, performedAt),   // negative weight
                         new ExerciseSetRequest(1L, 10, 60.0, performedAt)    // the one valid set
                 ),
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -170,7 +281,7 @@ class WorkoutSessionServiceImplTest {
         when(exerciseRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(99L), List.of(),
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -184,7 +295,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(), List.of(new ExerciseSetRequest(99L, 5, 100.0,
                 Instant.parse("2026-06-18T05:05:00Z"))),
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -198,7 +309,7 @@ class WorkoutSessionServiceImplTest {
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 6L));
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
-                null, null, null, 7L, null, null);
+                null, null, null, 7L, null, null, null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -211,7 +322,7 @@ class WorkoutSessionServiceImplTest {
         when(templateRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
-                null, null, null, 99L, null, null);
+                null, null, null, 99L, null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -242,7 +353,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), finished,
                 List.of(1L), List.of(new ExerciseSetRequest(1L, 8, 70.0,
                 Instant.parse("2026-06-18T05:30:00Z"))),
-                480.0, 140.0, "HK-UUID-2", null, null, null);
+                480.0, 140.0, "HK-UUID-2", null, null, null, null);
 
         WorkoutSessionResponse result = service.update(3L, request);
 
@@ -263,7 +374,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(), List.of(new ExerciseSetRequest(1L, 5, 50.0,
                 Instant.parse("2026-06-18T05:05:00Z"))),
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.update(99L, request))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -302,7 +413,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(), List.of(new ExerciseSetRequest(1L, 8, 70.0,
                 Instant.parse("2026-06-18T05:30:00Z"))),
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
 
         service.update(3L, request);
 
@@ -325,7 +436,7 @@ class WorkoutSessionServiceImplTest {
 
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), Instant.parse("2026-06-18T06:00:00Z"),
-                List.of(), List.of(), null, null, null, null, 8, "felt strong");
+                List.of(), List.of(), null, null, null, null, 8, "felt strong", null);
 
         WorkoutSessionResponse result = service.update(3L, request);
 
