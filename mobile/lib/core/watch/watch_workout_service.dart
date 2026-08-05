@@ -155,12 +155,24 @@ class WatchStandaloneSet {
     required this.reps,
     this.weight,
     this.exerciseIndex,
+    this.exerciseId,
   });
 
   final int loggedAtEpochMs;
   final int reps;
   final double? weight;
   final int? exerciseIndex;
+
+  /// The exercise's **clientId**, as the watch received it in the session plan
+  /// or the synced template (docs/watch/50-watch-f6c-session-plan-sync-plan.md)
+  /// — the identity a set is attributed by from F6c on, and the reason the
+  /// exercise list may change mid-session at all: a position means whatever
+  /// the current list says, an id means the same exercise forever.
+  ///
+  /// Null for a set logged by a watch build that predates F6c, and for one
+  /// logged outside any plan; [exerciseIndex] is still carried alongside it
+  /// for exactly those cases, and stays the fallback.
+  final String? exerciseId;
 
   factory WatchStandaloneSet.fromJson(Map<Object?, Object?> json) => WatchStandaloneSet(
         loggedAtEpochMs: json['loggedAtEpochMs'] as int,
@@ -169,6 +181,7 @@ class WatchStandaloneSet {
         // an int on the Android side of the bridge.
         weight: (json['weight'] as num?)?.toDouble(),
         exerciseIndex: json['exerciseIndex'] as int?,
+        exerciseId: json['exerciseId'] as String?,
       );
 }
 
@@ -249,6 +262,7 @@ class WatchStandaloneAdoption {
     this.activeCalories,
     this.averageHeartRate,
     this.currentExerciseIndex,
+    this.currentExerciseId,
   });
 
   final String standaloneSessionId;
@@ -272,6 +286,12 @@ class WatchStandaloneAdoption {
   /// falling back to the phone's own rule.
   final int? currentExerciseIndex;
 
+  /// The same answer as [currentExerciseIndex], by **clientId** instead of
+  /// position (F6c) — preferred wherever both are present, since the exercise
+  /// list can change mid-session and a position can't survive that. Null on a
+  /// watch build that predates F6c and outside any plan.
+  final String? currentExerciseId;
+
   factory WatchStandaloneAdoption.fromJson(Map<Object?, Object?> json) => WatchStandaloneAdoption(
         standaloneSessionId: json['standaloneSessionId'] as String,
         templateId: json['templateId'] as String?,
@@ -282,6 +302,7 @@ class WatchStandaloneAdoption {
         activeCalories: (json['activeCalories'] as num?)?.toDouble(),
         averageHeartRate: (json['averageHeartRate'] as num?)?.toDouble(),
         currentExerciseIndex: (json['currentExerciseIndex'] as num?)?.toInt(),
+        currentExerciseId: json['currentExerciseId'] as String?,
       );
 }
 

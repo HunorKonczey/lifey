@@ -356,10 +356,21 @@ extension PhoneConnector: WCSessionDelegate {
         // Which exercise `setsDone`/`setsTotal` are about, for a watch-started
         // session the phone has adopted — see `WorkoutManager.phoneSetsDone`.
         setsDoneExerciseIndex: (state?["setsDoneExerciseIndex"] as? NSNumber)?.intValue,
+        // …and the same answer by clientId, which is what F6c actually
+        // compares against: a position stops meaning the same thing on both
+        // sides the moment the session's exercise list changes.
+        setsDoneExerciseId: state?["setsDoneExerciseId"] as? String,
         // Plain array of ints over the wire; `compactMap` so a malformed entry
         // costs that entry rather than the whole payload.
         setsDonePerExercise: (state?["setsDonePerExercise"] as? [Any])?
-          .compactMap { ($0 as? NSNumber)?.intValue })
+          .compactMap { ($0 as? NSNumber)?.intValue },
+        // Which plan positions the session no longer has — absent (older phone
+        // build, or nothing removed) means "nothing removed".
+        removedExerciseIndexes: (state?["removedExerciseIndexes"] as? [Any])?
+          .compactMap { ($0 as? NSNumber)?.intValue },
+        // The session's own exercise list, JSON-encoded (F6c) — a string, so
+        // it crosses every transport unchanged.
+        sessionPlan: state?["sessionPlan"] as? String)
     }
   }
 }

@@ -458,6 +458,10 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                     "reps" to set.optInt("reps"),
                     "weight" to if (set.has("weight")) set.optDouble("weight") else null,
                     "exerciseIndex" to if (set.has("exerciseIndex")) set.optInt("exerciseIndex") else null,
+                    // F6c: the exercise's clientId, which outranks the position
+                    // on the Dart side (the session's exercise list can change
+                    // mid-workout, a set's exercise can't).
+                    "exerciseId" to if (set.has("exerciseId")) set.optString("exerciseId") else null,
                 )
             }
         eventSink?.success(
@@ -503,6 +507,10 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                     "reps" to set.optInt("reps"),
                     "weight" to if (set.has("weight")) set.optDouble("weight") else null,
                     "exerciseIndex" to if (set.has("exerciseIndex")) set.optInt("exerciseIndex") else null,
+                    // F6c: the exercise's clientId, which outranks the position
+                    // on the Dart side (the session's exercise list can change
+                    // mid-workout, a set's exercise can't).
+                    "exerciseId" to if (set.has("exerciseId")) set.optString("exerciseId") else null,
                 )
             }
         eventSink?.success(
@@ -520,6 +528,27 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                         "averageHeartRate" to
                             if (payload.has("averageHeartRate")) payload.optDouble("averageHeartRate")
                             else null,
+                        // Which exercise the watch's *next* set counts against.
+                        // Both forms: the position (F6b) and, from F6c, the
+                        // clientId that survives a mid-session plan change and
+                        // can name an exercise the plan never had. Neither was
+                        // forwarded before — the Wear watch has been sending
+                        // `currentExerciseIndex` since F6b, and this bridge
+                        // silently dropped it, so on Android the phone fell
+                        // back to its own "exercise of the last logged set"
+                        // rule and pushed a prefill for the wrong exercise.
+                        "currentExerciseIndex" to
+                            if (payload.has("currentExerciseIndex")) {
+                                payload.optInt("currentExerciseIndex")
+                            } else {
+                                null
+                            },
+                        "currentExerciseId" to
+                            if (payload.has("currentExerciseId")) {
+                                payload.optString("currentExerciseId")
+                            } else {
+                                null
+                            },
                     ),
             ),
         )

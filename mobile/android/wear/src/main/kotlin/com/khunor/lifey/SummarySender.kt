@@ -178,6 +178,10 @@ object SummarySender {
                                 put("reps", set.reps)
                                 putOpt("weight", set.weight)
                                 putOpt("exerciseIndex", set.exerciseIndex)
+                                // The identity the phone actually attributes
+                                // by (F6c); the index rides along for a phone
+                                // build that predates it.
+                                putOpt("exerciseId", set.exerciseId)
                             },
                         )
                     }
@@ -194,8 +198,13 @@ object SummarySender {
             // outside a template session, where there's no plan to index into.
             putOpt(
                 "currentExerciseIndex",
-                metadata.standaloneTemplate?.let { metadata.standaloneExerciseIndex },
+                metadata.activePlanExercises.takeIf { it.isNotEmpty() }
+                    ?.let { metadata.standaloneExerciseIndex },
             )
+            // The same answer by clientId (F6c) — preferred by the phone,
+            // since it survives a mid-session plan change and can name an
+            // exercise the template never had (one added on the phone).
+            putOpt("currentExerciseId", metadata.standaloneCurrentExerciseId)
         }
         send(context, "$MESSAGE_PATH_PREFIX/standaloneSessionAdopted", payload)
     }

@@ -100,6 +100,9 @@ void main() {
           'nextSetReps': null,
           'setsDoneExerciseIndex': null,
           'setsDonePerExercise': null,
+          'removedExerciseIndexes': null,
+          'sessionPlan': null,
+          'setsDoneExerciseId': null,
         },
       });
     });
@@ -213,6 +216,9 @@ void main() {
           'nextSetReps': null,
           'setsDoneExerciseIndex': null,
           'setsDonePerExercise': null,
+          'removedExerciseIndexes': null,
+          'sessionPlan': null,
+          'setsDoneExerciseId': null,
         },
       });
     });
@@ -266,6 +272,9 @@ void main() {
           'nextSetReps': null,
           'setsDoneExerciseIndex': null,
           'setsDonePerExercise': null,
+          'removedExerciseIndexes': null,
+          'sessionPlan': null,
+          'setsDoneExerciseId': null,
         },
       });
     });

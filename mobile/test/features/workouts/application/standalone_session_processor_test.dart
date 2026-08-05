@@ -352,6 +352,91 @@ void main() {
       expect(row.templateName, 'Push day');
     });
 
+    test('exerciseId wins over the position it was logged at (F6c)', () async {
+      // The wrist logs against the *session's* exercise list, which can have
+      // gained or lost entries since the template was cached — so the id it
+      // sends is the truth and the index is only a fallback. Here index 0
+      // would say bench; the id says squat.
+      final benchId = await makeExercise('Bench Press');
+      final squatId = await makeExercise('Back Squat');
+      final templateId = await makeTemplate('Push day', [
+        TemplateExercise(exerciseClientId: benchId, targetSets: 4),
+        TemplateExercise(exerciseClientId: squatId),
+      ]);
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleEvent(
+          templateId: templateId,
+          sets: [
+            WatchStandaloneSet(
+                loggedAtEpochMs: 1783075260000, reps: 10, exerciseIndex: 0, exerciseId: squatId),
+          ],
+        ),
+        language: LanguagePreference.english,
+      );
+
+      final set = await db.select(db.exerciseSets).getSingle();
+      expect(set.exerciseClientId, squatId);
+    });
+
+    test('an exercise added to the session on the phone is logged into by id alone', () async {
+      // The whole point of F6c: this exercise has no position in the template
+      // at all, so before it there was no way for the watch to name it.
+      final benchId = await makeExercise('Bench Press');
+      final curlId = await makeExercise('Biceps Curl');
+      final templateId = await makeTemplate('Push day', [
+        TemplateExercise(exerciseClientId: benchId, targetSets: 4),
+      ]);
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleEvent(
+          templateId: templateId,
+          sets: [
+            WatchStandaloneSet(
+                loggedAtEpochMs: 1783075260000, reps: 10, exerciseIndex: 0, exerciseId: benchId),
+            WatchStandaloneSet(
+                loggedAtEpochMs: 1783075320000, reps: 12, exerciseIndex: 1, exerciseId: curlId),
+          ],
+        ),
+        language: LanguagePreference.english,
+      );
+
+      final sets = await db.select(db.exerciseSets).get();
+      expect(sets.map((s) => s.exerciseClientId), [benchId, curlId]);
+      // No generic placeholder: the second set resolved, even though its
+      // index points past the end of the template.
+      final exercises = await db.select(db.exercises).get();
+      expect(exercises.map((e) => e.name), unorderedEquals(['Bench Press', 'Biceps Curl']));
+    });
+
+    test('an exerciseId this device no longer has falls back to the index', () async {
+      final benchId = await makeExercise('Bench Press');
+      final templateId = await makeTemplate('Push day', [
+        TemplateExercise(exerciseClientId: benchId, targetSets: 4),
+      ]);
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleEvent(
+          templateId: templateId,
+          sets: const [
+            WatchStandaloneSet(
+              loggedAtEpochMs: 1783075260000,
+              reps: 10,
+              exerciseIndex: 0,
+              exerciseId: 'deleted-since',
+            ),
+          ],
+        ),
+        language: LanguagePreference.english,
+      );
+
+      final set = await db.select(db.exerciseSets).getSingle();
+      expect(set.exerciseClientId, benchId);
+    });
+
     test('the session carries the template\'s full planned exercise list, including targetSets', () async {
       final benchId = await makeExercise('Bench Press');
       final flyId = await makeExercise('Cable Fly');

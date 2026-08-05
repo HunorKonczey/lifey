@@ -360,7 +360,10 @@ private struct LogPage: View {
         // switch belongs next to it, not two swipes away on `ControlsPage`.
         // The two circles above ride up by the page's own spacing to make
         // room; nothing here is pinned to the dial.
-        if workoutManager.standaloneTemplate != nil {
+        // Shown for a plan-backed session as before, and now also for a Quick
+        // strength one the phone has added exercises to (F6c) — but not for a
+        // bare one-exercise Quick session, where there is nothing to switch to.
+        if workoutManager.standaloneTemplate != nil || workoutManager.activePlanExercises.count > 1 {
           ExerciseListChip(isCompact: isCompact, action: onOpenExerciseList)
         }
         Spacer(minLength: 0)
@@ -928,7 +931,10 @@ private struct ControlsPage: View {
         // Only during a template-backed session (docs/watch/
         // 49-watch-f6b-template-sync-plan.md §3.5) — quick-strength and
         // phone-mastered sessions have nothing to switch between.
-        if workoutManager.standaloneTemplate != nil {
+        // Shown for a plan-backed session as before, and now also for a Quick
+        // strength one the phone has added exercises to (F6c) — but not for a
+        // bare one-exercise Quick session, where there is nothing to switch to.
+        if workoutManager.standaloneTemplate != nil || workoutManager.activePlanExercises.count > 1 {
           ExerciseListChip(isCompact: isCompact, action: onOpenExerciseList)
             .padding(.top, 10)
         }
@@ -1050,8 +1056,21 @@ private struct ExerciseListView: View {
             .foregroundColor(LifeyColors.onSurface)
           Spacer(minLength: 0)
         }
-        if let template = workoutManager.standaloneTemplate {
-          ForEach(Array(template.exercises.enumerated()), id: \.offset) { index, exercise in
+        // The phone's live session plan when it has pushed one, the cached
+        // template otherwise (F6c) — `activePlanExercises` is the same list
+        // every other "which exercise" decision reads, so what's on screen and
+        // what a tap logs into can't drift apart.
+        do {
+          // Enumerated *before* filtering, so a row keeps the position the
+          // logged sets are attributed by — in the template fallback this list
+          // only ever hides an entry the phone removed from the session, it
+          // never renumbers (see `WorkoutManager.removedExerciseIndexes`); a
+          // session plan has nothing to hide, it simply lacks removed ones.
+          ForEach(
+            Array(workoutManager.activePlanExercises.enumerated())
+              .filter { !workoutManager.standaloneExerciseIsRemoved($0.offset) },
+            id: \.offset
+          ) { index, exercise in
             ExerciseListRow(
               exercise: exercise, isCompact: isCompact,
               isCurrent: index == workoutManager.standaloneExerciseIndex,

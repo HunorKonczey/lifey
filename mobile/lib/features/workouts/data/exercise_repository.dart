@@ -72,6 +72,20 @@ class ExerciseRepository {
     return create(name);
   }
 
+  /// Which of [clientIds] this device actually has an exercise row for — the
+  /// standalone processor's check before trusting an `exerciseId` the watch
+  /// sent with a logged set (docs/watch/50-watch-f6c-session-plan-sync-plan.md):
+  /// the id came from this phone in the first place, but the exercise can have
+  /// been deleted since, and a dangling reference must fall back rather than
+  /// write a set nothing can render.
+  Future<Set<String>> existingClientIds(Set<String> clientIds) async {
+    if (clientIds.isEmpty) return const {};
+    final rows = await (_db.select(_db.exercises)
+          ..where((t) => t.clientId.isIn(clientIds)))
+        .get();
+    return {for (final row in rows) row.clientId};
+  }
+
   Future<void> update(
     String clientId, {
     required String name,

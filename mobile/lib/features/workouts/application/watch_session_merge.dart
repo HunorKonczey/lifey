@@ -27,12 +27,30 @@ class MergedWatchSessionContent {
 ///   the user typed on the phone, and keeping it also stops the inferred
 ///   weight for a bare "+1" tap ([StandaloneSessionProcessor._resolveWeights])
 ///   from being recomputed differently on every resend.
-/// - **Exercises**: the watch's plan, but keeping each exercise's stored
+/// - **Exercises**: the **stored** plan, keeping each exercise's stored
 ///   `targetSets` when it has one (that's the phone's live row count, which
-///   "+ Add set" may have grown past the template's number), plus any exercise
-///   only the phone knows about — without its link the session's own screen
-///   can't render that exercise's sets at all, so dropping it would hide them
-///   even though the merge above kept them.
+///   "+ Add set" may have grown past the template's number) and falling back
+///   to the watch's number otherwise, plus any exercise the merged set list
+///   references that the plan no longer has — without its link the session's
+///   own screen can't render that exercise's sets at all, so dropping it would
+///   hide them even though the merge above kept them.
+///
+/// The stored plan winning is what makes an exercise **removed on the phone**
+/// stay removed. The watch's list is derived from the *template* it started
+/// from ([StandaloneSessionProcessor._resolveExercisesAndSets]) and knows
+/// nothing about the mirror screen's edits, so re-deriving the plan from it on
+/// every resend put a deleted exercise straight back — "random idő után
+/// visszajön a törölt gyakorlat", where the random time was simply the next
+/// tap on the wrist (or a reconnect). The row's own plan is seeded from that
+/// same template when the mirror is first created, so nothing is lost by
+/// treating it as the newer answer from then on: an add and a removal are both
+/// edits it already carries.
+///
+/// An exercise whose sets survive the merge is the one exception — logged data
+/// outranks a plan edit, and a link-less set is invisible on the phone. In
+/// practice that only happens for an exercise the wrist has already logged
+/// into, which the watch keeps resending by design (49-doc §3.5: a logged
+/// set's `exerciseIndex` is permanent).
 ///
 /// Sets are matched on **whole seconds + exercise**, not on the exact
 /// timestamp: Drift stores a `DateTime` as unix *seconds*, so the millisecond
@@ -78,23 +96,26 @@ MergedWatchSessionContent mergeWatchSessionContent({
   }
   sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
 
-  final existingTargetSets = <String, int>{
-    for (final exercise in existingExercises)
+  final watchTargetSets = <String, int>{
+    for (final exercise in watchExercises)
       if (exercise.targetSets != null) exercise.exerciseClientId: exercise.targetSets!,
   };
   final exercises = [
-    for (final exercise in watchExercises)
+    for (final exercise in existingExercises)
       PlannedExerciseInput(
         exerciseClientId: exercise.exerciseClientId,
-        targetSets: existingTargetSets[exercise.exerciseClientId] ?? exercise.targetSets,
+        targetSets: exercise.targetSets ?? watchTargetSets[exercise.exerciseClientId],
       ),
   ];
-  final planned = {for (final exercise in watchExercises) exercise.exerciseClientId};
-  for (final exercise in existingExercises) {
-    if (planned.contains(exercise.exerciseClientId)) continue;
+  // Only a set that survived the merge above can re-add an exercise the stored
+  // plan doesn't list — never the watch's plan on its own, which would undo a
+  // removal made on the phone.
+  final planned = {for (final exercise in exercises) exercise.exerciseClientId};
+  for (final set in sets) {
+    if (!planned.add(set.exerciseClientId)) continue;
     exercises.add(PlannedExerciseInput(
-      exerciseClientId: exercise.exerciseClientId,
-      targetSets: exercise.targetSets,
+      exerciseClientId: set.exerciseClientId,
+      targetSets: watchTargetSets[set.exerciseClientId],
     ));
   }
 

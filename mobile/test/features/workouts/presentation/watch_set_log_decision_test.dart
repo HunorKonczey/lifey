@@ -347,6 +347,31 @@ void _prefillTests() {
       expect(watchCurrentBlock([bench], templateIds, 1), isNull);
     });
 
+    test('a clientId nyer az index felett (F6c)', () {
+      // Az óra a session listája szerint logol, ami a template-től eltérhet.
+      expect(
+        watchCurrentBlock([bench, squat], templateIds, 0, currentExerciseClientId: 'ex-squat'),
+        squat,
+      );
+    });
+
+    test('a telefonon hozzáadott gyakorlat csak clientId-vel oldható fel', () {
+      // Nincs pozíciója a tervben — pont ezért kellett a clientId.
+      final added = _block('ex-uj', doneRows: [false]);
+      expect(
+        watchCurrentBlock([bench, squat, added], templateIds, null,
+            currentExerciseClientId: 'ex-uj'),
+        added,
+      );
+    });
+
+    test('a session-ben nem szereplő clientId visszaesik az indexre', () {
+      expect(
+        watchCurrentBlock([bench, squat], templateIds, 1, currentExerciseClientId: 'ex-nincs'),
+        squat,
+      );
+    });
+
     test('a prefill az óra gyakorlatához tartozik, nem a befejezetthez', () {
       final benchDone = _blockWithRows('ex-bench', rows: [_row(weight: 80, reps: 5, done: true)]);
       final squatOpen = _blockWithRows('ex-squat', rows: [_row(weight: 100, reps: 6)]);
@@ -357,6 +382,59 @@ void _prefillTests() {
 
       expect(prefill!.weight, 100);
       expect(prefill.reps, 6);
+    });
+  });
+
+  group('watchSetPrefillForBlock — a kézzel választott gyakorlathoz kötve', () {
+    test('a kiválasztott blokk nyitott sorát nézi', () {
+      final block = _blockWithRows(
+        'a',
+        rows: [_row(weight: 50, reps: 8, done: true), _row(weight: 60, reps: 10)],
+      );
+
+      final prefill = watchSetPrefillForBlock(block);
+
+      expect(prefill!.weight, 60);
+      expect(prefill.reps, 10);
+    });
+
+    test('kész gyakorlatnál sem lép át másik blokkra — a saját utolsó szettjét adja', () {
+      // Ez a bejelentett hiba magja: az órán kézzel egy már kész gyakorlatot
+      // választva a telefon szabálya (b) a *következő* gyakorlat sorát adná
+      // vissza, tehát a stepper annak az értékeivel nyílna.
+      final doneBlock = _blockWithRows(
+        'kesz',
+        rows: [_row(weight: 80, reps: 5, done: true), _row(weight: 82.5, reps: 4, done: true)],
+      );
+      final nextBlock = _blockWithRows('kovetkezo', rows: [_row(weight: 100, reps: 12)]);
+      final blocks = [doneBlock, nextBlock];
+
+      // A telefon saját szabálya tényleg elmenne a következő gyakorlatra…
+      expect(watchSetPrefill(blocks, doneBlock)!.weight, 100);
+      // …a kézzel választott gyakorlathoz kötött prefill viszont nem.
+      final prefill = watchSetPrefillForBlock(doneBlock);
+      expect(prefill!.weight, 82.5);
+      expect(prefill.reps, 4);
+    });
+
+    test('kész gyakorlat + előzmény: az új sor pozíciójára néz', () {
+      final block = _blockWithRows(
+        'a',
+        rows: [_row(weight: 60, reps: 10, done: true)],
+        previousSets: const [
+          PreviousSetHint(weight: 60, reps: 10),
+          PreviousSetHint(weight: 65, reps: 8),
+        ],
+      );
+
+      final prefill = watchSetPrefillForBlock(block);
+
+      expect(prefill!.weight, 65, reason: 'a 2. szett az előző edzés 2. szettjéről induljon');
+      expect(prefill.reps, 8);
+    });
+
+    test('semmi támpont → null (az óra a saját defaultjáról indul)', () {
+      expect(watchSetPrefillForBlock(_blockWithRows('a', rows: [_row()])), isNull);
     });
   });
 }

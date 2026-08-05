@@ -606,6 +606,14 @@ class ExerciseService : Service() {
             put("startedAtEpochMs", startedAtEpochMs)
             put("exerciseIndex", metadata.standaloneExerciseIndex)
             metadata.standaloneTemplate?.let { put("template", it.toJson()) }
+            // The phone's live plan as it stood at this save (F6c) — restored
+            // with the session so `exerciseIndex` still means a position in
+            // the *same* list after a process death. Without it a recovered
+            // session would read a plan position as a template position and
+            // land on whatever exercise happened to sit there.
+            metadata.sessionPlanExercises?.let {
+                put("sessionPlan", StandalonePlanJson.exercisesToJson(it))
+            }
             put(
                 "sets",
                 JSONArray().apply {
@@ -616,6 +624,7 @@ class ExerciseService : Service() {
                                 put("reps", set.reps)
                                 putOpt("weight", set.weight)
                                 putOpt("exerciseIndex", set.exerciseIndex)
+                                putOpt("exerciseId", set.exerciseId)
                             },
                         )
                     }
@@ -673,6 +682,9 @@ class ExerciseService : Service() {
         val template = snapshot.optJSONObject("template")?.let { parseStandaloneTemplate(it.toString()) }
         val exerciseIndex = snapshot.optInt("exerciseIndex", 0)
         val sets = parseStandaloneSets(snapshot.optJSONArray("sets") ?: JSONArray())
+        val sessionPlan = snapshot.optJSONArray("sessionPlan")
+            ?.let { StandalonePlanJson.parseExercises(it) }
+            ?.ifEmpty { null }
 
         SessionStateHolder.onStandaloneRecovered(
             sessionClientId = sessionClientId,
@@ -680,6 +692,7 @@ class ExerciseService : Service() {
             template = template,
             exerciseIndex = exerciseIndex,
             sets = sets,
+            sessionPlan = sessionPlan,
         )
         // Live bridging picks back up from here too, same as a fresh start —
         // a phone that reconnects after this recovery still adopts the
@@ -698,6 +711,7 @@ class ExerciseService : Service() {
                 StandaloneSet(
                     loggedAtEpochMs = obj.getLong("loggedAtEpochMs"),
                     reps = obj.getInt("reps"),
+                    exerciseId = if (obj.has("exerciseId")) obj.getString("exerciseId") else null,
                     weight = if (obj.has("weight")) obj.getDouble("weight") else null,
                     exerciseIndex = if (obj.has("exerciseIndex")) obj.getInt("exerciseIndex") else null,
                 )
@@ -716,75 +730,11 @@ class ExerciseService : Service() {
      * Malformed JSON falls back to `null` — a Quick-strength-equivalent
      * session, not a crash.
      */
-    private fun parseStandaloneTemplate(json: String): StandaloneTemplate? {
-        return try {
-            val obj = JSONObject(json)
-            val exercisesArray = obj.optJSONArray("exercises") ?: JSONArray()
-            StandaloneTemplate(
-                templateId = obj.getString("templateId"),
-                title = obj.getString("title"),
-                exercises = (0 until exercisesArray.length()).map { i ->
-                    val exercise = exercisesArray.getJSONObject(i)
-                    val previousArray = exercise.optJSONArray("previousSets") ?: JSONArray()
-                    StandaloneTemplateExercise(
-                        exerciseId = exercise.getString("exerciseId"),
-                        name = exercise.getString("name"),
-                        restSeconds = exercise.getInt("restSeconds"),
-                        targetSets = if (exercise.has("targetSets")) exercise.getInt("targetSets") else null,
-                        previousSets = (0 until previousArray.length()).map { j ->
-                            val previous = previousArray.getJSONObject(j)
-                            StandalonePreviousSet(
-                                weight = previous.getDouble("weight"),
-                                reps = previous.getInt("reps"),
-                            )
-                        },
-                    )
-                },
-            )
-        } catch (e: Exception) {
-            Log.w(TAG, "parseStandaloneTemplate failed to parse payload", e)
-            null
-        }
-    }
+    private fun parseStandaloneTemplate(json: String): StandaloneTemplate? =
+        StandalonePlanJson.parseTemplate(json)
 
-    /** The recovery-snapshot counterpart of [parseStandaloneTemplate] —
-     * round-trips a [StandaloneTemplate] back into the same JSON shape it
-     * was decoded from. */
-    private fun StandaloneTemplate.toJson(): JSONObject = JSONObject().apply {
-        put("templateId", templateId)
-        put("title", title)
-        put(
-            "exercises",
-            JSONArray().apply {
-                exercises.forEach { exercise ->
-                    put(
-                        JSONObject().apply {
-                            put("exerciseId", exercise.exerciseId)
-                            put("name", exercise.name)
-                            put("restSeconds", exercise.restSeconds)
-                            putOpt("targetSets", exercise.targetSets)
-                            // Round-tripped too, or a session recovered after
-                            // process death would lose its prefill and drop
-                            // back to the bare default mid-workout.
-                            put(
-                                "previousSets",
-                                JSONArray().apply {
-                                    exercise.previousSets.forEach { previous ->
-                                        put(
-                                            JSONObject().apply {
-                                                put("weight", previous.weight)
-                                                put("reps", previous.reps)
-                                            },
-                                        )
-                                    }
-                                },
-                            )
-                        },
-                    )
-                }
-            },
-        )
-    }
+    /** The recovery-snapshot counterpart of [parseStandaloneTemplate]. */
+    private fun StandaloneTemplate.toJson(): JSONObject = StandalonePlanJson.templateToJson(this)
 
     companion object {
         private const val TAG = "LifeyExerciseService"

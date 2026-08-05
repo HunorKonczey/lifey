@@ -529,3 +529,14 @@ S1 (kulcsok, közös)
 - ✅ `docs/watch/40-watch-app-plan.md` állapottáblázatának F5b-sora „✅ Kész”-re mindkét platformon.
 - ✅ **Menet közben javított F6a-hiba** (44-doc §11/8): a log-korong standalone módban a telefon elérhetőségére volt kapuzva mindkét platformon, ami az F6a lokális logolását tette volna használhatatlanná telefon nélkül. Bevezetve egy `requiresPhone` (= `!isStandalone`) feltétel; a telefon-mesterelt út viselkedése változatlan.
 - Ha az F6b-t elkezdjük: a stepper-komponens átvétele a standalone logba (D-F5b.8, 44-doc §13/T5).
+
+---
+
+## Utólagos kiegészítés: a prefill a **kiválasztott** gyakorlathoz tartozik
+
+A D-F5b.2 prefill („a cél-sor értéke, különben az előző edzés, különben az utolsó kész sor") változatlan — de az, hogy **melyik gyakorlat** cél-soráról van szó, két helyen elcsúszhatott a felhasználó által látott/kiválasztott gyakorlattól:
+
+- watch-mesterelt sessionben a telefon `selectWatchSetLogTarget` (b) szabálya elhagyta az órán kézzel kiválasztott (már kész) gyakorlatot, és a következő értékeit tolta ki;
+- telefon-mesterelt sessionben a kijelzett gyakorlat („az utoljára logolt szetté") lemaradt a valódi cél-sortól, tehát az adjust „a következő" értékeivel nyílt.
+
+A részletes leírás és a javítás mindkét platformon: [49-watch-f6b-template-sync-plan.md](49-watch-f6b-template-sync-plan.md) → „Utólagos kiegészítés: az adjust és a »+1« mindig a **kiválasztott** gyakorlathoz tartozzon".

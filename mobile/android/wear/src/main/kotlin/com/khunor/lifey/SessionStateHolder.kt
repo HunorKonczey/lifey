@@ -40,6 +40,14 @@ data class StandaloneSet(
     val reps: Int,
     val weight: Double? = null,
     val exerciseIndex: Int? = null,
+    /** The exercise's clientId, as the phone sent it in the session plan or
+     * the synced template (docs/watch/50-watch-f6c-session-plan-sync-plan.md)
+     * — the identity this set is attributed by, and what makes the exercise
+     * list free to change mid-session: a position means whatever the current
+     * list says, an id means the same exercise forever. Null for a set logged
+     * by a pre-F6c build or outside any plan; [exerciseIndex] stays alongside
+     * as the fallback for exactly those. Mirrors iOS's `StandaloneSet`. */
+    val exerciseId: String? = null,
 )
 
 /** One exercise of a template as the watch received it (docs/watch/
@@ -52,6 +60,12 @@ data class StandaloneTemplateExercise(
     val name: String,
     val restSeconds: Int,
     val targetSets: Int? = null,
+    /** How many sets the **session** already has for this exercise, counting
+     * both devices' — only ever present when this entry came from the phone's
+     * live session plan (F6c); a synced template has no such thing. The watch
+     * takes the larger of this and its own count, exactly the reconciliation
+     * [SessionMetadata.phoneSetsDonePerExercise] did before. */
+    val setsDone: Int? = null,
     /**
      * What was logged for this exercise the last time it was trained,
      * heaviest first, as the phone resolved it (`previousSetsFor` in
@@ -260,12 +274,35 @@ data class SessionMetadata(
      * landing mid-session must not be able to change a *running* session's
      * gyakorlatnév/restSeconds out from under it. */
     val standaloneTemplate: StandaloneTemplate? = null,
+    /** The phone's live session plan (docs/watch/50-watch-f6c-session-plan-sync-plan.md),
+     * once it has pushed one — the session's *own* exercise list, which wins
+     * over [standaloneTemplate]'s snapshot from then on. That's the only list
+     * that can express an exercise added or removed on the phone mid-workout.
+     *
+     * Null until (and unless) one arrives: an older phone build, a phone out
+     * of range, or a session it isn't mirroring all leave the watch on its
+     * cached template, which is exactly the pre-F6c behaviour. */
+    val sessionPlanExercises: List<StandaloneTemplateExercise>? = null,
     /** Which of [standaloneTemplate]'s exercises new sets log against —
      * always 0 and unused outside a template session. Changed only by
      * [SessionStateHolder.onStandaloneExerciseSelected] (§3.5's
      * gyakorlat-lista, wired in T7); never by anything synced from the
      * phone. */
     val standaloneExerciseIndex: Int = 0,
+    /** Set by [SessionStateHolder.onStandaloneExerciseSelected], cleared by
+     * the next locally logged set — "the user picked this exercise by hand,
+     * don't move off it".
+     *
+     * Only the *phone-count-driven* [advancedStandaloneExerciseIndex] call
+     * site ([SessionStateHolder.onStateSynced]) honours it, and it exists for
+     * one case: picking an exercise that already has all its planned sets, to
+     * add one more. That exercise is complete by definition, so the very next
+     * state sync would otherwise bounce the selection straight on to the first
+     * unfinished one — leaving the user unable to select it at all. A set
+     * logged into it clears the flag, so the normal auto-advance takes over
+     * again from there. In-memory only: after a process death the recovered
+     * session simply auto-advances as usual. */
+    val standaloneExerciseManuallySelected: Boolean = false,
     /** What the phone reports for the exercise at [phoneSetsExerciseIndex]:
      * how many sets its copy of this session has for it, and how many its
      * plan holds. Both null until a state sync names an exercise this watch
@@ -285,6 +322,11 @@ data class SessionMetadata(
      * to the current one. Null whenever the phone had nothing matching to
      * say. */
     val phoneSetsExerciseIndex: Int? = null,
+    /** Which exercise [phoneSetsDone]/[phoneSetsTotal] are about, by clientId
+     * (F6c) — preferred over [phoneSetsExerciseIndex], which is a position in
+     * the *template* and therefore meaningless once the phone's session plan
+     * is what this watch lists. */
+    val phoneSetsExerciseId: String? = null,
     /** The phone's set count for **every** exercise of the plan, in this
      * watch's own index order (see `WorkoutSessionState.setsDonePerExercise`).
      *
@@ -294,6 +336,18 @@ data class SessionMetadata(
      * watch's own set list every exercise finished on the phone still looks
      * unfinished — so it kept hopping between already-finished ones. */
     val phoneSetsDonePerExercise: List<Int>? = null,
+    /** Plan positions the user removed from this session on the phone (see
+     * `WorkoutSessionState.removedExerciseIndexes`) — hidden from the exercise
+     * list and never advanced into. Empty for every session the phone hasn't
+     * said otherwise about, including an older phone build's.
+     *
+     * The watch's cached template stays the index space, deliberately: every
+     * set already logged carries a position in it, so the list can only ever
+     * *hide* entries here, never renumber them. An exercise added to the
+     * session on the phone has no position at all and so can't appear — that
+     * needs the session's own plan as the index space (docs/watch/
+     * 50-watch-f6c-session-plan-sync-plan.md). */
+    val removedExerciseIndexes: Set<Int> = emptySet(),
 ) {
     /** [sessionClientId] doubles as the standalone session's own id during
      * standalone mode — reused rather than a separate `standaloneSessionId`
@@ -305,16 +359,40 @@ data class SessionMetadata(
      * strength session — the safe-indexed lookup, so callers don't repeat
      * the bounds check. Mirrors iOS's `standaloneCurrentExercise`. */
     val standaloneCurrentExercise: StandaloneTemplateExercise?
-        get() = standaloneTemplate?.exercises?.getOrNull(standaloneExerciseIndex)
+        get() = activePlanExercises.getOrNull(standaloneExerciseIndex)
+
+    /** The exercise list this session actually works against: the phone's live
+     * plan when there is one, the cached template otherwise (F6c). Every
+     * "which exercise" decision reads this rather than [standaloneTemplate]
+     * directly, so both sources behave identically everywhere downstream.
+     * Mirrors iOS's `activePlanExercises`. */
+    val activePlanExercises: List<StandaloneTemplateExercise>
+        get() = sessionPlanExercises ?: standaloneTemplate?.exercises ?: emptyList()
+
+    /** The clientId of the exercise the next set counts against — what the
+     * watch now sends with every logged set and adoption snapshot instead of
+     * relying on its position (F6c). */
+    val standaloneCurrentExerciseId: String?
+        get() = standaloneCurrentExercise?.exerciseId
 
     /** [standaloneSets] narrowed to the current exercise. Outside a template
      * session (Quick strength) every set is one pool, matching F6a exactly.
      * Mirrors iOS's `standaloneSetsForCurrentExercise`. */
     val standaloneSetsForCurrentExercise: List<StandaloneSet>
-        get() = if (standaloneTemplate == null) {
+        get() = if (activePlanExercises.isEmpty()) {
             standaloneSets
         } else {
-            standaloneSets.filter { it.exerciseIndex == standaloneExerciseIndex }
+            val currentId = standaloneCurrentExerciseId
+            // Id-first, position as the fallback: a set logged before the
+            // phone's plan arrived (or by a pre-F6c build) carries only its
+            // position.
+            standaloneSets.filter { set ->
+                if (set.exerciseId != null && currentId != null) {
+                    set.exerciseId == currentId
+                } else {
+                    set.exerciseIndex == standaloneExerciseIndex
+                }
+            }
         }
 
     /**
@@ -367,8 +445,21 @@ data class SessionMetadata(
      * target-less exercise forever.
      */
     private fun isStandaloneExerciseComplete(index: Int): Boolean {
-        val exercise = standaloneTemplate?.exercises?.getOrNull(index) ?: return false
+        val exercise = activePlanExercises.getOrNull(index) ?: return false
+        // Removed from the session on the phone — not somewhere to land, so it
+        // counts as finished for every "where do we go next" decision.
+        if (isStandaloneExerciseRemoved(index)) return true
         return standaloneSetsDoneAt(index) >= (exercise.targetSets ?: 1)
+    }
+
+    /** Whether the phone has removed the plan's [index]-th exercise from this
+     * session — see [removedExerciseIndexes]. */
+    fun isStandaloneExerciseRemoved(index: Int): Boolean {
+        // Meaningless once the phone's own plan is what we're listing: those
+        // positions are the *template's*, and a plan that has an exercise at
+        // all has it because the session still contains it.
+        if (sessionPlanExercises != null) return false
+        return index in removedExerciseIndexes
     }
 
     /**
@@ -383,12 +474,33 @@ data class SessionMetadata(
      * for. Mirrors iOS's `standaloneSetsDone(at:)`.
      */
     fun standaloneSetsDoneAt(index: Int): Int {
-        var best = standaloneSets.count { it.exerciseIndex == index }
-        phoneSetsDonePerExercise?.getOrNull(index)?.let { best = maxOf(best, it) }
+        val exercise = activePlanExercises.getOrNull(index)
+        val exerciseId = exercise?.exerciseId
+        // Id-first, position as the fallback — see
+        // [standaloneSetsForCurrentExercise].
+        var best = standaloneSets.count { set ->
+            if (set.exerciseId != null && exerciseId != null) {
+                set.exerciseId == exerciseId
+            } else {
+                set.exerciseIndex == index
+            }
+        }
+        // The phone's own count for this exercise. From its session plan it
+        // comes keyed by id; the positional list is the template-space
+        // fallback and must not be read once the plan is what we're listing.
+        exercise?.setsDone?.let { best = maxOf(best, it) }
+        if (sessionPlanExercises == null) {
+            phoneSetsDonePerExercise?.getOrNull(index)?.let { best = maxOf(best, it) }
+        }
         // The single-exercise value can be a sync fresher than the array (it is
         // recomputed for the exercise this watch named), so it still gets a
         // look in.
-        if (index == phoneSetsExerciseIndex && phoneSetsDone != null) {
+        val matchesPhoneExercise = if (phoneSetsExerciseId != null && exerciseId != null) {
+            phoneSetsExerciseId == exerciseId
+        } else {
+            phoneSetsExerciseId == null && index == phoneSetsExerciseIndex
+        }
+        if (matchesPhoneExercise && phoneSetsDone != null) {
             best = maxOf(best, phoneSetsDone)
         }
         return best
@@ -414,11 +526,25 @@ data class SessionMetadata(
      * logging into the current one, matching `selectWatchSetLogTarget`'s own
      * rule (c).
      */
+    /** The first exercise of [activePlanExercises] that isn't finished yet, or
+     * 0 when they all are — where a session lands when the exercise it was on
+     * disappears from the plan. */
+    val firstUnfinishedStandaloneExerciseIndex: Int
+        get() = activePlanExercises.indices.firstOrNull { !isStandaloneExerciseComplete(it) } ?: 0
+
     val advancedStandaloneExerciseIndex: Int
         get() {
-            val exercises = standaloneTemplate?.exercises ?: return standaloneExerciseIndex
-            if (standaloneCurrentExercise?.targetSets == null) return standaloneExerciseIndex
-            if (!isStandaloneExerciseComplete(standaloneExerciseIndex)) return standaloneExerciseIndex
+            val exercises = activePlanExercises.ifEmpty { return standaloneExerciseIndex }
+            // The `targetSets` requirement is what keeps a plan-less exercise
+            // from being declared finished after one set — but an exercise
+            // *removed* on the phone has to be left regardless, target or no
+            // target.
+            if (!isStandaloneExerciseRemoved(standaloneExerciseIndex)) {
+                if (standaloneCurrentExercise?.targetSets == null) return standaloneExerciseIndex
+                if (!isStandaloneExerciseComplete(standaloneExerciseIndex)) {
+                    return standaloneExerciseIndex
+                }
+            }
             return exercises.indices.firstOrNull { !isStandaloneExerciseComplete(it) }
                 ?: standaloneExerciseIndex
         }
@@ -526,6 +652,9 @@ object SessionStateHolder {
         nextSetWeight: Double?,
         setsDoneExerciseIndex: Int?,
         setsDonePerExercise: List<Int>?,
+        removedExerciseIndexes: List<Int>? = null,
+        setsDoneExerciseId: String? = null,
+        sessionPlan: List<StandaloneTemplateExercise>? = null,
     ) {
         if (_metadata.value.isStandalone) {
             // A *different* session's state can't touch the watch's own
@@ -552,27 +681,74 @@ object SessionStateHolder {
             // and the rest timer, which describe the session the watch itself
             // drives and stay watch-owned. [standaloneSetsDoneAt] is what
             // reconciles the phone's number with this watch's own.
-            val matchesCurrent =
+            // F6c: the phone's own exercise list for this session, which
+            // replaces the cached template as what this watch lists and logs
+            // against. Applied first, so everything below already judges
+            // against the new list.
+            applySessionPlan(sessionPlan)
+            // Id-first (F6c): a position only means the same thing on both
+            // sides while the list can't change, which is exactly what the
+            // session plan undoes. Both sides carry the id whenever they can —
+            // a template's `exerciseId` *is* the exercise's clientId — so this
+            // is the normal route, and the index comparison is the pre-F6c
+            // fallback.
+            val currentExerciseId = _metadata.value.standaloneCurrentExerciseId
+            val matchesCurrent = if (setsDoneExerciseId != null && currentExerciseId != null) {
+                setsDoneExerciseId == currentExerciseId
+            } else {
                 setsDoneExerciseIndex != null &&
                     setsDoneExerciseIndex == _metadata.value.standaloneExerciseIndex
+            }
+            // The prefill is only taken when the phone is answering about the
+            // exercise this watch is actually on. [setsDoneExerciseIndex] is
+            // the phone echoing back the index it computed this whole payload
+            // for (null in a template-less Quick strength session, where there
+            // is no index to disagree about) — a mismatch means the payload was
+            // built before the phone learned about a hand-picked exercise, and
+            // applying it would open the stepper on another exercise's numbers.
+            // Cleared rather than kept in that case: a stale value is about the
+            // wrong exercise too, and [standalonePrefill]'s local fallbacks
+            // answer for the right one.
+            val prefillDescribesCurrentExercise =
+                matchesCurrent ||
+                    (setsDoneExerciseIndex == null && _metadata.value.standaloneTemplate == null)
             _metadata.update { current ->
                 current.copy(
-                    nextSetReps = nextSetReps,
-                    nextSetWeight = nextSetWeight,
+                    nextSetReps = if (prefillDescribesCurrentExercise) nextSetReps else null,
+                    nextSetWeight = if (prefillDescribesCurrentExercise) nextSetWeight else null,
                     // Index-keyed, so unlike the three below it needs no
                     // agreement about which exercise is current.
                     phoneSetsDonePerExercise = setsDonePerExercise,
                     phoneSetsExerciseIndex = if (matchesCurrent) setsDoneExerciseIndex else null,
+                    phoneSetsExerciseId = if (matchesCurrent) setsDoneExerciseId else null,
                     phoneSetsDone = if (matchesCurrent) setsDone else null,
                     phoneSetsTotal = if (matchesCurrent) setsTotal else null,
+                    // Applied in the same copy the advance below reads, so one
+                    // payload can both remove an exercise and move off it.
+                    removedExerciseIndexes = removedExerciseIndexes?.toSet() ?: emptySet(),
                 )
                     // A set logged on the phone can be the one that completes
                     // this exercise, and until now only a tap on the wrist ever
                     // re-evaluated that ([onStandaloneSetLogged]) — so the watch
                     // sat on a finished exercise offering to add yet another set
                     // to it. Read off the *updated* copy, so the phone's count
-                    // counts towards the target it may have completed.
-                    .let { it.copy(standaloneExerciseIndex = it.advancedStandaloneExerciseIndex) }
+                    // counts towards the target it may have completed. Skipped
+                    // right after a hand-picked exercise (see
+                    // [SessionMetadata.standaloneExerciseManuallySelected]),
+                    // which this would otherwise undo before the user got to
+                    // log into it.
+                    // A hand-picked exercise that has since been *deleted* on
+                    // the phone is not somewhere to keep the user, so the
+                    // stickiness doesn't apply to that case.
+                    .let {
+                        if (it.standaloneExerciseManuallySelected &&
+                            !it.isStandaloneExerciseRemoved(it.standaloneExerciseIndex)
+                        ) {
+                            it
+                        } else {
+                            it.withAdvancedExercise()
+                        }
+                    }
             }
             return
         }
@@ -644,6 +820,7 @@ object SessionStateHolder {
         template: StandaloneTemplate?,
         exerciseIndex: Int,
         sets: List<StandaloneSet>,
+        sessionPlan: List<StandaloneTemplateExercise>? = null,
     ) {
         if (_phase.value != SessionPhase.IDLE) return
         _phase.value = SessionPhase.ACTIVE
@@ -654,9 +831,65 @@ object SessionStateHolder {
                 standaloneTemplate = template,
                 standaloneExerciseIndex = exerciseIndex,
                 standaloneSets = sets,
+                sessionPlanExercises = sessionPlan,
             )
         }
         _liveMetrics.update { it.copy(startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs) }
+    }
+
+    /**
+     * Swaps in a new session plan, keeping the user on the *same exercise* —
+     * by clientId, not by position (D-F6c.2): the phone can add, remove and
+     * therefore renumber entries, so the index this watch holds means nothing
+     * across the change. Already-logged sets need no such fix-up; they carry
+     * their own [StandaloneSet.exerciseId].
+     *
+     * A no-op when the plan hasn't actually changed, so the ordinary state
+     * sync (which carries it every time) costs nothing. Mirrors iOS's
+     * `applySessionPlan`.
+     */
+    private fun applySessionPlan(plan: List<StandaloneTemplateExercise>?) {
+        if (plan == null || plan == _metadata.value.sessionPlanExercises) return
+        _metadata.update { current ->
+            val previousExerciseId = current.standaloneCurrentExerciseId
+            val updated = current.copy(sessionPlanExercises = plan)
+            val index = plan.indexOfFirst { it.exerciseId == previousExerciseId }
+            if (previousExerciseId != null && index >= 0) {
+                updated.copy(standaloneExerciseIndex = index)
+            } else {
+                // The exercise this watch was on is gone from the session
+                // (deleted on the phone), or there was none yet: land on the
+                // first one still unfinished, the same destination every other
+                // advance picks — and drop the phone's prefill with it, since
+                // it described the exercise we just left.
+                updated.copy(
+                    standaloneExerciseIndex = updated.firstUnfinishedStandaloneExerciseIndex,
+                    standaloneExerciseManuallySelected = false,
+                    nextSetReps = null,
+                    nextSetWeight = null,
+                )
+            }
+        }
+    }
+
+    /**
+     * [SessionMetadata.advancedStandaloneExerciseIndex] applied — and, when it
+     * actually moves the session on, the phone's pushed prefill dropped with
+     * it: that value was computed for the exercise just left behind, so
+     * keeping it would open the next exercise's first set on the finished
+     * one's numbers. [SessionMetadata.standalonePrefill]'s local fallbacks
+     * answer for the new exercise until the phone's fresh value lands (which
+     * `ExerciseService` asks for by re-sending the adoption snapshot whenever
+     * the index changes).
+     */
+    private fun SessionMetadata.withAdvancedExercise(): SessionMetadata {
+        val advanced = advancedStandaloneExerciseIndex
+        if (advanced == standaloneExerciseIndex) return this
+        return copy(
+            standaloneExerciseIndex = advanced,
+            nextSetReps = null,
+            nextSetWeight = null,
+        )
     }
 
     /**
@@ -665,15 +898,36 @@ object SessionStateHolder {
      * exercise the *next* logged set counts against. Never closes a set,
      * starts/skips a rest, or touches a set already logged — those keep the
      * `exerciseIndex` they were logged with, permanently (§3.5). A no-op
-     * outside a template session or for an index the snapshot doesn't have —
-     * nothing to switch to, and the UI that calls this (T7) only ever offers
-     * indices that exist.
+     * outside a template session, for an index the snapshot doesn't have
+     * (nothing to switch to, and the UI that calls this only ever offers
+     * indices that exist), and for the exercise already selected.
      */
     fun onStandaloneExerciseSelected(index: Int) {
         _metadata.update { current ->
-            val template = current.standaloneTemplate
-            if (template != null && index in template.exercises.indices) {
-                current.copy(standaloneExerciseIndex = index)
+            if (index in current.activePlanExercises.indices &&
+                index != current.standaloneExerciseIndex &&
+                !current.isStandaloneExerciseRemoved(index)
+            ) {
+                current.copy(
+                    standaloneExerciseIndex = index,
+                    standaloneExerciseManuallySelected = true,
+                    // The phone's pushed prefill describes the exercise the
+                    // *phone* thinks is current, which this tap just made
+                    // stale — and [standalonePrefill] takes it ahead of
+                    // everything else (priority 0). Dropping it here is what
+                    // makes the "+1" tap and the adjust stepper follow the
+                    // exercise the user just picked instead of opening on the
+                    // previous one's numbers; the local fallbacks (this
+                    // exercise's own synced `previousSets`, then its last
+                    // logged set) cover the gap until the phone answers with a
+                    // fresh value — and cover it entirely when the phone isn't
+                    // reachable at all. `ExerciseService` is what tells the
+                    // phone about the new index (it observes
+                    // [standaloneExerciseIndex] and re-sends the adoption
+                    // snapshot), so a fresh prefill is already on its way.
+                    nextSetReps = null,
+                    nextSetWeight = null,
+                )
             } else {
                 current
             }
@@ -696,7 +950,6 @@ object SessionStateHolder {
     fun onStandaloneSetLogged(reps: Int? = null, weight: Double? = null) {
         val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
         _metadata.update { current ->
-            val template = current.standaloneTemplate
             val restSeconds = current.standaloneCurrentExercise?.restSeconds ?: STANDALONE_REST_SECONDS
             // A plain tap takes whatever `standalonePrefill` resolved (last
             // workout's matching set, or this session's working weight)
@@ -710,16 +963,24 @@ object SessionStateHolder {
                         loggedAtEpochMs = System.currentTimeMillis(),
                         reps = reps ?: prefill.reps,
                         weight = weight ?: prefill.weight,
-                        // null outside a template session, matching F6a's
-                        // original behavior exactly.
-                        exerciseIndex = template?.let { current.standaloneExerciseIndex },
+                        // null outside a plan, matching F6a's original
+                        // behavior exactly. The id is what the phone actually
+                        // attributes by (F6c); the index rides along for a
+                        // phone build that predates it.
+                        exerciseIndex = current.activePlanExercises
+                            .takeIf { it.isNotEmpty() }?.let { current.standaloneExerciseIndex },
+                        exerciseId = current.standaloneCurrentExerciseId,
                     ),
                 restDeadlineElapsedRealtimeMs = nowElapsedRealtimeMs + restSeconds * 1_000L,
                 restTotalSeconds = restSeconds,
+                // The hand-picked exercise has now been logged into, which is
+                // all its stickiness was ever for — from here the normal
+                // auto-advance below decides.
+                standaloneExerciseManuallySelected = false,
             )
                 // Read off the *updated* copy, so the set just appended counts
                 // towards the target it may have completed.
-                .let { it.copy(standaloneExerciseIndex = it.advancedStandaloneExerciseIndex) }
+                .withAdvancedExercise()
         }
         // Unlike the phone-mastered path there's no ack to wait for, but the
         // state still needs to move so ExerciseService's

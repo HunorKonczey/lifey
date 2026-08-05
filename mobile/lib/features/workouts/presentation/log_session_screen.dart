@@ -30,6 +30,7 @@ import '../domain/workout_template.dart';
 import 'open_workout_screens.dart';
 import 'session_row_plan.dart';
 import 'watch_mirror_signature.dart';
+import 'watch_session_plan.dart';
 import 'watch_set_log_decision.dart';
 import 'widgets/add_exercise_to_session_sheet.dart';
 import 'widgets/exercise_session_card.dart';
@@ -174,6 +175,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   /// [_watchCurrentBlock] rather than stored as a clientId, so an adoption
   /// that arrives before [_loadTemplatePlan] finishes isn't simply dropped.
   int? _watchCurrentExerciseIndex;
+
+  /// The same answer by clientId, when the watch is new enough to send one
+  /// (F6c — [WatchStandaloneAdoption.currentExerciseId]). Preferred over the
+  /// index: it needs no template to resolve, and it's the only form that can
+  /// name an exercise *added to the session on the phone*, which has no
+  /// position in the plan the index space is built from.
+  String? _watchCurrentExerciseClientId;
 
   bool _saving = false;
   // Set when an edit arrives while a save is already in flight, so that
@@ -617,15 +625,24 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       case WatchStandaloneAdoption():
         if (event.standaloneSessionId != _sessionClientId) return;
         final index = event.currentExerciseIndex;
-        final movedOn = index != null && index != _watchCurrentExerciseIndex;
+        final exerciseClientId = event.currentExerciseId;
+        final movedOn = (index != null && index != _watchCurrentExerciseIndex) ||
+            (exerciseClientId != null && exerciseClientId != _watchCurrentExerciseClientId);
         if (index != null) _watchCurrentExerciseIndex = index;
+        if (exerciseClientId != null) _watchCurrentExerciseClientId = exerciseClientId;
         _startWatchMirror();
         // A snapshot can report a new current exercise without carrying a new
-        // set (the watch re-sends on reconnect too), and the mirror
-        // deliberately skips those — but the prefill this pushes back is
-        // per-exercise, so it would otherwise stay pointed at the previous
-        // one until the next set landed.
-        if (movedOn && _finishedAt == null && _sessionNotifierStarted) {
+        // set — the watch sends one the moment the user picks an exercise from
+        // the gyakorlat-lista, and re-sends on reconnect — and the mirror
+        // deliberately skips those. The prefill this pushes back is
+        // per-exercise, though, so without this it would stay pointed at the
+        // previous exercise until the next set landed, and the wrist would
+        // open its stepper on that one's numbers.
+        //
+        // Deliberately **not** gated on `_sessionNotifierStarted`: this push
+        // is the watch's, and a Live Activity that was refused or switched off
+        // must not take it down with it (see [_updateSessionNotifier]).
+        if (movedOn && _finishedAt == null) {
           unawaited(_updateSessionNotifier());
         }
       case WatchStandaloneSession():
@@ -1437,22 +1454,45 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   /// an exercise has all its planned sets, so at that moment the phone was
   /// still describing the finished one.
   ExerciseBlock? _watchCurrentBlock() =>
-      watchCurrentBlock(_blocks, _templateExerciseIds, _watchCurrentExerciseIndex);
+      watchCurrentBlock(
+        _blocks,
+        _templateExerciseIds,
+        _watchCurrentExerciseIndex,
+        currentExerciseClientId: _watchCurrentExerciseClientId,
+      );
 
   WorkoutSessionState _sessionState(AppLocalizations l10n) {
-    final current = _currentExerciseBlock();
-    // Only tag the counts with the watch's exercise index when `current` is
-    // actually the block that index resolved to — otherwise they describe the
-    // phone's own choice of current exercise, and the watch must not read them
-    // as being about its own (see [WorkoutSessionState.setsDoneExerciseIndex]).
+    // Everything published here — the exercise name, its set counts and the
+    // adjust stepper's prefill — describes **one** exercise: the one the next
+    // set will count against. Which device gets to answer that differs:
+    //
+    // - watch-mastered: the watch does, and its answer is final (`watchCurrent`
+    //   is exactly what it reported). Its pick holds even when that exercise
+    //   already has all its planned sets — the user selected it from the wrist
+    //   to add one more, so the prefill is pinned to that block rather than run
+    //   through [selectWatchSetLogTarget], whose rule (b) would leave it for
+    //   the first exercise with a row still open ("the adjust stepper shows the
+    //   *next* exercise's values" report);
+    // - phone-mastered: the phone's own row-selection rule does, and that is
+    //   [selectWatchSetLogTarget]'s target — not [_currentExerciseBlock], which
+    //   answers "the exercise of the most recently logged set" and therefore
+    //   stays on an exercise whose sets are all done. The watch would then show
+    //   "Bench · 3/3 sets" (and the Live Activity the same) while its next tap
+    //   already logged into the next exercise, with that exercise's prefill.
     final watchCurrent = _watchCurrentBlock();
+    final ExerciseBlock? current;
+    final WatchSetPrefill? prefill;
+    if (watchCurrent != null) {
+      current = watchCurrent;
+      prefill = watchSetPrefillForBlock(watchCurrent);
+    } else {
+      final phoneCurrent = _currentExerciseBlock();
+      final target = selectWatchSetLogTarget(_blocks, phoneCurrent);
+      current = target == null ? phoneCurrent : _blocks[target.blockIndex];
+      prefill = watchSetPrefill(_blocks, phoneCurrent);
+    }
     final totalSetsDone = _blocks.fold<int>(
         0, (sum, b) => sum + b.rows.where((r) => r.isDone).length);
-    // What a watch "+1 set" tap would start its adjust stepper from — resolved
-    // against the same row the tap would log into (docs/watch/
-    // 48-watch-f5b-set-adjust-plan.md D-F5b.2). Recomputed on every state sync,
-    // so the watch is at most one sync behind.
-    final prefill = watchSetPrefill(_blocks, current);
     return WorkoutSessionState(
       exerciseName: (current != null && current.exerciseName.isNotEmpty)
           ? current.exerciseName
@@ -1472,11 +1512,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       restRemainingSeconds: _currentRestRemainingSeconds(),
       nextSetWeight: prefill?.weight,
       nextSetReps: prefill?.reps,
-      setsDoneExerciseIndex:
-          (watchCurrent != null && identical(watchCurrent, current))
-              ? _watchCurrentExerciseIndex
-              : null,
+      // Tagged with the watch's own exercise index only when the counts above
+      // describe the exercise *it* named — never when they describe the phone's
+      // own choice of current exercise (see
+      // [WorkoutSessionState.setsDoneExerciseIndex]).
+      setsDoneExerciseIndex: watchCurrent != null ? _watchCurrentExerciseIndex : null,
+      setsDoneExerciseId: watchCurrent?.exerciseClientId,
       setsDonePerExercise: _watchSetsDonePerExercise(),
+      removedExerciseIndexes: _watchRemovedExerciseIndexes(),
+      sessionPlan: _watchSessionPlan(),
     );
   }
 
@@ -1501,6 +1545,41 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       for (final exerciseClientId in _templateExerciseIds)
         doneByExercise[exerciseClientId] ?? 0,
     ];
+  }
+
+  /// The plan positions this session no longer contains, for the watch's
+  /// exercise list — see [WorkoutSessionState.removedExerciseIndexes].
+  ///
+  /// Same gate and same index space as [_watchSetsDonePerExercise]: an
+  /// exercise the plan lists but this session has no block for was removed on
+  /// this screen (the mirror's blocks are rebuilt from the session row, which
+  /// the removal already rewrote). Null rather than an empty list in the
+  /// ordinary "nothing removed" case, so the key doesn't travel at all.
+  List<int>? _watchRemovedExerciseIndexes() {
+    if (!_watchMastered || _templateExerciseIds.isEmpty) return null;
+    final present = {for (final block in _blocks) block.exerciseClientId};
+    final removed = [
+      for (var i = 0; i < _templateExerciseIds.length; i++)
+        if (!present.contains(_templateExerciseIds[i])) i,
+    ];
+    return removed.isEmpty ? null : removed;
+  }
+
+  /// The session's own exercise list for the watch (F6c) — see
+  /// [WorkoutSessionState.sessionPlan].
+  ///
+  /// Only for a watch-mastered session: that's the only one with an exercise
+  /// list on the wrist. Unlike [_watchSetsDonePerExercise] this needs no
+  /// template — it *is* the answer the template can't give, and it stays
+  /// correct for a Quick strength session that has since gained exercises on
+  /// the phone.
+  String? _watchSessionPlan() {
+    if (!_watchMastered) return null;
+    final settings = _currentRestSettings();
+    return buildWatchSessionPlanJson(
+      blocks: _blocks,
+      restSecondsFor: (block) => _currentEffectiveRestSeconds(block, settings),
+    );
   }
 
   String _sessionTitle(AppLocalizations l10n) =>
