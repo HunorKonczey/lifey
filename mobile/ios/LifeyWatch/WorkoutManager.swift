@@ -294,11 +294,78 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// to change what a *running* session's gyakorlatnév/restSeconds are,
   /// which a cache-lookup-by-id would risk.
   @Published private(set) var standaloneTemplate: CachedTemplate?
+  /// The phone's live session plan (docs/watch/50-watch-f6c-session-plan-sync-plan.md),
+  /// once it has pushed one — the session's *own* exercise list, which wins
+  /// over `standaloneTemplate`'s snapshot from then on. That's the only list
+  /// that can express an exercise added or removed on the phone mid-workout.
+  ///
+  /// `nil` until (and unless) one arrives: an older phone build, a phone out
+  /// of range, or a session it isn't mirroring all leave the watch on its
+  /// cached template, which is exactly the pre-F6c behaviour.
+  @Published private(set) var sessionPlanExercises: [CachedTemplateExercise]?
+  /// Which exercise the **phone** says is current, by clientId — the
+  /// phone-mastered counterpart of `standaloneExerciseIndex` (docs/watch/
+  /// 50-watch-f6c-session-plan-sync-plan.md §7). Pushed on every state sync.
+  @Published private(set) var phoneCurrentExerciseId: String?
+  /// The exercise the user picked from this watch's own list during a
+  /// phone-mastered session, until the phone's next push confirms it — an
+  /// optimistic local override so the list highlight and the next tap follow
+  /// the finger immediately, without waiting for the round trip. Cleared the
+  /// moment the phone agrees (or names something else the user has since
+  /// picked on the phone itself).
+  @Published private(set) var phoneSelectedExerciseId: String?
+
+  /// The exercise list this session actually works against: the phone's live
+  /// plan when there is one, the cached template otherwise. Every "which
+  /// exercise" decision reads this rather than `standaloneTemplate` directly,
+  /// so both sources behave identically everywhere downstream.
+  var activePlanExercises: [CachedTemplateExercise] {
+    sessionPlanExercises ?? standaloneTemplate?.exercises ?? []
+  }
+
+  /// The clientId of the exercise the next set counts against — what the watch
+  /// now sends with every logged set and adoption snapshot instead of relying
+  /// on its position (F6c).
+  var standaloneCurrentExerciseId: String? { standaloneCurrentExercise?.exerciseId }
+
+  /// The exercise the next set counts against, whoever is mastering the
+  /// session: the wrist's own position in standalone mode, and in a
+  /// phone-mastered one the user's local pick if there is one, else whatever
+  /// the phone last named (F6c §7).
+  var currentExerciseId: String? {
+    isStandalone ? standaloneCurrentExerciseId : (phoneSelectedExerciseId ?? phoneCurrentExerciseId)
+  }
+
+  /// Where `currentExerciseId` sits in `activePlanExercises` — what the list
+  /// highlights, and the index the standalone path already works in.
+  var currentExercisePlanIndex: Int? {
+    guard let currentExerciseId else { return nil }
+    return activePlanExercises.firstIndex { $0.exerciseId == currentExerciseId }
+  }
+
+  /// Whether this watch may offer its exercise list: a plan-backed standalone
+  /// session as before, and now a phone-mastered one too as soon as the phone
+  /// has pushed the session's exercises (F6c §7). A single-exercise list is
+  /// not worth a chip — there is nothing to switch to.
+  var canChooseExercise: Bool {
+    activePlanExercises.count > 1 || (isStandalone && standaloneTemplate != nil)
+  }
   /// Which of `standaloneTemplate.exercises` new sets log against — always
   /// 0 and unused outside a template session. Changed only by
   /// `selectStandaloneExercise(_:)` (§3.5's gyakorlat-lista, wired in T7);
   /// never overwritten by anything synced from the phone.
   @Published private(set) var standaloneExerciseIndex = 0
+  /// Set by `selectStandaloneExercise(_:)`, cleared by the next locally logged
+  /// set — "the user picked this exercise by hand, don't move off it".
+  ///
+  /// Only `advanceStandaloneExerciseIfComplete()`'s *phone-count-driven* call
+  /// site (`applyStateUpdate`) honours it, and it exists for one case: picking
+  /// an exercise that already has all its planned sets, to add one more. That
+  /// exercise is complete by definition, so the very next state sync would
+  /// otherwise bounce the selection straight on to the first unfinished one —
+  /// leaving the user unable to select it at all. A set logged into it clears
+  /// the flag, so the normal auto-advance takes over again from there.
+  private var standaloneExerciseManuallySelected = false
 
   /// What the phone reports for the exercise at `phoneSetsExerciseIndex`:
   /// how many sets its copy of this session has for it, and how many its plan
@@ -313,6 +380,11 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// finished there.
   @Published private(set) var phoneSetsDone: Int?
   @Published private(set) var phoneSetsTotal: Int?
+  /// Which exercise `phoneSetsDone`/`phoneSetsTotal` are about, by clientId
+  /// (F6c) — preferred over `phoneSetsExerciseIndex`, which is a position in
+  /// the *template* and therefore meaningless once the phone's session plan is
+  /// what this watch lists.
+  @Published private(set) var phoneSetsExerciseId: String?
   /// The phone's set count for **every** exercise of the plan, in this
   /// watch's own index order (see `WorkoutSessionState.setsDonePerExercise`).
   ///
@@ -324,6 +396,18 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// were complete after all, then jumping on — visibly hopping between
   /// already-finished exercises.
   @Published private(set) var phoneSetsDonePerExercise: [Int]?
+  /// Plan positions the user removed from this session on the phone (see
+  /// `WorkoutSessionState.removedExerciseIndexes`) — hidden from the exercise
+  /// list and never advanced into. Empty for every session the phone hasn't
+  /// said otherwise about, including an older phone build's.
+  ///
+  /// The watch's cached template stays the index space, deliberately: every
+  /// set already logged carries a position in it, so the list can only ever
+  /// *hide* entries here, never renumber them. An exercise added to the
+  /// session on the phone has no position at all and so can't appear — that
+  /// needs the session's own plan as the index space (docs/watch/
+  /// 50-watch-f6c-session-plan-sync-plan.md).
+  @Published private(set) var removedExerciseIndexes: Set<Int> = []
   /// Which exercise the two values above are about — the phone echoes back
   /// the index this watch sent it (`currentExerciseIndex` in the adoption
   /// payload), so a value computed for a different exercise is never applied
@@ -410,6 +494,9 @@ final class WorkoutManager: NSObject, ObservableObject {
     standaloneSets = []
     standaloneTemplate = template
     standaloneExerciseIndex = 0
+    standaloneExerciseManuallySelected = false
+    removedExerciseIndexes = []
+    sessionPlanExercises = nil
     // A leftover prefill from an earlier session in this process would
     // otherwise win over this session's own resolution (see
     // `standalonePrefill`) until the phone adopts this one and pushes a
@@ -419,6 +506,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     nextSetReps = nil
     nextSetWeight = nil
     phoneSetsExerciseIndex = nil
+    phoneSetsExerciseId = nil
     phoneSetsDone = nil
     phoneSetsTotal = nil
     phoneSetsDonePerExercise = nil
@@ -455,17 +543,109 @@ final class WorkoutManager: NSObject, ObservableObject {
     sendAdoptionRequest()
   }
 
+  /// Decodes the `sessionPlan` JSON string the phone pushes (F6c). A malformed
+  /// or absent payload is `nil` — "keep using the cached template" — never a
+  /// half-applied list.
+  private func decodeSessionPlan(_ json: String?) -> [CachedTemplateExercise]? {
+    guard let json, let data = json.data(using: .utf8),
+      let plan = try? JSONDecoder().decode(SessionPlan.self, from: data),
+      !plan.exercises.isEmpty
+    else { return nil }
+    return plan.exercises
+  }
+
+  /// Swaps in a new session plan, keeping the user on the *same exercise* —
+  /// by clientId, not by position (D-F6c.2): the phone can add, remove and
+  /// therefore renumber entries, so the index this watch holds means nothing
+  /// across the change. Already-logged sets need no such fix-up; they carry
+  /// their own `exerciseId`.
+  ///
+  /// A no-op when the plan hasn't actually changed, so the ordinary state sync
+  /// (which carries it every time) costs nothing.
+  private func applySessionPlan(_ plan: [CachedTemplateExercise]?) {
+    guard plan != sessionPlanExercises else { return }
+    let previousExerciseId = standaloneCurrentExerciseId
+    sessionPlanExercises = plan
+    // Only the standalone path keeps a *position* of its own; a phone-mastered
+    // session tracks its exercise by id (`phoneCurrentExerciseId`), which a
+    // reordered list can't invalidate.
+    guard isStandalone else { return }
+    let exercises = activePlanExercises
+    guard !exercises.isEmpty else { return }
+    if let previousExerciseId,
+      let index = exercises.firstIndex(where: { $0.exerciseId == previousExerciseId })
+    {
+      guard index != standaloneExerciseIndex else { return }
+      standaloneExerciseIndex = index
+      saveActiveSnapshot()
+      return
+    }
+    // The exercise this watch was on is gone from the session (deleted on the
+    // phone), or there was none yet: land on the first one still unfinished,
+    // the same destination every other advance picks.
+    let next = exercises.indices.first { !standaloneExerciseIsComplete($0) } ?? 0
+    guard next != standaloneExerciseIndex || previousExerciseId != nil else { return }
+    standaloneExerciseIndex = next
+    standaloneExerciseManuallySelected = false
+    didAdvanceStandaloneExercise()
+  }
+
   /// The gyakorlat-lista's tap handler (docs/watch/49-watch-f6b-template-sync-plan.md
   /// §3.5, D-F6b.8) — changes only which exercise the *next* logged set
   /// counts against. Never closes a set, starts/skips a rest, or touches a
   /// set already logged — those keep the `exerciseIndex` they were logged
   /// with, permanently (§3.5: "a már logolt szettek exerciseIndex-e
-  /// véglegesen az marad"). A no-op outside a template session or for an
-  /// index the snapshot doesn't have — nothing to switch to, and the UI
-  /// that calls this (T7) only ever offers indices that exist.
+  /// véglegesen az marad"). A no-op outside a template session, for an index
+  /// the snapshot doesn't have (nothing to switch to, and the UI that calls
+  /// this only ever offers indices that exist), and for the exercise already
+  /// selected.
+  /// The exercise list's tap handler, whichever mode the session is in
+  /// (F6c §7). Standalone keeps its existing path; a phone-mastered session
+  /// records the pick locally and tells the phone, which owns the decision and
+  /// echoes it back on its next state push.
+  func selectExercise(at index: Int) {
+    guard index >= 0, index < activePlanExercises.count else { return }
+    guard !isStandalone else {
+      selectStandaloneExercise(index)
+      return
+    }
+    let exerciseId = activePlanExercises[index].exerciseId
+    guard exerciseId != currentExerciseId, let sessionClientId else { return }
+    phoneSelectedExerciseId = exerciseId
+    // The phone's prefill describes the exercise it still thinks is current —
+    // dropping it stops the stepper from opening on that one's numbers while
+    // the round trip completes (the same rule the standalone pick follows).
+    nextSetReps = nil
+    nextSetWeight = nil
+    PhoneConnector.shared.sendExerciseSelected(
+      sessionClientId: sessionClientId, exerciseId: exerciseId)
+  }
+
   func selectStandaloneExercise(_ index: Int) {
-    guard let standaloneTemplate, index >= 0, index < standaloneTemplate.exercises.count else { return }
+    guard index >= 0, index < activePlanExercises.count,
+      index != standaloneExerciseIndex, !standaloneExerciseIsRemoved(index)
+    else { return }
     standaloneExerciseIndex = index
+    standaloneExerciseManuallySelected = true
+    // The phone's pushed prefill describes the exercise the *phone* thinks is
+    // current, which this tap just made stale — and `standalonePrefill` takes
+    // it ahead of everything else (priority 0). Dropping it here is what makes
+    // the "+1" tap and the adjust stepper follow the exercise the user just
+    // picked instead of opening on the previous one's numbers; the local
+    // fallbacks (the synced template's `previousSets` for *this* exercise,
+    // then its last logged set) cover the gap until the phone answers with a
+    // fresh one — and cover it entirely when the phone isn't reachable at all.
+    nextSetReps = nil
+    nextSetWeight = nil
+    // A recovered process must come back on the exercise the user sees...
+    saveActiveSnapshot()
+    // ...and the phone must learn about the switch, or it would keep computing
+    // its prefill (and its Live Activity's exercise name) for the exercise it
+    // last knew about. The snapshot carries `currentExerciseIndex`, which is
+    // exactly what `LogSessionScreen._watchCurrentBlock` resolves against.
+    // Wear gets this for free — `ExerciseService` observes the index — but on
+    // watchOS nothing but a logged set ever re-sent it.
+    sendAdoptionRequestIfNeeded()
   }
 
   /// Whether the template exercise at [index] has had every set it planned
@@ -475,8 +655,33 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// without it `advanceStandaloneExerciseIfComplete` would bounce back to a
   /// target-less exercise forever.
   private func standaloneExerciseIsComplete(_ index: Int) -> Bool {
-    guard let standaloneTemplate, index < standaloneTemplate.exercises.count else { return false }
-    return standaloneSetsDone(at: index) >= (standaloneTemplate.exercises[index].targetSets ?? 1)
+    let exercises = activePlanExercises
+    guard index >= 0, index < exercises.count else { return false }
+    // Removed from the session on the phone — not somewhere to land, so it
+    // counts as finished for every "where do we go next" decision.
+    if standaloneExerciseIsRemoved(index) { return true }
+    return standaloneSetsDone(at: index) >= (exercises[index].targetSets ?? 1)
+  }
+
+  /// Whether the phone has removed the plan's [index]-th exercise from this
+  /// session — see `removedExerciseIndexes`.
+  func standaloneExerciseIsRemoved(_ index: Int) -> Bool {
+    // Meaningless once the phone's own plan is what we're listing: those
+    // positions are the *template's*, and a plan that has an exercise at all
+    // has it because the session still contains it.
+    guard sessionPlanExercises == nil else { return false }
+    return removedExerciseIndexes.contains(index)
+  }
+
+  /// The shared tail of an auto-advance: the prefill the phone pushed
+  /// describes the exercise just left behind, the new position has to survive
+  /// a process death, and the phone has to be told so its next push (and its
+  /// Live Activity) describe the same exercise this watch moved to.
+  private func didAdvanceStandaloneExercise() {
+    nextSetReps = nil
+    nextSetWeight = nil
+    saveActiveSnapshot()
+    sendAdoptionRequestIfNeeded()
   }
 
   /// How many sets this session has for the exercise at [index], counting the
@@ -489,13 +694,30 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// knows about sets this watch never logged, which is the case this exists
   /// for.
   func standaloneSetsDone(at index: Int) -> Int {
-    var best = standaloneSets.filter { $0.exerciseIndex == index }.count
-    if let phoneSetsDonePerExercise, index >= 0, index < phoneSetsDonePerExercise.count {
+    let exercises = activePlanExercises
+    let exerciseId = index >= 0 && index < exercises.count ? exercises[index].exerciseId : nil
+    // Id-first, position as the fallback: a set logged before the phone's plan
+    // arrived (or by a pre-F6c build) carries only its position.
+    var best = standaloneSets.filter {
+      if let setId = $0.exerciseId, let exerciseId { return setId == exerciseId }
+      return $0.exerciseIndex == index
+    }.count
+    // The phone's own count for this exercise. From its session plan it comes
+    // keyed by id; the positional list is the template-space fallback and must
+    // not be read once the plan is what we're listing.
+    if index >= 0, index < exercises.count, let planSetsDone = exercises[index].setsDone {
+      best = max(best, planSetsDone)
+    }
+    if sessionPlanExercises == nil, let phoneSetsDonePerExercise, index >= 0,
+      index < phoneSetsDonePerExercise.count
+    {
       best = max(best, phoneSetsDonePerExercise[index])
     }
     // The single-exercise value can be a sync fresher than the array (it is
     // recomputed for the exercise this watch named), so it still gets a look in.
-    if index == phoneSetsExerciseIndex, let phoneSetsDone {
+    if let phoneSetsExerciseId, phoneSetsExerciseId == exerciseId, let phoneSetsDone {
+      best = max(best, phoneSetsDone)
+    } else if phoneSetsExerciseId == nil, index == phoneSetsExerciseIndex, let phoneSetsDone {
       best = max(best, phoneSetsDone)
     }
     return best
@@ -524,10 +746,16 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// `applyStateUpdate` doesn't.
   @discardableResult
   private func advanceStandaloneExerciseIfComplete() -> Bool {
-    guard let standaloneTemplate, standaloneCurrentExercise?.targetSets != nil,
-      standaloneExerciseIsComplete(standaloneExerciseIndex)
+    let exercises = activePlanExercises
+    guard !exercises.isEmpty else { return false }
+    // The `targetSets` requirement is what keeps a plan-less exercise from
+    // being declared finished after one set — but a *removed* one has to be
+    // left regardless, target or no target.
+    guard standaloneExerciseIsRemoved(standaloneExerciseIndex)
+      || (standaloneCurrentExercise?.targetSets != nil
+        && standaloneExerciseIsComplete(standaloneExerciseIndex))
     else { return false }
-    for index in standaloneTemplate.exercises.indices where !standaloneExerciseIsComplete(index) {
+    for index in exercises.indices where !standaloneExerciseIsComplete(index) {
       guard index != standaloneExerciseIndex else { return false }
       standaloneExerciseIndex = index
       return true
@@ -541,10 +769,9 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// exercise is this" reads, instead of repeating the bounds check
   /// `selectStandaloneExercise(_:)` already guarantees can't go stale.
   var standaloneCurrentExercise: CachedTemplateExercise? {
-    guard let standaloneTemplate, standaloneExerciseIndex < standaloneTemplate.exercises.count else {
-      return nil
-    }
-    return standaloneTemplate.exercises[standaloneExerciseIndex]
+    let exercises = activePlanExercises
+    guard standaloneExerciseIndex >= 0, standaloneExerciseIndex < exercises.count else { return nil }
+    return exercises[standaloneExerciseIndex]
   }
 
   /// What the *next* standalone set should default to for the current
@@ -592,8 +819,16 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// (Quick strength) every set counts as one pool, matching F6a's original
   /// behavior exactly (§3.4's `standaloneTemplate == nil` short-circuit).
   var standaloneSetsForCurrentExercise: [StandaloneSet] {
-    guard standaloneTemplate != nil else { return standaloneSets }
-    return standaloneSets.filter { $0.exerciseIndex == standaloneExerciseIndex }
+    guard !activePlanExercises.isEmpty else { return standaloneSets }
+    let currentExerciseId = standaloneCurrentExerciseId
+    // Id-first, position as the fallback: a set logged before the phone's plan
+    // arrived (or by a pre-F6c build) carries only its position.
+    return standaloneSets.filter { set in
+      if let setExerciseId = set.exerciseId, let currentExerciseId {
+        return setExerciseId == currentExerciseId
+      }
+      return set.exerciseIndex == standaloneExerciseIndex
+    }
   }
 
   /// See [ActiveExerciseDisplay]'s doc comment. Three branches, in priority
@@ -611,9 +846,11 @@ final class WorkoutManager: NSObject, ObservableObject {
       // Both counts include what the phone logged into this same session; see
       // `standaloneSetsDone(at:)` and `phoneSetsTotal`.
       let setsDone = standaloneSetsDone(at: standaloneExerciseIndex)
-      let targetSets =
-        (standaloneExerciseIndex == phoneSetsExerciseIndex ? phoneSetsTotal : nil)
-        ?? currentExercise.targetSets
+      let phoneCountsThisExercise =
+        phoneSetsExerciseId != nil
+        ? phoneSetsExerciseId == currentExercise.exerciseId
+        : standaloneExerciseIndex == phoneSetsExerciseIndex
+      let targetSets = (phoneCountsThisExercise ? phoneSetsTotal : nil) ?? currentExercise.targetSets
       if let targetSets {
         return ActiveExerciseDisplay(
           name: currentExercise.name, setsDone: setsDone, setsTotal: targetSets,
@@ -737,7 +974,10 @@ final class WorkoutManager: NSObject, ObservableObject {
     nextSetReps: Int?,
     nextSetWeight: Double?,
     setsDoneExerciseIndex: Int?,
-    setsDonePerExercise: [Int]?
+    setsDoneExerciseId: String?,
+    setsDonePerExercise: [Int]?,
+    removedExerciseIndexes: [Int]?,
+    sessionPlan: String?
   ) {
     guard !isStandalone else {
       // A *different* session's state can't touch the watch's own standalone
@@ -748,6 +988,15 @@ final class WorkoutManager: NSObject, ObservableObject {
         PhoneConnector.shared.sendStartRejected(sessionClientId: sessionClientId)
         return
       }
+      // Which plan positions the phone's copy of this session no longer has
+      // (§ the exercise list hides them, `standaloneExerciseIsComplete` never
+      // lands on them). Applied before everything below, so the same payload's
+      // advance decision already sees it.
+      self.removedExerciseIndexes = Set(removedExerciseIndexes ?? [])
+      // F6c: the phone's own exercise list for this session, which replaces
+      // the cached template as what this watch lists and logs against. Applied
+      // first, so everything below already judges against the new list.
+      applySessionPlan(decodeSessionPlan(sessionPlan))
       // Matching id = the phone's live mirror of *this* session (live
       // bridging), pushing state for the workout the watch is running. Take
       // the prefill: those two fields are the phone answering "what should
@@ -755,8 +1004,32 @@ final class WorkoutManager: NSObject, ObservableObject {
       // the phone can (it holds the full history) — and taking them here is
       // what finally makes a watch-started session prefill exactly like a
       // phone-started one.
-      self.nextSetReps = nextSetReps
-      self.nextSetWeight = nextSetWeight
+      //
+      // But only when it is answering about the exercise this watch is
+      // actually on. `setsDoneExerciseIndex` is the phone echoing back the
+      // index it computed everything in this payload for (nil in a
+      // template-less Quick strength session, where there is no index to
+      // disagree about) — a mismatch means the payload was built before the
+      // phone learned about a hand-picked exercise, and applying it would open
+      // the stepper on another exercise's numbers. Cleared rather than kept in
+      // that case: a stale value is about the wrong exercise too, and
+      // `standalonePrefill`'s local fallbacks answer for the right one.
+      // Id-first (F6c): a position only means the same thing on both sides
+      // while the list can't change, which is exactly what the session plan
+      // undoes. Both sides carry the id whenever they can — a template's
+      // `exerciseId` *is* the exercise's clientId — so this is the normal
+      // route, and the index comparison is the pre-F6c fallback.
+      let currentExerciseId = standaloneCurrentExerciseId
+      let prefillDescribesCurrentExercise: Bool
+      if let setsDoneExerciseId, let currentExerciseId {
+        prefillDescribesCurrentExercise = setsDoneExerciseId == currentExerciseId
+      } else {
+        prefillDescribesCurrentExercise =
+          setsDoneExerciseIndex == standaloneExerciseIndex
+          || (setsDoneExerciseIndex == nil && standaloneTemplate == nil)
+      }
+      self.nextSetReps = prefillDescribesCurrentExercise ? nextSetReps : nil
+      self.nextSetWeight = prefillDescribesCurrentExercise ? nextSetWeight : nil
       // And the set counts, but only when the phone says which exercise they
       // are about *and* it's the one this watch is logging into. The phone's
       // row is the only place both sides' sets meet (its mirror screen stays
@@ -767,29 +1040,51 @@ final class WorkoutManager: NSObject, ObservableObject {
       // Index-keyed, so unlike the pair below it needs no agreement about
       // which exercise is current — it describes all of them.
       phoneSetsDonePerExercise = setsDonePerExercise
-      if let setsDoneExerciseIndex, setsDoneExerciseIndex == standaloneExerciseIndex {
+      if prefillDescribesCurrentExercise {
         phoneSetsExerciseIndex = setsDoneExerciseIndex
+        phoneSetsExerciseId = setsDoneExerciseId
         phoneSetsDone = setsDone
         phoneSetsTotal = setsTotal
         // A set logged on the phone can be the one that completes this
         // exercise, and until now only a tap on the wrist ever re-evaluated
         // that (`beginLocalLogSet`) — so the watch sat on a finished exercise
         // offering to add yet another set to it. Now that the count includes
-        // the phone's sets, the same rule can run here.
-        if advanceStandaloneExerciseIfComplete() {
-          // Persist the new position (a process death must recover into the
-          // exercise the user sees) and tell the phone about it, so its
-          // prefill and its next state push describe the same exercise this
-          // watch just moved to.
-          saveActiveSnapshot()
-          sendAdoptionRequestIfNeeded()
+        // the phone's sets, the same rule can run here — except right after a
+        // hand-picked exercise (see `standaloneExerciseManuallySelected`),
+        // which this would otherwise undo before the user got to log into it.
+        if !standaloneExerciseManuallySelected, advanceStandaloneExerciseIfComplete() {
+          didAdvanceStandaloneExercise()
         }
       } else {
         phoneSetsExerciseIndex = nil
+        phoneSetsExerciseId = nil
         phoneSetsDone = nil
         phoneSetsTotal = nil
       }
+      // The exercise this watch is standing on was removed from the session on
+      // the phone: leave it whatever else this payload said. Deliberately
+      // outside the branch above (the phone reports no `setsDoneExerciseIndex`
+      // for an exercise its session no longer contains, so that branch never
+      // runs for exactly this case) and deliberately ignoring
+      // `standaloneExerciseManuallySelected` — a hand-picked exercise that has
+      // since been deleted is not somewhere to keep the user.
+      if standaloneExerciseIsRemoved(standaloneExerciseIndex),
+        advanceStandaloneExerciseIfComplete()
+      {
+        didAdvanceStandaloneExercise()
+      }
       return
+    }
+    // F6c §7: the phone's exercise list and its current exercise reach a
+    // phone-mastered session too now — that's what its own picker lists, and
+    // what tells this watch when the phone has moved on by itself.
+    applySessionPlan(decodeSessionPlan(sessionPlan))
+    self.phoneCurrentExerciseId = setsDoneExerciseId ?? self.phoneCurrentExerciseId
+    // The local pick has served its purpose once the phone reports the same
+    // exercise — or a different one the user has since chosen *there*, which
+    // is the more recent instruction either way.
+    if let setsDoneExerciseId, setsDoneExerciseId == phoneSelectedExerciseId {
+      phoneSelectedExerciseId = nil
     }
     self.sessionClientId = sessionClientId
     self.title = title ?? self.title
@@ -826,7 +1121,8 @@ final class WorkoutManager: NSObject, ObservableObject {
       beginLocalLogSet(reps: reps, weight: weight)
     } else {
       beginRemoteLogSet(
-        sessionClientId: sessionClientId, eventId: UUID().uuidString, reps: reps, weight: weight)
+        sessionClientId: sessionClientId, eventId: UUID().uuidString, reps: reps, weight: weight,
+        exerciseId: currentExerciseId)
     }
   }
 
@@ -852,10 +1148,21 @@ final class WorkoutManager: NSObject, ObservableObject {
         // nil outside a template session, matching F6a's original
         // behavior exactly; the current gyakorlat-lista selection
         // otherwise (docs/watch/49-watch-f6b-template-sync-plan.md §3.3).
-        exerciseIndex: standaloneTemplate != nil ? standaloneExerciseIndex : nil))
+        exerciseIndex: activePlanExercises.isEmpty ? nil : standaloneExerciseIndex,
+        exerciseId: standaloneCurrentExerciseId))
+    // The hand-picked exercise has now been logged into, which is all its
+    // stickiness was ever for — from here the normal auto-advance decides.
+    standaloneExerciseManuallySelected = false
     // Before the snapshot save below, so a session recovered after process
     // death comes back pointing at the same exercise the user would see now.
-    advanceStandaloneExerciseIfComplete()
+    if advanceStandaloneExerciseIfComplete() {
+      // The phone's prefill was computed for the exercise this set finished —
+      // the next tap is a different exercise's first set, so the local
+      // fallbacks answer for it until the phone's fresh value lands (the
+      // adoption re-send below is what asks for it).
+      nextSetReps = nil
+      nextSetWeight = nil
+    }
     saveActiveSnapshot()
     // Live bridging: keeps an already-adopted phone mirror in sync with
     // every set as it's logged, not just at start/end — a no-op if the
@@ -880,20 +1187,19 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// range (shouldn't happen — `selectStandaloneExercise` itself validates
   /// it before ever setting it).
   private var currentStandaloneRestSeconds: TimeInterval {
-    guard let standaloneTemplate, standaloneExerciseIndex < standaloneTemplate.exercises.count else {
-      return standaloneRestSeconds
-    }
-    return TimeInterval(standaloneTemplate.exercises[standaloneExerciseIndex].restSeconds)
+    guard let exercise = standaloneCurrentExercise else { return standaloneRestSeconds }
+    return TimeInterval(exercise.restSeconds)
   }
 
   private func beginRemoteLogSet(
-    sessionClientId: String, eventId: String, reps: Int? = nil, weight: Double? = nil
+    sessionClientId: String, eventId: String, reps: Int? = nil, weight: Double? = nil,
+    exerciseId: String? = nil
   ) {
     logSetState = .pending(eventId)
     let loggedAtEpochMs = Int64(Date().timeIntervalSince1970 * 1000)
     PhoneConnector.shared.sendLogSet(
       sessionClientId: sessionClientId, eventId: eventId, loggedAtEpochMs: loggedAtEpochMs,
-      reps: reps, weight: weight)
+      reps: reps, weight: weight, exerciseId: exerciseId)
 
     logSetTimeoutTask?.cancel()
     logSetTimeoutTask = Task {
@@ -1235,8 +1541,11 @@ final class WorkoutManager: NSObject, ObservableObject {
       sets: standaloneSets,
       activeCalories: activeCaloriesTotal,
       averageHeartRate: averageHeartRate,
-      // Only meaningful within a plan — see the field's doc comment.
-      currentExerciseIndex: standaloneTemplate == nil ? nil : standaloneExerciseIndex)
+      // Only meaningful within a plan — see the field's doc comment. The id
+      // is what the phone actually resolves against (F6c); the index rides
+      // along for a phone build that predates it.
+      currentExerciseIndex: activePlanExercises.isEmpty ? nil : standaloneExerciseIndex,
+      currentExerciseId: standaloneCurrentExerciseId)
     PhoneConnector.shared.sendStandaloneAdoption(payload)
   }
 
@@ -1321,7 +1630,13 @@ final class WorkoutManager: NSObject, ObservableObject {
     standaloneSets = []
     standaloneTemplate = nil
     standaloneExerciseIndex = 0
+    standaloneExerciseManuallySelected = false
+    removedExerciseIndexes = []
+    sessionPlanExercises = nil
+    phoneCurrentExerciseId = nil
+    phoneSelectedExerciseId = nil
     phoneSetsExerciseIndex = nil
+    phoneSetsExerciseId = nil
     phoneSetsDone = nil
     phoneSetsTotal = nil
     phoneSetsDonePerExercise = nil
@@ -1348,6 +1663,7 @@ final class WorkoutManager: NSObject, ObservableObject {
         standaloneSessionId: sessionClientId,
         template: standaloneTemplate,
         exerciseIndex: standaloneExerciseIndex,
+        sessionPlan: sessionPlanExercises,
         startedAtEpochMs: Int64(startedAt.timeIntervalSince1970 * 1000),
         sets: standaloneSets))
   }
@@ -1371,6 +1687,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     isStandalone = true
     sessionClientId = meta.standaloneSessionId
     standaloneTemplate = meta.template
+    sessionPlanExercises = meta.sessionPlan
     standaloneExerciseIndex = meta.exerciseIndex
     standaloneSets = meta.sets
     startedAt = Date(timeIntervalSince1970: Double(meta.startedAtEpochMs) / 1000)

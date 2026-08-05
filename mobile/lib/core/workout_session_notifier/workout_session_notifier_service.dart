@@ -25,6 +25,9 @@ class WorkoutSessionState {
     this.nextSetReps,
     this.setsDoneExerciseIndex,
     this.setsDonePerExercise,
+    this.removedExerciseIndexes,
+    this.sessionPlan,
+    this.setsDoneExerciseId,
   });
 
   /// Current (last touched) exercise name; pass a pre-localized fallback
@@ -107,6 +110,43 @@ class WorkoutSessionState {
   /// sets, exactly as it did before.
   final List<int>? setsDonePerExercise;
 
+  /// Which positions of the watch's plan the user has since **removed** from
+  /// this session on the phone, in the same index space as
+  /// [setsDonePerExercise] — the watch hides those from its exercise list and
+  /// never advances into them, so a workout edited on the phone doesn't keep
+  /// offering an exercise that is no longer part of it.
+  ///
+  /// Null (never an empty list) when nothing is removed, outside a
+  /// watch-mastered session, and whenever the plan's exercise order isn't
+  /// known here — an older phone build simply doesn't send the key, and the
+  /// watch reads its absence as "nothing removed", i.e. today's behaviour.
+  ///
+  /// The reverse direction — an exercise *added* to the session on the phone —
+  /// deliberately isn't covered: the watch's plan is the index space every
+  /// logged set is attributed by, so an exercise with no position in it cannot
+  /// be logged into. See docs/watch/50-watch-f6c-session-plan-sync-plan.md.
+  final List<int>? removedExerciseIndexes;
+
+  /// The session's **own** exercise list, JSON-encoded (see
+  /// [buildWatchSessionPlanJson], docs/watch/50-watch-f6c-session-plan-sync-plan.md)
+  /// — what the watch shows in its exercise list and logs against, replacing
+  /// the template snapshot it started from. This is what makes an exercise
+  /// added or removed on the phone mid-workout reach the wrist at all: the
+  /// template can't express either.
+  ///
+  /// Null outside a watch-mastered session (a phone-mastered one has no
+  /// exercise list on the wrist) and when there are no blocks. A watch that
+  /// doesn't get it — older build, or the phone out of range — keeps using its
+  /// cached template, which is exactly the pre-F6c behaviour.
+  final String? sessionPlan;
+
+  /// Which exercise [setsDone]/[setsTotal] — and the prefill above — describe,
+  /// by **clientId** (F6c): the same answer as [setsDoneExerciseIndex] in the
+  /// form that survives a mid-session plan change, and the only form that can
+  /// name an exercise the plan never had. The watch prefers it and falls back
+  /// to the index.
+  final String? setsDoneExerciseId;
+
   Map<String, dynamic> toJson() => {
         'exerciseName': exerciseName,
         'setsDone': setsDone,
@@ -120,6 +160,9 @@ class WorkoutSessionState {
         'nextSetReps': nextSetReps,
         'setsDoneExerciseIndex': setsDoneExerciseIndex,
         'setsDonePerExercise': setsDonePerExercise,
+        'removedExerciseIndexes': removedExerciseIndexes,
+        'sessionPlan': sessionPlan,
+        'setsDoneExerciseId': setsDoneExerciseId,
       };
 }
 

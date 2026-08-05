@@ -744,4 +744,71 @@ A gyakorlat-listát eddig csak a vezérlő-lap (End/Pause) „Gyakorlatok" chipj
 
 - A chip kiemelve közös komponensbe (iOS `ExerciseListChip`, Wear `ExerciseListChip`), és most **mindkét lap** ezt használja, ugyanazzal a `onOpenExerciseList` callbackkel — tehát egy képernyő, egy állapot (`showExerciseList`), a két lap nem tud elcsúszni egymástól.
 - A log oldalon közvetlenül a státusz-sor (`<gyakorlat> · Set 2 of 2`) alá kerül. A két korong nem lett kisebb: az iOS oldali `VStack` térköze 10/16 → 8/12, a Wear `Column` pedig középre rendezett, tehát magától felfelé csúszik a tartalom.
-- Ugyanaz a megjelenés és ugyanaz a viselkedés, mint a vezérlő-lapon; továbbra is csak terv-alapú standalone sessionben látszik (quick strength és phone-mastered esetben nincs mire váltani).
+- Ugyanaz a megjelenés és ugyanaz a viselkedés, mint a vezérlő-lapon; ekkor még csak terv-alapú standalone sessionben látszott (quick strength és phone-mastered esetben nem volt mire váltani). **Ezt oldotta fel az F6c §6**: az óra id-vel nevezi meg a gyakorlatot, tehát a választó a telefonról indított edzésben is működik — [50-watch-f6c-session-plan-sync-plan.md](50-watch-f6c-session-plan-sync-plan.md).
+
+---
+
+## Utólagos kiegészítés: az adjust és a „+1" mindig a **kiválasztott** gyakorlathoz tartozzon
+
+**A jelentett hiba:** „ha nem a következő gyakorlatot választom ki a gyakorlat-listában, az adjust mégis a következő értékeivel nyílik. Az adjust legyen mindig a kiválasztott gyakorlat szerint — ha az a következő, akkor nyilván az, amikor automatikusan vált; de ha kézzel váltok, az adjust értékei annak feleljenek meg. És persze a »+1« is így működjön."
+
+Két, egymástól független ok adta össze ezt a viselkedést; mindkettő ugyanabból a régi feltevésből ered, hogy „az aktuális gyakorlat" és „a következő szett sora" mindig ugyanaz a gyakorlat.
+
+### 1. A telefon a *következő nyitott sor* szerint prefillel, akkor is, ha az egy másik gyakorlat
+
+A `watchSetPrefill(_blocks, current)` a `selectWatchSetLogTarget`-re épül, aminek a (b) szabálya elhagyja az aktuális blokkot, ha abban nincs több nyitott sor — és az **első olyan blokk** sorát adja vissza, amiben van. Telefon-mesterelt sessionben ez helyes (a tap tényleg oda logol), de watch-mesterelt sessionben **nem a telefon dönti el a gyakorlatot**: az órán kézzel kiválasztott gyakorlatba megy a szett, akkor is, ha annak már megvan az összes tervezett szettje (épp ez a „még egy szettet rakok rá" eset). A telefon viszont ilyenkor a *következő* gyakorlat értékeit tolta ki prefillként — pontosan a bejelentett tünet.
+
+- **Új, a blokkhoz kötött feloldás:** `watchSetPrefillForBlock(block)` (`watch_set_log_decision.dart`) — a blokk első nyitott sorát nézi, vagy a hozzáfűzendő sor pozícióját, és onnan futtatja a **változatlan** D-F5b.2 prioritási láncot (a közös törzs a kiemelt `watchSetPrefillAt(block, rowIndex)`). A `watchSetPrefill` (telefon-mesterelt út) bitre ugyanaz maradt.
+- **`LogSessionScreen._sessionState`** ennek megfelelően kettéágazik: ha az óra megmondta a gyakorlatát (`_watchCurrentBlock`), a prefill **ahhoz a blokkhoz kötött**; egyébként marad a telefon saját sor-választása.
+
+### 2. Telefon-mesterelt sessionben a kijelzett gyakorlat lemaradt a valódi cél-sortól
+
+Ugyanennek az érmének a másik oldala: a `_currentExerciseBlock()` szabálya „az utoljára logolt szett gyakorlata", tehát egy gyakorlat utolsó szettje után **azon marad**, miközben a következő tap (és a prefill) már a következő gyakorlat sorába megy. Az órán ez így nézett ki: a log-lap „Fekvenyomás · 3/3 szett"-et írt, a pihenő-lap „Következő · Fekvenyomás — 3/3 szett"-et, az adjust viszont a guggolás súlyával nyílt.
+
+**A megoldás:** a state-push (gyakorlatnév, szettszámok, prefill) telefon-mesterelt sessionben **a `selectWatchSetLogTarget` által választott blokkot** írja le, nem a `_currentExerciseBlock()`-ot. Így a kijelzett gyakorlat, a „+1" célja és az adjust kezdőértéke ugyanarról a gyakorlatról szól — a váltás pedig pont akkor történik, amikor a logolás is átlép (ez az „automatikusan vált" eset). A Live Activity/ongoing notification ugyanezt a state-et kapja, tehát az is a soron következő gyakorlatot mutatja pihenő közben.
+
+### 3. A kézi választásnak meg kell maradnia — és el kell jutnia a telefonig
+
+- **iOS:** a `selectStandaloneExercise(_:)` eddig **csak** az indexet állította. Így (a) a telefon sosem tudta meg a váltást — a Wearen ezt az `ExerciseService` index-figyelője már intézte, watchOS-en semmi —, tehát a telefon a régi gyakorlatra számolt prefillt tolta tovább; (b) a folyamathalál utáni recovery-snapshot sem frissült. Most mindkettő megvan: `saveActiveSnapshot()` + `sendAdoptionRequestIfNeeded()` (a snapshot `currentExerciseIndex` mezője az, amit a telefon `_watchCurrentBlock`-ja felold).
+- **Mindkét platform:** a váltás pillanatában a telefontól kapott `nextSetReps`/`nextSetWeight` **törlődik**, mert az a *másik* gyakorlatról szól, és a `standalonePrefill` (0) prioritása szerint nyerne. A helyi tartalékok (a szinkronizált `previousSets` erre a gyakorlatra, majd az ebben a sessionben ide logolt utolsó szett) veszik át, amíg a telefon friss értéke meg nem jön — telefon nélkül pedig végig azok maradnak. Ugyanez történik, amikor az automatikus léptetés mozdítja el az indexet.
+- **A prefill-átvétel kapuzva:** a state-sync `nextSet*` mezőit a watch már csak akkor veszi át, ha a payload `setsDoneExerciseIndex`-e **az aktuális gyakorlatát nevezi meg** (terv nélküli Quick strength sessionben nincs miben nem egyetérteni, ott változatlanul átveszi). Ez zárja be a versenyhelyzetet: a váltás előtt épített, még úton lévő state-push nem tudja visszaírni a régi gyakorlat értékeit.
+- **Kézzel választott, már kész gyakorlat:** a választás „ragadós" a következő oda logolt szettig (`standaloneExerciseManuallySelected`), különben az automatikus léptetés a legelső state-syncben azonnal továbbdobta volna — épp azt a gyakorlatot lett volna lehetetlen kiválasztani, amiért a lista létezik. A szett logolása után a flag törlődik, tehát a normál automatika viszi tovább. Csak memóriában él; egy folyamathalál után a session egyszerűen a szokásos automatikával megy.
+- **`LogSessionScreen`**: a kézi váltásból érkező adoption-snapshot state-pushja már nem függ attól, hogy a Live Activity elindult-e (`_sessionNotifierStarted`) — a watch felé menő push sosem lehet egy letiltott/elutasított Live Activity járulékos vesztese.
+
+**Tesztek:** `watch_set_log_decision_test.dart` — a `watchSetPrefillForBlock` négy ága, köztük az „egy már kész gyakorlatot választok ki" eset, ami a telefon (b) szabályával szemben a saját utolsó szettjét adja vissza. `flutter test` zöld (491), `flutter analyze` tiszta, `:wear:compileDebugKotlin` és a teljes `LifeyWatch` típusellenőrzés hibátlan.
+
+---
+
+## Utólagos kiegészítés: gyakorlat-lista és a telefonon szerkesztett terv
+
+**A jelentett hiba:** „ha törlök vagy hozzáadok új gyakorlatot az edzésen, a törölt random idő után visszajön. Hozzáadásnál az órán nem jelenik meg az új a gyakorlat-listában, törlésnél meg nem tűnik el."
+
+Három külön dolog, egy közös gyökérrel: a session gyakorlatlistáját eddig **a template terve** határozta meg, nem a session sora.
+
+### 1. A törölt gyakorlat visszajött (adat-hiba, javítva)
+
+Az óra minden logolt szett után újraküldi a teljes adoption-snapshotot, a feldolgozó pedig a `StandaloneSessionProcessor._resolveExercisesAndSets`-szel **a templateből** építi újra a session gyakorlatlistáját. A `mergeWatchSessionContent` eddig ezt a listát vette alapul, és csak a *telefonon hozzáadott* gyakorlatokat fűzte hozzá — a telefonon **törölt** gyakorlatot viszont minden resend visszatette. A „random idő" egyszerűen a következő csuklós tap (vagy egy újracsatlakozás) volt.
+
+**A javítás** (`watch_session_merge.dart`): a **tárolt** terv nyer, mert az az egyetlen lista, ami a telefonos szerkesztéseket ismeri — a sor a template tervéből indul az adoptáláskor, onnantól minden hozzáadás és törlés benne van. A watch tervéből semmi nem kerül vissza automatikusan; egy gyakorlat **csak akkor** kerül újra a listára, ha a mergelt szettlistában van rá szett (az órán már belelogolt gyakorlat), mert egy link nélküli szett a telefonon láthatatlan lenne. `targetSets`: a tárolt érték nyer, hiányában a watché.
+
+**Következmény, szándékosan:** egy gyakorlatot, amibe az órán már logoltál, nem lehet a telefonról „eltüntetni" — a szettjei visszahozzák (a logolt adat erősebb, mint egy terv-szerkesztés, és a 49-doc §3.5 szerint egy logolt szett `exerciseIndex`-e végleges).
+
+### 2. A törölt gyakorlat eltűnik az óra listájából (új)
+
+A telefon minden state-syncben küldi a `removedExerciseIndexes` listát: a terv azon **pozíciói**, amiket a session már nem tartalmaz (`LogSessionScreen._watchRemovedExerciseIndexes`, ugyanaz a kapu és ugyanaz az index-tér, mint a `setsDonePerExercise`-é; üresen a kulcs ki sem megy).
+
+Az órán (mindkét platform):
+- a gyakorlat-lista kihagyja ezeket a sorokat — **kihagyja, nem számozza át**: az `index` marad az a pozíció, ami szerint a logolt szettek feloldódnak;
+- `standaloneExerciseIsComplete` / `isStandaloneExerciseComplete` a törölt pozíciót „késznek" veszi, tehát az automatikus léptetés sosem lép bele;
+- ha a felhasználó épp egy törölt gyakorlaton áll, a következő state-sync továbblépteti — akkor is, ha kézzel választotta (egy azóta törölt gyakorlaton nincs mit tartani), és akkor is, ha a telefon szettszámai nem erről a gyakorlatról szólnak (pont ilyenkor nem szólnak róla: a telefon `setsDoneExerciseIndex`-e null egy olyan gyakorlatra, ami már nincs a sessionben);
+- a kézi választás egy törölt gyakorlatra no-op.
+
+Régi telefon-build nem küldi a kulcsot → „semmi nincs törölve", vagyis a korábbi viselkedés.
+
+### 3. A hozzáadott gyakorlat — az F6c oldotta meg
+
+Ez nem UI-hiány volt: **nem volt hova tenni**. A watch → telefon protokoll a gyakorlatot pozícióval azonosította (`sets[].exerciseIndex`, 44-doc §4.1), és a pozíciók jelentését a szinkronizált template adta — egy a sessionhöz utólag adott gyakorlatnak nincs pozíciója, egy kitalált index pedig a feldolgozóban csendben a generikus gyakorlatra esett volna.
+
+Az **F6c** ezt a gyökerénél oldotta meg: a telefon kiküldi a session saját gyakorlatlistáját, és a gyakorlatot mindkét irányban `exerciseId` azonosítja a pozíciója helyett — [50-watch-f6c-session-plan-sync-plan.md](50-watch-f6c-session-plan-sync-plan.md). Az itt leírt pozíció-alapú elrejtés (2.) attól kezdve **tartalék**: akkor él, ha az óra még nem kapott session-tervet (régi telefon-build, vagy hatótávon kívüli telefon).
+
+**Tesztek:** `watch_session_merge_test.dart` — a törölt gyakorlat nem jön vissza; visszajön viszont, ha az óra logolt bele; a telefonon hozzáadott, szett nélküli gyakorlat megmarad; a tárolt terv sorrendje nyer. `flutter test` zöld (494), `flutter analyze` tiszta, `:wear:compileDebugKotlin` + `:app:compileDebugKotlin` BUILD SUCCESSFUL, teljes `LifeyWatch` típusellenőrzés hibátlan.

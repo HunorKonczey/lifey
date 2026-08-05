@@ -186,7 +186,7 @@ void main() {
       expect(merged.exercises.last.targetSets, 2);
     });
 
-    test('the plan order the watch sent is preserved', () {
+    test('the stored plan order wins — that is the one the phone shows', () {
       final merged = mergeWatchSessionContent(
         existingExercises: [plannedExercise('ex-squat'), plannedExercise('ex-bench')],
         existingSets: const [],
@@ -197,7 +197,54 @@ void main() {
         watchSets: const [],
       );
 
+      expect(merged.exercises.map((e) => e.exerciseClientId), ['ex-squat', 'ex-bench']);
+    });
+
+    test('an exercise removed on the phone stays removed', () {
+      // The watch keeps resending the template's full plan after every tap;
+      // re-deriving from it put the deleted exercise back "random idő után".
+      final merged = mergeWatchSessionContent(
+        existingExercises: [plannedExercise('ex-bench', targetSets: 3)],
+        existingSets: const [],
+        watchExercises: const [
+          PlannedExerciseInput(exerciseClientId: 'ex-bench', targetSets: 3),
+          PlannedExerciseInput(exerciseClientId: 'ex-squat', targetSets: 4),
+        ],
+        watchSets: const [],
+      );
+
+      expect(merged.exercises.map((e) => e.exerciseClientId), ['ex-bench']);
+    });
+
+    test('…unless the wrist already logged a set into it — the set needs its link', () {
+      final merged = mergeWatchSessionContent(
+        existingExercises: [plannedExercise('ex-bench', targetSets: 3)],
+        existingSets: const [],
+        watchExercises: const [
+          PlannedExerciseInput(exerciseClientId: 'ex-bench', targetSets: 3),
+          PlannedExerciseInput(exerciseClientId: 'ex-squat', targetSets: 4),
+        ],
+        watchSets: [fromWatch(exerciseClientId: 'ex-squat', epochMs: 1000)],
+      );
+
       expect(merged.exercises.map((e) => e.exerciseClientId), ['ex-bench', 'ex-squat']);
+      expect(merged.exercises.last.targetSets, 4);
+      expect(merged.sets.single.exerciseClientId, 'ex-squat');
+    });
+
+    test('a phone-only exercise with no sets at all is kept', () {
+      // The mirror screen can add an exercise before anything is logged into
+      // it; the resend must not treat "the watch never heard of it" as
+      // "delete it".
+      final merged = mergeWatchSessionContent(
+        existingExercises: [plannedExercise('ex-bench'), plannedExercise('ex-curl', targetSets: 2)],
+        existingSets: const [],
+        watchExercises: const [PlannedExerciseInput(exerciseClientId: 'ex-bench')],
+        watchSets: const [],
+      );
+
+      expect(merged.exercises.map((e) => e.exerciseClientId), ['ex-bench', 'ex-curl']);
+      expect(merged.exercises.last.targetSets, 2);
     });
   });
 }

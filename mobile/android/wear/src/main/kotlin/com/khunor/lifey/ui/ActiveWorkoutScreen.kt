@@ -203,15 +203,21 @@ private val HEART_RATE_PERMISSIONS = arrayOf(
  */
 @Composable
 private fun activeExerciseDisplay(metadata: SessionMetadata): ActiveExerciseDisplay {
-    val template = metadata.standaloneTemplate
-    val currentExercise = template?.exercises?.getOrNull(metadata.standaloneExerciseIndex)
+    // The phone's live session plan when it has pushed one, the cached
+    // template otherwise (F6c) — same list every other decision reads.
+    val currentExercise = metadata.standaloneCurrentExercise
     if (currentExercise != null) {
-        val setsForExercise = metadata.standaloneSets.filter { it.exerciseIndex == metadata.standaloneExerciseIndex }
+        val setsForExercise = metadata.standaloneSetsForCurrentExercise
         // Both counts include what the phone logged into this same session —
         // see SessionMetadata.standaloneSetsDoneAt / phoneSetsTotal.
         val setsDone = metadata.standaloneSetsDoneAt(metadata.standaloneExerciseIndex)
+        val phoneCountsThisExercise = if (metadata.phoneSetsExerciseId != null) {
+            metadata.phoneSetsExerciseId == currentExercise.exerciseId
+        } else {
+            metadata.phoneSetsExerciseIndex == metadata.standaloneExerciseIndex
+        }
         val targetSets =
-            metadata.phoneSetsTotal.takeIf { metadata.phoneSetsExerciseIndex == metadata.standaloneExerciseIndex }
+            metadata.phoneSetsTotal.takeIf { phoneCountsThisExercise }
                 ?: currentExercise.targetSets
         return if (targetSets != null) {
             ActiveExerciseDisplay(
@@ -405,22 +411,40 @@ fun ActiveWorkoutScreen() {
                                 loggedAtEpochMs = System.currentTimeMillis(),
                                 reps = adjust.reps,
                                 weight = adjust.weight,
+                                exerciseId = metadata.currentExerciseId,
                             )
                         }
                     }
                 },
             )
-        } else if (showExerciseList && metadata.standaloneTemplate != null) {
+        } else if (showExerciseList && metadata.canChooseExercise) {
             ExerciseListScreen(
-                template = metadata.standaloneTemplate!!,
-                currentExerciseIndex = metadata.standaloneExerciseIndex,
-                setsDonePerExercise = List(metadata.standaloneTemplate!!.exercises.size) {
+                // The phone's live session plan when it has pushed one, the
+                // cached template otherwise (F6c) — the same list every other
+                // "which exercise" decision reads, so what's on screen and
+                // what a tap logs into can't drift apart.
+                exercises = metadata.activePlanExercises,
+                currentExerciseId = metadata.currentExerciseId,
+                setsDonePerExercise = List(metadata.activePlanExercises.size) {
                     metadata.standaloneSetsDoneAt(it)
                 },
+                removedExerciseIndexes = metadata.removedExerciseIndexes,
                 isCompact = isCompact,
                 maxWidth = maxWidth,
                 onSelect = { index ->
-                    SessionStateHolder.onStandaloneExerciseSelected(index)
+                    if (metadata.isStandalone) {
+                        SessionStateHolder.onStandaloneExerciseSelected(index)
+                    } else {
+                        // Phone-mastered: the phone owns the decision, this
+                        // only reports the pick (F6c §7).
+                        val sessionId = metadata.sessionClientId
+                        val exerciseId = SessionStateHolder.onPhoneExerciseSelected(index)
+                        if (sessionId != null && exerciseId != null) {
+                            scope.launch {
+                                SummarySender.sendExerciseSelected(context, sessionId, exerciseId)
+                            }
+                        }
+                    }
                     showExerciseList = false
                 },
                 onBack = { showExerciseList = false },
@@ -441,11 +465,12 @@ fun ActiveWorkoutScreen() {
                         setsDone = display.setsDone,
                         setsTotal = display.setsTotal,
                         sessionClientId = metadata.sessionClientId,
+                        currentExerciseId = metadata.currentExerciseId,
                         logSetState = logSetState,
                         isStandalone = isStandalone,
                         showsStandaloneBadge = showsStandaloneBadge,
                         freeFormatSets = display.freeFormatSets,
-                        hasStandaloneTemplate = metadata.standaloneTemplate != null,
+                        hasStandaloneTemplate = metadata.canChooseExercise,
                         onOpenExerciseList = { showExerciseList = true },
                         isCompact = isCompact,
                         maxWidth = maxWidth,
@@ -462,6 +487,8 @@ fun ActiveWorkoutScreen() {
                         isStandalone = showsStandaloneBadge,
                         headerLabel = activeHeaderLabel,
                         freeFormatSets = display.freeFormatSets,
+                        canChooseExercise = metadata.canChooseExercise,
+                        onOpenExerciseList = { showExerciseList = true },
                         isCompact = isCompact,
                         maxWidth = maxWidth,
                     )
@@ -471,7 +498,7 @@ fun ActiveWorkoutScreen() {
                         setsTotal = display.setsTotal,
                         isPaused = liveMetrics.isPaused,
                         freeFormatSets = display.freeFormatSets,
-                        hasStandaloneTemplate = metadata.standaloneTemplate != null,
+                        hasStandaloneTemplate = metadata.canChooseExercise,
                         isCompact = isCompact,
                         onEnd = { showEffortSelector = true },
                         onTogglePause = {
@@ -543,6 +570,10 @@ private fun LogPage(
     setsDone: Int?,
     setsTotal: Int?,
     sessionClientId: String?,
+    /** Which exercise a tap here should count against, when this watch has a
+     * say in it (F6c §7) — null leaves the choice entirely to the phone, the
+     * pre-F6c behaviour. */
+    currentExerciseId: String?,
     logSetState: LogSetState,
     isStandalone: Boolean,
     /** Whether HeaderChip's "not connected" badge should show — distinct
@@ -650,6 +681,7 @@ private fun LogPage(
                             sessionClientId = currentSessionClientId,
                             eventId = eventId,
                             loggedAtEpochMs = System.currentTimeMillis(),
+                            exerciseId = currentExerciseId,
                         )
                     }
                 },
@@ -1169,6 +1201,11 @@ private fun MetricsOrRestPage(
      * the rest-hero keeps its own "REST" label regardless. */
     headerLabel: String,
     freeFormatSets: Pair<Int, Int>?,
+    /** Whether the exercise readout on this page opens the exercise list —
+     * this is where the user notices they're on the wrong exercise, and the
+     * chip on the log/controls pages is a swipe away from here (F6c §7). */
+    canChooseExercise: Boolean,
+    onOpenExerciseList: () -> Unit,
     isCompact: Boolean,
     maxWidth: Dp,
 ) {
@@ -1188,16 +1225,18 @@ private fun MetricsOrRestPage(
         verticalArrangement = Arrangement.Center,
     ) {
         if (resting) {
-            RestHero(
-                restRemainingMs = restRemainingMs,
-                restTotalSeconds = restTotalSeconds,
-                exerciseName = exerciseName,
-                setsDone = setsDone,
-                setsTotal = setsTotal,
-                liveMetrics = liveMetrics,
-                isStandalone = isStandalone,
-                isCompact = isCompact,
-            )
+            Box(modifier = Modifier.exercisePickerTarget(canChooseExercise, onOpenExerciseList)) {
+                RestHero(
+                    restRemainingMs = restRemainingMs,
+                    restTotalSeconds = restTotalSeconds,
+                    exerciseName = exerciseName,
+                    setsDone = setsDone,
+                    setsTotal = setsTotal,
+                    liveMetrics = liveMetrics,
+                    isStandalone = isStandalone,
+                    isCompact = isCompact,
+                )
+            }
         } else {
             HeaderChip(
                 icon = Icons.Filled.FitnessCenter,
@@ -1255,16 +1294,27 @@ private fun MetricsOrRestPage(
                     ),
                 )
             }
-            ExerciseCard(
-                exerciseName = exerciseName,
-                setsDone = setsDone,
-                setsTotal = setsTotal,
-                freeFormatSets = freeFormatSets,
-                isCompact = isCompact,
-            )
+            Box(modifier = Modifier.exercisePickerTarget(canChooseExercise, onOpenExerciseList)) {
+                ExerciseCard(
+                    exerciseName = exerciseName,
+                    setsDone = setsDone,
+                    setsTotal = setsTotal,
+                    freeFormatSets = freeFormatSets,
+                    isCompact = isCompact,
+                )
+            }
         }
     }
 }
+
+/** Makes the exercise readout open the exercise list — but only while there is
+ * something to switch to, so a session without a pushed plan keeps a plain,
+ * non-interactive readout instead of a control that opens an empty screen.
+ * Mirrors iOS's `ExercisePickerTarget`. */
+private fun Modifier.exercisePickerTarget(
+    canChooseExercise: Boolean,
+    onOpenExerciseList: () -> Unit,
+): Modifier = if (canChooseExercise) clickable(onClick = onOpenExerciseList) else this
 
 /** Page 3 of 3 (canvas Wear 03): End + Pause only, with a dimmed reminder of
  * what's in progress (matching the canvas's faded, scaled-down exercise
@@ -1404,8 +1454,8 @@ private fun ExerciseListChip(onClick: () -> Unit) {
  */
 @Composable
 private fun ExerciseListScreen(
-    template: StandaloneTemplate,
-    currentExerciseIndex: Int,
+    exercises: List<StandaloneTemplateExercise>,
+    currentExerciseId: String?,
     /**
      * How many sets each exercise has, by plan index — resolved by the caller
      * through [SessionMetadata.standaloneSetsDoneAt], not counted from this
@@ -1415,6 +1465,13 @@ private fun ExerciseListScreen(
      * the active page, which already reconciles the two.
      */
     setsDonePerExercise: List<Int>,
+    /**
+     * Plan positions the phone removed from this session
+     * ([SessionMetadata.removedExerciseIndexes]) — skipped when rendering,
+     * never renumbered: `index` below stays the position every logged set is
+     * attributed by.
+     */
+    removedExerciseIndexes: Set<Int>,
     isCompact: Boolean,
     maxWidth: Dp,
     onSelect: (Int) -> Unit,
@@ -1438,12 +1495,13 @@ private fun ExerciseListScreen(
                     color = LifeyColors.onSurface,
                 )
             }
-            template.exercises.forEachIndexed { index, exercise ->
+            exercises.forEachIndexed { index, exercise ->
+                if (index in removedExerciseIndexes) return@forEachIndexed
                 item {
                     ExerciseListRow(
                         exercise = exercise,
                         isCompact = isCompact,
-                        isCurrent = index == currentExerciseIndex,
+                        isCurrent = exercise.exerciseId == currentExerciseId,
                         setsDone = setsDonePerExercise.getOrElse(index) { 0 },
                         onTap = { onSelect(index) },
                     )

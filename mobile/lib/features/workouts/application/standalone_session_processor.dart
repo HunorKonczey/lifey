@@ -454,13 +454,43 @@ class StandaloneSessionProcessor {
     // never partially.
     final template = templateId == null ? null : await _templateRepository.findByClientId(templateId);
 
+    // F6c: the watch now names the exercise by **clientId** where it can
+    // (docs/watch/50-watch-f6c-session-plan-sync-plan.md) — the id wins over
+    // the position, because the exercise list it logged against is the live
+    // session's and may have gained or lost entries since. Checked against
+    // this device's own rows first: the id came from here, but the exercise
+    // can have been deleted since, and a dangling reference has to fall back
+    // like any other unresolvable set rather than write an invisible one.
+    final knownExerciseIds = await _exerciseRepository.existingClientIds({
+      for (final set in sets)
+        if (set.exerciseId != null) set.exerciseId!,
+    });
+    String? resolvedExerciseId(WatchStandaloneSet set) {
+      final exerciseId = set.exerciseId;
+      if (exerciseId != null && knownExerciseIds.contains(exerciseId)) return exerciseId;
+      if (_resolvesWithinTemplate(set.exerciseIndex, template)) {
+        return template!.exercises[set.exerciseIndex!].exerciseClientId;
+      }
+      return null;
+    }
+
+    // Distinct, in the order the sets first mention them — the fallback
+    // exercise list for a session with no template (below).
+    final resolvedIds = <String>[];
+    for (final set in sets) {
+      final exerciseId = resolvedExerciseId(set);
+      if (exerciseId != null && !resolvedIds.contains(exerciseId)) resolvedIds.add(exerciseId);
+    }
+
     // Computed once, before any exercise is created — a session can be a
-    // *mix* of template-resolved and unresolved sets (e.g. the plan
-    // shrank after the watch cached it), so the generic exercise is only
-    // fetched/created when at least one set actually needs it, not
-    // unconditionally the way F6a's single-exercise path always did.
-    final needsGenericExercise =
-        template == null || sets.any((set) => !_resolvesWithinTemplate(set.exerciseIndex, template));
+    // *mix* of resolved and unresolved sets (e.g. the plan shrank after the
+    // watch cached it), so the generic exercise is only fetched/created when
+    // at least one set actually needs it, not unconditionally the way F6a's
+    // single-exercise path always did. A template-less session needs it too
+    // when nothing resolved at all: that's F6a's original Quick strength case,
+    // which has no other exercise to point at.
+    final needsGenericExercise = sets.any((set) => resolvedExerciseId(set) == null) ||
+        (template == null && resolvedIds.isEmpty);
     final genericExerciseClientId =
         needsGenericExercise ? await _exerciseRepository.getOrCreateByName(genericTitle) : null;
 
@@ -470,10 +500,7 @@ class StandaloneSessionProcessor {
     // the `sets` list below and [_resolveWeights]'s per-exercise fallback
     // need it, and it must be the same answer for both.
     final setExerciseIds = [
-      for (final set in sets)
-        _resolvesWithinTemplate(set.exerciseIndex, template)
-            ? template!.exercises[set.exerciseIndex!].exerciseClientId
-            : genericExerciseClientId!,
+      for (final set in sets) resolvedExerciseId(set) ?? genericExerciseClientId!,
     ];
     final weights = await _resolveWeights(
       sessionClientId: sessionClientId,
@@ -498,7 +525,16 @@ class StandaloneSessionProcessor {
                   targetSets: exercise.targetSets,
                 ),
             ]
-          : [PlannedExerciseInput(exerciseClientId: genericExerciseClientId!)],
+          // No template: whatever the sets themselves resolved to (F6c — a
+          // Quick strength session the phone has since added exercises to
+          // logs into real ones by id), and the generic placeholder when
+          // there's genuinely nothing else, which is F6a's original shape.
+          : resolvedIds.isEmpty
+              ? [PlannedExerciseInput(exerciseClientId: genericExerciseClientId!)]
+              : [
+                  for (final exerciseClientId in resolvedIds)
+                    PlannedExerciseInput(exerciseClientId: exerciseClientId),
+                ],
       sets: [
         for (var i = 0; i < sets.length; i++)
           ExerciseSetInput(

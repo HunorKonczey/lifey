@@ -247,6 +247,20 @@ class PhoneListenerService : WearableListenerService() {
                     ?.optInt("setsDoneExerciseIndex"),
                 setsDonePerExercise = state?.optJSONArray("setsDonePerExercise")
                     ?.let { array -> List(array.length()) { array.optInt(it) } },
+                // Which plan positions the session no longer has — absent
+                // (older phone build, or nothing removed) means "nothing
+                // removed", i.e. the pre-existing behaviour.
+                removedExerciseIndexes = state?.optJSONArray("removedExerciseIndexes")
+                    ?.let { array -> List(array.length()) { array.optInt(it) } },
+                // …and the same answer by clientId, which is what F6c compares
+                // against: a position stops meaning the same thing on both
+                // sides the moment the session's exercise list changes.
+                setsDoneExerciseId = state?.optString("setsDoneExerciseId")?.ifEmpty { null },
+                // The session's own exercise list, JSON-encoded (F6c) — a
+                // string, so it crosses every transport unchanged.
+                sessionPlan = StandalonePlanJson.parseSessionPlan(
+                    state?.optString("sessionPlan")?.ifEmpty { null },
+                ),
             )
             sessionClientId
         } catch (e: Exception) {
@@ -292,6 +306,10 @@ class PhoneListenerService : WearableListenerService() {
                 setsDoneExerciseIndex = state?.takeIf { it.containsKey("setsDoneExerciseIndex") }
                     ?.getInt("setsDoneExerciseIndex"),
                 setsDonePerExercise = state?.getIntegerArrayList("setsDonePerExercise")?.toList(),
+                removedExerciseIndexes =
+                    state?.getIntegerArrayList("removedExerciseIndexes")?.toList(),
+                setsDoneExerciseId = state?.getString("setsDoneExerciseId"),
+                sessionPlan = StandalonePlanJson.parseSessionPlan(state?.getString("sessionPlan")),
             )
 
             // The phone's `end` message may never have reached us while

@@ -79,6 +79,7 @@ object SummarySender {
         loggedAtEpochMs: Long,
         reps: Int? = null,
         weight: Double? = null,
+        exerciseId: String? = null,
     ) {
         val payload = JSONObject().apply {
             put("sessionClientId", sessionClientId)
@@ -86,8 +87,27 @@ object SummarySender {
             put("loggedAtEpochMs", loggedAtEpochMs)
             putOpt("reps", reps)
             putOpt("weight", weight)
+            // Which exercise this watch aimed the tap at, when its own picker
+            // was used (docs/watch/50-watch-f6c-session-plan-sync-plan.md §7);
+            // omitted for a plain tap, which leaves the choice to the phone.
+            putOpt("exerciseId", exerciseId)
         }
         send(context, "$MESSAGE_PATH_PREFIX/logSet", payload)
+    }
+
+    /**
+     * The exercise picker's own pick in a **phone-mastered** session (F6c §7)
+     * — no set, just "this is the exercise I'm on now", so the phone's next
+     * state push (name, counts, stepper prefill) describes it. Best-effort
+     * like every send here: a lost one costs nothing lasting, because the set
+     * itself names the exercise again when it comes.
+     */
+    suspend fun sendExerciseSelected(context: Context, sessionClientId: String, exerciseId: String) {
+        val payload = JSONObject().apply {
+            put("sessionClientId", sessionClientId)
+            put("exerciseId", exerciseId)
+        }
+        send(context, "$MESSAGE_PATH_PREFIX/exerciseSelected", payload)
     }
 
     /**
@@ -178,6 +198,10 @@ object SummarySender {
                                 put("reps", set.reps)
                                 putOpt("weight", set.weight)
                                 putOpt("exerciseIndex", set.exerciseIndex)
+                                // The identity the phone actually attributes
+                                // by (F6c); the index rides along for a phone
+                                // build that predates it.
+                                putOpt("exerciseId", set.exerciseId)
                             },
                         )
                     }
@@ -194,8 +218,13 @@ object SummarySender {
             // outside a template session, where there's no plan to index into.
             putOpt(
                 "currentExerciseIndex",
-                metadata.standaloneTemplate?.let { metadata.standaloneExerciseIndex },
+                metadata.activePlanExercises.takeIf { it.isNotEmpty() }
+                    ?.let { metadata.standaloneExerciseIndex },
             )
+            // The same answer by clientId (F6c) — preferred by the phone,
+            // since it survives a mid-session plan change and can name an
+            // exercise the template never had (one added on the phone).
+            putOpt("currentExerciseId", metadata.standaloneCurrentExerciseId)
         }
         send(context, "$MESSAGE_PATH_PREFIX/standaloneSessionAdopted", payload)
     }

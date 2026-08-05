@@ -40,6 +40,29 @@ class WatchSetLogDecision {
   final WatchSetLogTarget? target;
 }
 
+/// The row a tap **explicitly aimed at [block]** should land in — the wrist's
+/// exercise picker naming its choice (docs/watch/
+/// 50-watch-f6c-session-plan-sync-plan.md §7). [block]'s first not-done row,
+/// or a freshly appended one when every row of it is already done.
+///
+/// The pinned counterpart of [selectWatchSetLogTarget], for the same reason
+/// [watchSetPrefillForBlock] exists: that function's rule (b) leaves the
+/// current exercise once it has no rows left, which is right when the *phone*
+/// is choosing, and wrong when the user has just pointed at an exercise on
+/// their wrist — including at a finished one, to add a set to it.
+///
+/// Null when [block] isn't part of [blocks] (an exercise removed between the
+/// tap and its delivery), which the caller treats as "fall back to the phone's
+/// own choice".
+WatchSetLogTarget? selectWatchSetLogTargetIn(List<ExerciseBlock> blocks, ExerciseBlock block) {
+  final blockIndex = blocks.indexOf(block);
+  if (blockIndex == -1) return null;
+  final rowIndex = block.rows.indexWhere((r) => !r.isDone);
+  return rowIndex != -1
+      ? WatchSetLogTarget(blockIndex: blockIndex, rowIndex: rowIndex)
+      : WatchSetLogTarget(blockIndex: blockIndex, needsNewRow: true);
+}
+
 /// Which row the *next* watch "+1 set" tap would log into
 /// (docs/watch/43-watch-f5-set-logging-plan.md §5.2/4):
 ///
@@ -105,8 +128,20 @@ WatchSetLogTarget? selectWatchSetLogTarget(
 ExerciseBlock? watchCurrentBlock(
   List<ExerciseBlock> blocks,
   List<String> templateExerciseIds,
-  int? currentExerciseIndex,
-) {
+  int? currentExerciseIndex, {
+  String? currentExerciseClientId,
+}) {
+  // F6c: the watch names its current exercise by clientId whenever it has one
+  // (docs/watch/50-watch-f6c-session-plan-sync-plan.md). That answer needs no
+  // template at all — it survives an exercise added to the session on the
+  // phone, which by definition has no position in the plan the index space is
+  // built from — so it's tried first, and only an id this session doesn't
+  // contain falls through to the positional route below.
+  if (currentExerciseClientId != null) {
+    for (final block in blocks) {
+      if (block.exerciseClientId == currentExerciseClientId) return block;
+    }
+  }
   final index = currentExerciseIndex;
   if (index == null || index < 0 || index >= templateExerciseIds.length) {
     return null;
@@ -146,8 +181,31 @@ WatchSetPrefill? watchSetPrefill(List<ExerciseBlock> blocks, ExerciseBlock? curr
   if (target == null) return null;
   final block = blocks[target.blockIndex];
   // For a to-be-appended row, the position is the end of the list.
-  final rowIndex = target.rowIndex ?? block.rows.length;
+  return watchSetPrefillAt(block, target.rowIndex ?? block.rows.length);
+}
 
+/// The prefill for the next set of **[block] specifically**, whatever state
+/// the rest of the session is in — [block]'s first not-done row, or the
+/// position an appended row would take once every planned row is done.
+///
+/// This is the watch-mastered counterpart of [watchSetPrefill]: there the
+/// phone picks the row (and [selectWatchSetLogTarget]'s rule (b) may well
+/// leave the current exercise for the first one with a row left), but on a
+/// watch-mastered session the *watch* decides which exercise its next tap
+/// counts against — including deliberately picking one that already has all
+/// its planned sets, to add one more. Running the phone's rule there would
+/// answer with a different exercise's numbers than the one the user selected
+/// on the wrist, which is exactly the "the adjust stepper opens on the *next*
+/// exercise's values" report this exists to fix.
+WatchSetPrefill? watchSetPrefillForBlock(ExerciseBlock block) {
+  final openRow = block.rows.indexWhere((r) => !r.isDone);
+  return watchSetPrefillAt(block, openRow != -1 ? openRow : block.rows.length);
+}
+
+/// [watchSetPrefill]'s D-F5b.2 priority chain, resolved for one known row —
+/// [rowIndex] may be `block.rows.length`, meaning the row an append would
+/// create.
+WatchSetPrefill? watchSetPrefillAt(ExerciseBlock block, int rowIndex) {
   // 1. The target row itself.
   if (rowIndex < block.rows.length) {
     final row = block.rows[rowIndex];
@@ -196,6 +254,10 @@ WatchSetLogDecision decideWatchSetLog({
   required List<String> recentEventIds,
   required List<ExerciseBlock> blocks,
   required ExerciseBlock? currentBlock,
+  /// The exercise the watch itself named for this tap, when it did
+  /// ([WatchSetLogged.exerciseId]) — its row wins over the phone's own choice,
+  /// and stays put even when that exercise is already complete.
+  ExerciseBlock? chosenBlock,
 }) {
   if (eventSessionClientId != currentSessionClientId) {
     return const WatchSetLogDecision(action: WatchSetLogAction.reject);
@@ -207,7 +269,8 @@ WatchSetLogDecision decideWatchSetLog({
     return const WatchSetLogDecision(action: WatchSetLogAction.dedupe);
   }
 
-  final target = selectWatchSetLogTarget(blocks, currentBlock);
+  final target = (chosenBlock == null ? null : selectWatchSetLogTargetIn(blocks, chosenBlock)) ??
+      selectWatchSetLogTarget(blocks, currentBlock);
   if (target == null) {
     return const WatchSetLogDecision(action: WatchSetLogAction.reject);
   }

@@ -106,11 +106,19 @@ class WatchSetLogged {
     required this.loggedAtEpochMs,
     this.reps,
     this.weight,
+    this.exerciseId,
   });
 
   final String sessionClientId;
   final String eventId;
   final int loggedAtEpochMs;
+
+  /// Which exercise the watch chose to log this set into, by clientId
+  /// (docs/watch/50-watch-f6c-session-plan-sync-plan.md §7) — the wrist's
+  /// exercise picker now works in a phone-mastered session too, and this is
+  /// how its choice reaches the row selection. Null for the plain "+1 set"
+  /// flow, which leaves the choice entirely to the phone exactly as before.
+  final String? exerciseId;
 
   /// What the watch's adjust stepper produced, when the user went through it
   /// (docs/watch/48-watch-f5b-set-adjust-plan.md §4.1). **Optional and
@@ -139,6 +147,29 @@ class WatchSetLogged {
         // an int over the platform channel and would otherwise throw — the
         // same reason WatchLiveMetrics/WatchWorkoutSummary decode this way.
         weight: (json['weight'] as num?)?.toDouble(),
+        exerciseId: json['exerciseId'] as String?,
+      );
+}
+
+/// The watch picked a different exercise from its list during a
+/// **phone-mastered** session (docs/watch/50-watch-f6c-session-plan-sync-plan.md
+/// §7) — the counterpart of [WatchStandaloneAdoption.currentExerciseId] for a
+/// session the phone owns, where there is no adoption snapshot to carry it.
+///
+/// Carries no set: it only moves "which exercise is current", so the phone's
+/// next state push — the exercise name, its counts and the adjust stepper's
+/// prefill — describes the exercise the user just picked on the wrist. The set
+/// itself, when it comes, names the exercise again on its own
+/// ([WatchSetLogged.exerciseId]), so a lost message can't misfile it.
+class WatchExerciseSelected {
+  const WatchExerciseSelected({required this.sessionClientId, required this.exerciseId});
+
+  final String sessionClientId;
+  final String exerciseId;
+
+  factory WatchExerciseSelected.fromJson(Map<Object?, Object?> json) => WatchExerciseSelected(
+        sessionClientId: json['sessionClientId'] as String,
+        exerciseId: json['exerciseId'] as String,
       );
 }
 
@@ -155,12 +186,24 @@ class WatchStandaloneSet {
     required this.reps,
     this.weight,
     this.exerciseIndex,
+    this.exerciseId,
   });
 
   final int loggedAtEpochMs;
   final int reps;
   final double? weight;
   final int? exerciseIndex;
+
+  /// The exercise's **clientId**, as the watch received it in the session plan
+  /// or the synced template (docs/watch/50-watch-f6c-session-plan-sync-plan.md)
+  /// — the identity a set is attributed by from F6c on, and the reason the
+  /// exercise list may change mid-session at all: a position means whatever
+  /// the current list says, an id means the same exercise forever.
+  ///
+  /// Null for a set logged by a watch build that predates F6c, and for one
+  /// logged outside any plan; [exerciseIndex] is still carried alongside it
+  /// for exactly those cases, and stays the fallback.
+  final String? exerciseId;
 
   factory WatchStandaloneSet.fromJson(Map<Object?, Object?> json) => WatchStandaloneSet(
         loggedAtEpochMs: json['loggedAtEpochMs'] as int,
@@ -169,6 +212,7 @@ class WatchStandaloneSet {
         // an int on the Android side of the bridge.
         weight: (json['weight'] as num?)?.toDouble(),
         exerciseIndex: json['exerciseIndex'] as int?,
+        exerciseId: json['exerciseId'] as String?,
       );
 }
 
@@ -249,6 +293,7 @@ class WatchStandaloneAdoption {
     this.activeCalories,
     this.averageHeartRate,
     this.currentExerciseIndex,
+    this.currentExerciseId,
   });
 
   final String standaloneSessionId;
@@ -272,6 +317,12 @@ class WatchStandaloneAdoption {
   /// falling back to the phone's own rule.
   final int? currentExerciseIndex;
 
+  /// The same answer as [currentExerciseIndex], by **clientId** instead of
+  /// position (F6c) — preferred wherever both are present, since the exercise
+  /// list can change mid-session and a position can't survive that. Null on a
+  /// watch build that predates F6c and outside any plan.
+  final String? currentExerciseId;
+
   factory WatchStandaloneAdoption.fromJson(Map<Object?, Object?> json) => WatchStandaloneAdoption(
         standaloneSessionId: json['standaloneSessionId'] as String,
         templateId: json['templateId'] as String?,
@@ -282,6 +333,7 @@ class WatchStandaloneAdoption {
         activeCalories: (json['activeCalories'] as num?)?.toDouble(),
         averageHeartRate: (json['averageHeartRate'] as num?)?.toDouble(),
         currentExerciseIndex: (json['currentExerciseIndex'] as num?)?.toInt(),
+        currentExerciseId: json['currentExerciseId'] as String?,
       );
 }
 
@@ -348,6 +400,8 @@ class WatchWorkoutService {
         return WatchStandaloneSession.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
       case 'standaloneSessionAdopted':
         return WatchStandaloneAdoption.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
+      case 'exerciseSelected':
+        return WatchExerciseSelected.fromJson(map);
       default:
         return (map['type'] as String?) ?? 'unknown';
     }

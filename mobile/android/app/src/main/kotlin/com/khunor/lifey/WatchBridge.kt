@@ -344,6 +344,9 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "$MESSAGE_PATH_PREFIX/$COMMAND_LOG_SET" -> {
                 emitSetLogged(String(messageEvent.data))
             }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_EXERCISE_SELECTED" -> {
+                emitExerciseSelected(String(messageEvent.data))
+            }
             "$MESSAGE_PATH_PREFIX/$COMMAND_STANDALONE_SESSION" -> {
                 emitStandaloneSession(String(messageEvent.data))
             }
@@ -435,6 +438,25 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                 // Dart side instead of "no values" (D-F5b.6).
                 "reps" to if (payload.has("reps")) payload.optInt("reps") else null,
                 "weight" to if (payload.has("weight")) payload.optDouble("weight") else null,
+                // Which exercise the wrist's own picker aimed this tap at
+                // (docs/watch/50-watch-f6c-session-plan-sync-plan.md §7);
+                // absent for a plain tap, which still leaves the choice to
+                // the phone.
+                "exerciseId" to if (payload.has("exerciseId")) payload.optString("exerciseId") else null,
+            ),
+        )
+    }
+
+    /** The wrist's exercise picker in a phone-mastered session — no set, just
+     * "this is the exercise I'm on now" (F6c §7). */
+    private fun emitExerciseSelected(json: String) {
+        val payload = JSONObject(json)
+        val exerciseId = payload.optString("exerciseId").ifEmpty { return }
+        eventSink?.success(
+            mapOf(
+                "type" to "exerciseSelected",
+                "sessionClientId" to payload.optString("sessionClientId"),
+                "exerciseId" to exerciseId,
             ),
         )
     }
@@ -458,6 +480,10 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                     "reps" to set.optInt("reps"),
                     "weight" to if (set.has("weight")) set.optDouble("weight") else null,
                     "exerciseIndex" to if (set.has("exerciseIndex")) set.optInt("exerciseIndex") else null,
+                    // F6c: the exercise's clientId, which outranks the position
+                    // on the Dart side (the session's exercise list can change
+                    // mid-workout, a set's exercise can't).
+                    "exerciseId" to if (set.has("exerciseId")) set.optString("exerciseId") else null,
                 )
             }
         eventSink?.success(
@@ -503,6 +529,10 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                     "reps" to set.optInt("reps"),
                     "weight" to if (set.has("weight")) set.optDouble("weight") else null,
                     "exerciseIndex" to if (set.has("exerciseIndex")) set.optInt("exerciseIndex") else null,
+                    // F6c: the exercise's clientId, which outranks the position
+                    // on the Dart side (the session's exercise list can change
+                    // mid-workout, a set's exercise can't).
+                    "exerciseId" to if (set.has("exerciseId")) set.optString("exerciseId") else null,
                 )
             }
         eventSink?.success(
@@ -520,6 +550,27 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                         "averageHeartRate" to
                             if (payload.has("averageHeartRate")) payload.optDouble("averageHeartRate")
                             else null,
+                        // Which exercise the watch's *next* set counts against.
+                        // Both forms: the position (F6b) and, from F6c, the
+                        // clientId that survives a mid-session plan change and
+                        // can name an exercise the plan never had. Neither was
+                        // forwarded before — the Wear watch has been sending
+                        // `currentExerciseIndex` since F6b, and this bridge
+                        // silently dropped it, so on Android the phone fell
+                        // back to its own "exercise of the last logged set"
+                        // rule and pushed a prefill for the wrong exercise.
+                        "currentExerciseIndex" to
+                            if (payload.has("currentExerciseIndex")) {
+                                payload.optInt("currentExerciseIndex")
+                            } else {
+                                null
+                            },
+                        "currentExerciseId" to
+                            if (payload.has("currentExerciseId")) {
+                                payload.optString("currentExerciseId")
+                            } else {
+                                null
+                            },
                     ),
             ),
         )
@@ -565,6 +616,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_LIVE_METRICS = "liveMetrics"
         private const val COMMAND_LOG_SET = "logSet"
         private const val COMMAND_LOG_SET_ACK = "logSetAck"
+        private const val COMMAND_EXERCISE_SELECTED = "exerciseSelected"
         private const val COMMAND_STANDALONE_SESSION = "standaloneSessionCompleted"
         private const val COMMAND_STANDALONE_ACK = "standaloneSessionAck"
         private const val COMMAND_STANDALONE_ADOPTED = "standaloneSessionAdopted"

@@ -12,6 +12,14 @@ struct StandaloneSet: Codable, Equatable {
   let reps: Int
   let weight: Double?
   let exerciseIndex: Int?
+  /// The exercise's clientId, as the phone sent it in the session plan or the
+  /// synced template (docs/watch/50-watch-f6c-session-plan-sync-plan.md) — the
+  /// identity this set is attributed by, and what makes the exercise list free
+  /// to change mid-session: a position means whatever the current list says, an
+  /// id means the same exercise forever. Optional so a snapshot written by an
+  /// older build still decodes; `exerciseIndex` stays alongside it as the
+  /// fallback for exactly those sets and for an older phone build.
+  var exerciseId: String?
 }
 
 /// The wire/persisted shape of a finished standalone (phone-less) workout
@@ -63,6 +71,10 @@ struct StandaloneAdoptionPayload: Codable, Equatable {
   /// its own (`standalonePrefill`) — against the wrong exercise entirely.
   /// `nil` for a Quick strength session, where there's no plan to index into.
   let currentExerciseIndex: Int?
+  /// The same answer by clientId (F6c) — preferred by the phone, since it
+  /// survives a mid-session plan change and can name an exercise the template
+  /// never had (one added to the session on the phone).
+  let currentExerciseId: String?
 }
 
 /// The in-progress standalone session's own metadata, kept up to date on
@@ -85,6 +97,13 @@ struct StandaloneActiveSessionMeta: Codable, Equatable {
   /// unread) when `template` is nil. Not optional: always 0 for a
   /// Quick-strength session, just like the live `standaloneExerciseIndex`.
   var exerciseIndex: Int
+  /// The phone's live session plan as it stood at the last save (F6c), when
+  /// one had arrived — restored with the session so [exerciseIndex] still
+  /// means a position in the *same* list after a process death. Without it a
+  /// recovered session would read a plan position as a template position, and
+  /// land on whatever exercise happened to sit there. Optional so a snapshot
+  /// written before F6c (or by a phone-less session) still decodes.
+  var sessionPlan: [CachedTemplateExercise]?
   let startedAtEpochMs: Int64
   var sets: [StandaloneSet]
 }
@@ -99,6 +118,12 @@ struct CachedTemplateExercise: Codable, Equatable {
   let name: String
   let restSeconds: Int
   let targetSets: Int?
+  /// How many sets the **session** already has for this exercise, counting
+  /// both devices' — only ever present when this entry came from the phone's
+  /// live session plan (F6c); a synced template has no such thing. The watch
+  /// takes the larger of this and its own count, exactly the reconciliation
+  /// `setsDonePerExercise` did before.
+  let setsDone: Int?
   /// What was logged for this exercise the last time it was trained,
   /// heaviest first, as the phone resolved it (`previousSetsFor` in
   /// `watch_template_sync.dart`) — a standalone session's stand-in for the
@@ -114,6 +139,17 @@ struct CachedTemplateExercise: Codable, Equatable {
 struct CachedPreviousSet: Codable, Equatable {
   let weight: Double
   let reps: Int
+}
+
+/// The phone's live session plan (docs/watch/50-watch-f6c-session-plan-sync-plan.md)
+/// — the session's *own* exercise list, which is what the watch shows and logs
+/// against once it arrives, in place of the template snapshot the session
+/// started from. Decoded from the `sessionPlan` JSON string in the state
+/// payload; a string rather than a nested structure because the Wear side's
+/// DataItem transport carries only flat values, and one shape for both
+/// platforms is worth more than a marginally tidier iOS payload.
+struct SessionPlan: Codable, Equatable {
+  let exercises: [CachedTemplateExercise]
 }
 
 /// A template as cached on the watch for the standalone picker
