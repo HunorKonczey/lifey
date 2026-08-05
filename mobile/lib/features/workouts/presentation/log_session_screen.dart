@@ -648,6 +648,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       case WatchStandaloneSession():
         if (event.standaloneSessionId != _sessionClientId) return;
         _startWatchMirror();
+      // The wrist's exercise picker, in a session this phone owns (docs/watch/
+      // 50-watch-f6c-session-plan-sync-plan.md §7). Nothing is logged here —
+      // it only moves "which exercise is current", so the very next state push
+      // (name, counts, stepper prefill) describes what the user just picked.
+      case WatchExerciseSelected():
+        if (event.sessionClientId != _sessionClientId || _finishedAt != null) return;
+        if (event.exerciseId == _watchCurrentExerciseClientId) return;
+        if (!_blocks.any((b) => b.exerciseClientId == event.exerciseId)) return;
+        setState(() => _watchCurrentExerciseClientId = event.exerciseId);
+        unawaited(_updateSessionNotifier());
     }
   }
 
@@ -755,6 +765,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     // it should carry have to be worked out against the *same* current block,
     // and both before anything is mutated.
     final currentBlock = _currentExerciseBlock();
+    // The wrist's exercise picker naming this tap's exercise (F6c §7). Its row
+    // wins over the phone's own choice — and unlike that choice it stays put
+    // even when the exercise is already complete, since pointing at a finished
+    // exercise is how you add one more set to it from the watch.
+    final chosenBlock = _blockForExerciseId(event.exerciseId);
     final decision = decideWatchSetLog(
       eventSessionClientId: event.sessionClientId,
       currentSessionClientId: _sessionClientId,
@@ -764,6 +779,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       recentEventIds: _recentWatchSetEventIds,
       blocks: _blocks,
       currentBlock: currentBlock,
+      chosenBlock: chosenBlock,
     );
 
     switch (decision.action) {
@@ -780,6 +796,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
               accepted: true,
             ));
       case WatchSetLogAction.log:
+        // A tap that named its exercise also *is* a selection: everything the
+        // phone publishes from here on (name, counts, stepper prefill) should
+        // describe it, exactly as an explicit pick would have.
+        if (chosenBlock != null) {
+          _watchCurrentExerciseClientId = chosenBlock.exerciseClientId;
+        }
         final target = decision.target!;
         final blockIndex = target.blockIndex;
         // Resolved *before* anything is mutated: it answers "what should the
@@ -789,7 +811,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
         // (docs/watch/48-watch-f5b-set-adjust-plan.md D-F5b.2): the row's own
         // planned values, else what this exercise did at that position in the
         // last workout, else the last set already logged for it here.
-        final prefill = watchSetPrefill(_blocks, currentBlock);
+        final prefill = chosenBlock != null
+            ? watchSetPrefillForBlock(chosenBlock)
+            : watchSetPrefill(_blocks, currentBlock);
         final int rowIndex;
         if (target.needsNewRow) {
           _handleAddSet(blockIndex, prefillFromPrevious: true);
@@ -1453,6 +1477,17 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   /// full exercise behind on the watch's flow — the watch moves on as soon as
   /// an exercise has all its planned sets, so at that moment the phone was
   /// still describing the finished one.
+  /// The session's block for [exerciseClientId], or null when this session
+  /// doesn't (or no longer) contains it — the watch naming an exercise that
+  /// was removed on the phone between the tap and its delivery.
+  ExerciseBlock? _blockForExerciseId(String? exerciseClientId) {
+    if (exerciseClientId == null) return null;
+    for (final block in _blocks) {
+      if (block.exerciseClientId == exerciseClientId) return block;
+    }
+    return null;
+  }
+
   ExerciseBlock? _watchCurrentBlock() =>
       watchCurrentBlock(
         _blocks,
@@ -1568,13 +1603,13 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
   /// The session's own exercise list for the watch (F6c) — see
   /// [WorkoutSessionState.sessionPlan].
   ///
-  /// Only for a watch-mastered session: that's the only one with an exercise
-  /// list on the wrist. Unlike [_watchSetsDonePerExercise] this needs no
-  /// template — it *is* the answer the template can't give, and it stays
-  /// correct for a Quick strength session that has since gained exercises on
-  /// the phone.
+  /// Sent for **every** session, not just watch-mastered ones: the wrist's
+  /// exercise picker works in a phone-started workout too now, and this list
+  /// is what it shows (docs/watch/50-watch-f6c-session-plan-sync-plan.md §7).
+  /// Unlike [_watchSetsDonePerExercise] it needs no template — it *is* the
+  /// answer the template can't give, and it stays correct for a Quick strength
+  /// session that has since gained exercises on the phone.
   String? _watchSessionPlan() {
-    if (!_watchMastered) return null;
     final settings = _currentRestSettings();
     return buildWatchSessionPlanJson(
       blocks: _blocks,

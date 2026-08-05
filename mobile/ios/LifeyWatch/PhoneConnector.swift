@@ -78,7 +78,7 @@ final class PhoneConnector: NSObject {
   /// docs/40-watch-app-plan.md §11.2).
   func sendLogSet(
     sessionClientId: String, eventId: String, loggedAtEpochMs: Int64, reps: Int? = nil,
-    weight: Double? = nil
+    weight: Double? = nil, exerciseId: String? = nil
   ) {
     var message: [String: Any] = [
       "type": "logSet", "sessionClientId": sessionClientId, "eventId": eventId,
@@ -86,7 +86,22 @@ final class PhoneConnector: NSObject {
     ]
     if let reps { message["reps"] = reps }
     if let weight { message["weight"] = weight }
+    // Which exercise this watch aimed the tap at, when its own picker was used
+    // (docs/watch/50-watch-f6c-session-plan-sync-plan.md §7) — omitted, never
+    // NSNull, like every other optional key here.
+    if let exerciseId { message["exerciseId"] = exerciseId }
     sendMessage(message)
+  }
+
+  /// The exercise picker's own pick in a **phone-mastered** session (F6c §7) —
+  /// no set, just "this is the exercise I'm on now", so the phone's next state
+  /// push (name, counts, stepper prefill) describes it. Best-effort like every
+  /// `sendMessage` here: a lost one costs nothing lasting, because the set
+  /// itself names the exercise again when it comes.
+  func sendExerciseSelected(sessionClientId: String, exerciseId: String) {
+    sendMessage([
+      "type": "exerciseSelected", "sessionClientId": sessionClientId, "exerciseId": exerciseId,
+    ])
   }
 
   /// The watch's own `HKWorkoutSession` actually started running — drives the

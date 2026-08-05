@@ -79,6 +79,7 @@ object SummarySender {
         loggedAtEpochMs: Long,
         reps: Int? = null,
         weight: Double? = null,
+        exerciseId: String? = null,
     ) {
         val payload = JSONObject().apply {
             put("sessionClientId", sessionClientId)
@@ -86,8 +87,27 @@ object SummarySender {
             put("loggedAtEpochMs", loggedAtEpochMs)
             putOpt("reps", reps)
             putOpt("weight", weight)
+            // Which exercise this watch aimed the tap at, when its own picker
+            // was used (docs/watch/50-watch-f6c-session-plan-sync-plan.md §7);
+            // omitted for a plain tap, which leaves the choice to the phone.
+            putOpt("exerciseId", exerciseId)
         }
         send(context, "$MESSAGE_PATH_PREFIX/logSet", payload)
+    }
+
+    /**
+     * The exercise picker's own pick in a **phone-mastered** session (F6c §7)
+     * — no set, just "this is the exercise I'm on now", so the phone's next
+     * state push (name, counts, stepper prefill) describes it. Best-effort
+     * like every send here: a lost one costs nothing lasting, because the set
+     * itself names the exercise again when it comes.
+     */
+    suspend fun sendExerciseSelected(context: Context, sessionClientId: String, exerciseId: String) {
+        val payload = JSONObject().apply {
+            put("sessionClientId", sessionClientId)
+            put("exerciseId", exerciseId)
+        }
+        send(context, "$MESSAGE_PATH_PREFIX/exerciseSelected", payload)
     }
 
     /**

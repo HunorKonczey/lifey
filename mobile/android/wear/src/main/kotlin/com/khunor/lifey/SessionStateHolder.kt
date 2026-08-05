@@ -283,6 +283,15 @@ data class SessionMetadata(
      * of range, or a session it isn't mirroring all leave the watch on its
      * cached template, which is exactly the pre-F6c behaviour. */
     val sessionPlanExercises: List<StandaloneTemplateExercise>? = null,
+    /** Which exercise the **phone** says is current, by clientId — the
+     * phone-mastered counterpart of [standaloneExerciseIndex] (docs/watch/
+     * 50-watch-f6c-session-plan-sync-plan.md §7). Pushed on every state sync. */
+    val phoneCurrentExerciseId: String? = null,
+    /** The exercise the user picked from this watch's own list during a
+     * phone-mastered session, until the phone's next push confirms it — an
+     * optimistic local override so the list highlight and the next tap follow
+     * the finger immediately, without waiting for the round trip. */
+    val phoneSelectedExerciseId: String? = null,
     /** Which of [standaloneTemplate]'s exercises new sets log against —
      * always 0 and unused outside a template session. Changed only by
      * [SessionStateHolder.onStandaloneExerciseSelected] (§3.5's
@@ -374,6 +383,24 @@ data class SessionMetadata(
      * relying on its position (F6c). */
     val standaloneCurrentExerciseId: String?
         get() = standaloneCurrentExercise?.exerciseId
+
+    /** The exercise the next set counts against, whoever is mastering the
+     * session: the wrist's own position in standalone mode, and in a
+     * phone-mastered one the user's local pick if there is one, else whatever
+     * the phone last named (F6c §7). Mirrors iOS's `currentExerciseId`. */
+    val currentExerciseId: String?
+        get() = if (isStandalone) {
+            standaloneCurrentExerciseId
+        } else {
+            phoneSelectedExerciseId ?: phoneCurrentExerciseId
+        }
+
+    /** Whether this watch may offer its exercise list: a plan-backed
+     * standalone session as before, and now a phone-mastered one too as soon
+     * as the phone has pushed the session's exercises (F6c §7). A
+     * single-exercise list is not worth a chip — nothing to switch to. */
+    val canChooseExercise: Boolean
+        get() = activePlanExercises.size > 1 || (isStandalone && standaloneTemplate != null)
 
     /** [standaloneSets] narrowed to the current exercise. Outside a template
      * session (Quick strength) every set is one pool, matching F6a exactly.
@@ -755,8 +782,19 @@ object SessionStateHolder {
         val restDeadlineElapsedRealtimeMs = restRemainingSeconds?.let {
             SystemClock.elapsedRealtime() + it * 1_000L
         }
+        // F6c §7: the phone's exercise list and its current exercise reach a
+        // phone-mastered session too now — that's what its own picker lists,
+        // and what tells this watch when the phone has moved on by itself.
+        applySessionPlan(sessionPlan)
         _metadata.update { current ->
             current.copy(
+                phoneCurrentExerciseId = setsDoneExerciseId ?: current.phoneCurrentExerciseId,
+                // The local pick has served its purpose once the phone reports
+                // the same exercise — or a different one the user has since
+                // chosen *there*, which is the more recent instruction either
+                // way.
+                phoneSelectedExerciseId = current.phoneSelectedExerciseId
+                    ?.takeIf { setsDoneExerciseId == null || setsDoneExerciseId != it },
                 sessionClientId = sessionClientId,
                 title = title ?: current.title,
                 exerciseName = exerciseName ?: current.exerciseName,
@@ -850,6 +888,14 @@ object SessionStateHolder {
      */
     private fun applySessionPlan(plan: List<StandaloneTemplateExercise>?) {
         if (plan == null || plan == _metadata.value.sessionPlanExercises) return
+        // Only the standalone path keeps a *position* of its own; a
+        // phone-mastered session tracks its exercise by id
+        // ([SessionMetadata.phoneCurrentExerciseId]), which a reordered list
+        // can't invalidate.
+        if (!_metadata.value.isStandalone) {
+            _metadata.update { it.copy(sessionPlanExercises = plan) }
+            return
+        }
         _metadata.update { current ->
             val previousExerciseId = current.standaloneCurrentExerciseId
             val updated = current.copy(sessionPlanExercises = plan)
@@ -902,6 +948,29 @@ object SessionStateHolder {
      * (nothing to switch to, and the UI that calls this only ever offers
      * indices that exist), and for the exercise already selected.
      */
+    /** The exercise list's tap handler in a **phone-mastered** session
+     * (F6c §7) — records the pick locally and reports the exercise, so the
+     * caller (`ActiveWorkoutScreen`) can send it to the phone, which owns the
+     * decision and echoes it back on its next state push. Returns null when
+     * there is nothing to send: an out-of-range index, or the exercise the
+     * session is already on. */
+    fun onPhoneExerciseSelected(index: Int): String? {
+        val current = _metadata.value
+        val exerciseId = current.activePlanExercises.getOrNull(index)?.exerciseId ?: return null
+        if (exerciseId == current.currentExerciseId) return null
+        _metadata.update {
+            it.copy(
+                phoneSelectedExerciseId = exerciseId,
+                // The phone's prefill describes the exercise it still thinks
+                // is current — dropping it stops the stepper from opening on
+                // that one's numbers while the round trip completes.
+                nextSetReps = null,
+                nextSetWeight = null,
+            )
+        }
+        return exerciseId
+    }
+
     fun onStandaloneExerciseSelected(index: Int) {
         _metadata.update { current ->
             if (index in current.activePlanExercises.indices &&

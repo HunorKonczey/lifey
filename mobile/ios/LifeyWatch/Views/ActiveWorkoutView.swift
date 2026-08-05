@@ -67,7 +67,10 @@ struct ActiveWorkoutView: View {
               isCompact: isCompact, padding: padding, screenWidth: geometry.size.width,
               onOpenExerciseList: { showExerciseList = true }
             ).tag(0)
-            MetricsPage(isCompact: isCompact, padding: padding).tag(1)
+            MetricsPage(
+              isCompact: isCompact, padding: padding,
+              onOpenExerciseList: { showExerciseList = true }
+            ).tag(1)
             ControlsPage(
               isCompact: isCompact, padding: padding, onOpenExerciseList: { showExerciseList = true }
             ).tag(2)
@@ -360,10 +363,10 @@ private struct LogPage: View {
         // switch belongs next to it, not two swipes away on `ControlsPage`.
         // The two circles above ride up by the page's own spacing to make
         // room; nothing here is pinned to the dial.
-        // Shown for a plan-backed session as before, and now also for a Quick
-        // strength one the phone has added exercises to (F6c) — but not for a
-        // bare one-exercise Quick session, where there is nothing to switch to.
-        if workoutManager.standaloneTemplate != nil || workoutManager.activePlanExercises.count > 1 {
+        // Standalone as before, and now a phone-mastered session too once the
+        // phone has pushed its exercise list (F6c §7) — but never for a
+        // single-exercise list, where there is nothing to switch to.
+        if workoutManager.canChooseExercise {
           ExerciseListChip(isCompact: isCompact, action: onOpenExerciseList)
         }
         Spacer(minLength: 0)
@@ -782,10 +785,34 @@ private struct AdjustPage: View {
   }
 }
 
+/// Makes whatever it wraps open the exercise list — but only while there is
+/// something to switch to (`canChooseExercise`), so a Quick strength session
+/// or a phone that hasn't pushed its list keeps a plain, non-interactive
+/// readout instead of a control that opens an empty screen.
+private struct ExercisePickerTarget<Content: View>: View {
+  @ObservedObject private var workoutManager = WorkoutManager.shared
+  let onOpenExerciseList: () -> Void
+  @ViewBuilder let content: Content
+
+  var body: some View {
+    if workoutManager.canChooseExercise {
+      Button(action: onOpenExerciseList) { content }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("standalone_exercise_list_title"))
+    } else {
+      content
+    }
+  }
+}
+
 private struct MetricsPage: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
   let padding: CGFloat
+  /// The exercise name + set counter on this page is where the user notices
+  /// they're on the wrong exercise, so it opens the picker itself — the chip
+  /// on the log/controls pages is two swipes away from here (F6c §7).
+  let onOpenExerciseList: () -> Void
 
   private var heroFont: Font { isCompact ? .system(.title3, design: .rounded) : .system(.title2, design: .rounded) }
   private var captionFont: Font { isCompact ? .caption2 : .caption }
@@ -800,13 +827,15 @@ private struct MetricsPage: View {
             // fallback) and gets a real set count when it has a targetSets
             // (docs/watch/49-watch-f6b-template-sync-plan.md §3.4).
             let display = workoutManager.activeExerciseDisplay
-            RestHeroView(
-              remainingSeconds: remainingSeconds,
-              totalSeconds: workoutManager.restTotalSeconds,
-              exerciseName: display.name,
-              setsDone: display.setsDone,
-              setsTotal: display.setsTotal,
-              isCompact: isCompact)
+            ExercisePickerTarget(onOpenExerciseList: onOpenExerciseList) {
+              RestHeroView(
+                remainingSeconds: remainingSeconds,
+                totalSeconds: workoutManager.restTotalSeconds,
+                exerciseName: display.name,
+                setsDone: display.setsDone,
+                setsTotal: display.setsTotal,
+                isCompact: isCompact)
+            }
           }
         } else {
           // Left-aligned column (canvas AW 02) rather than centered — a
@@ -845,9 +874,11 @@ private struct MetricsPage: View {
             // phone-mastered) — see WorkoutManager.activeExerciseDisplay's
             // doc comment (docs/watch/49-watch-f6b-template-sync-plan.md §3.4).
             let display = workoutManager.activeExerciseDisplay
-            ExerciseCard(
-              exerciseName: display.name, setsDone: display.setsDone, setsTotal: display.setsTotal,
-              isCompact: isCompact, freeFormatSets: display.freeFormatSets)
+            ExercisePickerTarget(onOpenExerciseList: onOpenExerciseList) {
+              ExerciseCard(
+                exerciseName: display.name, setsDone: display.setsDone, setsTotal: display.setsTotal,
+                isCompact: isCompact, freeFormatSets: display.freeFormatSets)
+            }
           }
         }
       }
@@ -931,10 +962,10 @@ private struct ControlsPage: View {
         // Only during a template-backed session (docs/watch/
         // 49-watch-f6b-template-sync-plan.md §3.5) — quick-strength and
         // phone-mastered sessions have nothing to switch between.
-        // Shown for a plan-backed session as before, and now also for a Quick
-        // strength one the phone has added exercises to (F6c) — but not for a
-        // bare one-exercise Quick session, where there is nothing to switch to.
-        if workoutManager.standaloneTemplate != nil || workoutManager.activePlanExercises.count > 1 {
+        // Standalone as before, and now a phone-mastered session too once the
+        // phone has pushed its exercise list (F6c §7) — but never for a
+        // single-exercise list, where there is nothing to switch to.
+        if workoutManager.canChooseExercise {
           ExerciseListChip(isCompact: isCompact, action: onOpenExerciseList)
             .padding(.top, 10)
         }
@@ -1073,7 +1104,7 @@ private struct ExerciseListView: View {
           ) { index, exercise in
             ExerciseListRow(
               exercise: exercise, isCompact: isCompact,
-              isCurrent: index == workoutManager.standaloneExerciseIndex,
+              isCurrent: exercise.exerciseId == workoutManager.currentExerciseId,
               // `standaloneSetsDone(at:)`, not a count of this watch's own set
               // list: a watch-started workout is logged into from the phone
               // too, and only the phone's row holds both halves. Counting
@@ -1082,7 +1113,7 @@ private struct ExerciseListView: View {
               // the two.
               setsDone: workoutManager.standaloneSetsDone(at: index)
             ) {
-              workoutManager.selectStandaloneExercise(index)
+              workoutManager.selectExercise(at: index)
               onBack()
             }
           }

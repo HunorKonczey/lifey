@@ -40,6 +40,29 @@ class WatchSetLogDecision {
   final WatchSetLogTarget? target;
 }
 
+/// The row a tap **explicitly aimed at [block]** should land in — the wrist's
+/// exercise picker naming its choice (docs/watch/
+/// 50-watch-f6c-session-plan-sync-plan.md §7). [block]'s first not-done row,
+/// or a freshly appended one when every row of it is already done.
+///
+/// The pinned counterpart of [selectWatchSetLogTarget], for the same reason
+/// [watchSetPrefillForBlock] exists: that function's rule (b) leaves the
+/// current exercise once it has no rows left, which is right when the *phone*
+/// is choosing, and wrong when the user has just pointed at an exercise on
+/// their wrist — including at a finished one, to add a set to it.
+///
+/// Null when [block] isn't part of [blocks] (an exercise removed between the
+/// tap and its delivery), which the caller treats as "fall back to the phone's
+/// own choice".
+WatchSetLogTarget? selectWatchSetLogTargetIn(List<ExerciseBlock> blocks, ExerciseBlock block) {
+  final blockIndex = blocks.indexOf(block);
+  if (blockIndex == -1) return null;
+  final rowIndex = block.rows.indexWhere((r) => !r.isDone);
+  return rowIndex != -1
+      ? WatchSetLogTarget(blockIndex: blockIndex, rowIndex: rowIndex)
+      : WatchSetLogTarget(blockIndex: blockIndex, needsNewRow: true);
+}
+
 /// Which row the *next* watch "+1 set" tap would log into
 /// (docs/watch/43-watch-f5-set-logging-plan.md §5.2/4):
 ///
@@ -231,6 +254,10 @@ WatchSetLogDecision decideWatchSetLog({
   required List<String> recentEventIds,
   required List<ExerciseBlock> blocks,
   required ExerciseBlock? currentBlock,
+  /// The exercise the watch itself named for this tap, when it did
+  /// ([WatchSetLogged.exerciseId]) — its row wins over the phone's own choice,
+  /// and stays put even when that exercise is already complete.
+  ExerciseBlock? chosenBlock,
 }) {
   if (eventSessionClientId != currentSessionClientId) {
     return const WatchSetLogDecision(action: WatchSetLogAction.reject);
@@ -242,7 +269,8 @@ WatchSetLogDecision decideWatchSetLog({
     return const WatchSetLogDecision(action: WatchSetLogAction.dedupe);
   }
 
-  final target = selectWatchSetLogTarget(blocks, currentBlock);
+  final target = (chosenBlock == null ? null : selectWatchSetLogTargetIn(blocks, chosenBlock)) ??
+      selectWatchSetLogTarget(blocks, currentBlock);
   if (target == null) {
     return const WatchSetLogDecision(action: WatchSetLogAction.reject);
   }

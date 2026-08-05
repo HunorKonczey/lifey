@@ -1,6 +1,6 @@
 # 50 – F6c terv: a session élő gyakorlatlistája az órán
 
-Státusz: **kód kész (2026-08-05), eszközös végpróba hátravan.** `flutter test` 505 zöld, `flutter analyze` tiszta, `:app:` + `:wear:compileDebugKotlin` és a teljes `LifeyWatch` típusellenőrzés hibátlan.
+Státusz: **kód kész (2026-08-05), eszközös végpróba hátravan.** Két lépésben: az id-alapú session-terv (§1–§5), majd a rá épülő **gyakorlat-választó a telefonról indított edzésben** is (§6). `flutter test` 508 zöld, `flutter analyze` tiszta, `:app:` + `:wear:compileDebugKotlin` és a teljes `LifeyWatch` típusellenőrzés hibátlan.
 
 Kapcsolódó dokumentumok:
 - [49-watch-f6b-template-sync-plan.md](49-watch-f6b-template-sync-plan.md) — a template-sync és a gyakorlat-lista (§3.5, D-F6b.8), plusz az „Utólagos kiegészítés: gyakorlat-lista és a telefonon szerkesztett terv" szakasz, ami az F6c előtti félmegoldást (elrejtés) írja le.
@@ -91,8 +91,25 @@ Ettől a lista bármikor változhat: egy pozíció azt jelenti, amit az *aktuál
 
 Az eredeti terv `planVersion`-t és a már logolt szettek átszámozását írta elő (régi D-F6c.2/D-F6c.3). Egyikre sincs szükség: ha a szett a saját `exerciseId`-ját viszi, akkor nincs olyan pillanat, amikor egy régi listával küldött szettet egy új listával kellene értelmezni — épp azt a versenyhelyzetet szünteti meg, amiért a verziózás kellett volna. Az `exerciseId` ráadásul már ott volt a template-sync payloadban (49-doc §4.1 kifejezetten jegyzi, hogy „egy jövőbeli változás kulcsolhat rá"), tehát az óra oldalán nem kellett új adat.
 
-## 6. Amit ez a terv **nem** old meg
+## 6. Gyakorlat-választó a **telefonról indított** edzésben is
 
-- A telefon-mesterelt edzés nem érintett: ott nincs gyakorlat-lista az órán.
+**A bejelentés:** „a gyakorlat-lista csak akkor van ott, ha óráról indítom az edzést; ha telefonról, akkor nem látszik az órán." Plusz: „a fő képernyőn van egy gyakorlat-név és szett-számláló — arra lépve is nyíljon meg a gyakorlat-oldal."
+
+A 49-doc kifejezetten úgy zárta le, hogy a lista „továbbra is csak terv-alapú standalone sessionben látszik (quick strength és phone-mastered esetben nincs mire váltani)" — ez telefon-mesterelt edzésnél azért volt igaz, mert a watch csak egy néma „+1" eseményt küldött, a sort pedig a telefon választotta ki. **Az F6c id-alapú attribúciója után viszont van mire váltani**, mert az óra meg tudja nevezni a gyakorlatot.
+
+Ami ehhez bekerült:
+
+- **A session-terv minden edzéshez kimegy**, nem csak a watch-mesteresekhez (`_watchSessionPlan` gate megszűnt) — ez a lista, amit az óra mutat.
+- **`logSet` + `exerciseId`**: ha az óra saját listájából választottak, a tap megnevezi a gyakorlatot. A telefon ezt a blokkot célozza (`selectWatchSetLogTargetIn`) — **pinnelve**, tehát egy már kész gyakorlatra mutatva új sort fűz hozzá, nem lép át máshova (ugyanaz az elv, mint a prefillnél). Ismeretlen/eltűnt id esetén visszaesik a telefon saját szabályára.
+- **Új üzenet: `exerciseSelected`** (watch → telefon, szett nélkül) — a választás azonnal átáll a telefonon is, tehát a következő state-push (gyakorlatnév, szettszám, stepper-prefill) már azt írja le. Elveszhet: a szett úgyis magával viszi az id-t.
+- **Az órán** (mindkét platform): `currentExerciseId` = a lokális választás, különben amit a telefon mondott (`setsDoneExerciseId`); a lokális felülírás törlődik, amint a telefon ugyanazt (vagy a felhasználó által azóta a telefonon választott másikat) visszaigazolja. Választáskor a telefon prefillje eldobódik, hogy a stepper ne a régi gyakorlat számaival nyíljon.
+- **A chip** ott van, ahol van miből választani (`canChooseExercise`: egynél több gyakorlat a listában, vagy terv-alapú standalone), és a **metrikák-lap gyakorlat-kártyája / pihenő-hero-ja is megnyitja a listát** — ez az a képernyő, ahol a felhasználó észreveszi, hogy rossz gyakorlaton áll.
+
+**Tesztek:** `decideWatchSetLog` három új ága (választott blokk nyitott sora; kész gyakorlatra új sor; a sessionből eltűnt választás visszaesése). `flutter test` 508 zöld.
+
+---
+
+## 7. Amit ez a terv **nem** old meg
+
 - A gyakorlatok **sorrendjének** átrendezése a telefonon: az id-alapú attribúció bírná, de a telefon UI-ja ma nem kínálja.
-- Eszközös végpróba (mindkét platform): hozzáadás/törlés a telefonon futó edzés közben, kézi váltás az órán, offline óra, régi/új build párosítás.
+- Eszközös végpróba (mindkét platform): hozzáadás/törlés a telefonon futó edzés közben, kézi váltás az órán **mindkét indítási módban**, a metrikák-lapról nyitott lista, offline óra, régi/új build párosítás.

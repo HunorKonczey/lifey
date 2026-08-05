@@ -373,9 +373,11 @@ extension WatchBridge: WCSessionDelegate {
     case "startedOnWatch":
       eventSink?(["type": "startedOnWatch", "sessionClientId": sessionClientId])
     case "logSet":
-      // The watch never says *which* exercise/row to log — LogSessionScreen
-      // decides that from its own current position
-      // (docs/watch/43-watch-f5-set-logging-plan.md §4.1). It may, however,
+      // The watch names *which* exercise only when its own picker was used
+      // (`exerciseId`, docs/watch/50-watch-f6c-session-plan-sync-plan.md §7);
+      // for a plain tap it still says nothing and LogSessionScreen decides
+      // from its own current position
+      // (docs/watch/43-watch-f5-set-logging-plan.md §4.1). It may also
       // carry the values the user dialled in on its adjust stepper
       // (docs/watch/48-watch-f5b-set-adjust-plan.md §4.1): `reps`/`weight`
       // are absent for a plain F5a one-tap log, and the Dart side treats a
@@ -387,6 +389,15 @@ extension WatchBridge: WCSessionDelegate {
         "loggedAtEpochMs": message["loggedAtEpochMs"],
         "reps": message["reps"],
         "weight": message["weight"],
+        "exerciseId": message["exerciseId"],
+      ])
+    case "exerciseSelected":
+      // The wrist's exercise picker in a phone-mastered session — no set, just
+      // "this is the exercise I'm on now" (F6c §7).
+      eventSink?([
+        "type": "exerciseSelected",
+        "sessionClientId": sessionClientId,
+        "exerciseId": message["exerciseId"],
       ])
     case "liveMetrics":
       eventSink?([

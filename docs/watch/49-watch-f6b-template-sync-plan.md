@@ -744,7 +744,7 @@ A gyakorlat-listát eddig csak a vezérlő-lap (End/Pause) „Gyakorlatok" chipj
 
 - A chip kiemelve közös komponensbe (iOS `ExerciseListChip`, Wear `ExerciseListChip`), és most **mindkét lap** ezt használja, ugyanazzal a `onOpenExerciseList` callbackkel — tehát egy képernyő, egy állapot (`showExerciseList`), a két lap nem tud elcsúszni egymástól.
 - A log oldalon közvetlenül a státusz-sor (`<gyakorlat> · Set 2 of 2`) alá kerül. A két korong nem lett kisebb: az iOS oldali `VStack` térköze 10/16 → 8/12, a Wear `Column` pedig középre rendezett, tehát magától felfelé csúszik a tartalom.
-- Ugyanaz a megjelenés és ugyanaz a viselkedés, mint a vezérlő-lapon; továbbra is csak terv-alapú standalone sessionben látszik (quick strength és phone-mastered esetben nincs mire váltani).
+- Ugyanaz a megjelenés és ugyanaz a viselkedés, mint a vezérlő-lapon; ekkor még csak terv-alapú standalone sessionben látszott (quick strength és phone-mastered esetben nem volt mire váltani). **Ezt oldotta fel az F6c §6**: az óra id-vel nevezi meg a gyakorlatot, tehát a választó a telefonról indított edzésben is működik — [50-watch-f6c-session-plan-sync-plan.md](50-watch-f6c-session-plan-sync-plan.md).
 
 ---
 

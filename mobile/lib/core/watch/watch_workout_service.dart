@@ -106,11 +106,19 @@ class WatchSetLogged {
     required this.loggedAtEpochMs,
     this.reps,
     this.weight,
+    this.exerciseId,
   });
 
   final String sessionClientId;
   final String eventId;
   final int loggedAtEpochMs;
+
+  /// Which exercise the watch chose to log this set into, by clientId
+  /// (docs/watch/50-watch-f6c-session-plan-sync-plan.md §7) — the wrist's
+  /// exercise picker now works in a phone-mastered session too, and this is
+  /// how its choice reaches the row selection. Null for the plain "+1 set"
+  /// flow, which leaves the choice entirely to the phone exactly as before.
+  final String? exerciseId;
 
   /// What the watch's adjust stepper produced, when the user went through it
   /// (docs/watch/48-watch-f5b-set-adjust-plan.md §4.1). **Optional and
@@ -139,6 +147,29 @@ class WatchSetLogged {
         // an int over the platform channel and would otherwise throw — the
         // same reason WatchLiveMetrics/WatchWorkoutSummary decode this way.
         weight: (json['weight'] as num?)?.toDouble(),
+        exerciseId: json['exerciseId'] as String?,
+      );
+}
+
+/// The watch picked a different exercise from its list during a
+/// **phone-mastered** session (docs/watch/50-watch-f6c-session-plan-sync-plan.md
+/// §7) — the counterpart of [WatchStandaloneAdoption.currentExerciseId] for a
+/// session the phone owns, where there is no adoption snapshot to carry it.
+///
+/// Carries no set: it only moves "which exercise is current", so the phone's
+/// next state push — the exercise name, its counts and the adjust stepper's
+/// prefill — describes the exercise the user just picked on the wrist. The set
+/// itself, when it comes, names the exercise again on its own
+/// ([WatchSetLogged.exerciseId]), so a lost message can't misfile it.
+class WatchExerciseSelected {
+  const WatchExerciseSelected({required this.sessionClientId, required this.exerciseId});
+
+  final String sessionClientId;
+  final String exerciseId;
+
+  factory WatchExerciseSelected.fromJson(Map<Object?, Object?> json) => WatchExerciseSelected(
+        sessionClientId: json['sessionClientId'] as String,
+        exerciseId: json['exerciseId'] as String,
       );
 }
 
@@ -369,6 +400,8 @@ class WatchWorkoutService {
         return WatchStandaloneSession.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
       case 'standaloneSessionAdopted':
         return WatchStandaloneAdoption.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
+      case 'exerciseSelected':
+        return WatchExerciseSelected.fromJson(map);
       default:
         return (map['type'] as String?) ?? 'unknown';
     }

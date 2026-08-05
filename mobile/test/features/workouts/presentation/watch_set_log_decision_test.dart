@@ -18,6 +18,7 @@ WatchSetLogDecision _decide({
   List<String> recentEventIds = const [],
   required List<ExerciseBlock> blocks,
   ExerciseBlock? currentBlock,
+  ExerciseBlock? chosenBlock,
 }) =>
     decideWatchSetLog(
       eventSessionClientId: eventSessionClientId,
@@ -28,6 +29,7 @@ WatchSetLogDecision _decide({
       recentEventIds: recentEventIds,
       blocks: blocks,
       currentBlock: currentBlock,
+      chosenBlock: chosenBlock,
     );
 
 void main() {
@@ -100,6 +102,48 @@ void main() {
       // Screen would append 'event-1' to its FIFO after handling `first`.
       final second = _decide(eventId: 'event-1', recentEventIds: const ['event-1'], blocks: [block], currentBlock: block);
       expect(second.action, WatchSetLogAction.dedupe);
+    });
+  });
+
+  group('decideWatchSetLog — az óra által választott gyakorlat (F6c §7)', () {
+    test('a választott blokk nyitott sorába logol, a telefon szabálya helyett', () {
+      final current = _block('current', doneRows: [false, false]);
+      final chosen = _block('chosen', doneRows: [true, false]);
+      final decision = _decide(
+        blocks: [current, chosen],
+        currentBlock: current,
+        chosenBlock: chosen,
+      );
+
+      expect(decision.target!.blockIndex, 1);
+      expect(decision.target!.rowIndex, 1);
+    });
+
+    test('kész gyakorlatra mutatva új sort fűz hozzá — nem lép át máshova', () {
+      // A telefon (b) szabálya a másik blokkba menne; a kézi választás nem.
+      final open = _block('open', doneRows: [false]);
+      final chosen = _block('chosen', doneRows: [true, true]);
+      final decision = _decide(
+        blocks: [open, chosen],
+        currentBlock: open,
+        chosenBlock: chosen,
+      );
+
+      expect(decision.target!.blockIndex, 1);
+      expect(decision.target!.needsNewRow, isTrue);
+    });
+
+    test('a sessionből eltűnt választás visszaesik a telefon szabályára', () {
+      final current = _block('current', doneRows: [false]);
+      final gone = _block('gone', doneRows: [false]);
+      final decision = _decide(
+        blocks: [current],
+        currentBlock: current,
+        chosenBlock: gone,
+      );
+
+      expect(decision.target!.blockIndex, 0);
+      expect(decision.target!.rowIndex, 0);
     });
   });
 

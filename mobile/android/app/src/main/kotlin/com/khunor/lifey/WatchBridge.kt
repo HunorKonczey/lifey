@@ -344,6 +344,9 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "$MESSAGE_PATH_PREFIX/$COMMAND_LOG_SET" -> {
                 emitSetLogged(String(messageEvent.data))
             }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_EXERCISE_SELECTED" -> {
+                emitExerciseSelected(String(messageEvent.data))
+            }
             "$MESSAGE_PATH_PREFIX/$COMMAND_STANDALONE_SESSION" -> {
                 emitStandaloneSession(String(messageEvent.data))
             }
@@ -435,6 +438,25 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                 // Dart side instead of "no values" (D-F5b.6).
                 "reps" to if (payload.has("reps")) payload.optInt("reps") else null,
                 "weight" to if (payload.has("weight")) payload.optDouble("weight") else null,
+                // Which exercise the wrist's own picker aimed this tap at
+                // (docs/watch/50-watch-f6c-session-plan-sync-plan.md §7);
+                // absent for a plain tap, which still leaves the choice to
+                // the phone.
+                "exerciseId" to if (payload.has("exerciseId")) payload.optString("exerciseId") else null,
+            ),
+        )
+    }
+
+    /** The wrist's exercise picker in a phone-mastered session — no set, just
+     * "this is the exercise I'm on now" (F6c §7). */
+    private fun emitExerciseSelected(json: String) {
+        val payload = JSONObject(json)
+        val exerciseId = payload.optString("exerciseId").ifEmpty { return }
+        eventSink?.success(
+            mapOf(
+                "type" to "exerciseSelected",
+                "sessionClientId" to payload.optString("sessionClientId"),
+                "exerciseId" to exerciseId,
             ),
         )
     }
@@ -594,6 +616,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_LIVE_METRICS = "liveMetrics"
         private const val COMMAND_LOG_SET = "logSet"
         private const val COMMAND_LOG_SET_ACK = "logSetAck"
+        private const val COMMAND_EXERCISE_SELECTED = "exerciseSelected"
         private const val COMMAND_STANDALONE_SESSION = "standaloneSessionCompleted"
         private const val COMMAND_STANDALONE_ACK = "standaloneSessionAck"
         private const val COMMAND_STANDALONE_ADOPTED = "standaloneSessionAdopted"
