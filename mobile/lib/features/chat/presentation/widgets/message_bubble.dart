@@ -1,0 +1,249 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+
+import '../../../../l10n/app_localizations.dart';
+import '../../domain/chat_message.dart';
+import 'chat_avatar.dart';
+
+/// One message.
+///
+/// Two things here are load-bearing rather than decorative:
+///
+/// * **Status is never colour alone.** Each state has its own icon *shape*
+///   (clock → check → double check → filled double check → error), and the
+///   whole bubble carries a spoken equivalent through [Semantics], because
+///   the ticks are the only thing telling a sender their message got through.
+/// * **Only our own messages have a status.** Anything received is simply
+///   there; a tick on it would be meaningless.
+class MessageBubble extends StatelessWidget {
+  const MessageBubble({
+    super.key,
+    required this.message,
+    required this.isOwn,
+    required this.senderName,
+    required this.showTail,
+    required this.showAvatar,
+    required this.peerMonogram,
+    this.onRetry,
+    this.onDelete,
+  });
+
+  final ChatMessage message;
+  final bool isOwn;
+  final String senderName;
+
+  /// Last message of a same-sender run: the one that shows the time, the
+  /// status and the flattened "tail" corner. Consecutive messages group.
+  final bool showTail;
+
+  /// Peer-side runs show the avatar once, next to the last bubble.
+  final bool showAvatar;
+  final String peerMonogram;
+
+  final VoidCallback? onRetry;
+  final VoidCallback? onDelete;
+
+  static const _radius = 18.0;
+  static const _tailRadius = 6.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = theme.brightness == Brightness.dark;
+    final time = DateFormat.Hm(Localizations.localeOf(context).languageCode)
+        .format(message.createdAt);
+
+    final bubbleColor = isOwn
+        ? scheme.primary.withValues(alpha: isDark ? 0.20 : 0.13)
+        : scheme.surfaceContainerHigh;
+
+    return Semantics(
+      label: l10n.chatMessageSemantics(
+        senderName,
+        time,
+        message.isDeleted ? l10n.chatDeletedMessage : (message.body ?? ''),
+        isOwn ? _statusLabel(l10n) : '',
+      ),
+      excludeSemantics: true,
+      child: Padding(
+        padding: EdgeInsets.only(
+          // Tight inside a run, roomier between runs — the grouping the
+          // design asks for is spacing, not a separator.
+          top: showTail ? 2 : 1,
+          bottom: showTail ? 8 : 1,
+        ),
+        child: Row(
+          mainAxisAlignment: isOwn ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!isOwn)
+              SizedBox(
+                width: 36,
+                child: showAvatar ? ChatAvatar(monogram: peerMonogram, size: 30) : null,
+              ),
+            Flexible(
+              child: GestureDetector(
+                onLongPress: message.isDeleted ? null : () => _showActions(context, l10n),
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.sizeOf(context).width * 0.74,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: bubbleColor,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(_radius),
+                      topRight: const Radius.circular(_radius),
+                      // The flattened corner stands in for a drawn tail.
+                      bottomLeft: Radius.circular(
+                        !isOwn && showTail ? _tailRadius : _radius,
+                      ),
+                      bottomRight: Radius.circular(
+                        isOwn && showTail ? _tailRadius : _radius,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _body(context, scheme, l10n),
+                      if (showTail) ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              time,
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w500,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            if (isOwn) ...[
+                              const SizedBox(width: 4),
+                              _StatusIcon(state: message.state),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, ColorScheme scheme, AppLocalizations l10n) {
+    if (message.isDeleted) {
+      return Text(
+        l10n.chatDeletedMessage,
+        style: TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          fontSize: 14,
+          fontStyle: FontStyle.italic,
+          color: scheme.onSurfaceVariant,
+        ),
+      );
+    }
+    // Plain Text, not SelectableText: on touch both selection and the
+    // long-press menu below want the same gesture, and they fight for it.
+    // The menu wins because it is what the design specifies, and its "Copy"
+    // action covers the same need more reliably than a drag-to-select would
+    // inside a 74%-width bubble.
+    return Text(
+      message.body ?? '',
+      style: TextStyle(
+        fontFamily: 'PlusJakartaSans',
+        fontSize: 14.5,
+        fontWeight: FontWeight.w500,
+        height: 1.35,
+        color: scheme.onSurface,
+      ),
+    );
+  }
+
+  String _statusLabel(AppLocalizations l10n) {
+    return switch (message.state) {
+      ChatMessageState.pending => l10n.chatStatusPending,
+      ChatMessageState.sent => l10n.chatStatusSent,
+      ChatMessageState.delivered => l10n.chatStatusDelivered,
+      ChatMessageState.read => l10n.chatStatusRead,
+      ChatMessageState.failed => l10n.chatStatusFailed,
+    };
+  }
+
+  Future<void> _showActions(BuildContext context, AppLocalizations l10n) async {
+    final failed = message.state == ChatMessageState.failed;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.content_copy),
+              title: Text(l10n.chatCopyAction),
+              onTap: () async {
+                await Clipboard.setData(ClipboardData(text: message.body ?? ''));
+                if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+              },
+            ),
+            // Resend is only meaningful on something that actually failed —
+            // shown disabled elsewhere would just be noise.
+            if (failed && onRetry != null)
+              ListTile(
+                leading: const Icon(Icons.refresh),
+                title: Text(l10n.chatResendAction),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  onRetry!();
+                },
+              ),
+            if (isOwn && onDelete != null)
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+                title: Text(l10n.chatDeleteAction),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  onDelete!();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusIcon extends StatelessWidget {
+  const _StatusIcon({required this.state});
+
+  final ChatMessageState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (icon, color) = switch (state) {
+      ChatMessageState.pending => (Icons.schedule, scheme.onSurfaceVariant),
+      ChatMessageState.sent => (Icons.check, scheme.onSurfaceVariant),
+      ChatMessageState.delivered => (Icons.done_all, scheme.onSurfaceVariant),
+      // The one state that gets the accent colour — "they've seen it" is the
+      // only status worth drawing the eye.
+      ChatMessageState.read => (Icons.done_all, scheme.primary),
+      ChatMessageState.failed => (Icons.error_outline, scheme.error),
+    };
+    return Icon(icon, size: 13, color: color);
+  }
+}

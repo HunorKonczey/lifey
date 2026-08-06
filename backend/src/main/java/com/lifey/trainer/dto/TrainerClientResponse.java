@@ -14,6 +14,14 @@ import java.util.List;
 public record TrainerClientResponse(
         Long clientId,
         String clientEmail,
+        /**
+         * Added for the mobile chat's "new conversation" picker
+         * (docs/chat/40-trainer-chat-plan.md, I2), which shows name + email
+         * like every other person row in the app. Nullable: a client who
+         * never filled in their profile has neither.
+         */
+        String clientFirstName,
+        String clientLastName,
         Instant activeSince,
         List<WeightTrendPoint> weightTrend,
         int assignedPlanCount,

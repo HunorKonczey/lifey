@@ -32,12 +32,16 @@ class TrainerClientControllerTest {
     @Test
     void findActiveClients_returnsList() throws Exception {
         when(trainerAccessService.findActiveClientsForTrainer()).thenReturn(List.of(
-                new TrainerClientResponse(2L, "client@example.com", Instant.parse("2026-06-01T00:00:00Z"),
+                new TrainerClientResponse(2L, "client@example.com", "Kiss", "Anna",
+                        Instant.parse("2026-06-01T00:00:00Z"),
                         List.of(), 0, 0, null, null, 0)));
 
         mockMvc.perform(get("/api/v1/trainer/clients"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].clientEmail").value("client@example.com"));
+                .andExpect(jsonPath("$[0].clientEmail").value("client@example.com"))
+                // Name feeds the mobile "new conversation" picker's person row.
+                .andExpect(jsonPath("$[0].clientFirstName").value("Kiss"))
+                .andExpect(jsonPath("$[0].clientLastName").value("Anna"));
     }
 
     @Test

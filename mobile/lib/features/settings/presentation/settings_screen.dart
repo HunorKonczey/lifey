@@ -4,6 +4,7 @@ import 'dart:typed_data' show Uint8List;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
@@ -20,6 +21,7 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/presentation/change_password_screen.dart';
+import '../../chat/data/chat_repository.dart';
 import '../../my_trainers/application/my_trainers_controller.dart';
 import '../../my_trainers/domain/my_trainer.dart';
 import '../../onboarding/presentation/onboarding_edit_screen.dart';
@@ -61,6 +63,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late bool _trainerCommentPushEnabled;
   late bool _trainerGoalsPushEnabled;
   late bool _programAssignedPushEnabled;
+  late bool _chatPushEnabled;
 
   late bool _restTimerEnabled;
   late int _defaultRestSeconds;
@@ -96,6 +99,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _trainerCommentPushEnabled = s.trainerCommentPushEnabled;
     _trainerGoalsPushEnabled = s.trainerGoalsPushEnabled;
     _programAssignedPushEnabled = s.programAssignedPushEnabled;
+    _chatPushEnabled = s.chatPushEnabled;
     _restTimerEnabled = s.restTimerEnabled;
     _defaultRestSeconds = s.defaultRestSeconds;
     _watchWorkoutEnabled = s.watchWorkoutEnabled;
@@ -120,6 +124,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             trainerCommentPushEnabled: _trainerCommentPushEnabled,
             trainerGoalsPushEnabled: _trainerGoalsPushEnabled,
             programAssignedPushEnabled: _programAssignedPushEnabled,
+            chatPushEnabled: _chatPushEnabled,
             restTimerEnabled: _restTimerEnabled,
             defaultRestSeconds: _defaultRestSeconds,
             watchWorkoutEnabled: _watchWorkoutEnabled,
@@ -1447,6 +1452,21 @@ class _MyTrainerRow extends ConsumerWidget {
 
   final MyTrainer trainer;
 
+  /// Secondary chat entry point for the client side: the trainer they already
+  /// know about is right here, so the thread is one tap away without going
+  /// through the conversation list (docs/chat/40-trainer-chat-plan.md §6.1).
+  /// The thread is lazy-created server-side, so this works even before either
+  /// of them has written anything.
+  Future<void> _message(BuildContext context, WidgetRef ref) async {
+    try {
+      final conversationId =
+          await ref.read(chatRepositoryProvider).openConversationWith(trainer.trainerId);
+      if (context.mounted) context.push('/chat/$conversationId');
+    } catch (e) {
+      if (context.mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    }
+  }
+
   Future<void> _leave(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     final confirmed = await showConfirmDeleteDialog(
       context,
@@ -1501,7 +1521,12 @@ class _MyTrainerRow extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
+          IconButton(
+            onPressed: () => _message(context, ref),
+            tooltip: l10n.chatMessageAction,
+            icon: Icon(Icons.chat_bubble_outline, size: 20, color: scheme.primary),
+          ),
           TextButton(
             onPressed: () => _leave(context, ref, l10n),
             style: TextButton.styleFrom(foregroundColor: scheme.error),

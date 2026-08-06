@@ -1918,5 +1918,131 @@
     "@musicConnectCta": {"description": "Primary button on the iOS Spotify connect prompt"},
 
     "musicConnectingMessage": "Connecting…",
-    "@musicConnectingMessage": {"description": "Loading label shown in the mini music player while a connection attempt is in flight"}
+    "@musicConnectingMessage": {"description": "Loading label shown in the mini music player while a connection attempt is in flight"},
+
+    "chatClientListTitle": "Messages",
+    "@chatClientListTitle": {"description": "Conversation list header for a client, who chats with their trainer"},
+
+    "chatTrainerListTitle": "My clients",
+    "@chatTrainerListTitle": {"description": "Conversation list header for a trainer, whose threads are their clients"},
+
+    "chatOpenTooltip": "Messages",
+    "@chatOpenTooltip": {"description": "Tooltip on the badged chat icon in the dashboard app bar"},
+
+    "chatClientEmptyTitle": "No trainer yet",
+    "@chatClientEmptyTitle": {"description": "Conversation list empty state title for a client with no trainer"},
+
+    "chatClientEmptyBody": "Accept a trainer invitation and your conversation starts here.",
+    "@chatClientEmptyBody": {"description": "Conversation list empty state body for a client with no trainer"},
+
+    "chatTrainerEmptyTitle": "No clients yet",
+    "@chatTrainerEmptyTitle": {"description": "Conversation list empty state title for a trainer with no clients"},
+
+    "chatTrainerEmptyBody": "As soon as you have a client, you can start a conversation with them here.",
+    "@chatTrainerEmptyBody": {"description": "Conversation list empty state body for a trainer with no clients"},
+
+    "chatSearchHint": "Search by name…",
+    "@chatSearchHint": {"description": "Placeholder in the conversation list search field, shown to trainers with a long list"},
+
+    "chatArchivedLabel": "Closed",
+    "@chatArchivedLabel": {"description": "Chip on a conversation row whose trainer-client relationship has ended"},
+
+    "chatPeerRoleTrainerLabel": "YOUR TRAINER",
+    "@chatPeerRoleTrainerLabel": {"description": "Row label distinguishing the user's own trainer in a mixed list held by a dual-role account"},
+
+    "chatPeerRoleClientLabel": "YOUR CLIENT",
+    "@chatPeerRoleClientLabel": {"description": "Row label distinguishing a client in a mixed list held by a dual-role account"},
+
+    "chatOwnMessagePrefix": "You: ",
+    "@chatOwnMessagePrefix": {"description": "Prefix on a conversation row preview when the last message was sent by the user"},
+
+    "chatEmptyThreadTitle": "No messages yet",
+    "@chatEmptyThreadTitle": {"description": "Empty state title inside a conversation with no messages"},
+
+    "chatEmptyThreadBody": "Write first — {name} will be notified.",
+    "@chatEmptyThreadBody": {"description": "Empty state body inside an empty conversation", "placeholders": {"name": {"type": "String"}}},
+
+    "chatLoadErrorTitle": "Couldn't load",
+    "@chatLoadErrorTitle": {"description": "Error state title when the conversation list or thread fails to load"},
+
+    "chatLoadErrorBody": "Check your connection.",
+    "@chatLoadErrorBody": {"description": "Error state body when the conversation list or thread fails to load"},
+
+    "chatRetryAction": "Retry",
+    "@chatRetryAction": {"description": "Button on the chat error state"},
+
+    "chatOfflineNotice": "No connection — your messages will send once you're back online.",
+    "@chatOfflineNotice": {"description": "Strip below the thread header while offline; the composer deliberately stays enabled"},
+
+    "chatArchivedNotice": "This relationship has ended — the conversation is read-only.",
+    "@chatArchivedNotice": {"description": "Bar shown in place of the composer in an archived thread"},
+
+    "chatComposerHint": "Message…",
+    "@chatComposerHint": {"description": "Placeholder in the message composer"},
+
+    "chatSendTooltip": "Send",
+    "@chatSendTooltip": {"description": "Tooltip on the composer's send button"},
+
+    "chatDeletedMessage": "This message was deleted",
+    "@chatDeletedMessage": {"description": "Tombstone text rendered in place of a deleted message"},
+
+    "chatCopyAction": "Copy",
+    "@chatCopyAction": {"description": "Long-press menu action on a message bubble"},
+
+    "chatResendAction": "Resend",
+    "@chatResendAction": {"description": "Long-press menu action offered on a message that failed to send"},
+
+    "chatDeleteAction": "Delete",
+    "@chatDeleteAction": {"description": "Long-press menu action removing the user's own message"},
+
+    "chatCopiedMessage": "Copied",
+    "@chatCopiedMessage": {"description": "Confirmation shown after copying a message body"},
+
+    "chatToday": "Today",
+    "@chatToday": {"description": "Day divider chip in the message stream"},
+
+    "chatYesterday": "Yesterday",
+    "@chatYesterday": {"description": "Day divider chip in the message stream"},
+
+    "chatStatusPending": "Sending",
+    "@chatStatusPending": {"description": "Screen-reader wording for the clock icon on an unsent message"},
+
+    "chatStatusSent": "Sent",
+    "@chatStatusSent": {"description": "Screen-reader wording for the single-check icon"},
+
+    "chatStatusDelivered": "Delivered",
+    "@chatStatusDelivered": {"description": "Screen-reader wording for the double-check icon"},
+
+    "chatStatusRead": "Read",
+    "@chatStatusRead": {"description": "Screen-reader wording for the filled double-check icon"},
+
+    "chatStatusFailed": "Failed to send",
+    "@chatStatusFailed": {"description": "Screen-reader wording for the error icon on a failed message"},
+
+    "chatMessageSemantics": "{sender}, {time}: {text}, {status}",
+    "@chatMessageSemantics": {"description": "Full screen-reader announcement for a message bubble, giving the tick icons a spoken equivalent", "placeholders": {"sender": {"type": "String"}, "time": {"type": "String"}, "text": {"type": "String"}, "status": {"type": "String"}}},
+
+    "chatNewConversationTooltip": "New conversation",
+    "@chatNewConversationTooltip": {"description": "Tooltip on the trainer-only new-conversation button"},
+
+    "chatNewConversationTitle": "New conversation",
+    "@chatNewConversationTitle": {"description": "Title of the trainer's client picker sheet"},
+
+    "chatNewConversationSubtitle": "Clients without a thread yet",
+    "@chatNewConversationSubtitle": {"description": "Subtitle of the trainer's client picker sheet, explaining why some clients are missing"},
+
+    "chatNewConversationSearchHint": "Search clients…",
+    "@chatNewConversationSearchHint": {"description": "Placeholder in the client picker's search field"},
+
+    "chatNewConversationEmpty": "Every client already has a thread.",
+    "@chatNewConversationEmpty": {"description": "Empty state of the client picker when no client is left to start a thread with"},
+
+    "chatMessageAction": "Message",
+    "@chatMessageAction": {"description": "Action on the My Trainers settings row that opens the chat thread with that trainer"},
+
+    "chatPushToggleLabel": "Chat messages",
+    "@chatPushToggleLabel": {"description": "Label for the chat push notification toggle"},
+
+    "chatPushToggleSubtitle": "Get notified when a new message arrives",
+    "@chatPushToggleSubtitle": {"description": "Subtitle for the chat push notification toggle"}
 }

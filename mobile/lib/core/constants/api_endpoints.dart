@@ -14,4 +14,16 @@ class ApiEndpoints {
   static String trainerInviteRespond(int id) => '/trainer-invites/$id/respond';
   static const myTrainers = '/my-trainers';
   static String myTrainer(int trainerId) => '/my-trainers/$trainerId';
+
+  /// The trainer's own client list — used by the chat "new conversation"
+  /// picker. Requires ROLE_TRAINER, unlike everything under `/chat`.
+  static const trainerClients = '/trainer/clients';
+
+  // Chat (docs/chat/40-trainer-chat-plan.md §4). Under `/chat`, not
+  // `/trainer`, because both sides of a conversation call these.
+  static const chatConversations = '/chat/conversations';
+  static String chatConversationWithUser(int userId) => '/chat/conversations/with-user/$userId';
+  static String chatMessages(int conversationId) => '/chat/conversations/$conversationId/messages';
+  static String chatConversationRead(int conversationId) => '/chat/conversations/$conversationId/read';
+  static String chatMessage(int messageId) => '/chat/messages/$messageId';
 }

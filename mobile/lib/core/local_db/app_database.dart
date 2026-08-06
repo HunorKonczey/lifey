@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../sync/client_ref.dart';
+import 'tables/chat_tables.dart';
 import 'tables/exercise_table.dart';
 import 'tables/food_table.dart';
 import 'tables/meal_tables.dart';
@@ -50,12 +51,14 @@ part 'app_database.g.dart';
   PendingOperations,
   DailyStepCounts,
   SyncCursors,
+  ChatConversations,
+  ChatMessages,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -227,6 +230,15 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(userSettingsTable, userSettingsTable.restTimerEnabled);
             await m.addColumn(userSettingsTable, userSettingsTable.defaultRestSeconds);
             await m.addColumn(exercises, exercises.defaultRestSeconds);
+          }
+          // V29: trainer <-> client chat (docs/chat/40-trainer-chat-plan.md,
+          // I2). Two brand-new tables plus the push opt-out that goes with
+          // them; nothing to backfill, the first conversation refresh fills
+          // the cache.
+          if (from < 29) {
+            await m.createTable(chatConversations);
+            await m.createTable(chatMessages);
+            await m.addColumn(userSettingsTable, userSettingsTable.chatPushEnabled);
           }
         },
       );

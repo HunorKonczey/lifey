@@ -12,6 +12,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../chat/application/conversation_list_controller.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../../water/presentation/widgets/add_water_sheet.dart';
@@ -206,6 +207,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsB
               child: AdaptiveAppBar(
                 title: l10n.dashboardTodayTitle,
                 actions: [
+                  // Chat's only permanent entry point: it gets no bottom-nav
+                  // branch of its own (docs/chat/40-trainer-chat-plan.md
+                  // §6.1), so the unread badge lives here for both roles.
+                  AdaptiveAppBarAction(
+                    icon: Icons.chat_bubble_outline,
+                    tooltip: l10n.chatOpenTooltip,
+                    badgeCount: ref.watch(unreadBadgeProvider).value ?? 0,
+                    onPressed: () => context.push('/chat'),
+                  ),
                   AdaptiveAppBarAction(
                     icon: Icons.settings_outlined,
                     tooltip: l10n.settingsTitle,

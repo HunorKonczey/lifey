@@ -29,7 +29,7 @@ class SettingsControllerTest {
     void get_returnsLanguageDefaultingToSystem() throws Exception {
         when(settingsService.get())
                 .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, null,
-                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, 90));
+                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, true, 90));
 
         mockMvc.perform(get("/api/v1/settings"))
                 .andExpect(status().isOk())
@@ -40,7 +40,7 @@ class SettingsControllerTest {
     void update_withHungarianReturnsIt() throws Exception {
         when(settingsService.update(any()))
                 .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, null,
-                        ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true, true, true, 90));
+                        ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true, true, true, true, 90));
 
         mockMvc.perform(put("/api/v1/settings").contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -63,7 +63,7 @@ class SettingsControllerTest {
     void update_withDailyStepGoalReturnsIt() throws Exception {
         when(settingsService.update(any()))
                 .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, 10000,
-                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, 90));
+                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, true, 90));
 
         mockMvc.perform(put("/api/v1/settings").contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -88,7 +88,7 @@ class SettingsControllerTest {
     void update_withRestTimerFieldsReturnsThem() throws Exception {
         when(settingsService.update(any()))
                 .thenReturn(new SettingsResponse(UnitSystem.METRIC, null, null, null, null, null, null,
-                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, false, 120));
+                        ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, false, 120));
 
         mockMvc.perform(put("/api/v1/settings").contentType(MediaType.APPLICATION_JSON)
                         .content("""

@@ -158,6 +158,20 @@ lifey:
     # Used to build the accept/decline links in the invite email; the links
     # point back at this backend's own public endpoint, not a frontend route.
     public-base-url: ${TRAINER_INVITE_PUBLIC_BASE_URL:http://localhost:8080}
+  chat:
+    # Kill switch for the trainer<->client chat (docs/chat/40-trainer-chat-plan.md).
+    # Turning this off leaves every thread readable and only refuses new
+    # messages (503) — the incident lever, not a feature flag for rollout.
+    enabled: ${CHAT_ENABLED:true}
+    # Max characters per message, enforced after trimming.
+    max-body-length: ${CHAT_MAX_BODY_LENGTH:2000}
+    # Keyset page sizes for GET /chat/conversations/{id}/messages.
+    default-page-size: ${CHAT_DEFAULT_PAGE_SIZE:30}
+    max-page-size: ${CHAT_MAX_PAGE_SIZE:100}
+    # Per-user send budget. Abuse protection, not accounting: enforced in
+    # memory, so each instance applies it separately (see ChatRateLimiter).
+    rate-limit-per-minute: ${CHAT_RATE_LIMIT_PER_MINUTE:30}
+    rate-limit-per-day: ${CHAT_RATE_LIMIT_PER_DAY:600}
   jobs:
     password-reset-cleanup:
       # Daily sweep removing expired/used password reset tokens (PasswordResetTokenCleanupJob).

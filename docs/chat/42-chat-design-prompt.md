@@ -10,6 +10,14 @@
 > [web/06-design-system-web.md](web/06-design-system-web.md) (web tokenek),
 > [personal_trainer/06-design.md](personal_trainer/06-design.md) (edzői nyelv).
 > A fájl végén — a prompton kívül — a funkció **döntés-naplója** áll.
+>
+> **Ez a fájl a chat UI kötelező forrása.** A [40-trainer-chat-plan.md](40-trainer-chat-plan.md)
+> §10 innen indítja az összes UI-t érintő iterációt (I2 mobil, I3 web, I5 beállítások,
+> I6 bővítések): a terv a viselkedést rögzíti, ez a fájl + a belőle készült
+> [design/Lifey Chat.dc.html](design/Lifey%20Chat.dc.html) a megjelenést. Kód írása előtt
+> mindkettőt el kell olvasni. A backend API tényleges alakját a terv §12-je adja
+> (az I1 leszállítva) — ha a design olyan mezőt feltételez, ami ott nincs (pl. peer
+> avatar kép), az nyitott kérdés, nem hallgatólagos követelmény.
 
 ---
 

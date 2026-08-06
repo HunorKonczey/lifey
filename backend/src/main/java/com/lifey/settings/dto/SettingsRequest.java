@@ -50,6 +50,15 @@ public record SettingsRequest(
         @NotNull
         Boolean programAssignedPushEnabled,
 
+        /**
+         * Nullable on purpose, unlike the push flags above: this field was
+         * added after clients were already in the wild, and a {@code @NotNull}
+         * would 400 every settings save coming from an app version that
+         * predates it. Absent means "leave whatever is stored alone"
+         * (docs/chat/40-trainer-chat-plan.md, I2).
+         */
+        Boolean chatPushEnabled,
+
         @NotNull
         Boolean restTimerEnabled,
 

@@ -64,6 +64,14 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
     }
   }
 
+  Future<void> _setChatPush(bool value) async {
+    try {
+      await _controller.setChatPushEnabled(value);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    }
+  }
+
   Future<void> _setAll(bool value) async {
     final scheduled = await _controller.setAllEnabled(value);
     if (mounted) setState(() => _permissionDenied = value && !scheduled);
@@ -156,6 +164,12 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
           subtitle: Text(l10n.programAssignedPushToggleSubtitle),
           value: state.programAssignedPushEnabled,
           onChanged: _setProgramAssignedPush,
+        ),
+        SwitchListTile(
+          title: Text(l10n.chatPushToggleLabel),
+          subtitle: Text(l10n.chatPushToggleSubtitle),
+          value: state.chatPushEnabled,
+          onChanged: _setChatPush,
         ),
         if (_permissionDenied)
           Padding(

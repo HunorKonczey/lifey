@@ -1,6 +1,10 @@
 package com.lifey.common.exception;
 
 import com.lifey.auth.exception.*;
+import com.lifey.chat.exception.ChatDisabledException;
+import com.lifey.chat.exception.ChatRateLimitedException;
+import com.lifey.chat.exception.ConversationArchivedException;
+import com.lifey.chat.exception.InvalidMessageBodyException;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.trainer.exception.AlreadyClientException;
@@ -179,6 +183,27 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({RoleNotManageableException.class, CannotModifySelfException.class})
     public ResponseEntity<ApiError> handleRoleManagementRejection(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(ConversationArchivedException.class)
+    public ResponseEntity<ApiError> handleConversationArchived(ConversationArchivedException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(InvalidMessageBodyException.class)
+    public ResponseEntity<ApiError> handleInvalidMessageBody(InvalidMessageBodyException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(ChatRateLimitedException.class)
+    public ResponseEntity<ApiError> handleChatRateLimited(ChatRateLimitedException ex, HttpServletRequest request) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request, List.of(), ex);
+    }
+
+    /** Kill switch, not a client error — reads keep working, only sending is refused. */
+    @ExceptionHandler(ChatDisabledException.class)
+    public ResponseEntity<ApiError> handleChatDisabled(ChatDisabledException ex, HttpServletRequest request) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

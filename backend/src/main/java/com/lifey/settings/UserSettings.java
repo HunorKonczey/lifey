@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalTime;
+
 /**
  * One row per user, created lazily (with defaults) on first access rather than
  * at registration time, so the auth module stays unaware of this feature.
@@ -108,4 +110,24 @@ public class UserSettings extends BaseEntity {
      */
     @Column(name = "default_rest_seconds", nullable = false)
     private int defaultRestSeconds = 90;
+
+    /**
+     * Opt-out for the chat push notification
+     * (docs/chat/40-trainer-chat-plan.md §3.2). Role-independent on purpose —
+     * one switch, one mental model, for the trainer and the client alike.
+     * Default true. Read by the push pipeline from I2 on.
+     */
+    @Column(name = "chat_push_enabled", nullable = false)
+    private boolean chatPushEnabled = true;
+
+    /**
+     * Local-time window in which chat pushes are suppressed (the messages still
+     * arrive). Null means no quiet hours, which is the default. The window may
+     * wrap past midnight. Honoured from I5 on.
+     */
+    @Column(name = "chat_quiet_hours_start")
+    private LocalTime chatQuietHoursStart;
+
+    @Column(name = "chat_quiet_hours_end")
+    private LocalTime chatQuietHoursEnd;
 }

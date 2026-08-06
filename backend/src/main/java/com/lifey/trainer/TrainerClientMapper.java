@@ -36,6 +36,8 @@ public final class TrainerClientMapper {
         return new TrainerClientResponse(
                 tc.getClient().getId(),
                 tc.getClient().getEmail(),
+                tc.getClient().getFirstName(),
+                tc.getClient().getLastName(),
                 tc.getRespondedAt(),
                 weightTrend,
                 assignedPlanCount,

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Lifey API",
-    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*, *Settings*, *Water Tracking*, *Steps*, *User Details*, *User Avatar*, *Trainer Invites*, *Client Invites*, *My Trainers*, *Trainer Clients*, *Trainer Client Data*, *Trainer Schedules*, *Trainer Assignments*, *Super Admin*.\n\nAll `/api/v1/**` routes require a JWT access token except `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/social/google`, `/api/v1/auth/refresh`, `/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`, and the public `/api/v1/trainer-invites/email/**` invite-response link — note `/api/v1/auth/logout` requires auth too, it is NOT public. `/api/v1/trainer/**` additionally requires `ROLE_TRAINER` and `/api/v1/superadmin/**` requires `ROLE_SUPER_ADMIN`. The collection is set up to send the bearer token automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nFoods and exercises are per-user (see V40__foods_exercises_ownership.sql): the first real user in the database keeps the original seeded exercise rows (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank), every other user gets their own copy with different ids. Both are managed via their CRUD endpoints; deletes are soft (tombstoned) and no longer return 409 when still referenced.\n\nMany list endpoints additionally support a mobile offline delta-sync feed via `?updatedSince=<ISO-8601 instant>` (see docs/16-delta-sync-rollout.md) and/or pagination via `?page=`; see the 'Delta sync ...' / '... (paged...)' requests in each folder.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall; `totalWater` sums water entries over the same period.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace). `unitSystem`, `theme` and `language` are all required.\n\nWater Tracking has two parts: *Water Sources* (reusable presets like \"Creatine Shake\" = 0.9L, full CRUD) and *Water Entries* (logged intake, list/create/delete only — like Weight Tracking). An entry's `volumeLiters` is always client-supplied (picking a source just pre-fills it); `sourceId` is optional and purely informational.\n\nThe *Trainer ...* / *Super Admin* folders are the personal-trainer module (docs/personal_trainer/): a `ROLE_TRAINER` account manages invites/clients/schedules/assignments under `/api/v1/trainer/**`, clients respond to invites and view their trainers under `/api/v1/trainer-invites/**` and `/api/v1/my-trainers`, and a `ROLE_SUPER_ADMIN` account grants/revokes `ROLE_TRAINER` under `/api/v1/superadmin/**`.",
+    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*, *Settings*, *Water Tracking*, *Steps*, *User Details*, *User Avatar*, *Trainer Invites*, *Client Invites*, *My Trainers*, *Trainer Clients*, *Trainer Client Data*, *Trainer Schedules*, *Trainer Assignments*, *Chat*, *Super Admin*.\n\nAll `/api/v1/**` routes require a JWT access token except `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/social/google`, `/api/v1/auth/refresh`, `/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`, and the public `/api/v1/trainer-invites/email/**` invite-response link — note `/api/v1/auth/logout` requires auth too, it is NOT public. `/api/v1/trainer/**` additionally requires `ROLE_TRAINER` and `/api/v1/superadmin/**` requires `ROLE_SUPER_ADMIN`. The collection is set up to send the bearer token automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nFoods and exercises are per-user (see V40__foods_exercises_ownership.sql): the first real user in the database keeps the original seeded exercise rows (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank), every other user gets their own copy with different ids. Both are managed via their CRUD endpoints; deletes are soft (tombstoned) and no longer return 409 when still referenced.\n\nMany list endpoints additionally support a mobile offline delta-sync feed via `?updatedSince=<ISO-8601 instant>` (see docs/16-delta-sync-rollout.md) and/or pagination via `?page=`; see the 'Delta sync ...' / '... (paged...)' requests in each folder.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall; `totalWater` sums water entries over the same period.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace). `unitSystem`, `theme` and `language` are all required.\n\nWater Tracking has two parts: *Water Sources* (reusable presets like \"Creatine Shake\" = 0.9L, full CRUD) and *Water Entries* (logged intake, list/create/delete only — like Weight Tracking). An entry's `volumeLiters` is always client-supplied (picking a source just pre-fills it); `sourceId` is optional and purely informational.\n\nThe *Trainer ...* / *Super Admin* folders are the personal-trainer module (docs/personal_trainer/): a `ROLE_TRAINER` account manages invites/clients/schedules/assignments under `/api/v1/trainer/**`, clients respond to invites and view their trainers under `/api/v1/trainer-invites/**` and `/api/v1/my-trainers`, and a `ROLE_SUPER_ADMIN` account grants/revokes `ROLE_TRAINER` under `/api/v1/superadmin/**`.\n\nThe *Chat* folder (docs/chat/40-trainer-chat-plan.md) is the one trainer-module surface that is deliberately NOT role-gated: both sides of a conversation call the same `/api/v1/chat/**` endpoints, and access is decided by participation in the thread, so a non-participant gets 404 rather than 403.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -31,6 +31,8 @@
     { "key": "scheduleId", "value": "", "type": "string" },
     { "key": "scheduledSessionId", "value": "", "type": "string" },
     { "key": "assignmentId", "value": "", "type": "string" },
+    { "key": "conversationId", "value": "", "type": "string" },
+    { "key": "chatMessageId", "value": "", "type": "string" },
     { "key": "superAdminUserId", "value": "", "type": "string" }
   ],
   "item": [
@@ -1028,7 +1030,7 @@
     },
     {
       "name": "Settings",
-      "description": "Implemented feature. Per-user preferences: unit system, optional daily calorie/macro/water/step goals, theme, language. One row per user, created with defaults on first access — there's no separate create endpoint.",
+      "description": "Implemented feature. Per-user preferences: unit system, optional daily calorie/macro/water/step goals, theme, language. One row per user, created with defaults on first access — there's no separate create endpoint. PUT is a full replace and validates every non-goal field as required — the notification opt-outs (`workoutReminderEnabled`, `trainerCommentPushEnabled`, `trainerGoalsPushEnabled`, `programAssignedPushEnabled`) and the rest-timer fields must all be present, so send back everything GET returned rather than a partial body. The one exception is `chatPushEnabled` (docs/chat/40-trainer-chat-plan.md, I2): it is optional, and omitting it leaves the stored value untouched, so app versions released before chat existed keep working.",
       "item": [
         {
           "name": "Get settings",
@@ -1045,7 +1047,7 @@
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": \"METRIC\",\n  \"dailyCalorieGoal\": 2200,\n  \"dailyProteinGoal\": 150,\n  \"dailyCarbsGoal\": 220,\n  \"dailyFatGoal\": 70,\n  \"dailyWaterGoalLiters\": 2.5,\n  \"dailyStepGoal\": 10000,\n  \"theme\": \"DARK\",\n  \"language\": \"ENGLISH\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"unitSystem\": \"METRIC\",\n  \"dailyCalorieGoal\": 2200,\n  \"dailyProteinGoal\": 150,\n  \"dailyCarbsGoal\": 220,\n  \"dailyFatGoal\": 70,\n  \"dailyWaterGoalLiters\": 2.5,\n  \"dailyStepGoal\": 10000,\n  \"theme\": \"DARK\",\n  \"language\": \"ENGLISH\",\n  \"workoutReminderEnabled\": true,\n  \"trainerCommentPushEnabled\": true,\n  \"trainerGoalsPushEnabled\": true,\n  \"programAssignedPushEnabled\": true,\n  \"chatPushEnabled\": true,\n  \"restTimerEnabled\": true,\n  \"defaultRestSeconds\": 90\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/settings", "host": ["{{baseUrl}}"], "path": ["api", "v1", "settings"] },
             "description": "Replaces the current user's settings. `unitSystem` (METRIC/IMPERIAL), `theme` (LIGHT/DARK/SYSTEM) and `language` (SYSTEM/ENGLISH/HUNGARIAN) are required; the daily goal fields (`dailyCalorieGoal`/`dailyProteinGoal`/`dailyCarbsGoal`/`dailyFatGoal`/`dailyWaterGoalLiters`/`dailyStepGoal`) are optional (omit/null for no goal) and must be >= 0 (`dailyStepGoal` must be strictly positive) if present. Returns 200."
           },
@@ -1879,6 +1881,167 @@
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/v1/trainer/assignments/{{assignmentId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "trainer", "assignments", "{{assignmentId}}"] },
             "description": "Removes an assignment. Also soft-deletes the client's copy the assignment created. Returns 204."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "description": "Implemented feature (docs/chat/40-trainer-chat-plan.md, iteration I1 — backend foundation). Trainer ↔ client 1:1 threads.\n\nDeliberately NOT under `/api/v1/trainer/**`: that prefix requires ROLE_TRAINER and both sides of a conversation use these endpoints. Authorization comes from being a participant of the thread, never from a role — a non-participant gets 404 everywhere (not 403, so the existence of a thread never leaks).\n\nSuggested order: *Open conversation* (stores `conversationId`) → *Send message* (stores `chatMessageId`) → *List messages* → *Mark as read* → *List conversations*. To play both sides, log in as the trainer in one Postman environment and as the client in another; the thread is the same, only `peer.role` flips.\n\nNot in this iteration: the SSE stream (`GET /chat/stream`), presence, typing indicators and push notifications — see iterations I2/I4 of the plan.",
+      "item": [
+        {
+          "name": "Open conversation (by relationship)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('conversationId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"trainerClientId\": {{inviteId}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/chat/conversations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "conversations"] },
+            "description": "Lazy-create for a trainer-client relationship: 201 if the thread was just created, 200 with the existing one otherwise — same body either way, so the client never has to branch. Requires the relationship to be ACTIVE and the caller to be one of its two sides; anything else is 404. Stores the id in `conversationId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Open conversation (by peer user)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('conversationId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/chat/conversations/with-user/{{clientId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "conversations", "with-user", "{{clientId}}"] },
+            "description": "Same lazy-create keyed on the other user's id instead of the relationship id — the entry point mobile has (the web knows the relationship from the client detail page). Works from either side: pass the client's id as the trainer, or the trainer's id as the client. Stores the id in `conversationId`."
+          },
+          "response": []
+        },
+        {
+          "name": "List conversations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/chat/conversations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "conversations"] },
+            "description": "Every thread of the caller, newest activity first, wrapped in `items` (no paging in v1, but the envelope leaves room for a cursor later). Role-agnostic: a trainer who also has a trainer of their own sees both kinds here, told apart by `peer.role` (TRAINER/CLIENT). `unreadCount` is the caller's own — your own messages never count as unread for you. `archivedAt` is set once the relationship ended."
+          },
+          "response": []
+        },
+        {
+          "name": "Send message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('chatMessageId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"body\": \"Holnap 17:00 jó?\",\n  \"clientMessageId\": \"{{$guid}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"] },
+            "description": "201 for a new message, 200 with the stored one if `clientMessageId` was already used in this conversation — that idempotency is what makes an offline client's blind retry safe, so generate a UUID per message and reuse it across retries. `body` is trimmed and capped at `lifey.chat.max-body-length` (2000 by default). 409 if the thread is archived, 429 over the rate limit (30/min, 600/day), 503 if `lifey.chat.enabled=false`. Stores the id in `chatMessageId`."
+          },
+          "response": []
+        },
+        {
+          "name": "List messages (newest page)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages?limit=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"],
+              "query": [
+                { "key": "limit", "value": "30" }
+              ]
+            },
+            "description": "Newest `limit` messages (default 30, max 100), ordered id descending — the client renders them reversed. `hasMore` says whether older messages exist."
+          },
+          "response": []
+        },
+        {
+          "name": "List messages (older page, keyset)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages?before={{chatMessageId}}&limit=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"],
+              "query": [
+                { "key": "before", "value": "{{chatMessageId}}" },
+                { "key": "limit", "value": "30" }
+              ]
+            },
+            "description": "Scroll-up paging: pass the id of the oldest message you already have as `before`. Keyset rather than offset on purpose — a thread grows at the top, so offsets would duplicate or skip rows between pages."
+          },
+          "response": []
+        },
+        {
+          "name": "List messages (gap fill after reconnect)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages?after={{chatMessageId}}&limit=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"],
+              "query": [
+                { "key": "after", "value": "{{chatMessageId}}" },
+                { "key": "limit", "value": "30" }
+              ]
+            },
+            "description": "Pass the newest id you already have as `after` to fetch only what you missed while offline. The response is still newest-first. `after` wins if both cursors are given."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark as read",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"lastReadMessageId\": {{chatMessageId}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/read", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "read"] },
+            "description": "Moves the caller's read cursor to `lastReadMessageId` and returns 204. Monotonic (a late or out-of-order receipt can never un-read a thread) and clamped to the newest stored message, so a client racing ahead of the server is harmless. One cursor per participant, not a per-message flag."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete own message",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/chat/messages/{{chatMessageId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "messages", "{{chatMessageId}}"] },
+            "description": "Tombstone, not a hard delete: the row stays (so the other side keeps the context of their replies) but the text is cleared — the message comes back with `body: null` and `deletedAt` set, and clients render their own localized placeholder. 404 for anyone else's message. Returns 204."
           },
           "response": []
         }

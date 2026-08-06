@@ -13,6 +13,16 @@
 > weben elérhető többi edzői funkció mobilra vitelét a
 > [41-trainer-mobile-v2-plan.md](41-trainer-mobile-v2-plan.md) tervezi meg.
 >
+> **Állapot (2026-08-06):** az **I1 (backend alap)** és az **I2 (mobil chat mindkét
+> szerepkörben + push)** kész. A leszállított szerződést és a tervtől való eltéréseket a
+> **[§12 (I1)](#12-megvalósítási-napló--i1-backend-alap)** és a
+> **[§13 (I2)](#13-megvalósítási-napló--i2-mobil--push)** rögzíti.
+> **A következő lépés az I3 (edzői web) vagy az I4 (realtime) — mindkettő belépőpontja
+> a §12 + §13, illetve a [§10](#10-design) design-forrásai**
+> ([42-chat-design-prompt.md](42-chat-design-prompt.md) és
+> [design/Lifey Chat.dc.html](design/Lifey%20Chat.dc.html)) — minden UI-munka azokból
+> dolgozik.
+>
 > Kapcsolódó dokumentumok: [30-push-notifications-plan.md](30-push-notifications-plan.md)
 > (push infrastruktúra), [31-session-feedback-loop-plan.md](31-session-feedback-loop-plan.md)
 > (edzői megjegyzés – a chat "ősváltozata"),
@@ -601,7 +611,11 @@ bővít, ezért mindegyik önállóan is halasztható a mögötte lévő igény 
 
 ---
 
-### I1 – Backend alap (domain + REST) · ~3 nap
+### I1 – Backend alap (domain + REST) · ~3 nap · ✅ KÉSZ
+
+> **Állapot:** megvalósítva a `feature/chat-functionality` ágon. A tényleges
+> szerződés-eltéréseket és a következő lépés belépőpontját a §12 „Megvalósítási napló”
+> rögzíti — **az I2 azzal a szakasszal kezdődik, nem ezzel.**
 
 **Cél:** működő, tesztelt chat API realtime nélkül. Postmannel végigjátszható egy
 teljes beszélgetés.
@@ -628,7 +642,16 @@ konzisztens (`flyway:info` tiszta).
 
 ---
 
-### I2 – Mobil chat mindkét szerepkörben + push értesítés · ~6 nap
+### I2 – Mobil chat mindkét szerepkörben + push értesítés · ~6 nap · ✅ KÉSZ
+
+> **Állapot:** megvalósítva a `feature/chat-functionality` ágon. Az eltéréseket, a
+> leszállított felületet és az I3/I4 belépőpontját a §13 rögzíti.
+
+> **Belépőpont:** az I1 kész (§12), az API él. Mielőtt bármelyik képernyő elkezdődne,
+> **a §10 két design-forrását kell elolvasni** — a `42-chat-design-prompt.md` briefjét és
+> a `design/Lifey Chat.dc.html` vizuális tervet. A §6.1 alatti fájllista a *hol*, a
+> design a *hogyan néz ki*; a kettő együtt a feladat. Az API tényleges alakját (mezőnevek,
+> státuszkódok) a §12 tábláiból kell venni, nem a §4 vázlatából.
 
 **Cél:** a kliens **és az edző** mobilon tud írni egymásnak, és **push jön, ha nem
 látta**. Realtime még nincs — a szál megnyitása és az előtérbe kerülés tölt.
@@ -691,6 +714,9 @@ néma klienssel, és a repülő módban írt üzenet visszatéréskor magától 
 **Cél:** az edző böngészőből is chatel — asztali alternatíva a mobil mellé (nem
 helyettesíti, az I2 után az edző már teljesen elvan mobilról). Ez az iteráció ezért
 **halasztható**, ha az I2 csúszik: nem blokkol semmit.
+
+> A web edzői nézet elrendezését a §10 design-forrásai („web edző” blokk) írják le —
+> ugyanaz a token-készlet, más renderelés. Ne tervezz új web-layoutot ehhez.
 
 Feladatok:
 - `web/src/features/chat`: Zod sémák, TanStack Query hookok, mutációk optimista update-tel.
@@ -793,12 +819,38 @@ csendes órában néma.
 
 ## 10. Design
 
+> ### ⚠️ A design forrása a további lépésekhez
+>
+> **Minden UI-t érintő iteráció (I2, I3, I5 beállítás-képernyők, I6) kötelezően ebből a
+> két forrásból dolgozik:**
+>
+> 1. **[42-chat-design-prompt.md](42-chat-design-prompt.md)** — a chat design briefje:
+>    képernyőnkénti anatómia (beszélgetés-lista, szál, buborék, composer, állapotok,
+>    edzői „új beszélgetés” választó, push-előnézet), mobil kliens / mobil edző / web
+>    edző nézetben. **Ez az elsődleges forrás**, a §2 döntés-naplója köti a designt
+>    ehhez a tervhez.
+> 2. **[design/Lifey Chat.dc.html](design/Lifey%20Chat.dc.html)** — a prompt alapján
+>    elkészült, megnyitható vizuális terv. Ha a kettő eltér, a `.dc.html` a friss:
+>    az a leszállított design, a prompt a hozzá tartozó szándék.
+>
+> Az edzői mobil felület szélesebb kontextusához (v2, chaten túli képernyők):
+> [43-trainer-mobile-v2-design-prompt.md](43-trainer-mobile-v2-design-prompt.md) +
+> [design/Lifey Trainer Mobile.dc.html](design/Lifey%20Trainer%20Mobile.dc.html).
+>
+> Gyakorlati szabály: **UI-kód írása előtt a fenti fájlokat kell elolvasni**, nem ezt a
+> §-t vagy a §6-ot — a terv a viselkedést rögzíti, a design a megjelenést. Ha
+> fejlesztés közben derül ki, hogy a design és a terv ütközik, a döntést **itt és a
+> prompt §2-jében is** át kell vezetni, nem elég a kódban feloldani.
+
 A képernyők (beszélgetés-lista **kliens- és edzőnézetben**, szál, composer, edzői
 „új beszélgetés” választó, állapotok, push-előnézet) design promptja elkészült:
 **[42-chat-design-prompt.md](42-chat-design-prompt.md)** — mobil kliens, mobil edző és
 web edző felületre egyben, a 11-es/13-as prompt-dokumentumok szerkezetét követve.
 A prompt §2 döntés-naplója ennek a tervnek a designt kötő döntéseit tartalmazza; ha itt
 valami változik, ott is át kell vezetni.
+
+Az **I1 (backend) szándékosan nem érinti a designt** — az API-szerződés (§4) az egyetlen
+felület, amit szállít. A design innentől az I2 belépőpontja.
 
 ---
 
@@ -817,3 +869,148 @@ valami változik, ott is át kell vezetni.
    a fül-badge elég lehet.
 4. **Megőrzési idő**: tartsunk-e mindent örökre? Javaslat: igen v1-ben, mert az adatmennyiség
    elhanyagolható, és a törlési igény manuális folyamatként kezelhető.
+5. **Peer avatar a chatben.** A profilkép ma csak a saját fiókra kérhető le
+   (`GET /api/v1/users/me/avatar`) — nincs végpont *más* user képére, ezért a
+   `ConversationResponse.peer` **nem tartalmaz `avatarUrl`-t** (§12). A design monogram-
+   avatart használ, tehát ez ma nem blokkol semmit. Ha később kell a valódi kép, az egy
+   önálló, résztvevőség-ellenőrzött végpont (`GET /api/v1/chat/conversations/{id}/peer/avatar`),
+   nem a chat DTO bővítése — a jogosultság a szálhoz kötődik, nem a user-id-hez.
+
+---
+
+## 12. Megvalósítási napló — I1 (backend alap)
+
+> **Ez a szakasz a következő lépések kiindulópontja.** Az I2/I3/I4 kliensmunka a
+> **ténylegesen leszállított** szerződésből dolgozzon, nem a §4 tervvázlatából: ahol a
+> kettő eltér, az alábbi táblák az igazak. A megjelenéshez pedig a **§10 design-forrásai**
+> a kötelező bemenet.
+
+### 12.1 Mi készült el
+
+| Réteg | Fájlok |
+|---|---|
+| Migrációk | `V64__chat.sql`, `V65__user_settings_chat_push.sql` |
+| Entitások | `com.lifey.chat.entity`: `ChatConversation`, `ChatMessage`, `ChatParticipant` |
+| Repositoryk | `com.lifey.chat.repository`: `ChatConversationRepository`, `ChatMessageRepository` (+`ConversationUnreadCount` projekció), `ChatParticipantRepository` |
+| DTO-k | `com.lifey.chat.dto`: `ConversationListResponse`, `ConversationResponse`, `ChatPeerResponse`, `ChatPeerRole`, `MessageListResponse`, `MessageResponse`, `SendMessageRequest`, `ReadReceiptRequest`, `OpenConversationRequest` |
+| Szolgáltatás | `ChatService`/`ChatServiceImpl`, `ChatRateLimiter`, `OpenConversationResult`, `SendMessageResult` |
+| Controllerek | `ChatConversationController`, `ChatMessageController` |
+| Egyéb | `ChatMapper`, `ChatProperties`+`ChatConfig`, `ChatArchiveListener`, 4 kivétel + `GlobalExceptionHandler` ágak, `UserSettings` 3 új mező |
+| Tesztek | `ChatServiceImplTest` (22), `ChatRateLimiterTest` (3), `ChatConversationControllerTest` (7), `ChatMessageControllerTest` (7), `ChatArchiveListenerTest` (2), `ChatFlowIntegrationTest` (14, Testcontainers) |
+| Postman | `docs/postman` → új **Chat** mappa (9 kérés) + `conversationId`/`chatMessageId` változó |
+
+A teljes backend suite zöld (703 teszt).
+
+### 12.2 Eltérések a tervtől — ezekkel kell dolgozni
+
+| Terv | Valóság | Miért |
+|---|---|---|
+| `V63__chat.sql`, `V64__user_settings_chat_push.sql` | **`V64__chat.sql`, `V65__user_settings_chat_push.sql`** | a V63-at időközben elvitte a `workout_session_exercise_target_sets` |
+| `peer.avatarUrl` | **nincs**; helyette `peer.displayName` (név, hiányában e-mail) + `peer.email` | nincs cross-user avatar végpont (§11/5); a design monogramot használ |
+| `lastMessage` szűkített előnézet-objektum | **teljes `MessageResponse`** | a kliens így egyetlen üzenet-alakot parse-ol mindenhol; additív, nem szűkítő |
+| `chat_messages.body` `not null` | **nullable**, `check (deleted_at is not null or body is not null)` | a tombstone valóban törli a szöveget, nem csak elrejti; a kliens a saját lokalizált szövegét rendereli |
+| `POST /messages` hibái: 409 / 429 / 404 | **+ 400** (üres vagy `max-body-length` fölötti body), **+ 503** (`lifey.chat.enabled=false`) | a kill switch nem kliens-hiba, ezért nem 4xx |
+| — | `GET .../messages?limit=` felső határa **100** (`lifey.chat.max-page-size`), alap 30 | |
+| — | `POST /read` **klampol** a szál legutolsó üzenet-id-jére | offline kliens előreszaladása normális, nem hiba |
+
+### 12.3 Amit az I1 tudatosan nem szállít
+
+`GET /chat/stream` (SSE), `POST /chat/presence`, gépelés-jelző, **push értesítés**,
+`chatPushEnabled` a Settings API-ban, csendes órák logika. A `chat_participants`
+`muted_until` / `last_notified_at` / `last_delivered_message_id` oszlopai és a
+`user_settings.chat_*` mezők **léteznek, de még senki nem írja őket** — az I2 (push) és
+az I5 (összevonás, csendes órák) tölti fel őket.
+
+### 12.4 Amire a kliensoldalnak figyelnie kell
+
+- **Idempotencia**: minden üzenethez egy `clientMessageId` (UUID), és **újraküldéskor
+  ugyanaz** — a szerver ilyenkor 200-zal a már tárolt üzenetet adja vissza 201 helyett.
+  Ez a §6.1 optimista outboxának a feltétele.
+- **A saját üzenet sosem olvasatlan**: küldéskor a szerver előre lépteti a küldő
+  kurzorát, tehát az `unreadCount` a listában nem ugrik meg a saját üzenettől.
+- **A `peer.role` szerepkör-relatív**, nem globális: kettős szerepű usernél ugyanabban a
+  listában lesz `TRAINER` és `CLIENT` címkéjű sor is (§6.1).
+- **Egy párhoz több szál is tartozhat**: visszavonás után újra meghívott kliens **új**
+  `trainer_clients` sort, tehát **új beszélgetést** kap; a régi archívként megmarad. A
+  lista tehát mutathat két sort ugyanazzal a névvel, ahol az egyik `archivedAt != null`.
+  A designnak (és az I2 lista-képernyőnek) ezt kezelnie kell.
+- **404, nem 403**: nem-résztvevő minden végponton 404-et kap. A kliens ne
+  „nincs jogosultságod” hibát mutasson erre, hanem „a beszélgetés nem érhető el”.
+
+---
+
+## 13. Megvalósítási napló — I2 (mobil + push)
+
+> **Az I3 (edzői web) és az I4 (realtime) innen indul.** Az I3 ugyanazt az API-t
+> fogyasztja, amit a mobil már használ; az I4 az itt leírt „mi hiányzik még” listát
+> tölti fel. A megjelenéshez továbbra is a **§10 design-forrásai** a kötelező bemenet.
+
+### 13.1 Mi készült el
+
+**Mobil (Flutter)**
+
+| Réteg | Fájlok |
+|---|---|
+| Lokális DB | `core/local_db/tables/chat_tables.dart` (`chat_conversations`, `chat_messages`), séma **v29** migráció + `user_settings.chat_push_enabled` |
+| Domain | `features/chat/domain/`: `ChatConversation`, `ChatMessage` (+`ChatMessageState`), `ChatPeer` (+`ChatPeerRole`), `TrainerClientOption` |
+| Data | `chat_repository.dart` (REST + lokális cache + optimista küldés + saját outbox), `trainer_clients_repository.dart` |
+| Application | `conversation_list_controller.dart` (+`unreadBadgeProvider`), `chat_thread_controller.dart` (+`chatConversationProvider`), `new_conversation_controller.dart`, `core/auth/current_roles_provider.dart` |
+| Presentation | `conversation_list_screen.dart`, `chat_thread_screen.dart`, `new_conversation_sheet.dart`, `widgets/`: `conversation_tile`, `message_bubble`, `chat_composer` (+`ArchivedComposerNotice`), `day_divider`, `chat_avatar` |
+| Beépülés | `/chat` és `/chat/:conversationId` a shellen kívül (`app_router.dart`), badge-es chat ikon a dashboard app barban, `PushTapHandler` `chat_message` ág, „Üzenet” akció az „Edzőim” soron, `chatPushEnabled` kapcsoló az értesítés-beállításokon |
+| l10n | 40 új kulcs `app_en.arb` / `app_hu.arb` (mindkét szerep szövegei) |
+
+**Backend**
+
+| Elem | Fájl |
+|---|---|
+| Push pipeline | `ChatMessageStoredEvent`, `ChatNotificationService`/`Impl` (`@TransactionalEventListener(AFTER_COMMIT)` + `REQUIRES_NEW`) |
+| Settings API | `chatPushEnabled` a `SettingsRequest`/`SettingsResponse`/`SettingsMapper`-ben |
+| Kliens-választó adat | `TrainerClientResponse` + `clientFirstName` / `clientLastName` |
+
+Tesztek: mobil **568** zöld (ebből 45 új: repository, domain, szerepkör-provider,
+buborék-widget, lista-képernyő), backend **713** zöld (ebből 9 új a push-ra).
+
+### 13.2 Eltérések a tervtől — ezekkel kell dolgozni
+
+| Terv | Valóság | Miért |
+|---|---|---|
+| `data/chat_dto.dart` külön DTO réteg | **nincs**; a `fromJson` a domain modelleken ül | a `my_trainers` már így csinálja; egy réteggel kevesebb, ugyanaz a szerződés |
+| `ChatStreamClient`, jelenlét | **nincs** (I4) | SSE nélkül nincs mit olvasni |
+| Buborék-állapotok: 4 állapot élesben | **`pending` / `sent` / `failed` fordul elő**; a `delivered` és `read` a widgetben kész, de adat nincs hozzá | a szerver a *másik fél* olvasás-kurzorát nem adja vissza I4-ig — a pipák bekötése ott egy sor |
+| Szál-fejléc „online / utoljára aktív” alsor | **nincs** | nincs jelenlét-adat; a design kifejezetten tiltja a hamis jelzést |
+| Buborék szövege `SelectableText` | **`Text`** + hosszan-nyomás menü „Másolás”-sal | a kijelölés és a menü ugyanazért a hosszan-nyomásért versengett; a menü nyert, mert a design azt írja le (a widget-teszt fogta meg) |
+| Kép-csatolmány, gépelés-jelző, némítás | **nincs** (I6 / I5) | változatlanul későbbi fázis |
+| Push összevonási ablak (`push-coalesce-window`) | **nincs**, de a törzs **már aggregál**: 1 olvasatlannál az üzenet, több olvasatlannál „N új üzenet” | a szám a `last_read_message_id`-ből jön, nem az ablakból, így az I5 ablak-logika ezt nem írja felül, csak ritkítja a kiküldést |
+| `SettingsRequest` push-kapcsolói `@NotNull` | a `chatPushEnabled` **nullable**, hiánya = „hagyd a tárolt értéken” | a backend a mobil kiadás **előtt** megy ki; `@NotNull`-lal minden régebbi app-verzió beállítás-mentése 400-at kapna |
+
+### 13.3 Amit az I2 tudatosan nem szállít
+
+Realtime (SSE), jelenlét (`POST /chat/presence`), kézbesítve/olvasva pipa, gépelés-jelző,
+némítás, csendes órák, push összevonási ablak és collapse key, e-mail fallback,
+kép-csatolmány, rendszerüzenet a szálban. A `chat_participants` `muted_until` /
+`last_notified_at` / `last_delivered_message_id` oszlopai és a
+`user_settings.chat_quiet_hours_*` mezők továbbra is üresen állnak.
+
+**Ami emiatt polling:** SSE nélkül az olvasatlan badge és a lista frissülését a
+`ConnectivitySyncController` meglévő ütemezése hajtja (indulás, kapcsolat-visszatérés,
+app előtérbe kerülés, 60 mp-es timer) — a push értesítést hoz, nem adatot. Az I4 ezt
+váltja ki; a `refreshConversations()` hívás onnantól tartalék marad, nem az elsődleges út.
+
+### 13.4 Architektúra-döntések, amik kötik a következő lépéseket
+
+1. **A chat kimarad a generikus sync-ből.** Nincs `entity_sync_config` bejegyzés, a
+   `PullEngine` nem nyúl hozzá; a `ChatRepository` maga kezeli a REST-et, a cache-t és a
+   saját mini-outboxát (a `pending` sorok). Az I4 az SSE-t **ebbe** a repositoryba köti,
+   nem a `SyncEngine`-be.
+2. **Az idempotencia a kliens szerződése is.** Minden üzenet `clientMessageId`-t kap
+   (`newClientId()`), és az újraküldés **ugyanazt** használja. Ez az egyetlen ok, amiért
+   a `flushPending()` vakon újraküldhet mindent.
+3. **A szerver echója felülírja az optimista sort** (`InsertMode.insertOrReplace` a
+   `(conversationId, clientId)` kulcsra) — ettől lesz a `pending` buborékból valódi
+   üzenet duplikálódás helyett.
+4. **A szerepkör három ponton látszik, sehol máshol.** `isTrainerProvider` (JWT `roles`
+   claim) → lista-cím, „Új beszélgetés” FAB, üres állapot szövege. A `peer.role` címke
+   **csak vegyes listán** jelenik meg. Az I3 webnek ugyanezt kell tükröznie.
+5. **A composer offline sem tiltott.** Ez a funkció lényegi üzenete; bármilyen későbbi
+   „küldés letiltása” állapot (rate limit, kill switch) is csak visszajelzés lehet, nem
+   a mező letiltása.

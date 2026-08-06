@@ -25,6 +25,10 @@ public final class SettingsMapper {
         settings.setTrainerCommentPushEnabled(request.trainerCommentPushEnabled());
         settings.setTrainerGoalsPushEnabled(request.trainerGoalsPushEnabled());
         settings.setProgramAssignedPushEnabled(request.programAssignedPushEnabled());
+        // Absent (older client) means "don't touch it" — see SettingsRequest.
+        if (request.chatPushEnabled() != null) {
+            settings.setChatPushEnabled(request.chatPushEnabled());
+        }
         settings.setRestTimerEnabled(request.restTimerEnabled());
         settings.setDefaultRestSeconds(request.defaultRestSeconds());
     }
@@ -44,6 +48,7 @@ public final class SettingsMapper {
                 settings.isTrainerCommentPushEnabled(),
                 settings.isTrainerGoalsPushEnabled(),
                 settings.isProgramAssignedPushEnabled(),
+                settings.isChatPushEnabled(),
                 settings.isRestTimerEnabled(),
                 settings.getDefaultRestSeconds()
         );

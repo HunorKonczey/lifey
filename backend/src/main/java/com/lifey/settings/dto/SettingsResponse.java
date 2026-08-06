@@ -18,6 +18,7 @@ public record SettingsResponse(
         Boolean trainerCommentPushEnabled,
         Boolean trainerGoalsPushEnabled,
         Boolean programAssignedPushEnabled,
+        Boolean chatPushEnabled,
         Boolean restTimerEnabled,
         Integer defaultRestSeconds
 ) {

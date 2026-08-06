@@ -21,6 +21,7 @@ class UserSettings {
     this.trainerCommentPushEnabled = true,
     this.trainerGoalsPushEnabled = true,
     this.programAssignedPushEnabled = true,
+    this.chatPushEnabled = true,
     this.restTimerEnabled = true,
     this.defaultRestSeconds = 90,
     this.watchWorkoutEnabled = true,
@@ -40,6 +41,7 @@ class UserSettings {
         trainerCommentPushEnabled = true,
         trainerGoalsPushEnabled = true,
         programAssignedPushEnabled = true,
+        chatPushEnabled = true,
         restTimerEnabled = true,
         defaultRestSeconds = 90,
         watchWorkoutEnabled = true;
@@ -69,6 +71,11 @@ class UserSettings {
   // (docs/34-multi-week-program-plan.md, M6) — same shape as
   // [workoutReminderEnabled] above.
   final bool programAssignedPushEnabled;
+  // Opt-out for the chat push notification
+  // (docs/chat/40-trainer-chat-plan.md §3.2) — same shape as
+  // [workoutReminderEnabled] above, and deliberately role-independent: one
+  // switch covers both the client's and the trainer's messages.
+  final bool chatPushEnabled;
   // Master switch for the rest-timer feature (docs/39-rest-timer-plan.md) —
   // same shape as [workoutReminderEnabled] above.
   final bool restTimerEnabled;
@@ -94,6 +101,7 @@ class UserSettings {
     bool? trainerCommentPushEnabled,
     bool? trainerGoalsPushEnabled,
     bool? programAssignedPushEnabled,
+    bool? chatPushEnabled,
     bool? restTimerEnabled,
     int? defaultRestSeconds,
     bool? watchWorkoutEnabled,
@@ -112,6 +120,7 @@ class UserSettings {
       trainerCommentPushEnabled: trainerCommentPushEnabled ?? this.trainerCommentPushEnabled,
       trainerGoalsPushEnabled: trainerGoalsPushEnabled ?? this.trainerGoalsPushEnabled,
       programAssignedPushEnabled: programAssignedPushEnabled ?? this.programAssignedPushEnabled,
+      chatPushEnabled: chatPushEnabled ?? this.chatPushEnabled,
       restTimerEnabled: restTimerEnabled ?? this.restTimerEnabled,
       defaultRestSeconds: defaultRestSeconds ?? this.defaultRestSeconds,
       watchWorkoutEnabled: watchWorkoutEnabled ?? this.watchWorkoutEnabled,
@@ -133,6 +142,7 @@ class UserSettings {
       trainerCommentPushEnabled: json['trainerCommentPushEnabled'] as bool? ?? true,
       trainerGoalsPushEnabled: json['trainerGoalsPushEnabled'] as bool? ?? true,
       programAssignedPushEnabled: json['programAssignedPushEnabled'] as bool? ?? true,
+      chatPushEnabled: json['chatPushEnabled'] as bool? ?? true,
       restTimerEnabled: json['restTimerEnabled'] as bool? ?? true,
       defaultRestSeconds: json['defaultRestSeconds'] as int? ?? 90,
       watchWorkoutEnabled: json['watchWorkoutEnabled'] as bool? ?? true,
@@ -153,6 +163,7 @@ class UserSettings {
         'trainerCommentPushEnabled': trainerCommentPushEnabled,
         'trainerGoalsPushEnabled': trainerGoalsPushEnabled,
         'programAssignedPushEnabled': programAssignedPushEnabled,
+        'chatPushEnabled': chatPushEnabled,
         'restTimerEnabled': restTimerEnabled,
         'defaultRestSeconds': defaultRestSeconds,
         'watchWorkoutEnabled': watchWorkoutEnabled,

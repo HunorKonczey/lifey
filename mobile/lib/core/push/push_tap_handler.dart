@@ -28,6 +28,11 @@ import 'firebase_bootstrap.dart';
 /// `type == program_assigned` navigates to the workouts tab — tab-level like
 /// `scheduled_workout`, no deep link to the specific program assignment
 /// (docs/34-multi-week-program-plan.md, M6).
+/// `type == chat_message` opens the exact thread on top of the conversation
+/// list (docs/chat/40-trainer-chat-plan.md §5.2). Unlike `trainer_comment`
+/// this needs no local lookup first: the thread screen reads its own cache
+/// and fills the gap from the API on open, so a push that beat the data still
+/// lands on the right screen.
 ///
 /// Singleton for the app's lifetime (like `WorkoutResumePrompt`) — wired up
 /// once via `ref.watch(pushTapHandlerProvider)` in `app.dart`.
@@ -113,6 +118,22 @@ class PushTapHandler {
     if (data['type'] == 'program_assigned') {
       _ref.read(appRouterProvider).go('/workouts');
     }
+    if (data['type'] == 'chat_message') {
+      _routeToConversation(data);
+    }
+  }
+
+  void _routeToConversation(Map<String, dynamic> data) {
+    final conversationId = int.tryParse('${data['conversationId']}');
+    final router = _ref.read(appRouterProvider);
+    if (conversationId == null) {
+      router.go('/chat');
+      return;
+    }
+    // Pushed on top of the list so the back gesture lands on the other
+    // conversations rather than throwing the user out to the dashboard.
+    router.go('/chat');
+    router.push('/chat/$conversationId');
   }
 
   Future<void> _routeToCommentedSession(Map<String, dynamic> data) async {
