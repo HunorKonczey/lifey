@@ -172,6 +172,33 @@ lifey:
     # memory, so each instance applies it separately (see ChatRateLimiter).
     rate-limit-per-minute: ${CHAT_RATE_LIMIT_PER_MINUTE:30}
     rate-limit-per-day: ${CHAT_RATE_LIMIT_PER_DAY:600}
+    # SSE realtime (GET /api/v1/chat/stream). One connection is deliberately
+    # short-lived: the client reconnects with Last-Event-ID, and a bounded
+    # lifetime means a leaked emitter cannot outlive this window.
+    stream-timeout: ${CHAT_STREAM_TIMEOUT:5m}
+    # Comment frames keeping proxies from closing an idle stream. Must stay
+    # comfortably under any reverse-proxy read timeout in front of the app.
+    stream-heartbeat: ${CHAT_STREAM_HEARTBEAT:20s}
+    # Most messages a reconnect replays from Last-Event-ID before the server
+    # gives up and tells the client to reload over REST instead.
+    stream-catch-up-limit: ${CHAT_STREAM_CATCH_UP_LIMIT:200}
+    # How long "the user is looking at thread X" is believed without a refresh.
+    # Losing it is safe: the fallback is sending a push that wasn't needed.
+    presence-ttl: ${CHAT_PRESENCE_TTL:2m}
+    # At most one push per thread per window (§5.3). A burst of messages is one
+    # interruption; the count in the body comes from the read cursor, so it is
+    # accurate no matter how many sends the window swallowed.
+    push-coalesce-window: ${CHAT_PUSH_COALESCE_WINDOW:60s}
+    # How long a message stays unread before ChatUnreadReminderJob comes back
+    # for it — the safety net for a quiet hour, a mute, or a dropped push.
+    reminder-after: ${CHAT_REMINDER_AFTER:30m}
+    # Most reminders one user can get in a day. The reminder is the last line of
+    # defence, not a second notification channel.
+    reminder-daily-cap: ${CHAT_REMINDER_DAILY_CAP:1}
+    # §5.5 — off by default: an email about an unread chat message reads as spam
+    # very easily. Turn it on only after the metrics show how often it fires.
+    email-fallback-enabled: ${CHAT_EMAIL_FALLBACK_ENABLED:false}
+    email-fallback-after: ${CHAT_EMAIL_FALLBACK_AFTER:24h}
   jobs:
     password-reset-cleanup:
       # Daily sweep removing expired/used password reset tokens (PasswordResetTokenCleanupJob).
@@ -185,3 +212,8 @@ lifey:
     workout-reminder:
       # Per-user-local-time workout reminder tick, every 15 minutes (WorkoutReminderJob).
       cron: ${JOB_WORKOUT_REMINDER_CRON:0 */15 * * * *}
+    chat-unread-reminder:
+      # "Still not read" sweep every 5 minutes (ChatUnreadReminderJob, §5.4).
+      # Frequent because the decision is per-user-local (quiet hours) and each
+      # tick only acts on users whose window has just opened.
+      cron: ${JOB_CHAT_UNREAD_REMINDER_CRON:0 */5 * * * *}

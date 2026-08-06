@@ -206,6 +206,22 @@
 6. **Archív szál olvasható marad**, a composer helyén magyarázó sávval — a kapcsolat
    megszűnése nem törli az előzményt.
 7. **Web push nincs** az első kiadásban; a webes jelzés a sidebar-badge és a fül-cím.
+8. ~~**A sor- és szál-menü az I3-ban nem menü, hanem egyetlen ikon-gomb.**~~
+   **Feloldva az I5-ben:** a némítás megérkezett, így a szál fejlécében van egy
+   harang-akció, ami időtartam-választót nyit (1 óra / 8 óra / visszavonásig), némított
+   állapotban pedig egy koppintással old fel. A „Kliens megnyitása” külön ikon-gomb
+   maradt mellette — két gomb egyértelműbb, mint egy kétsoros legördülő.
+   A némítás **fix választék, nem szabad időpont-választó**: a kérdés „hagyjatok békén
+   egy kicsit” vagy „végleg”, és egy picker a gyakori esetet lassítaná.
+   (Terv: [40-trainer-chat-plan.md](40-trainer-chat-plan.md) §16.2.)
+10. **A némított sort áthúzott harang jelzi, de az olvasatlan-pötty marad** — a némítás
+    az értesítést hallgattatja el, nem a számlálót.
+11. **A csendes órák a beállítás-képernyőn élnek, nem a szálban**: egy kapcsoló
+    (alapértelmezett 22:00–07:00) és két időpont-választó. Szálanként a némítás a
+    megfelelő eszköz; a csendes óra az egész chatre vonatkozik.
+9. **A szál-fejléc alsora weben a peer e-mail-címe**, nem „online / utoljára aktív”.
+   A jelenlét I4, a design pedig kifejezetten tiltja a hamis állapotjelzést; az e-mail
+   valós adat, és az edzőnek ez azonosít egy kliens-listányi monogram között.
 
 ---
 

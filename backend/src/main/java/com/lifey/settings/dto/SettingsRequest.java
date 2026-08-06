@@ -9,6 +9,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
+import java.time.LocalTime;
+
 public record SettingsRequest(
 
         @NotNull
@@ -58,6 +60,26 @@ public record SettingsRequest(
          * (docs/chat/40-trainer-chat-plan.md, I2).
          */
         Boolean chatPushEnabled,
+
+        /**
+         * Local-time window in which chat pushes are held back (§5.4). Nullable
+         * for the same reason as {@code chatPushEnabled} — and additionally
+         * because "no quiet hours" is itself a valid stored state, which is why
+         * {@code chatQuietHoursSet} exists rather than treating null as "leave
+         * alone" here.
+         */
+        LocalTime chatQuietHoursStart,
+
+        LocalTime chatQuietHoursEnd,
+
+        /**
+         * Distinguishes "this client doesn't know about quiet hours" (absent →
+         * leave the stored window alone) from "the user cleared their window"
+         * (present and false → wipe it). Without it, an older app version's
+         * save would silently delete a window set from the web, and a user
+         * turning quiet hours off could never be told apart from an old client.
+         */
+        Boolean chatQuietHoursSet,
 
         @NotNull
         Boolean restTimerEnabled,

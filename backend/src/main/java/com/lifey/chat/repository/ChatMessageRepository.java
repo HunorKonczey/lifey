@@ -34,6 +34,21 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     List<ChatMessage> findLatestPage(@Param("conversationId") Long conversationId, Pageable pageable);
 
     /**
+     * Everything the user missed since {@code after}, across all of their
+     * threads at once — the {@code Last-Event-ID} replay when a stream
+     * reconnects (§4.4). Ascending, so replayed frames arrive in the same order
+     * they originally would have.
+     */
+    @Query("select m from ChatMessage m "
+            + "join fetch m.conversation c "
+            + "join fetch m.sender "
+            + "where (c.trainer.id = :userId or c.client.id = :userId) and m.id > :after "
+            + "order by m.id asc")
+    List<ChatMessage> findAllForParticipantAfter(@Param("userId") Long userId,
+                                                 @Param("after") Long after,
+                                                 Pageable pageable);
+
+    /**
      * Unread counts for every thread of one user in a single query — the
      * conversation list would otherwise be an N+1. Counts messages above the
      * viewer's read cursor that they did not send and that are not tombstoned.

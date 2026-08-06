@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
+
 class ChatRateLimiterTest {
 
     @Test
@@ -42,6 +44,8 @@ class ChatRateLimiterTest {
     }
 
     private static ChatRateLimiter limiterWith(int perMinute, int perDay) {
-        return new ChatRateLimiter(new ChatProperties(true, 2000, 30, 100, perMinute, perDay));
+        return new ChatRateLimiter(new ChatProperties(true, 2000, 30, 100, perMinute, perDay,
+                Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
+                Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false, Duration.ofHours(24)));
     }
 }

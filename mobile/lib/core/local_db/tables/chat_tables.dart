@@ -40,6 +40,16 @@ class ChatConversations extends Table {
   /// Set once the trainer-client relationship ends: readable, not writable.
   DateTimeColumn get archivedAt => dateTime().nullable()();
 
+  /// How far the *peer* has got in this thread — the two numbers our own tick
+  /// marks are drawn from (I4). Per participant rather than per message, which
+  /// is why they live on the thread and not on `chat_messages`: "has message N
+  /// been read" is the question "is N at or below the read cursor".
+  IntColumn get peerLastDeliveredMessageId => integer().nullable()();
+  IntColumn get peerLastReadMessageId => integer().nullable()();
+
+  /// Our own per-thread mute (§I5); null or in the past means not muted.
+  DateTimeColumn get mutedUntil => dateTime().nullable()();
+
   @override
   Set<Column> get primaryKey => {serverId};
 }

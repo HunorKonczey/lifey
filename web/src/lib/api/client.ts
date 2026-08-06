@@ -45,6 +45,18 @@ export function registerTokenRefresher(fn: TokenRefresher) {
   tokenRefresher = fn;
 }
 
+/**
+ * Refresh the access token from outside the normal request path. The SSE
+ * reader (lib/api/chat-stream.ts) can't go through `request()` — it consumes a
+ * stream rather than a body — so it needs its own way to recover from a 401
+ * instead of reconnecting forever with a token that has already expired.
+ */
+export async function refreshAccessToken(): Promise<string | null> {
+  const token = await refreshOnce();
+  setAccessToken(token);
+  return token;
+}
+
 async function refreshOnce(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
   if (!tokenRefresher) return null;

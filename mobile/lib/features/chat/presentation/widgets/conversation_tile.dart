@@ -97,6 +97,17 @@ class ConversationTile extends StatelessWidget {
                             const SizedBox(width: 6),
                             _MetaChip(label: l10n.chatArchivedLabel),
                           ],
+                          // A muted thread still shows its unread dot — the
+                          // mute silences the notification, not the count.
+                          if (conversation.isMuted && !archived) ...[
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.notifications_off,
+                              size: 14,
+                              color: scheme.onSurfaceVariant,
+                              semanticLabel: l10n.chatMutedLabel,
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 2),

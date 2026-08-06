@@ -1,9 +1,12 @@
 package com.lifey.chat.service;
 
 import com.lifey.chat.ChatMessageStoredEvent;
+import com.lifey.chat.ChatProperties;
 import com.lifey.chat.entity.ChatConversation;
 import com.lifey.chat.entity.ChatMessage;
+import com.lifey.chat.entity.ChatParticipant;
 import com.lifey.chat.repository.ChatMessageRepository;
+import com.lifey.chat.repository.ChatParticipantRepository;
 import com.lifey.push.service.PushMessage;
 import com.lifey.push.service.PushService;
 import com.lifey.settings.LanguagePreference;
@@ -14,13 +17,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +51,8 @@ class ChatNotificationServiceImplTest {
     private static final Long CLIENT_ID = 2L;
     private static final Long CONVERSATION_ID = 10L;
     private static final Long MESSAGE_ID = 100L;
+    private static final Instant NOW = Instant.parse("2026-08-06T12:00:00Z");
+    private static final Duration COALESCE_WINDOW = Duration.ofSeconds(60);
 
     @Mock
     ChatMessageRepository messageRepository;
@@ -55,12 +63,21 @@ class ChatNotificationServiceImplTest {
     @Mock
     PushService pushService;
 
-    @InjectMocks
+    @Mock
+    ChatEventBus eventBus;
+
+    @Mock
+    ChatPresenceRegistry presenceRegistry;
+
+    @Mock
+    ChatParticipantRepository participantRepository;
+
     ChatNotificationServiceImpl notificationService;
 
     User trainer;
     User client;
     ChatConversation conversation;
+    ChatParticipant recipientParticipant;
 
     @BeforeEach
     void setUp() {
@@ -72,8 +89,24 @@ class ChatNotificationServiceImplTest {
         conversation.setTrainer(trainer);
         conversation.setClient(client);
 
+        recipientParticipant = new ChatParticipant();
+        recipientParticipant.setConversation(conversation);
+        recipientParticipant.setUser(client);
+
+        notificationService = new ChatNotificationServiceImpl(
+                messageRepository, participantRepository, userSettingsRepository, pushService,
+                eventBus, presenceRegistry, properties(), Clock.fixed(NOW, ZoneOffset.UTC));
+
         when(messageRepository.countUnread(anyLong(), anyLong())).thenReturn(1L);
         when(userSettingsRepository.findByUserId(anyLong())).thenReturn(Optional.empty());
+        when(participantRepository.findByConversationIdAndUserId(anyLong(), anyLong()))
+                .thenReturn(Optional.of(recipientParticipant));
+    }
+
+    private static ChatProperties properties() {
+        return new ChatProperties(true, 2000, 30, 100, 30, 600,
+                Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
+                COALESCE_WINDOW, Duration.ofMinutes(30), 1, false, Duration.ofHours(24));
     }
 
     @Test
@@ -153,6 +186,129 @@ class ChatNotificationServiceImplTest {
     }
 
     @Test
+    void recipientLookingAtTheThread_isNotPushed() {
+        // §5.1 "seen": live stream + presence on this exact thread.
+        storedMessage(trainer, "Szia!");
+        when(eventBus.isConnected(CLIENT_ID)).thenReturn(true);
+        when(presenceRegistry.isViewing(CLIENT_ID, CONVERSATION_ID)).thenReturn(true);
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        verify(pushService, never()).sendToUser(anyLong(), any());
+    }
+
+    @Test
+    void recipientLookingAtAnotherThread_isStillPushed() {
+        storedMessage(trainer, "Szia!");
+        when(eventBus.isConnected(CLIENT_ID)).thenReturn(true);
+        when(presenceRegistry.isViewing(CLIENT_ID, CONVERSATION_ID)).thenReturn(false);
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        verify(pushService).sendToUser(anyLong(), any());
+    }
+
+    @Test
+    void stalePresenceWithoutAConnection_doesNotSilenceThePush() {
+        // A killed app can leave presence behind; without the connection check
+        // that user would go quiet until the TTL expired.
+        storedMessage(trainer, "Szia!");
+        when(eventBus.isConnected(CLIENT_ID)).thenReturn(false);
+        when(presenceRegistry.isViewing(CLIENT_ID, CONVERSATION_ID)).thenReturn(true);
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        verify(pushService).sendToUser(anyLong(), any());
+    }
+
+    @Test
+    void everyChatPushCarriesAPerThreadCollapseKey() {
+        // §5.3 — five messages in one thread are one row in the OS notification
+        // centre, not five.
+        storedMessage(trainer, "Szia!");
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        assertThat(capturePushTo(CLIENT_ID).collapseKey()).isEqualTo("chat-10");
+    }
+
+    @Test
+    void aSecondMessageWithinTheCoalesceWindow_isNotPushedAgain() {
+        storedMessage(trainer, "és még valami");
+        recipientParticipant.setLastNotifiedAt(NOW.minus(COALESCE_WINDOW).plusSeconds(1));
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        verify(pushService, never()).sendToUser(anyLong(), any());
+    }
+
+    @Test
+    void onceTheWindowHasPassed_thePushGoesOutAgain() {
+        storedMessage(trainer, "és még valami");
+        recipientParticipant.setLastNotifiedAt(NOW.minus(COALESCE_WINDOW).minusSeconds(1));
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        verify(pushService).sendToUser(anyLong(), any());
+    }
+
+    @Test
+    void aSentPushOpensTheWindowForTheNextOne() {
+        storedMessage(trainer, "Szia!");
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        assertThat(recipientParticipant.getLastNotifiedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void aMutedThread_isNotPushed() {
+        storedMessage(trainer, "Szia!");
+        recipientParticipant.setMutedUntil(NOW.plusSeconds(60));
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        verify(pushService, never()).sendToUser(anyLong(), any());
+    }
+
+    @Test
+    void anExpiredMuteIsNoMute() {
+        storedMessage(trainer, "Szia!");
+        recipientParticipant.setMutedUntil(NOW.minusSeconds(1));
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        verify(pushService).sendToUser(anyLong(), any());
+    }
+
+    @Test
+    void insideTheQuietHours_noPushGoesOut() {
+        // NOW is 12:00 UTC; the recipient is at UTC+2, so their local 14:00
+        // falls inside a 13:00–15:00 window.
+        storedMessage(trainer, "Szia!");
+        client.setUtcOffsetMinutes(120);
+        when(userSettingsRepository.findByUserId(CLIENT_ID))
+                .thenReturn(Optional.of(quietHours(LocalTime.of(13, 0), LocalTime.of(15, 0))));
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        verify(pushService, never()).sendToUser(anyLong(), any());
+    }
+
+    @Test
+    void theSameWindowInAnotherTimeZoneDoesNotSilenceThePush() {
+        // Identical settings, a recipient in UTC: local 12:00 is outside 13–15.
+        storedMessage(trainer, "Szia!");
+        client.setUtcOffsetMinutes(0);
+        when(userSettingsRepository.findByUserId(CLIENT_ID))
+                .thenReturn(Optional.of(quietHours(LocalTime.of(13, 0), LocalTime.of(15, 0))));
+
+        notificationService.onMessageStored(new ChatMessageStoredEvent(MESSAGE_ID));
+
+        verify(pushService).sendToUser(anyLong(), any());
+    }
+
+    @Test
     void aMissingMessage_isIgnored() {
         when(messageRepository.findById(MESSAGE_ID)).thenReturn(Optional.empty());
 
@@ -186,6 +342,13 @@ class ChatNotificationServiceImplTest {
         ArgumentCaptor<PushMessage> captor = ArgumentCaptor.captor();
         verify(pushService).sendToUser(org.mockito.ArgumentMatchers.eq(userId), captor.capture());
         return captor.getValue();
+    }
+
+    private static UserSettings quietHours(LocalTime start, LocalTime end) {
+        UserSettings settings = settings(true, LanguagePreference.SYSTEM);
+        settings.setChatQuietHoursStart(start);
+        settings.setChatQuietHoursEnd(end);
+        return settings;
     }
 
     private static UserSettings settings(boolean chatPushEnabled, LanguagePreference language) {

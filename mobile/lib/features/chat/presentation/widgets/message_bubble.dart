@@ -25,6 +25,7 @@ class MessageBubble extends StatelessWidget {
     required this.showTail,
     required this.showAvatar,
     required this.peerMonogram,
+    this.receiptState,
     this.onRetry,
     this.onDelete,
   });
@@ -32,6 +33,14 @@ class MessageBubble extends StatelessWidget {
   final ChatMessage message;
   final bool isOwn;
   final String senderName;
+
+  /// The tick to draw, when the caller knows more than the row does.
+  /// `delivered`/`read` are derived from the thread's peer cursors rather than
+  /// stored on the message, so a caller without a conversation in hand can
+  /// omit this and get the message's own state.
+  final ChatMessageState? receiptState;
+
+  ChatMessageState get _state => receiptState ?? message.state;
 
   /// Last message of a same-sender run: the one that shows the time, the
   /// status and the flattened "tail" corner. Consecutive messages group.
@@ -128,7 +137,7 @@ class MessageBubble extends StatelessWidget {
                             ),
                             if (isOwn) ...[
                               const SizedBox(width: 4),
-                              _StatusIcon(state: message.state),
+                              _StatusIcon(state: _state),
                             ],
                           ],
                         ),
@@ -174,7 +183,7 @@ class MessageBubble extends StatelessWidget {
   }
 
   String _statusLabel(AppLocalizations l10n) {
-    return switch (message.state) {
+    return switch (_state) {
       ChatMessageState.pending => l10n.chatStatusPending,
       ChatMessageState.sent => l10n.chatStatusSent,
       ChatMessageState.delivered => l10n.chatStatusDelivered,
@@ -184,7 +193,7 @@ class MessageBubble extends StatelessWidget {
   }
 
   Future<void> _showActions(BuildContext context, AppLocalizations l10n) async {
-    final failed = message.state == ChatMessageState.failed;
+    final failed = _state == ChatMessageState.failed;
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,

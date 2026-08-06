@@ -18,4 +18,11 @@ public interface MailService {
 
     /** Weekly digest of a trainer's active clients (docs/33-weekly-trainer-report-plan.md). */
     void sendWeeklyTrainerReport(User trainer, WeeklyTrainerReport report);
+
+    /**
+     * Last-resort nudge for chat messages left unread by someone with no push
+     * device at all (docs/chat/40-trainer-chat-plan.md §5.5). Behind
+     * {@code lifey.chat.email-fallback-enabled}, off by default.
+     */
+    void sendUnreadChatEmail(User user, long unreadCount, String peerName);
 }

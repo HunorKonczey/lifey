@@ -25,13 +25,26 @@ import { useTheme } from "@/lib/hooks/useTheme";
 import { useLocale } from "@/lib/hooks/useLocale";
 import { useSessionStore } from "@/features/auth/store";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { Switch } from "@/components/ui/Switch";
+import { TimePicker } from "@/components/ui/TimePicker";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 import type {
-  SettingsResponse, UnitSystem, ThemePreference, LanguagePreference,
+  SettingsResponse, SettingsRequest, UnitSystem, ThemePreference, LanguagePreference,
 } from "@/features/settings/types";
 
-type Section = "profile" | "goals" | "units" | "theme" | "language" | "security";
+type Section = "profile" | "goals" | "units" | "theme" | "language" | "notifications" | "security";
+
+/** A backend `LocalTime` is "HH:mm:ss"; the picker speaks "HH:mm". */
+function toPickerTime(value: string | null): string {
+  return value ? value.slice(0, 5) : "";
+}
+
+function fromPickerTime(value: string): string | null {
+  return value ? `${value}:00` : null;
+}
+
+const DEFAULT_QUIET_HOURS = { start: "22:00:00", end: "07:00:00" };
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
@@ -44,6 +57,7 @@ export default function SettingsPage() {
     { value: "units", label: t("units"), icon: "straighten" },
     { value: "theme", label: t("theme"), icon: "palette" },
     { value: "language", label: t("language"), icon: "translate" },
+    { value: "notifications", label: t("notifications"), icon: "notifications" },
     { value: "security", label: t("security"), icon: "shield" },
   ];
 
@@ -161,7 +175,7 @@ export default function SettingsPage() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (body: SettingsResponse) => settingsApi.update(body),
+    mutationFn: (body: SettingsRequest) => settingsApi.update(body),
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.all() });
       setForm(saved);
@@ -174,7 +188,7 @@ export default function SettingsPage() {
   if (isError) return <ErrorState onRetry={refetch} />;
 
   const patch = (p: Partial<SettingsResponse>) => setForm((f) => f ? { ...f, ...p } : f);
-  const saveImmediate = (p: Partial<SettingsResponse>) => {
+  const saveImmediate = (p: Partial<SettingsRequest>) => {
     const next = { ...form, ...p };
     setForm(next);
     saveMutation.mutate(next);
@@ -319,6 +333,56 @@ export default function SettingsPage() {
               value={form.language}
               onChange={(v) => { setLanguage(v); saveImmediate({ language: v }); }}
             />
+          </Panel>
+        )}
+
+        {section === "notifications" && (
+          <Panel title={t("notifications")}>
+            <Switch
+              checked={form.chatPushEnabled ?? true}
+              onChange={(checked) => saveImmediate({ chatPushEnabled: checked })}
+              label={t("chatPushLabel")}
+            />
+            <p className="text-xs -mt-2" style={{ color: "var(--muted)" }}>{t("chatPushHint")}</p>
+
+            <div className="h-px my-2" style={{ background: "var(--outline)" }} />
+
+            <Switch
+              checked={!!form.chatQuietHoursStart && !!form.chatQuietHoursEnd}
+              onChange={(checked) =>
+                // Turning the window off has to be said explicitly, or the
+                // server can't tell it from a client that doesn't know about
+                // quiet hours at all — hence chatQuietHoursSet.
+                saveImmediate({
+                  chatQuietHoursStart: checked ? DEFAULT_QUIET_HOURS.start : null,
+                  chatQuietHoursEnd: checked ? DEFAULT_QUIET_HOURS.end : null,
+                  chatQuietHoursSet: true,
+                })
+              }
+              label={t("quietHoursLabel")}
+            />
+            <p className="text-xs -mt-2" style={{ color: "var(--muted)" }}>{t("quietHoursHint")}</p>
+
+            {form.chatQuietHoursStart && form.chatQuietHoursEnd && (
+              <div className="flex gap-3">
+                <Field label={t("quietHoursFrom")}>
+                  <TimePicker
+                    value={toPickerTime(form.chatQuietHoursStart)}
+                    onChange={(v) =>
+                      saveImmediate({ chatQuietHoursStart: fromPickerTime(v), chatQuietHoursSet: true })
+                    }
+                  />
+                </Field>
+                <Field label={t("quietHoursTo")}>
+                  <TimePicker
+                    value={toPickerTime(form.chatQuietHoursEnd)}
+                    onChange={(v) =>
+                      saveImmediate({ chatQuietHoursEnd: fromPickerTime(v), chatQuietHoursSet: true })
+                    }
+                  />
+                </Field>
+              </div>
+            )}
           </Panel>
         )}
 

@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { enUS, hu } from "date-fns/locale";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import { useLocale } from "@/lib/hooks/useLocale";
+import { useToast } from "@/lib/hooks/useToast";
+import { chatApi } from "@/features/chat/api";
 import type { TrainerClientResponse } from "../types";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
@@ -31,7 +35,18 @@ interface ClientDetailHeaderProps {
 
 export function ClientDetailHeader({ client, tab, onTabChange, onScheduleWorkout }: ClientDetailHeaderProps) {
   const t = useTranslations("admin.clientDetail");
+  const chat = useTranslations("chat");
   const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
+  const router = useRouter();
+  const { show } = useToast();
+
+  // Lazy-create keyed on the client's user id: this page holds `clientId`, not
+  // the trainer_clients row id that POST /chat/conversations wants.
+  const openChat = useMutation({
+    mutationFn: () => chatApi.openConversationWithUser(client.clientId),
+    onSuccess: (conversation) => router.push(`/admin/chat?c=${conversation.id}`),
+    onError: () => show(chat("openConversationFailed"), "error"),
+  });
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -56,6 +71,15 @@ export function ClientDetailHeader({ client, tab, onTabChange, onScheduleWorkout
             date: format(new Date(client.activeSince), "yyyy. MMM d.", { locale: dateLocale }),
           })}
         </span>
+        <button
+          onClick={() => openChat.mutate()}
+          disabled={openChat.isPending}
+          className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-xs font-bold px-3.5 py-2 whitespace-nowrap transition-opacity disabled:opacity-50"
+          style={{ border: "1px solid var(--outline)", color: "var(--on-surface)" }}
+        >
+          <span className="material-symbols-rounded text-base">chat_bubble</span>
+          {chat("messageCta")}
+        </button>
         {tab === "schedule" ? (
           <button
             onClick={onScheduleWorkout}

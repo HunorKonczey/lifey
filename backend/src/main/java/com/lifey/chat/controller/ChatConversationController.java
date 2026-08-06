@@ -2,6 +2,7 @@ package com.lifey.chat.controller;
 
 import com.lifey.chat.dto.ConversationListResponse;
 import com.lifey.chat.dto.ConversationResponse;
+import com.lifey.chat.dto.MuteRequest;
 import com.lifey.chat.dto.OpenConversationRequest;
 import com.lifey.chat.dto.ReadReceiptRequest;
 import com.lifey.chat.service.ChatService;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -65,6 +67,15 @@ public class ChatConversationController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markRead(@PathVariable Long conversationId, @Valid @RequestBody ReadReceiptRequest request) {
         chatService.markRead(conversationId, request.lastReadMessageId());
+    }
+
+    @Operation(summary = "Mute or unmute a conversation",
+            description = "Silences this thread's pushes for the caller until mutedUntil; null unmutes. "
+                    + "Only the notification is affected — messages still arrive and still count as unread.")
+    @PutMapping("/{conversationId}/mute")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void mute(@PathVariable Long conversationId, @RequestBody MuteRequest request) {
+        chatService.mute(conversationId, request.mutedUntil());
     }
 
     private static ResponseEntity<ConversationResponse> respond(OpenConversationResult result) {

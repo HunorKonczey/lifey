@@ -4,6 +4,8 @@ import com.lifey.chat.dto.ConversationListResponse;
 import com.lifey.chat.dto.MessageListResponse;
 import com.lifey.chat.dto.SendMessageRequest;
 
+import java.time.Instant;
+
 public interface ChatService {
 
     /** Every thread of the caller, newest activity first, regardless of role. */
@@ -29,6 +31,13 @@ public interface ChatService {
 
     /** Tombstones one of the caller's own messages. */
     void deleteMessage(Long messageId);
+
+    /**
+     * Silences this thread's pushes for the caller until {@code mutedUntil};
+     * null unmutes. Only the notification is affected — messages still arrive
+     * and still count as unread (§I5).
+     */
+    void mute(Long conversationId, Instant mutedUntil);
 
     /** Closes the pair's live thread(s) for writing when the relationship ends. */
     void archiveForPair(Long trainerId, Long clientId);

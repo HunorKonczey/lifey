@@ -100,6 +100,10 @@ export const queryKeys = {
   trainerProgramAssignments: {
     forClient: (clientId: number) => ["trainer-program-assignments", "client", clientId] as const,
   },
+  chat: {
+    conversations: () => ["chat", "conversations"] as const,
+    messages: (conversationId: number) => ["chat", "messages", conversationId] as const,
+  },
   superAdminUsers: {
     page: (params: { page: number; size?: number; search?: string }) =>
       ["superadmin-users", "page", params] as const,

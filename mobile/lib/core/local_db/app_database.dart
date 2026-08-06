@@ -58,7 +58,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 29;
+  int get schemaVersion => 32;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -239,6 +239,26 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(chatConversations);
             await m.createTable(chatMessages);
             await m.addColumn(userSettingsTable, userSettingsTable.chatPushEnabled);
+          }
+          // V30: chat realtime (I4) — the peer's delivered/read cursors, so a
+          // sent bubble can show whether it landed and was opened. Null until
+          // the next conversation refresh, which is the same as "unknown" and
+          // renders as a plain "sent" tick.
+          if (from < 30) {
+            await m.addColumn(chatConversations, chatConversations.peerLastDeliveredMessageId);
+            await m.addColumn(chatConversations, chatConversations.peerLastReadMessageId);
+          }
+          // V31: chat quiet hours (I5) — a local-time window in which chat
+          // pushes are held back. Null on both sides means no window, which is
+          // the existing behaviour, so there is nothing to backfill.
+          if (from < 31) {
+            await m.addColumn(userSettingsTable, userSettingsTable.chatQuietHoursStart);
+            await m.addColumn(userSettingsTable, userSettingsTable.chatQuietHoursEnd);
+          }
+          // V32: per-thread mute (I5). Null means not muted, which is the
+          // existing behaviour — nothing to backfill.
+          if (from < 32) {
+            await m.addColumn(chatConversations, chatConversations.mutedUntil);
           }
         },
       );

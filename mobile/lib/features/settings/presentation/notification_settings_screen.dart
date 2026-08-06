@@ -77,6 +77,52 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
     if (mounted) setState(() => _permissionDenied = value && !scheduled);
   }
 
+  /// The backend serializes a `LocalTime` as "HH:mm:ss"; the picker speaks
+  /// TimeOfDay. Null-safe both ways, since "no window" is a valid state.
+  static TimeOfDay? _parseTime(String? value) {
+    if (value == null) return null;
+    final parts = value.split(':');
+    if (parts.length < 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  static String _toApiTime(TimeOfDay time) =>
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00';
+
+  Future<void> _setQuietHoursEnabled(bool enabled, NotificationSettingsState state) async {
+    try {
+      // A sensible default window rather than an empty one: switching this on
+      // and then being asked to pick two times before anything happens would
+      // be a worse first step than "22:00–07:00, adjust if you like".
+      await _controller.setChatQuietHours(
+        enabled ? (state.chatQuietHoursStart ?? '22:00:00') : null,
+        enabled ? (state.chatQuietHoursEnd ?? '07:00:00') : null,
+      );
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    }
+  }
+
+  Future<void> _pickQuietHour(NotificationSettingsState state, {required bool start}) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _parseTime(start ? state.chatQuietHoursStart : state.chatQuietHoursEnd) ??
+          const TimeOfDay(hour: 22, minute: 0),
+    );
+    if (picked == null || !mounted) return;
+    try {
+      await _controller.setChatQuietHours(
+        start ? _toApiTime(picked) : state.chatQuietHoursStart,
+        start ? state.chatQuietHoursEnd : _toApiTime(picked),
+      );
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+    }
+  }
+
   Future<void> _pickTime(NotificationSettingsState state) async {
     final picked = await showTimePicker(
       context: context,
@@ -84,6 +130,12 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
     );
     if (picked == null || !mounted) return;
     await _setWeighInReminder(true, hour: picked.hour, minute: picked.minute);
+  }
+
+  /// "HH:mm:ss" trimmed to what a button label should show.
+  static String _formatApiTime(String? value) {
+    final time = _parseTime(value);
+    return time == null ? '--:--' : '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   String _formatTime(int hour, int minute) {
@@ -171,6 +223,39 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
           value: state.chatPushEnabled,
           onChanged: _setChatPush,
         ),
+        SwitchListTile(
+          title: Text(l10n.chatQuietHoursLabel),
+          subtitle: Text(l10n.chatQuietHoursSubtitle),
+          value: state.quietHoursEnabled,
+          onChanged: (value) => _setQuietHoursEnabled(value, state),
+        ),
+        if (state.quietHoursEnabled)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _pickQuietHour(state, start: true),
+                    icon: const Icon(Icons.bedtime_outlined, size: 18),
+                    label: Text(
+                      '${l10n.chatQuietHoursFrom} ${_formatApiTime(state.chatQuietHoursStart)}',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _pickQuietHour(state, start: false),
+                    icon: const Icon(Icons.wb_sunny_outlined, size: 18),
+                    label: Text(
+                      '${l10n.chatQuietHoursTo} ${_formatApiTime(state.chatQuietHoursEnd)}',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (_permissionDenied)
           Padding(
             padding: const EdgeInsets.all(16),

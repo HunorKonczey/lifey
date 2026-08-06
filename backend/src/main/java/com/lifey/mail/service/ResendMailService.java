@@ -101,6 +101,21 @@ class ResendMailService implements MailService {
         send(trainer, "weekly_report", "weekly_report", language, subject, htmlPlaceholders, textPlaceholders);
     }
 
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendUnreadChatEmail(User user, long unreadCount, String peerName) {
+        MailLanguage language = languageResolver.resolve(user);
+        Map<String, String> placeholders = Map.of(
+                "name", displayName(user),
+                "count", String.valueOf(unreadCount),
+                "peerName", peerName
+        );
+        String subject = messages.get("mail.chat-unread.subject", language);
+        // The message body itself is never in the mail — only how many and from
+        // whom (docs/chat/40-trainer-chat-plan.md §7.4).
+        send(user, "chat_unread", "chat-unread", language, subject, placeholders);
+    }
+
     private String renderRow(WeeklyTrainerReport.ClientWeekSummary client, MailLanguage language, boolean html) {
         String summary = weeklyReportFormatting.summarize(client, language, html);
         String clientName = html ? WeeklyReportFormatting.escapeHtml(client.clientName()) : client.clientName();

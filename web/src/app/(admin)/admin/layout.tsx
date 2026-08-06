@@ -7,12 +7,17 @@ import { useSessionStore } from "@/features/auth/store";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { useUiStore } from "@/lib/hooks/useUiStore";
 import { ErrorBoundary } from "@/components/status/ErrorBoundary";
+import { useChatStream } from "@/features/chat/hooks";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isLoading, initialize } = useSessionStore();
   const common = useTranslations("common");
   const toggleDrawer = useUiStore((s) => s.toggleDrawer);
+
+  // Held open for the whole trainer shell rather than only on /admin/chat, so
+  // the sidebar's unread badge stays live while the trainer works elsewhere.
+  useChatStream(!!user?.roles.includes("ROLE_TRAINER"));
 
   useEffect(() => {
     initialize();

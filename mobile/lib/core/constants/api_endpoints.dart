@@ -26,4 +26,12 @@ class ApiEndpoints {
   static String chatMessages(int conversationId) => '/chat/conversations/$conversationId/messages';
   static String chatConversationRead(int conversationId) => '/chat/conversations/$conversationId/read';
   static String chatMessage(int messageId) => '/chat/messages/$messageId';
+  static String chatConversationMute(int conversationId) =>
+      '/chat/conversations/$conversationId/mute';
+
+  /// Long-lived `text/event-stream` carrying every thread's events (I4).
+  static const chatStream = '/chat/stream';
+
+  /// "I'm looking at this thread" — what decides whether a push is needed.
+  static const chatPresence = '/chat/presence';
 }

@@ -2,7 +2,9 @@ package com.lifey.push.service;
 
 import com.eatthepath.pushy.apns.ApnsClient;
 import com.eatthepath.pushy.apns.ApnsClientBuilder;
+import com.eatthepath.pushy.apns.DeliveryPriority;
 import com.eatthepath.pushy.apns.PushNotificationResponse;
+import com.eatthepath.pushy.apns.PushType;
 import com.eatthepath.pushy.apns.auth.ApnsSigningKey;
 import com.eatthepath.pushy.apns.util.ApnsPayloadBuilder;
 import com.eatthepath.pushy.apns.util.SimpleApnsPayloadBuilder;
@@ -72,8 +74,19 @@ class ApnsPushSender implements PushSender {
         // UNNotification.request.content.userInfo (see docs/30-push-notifications-plan.md, M3).
         message.data().forEach(payloadBuilder::addCustomProperty);
         String payload = payloadBuilder.build();
-        SimpleApnsPushNotification notification =
-                new SimpleApnsPushNotification(device.getToken(), topic, payload);
+        // apns-priority 10 alert push (the default here), plus an optional
+        // apns-collapse-id so a burst in one chat thread folds into a single
+        // row in Notification Centre instead of stacking up (§5.3). No
+        // expiration: null means "deliver whenever you can", the same as before
+        // the collapse id was threaded through.
+        SimpleApnsPushNotification notification = new SimpleApnsPushNotification(
+                device.getToken(),
+                topic,
+                payload,
+                null,
+                DeliveryPriority.IMMEDIATE,
+                PushType.ALERT,
+                message.collapseKey());
 
         try {
             PushNotificationResponse<SimpleApnsPushNotification> response =

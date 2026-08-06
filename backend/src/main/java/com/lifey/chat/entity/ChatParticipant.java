@@ -48,11 +48,27 @@ public class ChatParticipant extends BaseEntity {
     @Column(name = "last_delivered_message_id")
     private Long lastDeliveredMessageId;
 
-    /** Per-thread mute, wired up in I5. */
+    /**
+     * Per-thread mute (§I5). Null or in the past means "not muted"; the value
+     * is an absolute instant rather than a duration so the mute expires on its
+     * own without anything having to sweep it.
+     */
     @Column(name = "muted_until")
     private Instant mutedUntil;
 
-    /** Push coalescing window (§5.3), wired up in I5. */
+    /**
+     * When this participant was last pushed about this thread — the coalescing
+     * window (§5.3). Also what the reminder job compares against to tell
+     * "never notified" from "notified but it didn't land".
+     */
     @Column(name = "last_notified_at")
     private Instant lastNotifiedAt;
+
+    /**
+     * When the user was last sent an unread *reminder* (§5.4). Written to every
+     * one of their participant rows at once, because the daily cap is per user
+     * and there is no per-user chat row to hold it.
+     */
+    @Column(name = "last_reminded_at")
+    private Instant lastRemindedAt;
 }

@@ -13,12 +13,17 @@
 > weben elérhető többi edzői funkció mobilra vitelét a
 > [41-trainer-mobile-v2-plan.md](41-trainer-mobile-v2-plan.md) tervezi meg.
 >
-> **Állapot (2026-08-06):** az **I1 (backend alap)** és az **I2 (mobil chat mindkét
-> szerepkörben + push)** kész. A leszállított szerződést és a tervtől való eltéréseket a
-> **[§12 (I1)](#12-megvalósítási-napló--i1-backend-alap)** és a
-> **[§13 (I2)](#13-megvalósítási-napló--i2-mobil--push)** rögzíti.
-> **A következő lépés az I3 (edzői web) vagy az I4 (realtime) — mindkettő belépőpontja
-> a §12 + §13, illetve a [§10](#10-design) design-forrásai**
+> **Állapot (2026-08-06):** az **I1 (backend alap)**, az **I2 (mobil chat mindkét
+> szerepkörben + push)**, az **I3 (edzői web)**, az **I4 (realtime)** és az
+> **I5 (értesítés-finomhangolás)** kész — a chat ezzel funkcionálisan teljes.
+> A leszállított szerződést és a tervtől való eltéréseket a
+> **[§12 (I1)](#12-megvalósítási-napló--i1-backend-alap)**, a
+> **[§13 (I2)](#13-megvalósítási-napló--i2-mobil--push)**, a
+> **[§14 (I3)](#14-megvalósítási-napló--i3-edzői-web)**, a
+> **[§15 (I4)](#15-megvalósítási-napló--i4-realtime-sse--jelenlét--pipák)** és a
+> **[§16 (I5)](#16-megvalósítási-napló--i5-értesítés-finomhangolás)** rögzíti.
+> **Hátra az I6 (opcionális kiterjesztések) és az I7 (üzemeltetés és mérés) van —
+> belépőpontjuk a §12–§16, illetve a [§10](#10-design) design-forrásai**
 > ([42-chat-design-prompt.md](42-chat-design-prompt.md) és
 > [design/Lifey Chat.dc.html](design/Lifey%20Chat.dc.html)) — minden UI-munka azokból
 > dolgozik.
@@ -709,7 +714,10 @@ néma klienssel, és a repülő módban írt üzenet visszatéréskor magától 
 
 ---
 
-### I3 – Edzői web felület · ~3 nap
+### I3 – Edzői web felület · ~3 nap · ✅ KÉSZ
+
+> **Állapot:** megvalósítva a `feature/chat-functionality` ágon. Az eltéréseket, a
+> leszállított felületet és az I4 belépőpontját a §14 rögzíti.
 
 **Cél:** az edző böngészőből is chatel — asztali alternatíva a mobil mellé (nem
 helyettesíti, az I2 után az edző már teljesen elvan mobilról). Ez az iteráció ezért
@@ -731,7 +739,10 @@ gombbal / lapváltással, realtime még nincs).
 
 ---
 
-### I4 – Realtime (SSE) + jelenlét + kézbesítési állapotok · ~4 nap
+### I4 – Realtime (SSE) + jelenlét + kézbesítési állapotok · ~4 nap · ✅ KÉSZ
+
+> **Állapot:** megvalósítva a `feature/chat-functionality` ágon. Az eltéréseket, a
+> leszállított szerződést és az I5 belépőpontját a §15 rögzíti.
 
 **Cél:** az üzenet másodperceken belül megjelenik a másik oldalon; az olvasottság látszik.
 
@@ -760,7 +771,10 @@ Tesztek:
 
 ---
 
-### I5 – Értesítés-finomhangolás · ~2 nap
+### I5 – Értesítés-finomhangolás · ~2 nap · ✅ KÉSZ
+
+> **Állapot:** megvalósítva a `feature/chat-functionality` ágon. Az eltéréseket és a
+> leszállított szerződést a §16 rögzíti.
 
 Feladatok:
 - Push összevonás (`push-coalesce-window`, collapse key, "N új üzenet" szöveg) — §5.3.
@@ -1014,3 +1028,300 @@ váltja ki; a `refreshConversations()` hívás onnantól tartalék marad, nem az
 5. **A composer offline sem tiltott.** Ez a funkció lényegi üzenete; bármilyen későbbi
    „küldés letiltása” állapot (rate limit, kill switch) is csak visszajelzés lehet, nem
    a mező letiltása.
+
+---
+
+## 14. Megvalósítási napló — I3 (edzői web)
+
+> **Az I4 (realtime) innen indul.** A web ugyanazt az API-t fogyasztja, amit a mobil
+> már használ; új backend-végpont **nem** készült ehhez az iterációhoz. A megjelenéshez
+> továbbra is a **§10 design-forrásai** a kötelező bemenet.
+
+### 14.1 Mi készült el
+
+| Réteg | Fájlok |
+|---|---|
+| Adatréteg | `web/src/features/chat/types.ts` (a `com.lifey.chat.dto` tükre + `ThreadMessage`), `api.ts` (`chatApi`), `queryKeys.chat.*` |
+| Tiszta logika | `features/chat/thread.ts`: `mergeMessages`, `buildThreadItems` (nap-elválasztó + feladó-futamok), `sortConversations`, `filterConversations`, `hasMixedPeerRoles`, `totalUnread`, `titleWithUnread`, `unreadBadgeLabel`, `newClientMessageId`, body-validáció |
+| Hookok | `features/chat/hooks.ts`: `useConversations`, `useUnreadTotal`, `useUnreadDocumentTitle` |
+| Komponensek | `features/chat/components/`: `ConversationList` (kereső + sorok), `ChatThread` (fejléc, folyam, keyset lapozás felfelé, olvasás-nyugta, optimista küldés), `MessageBubble`, `ChatComposer` (+`ArchivedComposerNotice`), `ChatAvatar` |
+| Oldal | `web/src/app/(admin)/admin/chat/page.tsx` — két hasáb, `?c=<id>` a nyitott szálra |
+| Beépülés | `AdminSidebar` chat menüpont olvasatlan-badge-dzsel, `document.title` = `(3) Lifey`, „Üzenet” gomb a `ClientDetailHeader`-ben |
+| i18n | 42 kulcs a `chat` névtérben (`messages/hu.json` / `en.json`) + `admin.nav.chat` |
+| Tesztek | `features/chat/thread.test.ts` (18 eset), `e2e/trainer-chat.spec.ts` (Playwright: kliens-lapról nyitás → küldés Enterrel → a kliens API-n látja) |
+
+Teljes web suite zöld (**131** vitest teszt, ebből 18 új), `lint` és `typecheck` tiszta.
+
+### 14.2 Eltérések a tervtől — ezekkel kell dolgozni
+
+| Terv | Valóság | Miért |
+|---|---|---|
+| `web/src/app/(app)/chat/page.tsx` | **`(admin)/admin/chat/page.tsx`** | az `(app)` a *kliens* héja; a design C1 az edzői shellt rajzolja ([EDZŐ] chip, bal sidebar), és a `(admin)` layout adja a `ROLE_TRAINER` guardot is |
+| `features/chat/api.ts` **Zod sémákkal** | **TypeScript típusok** (`types.ts`), Zod nélkül | a webben a Zod ma kizárólag űrlap-validáció (`features/*/schemas.ts`); egyetlen API-válasz sincs runtime-validálva — a chat nem vezet be új mintát |
+| `features/chat/hooks.ts` **+ mutációk hookokban** | `hooks.ts` csak a lista- és olvasatlan-hookokat tartja; a szál mutációi a `ChatThread`-ben ülnek | a repo konvenciója a komponensbe írt `useQuery`/`useMutation`; a `hooks.ts` az első ilyen fájl, és csak azért létezik, mert az olvasatlan számot a sidebar és az oldal is kéri |
+| Sor-túlcsordulás „⋯” menü (némítás + kliens megnyitása) | **közvetlen „Kliens megnyitása” ikon-gomb** hoverre, menü nélkül | a némítás I5 (`chat_participants.muted_until` még üresen áll); egyetlen élő elemű legördülő rosszabb, mint maga a link |
+| Szál-fejléc „online” alsor | **a peer e-mail-címe** | nincs jelenlét-adat I4-ig, és a design tiltja a hamis jelzést — az e-mail viszont valós és az edzőnek azonosít |
+| Buborék-állapotok: 4 állapot | **`pending` / `sent` / `failed`** | ugyanaz az ok, mint mobilon (§13.2): a másik fél olvasás-kurzorát a szerver I4-ig nem adja vissza |
+| — | **`?c=<id>` query paraméter** a kiválasztott szálra | a kliens-lapról érkező átadás és az újratöltés is ezen múlik; a kiválasztás nem komponens-state |
+
+### 14.3 Amit az I3 tudatosan nem szállít
+
+Realtime (SSE), jelenlét, kézbesítve/olvasva pipa, gépelés-jelző, némítás, web push
+(VAPID + service worker), kép-csatolmány, üzenet-keresés a szálban. **Az edzőnek weben
+nincs „új beszélgetés” indítója**: a szál a kliens-részletező lap „Üzenet” gombjából jön
+létre (`POST /chat/conversations/with-user/{userId}`), ami ugyanaz a lazy-create, amit a
+mobil alsó lapja használ — a webnek nincs szüksége külön kliens-választóra, mert a
+kliens-lista maga a `/admin` főoldal.
+
+**Ami emiatt polling:** a beszélgetés-lista és a nyitott szál is `refetchInterval`-lel
+frissül (`CHAT_POLL_INTERVAL_MS`, 20 mp) plusz ablak-fókuszra. Egy következmény, amit az
+I4 old meg: a **másik fél által törölt** üzenet tombstone-ja csak teljes újratöltéskor
+jelenik meg, mert a szál-lekérdezés `after=<utolsó id>` hézagpótlást kér, ami régebbi
+sorok változását nem hozza vissza.
+
+### 14.4 Architektúra-döntések, amik kötik a következő lépéseket
+
+1. **A szál lekérdezése a saját eredményére épül.** A `ChatThread` `queryFn`-je kiolvassa
+   a cache-t, és `after=<newestMessageId>`-vel csak a hézagot kéri le; ha nincs kurzor
+   (első nyitás vagy kiürült cache), a legfrissebb oldalt. Az I4 SSE-je **ebbe a
+   cache-be** ír (`queryClient.setQueryData` + `mergeMessages`), nem invalidál — különben
+   minden üzenet egy teljes refetch-et váltana ki.
+2. **`mergeMessages` a `clientMessageId`-re kulcsol**, nem a szerver id-re. Ettől lesz az
+   optimista buborékból a szerver echója után ugyanaz a sor, és ez teszi az `mergeMessages`-t
+   újrahasznosíthatóvá az SSE-eseményekre is.
+3. **Az újraküldés ugyanazt a `clientMessageId`-t viszi.** A web `failed` buborékja a
+   mobil `pending` outboxának a párja: nincs perzisztens sor (a böngészőben nincs Drift),
+   de a retry ugyanúgy idempotens.
+4. **A `ChatThread` a beszélgetés id-jére van kulcsolva** (`key={selected.id}`), ezért a
+   szálváltás remount — a lapozási ablak és az olvasás-kurzor effekt nélkül áll vissza.
+5. **Az olvasatlan jelzés egy forrásból jön.** `useConversations` → `totalUnread` → a
+   sidebar badge és a fül-cím. Az I4 után ugyanez a hook kap SSE-frissítést, a badge-hez
+   nem kell hozzányúlni.
+6. **A web nem vezetett be új design tokent**, és nem talált ki új buborék-nyelvet: a
+   `radius`/szín/állapot-ikon készlet a mobiléval azonos, csak nagyobb képernyőre
+   (65ch max buborék-szélesség) lélegzik.
+
+---
+
+## 15. Megvalósítási napló — I4 (realtime: SSE + jelenlét + pipák)
+
+> **Az I5 (értesítés-finomhangolás) innen indul.** A §5.2 létrájából a jelenlét-kapu
+> már be van kötve; a maradék három (csendes órák, némítás, összevonási ablak) az I5.
+
+### 15.1 Mi készült el
+
+**Backend**
+
+| Réteg | Fájlok |
+|---|---|
+| Transzport | `service/ChatEmitterRegistry` (élő emitterek + heartbeat + szivárgás-védelem), `service/ChatEventBus` + `service/InMemoryChatEventBus` |
+| Stream | `service/ChatStreamService`/`Impl` (emitter nyitás, `Last-Event-ID` hézagpótlás, `resync`), `controller/ChatStreamController` (`GET /chat/stream`, `POST /chat/presence`) |
+| Jelenlét | `service/ChatPresenceRegistry` (TTL-es, memóriában) |
+| Nyugták | `service/ChatReceiptService`/`Impl` (delivered/read kurzor + `read` frame), `ChatStreamBroadcaster` (`AFTER_COMMIT` a `ChatMessageStoredEvent`-re és az új `ChatReadCursorEvent`-re) |
+| DTO-k | `dto/ChatEvent`, `MessageEventPayload`, `ReadEventPayload`, `ResyncEventPayload`, `PresenceRequest`; `ConversationResponse` + `peerLastDeliveredMessageId` / `peerLastReadMessageId` |
+| Egyéb | `ChatProperties` + `streamTimeout` / `streamCatchUpLimit` / `presenceTtl` (+ `lifey.chat.stream-heartbeat`), `ChatNotificationServiceImpl` jelenlét-kapu, `ChatMessageRepository.findAllForParticipantAfter`, `ChatParticipantRepository.findAllForUser` / `findPeerParticipants` |
+
+**Web**
+
+| Réteg | Fájlok |
+|---|---|
+| Transzport | `lib/api/chat-stream.ts` (fetch + `ReadableStream` parser, backoff jitterrel, `Last-Event-ID`, 401 → token-frissítés), `lib/api/client.ts` új `refreshAccessToken()` |
+| Bekötés | `features/chat/hooks.ts`: `useChatStream` (az admin layoutban él, a cache-be ír), `usePresence` (`visibilitychange`-re is) |
+| Pipák | `thread.ts` `receiptStateFor`, `MessageBubble` négy állapota (`read` = kitöltött, `primary`) |
+
+**Mobil**
+
+| Réteg | Fájlok |
+|---|---|
+| Transzport | `data/chat_stream_client.dart` (Dio stream, SSE parser, backoff, `Last-Event-ID`) |
+| Bekötés | `application/chat_stream_controller.dart` (életciklus: előtérben nyitva, háttérben zárva + `presence(null)`), `app.dart` provider |
+| Adat | `ChatRepository.applyIncomingMessage` / `applyReadReceipt` / `setPresence` / `newestServerIdAcrossThreads`, séma **v30** (`peerLastDeliveredMessageId`, `peerLastReadMessageId`) |
+| Pipák | `receiptStateFor` a `chat_conversation.dart`-ban, `MessageBubble.receiptState` |
+
+Tesztek: backend **751** zöld (ebből 38 új: emitter-regisztráció és -szivárgás, hézagpótlás
+és `resync`, jelenlét TTL, kurzor-monotonitás, jelenlét-alapú push-kihagyás, integrációs
+`peer*` mezők és `/chat/presence`), web **142** zöld (ebből 11 új: `receiptStateFor`,
+SSE-frame parser), mobil **586** zöld (ebből 18 új: stream-frame parser, bejövő üzenet,
+nyugta, reconnect-kurzor, `receiptStateFor`).
+
+### 15.2 Eltérések a tervtől — ezekkel kell dolgozni
+
+| Terv | Valóság | Miért |
+|---|---|---|
+| Az `id:` a `chat_messages.id`, a read-eknél **külön monoton szekvencia** | **csak a `message` frame hordoz `id:`-t**, a `read` és a `resync` nem | az SSE-ben egy `id:` nélküli frame nem mozdítja a `Last-Event-ID`-t, így a kurzor pontosan egy dolgot jelent: „a legfrissebb üzenet, amit már látok”. Két id-tér összekeverése a hézagpótló lekérdezést tette volna kétértelművé; a nyugta úgyis újraszámolható a lista-lekérésből |
+| `read` esemény: `{conversationId, userId, lastReadMessageId}` | **+ `lastDeliveredMessageId`** ugyanabban a frame-ben | a pipa egyetlen háromfokú létra (elküldve → kézbesítve → olvasva); két frame-típusra bontva a kliensnek kellene újra összerakni |
+| `ChatEventBus(+InMemoryChatEventBus)` egy osztálynyi seam | **`ChatEventBus` + `ChatEmitterRegistry` külön** | a socket nem osztható meg JVM-ek között: egy `LISTEN/NOTIFY` implementáció is ugyanezt a lokális registry-t hívná. Így a bus a cserélhető transzport, a registry nem |
+| `last_delivered_message_id` üzenetenként karbantartva | **stream-csatlakozáskor szálanként a `last_message_id`-ig ugrik**, utána élő üzenetenként | az üzenetenkénti kézbesítés kliens-ackot igényelne; „a kliensed él, és amit még nincs meg neki, azt épp tölti” igaz a reconnect-ablakon belül, és egy körbejárás a user szálain |
+| jelenlét TTL 2 perc, „a jelenlét memóriában él” | ugyanez, **plusz a `ChatEventBus.isConnected` együttes feltétel** a push-kihagyáshoz | egy kilőtt app után bent ragadt jelenlét-bejegyzés különben a TTL végéig elnémítaná a pusht — a kapcsolat megléte az, ami valóban „ott van” |
+| „a `refreshConversations()` onnantól tartalék marad” | weben a `refetchInterval` **20 mp-ről 60 mp-re** lazult, nem szűnt meg | többinstance-os deployon az in-memory bus instance-lokális (§9); a lassú poll az, ami ezt elfedi |
+| — | a stream **regisztrál, majd replayel** (nem fordítva) | a kettő között érkező üzenet így duplikálódhat (a kliens id szerint dedupál), nem veszik el — a fordított sorrend a lehetséges veszteséget választaná |
+
+### 15.3 Amit az I4 tudatosan nem szállít
+
+Gépelés-jelző (`typing`, I6), némítás (`muted_until`), csendes órák, push összevonási
+ablak és collapse key, e-mail fallback, kép-csatolmány, rendszerüzenet a szálban,
+**web push**. A `chat_participants.muted_until` / `last_notified_at` és a
+`user_settings.chat_quiet_hours_*` továbbra is üresen áll — ezeket az I5 tölti fel.
+
+**Egy instance.** A `PostgresChatEventBus` (LISTEN/NOTIFY) nem készült el: a §9 szerint
+több instance esetén a chat *működik*, csak a realtime lesz instance-lokális, és a push +
+a 60 mp-es poll elfedi. Ez az I7 tétele, és egy osztálynyi munka — a seam megvan.
+
+### 15.4 Architektúra-döntések, amik kötik a következő lépéseket
+
+1. **A stream soha nem igazságforrás.** Minden frame-nek van REST-megfelelője, és ha a
+   szerver nem tud hézagot pótolni, `resync`-et küld, amire a kliens teljes újratöltést
+   csinál. Bármi, ami az I6-ban a streamre kerül (gépelés-jelző), ugyanezt a szabályt
+   kövesse: ne legyen olyan állapot, ami *csak* a streamen létezik.
+2. **A pipák kurzorból származnak, nem üzenet-mezőből.** `receiptStateFor(message,
+   peerDelivered, peerRead)` mindkét kliensen; a szerver két számot ad szálanként. Aki új
+   üzenet-állapotot akar bevezetni, előbb döntse el, kurzor-e vagy sem.
+3. **A jelenlét két helyről dől el.** `isConnected` (van élő stream) **és**
+   `isViewing` (ezt a szálat nézi). Az I5 gátjai (csendes óra, némítás) e *mögé*
+   kerülnek a `ChatNotificationServiceImpl`-ben, nem elé — a „látta” eset már most sem
+   generál pusht, és azt nem kell újra eldönteni.
+4. **Két listener egy eseményen, szándékosan.** A `ChatStreamBroadcaster` azt dönti el,
+   mit mutassanak a már nyitott képernyők; a `ChatNotificationServiceImpl` azt, hogy
+   megzavarjunk-e valakit. Közös írásuk nincs, ezért a sorrendjük sem számít.
+5. **A mobil stream előtér-kötött.** Háttérbe menéskor lezár és `presence(null)`-t küld;
+   ettől lesz a push kézbesítési csatorna pontosan akkor, amikor kell. Bármilyen későbbi
+   „háttérben is figyelj” igény (pl. gépelés-jelző) ezt a szerződést bontaná meg.
+6. **A web streamje az admin shellben él, nem a `/chat` oldalon.** Így a sidebar
+   olvasatlan-badge-e akkor is él, amikor az edző máshol dolgozik — és ez az egyetlen
+   ambiens jelzés, amíg nincs web push.
+
+### 15.5 Terhelési sanity — 200 párhuzamos emitter (jegyzőkönyv)
+
+**Mérés dátuma:** 2026-08-06. **Környezet:** helyi dev backend (JDK 24, G1 GC, alap
+Tomcat/HikariCP beállítások), Postgres a `docker-compose`-ból. **Módszer:** egy Node
+szkript 200 SSE kapcsolatot nyit két user között elosztva (100–100), a heap-et kívülről
+`jcmd GC.run` + `GC.heap_info` mintázza, az emitter-darabszámot `jcmd GC.class_histogram`
+adja (az actuatorból csak a `/health` van kitéve, metrika-végpont nincs — az az I7).
+
+| | Alaphelyzet | 200 nyitott stream | Lezárás után |
+|---|---|---|---|
+| Heap used | 70 491 K | 91 872 K | 86 744 K |
+| Élő `SseEmitter` | 2 | **202** (200 + a 2 valódi kliens) | **2** |
+| JVM szálak | 46 | 44 | 45 |
+| TCP established (8080) | 2 | 202 | 2 |
+
+**Eredmények.**
+
+1. **~107 KB heap kapcsolatonként** (21,4 MB / 200). 200 párhuzamos edzőnél ez ~21 MB —
+   elhanyagolható; a §9 riasztási küszöbe nem a memória, hanem a *darabszám* elszállása.
+2. **A szálszám nem nő.** Az aszinkron feldolgozás visszaadja a kérés-szálat, mielőtt a
+   stream élne, tehát 200 kapcsolat nem 200 Tomcat-szál. Ez az a tulajdonság, ami miatt
+   az SSE egyáltalán vállalható ezen a stacken.
+3. **Nincs szivárgás.** Lezárás után 202 → 2 élő emitter, azaz mind a 200 felszabadult.
+   A heap „used” nem esik vissza pontosan az alapszintre (86,7 MB vs 70,5 MB); ez két
+   teljes 200-kapcsolatos futás után visszatartott puffer, nem emitter — a class
+   histogram a döntő jel, nem a heap-összeg.
+4. **A szórás mindenkit elér.** Egyetlen elküldött üzenet **pontosan 200** `message`
+   frame-et eredményezett a 200 kapcsolaton (a küldő saját kliensei is megkapják, §15.4/4).
+5. **200 kapcsolat megnyitása 647 ms** volt.
+
+**Amit a mérés talált (és javítva lett).** Az első futáskor egy stream megnyitása
+**~20 másodpercig** tartott: amíg nem íródik ki egyetlen bájt sem, a szervlet-konténer nem
+commitálja a választ, így a kliens kérése csak a következő heartbeatnél oldódott fel — és
+mivel egy kurzor nélküli kliens nem kap visszajátszást, tényleg nem volt mit írni.
+Ez minden csatlakozást és **minden újracsatlakozást** vakká tett a
+`lifey.chat.stream-heartbeat` idejéig. Javítás: a `ChatStreamServiceImpl.open` a
+regisztráció után azonnal kiír egy `: connected` komment-frame-et
+(`ChatEmitterRegistry.sendOpeningComment`). Utána a mérés **5 ms** kapcsolatonként.
+Regressziós teszt:
+`ChatStreamServiceImplTest.openingAStreamWritesImmediately_soTheClientIsNotBlindUntilTheFirstHeartbeat`.
+
+**Ami ebből az I7-be megy.** A `ChatEmitterRegistry.connectionCount()` ma csak
+programból olvasható; a §9 szivárgás-riasztásához Micrometer-gauge-ként ki kell tenni —
+enélkül ez a mérés csak kézzel, `jcmd`-vel megismételhető.
+
+---
+
+## 16. Megvalósítási napló — I5 (értesítés-finomhangolás)
+
+> **Ezzel a chat funkcionálisan kész.** Hátra az I6 (opcionális kiterjesztések) és az
+> I7 (üzemeltetés és mérés) van.
+
+### 16.1 Mi készült el
+
+**Backend**
+
+| Elem | Fájlok |
+|---|---|
+| A teljes §5.2 létra | `ChatNotificationServiceImpl`: jelenlét → master kapcsoló → csendes órák → némítás → összevonási ablak → küldés + `last_notified_at` |
+| Csendes órák | `service/ChatQuietHours` (tiszta, `User.utcOffsetMinutes` alapján, éjfélen átnyúló ablakkal), `SettingsRequest`/`Response`/`Mapper` + `chatQuietHoursStart` / `End` / **`chatQuietHoursSet`** |
+| Némítás | `dto/MuteRequest`, `PUT /chat/conversations/{id}/mute`, `ChatService.mute`, `ConversationResponse.mutedUntil` |
+| Összevonás | `ChatProperties.pushCoalesceWindow`, `PushMessage.collapseKey` + APNs `apns-collapse-id` és FCM `AndroidConfig.collapseKey` |
+| Emlékeztető | `ChatUnreadReminderJob` (cron 5 perc), `ChatParticipantRepository.findReminderCandidates`, `chat_participants.last_reminded_at` (`V66__chat_reminder.sql`) |
+| E-mail fallback | `MailService.sendUnreadChatEmail` + `chat_unread_{hu,en}.{html,txt}` + `mail.chat-unread.subject`, `lifey.chat.email-fallback-enabled` mögött (alapból **ki**) |
+
+**Kliensek**
+
+| Elem | Hol |
+|---|---|
+| Csendes órák UI | mobil: `notification_settings_screen.dart` (kapcsoló + két időpont-választó); web: új **Értesítések** szekció a `/settings` oldalon (chat push kapcsoló + csendes órák) |
+| Némítás UI | mobil: harang-akció a szál app barjában + időtartam-lap (1 óra / 8 óra / visszavonásig); web: a szál fejlécének „⋯"-utódja ugyanezekkel |
+| Némított sor | mobil `conversation_tile` és web `ConversationList`: áthúzott harang ikon |
+| Adat | mobil séma **v31** (`chat_quiet_hours_*`) és **v32** (`chat_conversations.muted_until`), `ChatRepository.setMuted`, web `thread.ts` `isMuted`/`muteUntil` |
+
+Tesztek: backend **777** zöld (ebből 26 új: összevonási ablak, collapse key, némítás,
+csendes órák időzóna-határesetekkel, reminder napi cap, e-mail fallback ágai), web
+**145** zöld (+3), mobil **589** zöld (+3).
+
+### 16.2 Eltérések a tervtől — ezekkel kell dolgozni
+
+| Terv | Valóság | Miért |
+|---|---|---|
+| „Csendes órában nem küld, hanem **eltolja az órák végére**" | a job egyszerűen **kihagyja** a csendes órás usert, és a következő 5 perces tick küld | ez ugyanaz az eredmény ütemezett feladat nélkül: a tick az ablak vége után ugyanazokat az olvasatlan üzeneteket találja. Egy „eltolt küldés" sor tárolása egy második, saját életciklusú állapot lenne |
+| `reminderDailyCap` konfigurálható darabszám | a mező megvan, de a logika **„volt-e emlékeztető 24 órán belül"** | 1-nél nagyobb cap értelmes ütemezést kívánna (mikor a második?), amire nincs termékdöntés; a `<= 0` érték kikapcsolja a jobot, ami viszont valódi kapcsoló |
+| — | **`SettingsRequest.chatQuietHoursSet`** (a tervben nem szerepel) | két nullérték nem különböztethető meg: „ez a kliens nem ismeri a csendes órákat" (hagyd békén) vs. „a user törölte az ablakot" (töröld). Enélkül egy régebbi mobil-verzió mentése némán kitörölte volna a weben beállított ablakot |
+| A némítás „időtartam-választó" | **fix választék** (1 óra / 8 óra / visszavonásig), abszolút `mutedUntil` instantként tárolva | a kérdés „hagyjatok békén egy kicsit" vagy „végleg"; egy szabad időpont-választó a gyakori esetet lassítaná. Instantként a némítás **magától lejár**, nem kell söpörni |
+| „Kép-csatolmány / gépelés-jelző" hivatkozás az I5-ben | változatlanul **I6** | nem került előre |
+
+### 16.3 Amit az I5 tudatosan nem szállít
+
+Web push (VAPID + service worker), gépelés-jelző, kép-csatolmány, rendszerüzenet a
+szálban, keresés a szálban — mind I6/I7 vagy nyitott kérdés. Az **e-mail fallback kódja
+kész, de kikapcsolva**: a §5.5 döntése szerint előbb a metrikákból kell látni, hányszor
+sülne el; a metrikák viszont az I7 tárgya, tehát a bekapcsolás sorrendben az I7 után jön.
+
+### 16.4 Architektúra-döntések, amik kötik a következő lépéseket
+
+1. **Minden kapu csak az értesítést némítja, az üzenetet soha.** Csendes óra, némítás,
+   összevonás — mindegyik után az üzenet olvasatlan marad, és a `ChatUnreadReminderJob`
+   a háló alattuk. Bármilyen új kapu (pl. „ne értesíts munkaidőben") ugyanide, a
+   `ChatNotificationServiceImpl` létrájába kerüljön, és ugyanez a szabály vonatkozzon rá.
+2. **A napi cap a useré, nem a szálé.** A `last_reminded_at` ezért a user **összes**
+   `chat_participants` sorára ráíródik, és a job a legfrissebbet olvassa. Aki új
+   per-user chat állapotot akar bevezetni, vagy ezt a mintát folytassa, vagy csináljon
+   neki valódi per-user sort — a `user_settings` viszont beállítás, nem kézbesítési állapot.
+3. **Az összevonás számlálója a kurzorból jön, nem az ablakból.** Ezért marad a „N új
+   üzenet" szám pontos akkor is, ha egy push elveszett, vagy a user máshol olvasta el a
+   szál egy részét. Az I7 metrikái ezt ne az ablakból származtassák.
+4. **A collapse key két helyen jelenik meg**: `chat-{conversationId}` az üzenet-pusholon
+   és `chat-reminder` az emlékeztetőn — így az emlékeztető nem nyom el egy üzenet-sort,
+   és két emlékeztető sem gyűlik egymásra.
+5. **A `ChatQuietHours` tiszta és statikus.** Nincs benne `Clock` és nincs benne
+   repository: a bemenete `User` + `UserSettings` + `Instant`. Ez az, ami az éjfélen
+   átnyúló ablakot és az időzóna-eseteket tesztelhetővé teszi anélkül, hogy Spring-et
+   kellene indítani hozzá.
+
+### 16.5 Élő ellenőrzés (jegyzőkönyv)
+
+Futtatva a `feature/chat-functionality` build ellen, valódi backend + Postgres, két
+munkamenettel (edző → kliens). A gátak nyomát a `chat_participants` sor őrzi, ezért az
+ellenőrzés azt olvassa, nem a push-kimenetet (nincs regisztrált eszköz):
+
+| Ellenőrzés | Eredmény |
+|---|---|
+| első üzenet nyitja az összevonási ablakot (`last_notified_at` beíródik) | ✅ |
+| ablakon belüli második üzenet kimarad (`last_notified_at` változatlan) | ✅ |
+| `PUT /mute` → 204, és `mutedUntil` megjelenik a lista-válaszban | ✅ |
+| némított szál nem értesít | ✅ |
+| némítás feloldása után újra értesít | ✅ |
+| csendes órák oda-vissza mennek a Settings API-n | ✅ |
+| csendes órán belül nincs push | ✅ |
+| az ablakon kívül újra van | ✅ |
+| `chatQuietHoursSet` nélküli mentés **nem** törli a tárolt ablakot | ✅ |
+| `chatQuietHoursSet: false` **törli** | ✅ |
+| `ChatUnreadReminderJob` a soron következő 5 perces tickre lefut és bélyegzi a user minden szálát | ✅ |

@@ -111,6 +111,9 @@ class ChatConversationControllerTest {
                 new ChatPeerResponse(88L, "Kiss Anna", "anna@example.com", ChatPeerRole.CLIENT),
                 lastMessage,
                 2L,
+                null,
+                4310L,
+                4200L,
                 null);
     }
 }

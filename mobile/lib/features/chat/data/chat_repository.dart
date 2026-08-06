@@ -225,6 +225,84 @@ class ChatRepository {
     );
   }
 
+  // --- realtime (I4) -----------------------------------------------------
+
+  /// The newest server id we hold across *every* thread — the `Last-Event-ID`
+  /// a reconnecting stream replays from. Thread-scoped cursors would be wrong
+  /// here: one stream carries all conversations.
+  Future<int?> newestServerIdAcrossThreads() async {
+    final maxId = _db.chatMessages.serverId.max();
+    final query = _db.selectOnly(_db.chatMessages)..addColumns([maxId]);
+    return (await query.getSingle()).read(maxId);
+  }
+
+  /// Applies an `event: message` frame.
+  ///
+  /// The unread count is bumped locally rather than refetched: the frame is
+  /// enough to keep the badge honest, and the next conversation refresh
+  /// reconciles it with the server's own count anyway. A message we sent
+  /// ourselves — echoed back because our other devices need it — never counts.
+  Future<void> applyIncomingMessage(int conversationId, ChatMessage message) async {
+    await _storeMessages([message]);
+
+    final isOwn = message.senderId == _currentUserId();
+    final row = await (_db.select(_db.chatConversations)
+          ..where((t) => t.serverId.equals(conversationId)))
+        .getSingleOrNull();
+    if (row == null) {
+      // A thread this device has never loaded (a brand-new conversation, or a
+      // cache that was cleared). The row arrives with the next refresh.
+      return;
+    }
+
+    await (_db.update(_db.chatConversations)..where((t) => t.serverId.equals(conversationId)))
+        .write(ChatConversationsCompanion(
+      lastMessageAt: Value(message.createdAt),
+      lastMessagePreview: Value(message.body),
+      lastMessageSenderId: Value(message.senderId),
+      unreadCount: Value(isOwn ? row.unreadCount : row.unreadCount + 1),
+    ));
+  }
+
+  /// Applies an `event: read` frame: how far the peer has got, which is what
+  /// our own sent bubbles' tick marks are drawn from.
+  Future<void> applyReadReceipt(
+    int conversationId, {
+    required int? lastDeliveredMessageId,
+    required int? lastReadMessageId,
+  }) async {
+    await (_db.update(_db.chatConversations)..where((t) => t.serverId.equals(conversationId)))
+        .write(ChatConversationsCompanion(
+      peerLastDeliveredMessageId: Value(lastDeliveredMessageId),
+      peerLastReadMessageId: Value(lastReadMessageId),
+    ));
+  }
+
+  /// Silences this thread's pushes until [mutedUntil]; null unmutes (§I5).
+  /// Written locally first so the row's bell icon reacts immediately.
+  Future<void> setMuted(int conversationId, DateTime? mutedUntil) async {
+    await (_db.update(_db.chatConversations)..where((t) => t.serverId.equals(conversationId)))
+        .write(ChatConversationsCompanion(mutedUntil: Value(mutedUntil)));
+    await _dio.put<void>(
+      ApiEndpoints.chatConversationMute(conversationId),
+      data: {'mutedUntil': mutedUntil?.toUtc().toIso8601String()},
+    );
+  }
+
+  /// Tells the server which thread is on screen, so it can skip a push the
+  /// reader does not need (§5.1). Never throws: presence is an optimisation,
+  /// and losing it costs an unnecessary notification, never a message.
+  Future<void> setPresence(int? conversationId) async {
+    try {
+      await _dio.post<void>(
+        ApiEndpoints.chatPresence,
+        data: {'activeConversationId': conversationId},
+      );
+    } catch (_) {
+      // See above.
+    }
+  }
+
   // --- internals ---------------------------------------------------------
 
   /// One send attempt. Never throws: a failure is a state on the row, not an
@@ -295,6 +373,9 @@ class ChatRepository {
             lastMessagePreview: Value(conversation.lastMessagePreview),
             lastMessageSenderId: Value(conversation.lastMessageSenderId),
             archivedAt: Value(conversation.archivedAt),
+            peerLastDeliveredMessageId: Value(conversation.peerLastDeliveredMessageId),
+            peerLastReadMessageId: Value(conversation.peerLastReadMessageId),
+            mutedUntil: Value(conversation.mutedUntil),
           ),
         );
   }
@@ -353,6 +434,9 @@ class ChatRepository {
       lastMessagePreview: row.lastMessagePreview,
       lastMessageSenderId: row.lastMessageSenderId,
       archivedAt: row.archivedAt,
+      peerLastDeliveredMessageId: row.peerLastDeliveredMessageId,
+      peerLastReadMessageId: row.peerLastReadMessageId,
+      mutedUntil: row.mutedUntil,
     );
   }
 

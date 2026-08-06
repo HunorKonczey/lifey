@@ -32,6 +32,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -82,7 +83,9 @@ class ChatServiceImplTest {
     @Mock
     ApplicationEventPublisher eventPublisher;
 
-    ChatProperties properties = new ChatProperties(true, 2000, 30, 100, 30, 600);
+    ChatProperties properties = new ChatProperties(true, 2000, 30, 100, 30, 600,
+            Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
+            Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false, Duration.ofHours(24));
 
     ChatServiceImpl chatService;
 
@@ -182,7 +185,10 @@ class ChatServiceImplTest {
     void sendMessage_whenChatIsDisabled_isRejected() {
         chatService = new ChatServiceImpl(conversationRepository, messageRepository, participantRepository,
                 trainerClientRepository, currentUserProvider, rateLimiter,
-                new ChatProperties(false, 2000, 30, 100, 30, 600), eventPublisher);
+                new ChatProperties(false, 2000, 30, 100, 30, 600,
+                        Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
+                        Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false,
+                        Duration.ofHours(24)), eventPublisher);
 
         assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Hi", "uuid-1")))
                 .isInstanceOf(ChatDisabledException.class);

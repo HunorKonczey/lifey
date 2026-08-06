@@ -22,6 +22,8 @@ class UserSettings {
     this.trainerGoalsPushEnabled = true,
     this.programAssignedPushEnabled = true,
     this.chatPushEnabled = true,
+    this.chatQuietHoursStart,
+    this.chatQuietHoursEnd,
     this.restTimerEnabled = true,
     this.defaultRestSeconds = 90,
     this.watchWorkoutEnabled = true,
@@ -42,6 +44,8 @@ class UserSettings {
         trainerGoalsPushEnabled = true,
         programAssignedPushEnabled = true,
         chatPushEnabled = true,
+        chatQuietHoursStart = null,
+        chatQuietHoursEnd = null,
         restTimerEnabled = true,
         defaultRestSeconds = 90,
         watchWorkoutEnabled = true;
@@ -76,6 +80,12 @@ class UserSettings {
   // [workoutReminderEnabled] above, and deliberately role-independent: one
   // switch covers both the client's and the trainer's messages.
   final bool chatPushEnabled;
+
+  /// Local-time window in which chat pushes are held back, in the shape the
+  /// backend serializes a `LocalTime`: "HH:mm:ss". Both null means no window
+  /// (docs/chat/40-trainer-chat-plan.md §5.4).
+  final String? chatQuietHoursStart;
+  final String? chatQuietHoursEnd;
   // Master switch for the rest-timer feature (docs/39-rest-timer-plan.md) —
   // same shape as [workoutReminderEnabled] above.
   final bool restTimerEnabled;
@@ -102,6 +112,10 @@ class UserSettings {
     bool? trainerGoalsPushEnabled,
     bool? programAssignedPushEnabled,
     bool? chatPushEnabled,
+    // Nullable fields need a "was it passed at all" marker, or clearing the
+    // window would be indistinguishable from leaving it alone.
+    Object? chatQuietHoursStart = _unset,
+    Object? chatQuietHoursEnd = _unset,
     bool? restTimerEnabled,
     int? defaultRestSeconds,
     bool? watchWorkoutEnabled,
@@ -121,6 +135,12 @@ class UserSettings {
       trainerGoalsPushEnabled: trainerGoalsPushEnabled ?? this.trainerGoalsPushEnabled,
       programAssignedPushEnabled: programAssignedPushEnabled ?? this.programAssignedPushEnabled,
       chatPushEnabled: chatPushEnabled ?? this.chatPushEnabled,
+      chatQuietHoursStart: chatQuietHoursStart == _unset
+          ? this.chatQuietHoursStart
+          : chatQuietHoursStart as String?,
+      chatQuietHoursEnd: chatQuietHoursEnd == _unset
+          ? this.chatQuietHoursEnd
+          : chatQuietHoursEnd as String?,
       restTimerEnabled: restTimerEnabled ?? this.restTimerEnabled,
       defaultRestSeconds: defaultRestSeconds ?? this.defaultRestSeconds,
       watchWorkoutEnabled: watchWorkoutEnabled ?? this.watchWorkoutEnabled,
@@ -143,6 +163,8 @@ class UserSettings {
       trainerGoalsPushEnabled: json['trainerGoalsPushEnabled'] as bool? ?? true,
       programAssignedPushEnabled: json['programAssignedPushEnabled'] as bool? ?? true,
       chatPushEnabled: json['chatPushEnabled'] as bool? ?? true,
+      chatQuietHoursStart: json['chatQuietHoursStart'] as String?,
+      chatQuietHoursEnd: json['chatQuietHoursEnd'] as String?,
       restTimerEnabled: json['restTimerEnabled'] as bool? ?? true,
       defaultRestSeconds: json['defaultRestSeconds'] as int? ?? 90,
       watchWorkoutEnabled: json['watchWorkoutEnabled'] as bool? ?? true,
@@ -164,8 +186,18 @@ class UserSettings {
         'trainerGoalsPushEnabled': trainerGoalsPushEnabled,
         'programAssignedPushEnabled': programAssignedPushEnabled,
         'chatPushEnabled': chatPushEnabled,
+        'chatQuietHoursStart': chatQuietHoursStart,
+        'chatQuietHoursEnd': chatQuietHoursEnd,
+        // This client knows about quiet hours, so its values are authoritative.
+        // Without the flag the server can't tell "the user cleared the window"
+        // from "an app version that never sends these", and would keep the
+        // stored window forever.
+        'chatQuietHoursSet': true,
         'restTimerEnabled': restTimerEnabled,
         'defaultRestSeconds': defaultRestSeconds,
         'watchWorkoutEnabled': watchWorkoutEnabled,
       };
 }
+
+/// Sentinel for `copyWith`'s nullable fields — see the quiet-hours params.
+const Object _unset = Object();

@@ -11,6 +11,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../application/chat_thread_controller.dart';
+import '../data/chat_repository.dart';
+import '../application/chat_stream_controller.dart';
 import '../domain/chat_conversation.dart';
 import '../domain/chat_message.dart';
 import 'widgets/chat_avatar.dart';
@@ -38,11 +40,20 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScroll);
+    // Tells the server this thread is on screen, so a message arriving now is
+    // read on arrival and no push goes out for it (§5.1). The background case
+    // is handled centrally by ChatStreamController, not here.
+    unawaited(
+      ref.read(chatStreamControllerProvider).setActiveConversation(widget.conversationId),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // Read off `ref` before the element is gone; leaving the thread must
+    // clear presence or pushes would stay silenced until the server's TTL.
+    unawaited(ref.read(chatStreamControllerProvider).setActiveConversation(null));
     _scrollController.dispose();
     super.dispose();
   }
@@ -78,6 +89,51 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
       ));
+    }
+  }
+
+  /// Fixed durations rather than a free time picker: the question is "leave me
+  /// alone for a bit" or "for good", and a picker would make the common case
+  /// slower without making it more expressive.
+  Future<void> _showMuteOptions(ChatConversation conversation, AppLocalizations l10n) async {
+    final choice = await showModalBottomSheet<Duration?>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final hours in const [1, 8])
+              ListTile(
+                leading: const Icon(Icons.schedule),
+                title: Text(l10n.chatMuteForHours(hours)),
+                onTap: () => Navigator.of(sheetContext).pop(Duration(hours: hours)),
+              ),
+            ListTile(
+              leading: const Icon(Icons.notifications_off),
+              title: Text(l10n.chatMuteUntilFurtherNotice),
+              // Far enough out to read as "off" without a separate flag.
+              onTap: () => Navigator.of(sheetContext).pop(const Duration(days: 3650)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    await _setMuted(DateTime.now().add(choice), l10n);
+  }
+
+  Future<void> _setMuted(DateTime? mutedUntil, AppLocalizations l10n) async {
+    try {
+      await ref.read(chatRepositoryProvider).setMuted(widget.conversationId, mutedUntil);
+      if (mounted) {
+        AppSnackbar.showSuccess(
+          context,
+          title: mutedUntil == null ? l10n.chatUnmutedMessage : l10n.chatMutedMessage,
+        );
+      }
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
     }
   }
 
@@ -125,8 +181,21 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
                   ),
                 ],
               ),
-        // No presence subtitle: there is no live-presence signal until the
-        // SSE stream lands (I4), and a fabricated "online" would be a lie.
+        // No presence subtitle: presence is tracked for the push decision
+        // (§5.1) but never reported back, and a fabricated "online" would be
+        // a lie the design explicitly rules out.
+        actions: [
+          if (conversation != null)
+            IconButton(
+              icon: Icon(
+                conversation.isMuted ? Icons.notifications_off : Icons.notifications_none,
+              ),
+              tooltip: conversation.isMuted ? l10n.chatUnmuteAction : l10n.chatMuteAction,
+              onPressed: () => conversation.isMuted
+                  ? _setMuted(null, l10n)
+                  : _showMuteOptions(conversation, l10n),
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -188,6 +257,10 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
 
         final bubble = MessageBubble(
           message: message,
+          // Delivered/read aren't stored on the message — they follow from the
+          // thread's peer cursors, so they're resolved here where both are in
+          // hand rather than baked into the row.
+          receiptState: receiptStateFor(message, conversation),
           isOwn: isOwn,
           senderName: isOwn
               ? ''

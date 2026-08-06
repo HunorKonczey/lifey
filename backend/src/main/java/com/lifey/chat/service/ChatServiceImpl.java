@@ -4,6 +4,7 @@ import com.lifey.auth.CurrentUserProvider;
 import com.lifey.chat.ChatMapper;
 import com.lifey.chat.ChatMessageStoredEvent;
 import com.lifey.chat.ChatProperties;
+import com.lifey.chat.ChatReadCursorEvent;
 import com.lifey.chat.dto.ConversationListResponse;
 import com.lifey.chat.dto.ConversationResponse;
 import com.lifey.chat.dto.MessageListResponse;
@@ -73,12 +74,26 @@ public class ChatServiceImpl implements ChatService {
         Map<Long, ChatMessage> previews = messageRepository.findAllById(previewIds).stream()
                 .collect(Collectors.toMap(ChatMessage::getId, Function.identity()));
 
+        // Both sides' participant rows, batched for the same reason as the
+        // previews: the tick marks and the mute flag would otherwise cost two
+        // queries per row.
+        Map<Boolean, Map<Long, ChatParticipant>> participants = participantRepository
+                .findAllForConversations(conversations.stream().map(ChatConversation::getId).toList())
+                .stream()
+                .collect(Collectors.partitioningBy(
+                        p -> p.getUser().getId().equals(viewerId),
+                        Collectors.toMap(p -> p.getConversation().getId(), Function.identity())));
+        Map<Long, ChatParticipant> mine = participants.get(true);
+        Map<Long, ChatParticipant> theirs = participants.get(false);
+
         List<ConversationResponse> items = conversations.stream()
                 .map(conversation -> ChatMapper.toConversationResponse(
                         conversation,
                         viewerId,
                         previews.get(conversation.getLastMessageId()),
-                        unreadByConversation.getOrDefault(conversation.getId(), 0L)))
+                        unreadByConversation.getOrDefault(conversation.getId(), 0L),
+                        theirs.get(conversation.getId()),
+                        mine.get(conversation.getId())))
                 .toList();
         return new ConversationListResponse(items);
     }
@@ -221,8 +236,15 @@ public class ChatServiceImpl implements ChatService {
         // Clamp instead of validating the id: a client racing ahead of what the
         // server has stored is a normal offline artefact, not an error.
         long target = Math.min(lastReadMessageId, conversation.getLastMessageId());
-        participantRepository.findByConversationIdAndUserId(conversationId, callerId)
-                .ifPresent(participant -> advanceCursor(participant, target, Instant.now()));
+        boolean advanced = participantRepository.findByConversationIdAndUserId(conversationId, callerId)
+                .map(participant -> advanceCursor(participant, target, Instant.now()))
+                .orElse(false);
+
+        // Only a real advance is worth a frame: the client calls this on every
+        // scroll to the bottom, and most of those change nothing.
+        if (advanced) {
+            eventPublisher.publishEvent(new ChatReadCursorEvent(conversationId, callerId));
+        }
     }
 
     @Override
@@ -237,6 +259,16 @@ public class ChatServiceImpl implements ChatService {
         message.setDeletedAt(Instant.now());
         // The row survives as a tombstone; the text itself is genuinely gone.
         message.setBody(null);
+    }
+
+    @Override
+    public void mute(Long conversationId, Instant mutedUntil) {
+        Long callerId = currentUserProvider.getUserId();
+        // Participation guard first: muting a thread you are not in should look
+        // exactly like the thread not existing, same as every other route (§4).
+        requireParticipation(conversationId, callerId);
+        participantRepository.findByConversationIdAndUserId(conversationId, callerId)
+                .ifPresent(participant -> participant.setMutedUntil(mutedUntil));
     }
 
     @Override
@@ -256,15 +288,31 @@ public class ChatServiceImpl implements ChatService {
                 ? null
                 : messageRepository.findById(conversation.getLastMessageId()).orElse(null);
         long unreadCount = messageRepository.countUnread(conversation.getId(), viewerId);
-        return ChatMapper.toConversationResponse(conversation, viewerId, lastMessage, unreadCount);
+        ChatParticipant peerParticipant = participantRepository
+                .findByConversationIdAndUserId(conversation.getId(), ChatMapper.peerIdOf(conversation, viewerId))
+                .orElse(null);
+        ChatParticipant viewerParticipant = participantRepository
+                .findByConversationIdAndUserId(conversation.getId(), viewerId)
+                .orElse(null);
+        return ChatMapper.toConversationResponse(
+                conversation, viewerId, lastMessage, unreadCount, peerParticipant, viewerParticipant);
     }
 
-    private static void advanceCursor(ChatParticipant participant, Long messageId, Instant now) {
+    /** @return true if the cursor actually moved forward */
+    private static boolean advanceCursor(ChatParticipant participant, Long messageId, Instant now) {
         if (participant.getLastReadMessageId() != null && participant.getLastReadMessageId() >= messageId) {
-            return;
+            return false;
         }
         participant.setLastReadMessageId(messageId);
         participant.setLastReadAt(now);
+        // Reading is a stronger statement than delivery, so it drags that
+        // cursor along — otherwise a thread read offline would show as
+        // "delivered but not read" forever.
+        if (participant.getLastDeliveredMessageId() == null
+                || participant.getLastDeliveredMessageId() < messageId) {
+            participant.setLastDeliveredMessageId(messageId);
+        }
+        return true;
     }
 
     private static ChatParticipant newParticipant(ChatConversation conversation, User user) {

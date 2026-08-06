@@ -31,6 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -304,6 +305,57 @@ class ChatFlowIntegrationTest {
     void unauthenticatedRequestsAreRejected() throws Exception {
         mockMvc.perform(get("/api/v1/chat/conversations"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void readReceiptShowsUpAsThePeerCursorsOnTheSendersSide() throws Exception {
+        // What the sender's tick marks are drawn from (§I4): the trainer sees
+        // how far the client got, not their own cursor.
+        long conversationId = openConversation();
+        long messageId = sendAndReadId(conversationId, trainerToken, "Szia!", "trainer-msg-1");
+
+        mockMvc.perform(get("/api/v1/chat/conversations").header("Authorization", "Bearer " + trainerToken))
+                .andExpect(jsonPath("$.items[0].peerLastReadMessageId").doesNotExist())
+                .andExpect(jsonPath("$.items[0].peerLastDeliveredMessageId").doesNotExist());
+
+        mockMvc.perform(post("/api/v1/chat/conversations/" + conversationId + "/read")
+                        .header("Authorization", "Bearer " + clientToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"lastReadMessageId\":" + messageId + "}"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/chat/conversations").header("Authorization", "Bearer " + trainerToken))
+                .andExpect(jsonPath("$.items[0].peerLastReadMessageId").value(messageId))
+                // Reading is a stronger statement than delivery, so it drags
+                // the delivered cursor along with it.
+                .andExpect(jsonPath("$.items[0].peerLastDeliveredMessageId").value(messageId));
+    }
+
+    @Test
+    void presenceIsAcceptedInBothDirections() throws Exception {
+        long conversationId = openConversation();
+
+        mockMvc.perform(post("/api/v1/chat/presence")
+                        .header("Authorization", "Bearer " + clientToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"activeConversationId\":" + conversationId + "}"))
+                .andExpect(status().isNoContent());
+
+        // Leaving the thread / going to the background.
+        mockMvc.perform(post("/api/v1/chat/presence")
+                        .header("Authorization", "Bearer " + clientToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"activeConversationId\":null}"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void theStreamIsBehindAuthenticationLikeEveryOtherChatRoute() throws Exception {
+        mockMvc.perform(get("/api/v1/chat/stream"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/chat/stream").header("Authorization", "Bearer " + clientToken))
+                .andExpect(request().asyncStarted());
     }
 
     // --- helpers -----------------------------------------------------------

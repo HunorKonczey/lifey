@@ -446,4 +446,136 @@ void main() {
     expect(conversationId, _conversationId);
     expect(await repo.findConversation(_conversationId), isNotNull);
   });
+
+  // --- realtime (I4) -----------------------------------------------------
+
+  group('stream frames', () {
+    test('an incoming message lands in the thread and bumps the unread count', () async {
+      await seedConversation();
+
+      await repo.applyIncomingMessage(
+        _conversationId,
+        ChatMessage.fromJson(_messageJson(id: 4310, clientMessageId: 'peer-1', body: 'szia')),
+      );
+
+      final messages = await repo.watchMessages(_conversationId).first;
+      expect(messages.single.body, 'szia');
+      final conversation = await repo.findConversation(_conversationId);
+      expect(conversation!.unreadCount, 1);
+      expect(conversation.lastMessagePreview, 'szia');
+    });
+
+    test('our own message echoed back to our other devices is never unread', () async {
+      await seedConversation();
+
+      await repo.applyIncomingMessage(
+        _conversationId,
+        ChatMessage.fromJson(
+          _messageJson(id: 4311, clientMessageId: 'mine-1', senderId: _meId, body: 'én írtam'),
+        ),
+      );
+
+      final conversation = await repo.findConversation(_conversationId);
+      expect(conversation!.unreadCount, 0);
+      expect(conversation.lastMessagePreview, 'én írtam');
+    });
+
+    test('the server echo replaces our optimistic bubble instead of duplicating it', () async {
+      await seedConversation();
+      adapter.builders['POST /chat/conversations/$_conversationId/messages'] = (options) {
+        final body = options.data as Map<String, dynamic>;
+        return _messageJson(
+          id: 4312,
+          clientMessageId: body['clientMessageId'] as String,
+          senderId: _meId,
+          body: body['body'] as String,
+        );
+      };
+      await repo.send(_conversationId, 'hello');
+      final sent = (await repo.watchMessages(_conversationId).first).single;
+
+      // The same message arriving again over the stream — our own send is
+      // broadcast back to every device we have, including this one.
+      await repo.applyIncomingMessage(
+        _conversationId,
+        ChatMessage.fromJson(
+          _messageJson(id: 4312, clientMessageId: sent.clientId, senderId: _meId, body: 'hello'),
+        ),
+      );
+
+      expect(await repo.watchMessages(_conversationId).first, hasLength(1));
+    });
+
+    test('a read receipt stores the peer cursors the tick marks read from', () async {
+      await seedConversation();
+
+      await repo.applyReadReceipt(
+        _conversationId,
+        lastDeliveredMessageId: 4320,
+        lastReadMessageId: 4310,
+      );
+
+      final conversation = await repo.findConversation(_conversationId);
+      expect(conversation!.peerLastDeliveredMessageId, 4320);
+      expect(conversation.peerLastReadMessageId, 4310);
+    });
+
+    test('the reconnect cursor is the newest id across every thread', () async {
+      await seedConversation();
+      expect(await repo.newestServerIdAcrossThreads(), isNull);
+
+      await repo.applyIncomingMessage(
+        _conversationId,
+        ChatMessage.fromJson(_messageJson(id: 4310, clientMessageId: 'a')),
+      );
+      await repo.applyIncomingMessage(
+        _conversationId,
+        ChatMessage.fromJson(_messageJson(id: 4315, clientMessageId: 'b')),
+      );
+
+      expect(await repo.newestServerIdAcrossThreads(), 4315);
+    });
+
+    test('muting writes locally first, then tells the server', () async {
+      await seedConversation();
+      final until = DateTime.now().add(const Duration(hours: 1));
+
+      await repo.setMuted(_conversationId, until);
+
+      expect((await repo.findConversation(_conversationId))!.isMuted, isTrue);
+      final request = requestFor('PUT', '/chat/conversations/$_conversationId/mute');
+      expect((request.data as Map)['mutedUntil'], until.toUtc().toIso8601String());
+    });
+
+    test('unmuting clears the local flag and sends a null', () async {
+      await seedConversation();
+      await repo.setMuted(_conversationId, DateTime.now().add(const Duration(hours: 1)));
+
+      await repo.setMuted(_conversationId, null);
+
+      expect((await repo.findConversation(_conversationId))!.isMuted, isFalse);
+      expect(
+        (requestFor('PUT', '/chat/conversations/$_conversationId/mute').data as Map)['mutedUntil'],
+        isNull,
+      );
+    });
+
+    test('a mute in the past has already lapsed', () async {
+      // The mute is an instant, not a flag, so nothing has to sweep it.
+      await seedConversation();
+      await repo.setMuted(_conversationId, DateTime.now().subtract(const Duration(minutes: 1)));
+
+      expect((await repo.findConversation(_conversationId))!.isMuted, isFalse);
+    });
+
+    test('presence is reported, and a failure to report it is swallowed', () async {
+      await repo.setPresence(_conversationId);
+      expect(requestFor('POST', '/chat/presence').data, {'activeConversationId': _conversationId});
+
+      adapter.failing.add('/chat/presence');
+      // Presence is an optimisation: losing it costs a needless notification,
+      // never a message, so it must never surface as an error.
+      await expectLater(repo.setPresence(null), completes);
+    });
+  });
 }

@@ -1,0 +1,9 @@
+Hi {{name}},
+
+You have {{count}} unread message(s) from {{peerName}} on Lifey, and no device registered for notifications.
+
+Open the app to read and reply.
+
+You can turn these emails off in the app's notification settings.
+
+— The Lifey team

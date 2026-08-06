@@ -6,6 +6,7 @@ import com.lifey.chat.dto.ConversationResponse;
 import com.lifey.chat.dto.MessageResponse;
 import com.lifey.chat.entity.ChatConversation;
 import com.lifey.chat.entity.ChatMessage;
+import com.lifey.chat.entity.ChatParticipant;
 import com.lifey.user.User;
 
 /**
@@ -28,16 +29,38 @@ public final class ChatMapper {
                 message.getDeletedAt());
     }
 
+    /**
+     * @param peerParticipant   the <em>other</em> side's participant row, source
+     *                          of the delivered/read cursors the viewer's own
+     *                          tick marks are drawn from
+     * @param viewerParticipant the viewer's own row, source of {@code mutedUntil}
+     *                          <p>
+     *                          Both are nullable so a caller that has not loaded
+     *                          them degrades to "sent" ticks and "not muted"
+     *                          rather than failing.
+     */
     public static ConversationResponse toConversationResponse(ChatConversation conversation,
                                                               Long viewerId,
                                                               ChatMessage lastMessage,
-                                                              long unreadCount) {
+                                                              long unreadCount,
+                                                              ChatParticipant peerParticipant,
+                                                              ChatParticipant viewerParticipant) {
         return new ConversationResponse(
                 conversation.getId(),
                 toPeer(conversation, viewerId),
                 lastMessage == null ? null : toMessageResponse(lastMessage),
                 unreadCount,
-                conversation.getArchivedAt());
+                conversation.getArchivedAt(),
+                peerParticipant == null ? null : peerParticipant.getLastDeliveredMessageId(),
+                peerParticipant == null ? null : peerParticipant.getLastReadMessageId(),
+                viewerParticipant == null ? null : viewerParticipant.getMutedUntil());
+    }
+
+    /** The id of the participant on the other side of the thread from the viewer. */
+    public static Long peerIdOf(ChatConversation conversation, Long viewerId) {
+        return conversation.getTrainer().getId().equals(viewerId)
+                ? conversation.getClient().getId()
+                : conversation.getTrainer().getId();
     }
 
     private static ChatPeerResponse toPeer(ChatConversation conversation, Long viewerId) {

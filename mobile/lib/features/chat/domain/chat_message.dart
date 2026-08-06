@@ -1,10 +1,10 @@
 /// Delivery state of one of *our own* messages. Anything received is always
 /// [sent] — the states only describe the outbound path.
 ///
-/// [delivered] and [read] cannot occur yet: the backend tracks a read cursor
-/// per participant but does not report the *peer's* cursor until the SSE
-/// stream lands (plan I4). They exist here so the bubble already renders all
-/// four and I4 only has to supply the data.
+/// Only [pending], [sent] and [failed] are ever *stored*: [delivered] and
+/// [read] are derived per render from the thread's peer cursors, because the
+/// server keeps them as two per-participant numbers rather than per message.
+/// See `receiptStateFor` in `chat_conversation.dart`.
 enum ChatMessageState { pending, sent, delivered, read, failed }
 
 class ChatMessage {
