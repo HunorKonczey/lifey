@@ -2,6 +2,7 @@ package com.lifey.chat.service;
 
 import com.lifey.chat.ChatMapper;
 import com.lifey.chat.ChatMessageStoredEvent;
+import com.lifey.chat.ChatMetrics;
 import com.lifey.chat.ChatProperties;
 import com.lifey.chat.entity.ChatConversation;
 import com.lifey.chat.entity.ChatMessage;
@@ -61,6 +62,7 @@ public class ChatNotificationServiceImpl implements ChatNotificationService {
     private final ChatEventBus eventBus;
     private final ChatPresenceRegistry presenceRegistry;
     private final ChatProperties properties;
+    private final ChatMetrics metrics;
     private final Clock clock;
 
     @Override
@@ -96,11 +98,13 @@ public class ChatNotificationServiceImpl implements ChatNotificationService {
         // which thread they are looking at.
         if (eventBus.isConnected(recipient.getId())
                 && presenceRegistry.isViewing(recipient.getId(), conversation.getId())) {
+            metrics.pushDecision(ChatMetrics.PushDecision.SKIPPED_VIEWING);
             return;
         }
 
         Optional<UserSettings> settings = userSettingsRepository.findByUserId(recipient.getId());
         if (!settings.map(UserSettings::isChatPushEnabled).orElse(true)) {
+            metrics.pushDecision(ChatMetrics.PushDecision.SKIPPED_DISABLED);
             return;
         }
 
@@ -108,13 +112,19 @@ public class ChatNotificationServiceImpl implements ChatNotificationService {
         // the message stays unread, and §5.4's reminder is what eventually
         // surfaces it once the window or the mute has passed.
         if (ChatQuietHours.isQuiet(recipient, settings.orElse(null), now)) {
+            metrics.pushDecision(ChatMetrics.PushDecision.SKIPPED_QUIET_HOURS);
             return;
         }
 
         ChatParticipant participant = participantRepository
                 .findByConversationIdAndUserId(conversation.getId(), recipient.getId())
                 .orElse(null);
-        if (isMuted(participant, now) || isWithinCoalesceWindow(participant, now)) {
+        if (isMuted(participant, now)) {
+            metrics.pushDecision(ChatMetrics.PushDecision.SKIPPED_MUTED);
+            return;
+        }
+        if (isWithinCoalesceWindow(participant, now)) {
+            metrics.pushDecision(ChatMetrics.PushDecision.SKIPPED_COALESCED);
             return;
         }
 
@@ -126,6 +136,7 @@ public class ChatNotificationServiceImpl implements ChatNotificationService {
         long unread = messageRepository.countUnread(conversation.getId(), recipient.getId());
 
         pushService.sendToUser(recipient.getId(), buildMessage(message, sender, unread, hungarian));
+        metrics.pushDecision(ChatMetrics.PushDecision.SENT);
 
         if (participant != null) {
             participant.setLastNotifiedAt(now);

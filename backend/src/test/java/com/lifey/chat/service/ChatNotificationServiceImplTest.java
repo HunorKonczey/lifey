@@ -1,5 +1,7 @@
 package com.lifey.chat.service;
 
+import com.lifey.chat.ChatMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.lifey.chat.ChatMessageStoredEvent;
 import com.lifey.chat.ChatProperties;
 import com.lifey.chat.entity.ChatConversation;
@@ -29,6 +31,7 @@ import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
+import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
@@ -95,7 +98,7 @@ class ChatNotificationServiceImplTest {
 
         notificationService = new ChatNotificationServiceImpl(
                 messageRepository, participantRepository, userSettingsRepository, pushService,
-                eventBus, presenceRegistry, properties(), Clock.fixed(NOW, ZoneOffset.UTC));
+                eventBus, presenceRegistry, properties(), metrics(), Clock.fixed(NOW, ZoneOffset.UTC));
 
         when(messageRepository.countUnread(anyLong(), anyLong())).thenReturn(1L);
         when(userSettingsRepository.findByUserId(anyLong())).thenReturn(Optional.empty());
@@ -367,4 +370,14 @@ class ChatNotificationServiceImplTest {
         user.setEmail(id + "@example.com");
         return user;
     }
+
+    /**
+     * Real meters over a {@code SimpleMeterRegistry} rather than a mock: the
+     * counters are pre-registered in {@link ChatMetrics}' constructor, and a
+     * mock would hide it if that ever stopped happening.
+     */
+    private static ChatMetrics metrics() {
+        return new ChatMetrics(new SimpleMeterRegistry(), mock(ChatEmitterRegistry.class));
+    }
+
 }

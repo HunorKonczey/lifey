@@ -1,5 +1,7 @@
 package com.lifey.chat.service;
 
+import com.lifey.chat.ChatMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.chat.ChatMessageDeletedEvent;
 import com.lifey.chat.ChatMessageStoredEvent;
@@ -49,6 +51,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
+import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -126,8 +129,8 @@ class ChatServiceImplTest {
         trainerParticipant.setUser(trainer);
 
         chatService = new ChatServiceImpl(conversationRepository, messageRepository, attachmentRepository,
-                participantRepository, trainerClientRepository, currentUserProvider, rateLimiter, properties,
-                eventPublisher);
+                participantRepository, trainerClientRepository, currentUserProvider, rateLimiter, metrics(),
+                properties, eventPublisher);
 
         when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
         when(conversationRepository.findByIdForParticipant(CONVERSATION_ID, TRAINER_ID))
@@ -201,7 +204,7 @@ class ChatServiceImplTest {
     @Test
     void sendMessage_whenChatIsDisabled_isRejected() {
         chatService = new ChatServiceImpl(conversationRepository, messageRepository, attachmentRepository,
-                participantRepository, trainerClientRepository, currentUserProvider, rateLimiter,
+                participantRepository, trainerClientRepository, currentUserProvider, rateLimiter, metrics(),
                 new ChatProperties(false, 2000, 30, 100, 30, 600,
                         Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
                         Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false,
@@ -626,4 +629,14 @@ class ChatServiceImplTest {
         relationship.setStatus(status);
         return relationship;
     }
+
+    /**
+     * Real meters over a {@code SimpleMeterRegistry} rather than a mock: the
+     * counters are pre-registered in {@link ChatMetrics}' constructor, and a
+     * mock would hide it if that ever stopped happening.
+     */
+    private static ChatMetrics metrics() {
+        return new ChatMetrics(new SimpleMeterRegistry(), mock(ChatEmitterRegistry.class));
+    }
+
 }

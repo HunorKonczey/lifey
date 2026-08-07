@@ -101,6 +101,29 @@ class RoleBasedAccessControlTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void actuatorMetrics_areSuperAdminOnly() throws Exception {
+        // Exposed for the chat counters (plan §21), on a platform with no
+        // metrics scraper — so the only thing keeping operational internals off
+        // the public internet is this rule.
+        mockMvc.perform(get("/actuator/metrics"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/actuator/metrics")
+                        .header("Authorization", "Bearer " + tokenFor(1L, Role.ROLE_USER)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/actuator/metrics")
+                        .header("Authorization", "Bearer " + tokenFor(2L, Role.ROLE_SUPER_ADMIN)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void actuatorHealth_staysPublic_becauseTheDeployProbeNeedsIt() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk());
+    }
+
     private String tokenFor(Long userId, Role... roles) {
         User user = new User();
         user.setId(userId);

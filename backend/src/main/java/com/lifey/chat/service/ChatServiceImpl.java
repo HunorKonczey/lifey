@@ -4,6 +4,7 @@ import com.lifey.auth.CurrentUserProvider;
 import com.lifey.chat.ChatMapper;
 import com.lifey.chat.ChatMessageDeletedEvent;
 import com.lifey.chat.ChatMessageStoredEvent;
+import com.lifey.chat.ChatMetrics;
 import com.lifey.chat.ChatProperties;
 import com.lifey.chat.ChatReadCursorEvent;
 import com.lifey.chat.dto.ConversationListResponse;
@@ -65,6 +66,7 @@ public class ChatServiceImpl implements ChatService {
     private final TrainerClientRepository trainerClientRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ChatRateLimiter rateLimiter;
+    private final ChatMetrics metrics;
     private final ChatProperties properties;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -296,6 +298,8 @@ public class ChatServiceImpl implements ChatService {
             attachment.setCreatedAt(now);
             attachmentRepository.save(attachment);
         }
+
+        metrics.messageSent(reencoded == null ? "text" : "image");
 
         conversation.setLastMessageAt(now);
         conversation.setLastMessageId(message.getId());

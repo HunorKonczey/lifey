@@ -54,6 +54,7 @@ public class ChatUnreadReminderJob {
     private final PushService pushService;
     private final MailService mailService;
     private final ChatProperties properties;
+    private final ChatMetrics metrics;
     private final Clock clock;
 
     @Scheduled(cron = "${lifey.jobs.chat-unread-reminder.cron}")
@@ -124,6 +125,7 @@ public class ChatUnreadReminderJob {
 
         if (shouldEmailInstead(user, oldestUnnotified, now)) {
             mailService.sendUnreadChatEmail(user, unread, peerName);
+            metrics.reminderSent("email");
         } else {
             pushService.sendToUser(user.getId(), new PushMessage(
                     hungarian ? "Olvasatlan üzeneteid vannak" : "You have unread messages",
@@ -132,6 +134,7 @@ public class ChatUnreadReminderJob {
                     // One reminder row that replaces the previous one, rather
                     // than a new line in the notification centre every day.
                     "chat-reminder"));
+            metrics.reminderSent("push");
         }
 
         markReminded(user.getId(), now);

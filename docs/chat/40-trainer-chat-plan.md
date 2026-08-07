@@ -29,8 +29,12 @@
 > (**[§20](#20-megvalósítási-napló--i64-keresés-a-szálban)**).
 > A törlésnél a leszállított munka valójában a törlés **átvitele a másik félhez**
 > (`deleted` SSE frame) volt, mert a felület már az I2/I3-ban elkészült.
-> **Hátra egyedül az I7 (üzemeltetés és mérés) van — belépőpontja a §12–§20,
-> illetve a [§10](#10-design) design-forrásai**
+> **Az I7 (üzemeltetés és mérés) is kész**
+> (**[§21](#21-megvalósítási-napló--i7-üzemeltetés-és-mérés)**) — **a terv ezzel
+> végig van vezetve.** A napi üzemeltetés belépőpontja innentől nem ez a
+> dokumentum, hanem a [devops/chat-operations.md](../../devops/chat-operations.md)
+> runbook; a §12–§21 a *miért*-eket őrzi, a [§10](#10-design) pedig a
+> design-forrásokat**
 > ([42-chat-design-prompt.md](42-chat-design-prompt.md) és
 > [design/Lifey Chat.dc.html](design/Lifey%20Chat.dc.html)) — minden UI-munka azokból
 > dolgozik.
@@ -814,7 +818,11 @@ csendes órában néma.
 - ~~**Üzenet törlése** UI-ból (a backend már tudja I1 óta).~~ ✅ **kész — §17**
 - ~~**Keresés a szálban** (`ILIKE` + trigram index, ha kell).~~ ✅ **kész — §20**
 
-### I7 – Üzemeltetés és mérés · ~1 nap
+### I7 – Üzemeltetés és mérés · ~1 nap · ✅ KÉSZ
+
+> **Állapot:** megvalósítva, a részleteket a §21 rögzíti. A `PostgresChatEventBus`
+> szándékosan **nem** készült el — a terv feltételhez kötötte („ha addig
+> többinstance-os lesz a backend"), és a deploy egyinstance-os (§21.2).
 
 - Metrikák (Actuator/Micrometer, már be van húzva): elküldött üzenetek, aktív SSE
   kapcsolatok, push kiküldés/kihagyás arány kihagyási okonként, reminder-találatok.
@@ -1715,3 +1723,79 @@ egyelőre az első oldalt mutatják), keresés csatolmány-fájlnévre.
 5. **Az ékezet-kezelés a szerveré, a kiemelés a kliensé — és a kettőnek egyeznie
    kell.** Ha a szerver talál valamit, amit a kliens nem tud kiemelni, az hibának
    látszik. A `unaccent` és a kliensoldali folding együtt mozognak.
+
+---
+
+## 21. Megvalósítási napló — I7 (üzemeltetés és mérés)
+
+> **Ezzel a terv végig van vezetve: I1–I7 kész.** A napi üzemeltetés
+> belépőpontja innentől a **[devops/chat-operations.md](../../devops/chat-operations.md)**
+> runbook — ez a szakasz azt rögzíti, mi készült el és miért így.
+
+### 21.1 Mi készült el
+
+| Elem | Fájlok |
+|---|---|
+| Metrikák | `ChatMetrics` — négy méter, előre regisztrált sorozatokkal; bekötve a `ChatServiceImpl` küldési útjába, a `ChatNotificationServiceImpl` teljes gát-létrájába és a `ChatUnreadReminderJob` két kézbesítési ágába |
+| Kapcsolat-mérő | `lifey.chat.stream.connections` gauge a `ChatEmitterRegistry.connectionCount()` fölött — a §15.5 nyitva hagyott tétele |
+| Kitettség | `management.endpoints.web.exposure.include: health,metrics`, és `/actuator/**` **`ROLE_SUPER_ADMIN`** mögé zárva a `SecurityConfig`-ban |
+| Runbook | **`devops/chat-operations.md`** (új): kill switch, a négy méter olvasása, négy küszöb azzal együtt, hogy mit jelentenek, tünet→ok tábla, teljes konfig-referencia, skálázási figyelmeztetés — linkelve a `devops/README.md`-ből |
+| Tesztek | `ChatMetricsTest` (4), `RoleBasedAccessControlTest` +2 (az actuator zárás) |
+
+A négy méter:
+
+| Méter | Típus | Címkék |
+|---|---|---|
+| `lifey.chat.messages.sent` | counter | `kind` = `text` \| `image` |
+| `lifey.chat.stream.connections` | gauge | — |
+| `lifey.chat.push.decisions` | counter | `outcome` = `sent` \| `skipped-viewing` \| `skipped-disabled` \| `skipped-quiet-hours` \| `skipped-muted` \| `skipped-coalesced` |
+| `lifey.chat.reminders.sent` | counter | `channel` = `push` \| `email` |
+
+Tesztek: backend **761** zöld (+4: minden sorozat létezik nullán, üzenetek
+típusonként, push-döntések okonként, a gauge élőben olvas), és **+2 integrációs
+teszt** az actuator jogosultságra. Mobil és web érintetlen — az I7 tisztán
+szerveroldali.
+
+> ⚠️ Ugyanaz a környezeti korlát, mint a §18.1/§20.1-ben: a Testcontainers-osztályok
+> itt nem futnak, tehát a **két új actuator-jogosultsági teszt sem futott le.** Ezek
+> pont azt igazolnák, hogy a `/actuator/metrics` nem publikus — **a legfontosabb
+> ellenőrzés ebben az iterációban.** Egy működő Docker melletti buildnél ez az első.
+
+### 21.2 Eltérések a tervtől — ezekkel kell dolgozni
+
+| Terv | Valóság | Miért |
+|---|---|---|
+| „Ha addig többinstance-os lesz a backend: `PostgresChatEventBus` (LISTEN/NOTIFY)" | **nem készült el** | a feltétel nem teljesült: a `render.yaml` egy `web` service `starter` terven, egy instance. Egy `LISTEN/NOTIFY` implementáció ma nem oldana meg semmit, viszont egy új, hosszú életű DB-kapcsolatot és egy listener-szálat hozna egy 192 MB heapes konténerbe. A seam megvan; a runbook „Scaling out" szakasza megmondja, mikor kell elővenni — **és azt is, hogy a `@Scheduled` jobok duplázódása a súlyosabb probléma ott, nem a realtime** |
+| „Riasztás-küszöbök" | **dokumentált küszöbök, nem konfigurált riasztások** | nincs riasztási platform ezen a deployon (se Prometheus, se Grafana). Egy „küszöb" ilyenkor az, amit egy ember tud megnézni: a runbook mindegyikhez megadja, mi a normális, mi a rossz, miért számít, és mi az első lépés |
+| „Metrikák (Actuator/Micrometer, **már be van húzva**)" | igaz, de **semmi nem volt kitéve**: `exposure.include: health` | ezért az I7 érdemi része nem a mérés, hanem az **elérhetőség** volt — és az, hogy közben ne szivárogjon ki semmi. Megoldás: `metrics` kitéve, `/actuator/**` super-admin mögé zárva. A prefixre írt szabály miatt egy később kitett endpoint sem válhat véletlenül publikussá |
+| — | **nincs `micrometer-registry-prometheus`** | nincs scraper, ami olvasná. A `/actuator/metrics` JSON-ja embernek olvasható, és pont ez a használati mód. A regisztrációs kód független ettől: ha lesz Prometheus, egy dependency és nulla kódváltozás |
+| — | minden sorozat **előre regisztrálva**, nullán | egy csak-első-használatkor megjelenő számláló a legrosszabb fajta riasztáshoz: a „nincs adat" és a „nem történt semmi" ugyanaz a leolvasás lenne — és az érdekes eset (hirtelen minden push kimarad) épp az, amikor egy sorozat hiányozna |
+| — | az e-mail fallback **továbbra is ki van kapcsolva** | a §16.3 szerint a bekapcsolás sorrendben az I7 *után* jön: előbb kellenek a számok. Most már megvannak — a runbook megírja, melyiket kell nézni hozzá (`reminders.sent{channel=push}`) és mit várj utána. Ez termékdöntés, nem kódmunka |
+
+### 21.3 Amit az I7 tudatosan nem szállít
+
+Riasztási platform (nincs mibe kötni), Prometheus/Grafana, tracing, a push
+**kézbesítési** hibaarányának metrikája (az APNs/FCM válasza ma logban él, nem
+méterben — a `PushService` a chat fölött van, és egy közös push-metrika a
+push-modul saját iterációja lenne, nem a chaté), megőrzési szabály a chat-adatra
+(§11/4 és §18.3), és a `PostgresChatEventBus`.
+
+### 21.4 Architektúra-döntések, amik kötik a következő lépéseket
+
+1. **Az `/actuator/**` super-admin mögött van, nem publikusan.** A szabály a
+   *prefixre* szól, nem a ma kitett egyetlen endpointra: aki később kitesz még
+   egyet az `exposure.include`-ban, az alapból zárt lesz. A `/actuator/health`
+   marad publikus, mert a Render deploy-próbája azon múlik.
+2. **A méterek neve és címkéi egy helyen élnek** (`ChatMetrics`). Egy elgépelt
+   string a hívás helyén két külön idősorra hasítja a metrikát, és azt senki nem
+   veszi észre. Aki chat-métert ad hozzá, oda adja hozzá.
+3. **Minden sorozat létezik indulástól, nullán.** Ez a runbook küszöbeinek az
+   előfeltétele. Új címke-értéknél (pl. egy hatodik push-kihagyási ok) a
+   konstruktorban is fel kell venni.
+4. **A push-döntés minden ága mér.** A `ChatNotificationServiceImpl` létrájának
+   nincs olyan kilépési pontja, ami ne növelne számlálót — ettől olvasható az
+   arány. Aki új gátat tesz a létrába (§16.4/1), adjon hozzá egy
+   `PushDecision` értéket is, különben a kimaradás láthatatlanná válik.
+5. **A runbook a művelet, a terv az indoklás.** Üzemeltetési változás
+   (új küszöb, új lever) a `devops/chat-operations.md`-be megy; ide csak akkor,
+   ha a *döntés* változik.

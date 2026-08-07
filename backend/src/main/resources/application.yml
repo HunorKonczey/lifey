@@ -71,10 +71,13 @@ springdoc:
 management:
   endpoints:
     web:
-      # Only expose the health endpoint over HTTP (at /actuator/health) — nothing
-      # else (env, beans, mappings, ...) is reachable, so no internals leak.
+      # Health is public (the deploy probe hits it); metrics is exposed but
+      # locked to ROLE_SUPER_ADMIN in SecurityConfig — it is the only way to
+      # read the chat counters (docs/chat/40-trainer-chat-plan.md §21) on a
+      # platform with no metrics scraper. Everything else (env, beans,
+      # mappings, ...) stays unreachable, so no internals leak.
       exposure:
-        include: health
+        include: health,metrics
   endpoint:
     health:
       # Plain UP/DOWN for unauthenticated callers — don't leak component details
