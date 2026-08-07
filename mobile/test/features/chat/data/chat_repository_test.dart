@@ -544,6 +544,43 @@ void main() {
     });
   });
 
+  group('search', () {
+    test('results are returned but never written into the thread cache', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [_messageJson(id: 4400, clientMessageId: 'recent', body: 'ma edzés')],
+        'hasMore': false,
+      };
+      await repo.loadNewer(_conversationId);
+      adapter.responses['GET /chat/conversations/$_conversationId/messages/search'] = {
+        'items': [_messageJson(id: 12, clientMessageId: 'ancient', body: 'régi lábnap')],
+        'hasMore': false,
+      };
+
+      final results = await repo.searchMessages(_conversationId, 'lábnap');
+
+      expect(results.single.serverId, 12);
+      // Storing a hit from the far past would make it look like the message
+      // right before the newest one — wrong day divider, wrong grouping.
+      final cached = await repo.watchMessages(_conversationId).first;
+      expect(cached.map((m) => m.serverId), [4400]);
+    });
+
+    test('the term and the keyset cursor go to the server', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages/search'] = {
+        'items': <dynamic>[],
+        'hasMore': false,
+      };
+
+      await repo.searchMessages(_conversationId, 'lábnap', before: 500);
+
+      final request = requestFor('GET', '/chat/conversations/$_conversationId/messages/search');
+      expect(request.queryParameters['q'], 'lábnap');
+      expect(request.queryParameters['before'], 500);
+    });
+  });
+
   group('deletion', () {
     test('a sent message is tombstoned on the server and locally', () async {
       await seedConversation();

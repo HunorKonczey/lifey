@@ -21,7 +21,16 @@ class ChatComposer extends StatefulWidget {
     required this.onSend,
     this.maxLength = 2000,
     this.maxAttachmentBytes = 8 * 1024 * 1024,
+    this.onTyping,
+    this.peerTypingName,
   });
+
+  /// Called on every keystroke; the reporter behind it does the throttling.
+  final VoidCallback? onTyping;
+
+  /// Non-null while the peer is writing — the name shown in the band above
+  /// the input. The band's space is reserved either way (design D3).
+  final String? peerTypingName;
 
   /// [image] is null for a plain text message. A picture may travel with an
   /// empty body — on its own it is already a complete message.
@@ -52,6 +61,9 @@ class _ChatComposerState extends State<ChatComposer> {
     _controller.addListener(() {
       final hasText = _controller.text.trim().isNotEmpty;
       if (hasText != _hasText) setState(() => _hasText = hasText);
+      // Every keystroke, not just the ones that change _hasText — the
+      // throttle upstream is what keeps this from being a request per key.
+      widget.onTyping?.call();
     });
   }
 
@@ -129,6 +141,7 @@ class _ChatComposerState extends State<ChatComposer> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        _TypingBand(name: widget.peerTypingName),
         if (_image != null) _PendingImageStrip(
           image: _image!,
           onRemove: () => setState(() => _image = null),
@@ -204,6 +217,110 @@ class _ChatComposerState extends State<ChatComposer> {
       ),
         ),
       ],
+    );
+  }
+}
+
+/// "{name} gépel…" with three rising dots, above the input (design D3).
+///
+/// **Fixed height, always in the tree.** The design says so outright, and the
+/// reason is structural: the thread is a reversed list anchored to the bottom,
+/// so a band that only existed while someone types would shove the whole
+/// conversation up and down as they start and stop. Only the content fades.
+class _TypingBand extends StatelessWidget {
+  const _TypingBand({required this.name});
+
+  final String? name;
+
+  static const _height = 18.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final active = name != null;
+
+    return SizedBox(
+      height: _height,
+      child: AnimatedOpacity(
+        opacity: active ? 1 : 0,
+        duration: const Duration(milliseconds: 150),
+        child: !active
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const _TypingDots(),
+                    const SizedBox(width: 7),
+                    Text(
+                      l10n.chatIsTyping(name!),
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+/// Three dots rising in turn. One controller drives all three; the stagger is
+/// an interval per dot rather than three animations to keep in step.
+class _TypingDots extends StatefulWidget {
+  const _TypingDots();
+
+  @override
+  State<_TypingDots> createState() => _TypingDotsState();
+}
+
+class _TypingDotsState extends State<_TypingDots> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (index) {
+            // Each dot peaks a sixth of a cycle after the previous one.
+            final phase = (_controller.value - index / 6) % 1.0;
+            final lift = phase < 0.3 ? (0.3 - (phase - 0.15).abs() * 2) / 0.3 : 0.0;
+            return Padding(
+              padding: EdgeInsets.only(right: index == 2 ? 0 : 3),
+              child: Transform.translate(
+                offset: Offset(0, -2 * lift),
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.35 + 0.65 * lift),
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

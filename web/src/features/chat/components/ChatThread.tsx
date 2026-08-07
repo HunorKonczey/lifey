@@ -16,8 +16,9 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ChatAvatar } from "./ChatAvatar";
 import { ArchivedComposerNotice, ChatComposer } from "./ChatComposer";
 import { MessageBubble } from "./MessageBubble";
+import { ChatSearch } from "./ChatSearch";
 import { chatApi } from "../api";
-import { CHAT_POLL_INTERVAL_MS } from "../hooks";
+import { CHAT_POLL_INTERVAL_MS, usePeerTyping, useReportTyping } from "../hooks";
 import {
   MESSAGE_PAGE_SIZE,
   applyDeletion,
@@ -249,8 +250,17 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
   // first — the same bar every other destructive action in the app clears.
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
+  // Search replaces the stream rather than filtering it: the thread's cache is
+  // a contiguous keyset window, and results are scattered across all of history
+  // (§20.4/2).
+  const [searchQuery, setSearchQuery] = useState<string | null>(null);
+  const searching = searchQuery !== null;
+
   const items = buildThreadItems(thread, ownUserId);
   const archived = conversation.archivedAt !== null;
+  const peerTyping = usePeerTyping(conversationId);
+  // Nothing to report from a thread nobody can write in.
+  const reportTyping = useReportTyping(conversationId, !archived);
   const muted = isMuted(conversation.mutedUntil);
 
   return (
@@ -267,18 +277,59 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
             <span className="material-symbols-rounded text-2xl">arrow_back</span>
           </button>
         )}
-        <ChatAvatar userId={conversation.peer.userId} displayName={conversation.peer.displayName} size={40} />
-        <div className="flex-1 min-w-0">
-          <p className="text-[15px] font-extrabold truncate" style={{ color: "var(--on-surface)" }}>
-            {conversation.peer.displayName}
-          </p>
-          {/* No "online / last seen" line: presence lands with I4, and the design
-              rules out a status signal that isn't backed by real data. */}
-          <p className="text-[11px] font-semibold truncate" style={{ color: "var(--muted)" }}>
-            {conversation.peer.email}
-          </p>
-        </div>
-        {archived && (
+        {searching ? (
+          <>
+            <input
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setSearchQuery(null);
+              }}
+              placeholder={t("searchPlaceholder")}
+              aria-label={t("searchPlaceholder")}
+              className="flex-1 min-w-0 h-[38px] px-3.5 text-sm font-medium outline-none"
+              style={{
+                background: "var(--surface-container)",
+                color: "var(--on-surface)",
+                borderRadius: "var(--r-input)",
+              }}
+            />
+            <button
+              onClick={() => setSearchQuery(null)}
+              title={t("searchClose")}
+              aria-label={t("searchClose")}
+              className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
+            >
+              <span className="material-symbols-rounded text-[21px]">close</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <ChatAvatar userId={conversation.peer.userId} displayName={conversation.peer.displayName} size={40} />
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-extrabold truncate" style={{ color: "var(--on-surface)" }}>
+                {conversation.peer.displayName}
+              </p>
+              {/* No "online / last seen" line: presence lands with I4, and the design
+                  rules out a status signal that isn't backed by real data. */}
+              <p className="text-[11px] font-semibold truncate" style={{ color: "var(--muted)" }}>
+                {conversation.peer.email}
+              </p>
+            </div>
+            <button
+              onClick={() => setSearchQuery("")}
+              title={t("searchInThread")}
+              aria-label={t("searchInThread")}
+              className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
+            >
+              <span className="material-symbols-rounded text-[21px]">search</span>
+            </button>
+          </>
+        )}
+        {!searching && archived && (
           <span
             className="rounded-[var(--r-sm)] px-2.5 py-1 text-[10.5px] font-extrabold"
             style={{ background: "var(--surface-high)", color: "var(--on-surface-variant)" }}
@@ -286,12 +337,14 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
             {t("archivedBadge")}
           </span>
         )}
-        <MuteMenu
-          muted={muted}
-          onMute={(hours) => muteMutation.mutate(muteUntil(hours))}
-          onUnmute={() => muteMutation.mutate(null)}
-        />
-        {conversation.peer.role === "CLIENT" && (
+        {!searching && (
+          <MuteMenu
+            muted={muted}
+            onMute={(hours) => muteMutation.mutate(muteUntil(hours))}
+            onUnmute={() => muteMutation.mutate(null)}
+          />
+        )}
+        {!searching && conversation.peer.role === "CLIENT" && (
           <Link
             href={`/admin/clients/${conversation.peer.userId}`}
             title={t("openClient")}
@@ -307,11 +360,18 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
       <div
         ref={scrollRef}
         onScroll={(e) => {
-          if (e.currentTarget.scrollTop < 80) void loadOlder();
+          if (!searching && e.currentTarget.scrollTop < 80) void loadOlder();
         }}
         className="flex-1 min-h-0 overflow-y-auto px-6 py-5"
       >
-        {isLoading ? (
+        {searching ? (
+          <ChatSearch
+            conversationId={conversationId}
+            ownUserId={ownUserId}
+            peerName={conversation.peer.displayName}
+            query={searchQuery}
+          />
+        ) : isLoading ? (
           <ThreadSkeleton />
         ) : isError ? (
           <ErrorState onRetry={refetch} />
@@ -362,7 +422,7 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
         )}
       </div>
 
-      {archived ? (
+      {searching ? null : archived ? (
         <ArchivedComposerNotice />
       ) : (
         <ChatComposer
@@ -370,6 +430,8 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
             sendMutation.mutate({ body, image, clientMessageId: newClientMessageId() })
           }
           onError={(message) => show(message, "error")}
+          onTyping={reportTyping}
+          peerTyping={{ active: peerTyping, name: conversation.peer.displayName }}
         />
       )}
 

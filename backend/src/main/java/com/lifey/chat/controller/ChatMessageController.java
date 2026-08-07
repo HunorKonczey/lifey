@@ -48,6 +48,21 @@ public class ChatMessageController {
         return chatService.listMessages(conversationId, before, after, limit);
     }
 
+    @Operation(summary = "Search messages in a conversation",
+            description = "Case- and accent-insensitive substring match on the message text, "
+                    + "newest hit first, keyset-paged by `before` exactly like the thread itself. "
+                    + "Tombstoned messages never match — their text is gone. Wildcards in `q` are "
+                    + "matched literally, and a term shorter than lifey.chat.search-min-length "
+                    + "answers with an empty page rather than an error, because clients search as "
+                    + "you type.")
+    @GetMapping("/conversations/{conversationId}/messages/search")
+    public MessageListResponse search(@PathVariable Long conversationId,
+                                      @RequestParam("q") String query,
+                                      @RequestParam(required = false) Long before,
+                                      @RequestParam(required = false) Integer limit) {
+        return chatService.searchMessages(conversationId, query, before, limit);
+    }
+
     @Operation(summary = "Send a message",
             description = "Idempotent on clientMessageId: 201 for a new message, 200 with the stored "
                     + "one when the same id is replayed — which is what makes the mobile outbox's "

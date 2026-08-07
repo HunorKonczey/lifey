@@ -3,6 +3,7 @@ import {
   MAX_MESSAGE_LENGTH,
   applyDeletion,
   hasImage,
+  highlightSegments,
   buildThreadItems,
   filterConversations,
   hasMixedPeerRoles,
@@ -79,6 +80,41 @@ describe("trimMessageForSend / isMessageSendable", () => {
   it("accepts a body at the cap and rejects one over it", () => {
     expect(isMessageSendable("a".repeat(MAX_MESSAGE_LENGTH))).toBe(true);
     expect(isMessageSendable("a".repeat(MAX_MESSAGE_LENGTH + 1))).toBe(false);
+  });
+});
+
+describe("highlightSegments", () => {
+  const shown = (segments: { text: string; match: boolean }[]) =>
+    segments.map((s) => (s.match ? `[${s.text}]` : s.text)).join("");
+
+  it("marks the hit and leaves the rest alone", () => {
+    expect(shown(highlightSegments("Holnap lábnap lesz", "lábnap"))).toBe("Holnap [lábnap] lesz");
+  });
+
+  it("matches without accents or case, but highlights the original text", () => {
+    // The server searches through `unaccent`, so a hit can look nothing like
+    // the term — highlighting nothing in a returned result reads as a bug.
+    expect(shown(highlightSegments("Holnap Lábnap lesz", "labnap"))).toBe("Holnap [Lábnap] lesz");
+  });
+
+  it("marks every occurrence, not just the first", () => {
+    expect(shown(highlightSegments("szett, szett, szett", "szett"))).toBe("[szett], [szett], [szett]");
+  });
+
+  it("keeps the original string intact across accented matches", () => {
+    // The folded form of "ő" is longer than the original: an index mapped from
+    // the folded string would slice in the wrong place without the map.
+    const segments = highlightSegments("Erősítő nap", "erosito");
+    expect(segments.map((s) => s.text).join("")).toBe("Erősítő nap");
+    expect(shown(segments)).toBe("[Erősítő] nap");
+  });
+
+  it("returns the text untouched for an empty term", () => {
+    expect(highlightSegments("bármi", "  ")).toEqual([{ text: "bármi", match: false }]);
+  });
+
+  it("returns the text untouched when nothing matches", () => {
+    expect(highlightSegments("bármi", "zzz")).toEqual([{ text: "bármi", match: false }]);
   });
 });
 

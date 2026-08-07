@@ -210,6 +210,19 @@ lifey:
     # once and read many times.
     attachment-max-side: ${CHAT_ATTACHMENT_MAX_SIDE:1600}
     attachment-thumbnail-size: ${CHAT_ATTACHMENT_THUMBNAIL_SIZE:400}
+    # Typing indicator (§19). The clients throttle at 3s; this is the server's
+    # own guard, because a keystroke-driven endpoint is the easiest one in the
+    # API to hammer and every accepted call writes to someone else's socket.
+    typing-throttle: ${CHAT_TYPING_THROTTLE:2s}
+    # How long a received "is typing" stays on screen. Not enforced anywhere on
+    # the server — nothing about typing is stored — it is the shared number the
+    # clients hide the indicator after.
+    typing-ttl: ${CHAT_TYPING_TTL:5s}
+    # In-thread search (§20). Shorter terms answer with an empty page rather
+    # than an error — the clients search as you type, so a single character is
+    # a normal request, not a mistake. One character would also match most of
+    # a thread, which is a scan for no useful answer.
+    search-min-length: ${CHAT_SEARCH_MIN_LENGTH:2}
   jobs:
     password-reset-cleanup:
       # Daily sweep removing expired/used password reset tokens (PasswordResetTokenCleanupJob).

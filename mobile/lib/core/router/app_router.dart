@@ -8,6 +8,7 @@ import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/chat/presentation/chat_search_screen.dart';
 import '../../features/chat/presentation/chat_thread_screen.dart';
 import '../../features/chat/presentation/conversation_list_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
@@ -93,6 +94,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/chat/:conversationId',
         builder: (context, state) => ChatThreadScreen(
+          conversationId: int.parse(state.pathParameters['conversationId']!),
+        ),
+      ),
+      // Its own route rather than a mode on the thread: results read
+      // oldest-last down the page, the thread reads newest-last up it, and one
+      // scroll view cannot be both (§20.4/3).
+      GoRoute(
+        path: '/chat/:conversationId/search',
+        builder: (context, state) => ChatSearchScreen(
           conversationId: int.parse(state.pathParameters['conversationId']!),
         ),
       ),

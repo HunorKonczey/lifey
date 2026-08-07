@@ -25,6 +25,18 @@ void main() {
       expect(parseChatStreamFrame('event: read\ndata: {"conversationId":12}')!.id, isNull);
     });
 
+    test('a typing frame carries no id, so it cannot move the cursor', () {
+      final frame = parseChatStreamFrame(
+        'event: typing\ndata: {"conversationId":12,"userId":88}',
+      )!;
+
+      expect(frame.name, 'typing');
+      // A typing hint is not a message; setting Last-Event-ID from one would
+      // point the reconnect cursor at nothing.
+      expect(frame.id, isNull);
+      expect(frame.data['conversationId'], 12);
+    });
+
     test('ignores heartbeat comments', () {
       expect(parseChatStreamFrame(': ping'), isNull);
     });

@@ -15,6 +15,7 @@ import '../../../shared/widgets/empty_view.dart';
 import '../application/chat_thread_controller.dart';
 import '../data/chat_repository.dart';
 import '../application/chat_stream_controller.dart';
+import '../application/chat_typing_controller.dart';
 import '../domain/chat_conversation.dart';
 import '../domain/chat_message.dart';
 import 'widgets/chat_avatar.dart';
@@ -195,6 +196,11 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
         // (§5.1) but never reported back, and a fabricated "online" would be
         // a lie the design explicitly rules out.
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: l10n.chatSearchInThread,
+            onPressed: () => context.push('/chat/${widget.conversationId}/search'),
+          ),
           if (conversation != null)
             IconButton(
               icon: Icon(
@@ -231,7 +237,16 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
             top: false,
             child: conversation?.isArchived ?? false
                 ? const ArchivedComposerNotice()
-                : ChatComposer(onSend: _send),
+                : ChatComposer(
+                    onSend: _send,
+                    onTyping: () => ref
+                        .read(chatTypingReporterProvider)
+                        .report(widget.conversationId),
+                    peerTypingName: ref.watch(chatTypingControllerProvider)
+                            .contains(widget.conversationId)
+                        ? conversation?.peer.displayName
+                        : null,
+                  ),
           ),
         ],
       ),

@@ -2078,6 +2078,25 @@
           "response": []
         },
         {
+          "name": "Search messages in the thread",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages/search?q=labnap",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages", "search"],
+              "query": [
+                { "key": "q", "value": "labnap", "description": "Case- and accent-insensitive: this finds \"Lábnap\"" },
+                { "key": "before", "value": "", "description": "Keyset cursor — the id of the oldest hit you already have", "disabled": true },
+                { "key": "limit", "value": "30", "disabled": true }
+              ]
+            },
+            "description": "Substring search inside one thread, newest hit first, keyset-paged by `before` exactly like the thread itself — so \"more results\" is the same mechanic as \"more history\". Accent-insensitive via Postgres' `unaccent` (V48), which is why `labnap` finds `Lábnap`.\n\nTombstoned messages never match: their text is genuinely gone. Wildcards in `q` are matched literally, so searching for `50%` finds a percent sign rather than everything. A term shorter than `lifey.chat.search-min-length` answers with an empty page rather than an error, because the clients search as you type. 404 for a thread the caller is not in."
+          },
+          "response": []
+        },
+        {
           "name": "Mark as read",
           "request": {
             "method": "POST",
@@ -2095,6 +2114,17 @@
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/v1/chat/messages/{{chatMessageId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "messages", "{{chatMessageId}}"] },
             "description": "Tombstone, not a hard delete: the row stays (so the other side keeps the context of their replies) but the text is cleared — the message comes back with `body: null` and `deletedAt` set, and clients render their own localized placeholder. 404 for anyone else's message. Returns 204."
+          },
+          "response": []
+        },
+        {
+          "name": "Typing",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"conversationId\": {{conversationId}}\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/chat/typing", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "typing"] },
+            "description": "Sends the *other* participant a `typing` frame on their open stream, and nobody else — not even the caller's own second device. Returns 204 whether or not anything was delivered: it is dropped when the peer has no live stream, when the thread is archived, and when it arrives inside `lifey.chat.typing-throttle` of the previous one. Nothing is stored and it never produces a push; the indicator expires on the receiving client after `lifey.chat.typing-ttl`. 404 for a thread the caller is not in.\n\nTo see it: open *Subscribe to the caller's chat events* as the peer (or run the app), then fire this."
           },
           "response": []
         }

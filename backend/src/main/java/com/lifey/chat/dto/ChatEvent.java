@@ -12,7 +12,7 @@ package com.lifey.chat.dto;
  * space would have made the gap-fill query ambiguous.
  *
  * @param name event name as it appears in {@code event:} — see {@link #MESSAGE},
- *             {@link #READ}, {@link #DELETED}, {@link #RESYNC}
+ *             {@link #READ}, {@link #DELETED}, {@link #TYPING}, {@link #RESYNC}
  * @param id   value for {@code id:}, or null to leave the client's cursor alone
  * @param data serialized to JSON into {@code data:}
  */
@@ -22,6 +22,8 @@ public record ChatEvent(String name, Long id, Object data) {
     public static final String READ = "read";
     /** A message was tombstoned — the row stays, the text is gone. */
     public static final String DELETED = "deleted";
+    /** The peer is writing. Expires on the client; nothing is stored. */
+    public static final String TYPING = "typing";
     /** "I cannot replay what you missed — reload from REST." */
     public static final String RESYNC = "resync";
 
@@ -40,6 +42,15 @@ public record ChatEvent(String name, Long id, Object data) {
      */
     public static ChatEvent deleted(MessageDeletedEventPayload payload) {
         return new ChatEvent(DELETED, null, payload);
+    }
+
+    /**
+     * No {@code id:}, for a stronger reason than the other frames: a typing
+     * hint is not a message at all, so it must never be able to move a cursor
+     * that means "the newest message I have".
+     */
+    public static ChatEvent typing(TypingEventPayload payload) {
+        return new ChatEvent(TYPING, null, payload);
     }
 
     public static ChatEvent resync() {

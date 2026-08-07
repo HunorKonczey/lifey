@@ -40,6 +40,23 @@ export const chatApi = {
     );
   },
 
+  /**
+   * Case- and accent-insensitive substring search inside one thread, newest
+   * hit first and keyset-paged by `before` just like the thread itself.
+   */
+  searchMessages: (
+    conversationId: number,
+    query: string,
+    params: { before?: number; limit?: number } = {},
+  ) => {
+    const search = new URLSearchParams({ q: query });
+    if (params.before != null) search.set("before", String(params.before));
+    if (params.limit != null) search.set("limit", String(params.limit));
+    return api.get<MessageListResponse>(
+      `/chat/conversations/${conversationId}/messages/search?${search.toString()}`,
+    );
+  },
+
   /** Idempotent on clientMessageId: replaying the same id returns the stored message. */
   send: (conversationId: number, body: SendMessageRequest) =>
     api.post<MessageResponse>(`/chat/conversations/${conversationId}/messages`, body),
@@ -77,6 +94,9 @@ export const chatApi = {
   /** "I'm looking at this thread" — null when leaving it or hiding the tab (§5.1). */
   presence: (activeConversationId: number | null) =>
     api.post<void>("/chat/presence", { activeConversationId }),
+
+  /** "I'm writing here." Fire and forget; throttled on both sides (§19). */
+  typing: (conversationId: number) => api.post<void>("/chat/typing", { conversationId }),
 
   /** Silences this thread's pushes until the given instant; null unmutes (§I5). */
   mute: (conversationId: number, mutedUntil: string | null) =>

@@ -185,6 +185,42 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public MessageListResponse searchMessages(Long conversationId, String query, Long before, Integer limit) {
+        Long callerId = currentUserProvider.getUserId();
+        requireParticipation(conversationId, callerId);
+
+        String term = query == null ? "" : query.trim();
+        if (term.length() < properties.searchMinLength()) {
+            // Not an error: the clients search as you type, so they legitimately
+            // ask with one character while the user is still typing.
+            return new MessageListResponse(List.of(), false);
+        }
+
+        int size = pageSize(limit);
+        List<ChatMessage> rows = messageRepository.searchInConversation(
+                conversationId, containsPattern(term), before, PageRequest.of(0, size + 1));
+
+        boolean hasMore = rows.size() > size;
+        List<ChatMessage> pageRows = hasMore ? rows.subList(0, size) : rows;
+        return new MessageListResponse(pageRows.stream().map(ChatMapper::toMessageResponse).toList(), hasMore);
+    }
+
+    /**
+     * Turns a search term into a LIKE pattern, escaping the wildcards so the
+     * text is matched literally — someone looking for "50%" is looking for a
+     * percent sign, not for everything. Paired with {@code escape '!'} in the
+     * query, so {@code !} itself has to be escaped first.
+     */
+    private static String containsPattern(String term) {
+        String escaped = term
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
+        return "%" + escaped + "%";
+    }
+
+    @Override
     public SendMessageResult sendMessage(Long conversationId, SendMessageRequest request) {
         return store(conversationId, request.body(), request.clientMessageId(), null);
     }

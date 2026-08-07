@@ -22,13 +22,15 @@
 > **[§14 (I3)](#14-megvalósítási-napló--i3-edzői-web)**, a
 > **[§15 (I4)](#15-megvalósítási-napló--i4-realtime-sse--jelenlét--pipák)** és a
 > **[§16 (I5)](#16-megvalósítási-napló--i5-értesítés-finomhangolás)** rögzíti.
-> Az **I6-ból az üzenet-törlés** (**[§17](#17-megvalósítási-napló--i61-üzenet-törlése)**)
-> és a **kép-csatolmány** (**[§18](#18-megvalósítási-napló--i62-kép-csatolmány)**) kész.
+> **Az I6 mind a négy tétele kész**: üzenet-törlés
+> (**[§17](#17-megvalósítási-napló--i61-üzenet-törlése)**), kép-csatolmány
+> (**[§18](#18-megvalósítási-napló--i62-kép-csatolmány)**), gépelés-jelző
+> (**[§19](#19-megvalósítási-napló--i63-gépelés-jelző)**) és keresés a szálban
+> (**[§20](#20-megvalósítási-napló--i64-keresés-a-szálban)**).
 > A törlésnél a leszállított munka valójában a törlés **átvitele a másik félhez**
 > (`deleted` SSE frame) volt, mert a felület már az I2/I3-ban elkészült.
-> **Hátra az I6 másik két tétele (gépelés-jelző, keresés a szálban)
-> és az I7 (üzemeltetés és mérés) van — belépőpontjuk a §12–§18, illetve a
-> [§10](#10-design) design-forrásai**
+> **Hátra egyedül az I7 (üzemeltetés és mérés) van — belépőpontja a §12–§20,
+> illetve a [§10](#10-design) design-forrásai**
 > ([42-chat-design-prompt.md](42-chat-design-prompt.md) és
 > [design/Lifey Chat.dc.html](design/Lifey%20Chat.dc.html)) — minden UI-munka azokból
 > dolgozik.
@@ -798,19 +800,19 @@ csendes órában néma.
 
 ---
 
-### I6 – Kiterjesztések (opcionális, igény szerint) · ~3 nap · ◐ RÉSZBEN KÉSZ
+### I6 – Kiterjesztések (opcionális, igény szerint) · ~3 nap · ✅ KÉSZ
 
-> **Állapot:** a négy tételből az **üzenet törlése** (§17) és a **kép-csatolmány**
-> (§18) kész. A maradék kettő nem indult el — az I6 tételei egymástól függetlenek,
-> tehát bármelyik önállóan felvehető később.
+> **Állapot:** mind a négy tétel megvan — **üzenet törlése** (§17),
+> **kép-csatolmány** (§18), **gépelés-jelző** (§19), **keresés a szálban** (§20).
+> A tételek egymástól függetlenül készültek, ahogy a terv szánta őket.
 
 - ~~**Kép-csatolmány**: a meglévő kép-pipeline (`common/image`, `Thumbnailator`,
   profilkép/recept minta) újrahasznosítása; `chat_messages.attachment_url` + `type`
   oszlop, kliensoldali feltöltés-progressz.~~ ✅ **kész — §18**
-- **Gépelés-jelző**: `POST /chat/typing` (throttle 3 mp) → `typing` SSE esemény, 5 mp TTL.
-  Sose vált ki pusht.
+- ~~**Gépelés-jelző**: `POST /chat/typing` (throttle 3 mp) → `typing` SSE esemény, 5 mp TTL.
+  Sose vált ki pusht.~~ ✅ **kész — §19**
 - ~~**Üzenet törlése** UI-ból (a backend már tudja I1 óta).~~ ✅ **kész — §17**
-- **Keresés a szálban** (`ILIKE` + trigram index, ha kell).
+- ~~**Keresés a szálban** (`ILIKE` + trigram index, ha kell).~~ ✅ **kész — §20**
 
 ### I7 – Üzemeltetés és mérés · ~1 nap
 
@@ -1249,8 +1251,8 @@ enélkül ez a mérés csak kézzel, `jcmd`-vel megismételhető.
 
 ## 16. Megvalósítási napló — I5 (értesítés-finomhangolás)
 
-> **Ezzel a chat funkcionálisan kész.** Hátra az I6 (opcionális kiterjesztések — az
-> üzenet-törlés azóta elkészült, lásd §17) és az I7 (üzemeltetés és mérés) van.
+> **Ezzel a chat funkcionálisan kész.** Az I6 (opcionális kiterjesztések) azóta
+> teljesen elkészült — §17–§20 —, hátra az I7 (üzemeltetés és mérés) van.
 
 ### 16.1 Mi készült el
 
@@ -1523,3 +1525,193 @@ objektumtárral is.
 5. **A felirat nélküli kép teljes értékű üzenet.** A `body` nullázható, ha van
    csatolmány (a DB check ezt kényszeríti ki), és minden felület (buborék, lista-
    előnézet, push, képernyőolvasó) külön ágon kezeli az „üres törzs" esetet.
+
+---
+
+## 19. Megvalósítási napló — I6/3 (gépelés-jelző)
+
+> **Az I6 utolsó tétele** (keresés a szálban) **innen indul.** A `typing` az első
+> frame, aminek nincs REST-megfelelője; a §19.4/1 mondja meg, miért szabad, és mire
+> nem hivatkozhat egy következő.
+
+### 19.1 Mi készült el
+
+**Backend**
+
+| Elem | Fájlok |
+|---|---|
+| Végpont | `POST /chat/typing` a `ChatStreamController`-ben (a `/presence` mellett), `dto/TypingRequest` |
+| Frame | `ChatEvent.TYPING` + `ChatEvent.typing(...)`, `dto/TypingEventPayload` (`conversationId`, `userId`) |
+| Logika | `ChatStreamService.typing(...)` / `Impl`: résztvevőség-guard → archív-ág → throttle → szórás **csak a peer felé** |
+| Fék | `service/ChatTypingThrottle` (memóriában, `merge()`-dzsel, hogy két párhuzamos leütésből is egy menjen át) |
+| Konfig | `ChatProperties.typingThrottle` (2 mp) és `typingTtl` (5 mp) + `application.yml` |
+
+**Mobil**
+
+| Elem | Hol |
+|---|---|
+| Küldés | `ChatRepository.sendTypingSignal`, `ApiEndpoints.chatTyping` |
+| Állapot | `application/chat_typing_controller.dart`: `ChatTypingController` (szálanként egy lejárati timer) + `ChatTypingReporter` (3 mp-es throttle, szálváltásra nullázódik) |
+| Bekötés | `ChatStreamController` `typing` ága egy `onPeerTyping` visszahíváson át — semmit nem ír a DB-be |
+| UI | `chat_composer.dart`: `_TypingBand` (fix magasságú sáv) + `_TypingDots` (egy controller, dotonként eltolt fázissal) |
+
+**Web**
+
+| Elem | Hol |
+|---|---|
+| Küldés | `chatApi.typing`, `useReportTyping` (3 mp throttle, szálváltásra nullázódik) |
+| Állapot | `hooks.ts`: `markPeerTyping` (a TTL-timer itt él) + `usePeerTyping`, `queryKeys.chat.typing` |
+| UI | `ChatComposer` `TypingBand`-je + `@keyframes chat-typing-dot` a `globals.css`-ben |
+
+Tesztek: backend **751** zöld (+7: a peer megkapja és a saját eszközök nem, archív
+szálban elnyelve, idegen szálra 404, a throttle első/ismételt jelzése, szálankénti és
+useronkénti ablak, nulla ablak = kikapcsolt fék, párhuzamos leütésekből pontosan egy
+megy át), web **152** zöld (+1: `typing` frame-parse), mobil **605** zöld (+7: TTL
+lejárat, a második frame kitolja a lejáratot, szálankénti jelölés, üres kiindulás,
+throttle-ablak, szálváltás, frame-parse).
+
+> ⚠️ Változatlanul igaz a §18.1 figyelmeztetése: **a Testcontainers-osztályok ebben a
+> környezetben nem futnak** (a Docker démon nem indít konténert), ezért a
+> `ChatFlowIntegrationTest` és nyolc társa ki van hagyva.
+
+### 19.2 Eltérések a tervtől — ezekkel kell dolgozni
+
+| Terv | Valóság | Miért |
+|---|---|---|
+| „throttle 3 mp" (kliens) | **kliensen 3 mp, szerveren további 2 mp** | egy leütés-vezérelt végpont a legkönnyebben hajtható az egész API-ban, és minden átengedett hívás egy frame valaki más socketjén. A `ChatRateLimiter` nem jó rá: az a küldési keretet fogyasztaná, amit a user valódi üzenetekre akar költeni |
+| — | a frame **csak a peernek** megy, a küldő saját eszközeinek nem | a `message` és a `deleted` szándékosan megy a saját eszközökre is (ott van mit mutatni); a „te gépelsz" a saját második telefonodon zaj arról, amit épp csinálsz |
+| — | **archív szálban elnyelve** | oda nem lehet írni, tehát senki nem gépel benne — és a `409`-et adó küldés mellett egy élő gépelés-jelző hazugság lenne |
+| — | a jelző **fix magasságú sávban** ül, mindig a fában | a design D3 kifejezetten ezt írja („Fix magasságú sáv"), és van rá szerkezeti ok is: a szál alulra horgonyzott (mobilon `reverse: true` lista), tehát egy csak-gépeléskor létező sáv az egész beszélgetést fel-le lökné, ahányszor a másik fél elkezd és abbahagy |
+| — | a TTL **a kliensek dolga**, a szerver nem tart nyilván semmit | a lejárat pontosan az, ami miatt ez az állapot elveszthető: nincs mit szinkronizálni, nincs mit visszakérdezni |
+| — | a payload **nem hordoz nevet** | az egyetlen felület, ami kirajzolja, egy már nyitott szál, ami tudja, ki a peer |
+| — | weben a TanStack Query cache a **csatorna** (`queryKeys.chat.typing`) | a stream az admin shellben él, a szál máshol; a cache az egyetlen meglévő út közöttük, és a `message`/`read` frame is ezen jut el a komponensekig (§14.4/1) |
+
+### 19.3 Amit az I6/3 tudatosan nem szállít
+
+Gépelés-jelző a **beszélgetés-listában** (csak a nyitott szálban látszik), „utoljára
+aktív" idő, olvasás-jelző a composerben, és bármi, ami a **háttérben** futna: a mobil
+stream előtér-kötött (§15.4/5), tehát háttérben nem érkezik és nem is megy `typing`.
+Ez szándékos — az ellenkezője pont azt a szerződést bontaná meg, amitől a push
+kézbesítési csatorna lesz.
+
+Hátra az I6-ból a **keresés a szálban**.
+
+### 19.4 Architektúra-döntések, amik kötik a következő lépéseket
+
+1. **Ez az egyetlen frame, aminek nincs REST-megfelelője — és marad is az egyetlen.**
+   A §15.4/1 szabálya („ne legyen olyan állapot, ami *csak* a streamen létezik") itt
+   azért nem sérül, mert a gépelés **nem állapot**: lejár magától, elveszni sem tud
+   értelmesen (egy elmaradt frame = nem jelenik meg a jelző = ugyanaz, mintha nem
+   gépelne), és nincs mit egyeztetni újracsatlakozáskor. Bármi, aminek egy elveszett
+   frame *következménye* van — üzenet, kurzor, törlés —, továbbra is köteles REST-ből
+   is előállítható lenni.
+2. **A gépelés soha nem értesít.** Nem megy át a `ChatNotificationServiceImpl`
+   létráján, nem mozdít kurzort, nem számít olvasatlanba, nem ír adatbázist. Egy
+   `typing` a szerveren nulla írás.
+3. **A leütés-vezérelt végpontnak szerveroldali féke is van.** A kliens-throttle
+   udvariasság, nem védelem. Aki új, felhasználói interakcióra kötött végpontot ír
+   (reakció, „lát engem" jelzés), tegye ugyanezt: a fék a szerveren van, a kliensé
+   ráadás.
+4. **A TTL rövidebb az újraküldési ablaknál** (5 mp vs. 3 mp), és ez a sorrend
+   szándékos: egy folyamatosan gépelő ember jelzője megújul, mielőtt lejárna, tehát
+   nem villog mondat közben. Aki ezeket hangolja, tartsa meg a relációt.
+
+---
+
+## 20. Megvalósítási napló — I6/4 (keresés a szálban)
+
+> **Ezzel az I6 teljes**, és a chat funkcionálisan is, kiterjesztéseivel együtt is
+> kész. Hátra az **I7 (üzemeltetés és mérés)** van — belépőpontja a §12–§20.
+
+### 20.1 Mi készült el
+
+**Backend**
+
+| Elem | Fájlok |
+|---|---|
+| Végpont | `GET /chat/conversations/{id}/messages/search?q=&before=&limit=` a `ChatMessageController`-ben, `MessageListResponse` válasszal |
+| Lekérdezés | `ChatMessageRepository.searchInConversation` — `unaccent(lower(...)) like ... escape '!'`, tombstone-ok kizárva, `id desc` |
+| Szolgáltatás | `ChatServiceImpl.searchMessages` (résztvevőség-guard, trim, minimum hossz, wildcard-escape, keyset + „van még" próbasor) |
+| Konfig | `ChatProperties.searchMinLength` (2) + `application.yml` |
+
+**Mobil**
+
+| Elem | Hol |
+|---|---|
+| Adat | `ChatRepository.searchMessages` — **nem ír a lokális DB-be**, `ApiEndpoints.chatMessageSearch` |
+| Állapot | `application/chat_search_controller.dart`: 300 ms debounce, generációszám a versenyző válaszok ellen, `failed` külön az „üres találat"-tól |
+| Kiemelés | `domain/message_highlight.dart`: `foldForSearch` (1:1 karakter-leképezés) + `highlightSegments` |
+| Képernyő | `presentation/chat_search_screen.dart` + `/chat/:conversationId/search` útvonal, belépő a szál app barjának nagyító ikonja |
+
+**Web**
+
+| Elem | Hol |
+|---|---|
+| Adat | `chatApi.searchMessages`, `queryKeys.chat.search` |
+| Kiemelés | `thread.ts`: `highlightSegments` (NFD + diakritika-eltávolítás, index-térképpel) |
+| UI | `components/ChatSearch.tsx` (debounce, üres/hiba/találat állapotok), a `ChatThread` fejléce keresőmezőre vált, a folyam helyére a találatok kerülnek |
+
+Tesztek: backend **757** zöld (+6: keyset és „van még", wildcard-escape, trim,
+rövid/üres term = üres oldal, idegen szálra 404) — plusz **5 integrációs teszt**, ami az
+ékezet-érzéketlenséget, a tombstone-kizárást, a wildcard-escape-et és a lapozást
+valódi Postgres ellen fogja; web **158** zöld (+6), mobil **616** zöld (+11: kilenc
+kiemelés-eset és két repository-eset).
+
+> ⚠️ **Az öt integrációs teszt nem futott le.** Ugyanaz a környezeti korlát, mint a
+> §18.1-ben: a Docker démon itt nem indít konténert, ezért a `ChatFlowIntegrationTest`
+> (és nyolc társa) ki van hagyva. **Ez itt jobban fáj, mint eddig**: az ékezet-kezelés
+> és a wildcard-escape SQL-ben él, amit mock nem tud igazolni — a hozzájuk tartozó
+> tesztek meg vannak írva, de futtatásuk a következő működő Docker melletti build
+> feladata.
+
+### 20.2 Eltérések a tervtől — ezekkel kell dolgozni
+
+| Terv | Valóság | Miért |
+|---|---|---|
+| „`ILIKE` + **trigram index**, ha kell" | **nincs index** | a keresés mindig egy szálra szűkül (`idx_chat_msg_conv`), és egy szál reálisan pár ezer sor — azon a szekvenciális szűrés ingyen van. Egy GIN trigram index *minden* chat-üzenet szövegén viszont írási költség lenne minden küldésnél, mérhető olvasási nyereség nélkül. A terv „ha kell"-je pontosan ezt a döntést hagyta nyitva, és a válasz most: nem kell |
+| `ILIKE` | **`unaccent(lower(...)) LIKE ... ESCAPE '!'`** | magyarul egy ékezet-érzékeny keresés használhatatlan („labnap" nem találná meg a „Lábnap"-ot). A `FoodRepository` már pontosan így csinálja a V48-as `unaccent` kiterjesztéssel — a chat nem vezet be új mintát. Az `escape` pedig azért kell, mert a beírt szöveg **keresőkifejezés, nem minta**: „50%" a százalékjelet keresi, nem mindent |
+| — | rövid vagy üres term = **üres oldal, nem 400** | a kliensek gépelés közben keresnek; az első leütésre adott hibaválasz minden normál használatot hibafolyammá tenne |
+| — | a találatok **nem kattinthatók** | lásd §20.3 |
+| — | mobilon **külön képernyő** (`/chat/:id/search`), weben **a fejléc kereső-módja** | mindkettőn ugyanaz az ok, más csomagolással: a szál fordított, alulra horgonyzott keyset-ablak, a találatok pedig szórtak és fentről lefelé olvasandók. Weben a két hasáb miatt a fejléc-váltás elég; mobilon egy képernyőn két, egymásnak ellentmondó lista-modell lakna |
+| — | a kiemelés **kliensenként más implementáció** (Dart tábla vs. JS NFD) | a Dartban nincs beépített Unicode-normalizálás, és egy csomagot behozni ezért az egy függvényért nem indokolt (`CLAUDE.md`). A magyar ábécére a két megoldás egyezik; a különbség egzotikus írásjeleknél lenne látható |
+
+### 20.3 Amit az I6/4 tudatosan nem szállít
+
+**Ugrás a találatról a szálba.** Ez a hiányzó darab, és szándékosan az: a szál egy
+*folytonos* keyset-ablak (mobilon a Drift táblában, weben a query cache-ben), amit a
+kliens a legfrissebbtől visszafelé lapoz. Egy régi találat megnyitásához vagy
+végig kellene lapozni odáig (sok körbejárás), vagy be kellene tölteni egy szigetet a
+találat köré — és egy lyukas ablakot a szál **szomszédosként** rajzol ki: rossz
+nap-elválasztók, rossz feladó-csoportosítás, vagyis csendben hazudik a beszélgetésről.
+Ez a helyes megoldás egy „hézag-tudatos" lista-modell, ami nagyobb változtatás, mint
+maga a keresés volt.
+
+Amit helyette kap a felhasználó: a találat **teljes szövegét**, a feladót, a pontos
+időpontot és a kiemelt egyezést — a „mit írt erről?" kérdésre ez a válasz. A seam az
+ugráshoz megvan: a szerver `before=<id>` kurzora már most tud a találat köré lapozni;
+a kliensoldali lista-modell az, ami hiányzik hozzá.
+
+Nem szállít továbbá: keresés **több szálon át** (a végpont szálra szűkített),
+találatok lapozása („több eredmény" gomb — a szerver `hasMore`-t ad, a kliensek
+egyelőre az első oldalt mutatják), keresés csatolmány-fájlnévre.
+
+### 20.4 Architektúra-döntések, amik kötik a következő lépéseket
+
+1. **A keresés ugyanaz a keyset, mint a szálé.** `before` + `hasMore`, `id desc`,
+   ugyanaz a `MessageListResponse`. Aki lapozást tesz a találatokra, ne találjon ki
+   új mechanikát — a szerver oldala már kész.
+2. **Találat ≠ cache.** Sem a mobil Drift táblája, sem a web query cache-e nem kapja
+   meg a találatokat. Ez nem óvatosság, hanem a folytonossági invariáns megőrzése:
+   mindkét kliens egy összefüggő ablakként rajzolja ki, ami a tárolóban van. Bármilyen
+   jövőbeli „üzenet betöltése id szerint" előbb ezt az invariánst kell rendezze.
+3. **Egy nézet, egy lista-modell.** A keresés azért külön képernyő (mobil) illetve
+   külön mód (web), mert a szál fordított és alulra horgonyzott, a találatok pedig
+   nem. Ha később bejön egy harmadik lista (pl. csatolmány-galéria), az is a maga
+   nézetét kapja, nem egy negyedik ág ugyanabban a `ListView`-ban.
+4. **A beírt szöveg soha nem minta.** A `%` és `_` escape-elve megy be. Aki új
+   `LIKE`-alapú keresést ír bárhol a projektben, ugyanezt tegye — a `FoodRepository`
+   és a `RecipeRepository` ma **nem** teszi, és az egy meglévő, külön javítandó hiba,
+   nem követendő minta.
+5. **Az ékezet-kezelés a szerveré, a kiemelés a kliensé — és a kettőnek egyeznie
+   kell.** Ha a szerver talál valamit, amit a kliens nem tud kiemelni, az hibának
+   látszik. A `unaccent` és a kliensoldali folding együtt mozognak.

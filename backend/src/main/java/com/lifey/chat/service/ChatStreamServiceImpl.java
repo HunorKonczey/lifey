@@ -5,8 +5,12 @@ import com.lifey.chat.ChatMapper;
 import com.lifey.chat.ChatProperties;
 import com.lifey.chat.dto.ChatEvent;
 import com.lifey.chat.dto.MessageEventPayload;
+import com.lifey.chat.dto.TypingEventPayload;
+import com.lifey.chat.entity.ChatConversation;
 import com.lifey.chat.entity.ChatMessage;
+import com.lifey.chat.repository.ChatConversationRepository;
 import com.lifey.chat.repository.ChatMessageRepository;
+import com.lifey.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -22,9 +26,12 @@ import java.util.List;
 public class ChatStreamServiceImpl implements ChatStreamService {
 
     private final ChatMessageRepository messageRepository;
+    private final ChatConversationRepository conversationRepository;
     private final ChatEmitterRegistry registry;
+    private final ChatEventBus eventBus;
     private final ChatPresenceRegistry presenceRegistry;
     private final ChatReceiptService receiptService;
+    private final ChatTypingThrottle throttle;
     private final CurrentUserProvider currentUserProvider;
     private final ChatProperties properties;
 
@@ -58,6 +65,24 @@ public class ChatStreamServiceImpl implements ChatStreamService {
     @Override
     public void updatePresence(Long activeConversationId) {
         presenceRegistry.set(currentUserProvider.getUserId(), activeConversationId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void typing(Long conversationId) {
+        Long userId = currentUserProvider.getUserId();
+        // Same guard as everywhere else: someone outside the thread gets a 404,
+        // not a 403, and certainly not the ability to poke the participants.
+        ChatConversation conversation = conversationRepository.findByIdForParticipant(conversationId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found: " + conversationId));
+        // An archived thread cannot be written to, so nobody is typing in it.
+        if (conversation.getArchivedAt() != null || !throttle.allow(conversationId, userId)) {
+            return;
+        }
+        // The peer only. Echoing "you are typing" to the sender's own second
+        // device would be noise about something they are doing themselves.
+        eventBus.publish(ChatMapper.peerIdOf(conversation, userId),
+                ChatEvent.typing(new TypingEventPayload(conversationId, userId)));
     }
 
     /**

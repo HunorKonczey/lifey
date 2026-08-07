@@ -115,6 +115,68 @@ export function applyDeletion(
   );
 }
 
+/** Mirrors `lifey.chat.search-min-length`; below it the server answers empty anyway. */
+export const SEARCH_MIN_LENGTH = 2;
+
+/** Waited out before each search request, so typing a word is one query, not five. */
+export const SEARCH_DEBOUNCE_MS = 300;
+
+/**
+ * Case- and accent-folded copy of [text], plus a map from each folded index
+ * back to the index it came from.
+ *
+ * Folding per character rather than over the whole string is what makes the
+ * map possible: `"á".normalize("NFD")` is two code units, so folding in bulk
+ * would shift every index after the first accent.
+ */
+function fold(text: string): { folded: string; indexes: number[] } {
+  let folded = "";
+  const indexes: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const stripped = text[i].normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+    for (const char of stripped) {
+      folded += char;
+      indexes.push(i);
+    }
+  }
+  return { folded, indexes };
+}
+
+export interface HighlightSegment {
+  text: string;
+  match: boolean;
+}
+
+/**
+ * Splits a message into matched and unmatched runs, so a result can show
+ * *where* the hit is.
+ *
+ * Folds accents the same way the server's `unaccent` does — otherwise a search
+ * for "labnap" would return a message reading "Lábnap" and then highlight
+ * nothing in it, which reads as a bug.
+ */
+export function highlightSegments(text: string, term: string): HighlightSegment[] {
+  const needle = fold(term.trim()).folded;
+  if (needle.length === 0) return [{ text, match: false }];
+
+  const haystack = fold(text);
+  const segments: HighlightSegment[] = [];
+  let cursor = 0;
+  let at = haystack.folded.indexOf(needle);
+
+  while (at !== -1) {
+    const start = haystack.indexes[at];
+    const end = haystack.indexes[at + needle.length - 1] + 1;
+    if (start > cursor) segments.push({ text: text.slice(cursor, start), match: false });
+    segments.push({ text: text.slice(start, end), match: true });
+    cursor = end;
+    at = haystack.folded.indexOf(needle, at + needle.length);
+  }
+
+  if (cursor < text.length) segments.push({ text: text.slice(cursor), match: false });
+  return segments;
+}
+
 /** Highest stored id — the read cursor, and the `after=` anchor for gap fills. */
 export function newestMessageId(messages: ThreadMessage[]): number | null {
   let newest: number | null = null;

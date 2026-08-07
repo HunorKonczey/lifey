@@ -1,10 +1,12 @@
 package com.lifey.chat.controller;
 
 import com.lifey.chat.dto.PresenceRequest;
+import com.lifey.chat.dto.TypingRequest;
 import com.lifey.chat.service.ChatStreamService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -36,8 +38,9 @@ public class ChatStreamController {
                     + "takes part in. Frames: `message` (carries an id, so Last-Event-ID means "
                     + "\"newest message I have\"), `read` (the peer's delivered/read cursors), "
                     + "`deleted` (a message was tombstoned — the only frame about a row the client "
-                    + "already holds), and `resync` when the gap is too large to replay. The "
-                    + "connection is closed after "
+                    + "already holds), `typing` (the peer is writing — the one frame with no REST "
+                    + "counterpart, because it expires on its own), and `resync` when the gap is "
+                    + "too large to replay. The connection is closed after "
                     + "lifey.chat.stream-timeout and the client is expected to reconnect.")
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@RequestHeader(value = "Last-Event-ID", required = false) Long lastEventId,
@@ -57,5 +60,17 @@ public class ChatStreamController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void presence(@RequestBody PresenceRequest request) {
         streamService.updatePresence(request.activeConversationId());
+    }
+
+    @Operation(summary = "Report that the caller is writing in a thread",
+            description = "Sends the peer a `typing` frame, throttled server-side by "
+                    + "lifey.chat.typing-throttle on top of whatever the client does. Fire and "
+                    + "forget: it is dropped when the peer has no live stream and when the thread "
+                    + "is archived, it never produces a push, and nothing about it is stored — the "
+                    + "hint expires on the receiving client. 404 for a thread the caller is not in.")
+    @PostMapping("/typing")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void typing(@Valid @RequestBody TypingRequest request) {
+        streamService.typing(request.conversationId());
     }
 }

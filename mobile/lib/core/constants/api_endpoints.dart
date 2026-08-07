@@ -25,6 +25,8 @@ class ApiEndpoints {
   static String chatConversationWithUser(int userId) => '/chat/conversations/with-user/$userId';
   static String chatMessages(int conversationId) => '/chat/conversations/$conversationId/messages';
   static String chatConversationRead(int conversationId) => '/chat/conversations/$conversationId/read';
+  static String chatMessageSearch(int conversationId) =>
+      '/chat/conversations/$conversationId/messages/search';
   static String chatMessage(int messageId) => '/chat/messages/$messageId';
   static String chatAttachment(int messageId) => '/chat/messages/$messageId/attachment';
   static String chatAttachmentThumbnail(int messageId) =>
@@ -37,4 +39,7 @@ class ApiEndpoints {
 
   /// "I'm looking at this thread" — what decides whether a push is needed.
   static const chatPresence = '/chat/presence';
+
+  /// "I'm writing here" — fire and forget, throttled on both sides (I6).
+  static const chatTyping = '/chat/typing';
 }

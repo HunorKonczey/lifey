@@ -34,6 +34,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -52,6 +53,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -99,7 +101,7 @@ class ChatServiceImplTest {
     ChatProperties properties = new ChatProperties(true, 2000, 30, 100, 30, 600,
             Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
             Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false, Duration.ofHours(24),
-            8L * 1024 * 1024, 1600, 400);
+            8L * 1024 * 1024, 1600, 400, Duration.ofSeconds(2), Duration.ofSeconds(5), 2);
 
     ChatServiceImpl chatService;
 
@@ -203,7 +205,7 @@ class ChatServiceImplTest {
                 new ChatProperties(false, 2000, 30, 100, 30, 600,
                         Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
                         Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false,
-                        Duration.ofHours(24), 8L * 1024 * 1024, 1600, 400), eventPublisher);
+                        Duration.ofHours(24), 8L * 1024 * 1024, 1600, 400, Duration.ofSeconds(2), Duration.ofSeconds(5), 2), eventPublisher);
 
         assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Hi", "uuid-1")))
                 .isInstanceOf(ChatDisabledException.class);
@@ -304,6 +306,74 @@ class ChatServiceImplTest {
         verify(messageRepository).findLatestPage(eq(CONVERSATION_ID),
                 // page size + 1 probe row
                 eq(Pageable.ofSize(101)));
+    }
+
+    // --- search (I6) --------------------------------------------------------
+
+    @Test
+    void searchMessages_pagesLikeTheThreadDoes() {
+        when(messageRepository.searchInConversation(eq(CONVERSATION_ID), anyString(), eq(null), any()))
+                .thenReturn(List.of(message(40L, trainer, "lábnap", "uuid-1")));
+
+        MessageListResponse result = chatService.searchMessages(CONVERSATION_ID, "lábnap", null, null);
+
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.hasMore()).isFalse();
+        verify(messageRepository).searchInConversation(eq(CONVERSATION_ID), eq("%lábnap%"), eq(null),
+                // Page size + 1 probe row, the same "is there more?" trick the thread uses.
+                eq(PageRequest.of(0, 31)));
+    }
+
+    @Test
+    void searchMessages_extraRowMeansThereIsMore() {
+        List<ChatMessage> rows = IntStream.rangeClosed(1, 31)
+                .mapToObj(i -> message((long) i, trainer, "hit " + i, "uuid-" + i))
+                .toList();
+        when(messageRepository.searchInConversation(eq(CONVERSATION_ID), anyString(), any(), any()))
+                .thenReturn(rows);
+
+        MessageListResponse result = chatService.searchMessages(CONVERSATION_ID, "hit", null, null);
+
+        assertThat(result.items()).hasSize(30);
+        assertThat(result.hasMore()).isTrue();
+    }
+
+    @Test
+    void searchMessages_escapesWildcards_soAPercentSignIsLookedForLiterally() {
+        chatService.searchMessages(CONVERSATION_ID, "50% _ !", null, null);
+
+        // Unescaped, "%" would match every message in the thread.
+        verify(messageRepository).searchInConversation(eq(CONVERSATION_ID), eq("%50!% !_ !!%"), any(), any());
+    }
+
+    @Test
+    void searchMessages_tooShortOrBlankTerm_isAnEmptyPageRatherThanAnError() {
+        for (String term : new String[]{null, "", "  ", "a"}) {
+            MessageListResponse result = chatService.searchMessages(CONVERSATION_ID, term, null, null);
+
+            // The clients search as you type: the first keystroke is a normal
+            // request, not a mistake worth a 400.
+            assertThat(result.items()).isEmpty();
+            assertThat(result.hasMore()).isFalse();
+        }
+        verify(messageRepository, never()).searchInConversation(anyLong(), anyString(), any(), any());
+    }
+
+    @Test
+    void searchMessages_isTrimmed_soATrailingSpaceIsNotPartOfTheTerm() {
+        chatService.searchMessages(CONVERSATION_ID, "  lábnap  ", null, null);
+
+        verify(messageRepository).searchInConversation(eq(CONVERSATION_ID), eq("%lábnap%"), any(), any());
+    }
+
+    @Test
+    void searchMessages_inSomeoneElsesThread_isNotFound() {
+        when(conversationRepository.findByIdForParticipant(CONVERSATION_ID, TRAINER_ID))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> chatService.searchMessages(CONVERSATION_ID, "lábnap", null, null))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(messageRepository, never()).searchInConversation(anyLong(), anyString(), any(), any());
     }
 
     // --- image attachments -------------------------------------------------

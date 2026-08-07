@@ -19,6 +19,12 @@ describe("parseFrame", () => {
     expect(parseFrame('event: read\ndata: {"conversationId":12}')?.id).toBeNull();
   });
 
+  it("gives a typing frame no id either — it isn't a message at all", () => {
+    const frame = parseFrame('event: typing\ndata: {"conversationId":12,"userId":88}');
+
+    expect(frame).toEqual({ name: "typing", id: null, data: { conversationId: 12, userId: 88 } });
+  });
+
   it("ignores heartbeat comments", () => {
     expect(parseFrame(": ping")).toBeNull();
   });

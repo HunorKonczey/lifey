@@ -358,6 +358,92 @@ class ChatFlowIntegrationTest {
                 .andExpect(request().asyncStarted());
     }
 
+    // --- search (I6) --------------------------------------------------------
+    //
+    // These are the only tests that exercise the search query itself: the
+    // accent folding and the wildcard escaping live in SQL, so a mock cannot
+    // tell whether they work.
+
+    @Test
+    void searchFindsAMessageIgnoringCaseAndAccents() throws Exception {
+        long conversationId = openConversation();
+        send(conversationId, trainerToken, "Holnap Lábnap lesz", "trainer-msg-1");
+        send(conversationId, clientToken, "Rendben", "client-msg-1");
+
+        // "labnap" must find "Lábnap" — in Hungarian an accent-sensitive search
+        // is a search nobody can use.
+        mockMvc.perform(get("/api/v1/chat/conversations/" + conversationId + "/messages/search")
+                        .param("q", "labnap")
+                        .header("Authorization", "Bearer " + clientToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].body").value("Holnap Lábnap lesz"))
+                .andExpect(jsonPath("$.hasMore").value(false));
+    }
+
+    @Test
+    void searchDoesNotMatchTombstonedMessages() throws Exception {
+        long conversationId = openConversation();
+        long messageId = sendAndReadId(conversationId, trainerToken, "titok", "trainer-msg-1");
+
+        mockMvc.perform(delete("/api/v1/chat/messages/" + messageId)
+                        .header("Authorization", "Bearer " + trainerToken))
+                .andExpect(status().isNoContent());
+
+        // The text is genuinely gone, so there is nothing left to find.
+        mockMvc.perform(get("/api/v1/chat/conversations/" + conversationId + "/messages/search")
+                        .param("q", "titok")
+                        .header("Authorization", "Bearer " + trainerToken))
+                .andExpect(jsonPath("$.items.length()").value(0));
+    }
+
+    @Test
+    void searchTreatsWildcardsAsText() throws Exception {
+        long conversationId = openConversation();
+        send(conversationId, trainerToken, "Menj fel 50% terheléssel", "trainer-msg-1");
+        send(conversationId, trainerToken, "Semmi százalék itt", "trainer-msg-2");
+
+        // Unescaped, "%" would match both — and every other message too.
+        mockMvc.perform(get("/api/v1/chat/conversations/" + conversationId + "/messages/search")
+                        .param("q", "50%")
+                        .header("Authorization", "Bearer " + trainerToken))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].body").value("Menj fel 50% terheléssel"));
+    }
+
+    @Test
+    void searchIsScopedToTheThreadAndToItsParticipants() throws Exception {
+        long conversationId = openConversation();
+        send(conversationId, trainerToken, "lábnap", "trainer-msg-1");
+
+        mockMvc.perform(get("/api/v1/chat/conversations/" + conversationId + "/messages/search")
+                        .param("q", "lábnap")
+                        .header("Authorization", "Bearer " + strangerToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void searchPagesBackwardsWithTheSameCursorTheThreadUses() throws Exception {
+        long conversationId = openConversation();
+        long first = sendAndReadId(conversationId, trainerToken, "ismétlés egy", "trainer-msg-1");
+        long second = sendAndReadId(conversationId, trainerToken, "ismétlés kettő", "trainer-msg-2");
+
+        mockMvc.perform(get("/api/v1/chat/conversations/" + conversationId + "/messages/search")
+                        .param("q", "ismétlés")
+                        .param("limit", "1")
+                        .header("Authorization", "Bearer " + trainerToken))
+                .andExpect(jsonPath("$.items[0].id").value(second))
+                .andExpect(jsonPath("$.hasMore").value(true));
+
+        mockMvc.perform(get("/api/v1/chat/conversations/" + conversationId + "/messages/search")
+                        .param("q", "ismétlés")
+                        .param("before", String.valueOf(second))
+                        .header("Authorization", "Bearer " + trainerToken))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].id").value(first))
+                .andExpect(jsonPath("$.hasMore").value(false));
+    }
+
     // --- helpers -----------------------------------------------------------
 
     private long openConversation() throws Exception {

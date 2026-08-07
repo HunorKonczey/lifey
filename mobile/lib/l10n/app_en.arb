@@ -3092,6 +3092,56 @@
   "@chatImageTooLarge": {
     "description": "Shown when a picked image exceeds the server's attachment limit"
   },
+  "chatIsTyping": "{name} is typing…",
+  "@chatIsTyping": {
+    "description": "Band above the composer while the other person is writing",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatSearchInThread": "Search this conversation",
+  "@chatSearchInThread": {
+    "description": "Thread app-bar action opening the in-thread search"
+  },
+  "chatSearchPlaceholder": "Search messages…",
+  "@chatSearchPlaceholder": {
+    "description": "Hint in the in-thread search field"
+  },
+  "chatSearchClearAction": "Clear search",
+  "@chatSearchClearAction": {
+    "description": "Clears the search field"
+  },
+  "chatSearchPromptTitle": "What are you looking for?",
+  "@chatSearchPromptTitle": {
+    "description": "Idle state of the in-thread search"
+  },
+  "chatSearchNoResultsTitle": "No matches",
+  "@chatSearchNoResultsTitle": {
+    "description": "Empty state when a search returned nothing"
+  },
+  "chatSearchNoResultsBody": "Try another word — accents and letter case don't matter.",
+  "@chatSearchNoResultsBody": {
+    "description": "Body of the no-matches state"
+  },
+  "chatSearchFailed": "Couldn't run the search",
+  "@chatSearchFailed": {
+    "description": "Shown when the search request failed"
+  },
+  "chatOwnMessageSender": "You",
+  "@chatOwnMessageSender": {
+    "description": "Sender name for the current user in a search result"
+  },
+  "chatSearchPromptBody": "Type at least {min} characters.",
+  "@chatSearchPromptBody": {
+    "description": "Body of the idle in-thread search state",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
   "chatCopiedMessage": "Copied",
   "@chatCopiedMessage": {
     "description": "Confirmation shown after copying a message body"

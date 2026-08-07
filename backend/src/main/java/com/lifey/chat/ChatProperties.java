@@ -39,6 +39,15 @@ import java.time.Duration;
  * @param attachmentMaxSide   longest side of the stored image, aspect preserved
  * @param attachmentThumbnailSize longest side of the thumbnail the bubble
  *                            shows; aspect-preserving, not square-cropped
+ * @param typingThrottle      shortest gap between two typing frames for the
+ *                            same user and thread, on top of the clients' own
+ *                            throttling; zero disables the server-side guard
+ * @param searchMinLength     shortest term the in-thread search will actually
+ *                            run; below it the answer is an empty page, because
+ *                            the clients search as you type
+ * @param typingTtl           how long a received typing hint stays on screen
+ *                            without a refresh — reported to clients only as a
+ *                            shared constant, since nothing about it is stored
  */
 @ConfigurationProperties(prefix = "lifey.chat")
 public record ChatProperties(
@@ -58,6 +67,9 @@ public record ChatProperties(
         Duration emailFallbackAfter,
         long attachmentMaxBytes,
         int attachmentMaxSide,
-        int attachmentThumbnailSize
+        int attachmentThumbnailSize,
+        Duration typingThrottle,
+        Duration typingTtl,
+        int searchMinLength
 ) {
 }

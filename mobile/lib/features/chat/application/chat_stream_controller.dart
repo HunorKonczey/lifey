@@ -8,6 +8,7 @@ import '../../../core/network/dio_client.dart';
 import '../data/chat_repository.dart';
 import '../data/chat_stream_client.dart';
 import '../domain/chat_message.dart';
+import 'chat_typing_controller.dart';
 
 /// Holds the chat stream open while the app is in the foreground, and folds
 /// every frame into the local cache (docs/chat/40-trainer-chat-plan.md I4).
@@ -18,13 +19,18 @@ import '../domain/chat_message.dart';
 /// going to the background closes the stream *and* clears presence, and
 /// resuming reconnects with a `Last-Event-ID` that replays whatever was missed.
 class ChatStreamController with WidgetsBindingObserver {
-  ChatStreamController(this._repository, this._client) {
+  ChatStreamController(this._repository, this._client, {required this.onPeerTyping}) {
     WidgetsBinding.instance.addObserver(this);
     _connect();
   }
 
   final ChatRepository _repository;
   final ChatStreamClient _client;
+
+  /// Where a `typing` frame goes. A callback rather than a repository call
+  /// because typing touches no storage at all — it is the one frame with
+  /// nothing to write down (§19.4/1).
+  final void Function(int conversationId) onPeerTyping;
 
   /// Which thread is on screen, remembered so it can be re-reported after a
   /// reconnect — the server's presence entry is in memory and does not survive
@@ -73,6 +79,10 @@ class ChatStreamController with WidgetsBindingObserver {
           lastDeliveredMessageId: (frame.data['lastDeliveredMessageId'] as num?)?.toInt(),
           lastReadMessageId: (frame.data['lastReadMessageId'] as num?)?.toInt(),
         ));
+      case 'typing':
+        final conversationId = (frame.data['conversationId'] as num?)?.toInt();
+        if (conversationId == null) return;
+        onPeerTyping(conversationId);
       case 'deleted':
         final conversationId = (frame.data['conversationId'] as num?)?.toInt();
         final messageId = (frame.data['messageId'] as num?)?.toInt();
@@ -130,6 +140,8 @@ final chatStreamControllerProvider = Provider<ChatStreamController>((ref) {
   final controller = ChatStreamController(
     ref.watch(chatRepositoryProvider),
     ChatStreamClient(ref.watch(dioClientProvider), ApiEndpoints.chatStream),
+    onPeerTyping: (conversationId) =>
+        ref.read(chatTypingControllerProvider.notifier).peerTyping(conversationId),
   );
   ref.onDispose(controller.dispose);
   return controller;

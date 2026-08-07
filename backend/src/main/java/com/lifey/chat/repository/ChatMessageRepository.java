@@ -34,6 +34,35 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     List<ChatMessage> findLatestPage(@Param("conversationId") Long conversationId, Pageable pageable);
 
     /**
+     * Free-text search inside one thread (§20), keyset-paged the same way the
+     * thread itself is so "more results" is the same mechanic as "more history".
+     *
+     * <p>Accent-insensitive on top of case-insensitive via Postgres'
+     * {@code unaccent}, exactly as {@code FoodRepository} does it — in Hungarian
+     * a search for "labnap" has to find "lábnap", or the feature is a toy. The
+     * {@code function()} passthrough keeps this a JPQL query over entity paths
+     * rather than a native one.
+     *
+     * <p>{@code escape '!'} because the caller's text is a search term, not a
+     * pattern: someone looking for "50%" must not match every message. The
+     * service escapes {@code !}, {@code %} and {@code _} before binding.
+     *
+     * <p>Tombstones are excluded: their text is genuinely gone, so there is
+     * nothing to match and a hit would be a hit on nothing.
+     */
+    @Query("select m from ChatMessage m "
+            + "where m.conversation.id = :conversationId "
+            + "and m.deletedAt is null and m.body is not null "
+            + "and (:before is null or m.id < :before) "
+            + "and cast(function('unaccent', lower(m.body)) as string) "
+            + "like cast(function('unaccent', lower(:pattern)) as string) escape '!' "
+            + "order by m.id desc")
+    List<ChatMessage> searchInConversation(@Param("conversationId") Long conversationId,
+                                           @Param("pattern") String pattern,
+                                           @Param("before") Long before,
+                                           Pageable pageable);
+
+    /**
      * Everything the user missed since {@code after}, across all of their
      * threads at once — the {@code Last-Event-ID} replay when a stream
      * reconnects (§4.4). Ascending, so replayed frames arrive in the same order

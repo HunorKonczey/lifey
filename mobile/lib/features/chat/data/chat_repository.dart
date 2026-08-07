@@ -216,6 +216,27 @@ class ChatRepository {
         .go();
   }
 
+  /// Searches one thread's messages on the server (I6).
+  ///
+  /// **Deliberately not cached.** Every other read here writes into
+  /// `chat_messages`, but results are scattered across all of history, and
+  /// dropping them into a table the thread renders as one contiguous run would
+  /// make unrelated messages look adjacent — wrong day dividers, wrong
+  /// grouping. Results are a view, so they stay in memory (§20.4/2).
+  Future<List<ChatMessage>> searchMessages(
+    int conversationId,
+    String query, {
+    int? before,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiEndpoints.chatMessageSearch(conversationId),
+      queryParameters: {'q': query, 'limit': _pageSize, if (before != null) 'before': before},
+    );
+    return (response.data?['items'] as List<dynamic>? ?? [])
+        .map((json) => ChatMessage.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
   /// Tombstones one of our own sent messages: the row survives on both sides
   /// so the other person keeps the context of their replies.
   Future<void> deleteMessage(int conversationId, String clientId) async {
@@ -331,6 +352,20 @@ class ChatRepository {
       await _dio.post<void>(
         ApiEndpoints.chatPresence,
         data: {'activeConversationId': conversationId},
+      );
+    } catch (_) {
+      // See above.
+    }
+  }
+
+  /// "I'm writing in this thread" (I6). Never throws either, and for a stronger
+  /// reason than presence: a dropped hint is invisible — the peer's indicator
+  /// simply doesn't appear, which is indistinguishable from not typing.
+  Future<void> sendTypingSignal(int conversationId) async {
+    try {
+      await _dio.post<void>(
+        ApiEndpoints.chatTyping,
+        data: {'conversationId': conversationId},
       );
     } catch (_) {
       // See above.

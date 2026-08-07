@@ -25,6 +25,16 @@ public interface ChatService {
      */
     MessageListResponse listMessages(Long conversationId, Long before, Long after, Integer limit);
 
+    /**
+     * Free-text search inside one thread, newest match first, keyset-paged by
+     * {@code before} exactly like {@link #listMessages}.
+     *
+     * <p>A blank or too-short term is an empty result, not an error: the
+     * clients search as you type, and answering the first keystroke with a 400
+     * would turn normal use into a stream of failures.
+     */
+    MessageListResponse searchMessages(Long conversationId, String query, Long before, Integer limit);
+
     /** Idempotent on {@code clientMessageId}: a retry returns the stored message. */
     SendMessageResult sendMessage(Long conversationId, SendMessageRequest request);
 

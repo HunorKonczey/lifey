@@ -19,9 +19,19 @@ interface ChatComposerProps {
   disabled?: boolean;
   /** Surfaced when a picked file is rejected before any upload starts. */
   onError?: (message: string) => void;
+  /** Called on every keystroke; the hook behind it does the throttling. */
+  onTyping?: () => void;
+  /** Renders the "… is typing" band. Its space is reserved either way. */
+  peerTyping?: { active: boolean; name: string };
 }
 
-export function ChatComposer({ onSend, disabled = false, onError }: ChatComposerProps) {
+export function ChatComposer({
+  onSend,
+  disabled = false,
+  onError,
+  onTyping,
+  peerTyping,
+}: ChatComposerProps) {
   const t = useTranslations("chat");
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
@@ -73,6 +83,8 @@ export function ChatComposer({ onSend, disabled = false, onError }: ChatComposer
 
   return (
     <div className="flex flex-col px-5 pb-4 shrink-0">
+      <TypingBand active={peerTyping?.active ?? false} name={peerTyping?.name ?? ""} />
+
       {image && (
         <div className="flex items-center gap-3 mb-2.5 ml-1">
           <div
@@ -114,7 +126,10 @@ export function ChatComposer({ onSend, disabled = false, onError }: ChatComposer
           ref={textareaRef}
           rows={1}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            setValue(e.target.value);
+            onTyping?.();
+          }}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onKeyDown={(e) => {
@@ -159,6 +174,40 @@ export function ChatComposer({ onSend, disabled = false, onError }: ChatComposer
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * "{name} is typing…", three animated dots, above the input (design D3).
+ *
+ * **Fixed height, always rendered.** The design's own note: appearing must
+ * never shove the flow. Since the message list is anchored to the bottom, a
+ * band that only exists while someone types would jolt the whole thread up on
+ * every keystroke run — so the space is reserved and only the content fades.
+ */
+function TypingBand({ active, name }: { active: boolean; name: string }) {
+  const t = useTranslations("chat");
+  return (
+    <div
+      className="flex items-center gap-[7px] h-[18px] mb-1.5 ml-1 transition-opacity duration-150"
+      style={{ opacity: active ? 1 : 0 }}
+      aria-live="polite"
+      aria-hidden={!active}
+    >
+      {[0, 0.2, 0.4].map((delay) => (
+        <span
+          key={delay}
+          className="w-[5px] h-[5px] rounded-full"
+          style={{
+            background: "var(--on-surface-variant)",
+            animation: active ? `chat-typing-dot 1.2s ${delay}s infinite` : undefined,
+          }}
+        />
+      ))}
+      <span className="text-[11px] font-semibold" style={{ color: "var(--on-surface-variant)" }}>
+        {active ? t("isTyping", { name }) : ""}
+      </span>
     </div>
   );
 }

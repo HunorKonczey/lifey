@@ -103,6 +103,16 @@ export interface MessageDeletedEventPayload {
 }
 
 /**
+ * Body of an `event: typing` frame. The only frame with no REST counterpart:
+ * nothing about typing is stored, and a lost one costs nothing, because the
+ * indicator expires on its own anyway.
+ */
+export interface TypingEventPayload {
+  conversationId: number;
+  userId: number;
+}
+
+/**
  * A message as the thread renders it. The server shape plus the local send
  * state: web mirrors mobile's optimistic send (§13.4/2), so a bubble exists
  * before the POST resolves and keeps its identity through the server echo.
