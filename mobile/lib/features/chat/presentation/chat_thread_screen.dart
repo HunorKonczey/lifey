@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../../../core/network/error_message.dart';
 import '../../../core/sync/connectivity_status_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../application/chat_thread_controller.dart';
 import '../data/chat_repository.dart';
@@ -80,8 +82,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
     }
   }
 
-  Future<void> _send(String body) async {
-    await ref.read(_controllerProvider.notifier).send(body);
+  Future<void> _send(String body, File? image) async {
+    await ref.read(_controllerProvider.notifier).send(body, image: image);
     // The new bubble is at offset 0 in a reversed list.
     if (_scrollController.hasClients) {
       unawaited(_scrollController.animateTo(
@@ -137,7 +139,15 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
     }
   }
 
-  Future<void> _delete(String clientId) async {
+  /// Asks first: a tombstone reaches the other person's screen and cannot be
+  /// undone, unlike discarding a message that never left the device.
+  Future<void> _delete(String clientId, AppLocalizations l10n) async {
+    final confirmed = await showConfirmDeleteDialog(
+      context,
+      title: l10n.chatDeleteMessageQuestionTitle,
+      message: l10n.chatDeleteMessageConfirmMessage,
+    );
+    if (!confirmed || !mounted) return;
     try {
       await ref.read(_controllerProvider.notifier).delete(clientId);
     } catch (e) {
@@ -234,6 +244,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
     ChatConversation? conversation,
     int? currentUserId,
   ) {
+    final l10n = AppLocalizations.of(context)!;
+    final uploads = ref.watch(chatUploadProgressProvider).value ?? const <String, double>{};
     // Reversed so the thread sits at the bottom and the keyboard pushes it up
     // without any manual scroll maths — index 0 is the newest message.
     final ordered = messages.reversed.toList();
@@ -268,10 +280,13 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
           showTail: endsRun,
           showAvatar: endsRun,
           peerMonogram: conversation?.peer.monogram ?? '',
+          uploadProgress: uploads[message.clientId],
           onRetry: () => ref.read(_controllerProvider.notifier).retry(message.clientId),
           onDelete: () => message.isUnsent
+              // Never sent, so nobody else has it and there is nothing to
+              // confirm — dropping the row is the whole operation.
               ? ref.read(_controllerProvider.notifier).discard(message.clientId)
-              : _delete(message.clientId),
+              : _delete(message.clientId, l10n),
         );
 
         if (!startsDay) return bubble;

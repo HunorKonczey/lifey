@@ -12,6 +12,7 @@ import { useLocale } from "@/lib/hooks/useLocale";
 import { useToast } from "@/lib/hooks/useToast";
 import { ErrorState } from "@/components/status/ErrorState";
 import { EmptyState } from "@/components/status/EmptyState";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ChatAvatar } from "./ChatAvatar";
 import { ArchivedComposerNotice, ChatComposer } from "./ChatComposer";
 import { MessageBubble } from "./MessageBubble";
@@ -19,6 +20,7 @@ import { chatApi } from "../api";
 import { CHAT_POLL_INTERVAL_MS } from "../hooks";
 import {
   MESSAGE_PAGE_SIZE,
+  applyDeletion,
   buildThreadItems,
   mergeMessages,
   newClientMessageId,
@@ -33,6 +35,13 @@ import type { ConversationResponse, MessageResponse, ThreadMessage } from "../ty
 
 const DATE_LOCALES = { en: enUS, hu } as const;
 
+interface SendVariables {
+  body: string;
+  clientMessageId: string;
+  /** Null for a plain text message; the multipart route is taken only for a picture. */
+  image: File | null;
+}
+
 interface ChatThreadProps {
   conversation: ConversationResponse;
   ownUserId: number;
@@ -42,6 +51,7 @@ interface ChatThreadProps {
 
 export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps) {
   const t = useTranslations("chat");
+  const common = useTranslations("common");
   const locale = useLocale((s) => s.locale);
   const queryClient = useQueryClient();
   const { show } = useToast();
@@ -141,19 +151,27 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
   };
 
   const sendMutation = useMutation({
-    mutationFn: ({ body, clientMessageId }: { body: string; clientMessageId: string }) =>
-      chatApi.send(conversationId, { body, clientMessageId }),
-    onMutate: ({ body, clientMessageId }) => {
+    mutationFn: ({ body, clientMessageId, image }: SendVariables) =>
+      image
+        ? chatApi.sendWithAttachment(conversationId, { file: image, body, clientMessageId })
+        : chatApi.send(conversationId, { body, clientMessageId }),
+    onMutate: ({ body, clientMessageId, image }) => {
       queryClient.setQueryData<ThreadMessage[]>(messagesKey, (current) => {
         const optimistic: ThreadMessage = {
           id: null,
           conversationId,
           senderId: ownUserId,
-          body,
+          body: body || null,
           clientMessageId,
           createdAt: new Date().toISOString(),
           deletedAt: null,
+          attachment: null,
           state: "pending",
+          // The picked file shows immediately, before there is a message id to
+          // fetch a server thumbnail with; the File is kept so a retry doesn't
+          // have to ask for it again.
+          localImageUrl: image ? URL.createObjectURL(image) : undefined,
+          localFile: image ?? undefined,
         };
         const rest = (current ?? []).filter((m) => m.clientMessageId !== clientMessageId);
         return [...rest, optimistic];
@@ -178,10 +196,11 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
   const deleteMutation = useMutation({
     mutationFn: (messageId: number) => chatApi.deleteMessage(messageId),
     onSuccess: (_result, messageId) => {
+      // The stream echoes a `deleted` frame back to this tab too, but patching
+      // here keeps the bubble honest even when the stream is down — and the
+      // frame is then a no-op, because applyDeletion skips a row already gone.
       queryClient.setQueryData<ThreadMessage[]>(messagesKey, (current) =>
-        (current ?? []).map((m) =>
-          m.id === messageId ? { ...m, body: null, deletedAt: new Date().toISOString() } : m,
-        ),
+        applyDeletion(current ?? [], messageId, new Date().toISOString()),
       );
       queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations() });
     },
@@ -190,9 +209,17 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
 
   const retry = (clientMessageId: string) => {
     const message = readMessages().find((m) => m.clientMessageId === clientMessageId);
+    if (!message) return;
     // Same clientMessageId as the first attempt — the server answers a replay
-    // with the stored message instead of a duplicate (§12.4).
-    if (message?.body) sendMutation.mutate({ body: message.body, clientMessageId });
+    // with the stored message instead of a duplicate (§12.4). An image retry
+    // re-uploads from the File the optimistic row kept.
+    if (message.body || message.localFile) {
+      sendMutation.mutate({
+        body: message.body ?? "",
+        clientMessageId,
+        image: message.localFile ?? null,
+      });
+    }
   };
 
   const discard = (clientMessageId: string) => {
@@ -217,6 +244,10 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
     },
     onError: () => show(t("muteFailed"), "error"),
   });
+
+  // Deleting is one click on a hover button and cannot be undone, so it asks
+  // first — the same bar every other destructive action in the app clears.
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   const items = buildThreadItems(thread, ownUserId);
   const archived = conversation.archivedAt !== null;
@@ -323,7 +354,7 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
                   )}
                   onRetry={retry}
                   onDiscard={discard}
-                  onDelete={(id) => deleteMutation.mutate(id)}
+                  onDelete={setPendingDeleteId}
                 />
               ),
             )}
@@ -335,9 +366,25 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
         <ArchivedComposerNotice />
       ) : (
         <ChatComposer
-          onSend={(body) => sendMutation.mutate({ body, clientMessageId: newClientMessageId() })}
+          onSend={(body, image) =>
+            sendMutation.mutate({ body, image, clientMessageId: newClientMessageId() })
+          }
+          onError={(message) => show(message, "error")}
         />
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title={t("deleteMessageConfirmTitle")}
+        body={t("deleteMessageConfirmBody")}
+        confirmLabel={common("delete")}
+        confirming={deleteMutation.isPending}
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          if (pendingDeleteId !== null) deleteMutation.mutate(pendingDeleteId);
+          setPendingDeleteId(null);
+        }}
+      />
     </div>
   );
 }
@@ -445,6 +492,8 @@ function sendErrorKey(error: unknown): string {
     if (error.status === 409) return "sendFailedArchived";
     if (error.status === 429) return "sendFailedRateLimited";
     if (error.status === 503) return "sendFailedDisabled";
+    if (error.status === 413) return "imageTooLarge";
+    if (error.status === 400) return "imageInvalid";
   }
   return "sendFailed";
 }

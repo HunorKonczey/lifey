@@ -1,6 +1,7 @@
 package com.lifey.common.exception;
 
 import com.lifey.auth.exception.*;
+import com.lifey.chat.exception.AttachmentTooLargeException;
 import com.lifey.chat.exception.ChatDisabledException;
 import com.lifey.chat.exception.ChatRateLimitedException;
 import com.lifey.chat.exception.ConversationArchivedException;
@@ -198,6 +199,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ChatRateLimitedException.class)
     public ResponseEntity<ApiError> handleChatRateLimited(ChatRateLimitedException ex, HttpServletRequest request) {
         return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request, List.of(), ex);
+    }
+
+    @ExceptionHandler(AttachmentTooLargeException.class)
+    public ResponseEntity<ApiError> handleAttachmentTooLarge(AttachmentTooLargeException ex,
+                                                             HttpServletRequest request) {
+        return build(HttpStatus.CONTENT_TOO_LARGE, ex.getMessage(), request, List.of(), ex);
     }
 
     /** Kill switch, not a client error — reads keep working, only sending is refused. */

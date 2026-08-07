@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/local_db/app_database.dart';
 import 'package:lifey/features/chat/data/chat_repository.dart';
 import 'package:lifey/features/chat/domain/chat_message.dart';
+import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 
 /// Canned responses keyed by "METHOD path", with every request recorded —
 /// same fake-adapter shape as the other Dio tests here, no mocking package.
@@ -82,6 +84,7 @@ Map<String, dynamic> _messageJson({
   String? body = 'hello',
   String createdAt = '2026-08-06T09:00:00Z',
   String? deletedAt,
+  Map<String, dynamic>? attachment,
 }) {
   return {
     'id': id,
@@ -91,6 +94,7 @@ Map<String, dynamic> _messageJson({
     'clientMessageId': clientMessageId,
     'createdAt': createdAt,
     'deletedAt': deletedAt,
+    'attachment': attachment,
   };
 }
 
@@ -404,6 +408,142 @@ void main() {
     });
   });
 
+  group('image attachments', () {
+    late Directory tempDir;
+
+    setUp(() async {
+      // The repository stages picked files under the app documents directory;
+      // in a plain unit test that channel isn't there, so point it somewhere
+      // real for the duration of the test.
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      tempDir = await Directory.systemTemp.createTemp('chat_attachment_test');
+      // Answer path_provider's channel directly rather than swapping the
+      // platform interface — that would pull a transitive package into this
+      // test's imports for one directory path.
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'),
+        (call) async =>
+            call.method == 'getApplicationDocumentsDirectory' ? tempDir.path : null,
+      );
+    });
+
+    tearDown(() async {
+      TestWidgetsFlutterBinding.ensureInitialized().defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'),
+        null,
+      );
+      if (await tempDir.exists()) await tempDir.delete(recursive: true);
+    });
+
+    Future<File> pickedImage() async {
+      final file = File(p.join(tempDir.path, 'picked.jpg'));
+      await file.writeAsBytes(List<int>.filled(64, 7));
+      return file;
+    }
+
+    test('an image is uploaded as multipart, with the same idempotency key', () async {
+      await seedConversation();
+      adapter.builders['POST /chat/conversations/$_conversationId/messages'] = (options) {
+        final form = options.data as FormData;
+        final clientId = form.fields.firstWhere((f) => f.key == 'clientMessageId').value;
+        return _messageJson(
+          id: 4310,
+          clientMessageId: clientId,
+          senderId: _meId,
+          body: 'form check',
+          attachment: {'width': 1200, 'height': 800, 'byteSize': 90000},
+        );
+      };
+
+      await repo.send(_conversationId, 'form check', image: await pickedImage());
+
+      final request = requestFor('POST', '/chat/conversations/$_conversationId/messages');
+      expect(request.data, isA<FormData>());
+      final form = request.data as FormData;
+      expect(form.files.map((f) => f.key), contains('file'));
+      expect(form.fields.map((f) => f.key), contains('clientMessageId'));
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.state, ChatMessageState.sent);
+      expect(message.attachment?.width, 1200);
+      expect(message.attachment?.height, 800);
+      // The staged copy is dead weight once the server has the bytes.
+      expect(message.attachmentLocalPath, isNull);
+    });
+
+    test('a picture with no caption is a whole message', () async {
+      await seedConversation();
+      adapter.builders['POST /chat/conversations/$_conversationId/messages'] = (options) {
+        final form = options.data as FormData;
+        final clientId = form.fields.firstWhere((f) => f.key == 'clientMessageId').value;
+        return _messageJson(
+          id: 4310,
+          clientMessageId: clientId,
+          senderId: _meId,
+          body: null,
+          attachment: {'width': 400, 'height': 400, 'byteSize': 1000},
+        );
+      };
+
+      await repo.send(_conversationId, '', image: await pickedImage());
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.body, isNull);
+      expect(message.hasAttachment, isTrue);
+      // The list has to say *something* — a null preview alone would read as
+      // a deleted message.
+      final conversation = await repo.watchConversation(_conversationId).first;
+      expect(conversation?.lastMessageHasAttachment, isTrue);
+    });
+
+    test('an image written offline keeps its file and goes out on the next flush', () async {
+      await seedConversation();
+      adapter.failing.add('/chat/conversations/$_conversationId/messages');
+
+      await repo.send(_conversationId, '', image: await pickedImage());
+
+      final queued = (await repo.watchMessages(_conversationId).first).single;
+      expect(queued.state, ChatMessageState.failed);
+      // Copied out of the picker's cache, which the OS may reclaim — without
+      // this there would be nothing left to replay.
+      expect(queued.attachmentLocalPath, isNotNull);
+      expect(File(queued.attachmentLocalPath!).existsSync(), isTrue);
+
+      adapter.failing.clear();
+      adapter.builders['POST /chat/conversations/$_conversationId/messages'] = (options) {
+        final form = options.data as FormData;
+        final clientId = form.fields.firstWhere((f) => f.key == 'clientMessageId').value;
+        return _messageJson(
+          id: 4310,
+          clientMessageId: clientId,
+          senderId: _meId,
+          body: null,
+          attachment: {'width': 400, 'height': 400, 'byteSize': 1000},
+        );
+      };
+
+      await repo.flushPending();
+
+      final sent = (await repo.watchMessages(_conversationId).first).single;
+      expect(sent.state, ChatMessageState.sent);
+      expect(sent.serverId, 4310);
+      expect(File(queued.attachmentLocalPath!).existsSync(), isFalse);
+    });
+
+    test('discarding an unsent image removes the staged file too', () async {
+      await seedConversation();
+      adapter.failing.add('/chat/conversations/$_conversationId/messages');
+      await repo.send(_conversationId, '', image: await pickedImage());
+      final queued = (await repo.watchMessages(_conversationId).first).single;
+
+      await repo.discardUnsent(_conversationId, queued.clientId);
+
+      expect(await repo.watchMessages(_conversationId).first, isEmpty);
+      expect(File(queued.attachmentLocalPath!).existsSync(), isFalse);
+    });
+  });
+
   group('deletion', () {
     test('a sent message is tombstoned on the server and locally', () async {
       await seedConversation();
@@ -420,6 +560,96 @@ void main() {
       final message = (await repo.watchMessages(_conversationId).first).single;
       expect(message.isDeleted, isTrue);
       expect(message.body, isNull);
+    });
+
+    test('deleting the newest message clears the list preview too', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [
+          _messageJson(id: 4310, clientMessageId: 'older', senderId: _meId),
+          _messageJson(id: 4311, clientMessageId: 'newest', senderId: _meId),
+        ],
+        'hasMore': false,
+      };
+      await repo.loadNewer(_conversationId);
+
+      await repo.deleteMessage(_conversationId, 'newest');
+
+      // A null preview is what the row renders as "message deleted".
+      final conversation = await repo.watchConversation(_conversationId).first;
+      expect(conversation?.lastMessagePreview, isNull);
+    });
+
+    test('deleting an older message leaves the list preview alone', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [
+          _messageJson(id: 4310, clientMessageId: 'older', senderId: _meId),
+          _messageJson(id: 4311, clientMessageId: 'newest', senderId: _meId),
+        ],
+        'hasMore': false,
+      };
+      await repo.loadNewer(_conversationId);
+      await repo.send(_conversationId, 'still here');
+      final before = (await repo.watchConversation(_conversationId).first)?.lastMessagePreview;
+
+      await repo.deleteMessage(_conversationId, 'older');
+
+      expect((await repo.watchConversation(_conversationId).first)?.lastMessagePreview,
+          equals(before));
+    });
+
+    test('an unsent bubble after the deleted one keeps owning the preview', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [_messageJson(id: 4310, clientMessageId: 'newest', senderId: _meId)],
+        'hasMore': false,
+      };
+      await repo.loadNewer(_conversationId);
+      adapter.failing.add('/chat/conversations/$_conversationId/messages');
+      await repo.send(_conversationId, 'still queued');
+
+      await repo.deleteMessage(_conversationId, 'newest');
+
+      // The queued bubble is the last row of the thread, even though it has no
+      // server id yet — blanking the preview would hide it from the list.
+      final conversation = await repo.watchConversation(_conversationId).first;
+      expect(conversation?.lastMessagePreview, equals('still queued'));
+    });
+
+    test('a deleted frame tombstones a message the peer removed', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [_messageJson(id: 4310, clientMessageId: 'theirs', senderId: _peerId)],
+        'hasMore': false,
+      };
+      await repo.loadNewer(_conversationId);
+
+      await repo.applyDeletedMessage(
+        _conversationId,
+        4310,
+        DateTime.utc(2026, 8, 7, 10),
+      );
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.isDeleted, isTrue);
+      expect(message.body, isNull);
+    });
+
+    test('a replayed deleted frame keeps the original timestamp', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [_messageJson(id: 4310, clientMessageId: 'theirs', senderId: _peerId)],
+        'hasMore': false,
+      };
+      await repo.loadNewer(_conversationId);
+      final first = DateTime.utc(2026, 8, 7, 10);
+
+      await repo.applyDeletedMessage(_conversationId, 4310, first);
+      await repo.applyDeletedMessage(_conversationId, 4310, DateTime.utc(2026, 8, 7, 11));
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.deletedAt?.toUtc(), equals(first));
     });
 
     test('an unsent message is just dropped — the server never knew about it', () async {

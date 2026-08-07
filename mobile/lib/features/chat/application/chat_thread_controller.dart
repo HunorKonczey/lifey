@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -59,7 +60,8 @@ class ChatThreadController extends StreamNotifier<List<ChatMessage>> {
     }
   }
 
-  Future<void> send(String body) => _repo.send(conversationId, body);
+  Future<void> send(String body, {File? image}) =>
+      _repo.send(conversationId, body, image: image);
 
   Future<void> retry(String clientId) => _repo.retry(conversationId, clientId);
 
@@ -74,6 +76,12 @@ final chatThreadControllerProvider =
     StreamNotifierProvider.family<ChatThreadController, List<ChatMessage>, int>(
   ChatThreadController.new,
 );
+
+/// Upload progress per `clientMessageId`, so a picture's bubble can show how
+/// far its bytes have got. Empty when nothing is in flight.
+final chatUploadProgressProvider = StreamProvider<Map<String, double>>((ref) {
+  return ref.watch(chatRepositoryProvider).watchUploadProgress();
+});
 
 /// The thread's own conversation row (peer name, archived flag), watched
 /// locally so the header renders before — and without — a network call.

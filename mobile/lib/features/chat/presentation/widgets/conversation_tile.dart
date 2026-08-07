@@ -51,9 +51,20 @@ class ConversationTile extends StatelessWidget {
     final unread = conversation.hasUnread;
     final archived = conversation.isArchived;
 
-    final preview = conversation.lastMessagePreview == null
-        ? (conversation.lastMessageAt == null ? '' : l10n.chatDeletedMessage)
-        : '${isOwnLastMessage ? l10n.chatOwnMessagePrefix : ''}${conversation.lastMessagePreview}';
+    final ownPrefix = isOwnLastMessage ? l10n.chatOwnMessagePrefix : '';
+    // Three cases share a null preview: no messages yet, a tombstone, and a
+    // picture sent without a caption — only the attachment flag separates the
+    // last one from the tombstone.
+    final String preview;
+    if (conversation.lastMessageHasAttachment) {
+      final caption = conversation.lastMessagePreview;
+      preview = '$ownPrefix${l10n.chatImagePreview}'
+          '${caption == null || caption.isEmpty ? '' : ' $caption'}';
+    } else if (conversation.lastMessagePreview == null) {
+      preview = conversation.lastMessageAt == null ? '' : l10n.chatDeletedMessage;
+    } else {
+      preview = '$ownPrefix${conversation.lastMessagePreview}';
+    }
 
     return Material(
       color: Colors.transparent,

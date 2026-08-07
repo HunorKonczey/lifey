@@ -105,7 +105,7 @@ class ChatConversationControllerTest {
 
     private static ConversationResponse conversation() {
         MessageResponse lastMessage = new MessageResponse(4310L, 12L, 7L, "Holnap 17:00 jó?", "a3f",
-                Instant.parse("2026-08-02T09:12:44Z"), null);
+                Instant.parse("2026-08-02T09:12:44Z"), null, null);
         return new ConversationResponse(
                 12L,
                 new ChatPeerResponse(88L, "Kiss Anna", "anna@example.com", ChatPeerRole.CLIENT),

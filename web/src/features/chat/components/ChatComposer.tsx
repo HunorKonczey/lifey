@@ -2,22 +2,32 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { MAX_MESSAGE_LENGTH, isMessageSendable, trimMessageForSend } from "../thread";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  MAX_ATTACHMENT_BYTES,
+  MAX_MESSAGE_LENGTH,
+  isMessageSendable,
+  trimMessageForSend,
+} from "../thread";
 
 /** ~5 text rows before the textarea stops growing and scrolls internally. */
 const MAX_ROWS_PX = 132;
 
 interface ChatComposerProps {
-  onSend: (body: string) => void;
+  onSend: (body: string, image: File | null) => void;
   /** Set while a send is in flight; the composer stays usable, only the button waits. */
   disabled?: boolean;
+  /** Surfaced when a picked file is rejected before any upload starts. */
+  onError?: (message: string) => void;
 }
 
-export function ChatComposer({ onSend, disabled = false }: ChatComposerProps) {
+export function ChatComposer({ onSend, disabled = false, onError }: ChatComposerProps) {
   const t = useTranslations("chat");
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
+  const [image, setImage] = useState<{ file: File; url: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   // Grow with the content: reset to auto first, or the box can only ever get
   // taller (scrollHeight never shrinks below the current height).
@@ -28,19 +38,78 @@ export function ChatComposer({ onSend, disabled = false }: ChatComposerProps) {
     el.style.height = `${Math.min(el.scrollHeight, MAX_ROWS_PX)}px`;
   }, [value]);
 
-  const sendable = isMessageSendable(value) && !disabled;
+  const sendable = isMessageSendable(value, image !== null) && !disabled;
   const overLimit = value.trim().length > MAX_MESSAGE_LENGTH;
 
+  const clearImage = () => {
+    if (image) URL.revokeObjectURL(image.url);
+    setImage(null);
+    // Reset the input, or picking the very same file again fires no change event.
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const pick = (file: File | undefined) => {
+    if (!file) return;
+    // Checked here rather than left to the server: a rejected 8MB upload costs
+    // the whole upload before it fails.
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      onError?.(t("imageTooLarge"));
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    if (image) URL.revokeObjectURL(image.url);
+    setImage({ file, url: URL.createObjectURL(file) });
+  };
+
   const submit = () => {
+    if (!sendable) return;
     const body = trimMessageForSend(value);
-    if (!body || !sendable) return;
-    onSend(body);
+    // A picture is a complete message; text alone still has to be non-blank.
+    if (!body && !image) return;
+    onSend(body ?? "", image?.file ?? null);
     setValue("");
+    clearImage();
   };
 
   return (
     <div className="flex flex-col px-5 pb-4 shrink-0">
+      {image && (
+        <div className="flex items-center gap-3 mb-2.5 ml-1">
+          <div
+            className="relative rounded-[12px] overflow-hidden shrink-0"
+            style={{ width: 64, height: 64, background: "var(--surface-container)" }}
+          >
+            {/* Object URLs aren't compatible with next/image's optimizer. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={image.url} alt="" className="w-full h-full object-cover" />
+          </div>
+          <button
+            onClick={clearImage}
+            className="text-[11.5px] font-bold"
+            style={{ color: "var(--on-surface-variant)" }}
+          >
+            {t("removeImage")}
+          </button>
+        </div>
+      )}
+
       <div className="flex items-end gap-2.5">
+        <input
+          ref={fileRef}
+          type="file"
+          accept={ACCEPTED_IMAGE_TYPES}
+          onChange={(e) => pick(e.target.files?.[0])}
+          className="hidden"
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          aria-label={t("attachImage")}
+          title={t("attachImage")}
+          className="w-[46px] h-[46px] shrink-0 rounded-[15px] flex items-center justify-center"
+          style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
+        >
+          <span className="material-symbols-rounded text-[21px]">image</span>
+        </button>
         <textarea
           ref={textareaRef}
           rows={1}

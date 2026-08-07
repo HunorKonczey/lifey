@@ -3048,6 +3048,50 @@
   "@chatDeleteAction": {
     "description": "Long-press menu action removing the user's own message"
   },
+  "chatDeleteMessageQuestionTitle": "Delete this message?",
+  "@chatDeleteMessageQuestionTitle": {
+    "description": "Title of the confirmation dialog before tombstoning a sent message"
+  },
+  "chatDeleteMessageConfirmMessage": "The text disappears for both of you — only a note that it was deleted stays. This can't be undone.",
+  "@chatDeleteMessageConfirmMessage": {
+    "description": "Body of the confirmation dialog before tombstoning a sent message"
+  },
+  "chatAttachImageTooltip": "Attach an image",
+  "@chatAttachImageTooltip": {
+    "description": "Composer button opening the image source sheet"
+  },
+  "chatTakePhotoAction": "Take a photo",
+  "@chatTakePhotoAction": {
+    "description": "Image source option using the camera"
+  },
+  "chatChooseImageAction": "Choose from gallery",
+  "@chatChooseImageAction": {
+    "description": "Image source option using the photo library"
+  },
+  "chatRemoveImageAction": "Remove image",
+  "@chatRemoveImageAction": {
+    "description": "Drops the picked image before it is sent"
+  },
+  "chatImageReady": "Image ready to send",
+  "@chatImageReady": {
+    "description": "Label next to the picked image above the composer"
+  },
+  "chatImageAlt": "Photo",
+  "@chatImageAlt": {
+    "description": "Screen-reader name for a picture in a message"
+  },
+  "chatImagePreview": "\ud83d\udcf7 Photo",
+  "@chatImagePreview": {
+    "description": "Conversation-list preview of a message that is a picture"
+  },
+  "chatCloseImageAction": "Close image",
+  "@chatCloseImageAction": {
+    "description": "Closes the full-screen image view"
+  },
+  "chatImageTooLarge": "That image is too large \u2014 8 MB is the limit.",
+  "@chatImageTooLarge": {
+    "description": "Shown when a picked image exceeds the server's attachment limit"
+  },
   "chatCopiedMessage": "Copied",
   "@chatCopiedMessage": {
     "description": "Confirmation shown after copying a message body"

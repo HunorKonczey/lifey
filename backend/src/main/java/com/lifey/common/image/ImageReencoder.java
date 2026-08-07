@@ -50,9 +50,29 @@ public final class ImageReencoder {
                 .size(size, size));
     }
 
-    /** Resized so its longest side is at most {@code maxSide}, aspect ratio preserved. */
+    /**
+     * Resized so its longest side is {@code maxSide}, aspect ratio preserved.
+     *
+     * <p><b>This enlarges a smaller source</b> — it resizes <em>to</em> the
+     * target, not within it. That is what the fixed-size recipe and avatar
+     * slots want; anything that should leave a small picture alone wants
+     * {@link #boundedJpeg} instead.
+     */
     public static byte[] resizedJpeg(BufferedImage source, int maxSide) {
         return encode(Thumbnails.of(source).size(maxSide, maxSide).keepAspectRatio(true));
+    }
+
+    /**
+     * Like {@link #resizedJpeg}, but never larger than the source: an image
+     * that already fits is only re-encoded. For content whose natural size is
+     * the right size — a photo someone sends in a chat — upscaling would cost
+     * bytes and add no detail.
+     */
+    public static byte[] boundedJpeg(BufferedImage source, int maxSide) {
+        if (Math.max(source.getWidth(), source.getHeight()) <= maxSide) {
+            return encode(Thumbnails.of(source).scale(1.0));
+        }
+        return resizedJpeg(source, maxSide);
     }
 
     /** Convenience one-shot: {@link #decode} then {@link #squareJpeg}. */

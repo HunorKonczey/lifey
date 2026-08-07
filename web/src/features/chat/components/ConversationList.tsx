@@ -128,10 +128,13 @@ function ConversationRow({
   const muted = isMuted(conversation.mutedUntil);
 
   const ownPrefix = lastMessage && lastMessage.senderId === ownUserId ? t("ownMessagePrefix") : "";
+  // A picture with no caption still needs words in the list, and the marker
+  // stays in front of a caption so the row says what kind of message it was.
+  const imageMarker = lastMessage?.attachment ? `${t("imagePreview")} ` : "";
   const preview = lastMessage
     ? lastMessage.deletedAt
       ? `${ownPrefix}${t("deletedMessage")}`
-      : `${ownPrefix}${lastMessage.body ?? ""}`
+      : `${ownPrefix}${imageMarker}${lastMessage.body ?? ""}`.trimEnd()
     : t("noMessagesYet");
 
   return (

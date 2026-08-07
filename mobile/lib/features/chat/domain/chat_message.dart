@@ -7,6 +7,31 @@
 /// See `receiptStateFor` in `chat_conversation.dart`.
 enum ChatMessageState { pending, sent, delivered, read, failed }
 
+/// What a message's picture looks like before any of it is downloaded — the
+/// numbers the bubble reserves its box from, so a thread of images doesn't
+/// reflow as they arrive.
+class ChatAttachment {
+  const ChatAttachment({
+    required this.width,
+    required this.height,
+    required this.byteSize,
+  });
+
+  final int width;
+  final int height;
+  final int byteSize;
+
+  double get aspectRatio => height == 0 ? 1 : width / height;
+
+  factory ChatAttachment.fromJson(Map<String, dynamic> json) {
+    return ChatAttachment(
+      width: (json['width'] as num).toInt(),
+      height: (json['height'] as num).toInt(),
+      byteSize: (json['byteSize'] as num).toInt(),
+    );
+  }
+}
+
 class ChatMessage {
   const ChatMessage({
     required this.clientId,
@@ -17,6 +42,8 @@ class ChatMessage {
     required this.createdAt,
     this.deletedAt,
     required this.state,
+    this.attachment,
+    this.attachmentLocalPath,
   });
 
   /// The `clientMessageId`: our idempotency key on every send/retry, and the
@@ -26,11 +53,22 @@ class ChatMessage {
   final int conversationId;
   final int senderId;
 
-  /// Null exactly when [deletedAt] is set.
+  /// Null when [deletedAt] is set, and also when the message is a picture with
+  /// no caption — an image on its own is a complete message.
   final String? body;
   final DateTime createdAt;
   final DateTime? deletedAt;
   final ChatMessageState state;
+
+  /// Set once the server has the picture.
+  final ChatAttachment? attachment;
+
+  /// Path to the picked file while the send is still `pending` or `failed`.
+  /// This is the copy the outbox replays from, so an image written offline
+  /// goes out on reconnect just like a text message does.
+  final String? attachmentLocalPath;
+
+  bool get hasAttachment => attachment != null || attachmentLocalPath != null;
 
   bool get isDeleted => deletedAt != null;
 
@@ -50,6 +88,9 @@ class ChatMessage {
           ? null
           : DateTime.parse(json['deletedAt'] as String).toLocal(),
       state: ChatMessageState.sent,
+      attachment: json['attachment'] == null
+          ? null
+          : ChatAttachment.fromJson(json['attachment'] as Map<String, dynamic>),
     );
   }
 }

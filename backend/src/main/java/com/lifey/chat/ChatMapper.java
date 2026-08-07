@@ -3,6 +3,7 @@ package com.lifey.chat;
 import com.lifey.chat.dto.ChatPeerResponse;
 import com.lifey.chat.dto.ChatPeerRole;
 import com.lifey.chat.dto.ConversationResponse;
+import com.lifey.chat.dto.MessageAttachmentResponse;
 import com.lifey.chat.dto.MessageResponse;
 import com.lifey.chat.entity.ChatConversation;
 import com.lifey.chat.entity.ChatMessage;
@@ -26,7 +27,19 @@ public final class ChatMapper {
                 message.getBody(),
                 message.getClientMessageId(),
                 message.getCreatedAt(),
-                message.getDeletedAt());
+                message.getDeletedAt(),
+                toAttachment(message));
+    }
+
+    /** Metadata only — the bytes are a separate, cacheable request (§18.2). */
+    private static MessageAttachmentResponse toAttachment(ChatMessage message) {
+        if (!message.hasAttachment()) {
+            return null;
+        }
+        return new MessageAttachmentResponse(
+                message.getAttachmentWidth(),
+                message.getAttachmentHeight(),
+                message.getAttachmentByteSize());
     }
 
     /**

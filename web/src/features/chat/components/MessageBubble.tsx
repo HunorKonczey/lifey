@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { enUS, hu } from "date-fns/locale";
 import { useLocale } from "@/lib/hooks/useLocale";
 import { ChatAvatar } from "./ChatAvatar";
+import { ChatAttachment } from "./ChatAttachment";
+import { hasImage } from "../thread";
 import type { ChatReceiptState, ThreadMessage } from "../types";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
@@ -65,7 +67,11 @@ export function MessageBubble({
   const deleted = message.deletedAt !== null;
   const time = format(new Date(message.createdAt), "H:mm", { locale: DATE_LOCALES[locale] });
   const stateLabel = own ? t(`state.${receiptState}`) : "";
+  const image = !deleted && hasImage(message);
   const text = deleted ? t("deletedMessage") : message.body ?? "";
+  // A picture with no caption gets no empty text bubble under it, but the
+  // screen reader still needs to hear that a picture is what arrived.
+  const spokenText = text || (image ? t("imageAlt") : "");
 
   // Only the bubble that closes a run gets the flattened corner — mid-run
   // bubbles stay fully rounded so a run reads as one block (design A3).
@@ -89,27 +95,46 @@ export function MessageBubble({
           <div className="w-[30px] shrink-0" aria-hidden />
         ))}
 
-      <div className={`min-w-0 flex flex-col ${own ? "items-end" : "items-start"}`} style={{ maxWidth: "65ch" }}>
-        <p
-          className="px-4 py-2.5 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words"
-          style={{
-            background: own
-              ? "color-mix(in srgb, var(--primary) 20%, transparent)"
-              : "var(--surface-container)",
-            color: deleted ? "var(--on-surface-variant)" : "var(--on-surface)",
-            fontStyle: deleted ? "italic" : undefined,
-            fontWeight: 500,
-            borderRadius: radius,
-          }}
-          aria-label={t("bubbleA11y", {
-            sender: own ? t("you") : peerName,
-            time,
-            text,
-            state: stateLabel,
-          })}
-        >
-          {text}
-        </p>
+      <div className={`min-w-0 flex flex-col gap-1 ${own ? "items-end" : "items-start"}`} style={{ maxWidth: "65ch" }}>
+        {image && (
+          <div
+            aria-label={t("bubbleA11y", {
+              sender: own ? t("you") : peerName,
+              time,
+              text: spokenText,
+              state: stateLabel,
+            })}
+          >
+            <ChatAttachment message={message} uploading={message.state === "pending"} />
+          </div>
+        )}
+        {/* No empty bubble under a caption-less picture — the image is the message. */}
+        {(text || !image) && (
+          <p
+            className="px-4 py-2.5 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words"
+            style={{
+              background: own
+                ? "color-mix(in srgb, var(--primary) 20%, transparent)"
+                : "var(--surface-container)",
+              color: deleted ? "var(--on-surface-variant)" : "var(--on-surface)",
+              fontStyle: deleted ? "italic" : undefined,
+              fontWeight: 500,
+              borderRadius: radius,
+            }}
+            aria-label={
+              image
+                ? undefined
+                : t("bubbleA11y", {
+                    sender: own ? t("you") : peerName,
+                    time,
+                    text: spokenText,
+                    state: stateLabel,
+                  })
+            }
+          >
+            {text}
+          </p>
+        )}
 
         {groupEnd && (
           <div className={`flex items-center gap-1 mt-1 ${own ? "mr-1" : "ml-1"}`}>

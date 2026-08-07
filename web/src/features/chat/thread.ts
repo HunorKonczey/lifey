@@ -16,9 +16,20 @@ export function trimMessageForSend(raw: string): string | null {
   return trimmed.length === 0 ? null : trimmed;
 }
 
-export function isMessageSendable(raw: string): boolean {
+/** Mirrors `lifey.chat.attachment-max-bytes`; checked before the upload starts. */
+export const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+
+/** What the file picker offers, and what the server's decoder actually accepts. */
+export const ACCEPTED_IMAGE_TYPES = "image/jpeg,image/png,image/webp";
+
+/**
+ * A picture on its own is a complete message, so the caption may be empty —
+ * but text alone still has to be non-blank.
+ */
+export function isMessageSendable(raw: string, withImage = false): boolean {
   const trimmed = trimMessageForSend(raw);
-  return trimmed !== null && trimmed.length <= MAX_MESSAGE_LENGTH;
+  if (trimmed === null) return withImage;
+  return trimmed.length <= MAX_MESSAGE_LENGTH;
 }
 
 /**
@@ -63,8 +74,45 @@ export function mergeMessages(
 ): ThreadMessage[] {
   const byClientId = new Map<string, ThreadMessage>();
   for (const message of existing) byClientId.set(message.clientMessageId, message);
-  for (const message of incoming) byClientId.set(message.clientMessageId, toThreadMessage(message));
+  for (const message of incoming) {
+    const previous = byClientId.get(message.clientMessageId);
+    byClientId.set(message.clientMessageId, {
+      ...toThreadMessage(message),
+      // The picked file's object URL survives the echo so the picture doesn't
+      // blink out and back in while the server thumbnail loads. `localFile`
+      // does not: the upload succeeded, and holding the bytes would keep every
+      // image sent this session in memory.
+      localImageUrl: previous?.localImageUrl,
+    });
+  }
   return [...byClientId.values()].sort(compareMessages);
+}
+
+/** Whether this message shows a picture — stored, or still being uploaded. */
+export function hasImage(message: ThreadMessage): boolean {
+  return message.attachment !== null || message.localImageUrl !== undefined;
+}
+
+/**
+ * Turn one already-held message into a tombstone: the row stays so the other
+ * side keeps the context of their replies, the text goes.
+ *
+ * Kept separate from `mergeMessages` because a deletion is not a page of
+ * messages — it is the one change that reaches back into rows the gap fill
+ * (`after=<id>`) will never look at again. Returns the same array when nothing
+ * matched, so a frame for a thread the browser never opened costs no rerender.
+ */
+export function applyDeletion(
+  messages: ThreadMessage[],
+  messageId: number,
+  deletedAt: string,
+): ThreadMessage[] {
+  if (!messages.some((message) => message.id === messageId && message.deletedAt === null)) {
+    return messages;
+  }
+  return messages.map((message) =>
+    message.id === messageId ? { ...message, body: null, deletedAt } : message,
+  );
 }
 
 /** Highest stored id — the read cursor, and the `after=` anchor for gap fills. */

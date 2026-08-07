@@ -219,6 +219,15 @@
 11. **A csendes órák a beállítás-képernyőn élnek, nem a szálban**: egy kapcsoló
     (alapértelmezett 22:00–07:00) és két időpont-választó. Szálanként a némítás a
     megfelelő eszköz; a csendes óra az egész chatre vonatkozik.
+12. **A kép-csatolmány leszállt, design nélkül.** Ez a prompt kizárta („csak ha marad
+    idő, külön, jelölten"), és a `.dc.html` sem rajzolja — az I6 mégis megépítette
+    (terv §18). A megjelenés ezért a meglévő chat-nyelvből következik, új token nélkül:
+    a kép a buborék belsejét tölti ki (4 px padding), a valódi képarányát tartja egy
+    240×300 dp-s dobozon belül, a felirat alatta ül, a feltöltés a képre húzott
+    fátyol + körkörös progressz, a lista-előnézet „📷 Kép" (+ felirat, ha van), a
+    composerben pedig egy kép-ikon és a kiválasztott kép sávja a mező fölött.
+    **Ha készül rá design, ez a bekezdés az, amit felül kell írnia** — nem a kód.
+
 9. **A szál-fejléc alsora weben a peer e-mail-címe**, nem „online / utoljára aktív”.
    A jelenlét I4, a design pedig kifejezetten tiltja a hamis állapotjelzést; az e-mail
    valós adat, és az edzőnek ez azonosít egy kliens-listányi monogram között.

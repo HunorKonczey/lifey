@@ -1,6 +1,7 @@
 package com.lifey.chat;
 
 import com.lifey.chat.dto.ChatEvent;
+import com.lifey.chat.dto.MessageDeletedEventPayload;
 import com.lifey.chat.dto.MessageEventPayload;
 import com.lifey.chat.entity.ChatConversation;
 import com.lifey.chat.entity.ChatMessage;
@@ -144,10 +145,65 @@ class ChatStreamBroadcasterTest {
         verify(eventBus, never()).publish(anyLong(), any());
     }
 
+    @Test
+    void bothSidesGetTheDeletedFrame() {
+        tombstone();
+
+        broadcaster.onMessageDeleted(new ChatMessageDeletedEvent(MESSAGE_ID));
+
+        for (Long userId : new Long[]{TRAINER_ID, CLIENT_ID}) {
+            ChatEvent frame = captureFrame(userId);
+            assertThat(frame.name()).isEqualTo(ChatEvent.DELETED);
+            // No id: the deleted message is older than the client's cursor, and
+            // setting Last-Event-ID back to it would replay the thread tail.
+            assertThat(frame.id()).isNull();
+            MessageDeletedEventPayload payload = (MessageDeletedEventPayload) frame.data();
+            assertThat(payload.conversationId()).isEqualTo(CONVERSATION_ID);
+            assertThat(payload.messageId()).isEqualTo(MESSAGE_ID);
+            assertThat(payload.deletedAt()).isNotNull();
+        }
+    }
+
+    @Test
+    void aDeletionMovesNeitherCursor_becauseATombstoneIsNotANewMessage() {
+        tombstone();
+        when(eventBus.publish(anyLong(), any())).thenReturn(true);
+        when(presenceRegistry.isViewing(anyLong(), anyLong())).thenReturn(true);
+
+        broadcaster.onMessageDeleted(new ChatMessageDeletedEvent(MESSAGE_ID));
+
+        verify(receiptService, never()).recordDelivered(anyLong(), anyLong(), anyLong());
+        verify(receiptService, never()).recordSeen(anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
+    void aMessageThatIsNotActuallyDeletedIsNotAnnounced() {
+        // The stored row still has its body — a stale event, and telling the
+        // clients to blank a live message would lose text nobody deleted.
+        broadcaster.onMessageDeleted(new ChatMessageDeletedEvent(MESSAGE_ID));
+
+        verify(eventBus, never()).publish(anyLong(), any());
+    }
+
+    @Test
+    void aDeletionFailureIsSwallowed_soDeleteNeverFailsBecauseOfTheStream() {
+        when(messageRepository.findById(MESSAGE_ID)).thenThrow(new IllegalStateException("db down"));
+
+        assertThatCode(() -> broadcaster.onMessageDeleted(new ChatMessageDeletedEvent(MESSAGE_ID)))
+                .doesNotThrowAnyException();
+    }
+
     private ChatEvent captureFrame(Long userId) {
         ArgumentCaptor<ChatEvent> captor = ArgumentCaptor.captor();
         verify(eventBus).publish(eq(userId), captor.capture());
         return captor.getValue();
+    }
+
+    /** Turns the stored message into what {@code deleteMessage} leaves behind. */
+    private void tombstone() {
+        ChatMessage message = messageRepository.findById(MESSAGE_ID).orElseThrow();
+        message.setBody(null);
+        message.setDeletedAt(Instant.parse("2026-08-07T10:00:00Z"));
     }
 
     private void storedMessage(User sender) {

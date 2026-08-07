@@ -17,6 +17,7 @@ class ChatConversation {
     this.peerLastDeliveredMessageId,
     this.peerLastReadMessageId,
     this.mutedUntil,
+    this.lastMessageHasAttachment = false,
   });
 
   final int id;
@@ -24,10 +25,15 @@ class ChatConversation {
   final int unreadCount;
   final DateTime? lastMessageAt;
 
-  /// Null both for a brand-new thread and for one whose last message was
-  /// deleted — the row shows the tombstone text in the second case.
+  /// Null for a brand-new thread, for one whose last message was deleted, and
+  /// for a picture sent without a caption — [lastMessageHasAttachment] is what
+  /// tells the last case apart from the tombstone.
   final String? lastMessagePreview;
   final int? lastMessageSenderId;
+
+  /// Whether the previewed message is a picture, so the row can say so
+  /// instead of showing an empty line or the tombstone text (I6).
+  final bool lastMessageHasAttachment;
 
   /// Set once the relationship ended: readable forever, not writable.
   final DateTime? archivedAt;
@@ -60,6 +66,7 @@ class ChatConversation {
           : DateTime.parse(lastMessage['createdAt'] as String).toLocal(),
       lastMessagePreview: lastMessage?['body'] as String?,
       lastMessageSenderId: lastMessage?['senderId'] as int?,
+      lastMessageHasAttachment: lastMessage?['attachment'] != null,
       archivedAt: json['archivedAt'] == null
           ? null
           : DateTime.parse(json['archivedAt'] as String).toLocal(),

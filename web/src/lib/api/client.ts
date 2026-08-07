@@ -151,4 +151,7 @@ export const api = {
   /** PUT with a multipart body (e.g. a file upload) instead of JSON. */
   putForm: (path: string, formData: FormData) =>
     request<void>(path, { method: "PUT", body: formData }),
+  /** POST with a multipart body, answered with JSON (e.g. sending a chat image). */
+  postForm: <T>(path: string, formData: FormData) =>
+    request<T>(path, { method: "POST", body: formData }),
 };

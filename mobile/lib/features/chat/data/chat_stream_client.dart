@@ -7,7 +7,7 @@ import 'package:dio/dio.dart';
 class ChatStreamFrame {
   const ChatStreamFrame({required this.name, this.id, required this.data});
 
-  /// `event:` — `message`, `read` or `resync`.
+  /// `event:` — `message`, `read`, `deleted` or `resync`.
   final String name;
 
   /// `id:`, present only on message frames, which is what makes it the cursor.

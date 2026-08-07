@@ -1,7 +1,13 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../../../core/network/error_message.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_snackbar.dart';
 
 /// The message input.
 ///
@@ -10,9 +16,20 @@ import '../../../../l10n/app_localizations.dart';
 /// The only thing that replaces it is an archived thread, where there is
 /// genuinely nothing to send to.
 class ChatComposer extends StatefulWidget {
-  const ChatComposer({super.key, required this.onSend, this.maxLength = 2000});
+  const ChatComposer({
+    super.key,
+    required this.onSend,
+    this.maxLength = 2000,
+    this.maxAttachmentBytes = 8 * 1024 * 1024,
+  });
 
-  final ValueChanged<String> onSend;
+  /// [image] is null for a plain text message. A picture may travel with an
+  /// empty body — on its own it is already a complete message.
+  final void Function(String body, File? image) onSend;
+
+  /// Mirrors the server's `lifey.chat.attachment-max-bytes`, so an oversized
+  /// picture is refused at the picker instead of after the upload.
+  final int maxAttachmentBytes;
 
   /// Matches the server's `lifey.chat.max-body-length`; enforced here so an
   /// over-long message is stopped at the keyboard rather than by a 400.
@@ -24,14 +41,17 @@ class ChatComposer extends StatefulWidget {
 
 class _ChatComposerState extends State<ChatComposer> {
   final _controller = TextEditingController();
-  bool _canSend = false;
+  bool _hasText = false;
+  File? _image;
+
+  bool get _canSend => _hasText || _image != null;
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(() {
-      final canSend = _controller.text.trim().isNotEmpty;
-      if (canSend != _canSend) setState(() => _canSend = canSend);
+      final hasText = _controller.text.trim().isNotEmpty;
+      if (hasText != _hasText) setState(() => _hasText = hasText);
     });
   }
 
@@ -43,9 +63,62 @@ class _ChatComposerState extends State<ChatComposer> {
 
   void _send() {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    final image = _image;
+    if (text.isEmpty && image == null) return;
     _controller.clear();
-    widget.onSend(text);
+    setState(() => _image = null);
+    widget.onSend(text, image);
+  }
+
+  Future<void> _pickImage(ImageSource source, AppLocalizations l10n) async {
+    final XFile? picked;
+    try {
+      // Downscaled and re-compressed by the picker before it ever reaches the
+      // network: the server bounds it again, but there is no reason to upload
+      // a 12MP original over a phone connection to have it shrunk on arrival.
+      picked = await ImagePicker().pickImage(source: source, maxWidth: 1600, imageQuality: 90);
+    } catch (e) {
+      if (mounted) AppSnackbar.showError(context, title: friendlyError(e));
+      return;
+    }
+    if (picked == null) return;
+
+    final file = File(picked.path);
+    if (await file.length() > widget.maxAttachmentBytes) {
+      if (mounted) AppSnackbar.showError(context, title: l10n.chatImageTooLarge);
+      return;
+    }
+    if (mounted) setState(() => _image = file);
+  }
+
+  Future<void> _showImageSourceSheet(AppLocalizations l10n) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text(l10n.chatTakePhotoAction),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                unawaited(_pickImage(ImageSource.camera, l10n));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.chatChooseImageAction),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                unawaited(_pickImage(ImageSource.gallery, l10n));
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -53,9 +126,16 @@ class _ChatComposerState extends State<ChatComposer> {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
-    return Container(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_image != null) _PendingImageStrip(
+          image: _image!,
+          onRemove: () => setState(() => _image = null),
+        ),
+        Container(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-      padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
       decoration: BoxDecoration(
         color: scheme.surfaceContainer,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -63,6 +143,15 @@ class _ChatComposerState extends State<ChatComposer> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: IconButton(
+              onPressed: () => _showImageSourceSheet(l10n),
+              tooltip: l10n.chatAttachImageTooltip,
+              icon: const Icon(Icons.image_outlined, size: 21),
+              style: IconButton.styleFrom(foregroundColor: scheme.onSurfaceVariant),
+            ),
+          ),
           Expanded(
             child: TextField(
               controller: _controller,
@@ -110,6 +199,52 @@ class _ChatComposerState extends State<ChatComposer> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The picked picture, above the input, until it is sent or dropped.
+class _PendingImageStrip extends StatelessWidget {
+  const _PendingImageStrip({required this.image, required this.onRemove});
+
+  final File image;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(image, width: 56, height: 56, fit: BoxFit.cover),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              l10n.chatImageReady,
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: onRemove,
+            tooltip: l10n.chatRemoveImageAction,
+            icon: const Icon(Icons.close, size: 18),
+            style: IconButton.styleFrom(foregroundColor: scheme.onSurfaceVariant),
           ),
         ],
       ),

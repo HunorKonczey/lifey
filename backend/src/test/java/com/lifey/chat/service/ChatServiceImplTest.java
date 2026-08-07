@@ -1,6 +1,7 @@
 package com.lifey.chat.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.chat.ChatMessageDeletedEvent;
 import com.lifey.chat.ChatMessageStoredEvent;
 import com.lifey.chat.ChatProperties;
 import com.lifey.chat.dto.ChatPeerRole;
@@ -9,11 +10,14 @@ import com.lifey.chat.dto.MessageListResponse;
 import com.lifey.chat.dto.SendMessageRequest;
 import com.lifey.chat.entity.ChatConversation;
 import com.lifey.chat.entity.ChatMessage;
+import com.lifey.chat.entity.ChatMessageAttachment;
 import com.lifey.chat.entity.ChatParticipant;
+import com.lifey.chat.exception.AttachmentTooLargeException;
 import com.lifey.chat.exception.ChatDisabledException;
 import com.lifey.chat.exception.ConversationArchivedException;
 import com.lifey.chat.exception.InvalidMessageBodyException;
 import com.lifey.chat.repository.ChatConversationRepository;
+import com.lifey.chat.repository.ChatMessageAttachmentRepository;
 import com.lifey.chat.repository.ChatMessageRepository;
 import com.lifey.chat.repository.ChatParticipantRepository;
 import com.lifey.common.exception.ResourceNotFoundException;
@@ -31,7 +35,13 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
+import org.springframework.mock.web.MockMultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -69,6 +79,9 @@ class ChatServiceImplTest {
     ChatMessageRepository messageRepository;
 
     @Mock
+    ChatMessageAttachmentRepository attachmentRepository;
+
+    @Mock
     ChatParticipantRepository participantRepository;
 
     @Mock
@@ -85,7 +98,8 @@ class ChatServiceImplTest {
 
     ChatProperties properties = new ChatProperties(true, 2000, 30, 100, 30, 600,
             Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
-            Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false, Duration.ofHours(24));
+            Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false, Duration.ofHours(24),
+            8L * 1024 * 1024, 1600, 400);
 
     ChatServiceImpl chatService;
 
@@ -109,8 +123,9 @@ class ChatServiceImplTest {
         trainerParticipant.setConversation(conversation);
         trainerParticipant.setUser(trainer);
 
-        chatService = new ChatServiceImpl(conversationRepository, messageRepository, participantRepository,
-                trainerClientRepository, currentUserProvider, rateLimiter, properties, eventPublisher);
+        chatService = new ChatServiceImpl(conversationRepository, messageRepository, attachmentRepository,
+                participantRepository, trainerClientRepository, currentUserProvider, rateLimiter, properties,
+                eventPublisher);
 
         when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
         when(conversationRepository.findByIdForParticipant(CONVERSATION_ID, TRAINER_ID))
@@ -183,12 +198,12 @@ class ChatServiceImplTest {
 
     @Test
     void sendMessage_whenChatIsDisabled_isRejected() {
-        chatService = new ChatServiceImpl(conversationRepository, messageRepository, participantRepository,
-                trainerClientRepository, currentUserProvider, rateLimiter,
+        chatService = new ChatServiceImpl(conversationRepository, messageRepository, attachmentRepository,
+                participantRepository, trainerClientRepository, currentUserProvider, rateLimiter,
                 new ChatProperties(false, 2000, 30, 100, 30, 600,
                         Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
                         Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false,
-                        Duration.ofHours(24)), eventPublisher);
+                        Duration.ofHours(24), 8L * 1024 * 1024, 1600, 400), eventPublisher);
 
         assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, new SendMessageRequest("Hi", "uuid-1")))
                 .isInstanceOf(ChatDisabledException.class);
@@ -291,6 +306,88 @@ class ChatServiceImplTest {
                 eq(Pageable.ofSize(101)));
     }
 
+    // --- image attachments -------------------------------------------------
+
+    @Test
+    void sendMessage_withImage_storesTheBytesAndTheShapeToReserve() {
+        var result = chatService.sendMessage(CONVERSATION_ID, "Nézd meg a tartást", "uuid-1", jpeg(200, 120));
+
+        assertThat(result.created()).isTrue();
+        assertThat(result.message().body()).isEqualTo("Nézd meg a tartást");
+        // Dimensions travel on the message so a client can size the box before
+        // it downloads a single byte.
+        assertThat(result.message().attachment()).isNotNull();
+        assertThat(result.message().attachment().width()).isEqualTo(200);
+        assertThat(result.message().attachment().height()).isEqualTo(120);
+        assertThat(result.message().attachment().byteSize()).isPositive();
+
+        ArgumentCaptor<ChatMessageAttachment> captor = ArgumentCaptor.captor();
+        verify(attachmentRepository).save(captor.capture());
+        assertThat(captor.getValue().getImage()).isNotEmpty();
+        assertThat(captor.getValue().getThumbnail()).isNotEmpty();
+        assertThat(captor.getValue().getContentType()).isEqualTo("image/jpeg");
+    }
+
+    @Test
+    void sendMessage_imageWithNoCaption_isAWholeMessage() {
+        var result = chatService.sendMessage(CONVERSATION_ID, "   ", "uuid-1", jpeg(64, 64));
+
+        assertThat(result.message().body()).isNull();
+        assertThat(result.message().attachment()).isNotNull();
+    }
+
+    @Test
+    void sendMessage_neitherTextNorImage_isRejected() {
+        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, "  ", "uuid-1", null))
+                .isInstanceOf(InvalidMessageBodyException.class);
+    }
+
+    @Test
+    void sendMessage_oversizeImage_isRejectedBeforeAnythingIsStored() {
+        MockMultipartFile huge = new MockMultipartFile(
+                "file", "big.jpg", "image/jpeg", new byte[(int) properties.attachmentMaxBytes() + 1]);
+
+        assertThatThrownBy(() -> chatService.sendMessage(CONVERSATION_ID, "", "uuid-1", huge))
+                .isInstanceOf(AttachmentTooLargeException.class);
+        verify(messageRepository, never()).save(any());
+        verify(attachmentRepository, never()).save(any());
+    }
+
+    @Test
+    void sendMessage_replayedImageSend_doesNotUploadAgain() {
+        ChatMessage stored = message(42L, trainer, null, "uuid-1");
+        when(messageRepository.findByConversationIdAndClientMessageId(CONVERSATION_ID, "uuid-1"))
+                .thenReturn(Optional.of(stored));
+
+        var result = chatService.sendMessage(CONVERSATION_ID, "", "uuid-1", jpeg(64, 64));
+
+        assertThat(result.created()).isFalse();
+        verify(attachmentRepository, never()).save(any());
+    }
+
+    @Test
+    void findAttachment_isGuardedByTheThread_notBySender() {
+        ChatMessage stored = message(42L, client, null, "uuid-1");
+        stored.setAttachmentWidth(64);
+        when(messageRepository.findById(42L)).thenReturn(Optional.of(stored));
+        when(attachmentRepository.findByMessageId(42L)).thenReturn(Optional.of(new ChatMessageAttachment()));
+
+        // The trainer did not send it, but they are in the conversation.
+        assertThat(chatService.findAttachment(42L)).isNotNull();
+    }
+
+    @Test
+    void findAttachment_outsideTheConversation_isNotFound() {
+        ChatMessage stored = message(42L, client, null, "uuid-1");
+        when(messageRepository.findById(42L)).thenReturn(Optional.of(stored));
+        when(conversationRepository.findByIdForParticipant(CONVERSATION_ID, TRAINER_ID))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> chatService.findAttachment(42L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(attachmentRepository, never()).findByMessageId(anyLong());
+    }
+
     // --- deletion ----------------------------------------------------------
 
     @Test
@@ -302,6 +399,36 @@ class ChatServiceImplTest {
 
         assertThat(stored.getDeletedAt()).isNotNull();
         assertThat(stored.getBody()).isNull();
+        // The peer may already be showing the text, and their gap fill only
+        // walks forward — without this frame the tombstone never reaches them.
+        verify(eventPublisher).publishEvent(new ChatMessageDeletedEvent(42L));
+    }
+
+    @Test
+    void deleteMessage_replayedDeletion_isNotAnnouncedTwice() {
+        ChatMessage stored = message(42L, trainer, null, "uuid-1");
+        stored.setDeletedAt(Instant.parse("2026-08-07T09:00:00Z"));
+        when(messageRepository.findById(42L)).thenReturn(Optional.of(stored));
+
+        chatService.deleteMessage(42L);
+
+        assertThat(stored.getDeletedAt()).isEqualTo(Instant.parse("2026-08-07T09:00:00Z"));
+        verify(eventPublisher, never()).publishEvent(any(ChatMessageDeletedEvent.class));
+    }
+
+    @Test
+    void deleteMessage_withImage_removesThePictureToo() {
+        ChatMessage stored = message(42L, trainer, "oops", "uuid-1");
+        stored.setAttachmentWidth(200);
+        stored.setAttachmentHeight(120);
+        stored.setAttachmentByteSize(4096);
+        when(messageRepository.findById(42L)).thenReturn(Optional.of(stored));
+
+        chatService.deleteMessage(42L);
+
+        // "Deleted" that left the image downloadable would be a lie.
+        verify(attachmentRepository).deleteByMessageId(42L);
+        assertThat(stored.hasAttachment()).isFalse();
     }
 
     @Test
@@ -408,6 +535,17 @@ class ChatServiceImplTest {
         message.setClientMessageId(clientMessageId);
         message.setCreatedAt(Instant.parse("2026-08-02T09:12:44Z"));
         return message;
+    }
+
+    /** A real, decodable JPEG — the service validates by decoding, so bytes won't do. */
+    private static MockMultipartFile jpeg(int width, int height) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ImageIO.write(new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB), "jpg", out);
+            return new MockMultipartFile("file", "photo.jpg", "image/jpeg", out.toByteArray());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private TrainerClient relationship(TrainerClientStatus status) {

@@ -26,6 +26,9 @@ class ApiEndpoints {
   static String chatMessages(int conversationId) => '/chat/conversations/$conversationId/messages';
   static String chatConversationRead(int conversationId) => '/chat/conversations/$conversationId/read';
   static String chatMessage(int messageId) => '/chat/messages/$messageId';
+  static String chatAttachment(int messageId) => '/chat/messages/$messageId/attachment';
+  static String chatAttachmentThumbnail(int messageId) =>
+      '/chat/messages/$messageId/attachment/thumbnail';
   static String chatConversationMute(int conversationId) =>
       '/chat/conversations/$conversationId/mute';
 

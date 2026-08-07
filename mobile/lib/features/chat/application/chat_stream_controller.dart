@@ -73,6 +73,16 @@ class ChatStreamController with WidgetsBindingObserver {
           lastDeliveredMessageId: (frame.data['lastDeliveredMessageId'] as num?)?.toInt(),
           lastReadMessageId: (frame.data['lastReadMessageId'] as num?)?.toInt(),
         ));
+      case 'deleted':
+        final conversationId = (frame.data['conversationId'] as num?)?.toInt();
+        final messageId = (frame.data['messageId'] as num?)?.toInt();
+        final deletedAt = frame.data['deletedAt'] as String?;
+        if (conversationId == null || messageId == null) return;
+        unawaited(_repository.applyDeletedMessage(
+          conversationId,
+          messageId,
+          deletedAt == null ? DateTime.now() : DateTime.parse(deletedAt).toLocal(),
+        ));
       case 'resync':
         // The server could not bridge the gap. The stream is a fast path over
         // REST, never the truth, so fall back to a plain refresh.

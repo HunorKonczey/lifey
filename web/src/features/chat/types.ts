@@ -14,7 +14,21 @@ export interface ChatPeerResponse {
   role: ChatPeerRole;
 }
 
-/** `body` is null exactly when `deletedAt` is set — the tombstone text is ours to localize. */
+/**
+ * What a client knows about a message's image without downloading it — enough
+ * to reserve the right box so the thread doesn't reflow as pictures arrive.
+ */
+export interface MessageAttachmentResponse {
+  width: number;
+  height: number;
+  byteSize: number;
+}
+
+/**
+ * Text, an image (with an optional caption in `body`), or a tombstone. `body`
+ * and `attachment` are both null only when `deletedAt` is set — the tombstone
+ * text is ours to localize, and deleting really removes the picture too.
+ */
 export interface MessageResponse {
   id: number;
   conversationId: number;
@@ -23,6 +37,7 @@ export interface MessageResponse {
   clientMessageId: string;
   createdAt: string;
   deletedAt: string | null;
+  attachment: MessageAttachmentResponse | null;
 }
 
 export interface ConversationResponse {
@@ -77,6 +92,17 @@ export interface ReadEventPayload {
 }
 
 /**
+ * Body of an `event: deleted` frame — the only frame about a row the client
+ * already holds. It has no `id:` on the wire, so it never moves the reconnect
+ * cursor backwards onto an old message.
+ */
+export interface MessageDeletedEventPayload {
+  conversationId: number;
+  messageId: number;
+  deletedAt: string;
+}
+
+/**
  * A message as the thread renders it. The server shape plus the local send
  * state: web mirrors mobile's optimistic send (§13.4/2), so a bubble exists
  * before the POST resolves and keeps its identity through the server echo.
@@ -94,4 +120,12 @@ export interface ThreadMessage extends Omit<MessageResponse, "id"> {
   /** Null while the message only exists locally (pending or failed). */
   id: number | null;
   state: ChatMessageState;
+  /**
+   * Object URL of the picked file, set only on an optimistic image bubble.
+   * It lets the picture show at once, before the upload finishes — and before
+   * there is a message id to fetch a server-side thumbnail with.
+   */
+  localImageUrl?: string;
+  /** Kept alongside so a retry can re-upload without asking for the file again. */
+  localFile?: File;
 }

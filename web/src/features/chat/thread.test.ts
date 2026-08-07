@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   MAX_MESSAGE_LENGTH,
+  applyDeletion,
+  hasImage,
   buildThreadItems,
   filterConversations,
   hasMixedPeerRoles,
@@ -27,6 +29,7 @@ function serverMessage(over: Partial<MessageResponse> & { id: number }): Message
     clientMessageId: `c${over.id}`,
     createdAt: "2026-08-06T09:00:00Z",
     deletedAt: null,
+    attachment: null,
     ...over,
   };
 }
@@ -40,6 +43,7 @@ function pending(clientMessageId: string, over: Partial<ThreadMessage> = {}): Th
     clientMessageId,
     createdAt: "2026-08-06T10:00:00Z",
     deletedAt: null,
+    attachment: null,
     state: "pending",
     ...over,
   };
@@ -75,6 +79,70 @@ describe("trimMessageForSend / isMessageSendable", () => {
   it("accepts a body at the cap and rejects one over it", () => {
     expect(isMessageSendable("a".repeat(MAX_MESSAGE_LENGTH))).toBe(true);
     expect(isMessageSendable("a".repeat(MAX_MESSAGE_LENGTH + 1))).toBe(false);
+  });
+});
+
+describe("image attachments", () => {
+  const withImage = (over: Partial<ThreadMessage> = {}): ThreadMessage => ({
+    ...serverMessage({ id: 30 }),
+    state: "sent",
+    attachment: { width: 1600, height: 900, byteSize: 120_000 },
+    ...over,
+  });
+
+  it("counts a stored picture and one still uploading alike", () => {
+    expect(hasImage(withImage())).toBe(true);
+    expect(hasImage(pending("abc", { localImageUrl: "blob:local" }))).toBe(true);
+    expect(hasImage(pending("abc"))).toBe(false);
+  });
+
+  it("lets a picture go without a caption, but never text on its own", () => {
+    expect(isMessageSendable("", true)).toBe(true);
+    expect(isMessageSendable("   ", true)).toBe(true);
+    expect(isMessageSendable("", false)).toBe(false);
+    // The length cap still applies to a caption.
+    expect(isMessageSendable("x".repeat(MAX_MESSAGE_LENGTH + 1), true)).toBe(false);
+  });
+
+  it("keeps the local preview through the server echo, so the picture doesn't blink", () => {
+    const optimistic = [pending("abc", { localImageUrl: "blob:local" })];
+
+    const merged = mergeMessages(optimistic, [
+      serverMessage({ id: 4310, clientMessageId: "abc", body: null }),
+    ]);
+
+    expect(merged[0].id).toBe(4310);
+    expect(merged[0].localImageUrl).toBe("blob:local");
+  });
+});
+
+describe("applyDeletion", () => {
+  const stored = (id: number, over: Partial<ThreadMessage> = {}): ThreadMessage => ({
+    ...serverMessage({ id }),
+    state: "sent",
+    ...over,
+  });
+
+  it("clears the text but keeps the row, so the replies around it still make sense", () => {
+    const after = applyDeletion([stored(30), stored(31)], 30, "2026-08-07T10:00:00Z");
+
+    expect(after).toHaveLength(2);
+    expect(after[0]).toMatchObject({ id: 30, body: null, deletedAt: "2026-08-07T10:00:00Z" });
+    expect(after[1].body).toBe("hello");
+  });
+
+  it("is a no-op on a message already tombstoned, so the frame echoed back changes nothing", () => {
+    const messages = [stored(30, { body: null, deletedAt: "2026-08-07T10:00:00Z" })];
+
+    // Same array back: the tab that performed the deletion also receives the
+    // frame for it, and a fresh array there would rerender the whole thread.
+    expect(applyDeletion(messages, 30, "2026-08-07T10:00:05Z")).toBe(messages);
+  });
+
+  it("leaves a thread that never held the message untouched", () => {
+    const messages = [stored(30)];
+
+    expect(applyDeletion(messages, 999, "2026-08-07T10:00:00Z")).toBe(messages);
   });
 });
 

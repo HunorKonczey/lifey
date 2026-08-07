@@ -2,6 +2,7 @@ package com.lifey.chat.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.chat.ChatMapper;
+import com.lifey.chat.ChatMessageDeletedEvent;
 import com.lifey.chat.ChatMessageStoredEvent;
 import com.lifey.chat.ChatProperties;
 import com.lifey.chat.ChatReadCursorEvent;
@@ -11,15 +12,19 @@ import com.lifey.chat.dto.MessageListResponse;
 import com.lifey.chat.dto.SendMessageRequest;
 import com.lifey.chat.entity.ChatConversation;
 import com.lifey.chat.entity.ChatMessage;
+import com.lifey.chat.entity.ChatMessageAttachment;
 import com.lifey.chat.entity.ChatParticipant;
+import com.lifey.chat.exception.AttachmentTooLargeException;
 import com.lifey.chat.exception.ChatDisabledException;
 import com.lifey.chat.exception.ConversationArchivedException;
 import com.lifey.chat.exception.InvalidMessageBodyException;
 import com.lifey.chat.repository.ChatConversationRepository;
+import com.lifey.chat.repository.ChatMessageAttachmentRepository;
 import com.lifey.chat.repository.ChatMessageRepository;
 import com.lifey.chat.repository.ChatParticipantRepository;
 import com.lifey.chat.repository.ConversationUnreadCount;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.common.image.ImageReencoder;
 import com.lifey.trainer.TrainerClientRepository;
 import com.lifey.trainer.TrainerClientStatus;
 import com.lifey.trainer.entity.TrainerClient;
@@ -30,7 +35,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,6 +60,7 @@ public class ChatServiceImpl implements ChatService {
 
     private final ChatConversationRepository conversationRepository;
     private final ChatMessageRepository messageRepository;
+    private final ChatMessageAttachmentRepository attachmentRepository;
     private final ChatParticipantRepository participantRepository;
     private final TrainerClientRepository trainerClientRepository;
     private final CurrentUserProvider currentUserProvider;
@@ -174,6 +186,17 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public SendMessageResult sendMessage(Long conversationId, SendMessageRequest request) {
+        return store(conversationId, request.body(), request.clientMessageId(), null);
+    }
+
+    @Override
+    public SendMessageResult sendMessage(Long conversationId, String body, String clientMessageId,
+                                         MultipartFile image) {
+        return store(conversationId, body, clientMessageId, image);
+    }
+
+    private SendMessageResult store(Long conversationId, String rawBody, String clientMessageId,
+                                    MultipartFile image) {
         Long senderId = currentUserProvider.getUserId();
         ChatConversation conversation = requireParticipation(conversationId, senderId);
 
@@ -185,15 +208,19 @@ public class ChatServiceImpl implements ChatService {
         }
 
         // Replay of an already-stored send: return it untouched and don't spend
-        // rate-limit budget on a retry that isn't new traffic.
+        // rate-limit budget on a retry that isn't new traffic. With an image
+        // this also means the bytes are never re-uploaded — the retry of a
+        // half-finished upload costs one round trip, not another megabyte.
         Optional<ChatMessage> stored =
-                messageRepository.findByConversationIdAndClientMessageId(conversationId, request.clientMessageId());
+                messageRepository.findByConversationIdAndClientMessageId(conversationId, clientMessageId);
         if (stored.isPresent()) {
             return new SendMessageResult(ChatMapper.toMessageResponse(stored.get()), false);
         }
 
-        String body = request.body().trim();
-        if (body.isEmpty()) {
+        boolean hasImage = image != null && !image.isEmpty();
+        String body = rawBody == null ? "" : rawBody.trim();
+        // An image on its own is a complete message; the caption is optional.
+        if (body.isEmpty() && !hasImage) {
             throw new InvalidMessageBodyException("Message body must not be blank");
         }
         if (body.length() > properties.maxBodyLength()) {
@@ -201,16 +228,38 @@ public class ChatServiceImpl implements ChatService {
                     "Message body exceeds " + properties.maxBodyLength() + " characters");
         }
 
+        // Before the decode, not after: the rate limit exists to bound exactly
+        // this kind of work, and re-encoding an image is the expensive part.
         rateLimiter.requireSendAllowance(senderId);
+
+        // Decoded before the message row is written, so a picture that turns
+        // out to be unreadable fails the whole send instead of leaving an
+        // empty bubble on the other side.
+        ReencodedImage reencoded = hasImage ? reencode(image) : null;
 
         Instant now = Instant.now();
         ChatMessage message = new ChatMessage();
         message.setConversation(conversation);
         message.setSender(senderOf(conversation, senderId));
-        message.setBody(body);
-        message.setClientMessageId(request.clientMessageId());
+        message.setBody(body.isEmpty() ? null : body);
+        message.setClientMessageId(clientMessageId);
         message.setCreatedAt(now);
+        if (reencoded != null) {
+            message.setAttachmentWidth(reencoded.width());
+            message.setAttachmentHeight(reencoded.height());
+            message.setAttachmentByteSize(reencoded.image().length);
+        }
         messageRepository.save(message);
+
+        if (reencoded != null) {
+            ChatMessageAttachment attachment = new ChatMessageAttachment();
+            attachment.setMessage(message);
+            attachment.setImage(reencoded.image());
+            attachment.setThumbnail(reencoded.thumbnail());
+            attachment.setContentType(ImageReencoder.CONTENT_TYPE);
+            attachment.setCreatedAt(now);
+            attachmentRepository.save(attachment);
+        }
 
         conversation.setLastMessageAt(now);
         conversation.setLastMessageId(message.getId());
@@ -248,6 +297,19 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ChatMessageAttachment findAttachment(Long messageId) {
+        Long callerId = currentUserProvider.getUserId();
+        ChatMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found: " + messageId));
+        // The guard is the thread, not the sender: both sides can look at a
+        // picture in a conversation they are part of.
+        requireParticipation(message.getConversation().getId(), callerId);
+        return attachmentRepository.findByMessageId(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("No attachment on message: " + messageId));
+    }
+
+    @Override
     public void deleteMessage(Long messageId) {
         Long callerId = currentUserProvider.getUserId();
         ChatMessage message = messageRepository.findById(messageId)
@@ -259,6 +321,16 @@ public class ChatServiceImpl implements ChatService {
         message.setDeletedAt(Instant.now());
         // The row survives as a tombstone; the text itself is genuinely gone.
         message.setBody(null);
+        // And so is the picture. "Deleted" that left the image downloadable
+        // would be a lie — the bytes go, not just the reference to them.
+        if (message.hasAttachment()) {
+            attachmentRepository.deleteByMessageId(messageId);
+            message.clearAttachment();
+        }
+
+        // The one write that changes a row the peer may already be showing, so
+        // it needs a frame of its own — their gap-fill only walks forward.
+        eventPublisher.publishEvent(new ChatMessageDeletedEvent(messageId));
     }
 
     @Override
@@ -276,6 +348,41 @@ public class ChatServiceImpl implements ChatService {
         Instant now = Instant.now();
         conversationRepository.findByTrainerIdAndClientIdAndArchivedAtIsNull(trainerId, clientId)
                 .forEach(conversation -> conversation.setArchivedAt(now));
+    }
+
+    /** What one upload becomes: a bounded JPEG, a square thumbnail, and the size to reserve. */
+    private record ReencodedImage(byte[] image, byte[] thumbnail, int width, int height) {
+    }
+
+    /**
+     * Runs an upload through the shared {@code ImageReencoder} (the same
+     * pipeline as avatars and recipe photos): decoding validates it, and since
+     * only pixels survive the round trip, EXIF and GPS are stripped with it.
+     */
+    private ReencodedImage reencode(MultipartFile file) {
+        if (file.getSize() > properties.attachmentMaxBytes()) {
+            throw new AttachmentTooLargeException(
+                    "Attachment exceeds " + properties.attachmentMaxBytes() + " bytes");
+        }
+        BufferedImage source = ImageReencoder.decode(inputStream(file));
+        byte[] image = ImageReencoder.boundedJpeg(source, properties.attachmentMaxSide());
+        // Bounded, not square-cropped: the bubble reserves the picture's real
+        // aspect ratio from the metadata, so a center-cropped thumbnail would
+        // be cropped a second time on the way into that box.
+        byte[] thumbnail = ImageReencoder.boundedJpeg(source, properties.attachmentThumbnailSize());
+        // Read back from the stored bytes rather than scaling the source
+        // dimensions by hand: the client reserves its box from these numbers,
+        // and an off-by-one there is a visible jump when the image loads.
+        BufferedImage storedImage = ImageReencoder.decode(new ByteArrayInputStream(image));
+        return new ReencodedImage(image, thumbnail, storedImage.getWidth(), storedImage.getHeight());
+    }
+
+    private static InputStream inputStream(MultipartFile file) {
+        try {
+            return file.getInputStream();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private ChatConversation requireParticipation(Long conversationId, Long userId) {

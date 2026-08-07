@@ -1,6 +1,7 @@
 package com.lifey.chat;
 
 import com.lifey.chat.dto.ChatEvent;
+import com.lifey.chat.dto.MessageDeletedEventPayload;
 import com.lifey.chat.dto.MessageEventPayload;
 import com.lifey.chat.entity.ChatConversation;
 import com.lifey.chat.entity.ChatMessage;
@@ -49,6 +50,16 @@ public class ChatStreamBroadcaster {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onMessageDeleted(ChatMessageDeletedEvent event) {
+        try {
+            broadcastDeletion(event.messageId());
+        } catch (RuntimeException ex) {
+            log.error("Chat stream deletion broadcast failed for message {}", event.messageId(), ex);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onReadCursorAdvanced(ChatReadCursorEvent event) {
         try {
             receiptService.broadcastCursors(event.conversationId(), event.userId());
@@ -83,5 +94,24 @@ public class ChatStreamBroadcaster {
         } else if (delivered) {
             receiptService.recordDelivered(conversation.getId(), recipientId, messageId);
         }
+    }
+
+    /**
+     * Both sides, and no receipt bookkeeping: a tombstone is not a new message,
+     * so it must not move anyone's delivered or read cursor. The sender's own
+     * other devices are included for the same reason as on a send — a phone
+     * that did not perform the deletion should still stop showing the text.
+     */
+    private void broadcastDeletion(Long messageId) {
+        ChatMessage message = messageRepository.findById(messageId).orElse(null);
+        if (message == null || message.getDeletedAt() == null) {
+            return;
+        }
+        ChatConversation conversation = message.getConversation();
+        ChatEvent frame = ChatEvent.deleted(new MessageDeletedEventPayload(
+                conversation.getId(), message.getId(), message.getDeletedAt()));
+
+        eventBus.publish(conversation.getTrainer().getId(), frame);
+        eventBus.publish(conversation.getClient().getId(), frame);
     }
 }

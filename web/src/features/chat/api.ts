@@ -44,6 +44,29 @@ export const chatApi = {
   send: (conversationId: number, body: SendMessageRequest) =>
     api.post<MessageResponse>(`/chat/conversations/${conversationId}/messages`, body),
 
+  /**
+   * The same send with an image, as multipart. One request rather than
+   * "create, then attach": the same `clientMessageId` still makes a retry
+   * idempotent, and there is never a half-sent message on the other side.
+   */
+  sendWithAttachment: (
+    conversationId: number,
+    { file, body, clientMessageId }: { file: File; body: string; clientMessageId: string },
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (body) formData.append("body", body);
+    formData.append("clientMessageId", clientMessageId);
+    return api.postForm<MessageResponse>(`/chat/conversations/${conversationId}/messages`, formData);
+  },
+
+  /** Bubble-sized image. 404 for a message without one, same as for a stranger's thread. */
+  attachmentThumbnail: (messageId: number) =>
+    api.getBlob(`/chat/messages/${messageId}/attachment/thumbnail`),
+
+  /** Full-size image, fetched only when someone opens the picture. */
+  attachment: (messageId: number) => api.getBlob(`/chat/messages/${messageId}/attachment`),
+
   /** Tombstone, not a hard delete — only your own message. */
   deleteMessage: (messageId: number) => api.delete(`/chat/messages/${messageId}`),
 

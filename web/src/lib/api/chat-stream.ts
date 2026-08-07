@@ -12,7 +12,7 @@ import { getAccessToken, refreshAccessToken } from "@/lib/api/client";
  */
 
 export interface ChatStreamFrame {
-  /** `event:` — "message", "read" or "resync". */
+  /** `event:` — "message", "read", "deleted" or "resync". */
   name: string;
   /** `id:`, present only on message frames, which is what makes it the cursor. */
   id: string | null;

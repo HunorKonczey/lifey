@@ -3,6 +3,8 @@ package com.lifey.chat.service;
 import com.lifey.chat.dto.ConversationListResponse;
 import com.lifey.chat.dto.MessageListResponse;
 import com.lifey.chat.dto.SendMessageRequest;
+import com.lifey.chat.entity.ChatMessageAttachment;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 
@@ -25,6 +27,23 @@ public interface ChatService {
 
     /** Idempotent on {@code clientMessageId}: a retry returns the stored message. */
     SendMessageResult sendMessage(Long conversationId, SendMessageRequest request);
+
+    /**
+     * The same send, with an image. One request rather than "create the message,
+     * then attach": a two-step upload can leave an empty bubble on the other
+     * side when the second call never lands, and it would need its own
+     * idempotency story on top of {@code clientMessageId} (§18.4/1).
+     *
+     * @param body optional caption — an image on its own is a complete message
+     */
+    SendMessageResult sendMessage(Long conversationId, String body, String clientMessageId, MultipartFile image);
+
+    /**
+     * The stored image of a message in one of the caller's own threads.
+     * Non-participants get a 404, exactly like every other chat route: the
+     * permission follows the conversation, never the message id (§4).
+     */
+    ChatMessageAttachment findAttachment(Long messageId);
 
     /** Advances the caller's read cursor; never moves it backwards. */
     void markRead(Long conversationId, Long lastReadMessageId);

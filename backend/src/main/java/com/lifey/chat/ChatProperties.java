@@ -33,6 +33,12 @@ import java.time.Duration;
  *                              metrics for how often it would fire come first
  * @param emailFallbackAfter  how long unread before the mail goes out, and only
  *                            to a user with no push device at all
+ * @param attachmentMaxBytes  largest image upload accepted, measured on the raw
+ *                            upload before re-encoding; the chat's own budget,
+ *                            below the container's shared multipart limit
+ * @param attachmentMaxSide   longest side of the stored image, aspect preserved
+ * @param attachmentThumbnailSize longest side of the thumbnail the bubble
+ *                            shows; aspect-preserving, not square-cropped
  */
 @ConfigurationProperties(prefix = "lifey.chat")
 public record ChatProperties(
@@ -49,6 +55,9 @@ public record ChatProperties(
         Duration reminderAfter,
         int reminderDailyCap,
         boolean emailFallbackEnabled,
-        Duration emailFallbackAfter
+        Duration emailFallbackAfter,
+        long attachmentMaxBytes,
+        int attachmentMaxSide,
+        int attachmentThumbnailSize
 ) {
 }

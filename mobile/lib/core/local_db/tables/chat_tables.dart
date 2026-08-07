@@ -50,6 +50,12 @@ class ChatConversations extends Table {
   /// Our own per-thread mute (§I5); null or in the past means not muted.
   DateTimeColumn get mutedUntil => dateTime().nullable()();
 
+  /// Whether the previewed message is a picture (I6). The preview text alone
+  /// cannot say so: a caption-less image has no body, and a null preview
+  /// already means "deleted" on this row.
+  BoolColumn get lastMessageHasAttachment =>
+      boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {serverId};
 }
@@ -81,6 +87,21 @@ class ChatMessages extends Table {
   /// `pending` | `sent` | `failed` — drives the bubble's status icon. Only
   /// our own messages are ever anything but `sent`.
   TextColumn get syncState => text().withDefault(const Constant('sent'))();
+
+  /// Image metadata as the server reports it (I6), all set together or all
+  /// null. The bubble reserves its box from these, so a thread of pictures
+  /// doesn't reflow as they load.
+  IntColumn get attachmentWidth => integer().nullable()();
+  IntColumn get attachmentHeight => integer().nullable()();
+  IntColumn get attachmentByteSize => integer().nullable()();
+
+  /// Where the picked file waits while the send is `pending` or `failed`.
+  ///
+  /// This is what makes an image survive being written offline: the outbox
+  /// replays a text message from [body], and without a copy of the file on
+  /// disk there would be nothing to replay for a picture. Cleared — and the
+  /// file deleted — once the server has it.
+  TextColumn get attachmentLocalPath => text().nullable()();
 
   /// Composite: `clientMessageId` is only unique *within* a conversation on
   /// the server, so it alone would be the wrong key here.

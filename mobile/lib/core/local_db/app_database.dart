@@ -58,7 +58,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 32;
+  int get schemaVersion => 33;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -259,6 +259,15 @@ class AppDatabase extends _$AppDatabase {
           // existing behaviour — nothing to backfill.
           if (from < 32) {
             await m.addColumn(chatConversations, chatConversations.mutedUntil);
+          }
+          // V33: image attachments (I6). Every column is nullable or defaulted,
+          // so existing text messages need no backfill.
+          if (from < 33) {
+            await m.addColumn(chatMessages, chatMessages.attachmentWidth);
+            await m.addColumn(chatMessages, chatMessages.attachmentHeight);
+            await m.addColumn(chatMessages, chatMessages.attachmentByteSize);
+            await m.addColumn(chatMessages, chatMessages.attachmentLocalPath);
+            await m.addColumn(chatConversations, chatConversations.lastMessageHasAttachment);
           }
         },
       );

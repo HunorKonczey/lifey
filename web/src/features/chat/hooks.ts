@@ -6,9 +6,10 @@ import { queryKeys } from "@/lib/api/queryKeys";
 import { connectChatStream, type ChatStreamFrame } from "@/lib/api/chat-stream";
 import { useSessionStore } from "@/features/auth/store";
 import { chatApi } from "./api";
-import { mergeMessages, sortConversations, titleWithUnread, totalUnread } from "./thread";
+import { applyDeletion, mergeMessages, sortConversations, titleWithUnread, totalUnread } from "./thread";
 import type {
   ConversationResponse,
+  MessageDeletedEventPayload,
   MessageEventPayload,
   ReadEventPayload,
   ThreadMessage,
@@ -120,6 +121,23 @@ function applyFrame(queryClient: QueryClient, frame: ChatStreamFrame) {
           ),
         },
     );
+    return;
+  }
+
+  if (frame.name === "deleted") {
+    const payload = frame.data as MessageDeletedEventPayload;
+    if (!payload) return;
+
+    // Same rule as a message frame: only patch a thread already in the cache.
+    const key = queryKeys.chat.messages(payload.conversationId);
+    if (queryClient.getQueryData(key)) {
+      queryClient.setQueryData<ThreadMessage[]>(key, (current) =>
+        applyDeletion(current ?? [], payload.messageId, payload.deletedAt),
+      );
+    }
+    // The list carries the deleted message as its preview when it was the last
+    // one, and the server decides that — same reasoning as for a new message.
+    queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations() });
     return;
   }
 

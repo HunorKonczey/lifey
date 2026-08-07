@@ -103,6 +103,8 @@ export const queryKeys = {
   chat: {
     conversations: () => ["chat", "conversations"] as const,
     messages: (conversationId: number) => ["chat", "messages", conversationId] as const,
+    attachmentThumbnail: (messageId: number) => ["chat", "attachment", messageId, "thumb"] as const,
+    attachment: (messageId: number) => ["chat", "attachment", messageId, "full"] as const,
   },
   superAdminUsers: {
     page: (params: { page: number; size?: number; search?: string }) =>

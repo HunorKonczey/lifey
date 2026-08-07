@@ -1972,6 +1972,59 @@
           "response": []
         },
         {
+          "name": "Send message with image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('chatMessageId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": [], "description": "JPEG/PNG within lifey.chat.attachment-max-bytes (8MB by default)" },
+                { "key": "body", "value": "Nézd meg a tartást", "type": "text", "description": "Optional caption — an image on its own is already a complete message" },
+                { "key": "clientMessageId", "value": "{{$guid}}", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"] },
+            "description": "Multipart variant of *Send message* — same endpoint, distinguished by content type, and the same `clientMessageId` idempotency: a replay returns the stored message without re-uploading the bytes. The server decodes the image (which validates it and strips EXIF/GPS), stores a bounded JPEG plus an aspect-preserving thumbnail, and answers with the message carrying an `attachment` object (`width`, `height`, `byteSize`) — the numbers a client sizes its bubble from before downloading anything. 413 over `lifey.chat.attachment-max-bytes`, 400 if the file cannot be decoded as an image, and the same 409/429/503 as a text send."
+          },
+          "response": []
+        },
+        {
+          "name": "Get message image",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "If-None-Match", "value": "", "description": "Send the ETag from a previous response to get a 304", "disabled": true }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/chat/messages/{{chatMessageId}}/attachment", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "messages", "{{chatMessageId}}", "attachment"] },
+            "description": "Full-size stored image. Guarded by participation in the conversation rather than by who sent it — both sides can look at the picture. 404 both for a message without an image and for a thread you are not in. An attachment never changes, so after the first fetch a conditional GET is always a 304."
+          },
+          "response": []
+        },
+        {
+          "name": "Get message image thumbnail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/chat/messages/{{chatMessageId}}/attachment/thumbnail", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "messages", "{{chatMessageId}}", "attachment", "thumbnail"] },
+            "description": "Bubble-sized version of the same image, aspect ratio preserved (not square-cropped), so scrolling a thread of pictures costs thumbnails rather than full images."
+          },
+          "response": []
+        },
+        {
           "name": "List messages (newest page)",
           "request": {
             "method": "GET",

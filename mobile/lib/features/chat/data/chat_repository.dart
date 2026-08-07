@@ -1,6 +1,12 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/local_db/app_database.dart';
@@ -143,31 +149,42 @@ class ChatRepository {
   /// Writes the bubble immediately, then tries the network. Offline (or on
   /// any failure) the row simply stays `pending` and [flushPending] picks it
   /// up later — the composer is never blocked on connectivity.
-  Future<void> send(int conversationId, String body) async {
+  Future<void> send(int conversationId, String body, {File? image}) async {
     final trimmed = body.trim();
-    if (trimmed.isEmpty) return;
+    // A picture on its own is a complete message; text alone must not be blank.
+    if (trimmed.isEmpty && image == null) return;
 
     final clientId = newClientId();
     final now = DateTime.now();
+    // Copied out of the picker's cache before anything else: that cache is the
+    // OS's to clear, and an image queued offline may wait there for days.
+    final localPath = image == null ? null : await _stageAttachment(clientId, image);
+
     await _db.into(_db.chatMessages).insert(ChatMessagesCompanion.insert(
           clientId: clientId,
           conversationId: conversationId,
           senderId: _currentUserId(),
-          body: Value(trimmed),
+          body: Value(trimmed.isEmpty ? null : trimmed),
           createdAt: now,
           syncState: const Value('pending'),
+          attachmentLocalPath: Value(localPath),
         ));
-    await _touchConversationPreview(conversationId, trimmed, now);
-    await _deliver(conversationId, clientId, trimmed);
+    await _touchConversationPreview(
+      conversationId,
+      trimmed.isEmpty ? null : trimmed,
+      now,
+      hasAttachment: localPath != null,
+    );
+    await _deliver(conversationId, clientId, trimmed, localPath);
   }
 
   /// Manual "Resend" from the failed-bubble menu. Safe because the send is
   /// idempotent on the same [clientId] we stored the first time.
   Future<void> retry(int conversationId, String clientId) async {
     final row = await _findMessage(conversationId, clientId);
-    if (row == null || row.body == null) return;
+    if (row == null || (row.body == null && row.attachmentLocalPath == null)) return;
     await _setState(conversationId, clientId, 'pending');
-    await _deliver(conversationId, clientId, row.body!);
+    await _deliver(conversationId, clientId, row.body ?? '', row.attachmentLocalPath);
   }
 
   /// Replays every unsent message, oldest first, so a thread that was written
@@ -179,14 +196,21 @@ class ChatRepository {
           ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
         .get();
     for (final row in rows) {
-      if (row.body == null) continue;
-      await _deliver(row.conversationId, row.clientId, row.body!);
+      if (row.body == null && row.attachmentLocalPath == null) continue;
+      await _deliver(
+        row.conversationId,
+        row.clientId,
+        row.body ?? '',
+        row.attachmentLocalPath,
+      );
     }
   }
 
   /// Drops a message that never reached the server. Nothing to tell the
   /// backend about — it never knew.
   Future<void> discardUnsent(int conversationId, String clientId) async {
+    final row = await _findMessage(conversationId, clientId);
+    await _discardStagedAttachment(row?.attachmentLocalPath);
     await (_db.delete(_db.chatMessages)
           ..where((t) => t.conversationId.equals(conversationId) & t.clientId.equals(clientId)))
         .go();
@@ -202,12 +226,7 @@ class ChatRepository {
       return;
     }
     await _dio.delete<void>(ApiEndpoints.chatMessage(row.serverId!));
-    await (_db.update(_db.chatMessages)
-          ..where((t) => t.conversationId.equals(conversationId) & t.clientId.equals(clientId)))
-        .write(ChatMessagesCompanion(
-      body: const Value(null),
-      deletedAt: Value(DateTime.now()),
-    ));
+    await _tombstone(conversationId, row.serverId!, DateTime.now());
   }
 
   /// Acknowledges everything currently in the thread. Clears the local unread
@@ -260,6 +279,7 @@ class ChatRepository {
       lastMessageAt: Value(message.createdAt),
       lastMessagePreview: Value(message.body),
       lastMessageSenderId: Value(message.senderId),
+      lastMessageHasAttachment: Value(message.attachment != null),
       unreadCount: Value(isOwn ? row.unreadCount : row.unreadCount + 1),
     ));
   }
@@ -276,6 +296,20 @@ class ChatRepository {
       peerLastDeliveredMessageId: Value(lastDeliveredMessageId),
       peerLastReadMessageId: Value(lastReadMessageId),
     ));
+  }
+
+  /// Applies an `event: deleted` frame — the peer (or another of our own
+  /// devices) tombstoned a message.
+  ///
+  /// This is the only frame that changes a row we already hold. Without it the
+  /// text would stay on screen indefinitely, because the catch-up query only
+  /// ever asks for ids *above* the newest one cached.
+  Future<void> applyDeletedMessage(
+    int conversationId,
+    int messageId,
+    DateTime deletedAt,
+  ) async {
+    await _tombstone(conversationId, messageId, deletedAt);
   }
 
   /// Silences this thread's pushes until [mutedUntil]; null unmutes (§I5).
@@ -308,17 +342,133 @@ class ChatRepository {
   /// One send attempt. Never throws: a failure is a state on the row, not an
   /// error the composer has to handle — that is the whole point of the
   /// optimistic bubble.
-  Future<void> _deliver(int conversationId, String clientId, String body) async {
+  Future<void> _deliver(
+    int conversationId,
+    String clientId,
+    String body,
+    String? attachmentPath,
+  ) async {
     try {
+      final hasImage = attachmentPath != null && File(attachmentPath).existsSync();
       final response = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.chatMessages(conversationId),
-        data: {'body': body, 'clientMessageId': clientId},
+        data: hasImage
+            ? FormData.fromMap({
+                'file': await MultipartFile.fromFile(attachmentPath),
+                if (body.isNotEmpty) 'body': body,
+                'clientMessageId': clientId,
+              })
+            : {'body': body, 'clientMessageId': clientId},
+        onSendProgress: hasImage
+            ? (sent, total) => _publishProgress(clientId, total <= 0 ? null : sent / total)
+            : null,
       );
       // 200 here means "you already sent this" — same handling as 201, which
       // is exactly why a blind retry is safe.
       await _storeMessages([ChatMessage.fromJson(response.data!)]);
+      // The server has the bytes now; the staged copy is dead weight, and the
+      // server echo has already cleared the path column.
+      await _discardStagedAttachment(attachmentPath);
     } catch (_) {
       await _setState(conversationId, clientId, 'failed');
+    } finally {
+      _publishProgress(clientId, null);
+    }
+  }
+
+  // --- attachments (I6) ---------------------------------------------------
+
+  /// Upload progress per `clientMessageId`, 0..1, absent when nothing is in
+  /// flight. In memory rather than in Drift on purpose: a row write per
+  /// progress tick would be a database transaction per network chunk.
+  final _uploadProgress = <String, double>{};
+  final _progressController = StreamController<Map<String, double>>.broadcast();
+
+  Stream<Map<String, double>> watchUploadProgress() =>
+      _progressController.stream.map((snapshot) => Map.unmodifiable(snapshot));
+
+  void _publishProgress(String clientId, double? value) {
+    if (value == null) {
+      _uploadProgress.remove(clientId);
+    } else {
+      _uploadProgress[clientId] = value;
+    }
+    if (!_progressController.isClosed) _progressController.add(_uploadProgress);
+  }
+
+  /// Copies the picked file somewhere we control, keyed by the message's own
+  /// id. `image_picker` hands back a path in a cache directory the OS may
+  /// reclaim at any time — fine for an upload that starts now, not for one
+  /// that waits for the plane to land.
+  Future<String> _stageAttachment(String clientId, File source) async {
+    final dir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'chat_outbox'));
+    if (!await dir.exists()) await dir.create(recursive: true);
+    final staged = File(p.join(dir.path, '$clientId.jpg'));
+    await source.copy(staged.path);
+    return staged.path;
+  }
+
+  Future<void> _discardStagedAttachment(String? path) async {
+    if (path == null) return;
+    final file = File(path);
+    if (await file.exists()) await file.delete();
+  }
+
+  /// Bytes of a message's picture: the bubble-sized thumbnail, or the full
+  /// image when someone opens it. Cached on disk under the message id and
+  /// revalidated with an ETag — the stored image never changes, so after the
+  /// first fetch this is a 304 at worst.
+  Future<Uint8List?> fetchAttachment(int messageId, {bool thumbnail = true}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final suffix = thumbnail ? 'thumb' : 'full';
+    final etagKey = 'chat_attachment_etag_${messageId}_$suffix';
+    final dir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'chat_images'));
+    if (!await dir.exists()) await dir.create(recursive: true);
+    final file = File(p.join(dir.path, '$messageId-$suffix.jpg'));
+    final etag = prefs.getString(etagKey);
+
+    try {
+      final response = await _dio.get<List<int>>(
+        thumbnail
+            ? ApiEndpoints.chatAttachmentThumbnail(messageId)
+            : ApiEndpoints.chatAttachment(messageId),
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: etag != null ? {'If-None-Match': etag} : null,
+          validateStatus: (code) => code == 200 || code == 304 || code == 404,
+        ),
+      );
+
+      if (response.statusCode == 304) {
+        return file.existsSync() ? file.readAsBytes() : null;
+      }
+      if (response.statusCode == 404) {
+        // The sender deleted the message — the picture is genuinely gone, so
+        // the cached copy has to go with it.
+        await prefs.remove(etagKey);
+        if (file.existsSync()) await file.delete();
+        return null;
+      }
+
+      final bytes = Uint8List.fromList(response.data!);
+      await file.writeAsBytes(bytes, flush: true);
+      final newEtag = response.headers.value('etag');
+      if (newEtag != null) await prefs.setString(etagKey, newEtag);
+      return bytes;
+    } on DioException {
+      // Offline with a cached copy is not a failure — that is the whole point
+      // of keeping one.
+      return file.existsSync() ? file.readAsBytes() : null;
+    }
+  }
+
+  /// Drops every cached chat picture without touching the server — called on
+  /// logout, so the next account on this device inherits nothing.
+  Future<void> clearAttachmentCache() async {
+    final root = await getApplicationDocumentsDirectory();
+    for (final name in ['chat_images', 'chat_outbox']) {
+      final dir = Directory(p.join(root.path, name));
+      if (await dir.exists()) await dir.delete(recursive: true);
     }
   }
 
@@ -350,6 +500,12 @@ class ChatRepository {
             createdAt: message.createdAt,
             deletedAt: Value(message.deletedAt),
             syncState: const Value('sent'),
+            attachmentWidth: Value(message.attachment?.width),
+            attachmentHeight: Value(message.attachment?.height),
+            attachmentByteSize: Value(message.attachment?.byteSize),
+            // Deliberately left null: the server has the picture, so the
+            // staged copy is no longer the source of truth for this row.
+            attachmentLocalPath: const Value(null),
           ),
           // The server's copy always wins over the optimistic one — this is
           // where a `pending` bubble becomes a real message rather than a
@@ -372,6 +528,7 @@ class ChatRepository {
             lastMessageAt: Value(conversation.lastMessageAt),
             lastMessagePreview: Value(conversation.lastMessagePreview),
             lastMessageSenderId: Value(conversation.lastMessageSenderId),
+            lastMessageHasAttachment: Value(conversation.lastMessageHasAttachment),
             archivedAt: Value(conversation.archivedAt),
             peerLastDeliveredMessageId: Value(conversation.peerLastDeliveredMessageId),
             peerLastReadMessageId: Value(conversation.peerLastReadMessageId),
@@ -383,13 +540,89 @@ class ChatRepository {
   /// Keeps the conversation list in step with an optimistic send, so the row
   /// jumps to the top the moment the bubble appears rather than after a
   /// refresh that may be minutes away (or offline, never).
-  Future<void> _touchConversationPreview(int conversationId, String body, DateTime at) async {
+  Future<void> _touchConversationPreview(
+    int conversationId,
+    String? body,
+    DateTime at, {
+    bool hasAttachment = false,
+  }) async {
     await (_db.update(_db.chatConversations)..where((t) => t.serverId.equals(conversationId)))
         .write(ChatConversationsCompanion(
       lastMessageAt: Value(at),
       lastMessagePreview: Value(body),
       lastMessageSenderId: Value(_currentUserId()),
+      lastMessageHasAttachment: Value(hasAttachment),
     ));
+  }
+
+  /// Clears one message's text and stamps it deleted, wherever the deletion
+  /// came from — our own menu or a `deleted` frame. Idempotent, because the
+  /// device that performed the deletion also receives the frame for it.
+  ///
+  /// The conversation preview follows only when the tombstoned message *is* the
+  /// newest one: a null preview is what the row renders as "message deleted",
+  /// and blanking it for an older message would misreport the thread.
+  Future<void> _tombstone(int conversationId, int messageId, DateTime deletedAt) async {
+    final existing = await (_db.select(_db.chatMessages)
+          ..where((t) =>
+              t.conversationId.equals(conversationId) &
+              t.serverId.equals(messageId) &
+              t.deletedAt.isNull()))
+        .getSingleOrNull();
+    if (existing == null) return;
+
+    await (_db.update(_db.chatMessages)
+          ..where((t) =>
+              t.conversationId.equals(conversationId) & t.serverId.equals(messageId)))
+        .write(ChatMessagesCompanion(
+      body: const Value(null),
+      deletedAt: Value(deletedAt),
+      // The server dropped the bytes, so the metadata that says "there is a
+      // picture here" has to go with them.
+      attachmentWidth: const Value(null),
+      attachmentHeight: const Value(null),
+      attachmentByteSize: const Value(null),
+    ));
+    if (existing.attachmentWidth != null) {
+      await _evictCachedAttachment(messageId);
+    }
+
+    // The *last row of the thread*, not the highest server id: an unsent bubble
+    // sitting after it owns the preview and has no server id at all.
+    final last = await (_db.select(_db.chatMessages)
+          ..where((t) => t.conversationId.equals(conversationId))
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
+            (t) => OrderingTerm(expression: t.clientId, mode: OrderingMode.desc),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+    if (last?.serverId == messageId) {
+      await (_db.update(_db.chatConversations)..where((t) => t.serverId.equals(conversationId)))
+          .write(const ChatConversationsCompanion(
+        lastMessagePreview: Value(null),
+        lastMessageHasAttachment: Value(false),
+      ));
+    }
+  }
+
+  /// A tombstoned picture is gone on the server, so the cached copy would be
+  /// the only place it still existed.
+  ///
+  /// Best effort: this is cache housekeeping, and a filesystem that refuses
+  /// must not undo a tombstone the server has already accepted.
+  Future<void> _evictCachedAttachment(int messageId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dir = Directory(p.join((await getApplicationDocumentsDirectory()).path, 'chat_images'));
+      for (final suffix in ['thumb', 'full']) {
+        await prefs.remove('chat_attachment_etag_${messageId}_$suffix');
+        final file = File(p.join(dir.path, '$messageId-$suffix.jpg'));
+        if (await file.exists()) await file.delete();
+      }
+    } catch (_) {
+      // See above.
+    }
   }
 
   Future<void> _setState(int conversationId, String clientId, String state) {
@@ -437,6 +670,7 @@ class ChatRepository {
       peerLastDeliveredMessageId: row.peerLastDeliveredMessageId,
       peerLastReadMessageId: row.peerLastReadMessageId,
       mutedUntil: row.mutedUntil,
+      lastMessageHasAttachment: row.lastMessageHasAttachment,
     );
   }
 
@@ -449,6 +683,14 @@ class ChatRepository {
       body: row.body,
       createdAt: row.createdAt,
       deletedAt: row.deletedAt,
+      attachment: row.attachmentWidth == null
+          ? null
+          : ChatAttachment(
+              width: row.attachmentWidth!,
+              height: row.attachmentHeight ?? row.attachmentWidth!,
+              byteSize: row.attachmentByteSize ?? 0,
+            ),
+      attachmentLocalPath: row.attachmentLocalPath,
       state: switch (row.syncState) {
         'pending' => ChatMessageState.pending,
         'failed' => ChatMessageState.failed,

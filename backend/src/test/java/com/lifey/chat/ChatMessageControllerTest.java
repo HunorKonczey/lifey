@@ -106,6 +106,6 @@ class ChatMessageControllerTest {
 
     private static MessageResponse message() {
         return new MessageResponse(4310L, 12L, 7L, "Holnap 17:00 jó?", "a3f",
-                Instant.parse("2026-08-02T09:12:44Z"), null);
+                Instant.parse("2026-08-02T09:12:44Z"), null, null);
     }
 }

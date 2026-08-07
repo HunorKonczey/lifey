@@ -104,7 +104,7 @@ class ChatUnreadReminderJobTest {
         ChatProperties properties = new ChatProperties(true, 2000, 30, 100, 30, 600,
                 Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
                 Duration.ofSeconds(60), Duration.ofMinutes(30), 1,
-                emailFallbackEnabled, Duration.ofHours(24));
+                emailFallbackEnabled, Duration.ofHours(24), 8L * 1024 * 1024, 1600, 400);
         return new ChatUnreadReminderJob(participantRepository, messageRepository, userSettingsRepository,
                 pushDeviceRepository, pushService, mailService, properties, Clock.fixed(NOW, ZoneOffset.UTC));
     }

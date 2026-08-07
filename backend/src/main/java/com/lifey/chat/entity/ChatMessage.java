@@ -50,4 +50,30 @@ public class ChatMessage extends BaseEntity {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    /**
+     * Image metadata, all three set together or all three null. Kept here
+     * rather than joined from {@link ChatMessageAttachment} because a client
+     * needs the aspect ratio to reserve space <em>before</em> the picture
+     * arrives — a thread that reflows as images load is unusable.
+     */
+    @Column(name = "attachment_width")
+    private Integer attachmentWidth;
+
+    @Column(name = "attachment_height")
+    private Integer attachmentHeight;
+
+    @Column(name = "attachment_byte_size")
+    private Integer attachmentByteSize;
+
+    public boolean hasAttachment() {
+        return attachmentWidth != null;
+    }
+
+    /** Clears the metadata; the bytes are removed by the caller (§18.4/2). */
+    public void clearAttachment() {
+        attachmentWidth = null;
+        attachmentHeight = null;
+        attachmentByteSize = null;
+    }
 }

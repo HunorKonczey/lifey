@@ -34,8 +34,10 @@ public class ChatStreamController {
     @Operation(summary = "Subscribe to the caller's chat events",
             description = "One long-lived text/event-stream carrying every conversation the caller "
                     + "takes part in. Frames: `message` (carries an id, so Last-Event-ID means "
-                    + "\"newest message I have\"), `read` (the peer's delivered/read cursors), and "
-                    + "`resync` when the gap is too large to replay. The connection is closed after "
+                    + "\"newest message I have\"), `read` (the peer's delivered/read cursors), "
+                    + "`deleted` (a message was tombstoned — the only frame about a row the client "
+                    + "already holds), and `resync` when the gap is too large to replay. The "
+                    + "connection is closed after "
                     + "lifey.chat.stream-timeout and the client is expected to reconnect.")
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@RequestHeader(value = "Last-Event-ID", required = false) Long lastEventId,

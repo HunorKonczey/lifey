@@ -157,7 +157,7 @@ public class ChatNotificationServiceImpl implements ChatNotificationService {
         String title = ChatMapper.displayName(sender);
         String body = unread > 1
                 ? aggregatedBody(unread, hungarian)
-                : truncate(message.getBody());
+                : singleBody(message, hungarian);
         Map<String, String> data = Map.of(
                 "type", "chat_message",
                 "conversationId", String.valueOf(message.getConversation().getId()),
@@ -169,6 +169,20 @@ public class ChatNotificationServiceImpl implements ChatNotificationService {
     /** One row per thread in the OS notification centre (§5.3). */
     static String collapseKey(Long conversationId) {
         return "chat-" + conversationId;
+    }
+
+    /**
+     * A picture with no caption still has to say something in the notification
+     * shade. The marker goes in front of a caption too, so the recipient can
+     * tell there is an image before opening the thread.
+     */
+    private static String singleBody(ChatMessage message, boolean hungarian) {
+        String text = truncate(message.getBody());
+        if (!message.hasAttachment()) {
+            return text;
+        }
+        String marker = hungarian ? "📷 Kép" : "📷 Photo";
+        return text.isEmpty() ? marker : marker + " · " + text;
     }
 
     private static String aggregatedBody(long unread, boolean hungarian) {

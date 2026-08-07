@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/chat_message.dart';
+import 'chat_attachment_view.dart';
 import 'chat_avatar.dart';
 
 /// One message.
@@ -28,7 +29,11 @@ class MessageBubble extends StatelessWidget {
     this.receiptState,
     this.onRetry,
     this.onDelete,
+    this.uploadProgress,
   });
+
+  /// 0..1 while this message's picture is uploading; null otherwise.
+  final double? uploadProgress;
 
   final ChatMessage message;
   final bool isOwn;
@@ -73,7 +78,9 @@ class MessageBubble extends StatelessWidget {
       label: l10n.chatMessageSemantics(
         senderName,
         time,
-        message.isDeleted ? l10n.chatDeletedMessage : (message.body ?? ''),
+        message.isDeleted
+            ? l10n.chatDeletedMessage
+            : _spokenBody(l10n),
         isOwn ? _statusLabel(l10n) : '',
       ),
       excludeSemantics: true,
@@ -100,7 +107,10 @@ class MessageBubble extends StatelessWidget {
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.sizeOf(context).width * 0.74,
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                  // A picture wants to fill its bubble, not float in it.
+                  padding: message.hasAttachment && !message.isDeleted
+                      ? const EdgeInsets.all(4)
+                      : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
                   decoration: BoxDecoration(
                     color: bubbleColor,
                     borderRadius: BorderRadius.only(
@@ -165,13 +175,37 @@ class MessageBubble extends StatelessWidget {
         ),
       );
     }
+    if (message.hasAttachment) {
+      final caption = message.body;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ChatAttachmentView(
+            message: message,
+            uploading: _state == ChatMessageState.pending,
+            uploadProgress: uploadProgress,
+          ),
+          // No empty text row under a caption-less picture — the image is the
+          // whole message.
+          if (caption != null && caption.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _text(caption, scheme),
+          ],
+        ],
+      );
+    }
     // Plain Text, not SelectableText: on touch both selection and the
     // long-press menu below want the same gesture, and they fight for it.
     // The menu wins because it is what the design specifies, and its "Copy"
     // action covers the same need more reliably than a drag-to-select would
     // inside a 74%-width bubble.
+    return _text(message.body ?? '', scheme);
+  }
+
+  Widget _text(String value, ColorScheme scheme) {
     return Text(
-      message.body ?? '',
+      value,
       style: TextStyle(
         fontFamily: 'PlusJakartaSans',
         fontSize: 14.5,
@@ -180,6 +214,13 @@ class MessageBubble extends StatelessWidget {
         color: scheme.onSurface,
       ),
     );
+  }
+
+  /// A picture with no caption still has to be announced as something.
+  String _spokenBody(AppLocalizations l10n) {
+    final body = message.body ?? '';
+    if (!message.hasAttachment) return body;
+    return body.isEmpty ? l10n.chatImageAlt : '${l10n.chatImageAlt}: $body';
   }
 
   String _statusLabel(AppLocalizations l10n) {
@@ -201,14 +242,16 @@ class MessageBubble extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.content_copy),
-              title: Text(l10n.chatCopyAction),
-              onTap: () async {
-                await Clipboard.setData(ClipboardData(text: message.body ?? ''));
-                if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-              },
-            ),
+            // Nothing to copy from a picture with no caption.
+            if ((message.body ?? '').isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.content_copy),
+                title: Text(l10n.chatCopyAction),
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: message.body!));
+                  if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                },
+              ),
             // Resend is only meaningful on something that actually failed —
             // shown disabled elsewhere would just be noise.
             if (failed && onRetry != null)

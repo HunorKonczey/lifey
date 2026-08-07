@@ -22,8 +22,13 @@
 > **[§14 (I3)](#14-megvalósítási-napló--i3-edzői-web)**, a
 > **[§15 (I4)](#15-megvalósítási-napló--i4-realtime-sse--jelenlét--pipák)** és a
 > **[§16 (I5)](#16-megvalósítási-napló--i5-értesítés-finomhangolás)** rögzíti.
-> **Hátra az I6 (opcionális kiterjesztések) és az I7 (üzemeltetés és mérés) van —
-> belépőpontjuk a §12–§16, illetve a [§10](#10-design) design-forrásai**
+> Az **I6-ból az üzenet-törlés** (**[§17](#17-megvalósítási-napló--i61-üzenet-törlése)**)
+> és a **kép-csatolmány** (**[§18](#18-megvalósítási-napló--i62-kép-csatolmány)**) kész.
+> A törlésnél a leszállított munka valójában a törlés **átvitele a másik félhez**
+> (`deleted` SSE frame) volt, mert a felület már az I2/I3-ban elkészült.
+> **Hátra az I6 másik két tétele (gépelés-jelző, keresés a szálban)
+> és az I7 (üzemeltetés és mérés) van — belépőpontjuk a §12–§18, illetve a
+> [§10](#10-design) design-forrásai**
 > ([42-chat-design-prompt.md](42-chat-design-prompt.md) és
 > [design/Lifey Chat.dc.html](design/Lifey%20Chat.dc.html)) — minden UI-munka azokból
 > dolgozik.
@@ -793,14 +798,18 @@ csendes órában néma.
 
 ---
 
-### I6 – Kiterjesztések (opcionális, igény szerint) · ~3 nap
+### I6 – Kiterjesztések (opcionális, igény szerint) · ~3 nap · ◐ RÉSZBEN KÉSZ
 
-- **Kép-csatolmány**: a meglévő kép-pipeline (`common/image`, `Thumbnailator`,
+> **Állapot:** a négy tételből az **üzenet törlése** (§17) és a **kép-csatolmány**
+> (§18) kész. A maradék kettő nem indult el — az I6 tételei egymástól függetlenek,
+> tehát bármelyik önállóan felvehető később.
+
+- ~~**Kép-csatolmány**: a meglévő kép-pipeline (`common/image`, `Thumbnailator`,
   profilkép/recept minta) újrahasznosítása; `chat_messages.attachment_url` + `type`
-  oszlop, kliensoldali feltöltés-progressz.
+  oszlop, kliensoldali feltöltés-progressz.~~ ✅ **kész — §18**
 - **Gépelés-jelző**: `POST /chat/typing` (throttle 3 mp) → `typing` SSE esemény, 5 mp TTL.
   Sose vált ki pusht.
-- **Üzenet törlése** UI-ból (a backend már tudja I1 óta).
+- ~~**Üzenet törlése** UI-ból (a backend már tudja I1 óta).~~ ✅ **kész — §17**
 - **Keresés a szálban** (`ILIKE` + trigram index, ha kell).
 
 ### I7 – Üzemeltetés és mérés · ~1 nap
@@ -1077,7 +1086,8 @@ kliens-lista maga a `/admin` főoldal.
 frissül (`CHAT_POLL_INTERVAL_MS`, 20 mp) plusz ablak-fókuszra. Egy következmény, amit az
 I4 old meg: a **másik fél által törölt** üzenet tombstone-ja csak teljes újratöltéskor
 jelenik meg, mert a szál-lekérdezés `after=<utolsó id>` hézagpótlást kér, ami régebbi
-sorok változását nem hozza vissza.
+sorok változását nem hozza vissza. *(Utólag: az I4 ezt **nem** oldotta meg — a törléshez
+saját frame kellett, amit végül az I6/1 szállított, lásd §17.)*
 
 ### 14.4 Architektúra-döntések, amik kötik a következő lépéseket
 
@@ -1239,8 +1249,8 @@ enélkül ez a mérés csak kézzel, `jcmd`-vel megismételhető.
 
 ## 16. Megvalósítási napló — I5 (értesítés-finomhangolás)
 
-> **Ezzel a chat funkcionálisan kész.** Hátra az I6 (opcionális kiterjesztések) és az
-> I7 (üzemeltetés és mérés) van.
+> **Ezzel a chat funkcionálisan kész.** Hátra az I6 (opcionális kiterjesztések — az
+> üzenet-törlés azóta elkészült, lásd §17) és az I7 (üzemeltetés és mérés) van.
 
 ### 16.1 Mi készült el
 
@@ -1325,3 +1335,191 @@ ellenőrzés azt olvassa, nem a push-kimenetet (nincs regisztrált eszköz):
 | `chatQuietHoursSet` nélküli mentés **nem** törli a tárolt ablakot | ✅ |
 | `chatQuietHoursSet: false` **törli** | ✅ |
 | `ChatUnreadReminderJob` a soron következő 5 perces tickre lefut és bélyegzi a user minden szálát | ✅ |
+
+---
+
+## 17. Megvalósítási napló — I6/1 (üzenet törlése)
+
+> **Az I6 három megmaradt tétele** (kép-csatolmány, gépelés-jelző, keresés a szálban)
+> **innen indul.** A `deleted` frame az első olyan SSE esemény, ami egy már meglévő
+> sort módosít — a §17.4/1 szabálya minden továbbira vonatkozik.
+
+### 17.1 Amit a munka a kódban talált
+
+A tétel szövege („üzenet törlése UI-ból, a backend már tudja I1 óta") **félrevezető
+volt**: a törlés UI-ja az I2/I3-ban már leszállt mindkét kliensen — mobilon a buborék
+hosszan-nyomás menüjének „Törlés" sora, weben a hoverre megjelenő kuka-gomb, tombstone
+renderelés és lista-előnézet mindkettőn.
+
+Ami **hiányzott**, azt a §14.3 maga nevezi meg: a törlés **nem jutott el a másik
+félhez**. A szál lekérdezése `after=<utolsó id>` hézagpótlást kér, ami régebbi sorok
+változását sosem hozza vissza — a peer tehát a törölt üzenet szövegét látta tovább,
+akár korlátlan ideig (mobilon a lokális cache miatt egy újratelepítésig). Az I6 valódi
+tartalma ezért a **propagáció** lett, nem a felület.
+
+### 17.2 Mi készült el
+
+**Backend**
+
+| Elem | Fájlok |
+|---|---|
+| Esemény | `ChatMessageDeletedEvent` (csak `messageId`, a `ChatMessageStoredEvent` mintájára), publikálva a `ChatServiceImpl.deleteMessage`-ből |
+| Frame | `ChatEvent.DELETED` + `ChatEvent.deleted(...)`, `dto/MessageDeletedEventPayload` (`conversationId`, `messageId`, `deletedAt`) |
+| Szórás | `ChatStreamBroadcaster.onMessageDeleted` (`AFTER_COMMIT` + `REQUIRES_NEW`) → mindkét résztvevő, kurzor-mozgatás nélkül |
+| Dokumentáció | `ChatStreamController` OpenAPI leírása a negyedik frame-mel |
+
+**Kliensek**
+
+| Elem | Hol |
+|---|---|
+| Frame kezelése | mobil: `ChatStreamController` `deleted` ága → `ChatRepository.applyDeletedMessage`; web: `hooks.ts` `applyFrame` `deleted` ága |
+| Tombstone írás | mobil: `ChatRepository._tombstone` (idempotens, a lista-előnézetet csak a legutolsó üzenetnél nullázza); web: `thread.ts` `applyDeletion` (tiszta függvény, változatlan tömböt ad vissza, ha nincs mit tenni) |
+| Megerősítés | mobil: `showConfirmDeleteDialog` a szál képernyőjén; web: `ConfirmDialog` a `ChatThread`-ben — új l10n kulcsok mindkét nyelven |
+
+Tesztek: backend **782** zöld (ebből 5 új: mindkét fél megkapja a frame-et, a tombstone
+egyik kurzort sem mozdítja, nem-törölt sorra nincs frame, hibanyelés, az ismételt
+törlés nem szór újra), web **148** zöld (+3: `applyDeletion`), mobil **594** zöld
+(+5: előnézet-nullázás a legutolsó üzenetnél, változatlan előnézet régebbinél, el nem
+küldött buborék viszi tovább az előnézetet, bejövő `deleted` frame, ismételt frame).
+
+### 17.3 Eltérések a tervtől — ezekkel kell dolgozni
+
+| Terv | Valóság | Miért |
+|---|---|---|
+| „Üzenet törlése **UI-ból**" | a UI megvolt; a szállított munka a **`deleted` SSE frame** end-to-end | lásd §17.1 — egy törlés, amit a másik fél nem lát, nincs leszállítva |
+| — | a `deleted` frame **nem hordoz `id:`-t** | a törölt üzenet id-je definíció szerint régebbi a kliens kurzoránál; `Last-Event-ID`-nek beállítva minden újracsatlakozás visszajátszaná a szál végét (a §15.2 „csak a `message` hordoz id-t" szabályának egyenes folytatása) |
+| — | a frame a **küldő saját eszközeire is** megy | ugyanaz az ok, mint küldésnél: a másik fül / a másik telefon ne mutassa tovább a szöveget. A törlést végző kliens optimista frissítése miatt ott no-op |
+| — | **megerősítő párbeszéd** mindkét kliensen, új l10n kulcsokkal | a törlés visszavonhatatlan és a másik fél képernyőjéig ér; a repo minden más destruktív műveleténél is van megerősítés. A **még el nem küldött** buborék elvetése továbbra sem kérdez — azt rajtunk kívül senki nem látta |
+| — | mobilon a lista-előnézet **csak akkor** nullázódik, ha a törölt üzenet a legutolsó | a null előnézet az, amit a sor „Az üzenetet törölték"-ként rendel; egy régebbi üzenetre alkalmazva hazudna a szálról |
+
+### 17.4 Architektúra-döntések, amik kötik a következő lépéseket
+
+1. **A `deleted` az egyetlen frame, ami visszanyúl egy már meglévő sorra.** Minden
+   eddigi frame előre mutatott (új üzenet, előrelépő kurzor), ezért volt elég a
+   `after=<id>` hézagpótlás. Aki új, *módosító* eseményt vezet be (üzenet-szerkesztés,
+   csatolmány-állapot), annak ugyanígy saját frame kell, és ugyanígy `id:` nélkül.
+2. **A tombstone nem üzenet.** Nem mozdítja a `delivered` / `read` kurzort, nem számít
+   bele az olvasatlanba, és nem vált ki pusht — a `ChatNotificationServiceImpl`
+   létrájához hozzá sem ér.
+3. **A törlés alkalmazása idempotens mindkét kliensen.** A művelet elvégzője optimista
+   frissítést ír, majd megkapja a saját frame-jét is; a `_tombstone` (mobil) csak
+   `deletedAt is null` sorra ír, az `applyDeletion` (web) ugyanazt a tömböt adja
+   vissza. Bármilyen későbbi frame-típus kövesse ezt — a stream duplikálhat (§15.2).
+
+### 17.5 Amit az I6/1 tudatosan nem szállít
+
+Kép-csatolmány, gépelés-jelző, keresés a szálban — az I6 másik három tétele, mind
+felvehető önállóan.
+
+**Egy ismert korlát.** Ha a törlés akkor történik, amikor a kliens **nincs
+csatlakozva**, a frame elvész, és az újracsatlakozás hézagpótlása (`after=<id>`) nem
+hozza vissza: a tombstone csak teljes újratöltéskor jelenik meg (`resync`, cache-ürítés,
+vagy weben az oldal-újratöltés utáni első oldal-lekérés). Ez tudatos: egy „mi változott
+mióta offline vagy" lekérdezés a chat egészét érintő új szerződés lenne
+(`chat_messages.updated_at` + egy delta végpont), az üzenet szövege pedig a szerveren
+már ekkor sincs meg — csak a másik fél elavult másolata él tovább egy ideig. Ha ez
+később mégis kell, a helye a stream catch-up (`ChatStreamServiceImpl`), nem a REST.
+
+---
+
+## 18. Megvalósítási napló — I6/2 (kép-csatolmány)
+
+> **Az I6 két megmaradt tétele** (gépelés-jelző, keresés a szálban) **innen indul.**
+> A kép az első nem-szöveges üzenettípus; a §18.4 szabályai minden továbbira
+> vonatkoznak.
+
+### 18.1 Mi készült el
+
+**Backend**
+
+| Réteg | Fájlok |
+|---|---|
+| Migráció | `V67__chat_attachments.sql`: `chat_message_attachments` tábla + `chat_messages.attachment_width/height/byte_size` + a `body` kötelezőségét felváltó `chat_messages_content_present` check |
+| Entitás | `entity/ChatMessageAttachment`, `ChatMessage` + a három metaadat-mező, `hasAttachment()` / `clearAttachment()` |
+| Repository | `repository/ChatMessageAttachmentRepository` |
+| DTO | `dto/MessageAttachmentResponse`, `MessageResponse.attachment` |
+| Szolgáltatás | `ChatServiceImpl.store(...)` (a szöveges és a képes küldés közös útja), `reencode(...)`, `findAttachment(...)`; a törlés a bájtokat is viszi |
+| Végpontok | `POST /chat/conversations/{id}/messages` **multipart** változata, `GET /chat/messages/{id}/attachment` és `/attachment/thumbnail` (ETag-es feltételes GET) |
+| Kép-pipeline | `ImageReencoder.boundedJpeg` (új, nem nagyít) |
+| Egyéb | `ChatProperties` + `attachmentMaxBytes` / `attachmentMaxSide` / `attachmentThumbnailSize`, `exception/AttachmentTooLargeException` (413), a push törzse képnél „📷 Kép" / „📷 Photo" |
+
+**Mobil**
+
+| Réteg | Fájlok |
+|---|---|
+| Séma | **v33**: `chat_messages.attachment_width/height/byte_size/attachment_local_path`, `chat_conversations.last_message_has_attachment` |
+| Domain | `ChatAttachment`, `ChatMessage.attachment` / `attachmentLocalPath` / `hasAttachment`, `ChatConversation.lastMessageHasAttachment` |
+| Data | `ChatRepository.send(..., image:)`, multipart `_deliver` `onSendProgress`-szel, `_stageAttachment`, `fetchAttachment` (lemezes cache + ETag), `watchUploadProgress`, `clearAttachmentCache` |
+| Presentation | `widgets/chat_attachment_view.dart` (buborék-kép + teljes képernyős néző `InteractiveViewer`-rel), `chat_composer` kép-gomb + forrás-lap + kiválasztott kép sávja, `message_bubble` kép + felirat, `conversation_tile` képes előnézet |
+| Beépülés | `chatUploadProgressProvider`, kijelentkezéskori cache-ürítés az `auth_controller`-ben |
+
+**Web**
+
+| Réteg | Fájlok |
+|---|---|
+| Adatréteg | `api.postForm`, `chatApi.sendWithAttachment` / `attachment` / `attachmentThumbnail`, `queryKeys.chat.attachment*`, `types.ts` `MessageAttachmentResponse` + `ThreadMessage.localImageUrl` / `localFile` |
+| Tiszta logika | `thread.ts`: `hasImage`, `isMessageSendable(raw, withImage)`, `MAX_ATTACHMENT_BYTES`, `ACCEPTED_IMAGE_TYPES`; `mergeMessages` átmenti a lokális előnézetet |
+| Komponensek | `components/ChatAttachment.tsx` (thumbnail + lightbox), `ChatComposer` kép-gomb és előnézet-sáv, `MessageBubble` kép + felirat, `ConversationList` képes előnézet |
+| i18n | 8 új kulcs mindkét nyelven (mobil: 9) |
+
+Tesztek: backend **744** zöld (+8 új: metaadat és bájtok tárolása, felirat nélküli
+kép, se szöveg se kép → 400, méretkorlát, ismételt küldés nem tölt fel újra,
+résztvevőség-alapú letöltés, idegen szálra 404, törlés viszi a képet), web **151**
+zöld (+3), mobil **598** zöld (+4: multipart küldés, felirat nélküli kép,
+offline sorban álló kép újraküldése, elvetés törli a fájlt).
+
+> ⚠️ **A Testcontainers-alapú integrációs tesztek nem futottak.** Ebben a
+> környezetben a Docker démon nem indít konténert (a `docker` CLI listáz, de a
+> `docker run` és a Testcontainers `DockerClientFactory` is végtelenül vár), ezért
+> a `ChatFlowIntegrationTest` és a másik nyolc Testcontainers-osztály ki lett hagyva
+> a futtatásból. **Ezzel együtt a `V67` migráció valódi Postgres ellen nem lett
+> lefuttatva** — ez az első dolog, amit egy működő Docker mellett ellenőrizni kell.
+
+### 18.2 Eltérések a tervtől — ezekkel kell dolgozni
+
+| Terv | Valóság | Miért |
+|---|---|---|
+| `chat_messages.attachment_url` + `type` oszlop | **`chat_message_attachments` tábla** (bájtok) + három metaadat-oszlop a `chat_messages`-en | nincs objektumtár a projektben; a profilkép és a receptkép is bájtként él a DB-ben, és a chat nem vezet be új infrastruktúrát ehhez. A `type` oszlop elmaradt: egy `attachment` alobjektum megléte pontosan ugyanazt mondja meg, egy enum nélkül, ami ma egyértékű lenne |
+| — | a kép **ugyanazon a végponton** megy, multipart tartalomtípussal | egy külön „csatolmány feltöltése" lépés nem-atomi lenne (üres buborék a másik oldalon, ha a második hívás elmarad), és saját idempotencia-történetet kívánna a `clientMessageId` mellé |
+| — | a méretek a **`chat_messages`-en**, nem a bájtok mellett | a lista- és szál-lekérdezés minden sort beolvas; egy join a bájtokat tartó táblához vagy egy plusz kérés a kliensről ugyanazért az egy számpárért nem éri meg. A kliens ebből foglal helyet, mielőtt egyetlen bájt megérkezne |
+| — | **`ImageReencoder.boundedJpeg`** (új metódus) | a meglévő `resizedJpeg` **felnagyít** — egy 200×120-as kép 1600×960 lett (a teszt fogta meg). Fix méretű profilkép-slotnál ez jó, egy chat-fotónál csak bájt. A meglévő hívókat nem érinti |
+| — | a thumbnail **nem négyzetes**, hanem arányos | a buborék a valódi képarányt foglalja le, tehát egy közép-vágott négyzetet másodszor is levágna |
+| „kliensoldali feltöltés-progressz" | **mobilon valódi százalék** (Dio `onSendProgress`), **weben határozatlan pörgő** | a web `fetch`-alapú API-kliense nem tud feltöltés-progresszt; egy `XMLHttpRequest`-ág új minta lenne egyetlen funkcióért. A helyi előnézet amúgy is azonnal látszik, tehát a különbség egy pörgő és egy szám között van, nem „látok valamit" és „nem látok semmit" között |
+| — | a törlés a **bájtokat is törli** | egy tombstone, ami után a kép még letölthető, hazugság |
+| — | mobilon a picked fájl **átmásolódik** az app dokumentum-könyvtárába | az `image_picker` cache-könyvtárát az OS bármikor felszabadíthatja; egy repülőn megírt üzenet napokig ott várna |
+| — | `chat_conversations.last_message_has_attachment` (mobil séma) | a null előnézet eddig egyértelműen „törölt üzenet" volt; egy felirat nélküli kép ugyanúgy null törzsű, tehát kellett egy harmadik jel. A web nem kapott ilyen mezőt: ott a teljes `lastMessage` a kézben van |
+| A design prompt: „Kép-csatolmány **csak** ha marad idő, külön, jelölten" | **nincs hozzá design-forrás** | a `42-chat-design-prompt.md` kifejezetten kizárta, és a `.dc.html` sem rajzolja. A megjelenés ezért a meglévő chat-nyelvből következik (ugyanaz a buborék, sugár, állapot-ikon készlet), új token nélkül. **Ha készül rá design, ez a szakasz az, amit felül kell írnia** |
+
+### 18.3 Amit az I6/2 tudatosan nem szállít
+
+Videó, hangüzenet, dokumentum-csatolmány, több kép egy üzenetben, kép-szerkesztés
+küldés előtt, letöltés/megosztás a teljes képernyős nézőből. A gépelés-jelző és a
+keresés a szálban változatlanul az I6 nyitott tételei.
+
+**Egy ismert korlát.** Az `attachment` bájtjai a `chat_message_attachments`
+táblában élnek, azaz **a Postgres-ben**, nem objektumtárban. Egy aktív edző-kliens
+párnál ez napi néhány száz KB — elhanyagolható —, de a tábla monoton nő, és nincs
+megőrzési szabály (§11/4 ugyanezt mondja a szövegre). Ha a méret valaha téma lesz,
+a csere helye a `ChatMessageAttachment` + a két letöltő végpont, nem a küldési út:
+a kliens szerződése (metaadat az üzeneten, bájt külön kérésben) ugyanaz marad
+objektumtárral is.
+
+### 18.4 Architektúra-döntések, amik kötik a következő lépéseket
+
+1. **Egy üzenet = egy kérés.** A kép ugyanazon a `POST`-on megy, ugyanazzal a
+   `clientMessageId`-vel, és a replay-ág **a bájtok feltöltése előtt** dönt. Aki új
+   üzenettípust vezet be, ezt kövesse: ne legyen olyan állapot, amiben létezik egy
+   üzenet, aminek a tartalma még úton van.
+2. **A metaadat az üzeneten van, a tartalom külön kérésben.** Ez az, amitől a szál-
+   lekérdezés olcsó marad és a kliens előre tud helyet foglalni. Bármilyen új
+   tartalomtípus (hang, dokumentum) ugyanígy: egy kis, kötelezően jelenlévő
+   leíró az üzenetben, a bájtok ETag-es GET mögött.
+3. **A törlés a tartalmat is törli.** A `deleteMessage` a bájtokat is elviszi, a
+   kliensek a lemezes cache-t is ürítik rá. Új tartalomtípusnál ez nem opcionális.
+4. **A mobil outboxnak fájl-életciklusa is van.** A `pending` sor mellé tartozik egy
+   `chat_outbox/<clientMessageId>.jpg`, amit a sikeres küldés, az elvetés és a
+   kijelentkezés is takarít. Aki új, bináris tartalmú offline műveletet ír, ezt a
+   hármat mind kösse be — különben a felhasználó privát fotói maradnak a lemezen.
+5. **A felirat nélküli kép teljes értékű üzenet.** A `body` nullázható, ha van
+   csatolmány (a DB check ezt kényszeríti ki), és minden felület (buborék, lista-
+   előnézet, push, képernyőolvasó) külön ágon kezeli az „üres törzs" esetet.

@@ -199,6 +199,17 @@ lifey:
     # very easily. Turn it on only after the metrics show how often it fires.
     email-fallback-enabled: ${CHAT_EMAIL_FALLBACK_ENABLED:false}
     email-fallback-after: ${CHAT_EMAIL_FALLBACK_AFTER:24h}
+    # Image attachments (§18). The byte cap is the chat's own, checked on the
+    # raw upload before re-encoding — deliberately below the container-wide
+    # multipart limit, which is shared with avatar and recipe photos.
+    attachment-max-bytes: ${CHAT_ATTACHMENT_MAX_BYTES:8388608}
+    # Longest side of the stored image and of the bubble thumbnail; both keep
+    # the picture's aspect ratio and neither enlarges a smaller original.
+    # Larger than the recipe photo's 1024: a chat picture is often a form check
+    # or a screenshot of a plan, where detail is the point, and it is stored
+    # once and read many times.
+    attachment-max-side: ${CHAT_ATTACHMENT_MAX_SIDE:1600}
+    attachment-thumbnail-size: ${CHAT_ATTACHMENT_THUMBNAIL_SIZE:400}
   jobs:
     password-reset-cleanup:
       # Daily sweep removing expired/used password reset tokens (PasswordResetTokenCleanupJob).
