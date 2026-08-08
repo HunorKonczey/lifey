@@ -71,10 +71,13 @@ springdoc:
 management:
   endpoints:
     web:
-      # Only expose the health endpoint over HTTP (at /actuator/health) — nothing
-      # else (env, beans, mappings, ...) is reachable, so no internals leak.
+      # Health is public (the deploy probe hits it); metrics is exposed but
+      # locked to ROLE_SUPER_ADMIN in SecurityConfig — on a platform with no
+      # metrics scraper that endpoint is the only way to read this
+      # application's counters. Everything else (env, beans, mappings, ...)
+      # stays unreachable, so no internals leak.
       exposure:
-        include: health
+        include: health,metrics
   endpoint:
     health:
       # Plain UP/DOWN for unauthenticated callers — don't leak component details
@@ -158,6 +161,28 @@ lifey:
     # Used to build the accept/decline links in the invite email; the links
     # point back at this backend's own public endpoint, not a frontend route.
     public-base-url: ${TRAINER_INVITE_PUBLIC_BASE_URL:http://localhost:8080}
+  # The seam with lifey-chat, in both directions
+  # (docs/chat/44-chat-service-extraction-plan.md §5.5, §6.1).
+  internal:
+    # Shared secret for /internal/**. EMPTY CLOSES the internal API rather than
+    # opening it: with no secret configured every inbound call is rejected.
+    token: ${LIFEY_INTERNAL_TOKEN:}
+    # Where lifey-chat lives, for the revoke webhook (§5.4). Empty disables the
+    # webhook — useful locally when no chat service is running.
+    chat-url: ${CHAT_INTERNAL_URL:}
+    # Short: the webhook fires after the revoke has already committed, so a slow
+    # chat service must not hold a request thread.
+    connect-timeout: ${CHAT_INTERNAL_CONNECT_TIMEOUT:2s}
+    read-timeout: ${CHAT_INTERNAL_READ_TIMEOUT:5s}
+  client-config:
+    # Where clients should send chat traffic, handed to them by
+    # GET /api/v1/client-config (§7.1). EMPTY means "this API serves the chat",
+    # which is what every client falls back to — so an unset variable degrades
+    # to a 404 on the chat routes rather than to a broken app.
+    chat-base-url: ${CHAT_PUBLIC_BASE_URL:}
+    # How long clients may cache the answer. Drop this to 300 around a rollout
+    # so a change — or a rollback — propagates in minutes.
+    ttl-seconds: ${CLIENT_CONFIG_TTL_SECONDS:21600}
   jobs:
     password-reset-cleanup:
       # Daily sweep removing expired/used password reset tokens (PasswordResetTokenCleanupJob).

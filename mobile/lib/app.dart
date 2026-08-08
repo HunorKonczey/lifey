@@ -13,6 +13,7 @@ import 'core/sync/connectivity_sync_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'core/watch/watch_template_sync_controller.dart';
 import 'features/auth/application/auth_controller.dart';
+import 'features/chat/application/chat_stream_controller.dart';
 import 'features/settings/application/settings_controller.dart';
 import 'features/settings/domain/user_settings.dart';
 import 'features/workouts/application/workout_resume_prompt.dart';
@@ -37,6 +38,8 @@ class LifeyApp extends ConsumerWidget {
 
     // Keeps itself alive for the app's lifetime; the return value is unused.
     ref.watch(connectivitySyncControllerProvider);
+    // Holds the chat SSE stream open while the app is in the foreground (I4).
+    ref.watch(chatStreamControllerProvider);
     // Same — fires the Phase 3 Apple Health weight import on app resume.
     ref.watch(weightHealthImportLifecycleProvider);
     // Phase 2 — fires the step history backfill on app resume.

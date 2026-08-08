@@ -14,6 +14,12 @@ import java.time.Instant;
  * the invite itself (see docs/personal_trainer/02-domain-es-migraciok.md
  * "Változás 2"). Not delta-synced: this drives web-admin/mobile screens that
  * always hit the API directly, not offline-first data.
+ *
+ * <p><b>Read across a service boundary.</b> The chat service reads
+ * {@code trainer_clients.(id, trainer_id, client_id, status)} directly — it is
+ * the authorization basis for every thread. Renaming or dropping one of those
+ * four columns is a breaking change for a separate deployable, not a local
+ * refactor: see docs/chat/44-chat-service-extraction-plan.md §4.4.
  */
 @Getter
 @Setter

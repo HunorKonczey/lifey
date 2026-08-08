@@ -19,6 +19,9 @@ class NotificationSettingsState {
     required this.trainerCommentPushEnabled,
     required this.trainerGoalsPushEnabled,
     required this.programAssignedPushEnabled,
+    required this.chatPushEnabled,
+    this.chatQuietHoursStart,
+    this.chatQuietHoursEnd,
   });
 
   final bool workoutReminderEnabled;
@@ -29,6 +32,13 @@ class NotificationSettingsState {
   final bool trainerCommentPushEnabled;
   final bool trainerGoalsPushEnabled;
   final bool programAssignedPushEnabled;
+  final bool chatPushEnabled;
+
+  /// "HH:mm:ss" or null — the window in which chat pushes are held back (§5.4).
+  final String? chatQuietHoursStart;
+  final String? chatQuietHoursEnd;
+
+  bool get quietHoursEnabled => chatQuietHoursStart != null && chatQuietHoursEnd != null;
 
   /// The master switch reflects this — "on" the moment any one type is,
   /// no separate stored flag (see `WeighInReminderController` / the plan's
@@ -39,7 +49,8 @@ class NotificationSettingsState {
       stepGoalNotificationEnabled ||
       trainerCommentPushEnabled ||
       trainerGoalsPushEnabled ||
-      programAssignedPushEnabled;
+      programAssignedPushEnabled ||
+      chatPushEnabled;
 
   NotificationSettingsState copyWith({
     bool? workoutReminderEnabled,
@@ -50,6 +61,9 @@ class NotificationSettingsState {
     bool? trainerCommentPushEnabled,
     bool? trainerGoalsPushEnabled,
     bool? programAssignedPushEnabled,
+    bool? chatPushEnabled,
+    Object? chatQuietHoursStart = _unsetTime,
+    Object? chatQuietHoursEnd = _unsetTime,
   }) {
     return NotificationSettingsState(
       workoutReminderEnabled: workoutReminderEnabled ?? this.workoutReminderEnabled,
@@ -60,9 +74,20 @@ class NotificationSettingsState {
       trainerCommentPushEnabled: trainerCommentPushEnabled ?? this.trainerCommentPushEnabled,
       trainerGoalsPushEnabled: trainerGoalsPushEnabled ?? this.trainerGoalsPushEnabled,
       programAssignedPushEnabled: programAssignedPushEnabled ?? this.programAssignedPushEnabled,
+      chatPushEnabled: chatPushEnabled ?? this.chatPushEnabled,
+      chatQuietHoursStart: chatQuietHoursStart == _unsetTime
+          ? this.chatQuietHoursStart
+          : chatQuietHoursStart as String?,
+      chatQuietHoursEnd: chatQuietHoursEnd == _unsetTime
+          ? this.chatQuietHoursEnd
+          : chatQuietHoursEnd as String?,
     );
   }
 }
+
+/// Sentinel for `copyWith`'s nullable time fields — clearing the window must
+/// be distinguishable from not passing it.
+const Object _unsetTime = Object();
 
 class NotificationSettingsController extends AsyncNotifier<NotificationSettingsState> {
   WeighInReminderPreferences get _weighInPrefs => ref.read(weighInReminderPreferencesProvider);
@@ -88,6 +113,9 @@ class NotificationSettingsController extends AsyncNotifier<NotificationSettingsS
       trainerCommentPushEnabled: settings.trainerCommentPushEnabled,
       trainerGoalsPushEnabled: settings.trainerGoalsPushEnabled,
       programAssignedPushEnabled: settings.programAssignedPushEnabled,
+      chatPushEnabled: settings.chatPushEnabled,
+      chatQuietHoursStart: settings.chatQuietHoursStart,
+      chatQuietHoursEnd: settings.chatQuietHoursEnd,
     );
   }
 
@@ -199,6 +227,41 @@ class NotificationSettingsController extends AsyncNotifier<NotificationSettingsS
     }
   }
 
+  /// Same optimistic-flip-with-rollback shape as [setWorkoutReminderEnabled].
+  /// One switch for both roles — a trainer and a client opt out of chat
+  /// notifications the same way (docs/chat/40-trainer-chat-plan.md §11/1).
+  Future<void> setChatPushEnabled(bool enabled) async {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(current.copyWith(chatPushEnabled: enabled));
+    try {
+      final settings = await ref.read(settingsControllerProvider.future);
+      await ref
+          .read(settingsControllerProvider.notifier)
+          .save(settings.copyWith(chatPushEnabled: enabled));
+    } catch (_) {
+      state = AsyncValue.data(current);
+      rethrow;
+    }
+  }
+
+  /// The §5.4 window. Both values move together — a half-set window is not a
+  /// window — so this takes them as a pair and null clears both.
+  Future<void> setChatQuietHours(String? start, String? end) async {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(current.copyWith(chatQuietHoursStart: start, chatQuietHoursEnd: end));
+    try {
+      final settings = await ref.read(settingsControllerProvider.future);
+      await ref.read(settingsControllerProvider.notifier).save(
+            settings.copyWith(chatQuietHoursStart: start, chatQuietHoursEnd: end),
+          );
+    } catch (_) {
+      state = AsyncValue.data(current);
+      rethrow;
+    }
+  }
+
   /// Master switch: bulk action, not a separate stored gate — flips every
   /// type to [enabled]. Returns whether the weigh-in reminder actually got
   /// scheduled when turning everything on (irrelevant, and always `true`,
@@ -210,6 +273,7 @@ class NotificationSettingsController extends AsyncNotifier<NotificationSettingsS
     await setTrainerCommentPushEnabled(enabled);
     await setTrainerGoalsPushEnabled(enabled);
     await setProgramAssignedPushEnabled(enabled);
+    await setChatPushEnabled(enabled);
     return weighInScheduled;
   }
 }

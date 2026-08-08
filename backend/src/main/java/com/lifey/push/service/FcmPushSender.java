@@ -1,5 +1,6 @@
 package com.lifey.push.service;
 
+import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -37,14 +38,21 @@ class FcmPushSender implements PushSender {
 
     @Override
     public PushSendResult send(PushDevice device, PushMessage message) {
-        Message fcmMessage = Message.builder()
+        Message.Builder builder = Message.builder()
                 .setToken(device.getToken())
                 .setNotification(Notification.builder()
                         .setTitle(message.title())
                         .setBody(message.body())
                         .build())
-                .putAllData(message.data())
-                .build();
+                .putAllData(message.data());
+        if (message.collapseKey() != null) {
+            // Android folds notifications sharing a collapse key into one row,
+            // so a burst in a single chat thread reads as one item (§5.3).
+            builder.setAndroidConfig(AndroidConfig.builder()
+                    .setCollapseKey(message.collapseKey())
+                    .build());
+        }
+        Message fcmMessage = builder.build();
 
         try {
             firebaseMessaging.send(fcmMessage);

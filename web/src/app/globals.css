@@ -211,6 +211,12 @@ body {
   border-radius: var(--r-sm);
 }
 
+/* ─── Chat typing indicator: three dots rising in turn (design D3) ─── */
+@keyframes chat-typing-dot {
+  0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+  30%           { opacity: 1;    transform: translateY(-2px); }
+}
+
 /* ─── Workout-success celebration dialog entrance ─── */
 @keyframes dialogEnter {
   from { opacity: 0; transform: scale(.9); }

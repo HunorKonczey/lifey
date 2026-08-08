@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../sync/client_ref.dart';
+import 'tables/chat_tables.dart';
 import 'tables/exercise_table.dart';
 import 'tables/food_table.dart';
 import 'tables/meal_tables.dart';
@@ -50,12 +51,14 @@ part 'app_database.g.dart';
   PendingOperations,
   DailyStepCounts,
   SyncCursors,
+  ChatConversations,
+  ChatMessages,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 33;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -227,6 +230,44 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(userSettingsTable, userSettingsTable.restTimerEnabled);
             await m.addColumn(userSettingsTable, userSettingsTable.defaultRestSeconds);
             await m.addColumn(exercises, exercises.defaultRestSeconds);
+          }
+          // V29: trainer <-> client chat (docs/chat/40-trainer-chat-plan.md,
+          // I2). Two brand-new tables plus the push opt-out that goes with
+          // them; nothing to backfill, the first conversation refresh fills
+          // the cache.
+          if (from < 29) {
+            await m.createTable(chatConversations);
+            await m.createTable(chatMessages);
+            await m.addColumn(userSettingsTable, userSettingsTable.chatPushEnabled);
+          }
+          // V30: chat realtime (I4) — the peer's delivered/read cursors, so a
+          // sent bubble can show whether it landed and was opened. Null until
+          // the next conversation refresh, which is the same as "unknown" and
+          // renders as a plain "sent" tick.
+          if (from < 30) {
+            await m.addColumn(chatConversations, chatConversations.peerLastDeliveredMessageId);
+            await m.addColumn(chatConversations, chatConversations.peerLastReadMessageId);
+          }
+          // V31: chat quiet hours (I5) — a local-time window in which chat
+          // pushes are held back. Null on both sides means no window, which is
+          // the existing behaviour, so there is nothing to backfill.
+          if (from < 31) {
+            await m.addColumn(userSettingsTable, userSettingsTable.chatQuietHoursStart);
+            await m.addColumn(userSettingsTable, userSettingsTable.chatQuietHoursEnd);
+          }
+          // V32: per-thread mute (I5). Null means not muted, which is the
+          // existing behaviour — nothing to backfill.
+          if (from < 32) {
+            await m.addColumn(chatConversations, chatConversations.mutedUntil);
+          }
+          // V33: image attachments (I6). Every column is nullable or defaulted,
+          // so existing text messages need no backfill.
+          if (from < 33) {
+            await m.addColumn(chatMessages, chatMessages.attachmentWidth);
+            await m.addColumn(chatMessages, chatMessages.attachmentHeight);
+            await m.addColumn(chatMessages, chatMessages.attachmentByteSize);
+            await m.addColumn(chatMessages, chatMessages.attachmentLocalPath);
+            await m.addColumn(chatConversations, chatConversations.lastMessageHasAttachment);
           }
         },
       );

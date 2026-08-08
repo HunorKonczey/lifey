@@ -1,0 +1,9 @@
+Szia {{name}},
+
+{{count}} olvasatlan üzeneted van {{peerName}} felhasználótól a Lifey-ban, és nincs értesítésre regisztrált eszközöd.
+
+Nyisd meg az appot az elolvasáshoz és a válaszhoz.
+
+Ezeket az e-maileket az app értesítési beállításaiban kapcsolhatod ki.
+
+— A Lifey csapata

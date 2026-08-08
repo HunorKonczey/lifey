@@ -9,6 +9,14 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * <b>Read across a service boundary.</b> The chat service reads
+ * {@code users.(id, first_name, last_name, email, utc_offset_minutes)} directly,
+ * to title a thread and to evaluate quiet hours in the user's own local time.
+ * Renaming or dropping one of those five columns is a breaking change for a
+ * separate deployable, not a local refactor: see
+ * docs/chat/44-chat-service-extraction-plan.md §4.4.
+ */
 @Getter
 @Setter
 @Entity

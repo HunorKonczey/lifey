@@ -36,6 +36,14 @@ class UserSettingsTable extends Table {
   // the same reason as `language` above.
   BoolColumn get restTimerEnabled => boolean().withDefault(const Constant(true))();
   IntColumn get defaultRestSeconds => integer().withDefault(const Constant(90))();
+  // Added in schema v29 (docs/chat/40-trainer-chat-plan.md §3.2) — needs a
+  // DEFAULT for the same reason as `language` above.
+  BoolColumn get chatPushEnabled => boolean().withDefault(const Constant(true))();
+
+  /// Local-time window in which chat pushes are held back, "HH:mm:ss" as the
+  /// backend serializes a `LocalTime`. Both null means no window (§5.4).
+  TextColumn get chatQuietHoursStart => text().nullable()();
+  TextColumn get chatQuietHoursEnd => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {clientId};

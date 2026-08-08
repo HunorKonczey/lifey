@@ -10,6 +10,14 @@
 > [web/06-design-system-web.md](web/06-design-system-web.md) (web tokenek),
 > [personal_trainer/06-design.md](personal_trainer/06-design.md) (edzői nyelv).
 > A fájl végén — a prompton kívül — a funkció **döntés-naplója** áll.
+>
+> **Ez a fájl a chat UI kötelező forrása.** A [40-trainer-chat-plan.md](40-trainer-chat-plan.md)
+> §10 innen indítja az összes UI-t érintő iterációt (I2 mobil, I3 web, I5 beállítások,
+> I6 bővítések): a terv a viselkedést rögzíti, ez a fájl + a belőle készült
+> [design/Lifey Chat.dc.html](design/Lifey%20Chat.dc.html) a megjelenést. Kód írása előtt
+> mindkettőt el kell olvasni. A backend API tényleges alakját a terv §12-je adja
+> (az I1 leszállítva) — ha a design olyan mezőt feltételez, ami ott nincs (pl. peer
+> avatar kép), az nyitott kérdés, nem hallgatólagos követelmény.
 
 ---
 
@@ -198,6 +206,31 @@
 6. **Archív szál olvasható marad**, a composer helyén magyarázó sávval — a kapcsolat
    megszűnése nem törli az előzményt.
 7. **Web push nincs** az első kiadásban; a webes jelzés a sidebar-badge és a fül-cím.
+8. ~~**A sor- és szál-menü az I3-ban nem menü, hanem egyetlen ikon-gomb.**~~
+   **Feloldva az I5-ben:** a némítás megérkezett, így a szál fejlécében van egy
+   harang-akció, ami időtartam-választót nyit (1 óra / 8 óra / visszavonásig), némított
+   állapotban pedig egy koppintással old fel. A „Kliens megnyitása” külön ikon-gomb
+   maradt mellette — két gomb egyértelműbb, mint egy kétsoros legördülő.
+   A némítás **fix választék, nem szabad időpont-választó**: a kérdés „hagyjatok békén
+   egy kicsit” vagy „végleg”, és egy picker a gyakori esetet lassítaná.
+   (Terv: [40-trainer-chat-plan.md](40-trainer-chat-plan.md) §16.2.)
+10. **A némított sort áthúzott harang jelzi, de az olvasatlan-pötty marad** — a némítás
+    az értesítést hallgattatja el, nem a számlálót.
+11. **A csendes órák a beállítás-képernyőn élnek, nem a szálban**: egy kapcsoló
+    (alapértelmezett 22:00–07:00) és két időpont-választó. Szálanként a némítás a
+    megfelelő eszköz; a csendes óra az egész chatre vonatkozik.
+12. **A kép-csatolmány leszállt, design nélkül.** Ez a prompt kizárta („csak ha marad
+    idő, külön, jelölten"), és a `.dc.html` sem rajzolja — az I6 mégis megépítette
+    (terv §18). A megjelenés ezért a meglévő chat-nyelvből következik, új token nélkül:
+    a kép a buborék belsejét tölti ki (4 px padding), a valódi képarányát tartja egy
+    240×300 dp-s dobozon belül, a felirat alatta ül, a feltöltés a képre húzott
+    fátyol + körkörös progressz, a lista-előnézet „📷 Kép" (+ felirat, ha van), a
+    composerben pedig egy kép-ikon és a kiválasztott kép sávja a mező fölött.
+    **Ha készül rá design, ez a bekezdés az, amit felül kell írnia** — nem a kód.
+
+9. **A szál-fejléc alsora weben a peer e-mail-címe**, nem „online / utoljára aktív”.
+   A jelenlét I4, a design pedig kifejezetten tiltja a hamis állapotjelzést; az e-mail
+   valós adat, és az edzőnek ez azonosít egy kliens-listányi monogram között.
 
 ---
 

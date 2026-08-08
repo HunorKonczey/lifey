@@ -1,0 +1,45 @@
+name: Chat CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "chat/**"
+      - "devops/check-schema-ownership.sh"
+      - ".github/workflows/chat-ci.yml"
+  pull_request:
+    branches: [main, "feature/**", "bug/**"]
+    paths:
+      - "chat/**"
+      - "devops/check-schema-ownership.sh"
+      - ".github/workflows/chat-ci.yml"
+
+defaults:
+  run:
+    working-directory: chat
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Same guard the backend workflow runs, from the other side: a chat
+      # migration must not write to a table the monolith owns.
+      # docs/chat/44-chat-service-extraction-plan.md §4.2.
+      - name: Check schema ownership
+        working-directory: .
+        run: ./devops/check-schema-ownership.sh
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "24"
+          cache: maven
+          cache-dependency-path: chat/pom.xml
+
+      # ChatFlowIntegrationTest runs against a real Postgres via Testcontainers,
+      # which is what verifies the hand-written SQL in com.lifey.chat.spi.jdbc —
+      # the part of this service that reads another service's tables.
+      - name: Build and run tests
+        run: ./mvnw -B verify

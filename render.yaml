@@ -92,3 +92,72 @@ services:
         value: com.khunor.lifey
       - key: PUSH_APNS_SANDBOX
         sync: false
+      # --- the seam with lifey-chat (docs/chat/44-chat-service-extraction-plan.md) ---
+      # Where clients should send chat traffic, handed to them at runtime by
+      # GET /api/v1/client-config. Empty means "this API serves the chat" —
+      # which it no longer does, so this must be set once lifey-chat is up.
+      # It is also the rollback lever, and needs no client release (§7.1).
+      - key: CHAT_PUBLIC_BASE_URL
+        sync: false
+      # Where THIS service reaches lifey-chat, for the revoke webhook (§5.4).
+      - key: CHAT_INTERNAL_URL
+        sync: false
+      # Shared secret for the /internal/** endpoints both services use (§5.5).
+      # Same value here and on lifey-chat; empty CLOSES the internal API.
+      - key: LIFEY_INTERNAL_TOKEN
+        sync: false
+
+  # The chat, as its own deployable. Same database, same JWT secret, different
+  # Postgres role — see devops/chat-database-split.md.
+  - type: web
+    name: lifey-chat
+    runtime: docker
+    dockerfilePath: ./chat/Dockerfile
+    dockerContext: ./chat
+    # Same region as Neon AND as lifey-api: this service talks to both, the
+    # database directly and the monolith over HTTP for push.
+    region: frankfurt
+    # NOT free, for the same reason as lifey-api and one more: a spun-down
+    # container runs no ChatUnreadReminderJob, and every SSE connection dies
+    # with it. A chat that goes to sleep is not a chat.
+    plan: starter
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      # MEASURED, not guessed (§17.4). Metaspace peaked at 99 MB with every
+      # endpoint exercised; the plan's original 96 MB cap let the service boot
+      # and then killed it on the first request. Still 64 MB below lifey-api's,
+      # because the Firebase Admin SDK is not in this JVM — push goes over HTTP
+      # to the monolith (§6.1). Heap keeps 192m: an SSE connection costs ~107 KB
+      # (plan §15.5), so connections are not what fills it.
+      - key: JAVA_OPTS
+        value: -Xms64m -Xmx192m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m
+      # The SAME url as lifey-api — one database, two roles. A typo here is two
+      # separate databases, silently (§17.3.5).
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      # lifey_chat, NOT the monolith's role. Its grants are what stop a bug in
+      # this service writing to users/user_settings/trainer_clients.
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      # Bit-identical to lifey-api's. This is the entire trust relationship
+      # between the two services (§5.3); a mismatch is a 401 on every request.
+      - key: JWT_SECRET
+        sync: false
+      - key: LIFEY_INTERNAL_TOKEN
+        sync: false
+      # https://lifey.onrender.com — where push is actually sent from (§6.1).
+      - key: LIFEY_API_INTERNAL_URL
+        sync: false
+      # The web admin's origin. Mobile is unaffected by CORS; the web chat
+      # breaks completely without this, which is the easiest cutover mistake
+      # to make (§7.3, §13/R2).
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CHAT_ENABLED
+        value: "true"

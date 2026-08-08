@@ -100,6 +100,20 @@ export const queryKeys = {
   trainerProgramAssignments: {
     forClient: (clientId: number) => ["trainer-program-assignments", "client", clientId] as const,
   },
+  chat: {
+    conversations: () => ["chat", "conversations"] as const,
+    messages: (conversationId: number) => ["chat", "messages", conversationId] as const,
+    attachmentThumbnail: (messageId: number) => ["chat", "attachment", messageId, "thumb"] as const,
+    attachment: (messageId: number) => ["chat", "attachment", messageId, "full"] as const,
+    /**
+     * Not a query anyone fetches — the cache is how the stream (which lives in
+     * the admin layout) reaches the thread component, and typing is written
+     * there like any other frame. Holds a timestamp, or nothing.
+     */
+    typing: (conversationId: number) => ["chat", "typing", conversationId] as const,
+    search: (conversationId: number, query: string) =>
+      ["chat", "search", conversationId, query] as const,
+  },
   superAdminUsers: {
     page: (params: { page: number; size?: number; search?: string }) =>
       ["superadmin-users", "page", params] as const,

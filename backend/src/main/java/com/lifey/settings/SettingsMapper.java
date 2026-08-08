@@ -25,6 +25,20 @@ public final class SettingsMapper {
         settings.setTrainerCommentPushEnabled(request.trainerCommentPushEnabled());
         settings.setTrainerGoalsPushEnabled(request.trainerGoalsPushEnabled());
         settings.setProgramAssignedPushEnabled(request.programAssignedPushEnabled());
+        // Absent (older client) means "don't touch it" — see SettingsRequest.
+        if (request.chatPushEnabled() != null) {
+            settings.setChatPushEnabled(request.chatPushEnabled());
+        }
+        // The flag, not the times, decides whether to write: it is what tells
+        // "the client doesn't know about quiet hours" from "the user turned
+        // them off", and only the second one should clear the stored window.
+        if (Boolean.TRUE.equals(request.chatQuietHoursSet())) {
+            settings.setChatQuietHoursStart(request.chatQuietHoursStart());
+            settings.setChatQuietHoursEnd(request.chatQuietHoursEnd());
+        } else if (Boolean.FALSE.equals(request.chatQuietHoursSet())) {
+            settings.setChatQuietHoursStart(null);
+            settings.setChatQuietHoursEnd(null);
+        }
         settings.setRestTimerEnabled(request.restTimerEnabled());
         settings.setDefaultRestSeconds(request.defaultRestSeconds());
     }
@@ -44,6 +58,9 @@ public final class SettingsMapper {
                 settings.isTrainerCommentPushEnabled(),
                 settings.isTrainerGoalsPushEnabled(),
                 settings.isProgramAssignedPushEnabled(),
+                settings.isChatPushEnabled(),
+                settings.getChatQuietHoursStart(),
+                settings.getChatQuietHoursEnd(),
                 settings.isRestTimerEnabled(),
                 settings.getDefaultRestSeconds()
         );

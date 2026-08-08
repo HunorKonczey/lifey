@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/chat/data/chat_repository.dart';
 import '../storage/token_storage.dart';
 import 'pull_engine.dart';
 import 'sync_engine.dart';
@@ -25,13 +26,22 @@ import 'sync_engine_provider.dart';
 /// the web app) while this device stays foregrounded the whole time would
 /// never show up until the app backgrounds/resumes or connectivity drops.
 ///
+/// Chat rides along on the same triggers but through its own repository, not
+/// the outbox/pull engines it deliberately sits outside of
+/// (docs/chat/40-trainer-chat-plan.md §6.1). Two things happen: messages
+/// written offline go out, and the conversation list is refreshed — which
+/// until the SSE stream lands (I4) is also the only thing that moves the
+/// unread badge while the app stays open, since a push carries a
+/// notification, not data.
+///
 /// True background sync (while the app is fully closed) is out of scope
 /// for this phase.
 class ConnectivitySyncController with WidgetsBindingObserver {
   ConnectivitySyncController(
     this._syncEngine,
     this._pullEngine,
-    this._tokenStorage, [
+    this._tokenStorage,
+    this._chatRepository, [
     Connectivity? connectivity,
   ]) : _connectivity = connectivity ?? Connectivity() {
     WidgetsBinding.instance.addObserver(this);
@@ -45,6 +55,7 @@ class ConnectivitySyncController with WidgetsBindingObserver {
   final SyncEngine _syncEngine;
   final PullEngine _pullEngine;
   final TokenStorage _tokenStorage;
+  final ChatRepository _chatRepository;
   final Connectivity _connectivity;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   Timer? _timer;
@@ -69,6 +80,14 @@ class ConnectivitySyncController with WidgetsBindingObserver {
     } catch (_) {
       // Best-effort: a failed refresh (no connectivity, backend error) just
       // means the cache stays as-is until the next trigger.
+    }
+    // Separate try: chat has its own transport, and a failing pull must not
+    // stop an offline-written message from finally going out.
+    try {
+      await _chatRepository.flushPending();
+      await _chatRepository.refreshConversations();
+    } catch (_) {
+      // Same best-effort contract as above.
     }
   }
 
@@ -106,6 +125,7 @@ final connectivitySyncControllerProvider = Provider<ConnectivitySyncController>(
     ref.watch(syncEngineProvider),
     ref.watch(pullEngineProvider),
     ref.watch(tokenStorageProvider),
+    ref.watch(chatRepositoryProvider),
   );
   ref.onDispose(controller.dispose);
   return controller;

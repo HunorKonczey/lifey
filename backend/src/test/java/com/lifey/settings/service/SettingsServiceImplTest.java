@@ -62,7 +62,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true, true, true, 90);
+                ThemePreference.SYSTEM, LanguagePreference.HUNGARIAN, true, true, true, true, true, null, null, null, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -77,7 +77,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, 10000,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, 90);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, null, null, null, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -93,7 +93,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, 90);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, null, null, null, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -118,7 +118,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, false, true, true, true, true, 90);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, false, true, true, true, true, null, null, null, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -143,7 +143,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, false, true, true, true, 90);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, false, true, true, true, null, null, null, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -168,7 +168,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, false, true, true, 90);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, false, true, true, null, null, null, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -193,7 +193,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, false, true, 90);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, false, true, null, null, null, true, 90);
 
         SettingsResponse result = service.update(request);
 
@@ -219,7 +219,7 @@ class SettingsServiceImplTest {
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SettingsRequest request = new SettingsRequest(UnitSystem.METRIC, null, null, null, null, null, null,
-                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, false, 120);
+                ThemePreference.SYSTEM, LanguagePreference.SYSTEM, true, true, true, true, true, null, null, null, false, 120);
 
         SettingsResponse result = service.update(request);
 

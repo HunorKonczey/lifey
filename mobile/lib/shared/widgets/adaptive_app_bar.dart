@@ -14,11 +14,17 @@ class AdaptiveAppBarAction {
     required this.icon,
     required this.onPressed,
     this.tooltip,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final VoidCallback onPressed;
   final String? tooltip;
+
+  /// Unread indicator drawn on the button's top-right corner; 0 hides it.
+  /// Counts above 9 collapse to "9+" — past that the exact number stops
+  /// meaning anything and the badge stops fitting.
+  final int badgeCount;
 }
 
 // ---------------------------------------------------------------------------
@@ -179,6 +185,7 @@ class AdaptiveAppBar extends StatelessWidget {
                     icon: a.icon,
                     onPressed: a.onPressed,
                     tooltip: a.tooltip,
+                    badgeCount: a.badgeCount,
                     collapsed: collapsed,
                     scheme: scheme,
                   ),
@@ -280,6 +287,7 @@ class _AppBarButton extends StatelessWidget {
     required this.collapsed,
     required this.scheme,
     this.tooltip,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
@@ -287,6 +295,7 @@ class _AppBarButton extends StatelessWidget {
   final bool collapsed;
   final ColorScheme scheme;
   final String? tooltip;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -321,10 +330,64 @@ class _AppBarButton extends StatelessWidget {
       ),
     );
 
+    if (badgeCount > 0) {
+      btn = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          btn,
+          Positioned(
+            top: -3,
+            right: -3,
+            child: _Badge(count: badgeCount, scheme: scheme),
+          ),
+        ],
+      );
+    }
+
     if (tooltip != null) {
       btn = Tooltip(message: tooltip!, child: btn);
     }
 
     return btn;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Unread badge
+// ---------------------------------------------------------------------------
+
+class _Badge extends StatelessWidget {
+  const _Badge({required this.count, required this.scheme});
+
+  final int count;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    // primary, not error: unread messages are an invitation, not an alert.
+    final label = count > 9 ? '9+' : '$count';
+    return Container(
+      constraints: const BoxConstraints(minWidth: 16),
+      height: 16,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: scheme.primary,
+        borderRadius: BorderRadius.circular(8),
+        // Separates the badge from the icon underneath it without needing a
+        // shadow, which would fight the frosted bar.
+        border: Border.all(color: scheme.surfaceContainer, width: 1.5),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          fontSize: 9.5,
+          fontWeight: FontWeight.w800,
+          height: 1,
+          color: scheme.onPrimary,
+        ),
+      ),
+    );
   }
 }

@@ -1,0 +1,26 @@
+# Test overrides, as a PROFILE rather than a plain application.yml.
+#
+# A src/test/resources/application.yml would not merge with the main one — it
+# would shadow it completely, since test-classes come first on the classpath.
+# That silently drops lifey.jwt.secret and every other real setting, which
+# surfaces as a context that will not start. Overrides go here, and the
+# integration test opts in with @ActiveProfiles("test").
+#
+# The datasource itself comes from Testcontainers via @ServiceConnection, so
+# nothing here names a host.
+spring:
+  flyway:
+    # TWO locations, and the order in the list does not matter — Flyway applies
+    # by version. V1 (the monolith stub) therefore runs before V1000 (the chat
+    # baseline), which it has to: the chat's foreign keys point at users and
+    # trainer_clients (docs/chat/44-chat-service-extraction-plan.md §4.2.1).
+    locations: classpath:db/migration-test,classpath:db/migration
+    # An empty test database has nothing to baseline past, so V1 and V1000 both
+    # run for real here — unlike production, where V1000 is a no-op.
+    baseline-on-migrate: false
+
+lifey:
+  monolith:
+    # No lifey-api next to the tests. The push sender short-circuits on an empty
+    # base URL rather than trying to reach a host that isn't there (§6.1).
+    base-url: ""

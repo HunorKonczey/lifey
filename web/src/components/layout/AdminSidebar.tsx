@@ -12,10 +12,13 @@ import { trainerApi } from "@/features/trainer/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { Switch } from "@/components/ui/Switch";
+import { useUnreadTotal } from "@/features/chat/hooks";
+import { unreadBadgeLabel } from "@/features/chat/thread";
 
 const NAV_ITEMS = [
   { href: "/admin", icon: "group", key: "clients" },
   { href: "/admin/calendar", icon: "calendar_month", key: "calendar" },
+  { href: "/admin/chat", icon: "chat_bubble", key: "chat" },
   { href: "/admin/invites", icon: "mail", key: "invites" },
   { href: "/admin/workouts", icon: "fitness_center", key: "workouts" },
   { href: "/admin/programs", icon: "event_repeat", key: "programs" },
@@ -27,6 +30,7 @@ export function AdminSidebar() {
   const admin = useTranslations("admin");
   const t = useTranslations("admin.nav");
   const prefs = useTranslations("admin.preferences");
+  const chat = useTranslations("chat");
   const common = useTranslations("common");
   const pathname = usePathname();
   const { user, logout } = useSessionStore();
@@ -34,6 +38,7 @@ export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const queryClient = useQueryClient();
   const { show } = useToast();
+  const unread = useUnreadTotal();
 
   const { data: preferences } = useQuery({
     queryKey: queryKeys.trainerPreferences.all(),
@@ -144,12 +149,15 @@ export function AdminSidebar() {
           {NAV_ITEMS.map(({ href, icon, key }) => {
             const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
             const label = t(key);
+            // Web push is out of the first chat release, so this badge and the
+            // tab title are the trainer's only ambient unread signal (§6.2).
+            const badge = key === "chat" && unread > 0 ? unreadBadgeLabel(unread) : null;
             return (
               <Link
                 key={href}
                 href={href}
                 onClick={closeDrawer}
-                className="flex items-center gap-[13px] px-3.5 py-[11px] rounded-[14px] transition-colors"
+                className="flex items-center gap-[13px] px-3.5 py-[11px] rounded-[14px] transition-colors relative"
                 style={{
                   background: active ? "var(--tertiary)" : "transparent",
                   color: active ? "#161611" : "var(--on-surface-variant)",
@@ -163,6 +171,25 @@ export function AdminSidebar() {
                   {icon}
                 </span>
                 {!collapsed && <span className="text-sm font-semibold truncate">{label}</span>}
+                {badge &&
+                  (collapsed ? (
+                    <span
+                      className="absolute top-1.5 right-2 w-2 h-2 rounded-full"
+                      style={{ background: active ? "#161611" : "var(--primary)" }}
+                      aria-label={chat("unreadCount", { count: unread })}
+                    />
+                  ) : (
+                    <span
+                      className="ml-auto min-w-[20px] h-5 rounded-[10px] px-1.5 flex items-center justify-center text-[11px] font-extrabold"
+                      style={{
+                        background: active ? "#161611" : "var(--primary)",
+                        color: active ? "var(--on-surface)" : "#161611",
+                      }}
+                      aria-label={chat("unreadCount", { count: unread })}
+                    >
+                      {badge}
+                    </span>
+                  ))}
               </Link>
             );
           })}

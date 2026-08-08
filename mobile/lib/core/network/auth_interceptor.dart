@@ -1,27 +1,37 @@
 import 'package:dio/dio.dart';
 
 import '../storage/token_storage.dart';
+import 'token_refresher.dart';
 
 /// Attaches the stored access token to outgoing requests and, on a 401,
 /// rotates it via the refresh token (backend access tokens are short-lived,
 /// 15 minutes) before retrying the original request once.
+///
+/// One instance per [Dio], and there are two of them since the chat became its
+/// own service. The two things that must NOT be duplicated per instance are
+/// handled elsewhere: token rotation is shared through [TokenRefresher], and
+/// the retry goes back out through [retryDio] — the very client the request
+/// came from, so a chat request is retried against the chat service rather
+/// than against whichever `Dio` happened to be wired in here.
 class AuthInterceptor extends Interceptor {
   AuthInterceptor({
     required TokenStorage tokenStorage,
-    required Dio refreshDio,
-    required Dio mainDio,
+    required TokenRefresher refresher,
+    required Dio Function() retryDio,
     required void Function() onSessionExpired,
   })  : _tokenStorage = tokenStorage,
-        _refreshDio = refreshDio,
-        _mainDio = mainDio,
+        _refresher = refresher,
+        _retryDio = retryDio,
         _onSessionExpired = onSessionExpired;
 
   final TokenStorage _tokenStorage;
-  final Dio _refreshDio;
-  final Dio _mainDio;
-  final void Function() _onSessionExpired;
+  final TokenRefresher _refresher;
 
-  Future<void>? _refreshing;
+  /// A callback rather than the instance: the interceptor is built *while* its
+  /// own `Dio` is being constructed, so it cannot hold a reference to it yet.
+  final Dio Function() _retryDio;
+
+  final void Function() _onSessionExpired;
 
   static const _publicPaths = ['/auth/register', '/auth/login', '/auth/refresh'];
 
@@ -55,14 +65,14 @@ class AuthInterceptor extends Interceptor {
     final requestToken = _bearerToken(err.requestOptions.headers['Authorization'] as String?);
 
     try {
-      // Concurrent 401s share one in-flight refresh instead of each rotating
-      // the (single-use) refresh token themselves.
-      await (_refreshing ??= _refresh());
+      // Shared across both Dio clients: the refresh token is single-use, so two
+      // simultaneous rotations would spend it twice and sign the user out.
+      await _refresher.refresh();
       final token = await _tokenStorage.readAccessToken();
       final retryOptions = err.requestOptions
         ..extra = {...err.requestOptions.extra, 'retried': true}
         ..headers = {...err.requestOptions.headers, 'Authorization': 'Bearer $token'};
-      final response = await _mainDio.fetch<dynamic>(retryOptions);
+      final response = await _retryDio().fetch<dynamic>(retryOptions);
       handler.resolve(response);
     } catch (_) {
       // A request that started before the user was signed in (e.g. a
@@ -77,8 +87,6 @@ class AuthInterceptor extends Interceptor {
         _onSessionExpired();
       }
       handler.next(err);
-    } finally {
-      _refreshing = null;
     }
   }
 
@@ -86,26 +94,5 @@ class AuthInterceptor extends Interceptor {
     const prefix = 'Bearer ';
     if (header == null || !header.startsWith(prefix)) return null;
     return header.substring(prefix.length);
-  }
-
-  Future<void> _refresh() async {
-    final refreshToken = await _tokenStorage.readRefreshToken();
-    if (refreshToken == null) throw StateError('No refresh token stored');
-    // _refreshDio has no interceptors (see dio_client.dart), so the offset
-    // header has to be attached here rather than relying on onRequest above —
-    // this is the main mechanism that keeps existing users' offset current,
-    // since refresh fires far more often than login/register.
-    final response = await _refreshDio.post<Map<String, dynamic>>(
-      '/auth/refresh',
-      data: {'refreshToken': refreshToken},
-      options: Options(headers: {
-        'X-Utc-Offset-Minutes': DateTime.now().timeZoneOffset.inMinutes.toString(),
-      }),
-    );
-    final data = response.data!;
-    await _tokenStorage.save(
-      accessToken: data['accessToken'] as String,
-      refreshToken: data['refreshToken'] as String,
-    );
   }
 }

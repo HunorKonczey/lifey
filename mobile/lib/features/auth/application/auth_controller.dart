@@ -14,6 +14,7 @@ import '../../../core/push/weigh_in_reminder_preferences.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/sync/connectivity_sync_controller.dart';
 import '../../my_trainers/application/my_trainers_controller.dart';
+import '../../chat/data/chat_repository.dart';
 import '../../recipes/data/recipe_image_repository.dart';
 import '../../settings/application/avatar_controller.dart';
 import '../../settings/data/avatar_repository.dart';
@@ -137,6 +138,9 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     await ref.read(musicPreferencesProvider).clear();
     await ref.read(avatarRepositoryProvider).clearCache();
     await ref.read(recipeImageRepositoryProvider).clearCache();
+    // Chat pictures and anything still queued to upload — same reasoning, and
+    // a staged attachment is somebody's private photo sitting on disk.
+    await ref.read(chatRepositoryProvider).clearAttachmentCache();
     // clearCache()/clear() above only wipe on-disk/secure storage; these
     // controllers (not autoDispose) would otherwise keep serving this
     // account's data to whichever account signs in next in the same app

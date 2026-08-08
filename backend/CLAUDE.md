@@ -61,5 +61,13 @@ only from within their own subpackage can stay package-private; anything reached
 - Always add a Service interface + Impl, even for simple CRUD — matches existing features.
 - New entities must extend `BaseEntity` and be scoped to a user (per root rule).
 - New tables/columns go through a new Flyway migration, never edit an applied one.
+- **A new migration must never touch `chat_conversations`, `chat_messages`, `chat_participants` or
+  `chat_message_attachments`.** Those tables belong to the `lifey-chat` service, which shares this
+  database under its own role (read-only on `users`, `user_settings`, `trainer_clients`).
+  `devops/check-schema-ownership.sh` enforces it in CI, with no exceptions.
+  Reasoning: `docs/chat/44-chat-service-extraction-plan.md` §4.
+- The chat itself no longer lives here. What remains of it in this application is `V65`'s columns on
+  `user_settings` (the settings API still exposes them), `com.lifey.internal` (the service-to-service
+  seam: `/internal/push` and the revoke webhook) and `com.lifey.clientconfig`.
 - Note: root `CLAUDE.md` says "Use Java 21" but `pom.xml` pins `<java.version>24</java.version>` — the pom is
   authoritative for this repo; flag this discrepancy if it matters for your task instead of silently picking one.

@@ -4,6 +4,8 @@ import com.lifey.settings.LanguagePreference;
 import com.lifey.settings.ThemePreference;
 import com.lifey.settings.UnitSystem;
 
+import java.time.LocalTime;
+
 public record SettingsResponse(
         UnitSystem unitSystem,
         Integer dailyCalorieGoal,
@@ -18,6 +20,10 @@ public record SettingsResponse(
         Boolean trainerCommentPushEnabled,
         Boolean trainerGoalsPushEnabled,
         Boolean programAssignedPushEnabled,
+        Boolean chatPushEnabled,
+        /** Null when the user has no quiet-hours window set (§5.4). */
+        LocalTime chatQuietHoursStart,
+        LocalTime chatQuietHoursEnd,
         Boolean restTimerEnabled,
         Integer defaultRestSeconds
 ) {

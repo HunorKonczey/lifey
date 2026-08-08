@@ -97,6 +97,13 @@ public class SecurityConfig {
                         // (mobile) counterparts and stay on the plain ROLE_USER `authenticated()` rule.
                         .requestMatchers("/api/v1/trainer/**").hasRole("TRAINER")
                         .requestMatchers("/api/v1/superadmin/**").hasRole("SUPER_ADMIN")
+                        // /actuator/health stays public above (the deploy probe
+                        // needs it); everything else actuator exposes is
+                        // operational detail. Today that is only /actuator/metrics
+                        // (the chat counters, plan §21) — but the rule is written
+                        // for the prefix, so exposing another endpoint later
+                        // cannot accidentally make it public.
+                        .requestMatchers("/actuator/**").hasRole("SUPER_ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(entryPoint)

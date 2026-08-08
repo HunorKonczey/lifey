@@ -31,6 +31,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.List;
@@ -186,6 +187,21 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.FORBIDDEN, "Access denied", request, List.of(), ex);
     }
 
+    /**
+     * A path that matches no handler. Without this it falls through to the
+     * catch-all below and becomes a 500 — an unknown URL reported as "the server
+     * is broken", which sends anyone debugging it looking in the wrong place.
+     * It also matters for the chat: this application no longer serves
+     * /api/v1/chat/**, so a client still pointed here should get a clean 404
+     * rather than a 500 that looks like an outage
+     * (docs/chat/44-chat-service-extraction-plan.md §10.4).
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "No endpoint " + request.getMethod() + " " + request.getRequestURI(),
+                request, List.of(), ex);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request, List.of(), ex);
@@ -193,21 +209,6 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ApiError> build(HttpStatus status, String message,
                                            HttpServletRequest request, List<String> details, Exception ex) {
-        if (status.is5xxServerError()) {
-            log.error("{} {} -> {} {}", request.getMethod(), request.getRequestURI(), status.value(), message, ex);
-        } else {
-            // 4xx responses are expected, client-driven outcomes (validation, auth, not-found
-            // while onboarding, etc.) — log a one-liner without the stack trace to keep logs quiet.
-            log.warn("{} {} -> {} {}", request.getMethod(), request.getRequestURI(), status.value(), message);
-        }
-        ApiError body = new ApiError(
-                Instant.now(),
-                status.value(),
-                status.getReasonPhrase(),
-                message,
-                request.getRequestURI(),
-                details
-        );
-        return ResponseEntity.status(status).body(body);
+        return ApiErrorResponses.build(status, message, request, details, ex);
     }
 }

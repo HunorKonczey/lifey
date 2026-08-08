@@ -6,9 +6,20 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalTime;
+
 /**
  * One row per user, created lazily (with defaults) on first access rather than
  * at registration time, so the auth module stays unaware of this feature.
+ *
+ * <p><b>Read across a service boundary.</b> The chat service reads
+ * {@code user_settings.(user_id, chat_push_enabled, chat_quiet_hours_start,
+ * chat_quiet_hours_end, language)} directly — those five drive the whole push
+ * gate ladder. Renaming or dropping one is a breaking change for a separate
+ * deployable, not a local refactor: see
+ * docs/chat/44-chat-service-extraction-plan.md §4.4. The lazily-created row is
+ * also why "no row" has to keep meaning "all defaults" — see
+ * {@code ChatPreferencesAdapter}.
  */
 @Getter
 @Setter
@@ -108,4 +119,24 @@ public class UserSettings extends BaseEntity {
      */
     @Column(name = "default_rest_seconds", nullable = false)
     private int defaultRestSeconds = 90;
+
+    /**
+     * Opt-out for the chat push notification
+     * (docs/chat/40-trainer-chat-plan.md §3.2). Role-independent on purpose —
+     * one switch, one mental model, for the trainer and the client alike.
+     * Default true. Read by the push pipeline from I2 on.
+     */
+    @Column(name = "chat_push_enabled", nullable = false)
+    private boolean chatPushEnabled = true;
+
+    /**
+     * Local-time window in which chat pushes are suppressed (the messages still
+     * arrive). Null means no quiet hours, which is the default. The window may
+     * wrap past midnight. Honoured from I5 on.
+     */
+    @Column(name = "chat_quiet_hours_start")
+    private LocalTime chatQuietHoursStart;
+
+    @Column(name = "chat_quiet_hours_end")
+    private LocalTime chatQuietHoursEnd;
 }

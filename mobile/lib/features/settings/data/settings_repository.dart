@@ -44,6 +44,9 @@ class SettingsRepository {
       trainerCommentPushEnabled: Value(settings.trainerCommentPushEnabled),
       trainerGoalsPushEnabled: Value(settings.trainerGoalsPushEnabled),
       programAssignedPushEnabled: Value(settings.programAssignedPushEnabled),
+      chatPushEnabled: Value(settings.chatPushEnabled),
+      chatQuietHoursStart: Value(settings.chatQuietHoursStart),
+      chatQuietHoursEnd: Value(settings.chatQuietHoursEnd),
       restTimerEnabled: Value(settings.restTimerEnabled),
       defaultRestSeconds: Value(settings.defaultRestSeconds),
     );
@@ -72,6 +75,9 @@ class SettingsRepository {
       trainerCommentPushEnabled: row.trainerCommentPushEnabled,
       trainerGoalsPushEnabled: row.trainerGoalsPushEnabled,
       programAssignedPushEnabled: row.programAssignedPushEnabled,
+      chatPushEnabled: row.chatPushEnabled,
+      chatQuietHoursStart: row.chatQuietHoursStart,
+      chatQuietHoursEnd: row.chatQuietHoursEnd,
       restTimerEnabled: row.restTimerEnabled,
       defaultRestSeconds: row.defaultRestSeconds,
     );

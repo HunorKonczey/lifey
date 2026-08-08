@@ -34,6 +34,7 @@ Identifiers reused across every doc:
 - [email-sender.md](email-sender.md) — Resend transactional email (welcome, password reset, trainer invite)
 - [push-notifications-ios.md](push-notifications-ios.md) — APNs setup & operation (backend + app)
 - [push-notifications-android.md](push-notifications-android.md) — FCM setup & operation (backend + app)
+- [chat-operations.md](chat-operations.md) — trainer ↔ client chat: kill switch, metrics, thresholds, scaling caveats
 
 ### Deployment
 - [deploy-backend-render.md](deploy-backend-render.md) — backend on Render + Neon Postgres **(current)**
