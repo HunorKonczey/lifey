@@ -350,30 +350,37 @@ kerülne — különben a tesztek zöldnek látszanak úgy, hogy nincs mit teszt
 
 ### 4.3 Adatbázis-felhasználók és jogosultságok
 
-Két külön DB-user, nem egy közös:
+Két külön DB-user, nem egy közös. A teljes runbook:
+[devops/chat-database-split.md](../../devops/chat-database-split.md).
 
 ```sql
--- Egyszeri, kézzel a Neon konzolon vagy psql-ből.
-create user lifey_chat with password '<generált>';
+create role lifey_chat with login password '<generált>';
 
--- A chat saját táblái: teljes jog.
-grant select, insert, update, delete on
-    chat_conversations, chat_messages, chat_participants, chat_message_attachments
-    to lifey_chat;
-grant usage, select on sequence
-    chat_conversations_id_seq, chat_messages_id_seq,
-    chat_participants_id_seq, chat_message_attachments_id_seq
-    to lifey_chat;
+-- Sajat tablak + a Flyway history tabla letrehozasahoz.
+grant usage, create on schema public to lifey_chat;
 
--- A monolit táblái: CSAK olvasás. Ez a gépi kényszer a §4.1 szabály mögött.
-grant select on users, user_settings, trainer_clients to lifey_chat;
+-- A monolit tablai: olvasas, ES a jog, hogy idegen kulcsot mutasson rajuk.
+-- A REFERENCES kulon privilegium a SELECT-tol — enelkul a chat service az elso
+-- migracion elhasal: "permission denied for table trainer_clients".
+grant select, references on users, trainer_clients to lifey_chat;
 
--- A Flyway history táblához kell CREATE jog a sémán.
-grant create on schema public to lifey_chat;
+-- user_settings-re nem mutat FK, oda eleg a select.
+grant select on user_settings to lifey_chat;
 ```
+
+**A `chat_*` táblákra nincs grant, és nem is kell.** A `lifey_chat` **hozza
+létre** őket, Postgresben pedig a létrehozó a tulajdonos, minden joggal. Előre
+grantolni nem csak felesleges, hanem lehetetlen is: a táblák a service első
+indulásáig nem léteznek.
 
 Ez az egyetlen pont, ahol az „olvasás-írás" határ **nem** csak dokumentáció:
 ha a chat service bármikor `users`-be próbálna írni, a Postgres visszautasítja.
+
+> **M6-ban ez élesben elbukott** — a `references` jog hiányzott ebből a
+> szakaszból. A javítás lokálisan végigmérve: a fenti négy állítással a service
+> elindul, a négy negatív ellenőrzés (`insert into users`,
+> `update user_settings`, `delete from trainer_clients`,
+> `select from push_devices`) mind `permission denied`, és a küldés 201.
 
 ### 4.4 A monolit tábláinak olvasása a chat service-ből
 

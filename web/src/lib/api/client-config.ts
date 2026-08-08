@@ -1,5 +1,5 @@
 import { setChatBaseUrl } from "@/lib/api/base-url";
-import { env } from "@/lib/env";
+import { api } from "@/lib/api/client";
 
 interface ClientConfigResponse {
   chatBaseUrl: string;
@@ -12,12 +12,20 @@ const CACHE_KEY = "lifey.clientConfig.chatBaseUrl";
  * Asks the API where the chat lives, and remembers the answer
  * (docs/chat/44-chat-service-extraction-plan.md §7.1).
  *
- * <p>Deliberately **unauthenticated-safe and failure-safe**: it runs before
- * anything else and must never be able to stop the app. A 401 (nobody signed in
- * yet), a network error, a service that is down — all of them leave the
- * previously cached value in place, and if there is none, `chatBaseUrl()` falls
- * back to the main API. The worst outcome is chat requests hitting an origin
- * that answers 404, never an app that will not load.
+ * <p>Goes through {@link api} rather than a bare `fetch` because
+ * `/client-config` is **authenticated**: a raw call carries no `Authorization`
+ * header, gets a 401, and silently leaves the chat pointed at the main API —
+ * which since the split answers 404. That is exactly the failure this endpoint
+ * exists to prevent, and it is invisible unless you read the network tab.
+ *
+ * <p>Which is also why the caller re-runs this once a session exists
+ * (`lib/providers.tsx`): the first attempt happens on page load, before anyone
+ * has signed in, and is expected to fail.
+ *
+ * <p>Still **failure-safe**: a 401, a network error, a service that is down —
+ * all of them leave the previously cached value in place, and if there is none,
+ * `chatBaseUrl()` falls back to the main API. The worst outcome is chat
+ * requests hitting an origin that answers 404, never an app that will not load.
  *
  * <p>Cached in `localStorage` so a reload does not spend a round trip before the
  * chat can render, and so a cold start with the API briefly unreachable still
@@ -30,11 +38,7 @@ export async function loadClientConfig(): Promise<void> {
   if (cached !== null) setChatBaseUrl(cached);
 
   try {
-    const response = await fetch(`${env.NEXT_PUBLIC_API_BASE_URL}/client-config`, {
-      credentials: "include",
-    });
-    if (!response.ok) return;
-    const config = (await response.json()) as ClientConfigResponse;
+    const config = await api.get<ClientConfigResponse>("/client-config");
     setChatBaseUrl(config.chatBaseUrl);
     writeCache(config.chatBaseUrl ?? "");
   } catch {
