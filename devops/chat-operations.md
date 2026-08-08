@@ -1,20 +1,44 @@
 # Operations — Trainer ↔ client chat
 
 What to know about the chat when something is wrong with it. Design and
-rationale live in [docs/chat/40-trainer-chat-plan.md](../docs/chat/40-trainer-chat-plan.md);
-this doc is the operational half — the levers, the numbers, and what they mean.
+rationale live in [docs/chat/40-trainer-chat-plan.md](../docs/chat/40-trainer-chat-plan.md)
+(the feature) and [docs/chat/44-chat-service-extraction-plan.md](../docs/chat/44-chat-service-extraction-plan.md)
+(why it runs where it does); this doc is the operational half — the levers, the
+numbers, and what they mean.
+
+## Where the chat lives
+
+**Its own Render service, `lifey-chat`**, not `lifey-api`. Two things follow,
+and both bite during an incident:
+
+- **`/actuator/metrics` means the chat service's**, not the API's. Every meter
+  below is read from `https://<chat>.onrender.com/actuator/metrics`.
+- **The two services share one Neon database** under different roles: the chat
+  owns `chat_*` and reads `users`, `user_settings` and `trainer_clients`
+  read-only. See [chat-database-split.md](chat-database-split.md).
+
+What still lives in `lifey-api`: the push credentials (the chat asks for a send
+over `POST /internal/push`), the `user_settings` chat columns, and
+`GET /api/v1/client-config`, which is what tells the clients where the chat is.
+
+> **The chat service has no fallback.** `lifey-api` no longer serves
+> `/api/v1/chat/**` — it answers 404. If `lifey-chat` is down, the chat is down;
+> emptying `CHAT_PUBLIC_BASE_URL` makes that failure *clean* rather than
+> *fixing* it.
 
 > **One instance.** The chat's realtime layer keeps its live connections in
-> memory on the instance serving them (`InMemoryChatEventBus`). Render runs
-> `lifey-api` as a single instance, which is what makes that correct. **Scaling
-> to two instances silently degrades realtime**: a message only streams to
-> clients connected to the same node as the sender. Nothing breaks — push and
-> the 60-second poll cover it — but "instant" becomes "within a minute". See
+> memory on the instance serving them (`InMemoryChatEventBus`), and its
+> reminder job must not run twice. Render runs `lifey-chat` as a single
+> instance, which is what makes both correct. See
 > [Scaling out](#scaling-out) before you change the instance count.
+>
+> The upside of the split: **`lifey-api` is now free to scale out**, because the
+> component that pinned it to one node moved away.
 
 ## The kill switch
 
-`CHAT_ENABLED=false` (Render → Environment → save; the service restarts).
+`CHAT_ENABLED=false` on **lifey-chat** (Render → Environment → save; the
+service restarts).
 
 - Existing threads stay **readable**: the list, the history, the images, the
   search all keep working.
@@ -30,15 +54,16 @@ It is deliberately *not* a rollout flag — the feature is live for everyone.
 
 ## Reading the numbers
 
-Metrics are exposed at **`GET /actuator/metrics`**, locked to
-**`ROLE_SUPER_ADMIN`** (`SecurityConfig`). There is no Prometheus or Grafana on
-this deployment, so this endpoint *is* the dashboard: fetch it with a super-admin
-access token.
+Metrics are exposed at **`GET /actuator/metrics`** on the **chat service**,
+locked to **`ROLE_SUPER_ADMIN`**. There is no Prometheus or Grafana on this
+deployment, so this endpoint *is* the dashboard: fetch it with a super-admin
+access token — one minted by **lifey-api**, which the chat service verifies but
+never issues.
 
 ```bash
 # One meter, with its tags broken out:
 curl -s -H "Authorization: Bearer $TOKEN" \
-  "https://<service>.onrender.com/actuator/metrics/lifey.chat.push.decisions?tag=outcome:sent"
+  "https://<chat-service>.onrender.com/actuator/metrics/lifey.chat.push.decisions?tag=outcome:sent"
 ```
 
 | Meter | Type | What it answers |
@@ -47,6 +72,8 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 | `lifey.chat.stream.connections` | gauge | How many SSE connections are open **on this instance right now** |
 | `lifey.chat.push.decisions` (`outcome` = `sent` \| `skipped-viewing` \| `skipped-disabled` \| `skipped-quiet-hours` \| `skipped-muted` \| `skipped-coalesced`) | counter | Of every message worth notifying about, how many actually interrupted someone — and when they didn't, which gate stopped it |
 | `lifey.chat.reminders.sent` (`channel` = `push` \| `email`) | counter | How often the §5.4 safety net had to fire |
+| `lifey.chat.internal.push` (`outcome` = `ok` \| `failed`) | counter | Did the push actually reach lifey-api? New with the split — this hop did not exist in-process |
+| `lifey.chat.relationship.reconciled` | counter | Threads the nightly sweep had to freeze because the revoke webhook never arrived. **Zero is the healthy value** |
 
 Every series exists from startup, at zero. That is deliberate: "no data" and
 "nothing happened" have to look different, or the thresholds below can't be
@@ -114,7 +141,11 @@ stops being irrelevant, the fix is object storage, not a cleanup job (plan §18.
 | "Messages arrive late / only when I reopen the app" | `lifey.chat.stream.connections` ≈ 0 while people are online | The stream is not connecting. Check that the reverse proxy isn't buffering (`X-Accel-Buffering: no` is set by `ChatStreamController`), and that nothing in front of Render is capping response time below `CHAT_STREAM_TIMEOUT`. |
 | "I get pushes for messages I already read" | `skipped-viewing` near zero | Presence isn't reaching the server. Losing presence is the safe direction by design — an extra notification, never a missed message. |
 | "I get no push at all" | `push.decisions` by outcome | Walk the gates in the table above. |
-| "Sending fails with 503" | `CHAT_ENABLED` | Someone flipped the kill switch. |
+| "Sending fails with 503" | `CHAT_ENABLED` | Someone flipped the kill switch on `lifey-chat`. |
+| "Sending fails with 409 on a thread that looks fine" | `trainer_clients.status` for that pair | The relationship was revoked. The chat re-checks it on every send, so this is correct even when `archived_at` is still null — see plan §5.4. |
+| "Every chat call is 401" | `JWT_SECRET` on both services | The two must be bit-identical: `lifey-api` issues the token, `lifey-chat` only verifies it. |
+| "The chat is 404 everywhere" | `CHAT_PUBLIC_BASE_URL` on `lifey-api` | Empty means "the API serves the chat", which it no longer does — clients fall back to it and get 404s. |
+| "Nobody gets push, but the chat says it sent them" | `lifey.chat.internal.push{outcome=failed}` | The chat→API hop is failing: check `LIFEY_INTERNAL_TOKEN` and `LIFEY_API_INTERNAL_URL`. |
 | "Sending fails with 429" | — | Per-user rate limit: `CHAT_RATE_LIMIT_PER_MINUTE` (30) / `CHAT_RATE_LIMIT_PER_DAY` (600), in memory per instance. Abuse protection, not accounting. |
 | "The image upload fails" | HTTP status | 413 = over `CHAT_ATTACHMENT_MAX_BYTES`; 400 = not a decodable image. The container-wide multipart cap (10 MB, shared with avatars) sits above the chat's own. |
 | "Search finds nothing for an accented word" | — | Search goes through Postgres `unaccent` (`V48__unaccent_search.sql`). If that extension is missing on a restored database, every accented search silently returns nothing. `CREATE EXTENSION IF NOT EXISTS unaccent;` |
@@ -157,8 +188,9 @@ reminder count is low enough that the email version would be rare — and watch
 
 ## Scaling out
 
-If `lifey-api` ever runs on more than one instance, three things become
-instance-local and stop being globally correct:
+If **`lifey-chat`** ever runs on more than one instance, these become
+instance-local and stop being globally correct. (`lifey-api` is no longer
+affected by any of this — that was the point of the split.)
 
 1. **`InMemoryChatEventBus`** — realtime only reaches clients on the same node.
    The fix is a `ChatEventBus` implementation over Postgres `LISTEN/NOTIFY`;
@@ -172,6 +204,8 @@ instance-local and stop being globally correct:
 4. **`lifey.chat.stream.connections`** becomes per-instance, so the leak
    threshold has to be read per node.
 
-`ChatUnreadReminderJob` and the other `@Scheduled` jobs would run **once per
-instance** — that is the one item on this list that causes user-visible harm
-(duplicate reminders), and it needs a lock before scaling out.
+`ChatUnreadReminderJob` and the nightly reconciliation sweep would run **once
+per instance** — the reminder is the one item on this list that causes
+user-visible harm (duplicate notifications), and it needs a lock before scaling
+out. The cheapest option, with no new dependency, is a Postgres advisory lock at
+the top of the job (`pg_try_advisory_xact_lock`); see plan §6.4.

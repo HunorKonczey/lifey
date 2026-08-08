@@ -136,10 +136,16 @@ class ChatStreamController with WidgetsBindingObserver {
 
 /// Plain (non-autoDispose) provider: created once for the app's lifetime,
 /// alongside `connectivitySyncControllerProvider`.
+///
+/// It does get rebuilt for one reason: [chatDioProvider] watches the runtime
+/// chat base URL, so if the backend moves the chat to another host this
+/// controller is disposed (which disconnects the stream) and recreated against
+/// the new one — no app restart, no stale connection
+/// (docs/chat/44-chat-service-extraction-plan.md §7.1).
 final chatStreamControllerProvider = Provider<ChatStreamController>((ref) {
   final controller = ChatStreamController(
     ref.watch(chatRepositoryProvider),
-    ChatStreamClient(ref.watch(dioClientProvider), ApiEndpoints.chatStream),
+    ChatStreamClient(ref.watch(chatDioProvider), ApiEndpoints.chatStream),
     onPeerTyping: (conversationId) =>
         ref.read(chatTypingControllerProvider.notifier).peerTyping(conversationId),
   );

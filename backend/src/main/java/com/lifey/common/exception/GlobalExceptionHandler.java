@@ -1,11 +1,6 @@
 package com.lifey.common.exception;
 
 import com.lifey.auth.exception.*;
-import com.lifey.chat.exception.AttachmentTooLargeException;
-import com.lifey.chat.exception.ChatDisabledException;
-import com.lifey.chat.exception.ChatRateLimitedException;
-import com.lifey.chat.exception.ConversationArchivedException;
-import com.lifey.chat.exception.InvalidMessageBodyException;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.trainer.exception.AlreadyClientException;
@@ -36,6 +31,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.List;
@@ -186,36 +182,23 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
     }
 
-    @ExceptionHandler(ConversationArchivedException.class)
-    public ResponseEntity<ApiError> handleConversationArchived(ConversationArchivedException ex, HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
-    }
-
-    @ExceptionHandler(InvalidMessageBodyException.class)
-    public ResponseEntity<ApiError> handleInvalidMessageBody(InvalidMessageBodyException ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
-    }
-
-    @ExceptionHandler(ChatRateLimitedException.class)
-    public ResponseEntity<ApiError> handleChatRateLimited(ChatRateLimitedException ex, HttpServletRequest request) {
-        return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request, List.of(), ex);
-    }
-
-    @ExceptionHandler(AttachmentTooLargeException.class)
-    public ResponseEntity<ApiError> handleAttachmentTooLarge(AttachmentTooLargeException ex,
-                                                             HttpServletRequest request) {
-        return build(HttpStatus.CONTENT_TOO_LARGE, ex.getMessage(), request, List.of(), ex);
-    }
-
-    /** Kill switch, not a client error — reads keep working, only sending is refused. */
-    @ExceptionHandler(ChatDisabledException.class)
-    public ResponseEntity<ApiError> handleChatDisabled(ChatDisabledException ex, HttpServletRequest request) {
-        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request, List.of(), ex);
-    }
-
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, "Access denied", request, List.of(), ex);
+    }
+
+    /**
+     * A path that matches no handler. Without this it falls through to the
+     * catch-all below and becomes a 500 — an unknown URL reported as "the server
+     * is broken", which sends anyone debugging it looking in the wrong place.
+     * It also matters at the chat cutover: once CHAT_LOCAL_ENABLED is off, a
+     * client still pointed here should get a clean 404
+     * (docs/chat/44-chat-service-extraction-plan.md §10.3).
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "No endpoint " + request.getMethod() + " " + request.getRequestURI(),
+                request, List.of(), ex);
     }
 
     @ExceptionHandler(Exception.class)
@@ -225,21 +208,6 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ApiError> build(HttpStatus status, String message,
                                            HttpServletRequest request, List<String> details, Exception ex) {
-        if (status.is5xxServerError()) {
-            log.error("{} {} -> {} {}", request.getMethod(), request.getRequestURI(), status.value(), message, ex);
-        } else {
-            // 4xx responses are expected, client-driven outcomes (validation, auth, not-found
-            // while onboarding, etc.) — log a one-liner without the stack trace to keep logs quiet.
-            log.warn("{} {} -> {} {}", request.getMethod(), request.getRequestURI(), status.value(), message);
-        }
-        ApiError body = new ApiError(
-                Instant.now(),
-                status.value(),
-                status.getReasonPhrase(),
-                message,
-                request.getRequestURI(),
-                details
-        );
-        return ResponseEntity.status(status).body(body);
+        return ApiErrorResponses.build(status, message, request, details, ex);
     }
 }

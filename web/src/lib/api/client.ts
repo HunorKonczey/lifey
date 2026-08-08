@@ -1,3 +1,4 @@
+import { chatBaseUrl } from "@/lib/api/base-url";
 import { env } from "@/lib/env";
 
 // Spring Data `Page<T>` as serialized by any GET .../{resource}?page=... endpoint
@@ -71,6 +72,13 @@ interface RequestConfig {
   retry?: boolean;
   /** "blob" for binary responses (e.g. the profile picture) — skips JSON parsing. */
   parseAs?: "json" | "blob";
+  /**
+   * Which service to call. Defaults to the main API; the chat lives elsewhere
+   * (docs/chat/44-chat-service-extraction-plan.md §7.3). A function rather than
+   * a string because the chat's URL is resolved at runtime and can change while
+   * the tab is open.
+   */
+  baseUrl?: () => string;
 }
 
 async function request<T>(
@@ -78,7 +86,7 @@ async function request<T>(
   init: RequestInit = {},
   config: RequestConfig = {},
 ): Promise<T> {
-  const { retry = true, parseAs = "json" } = config;
+  const { retry = true, parseAs = "json", baseUrl } = config;
   // FormData sets its own multipart boundary in the Content-Type header —
   // letting fetch do that means not setting the header ourselves at all.
   const isFormData = init.body instanceof FormData;
@@ -95,7 +103,8 @@ async function request<T>(
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  const res = await fetch(`${env.NEXT_PUBLIC_API_BASE_URL}${path}`, {
+  const origin = baseUrl ? baseUrl() : env.NEXT_PUBLIC_API_BASE_URL;
+  const res = await fetch(`${origin}${path}`, {
     ...init,
     headers,
     credentials: "include",
@@ -107,7 +116,7 @@ async function request<T>(
     const newToken = await refreshOnce();
     if (newToken) {
       setAccessToken(newToken);
-      return request<T>(path, init, { retry: false, parseAs });
+      return request<T>(path, init, { retry: false, parseAs, baseUrl });
     }
     setAccessToken(null);
     throw new ApiError(401, "UNAUTHORIZED", "Session expired");
@@ -137,6 +146,17 @@ async function request<T>(
   return JSON.parse(text) as T;
 }
 
+/**
+ * The same client, pointed at the chat service.
+ *
+ * Everything else is shared on purpose: one access token, one refresh path (to
+ * the main API — the chat service only verifies tokens, it cannot issue one,
+ * §5.3), and one error shape. Only the origin differs.
+ */
+function chatRequest<T>(path: string, init: RequestInit = {}, config: RequestConfig = {}) {
+  return request<T>(path, init, { ...config, baseUrl: chatBaseUrl });
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
   post: <T>(path: string, body?: unknown) =>
@@ -154,4 +174,17 @@ export const api = {
   /** POST with a multipart body, answered with JSON (e.g. sending a chat image). */
   postForm: <T>(path: string, formData: FormData) =>
     request<T>(path, { method: "POST", body: formData }),
+};
+
+/** Mirror of {@link api} for `/chat/**`. Same session, different host. */
+export const chatClient = {
+  get: <T>(path: string) => chatRequest<T>(path, { method: "GET" }),
+  post: <T>(path: string, body?: unknown) =>
+    chatRequest<T>(path, { method: "POST", body: JSON.stringify(body) }),
+  put: <T>(path: string, body?: unknown) =>
+    chatRequest<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+  delete: <T = void>(path: string) => chatRequest<T>(path, { method: "DELETE" }),
+  getBlob: (path: string) => chatRequest<Blob>(path, { method: "GET" }, { parseAs: "blob" }),
+  postForm: <T>(path: string, formData: FormData) =>
+    chatRequest<T>(path, { method: "POST", body: formData }),
 };

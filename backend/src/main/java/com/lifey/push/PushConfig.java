@@ -7,8 +7,6 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.time.Clock;
-
 /**
  * Small dedicated pool for {@code @Async} push sends, kept separate from
  * Spring's default executor for the same reason as {@code mailTaskExecutor}
@@ -19,12 +17,6 @@ import java.time.Clock;
 @EnableAsync
 @EnableConfigurationProperties(PushProperties.class)
 public class PushConfig {
-
-    /** Injected (rather than {@code Clock.systemUTC()} calls) so {@code WorkoutReminderJob} is testable with a fixed instant. */
-    @Bean
-    Clock clock() {
-        return Clock.systemUTC();
-    }
 
     @Bean
     TaskExecutor pushTaskExecutor() {

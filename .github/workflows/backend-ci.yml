@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "devops/check-schema-ownership.sh"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     branches: [main, "feature/**", "bug/**"]
     paths:
       - "backend/**"
+      - "devops/check-schema-ownership.sh"
       - ".github/workflows/backend-ci.yml"
 
 defaults:
@@ -21,6 +23,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      # Cheap and first: a migration that reaches across the chat/monolith
+      # schema boundary should fail in review, not after it has already run.
+      # See docs/chat/44-chat-service-extraction-plan.md §4.2.
+      - name: Check schema ownership
+        working-directory: .
+        run: ./devops/check-schema-ownership.sh
 
       - uses: actions/setup-java@v4
         with:
