@@ -40,10 +40,20 @@ web origin (no wildcard) because credentials are sent.
    Vercel auto-detects Next.js — leave Build/Output settings as default.
 3. **Environment Variables** (Project → Settings → Environment Variables):
    ```
-   NEXT_PUBLIC_API_BASE_URL = https://<backend>.onrender.com/api/v1
+   NEXT_PUBLIC_API_BASE_URL  = https://<backend>.onrender.com/api/v1
+   NEXT_PUBLIC_CHAT_BASE_URL = https://<chat-service>.onrender.com/api/v1
    ```
-   Add it for **Production** (and Preview if you want PR previews to work — but note the
+   Add them for **Production** (and Preview if you want PR previews to work — but note the
    backend CORS must then also allow the preview domain).
+
+   `NEXT_PUBLIC_CHAT_BASE_URL` is **not optional on the web**, even though the chat's URL is
+   otherwise resolved at runtime from `GET /client-config`: the CSP `connect-src` header is
+   fixed at build time ([`next.config.ts`](next.config.ts)), so an origin the build never
+   heard of is blocked by the browser regardless of what the config endpoint answers. The
+   runtime lookup still gives you the rollback it was built for — emptying
+   `CHAT_PUBLIC_BASE_URL` on the API sends the chat back to the API with no redeploy — but
+   moving the chat to a *different host* needs this variable updated and the web rebuilt.
+   See `docs/chat/44-chat-service-extraction-plan.md` §7.1.
 4. **Deploy.** Vercel builds and serves automatically on every push to `main`.
 5. Copy the assigned domain (e.g. `https://lifey-web.vercel.app`) and put it into the
    backend's `CORS_ALLOWED_ORIGINS` (step 0), then redeploy the backend.
@@ -117,6 +127,9 @@ Render (if used for the web too) likewise deploys on push to `main` independentl
 | Where | Variable | Example | Notes |
 |---|---|---|---|
 | Web | `NEXT_PUBLIC_API_BASE_URL` | `https://<backend>.onrender.com/api/v1` | Build-time, inlined |
+| Web | `NEXT_PUBLIC_CHAT_BASE_URL` | `https://<chat-service>.onrender.com/api/v1` | Build-time; also feeds the CSP `connect-src` |
+| Chat | `CORS_ALLOWED_ORIGINS` | `https://lifey-web.vercel.app` | The chat has its own — the API's does not cover it |
+| API | `CHAT_PUBLIC_BASE_URL` | `https://<chat-service>.onrender.com/api/v1` | What `/client-config` hands to clients; empty = "the API serves the chat" |
 | Backend | `CORS_ALLOWED_ORIGINS` | `https://lifey-web.vercel.app` | Exact origin(s), comma-separated |
 | Backend | `COOKIE_SECURE` | `true` | Required for `SameSite=None` |
 | Backend | `COOKIE_SAME_SITE` | `None` | Cross-site refresh cookie |

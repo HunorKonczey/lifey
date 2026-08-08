@@ -23,9 +23,14 @@ Two things enforce it, and both are needed:
    the cheaper place to find out.
 
 > **Do this before the first `lifey-chat` deploy.** Without the grants the
-> service cannot even start: Flyway's first statement is a `create table` it has
-> no rights for. That is the intended failure — loud, at startup, before anything
-> depends on it.
+> service cannot even start — Flyway fails on `V1000__chat.sql`. That is the
+> intended failure: loud, at startup, before anything depends on it. The two
+> ways it shows up:
+>
+> - `permission denied for table trainer_clients` → the **`references`** grant
+>   is missing (step 2/3). Easy to miss, because `select` looks like enough.
+> - `permission denied for schema public` → the **`create`** grant is missing
+>   (step 2/2).
 
 ## 1. Generate a password
 
@@ -41,8 +46,8 @@ setups, where they need escaping. `-` and `_` never do.)
 
 ## 2. Create the role and grant it exactly what it needs
 
-Neon → your project → **SQL Editor**, against the `lifey` database. Or `psql`
-with the existing owner connection string.
+Neon → your project → **SQL Editor**, against the database `lifey-api` uses.
+Or `psql` with the existing owner connection string.
 
 Replace `<PASSWORD>` with the value from step 1. Run the whole block at once.
 
@@ -50,35 +55,30 @@ Replace `<PASSWORD>` with the value from step 1. Run the whole block at once.
 -- 1. The role. LOGIN only: no CREATEDB, no CREATEROLE, no SUPERUSER.
 create role lifey_chat with login password '<PASSWORD>';
 
--- 2. Its own tables: full access.
-grant select, insert, update, delete on
-    chat_conversations,
-    chat_messages,
-    chat_participants,
-    chat_message_attachments
-    to lifey_chat;
-
--- 3. The sequences behind those tables' bigserial ids. Without this every
---    insert fails with "permission denied for sequence" — the grant on the
---    table is not enough.
-grant usage, select on sequence
-    chat_conversations_id_seq,
-    chat_messages_id_seq,
-    chat_participants_id_seq,
-    chat_message_attachments_id_seq
-    to lifey_chat;
-
--- 4. The monolith's tables: READ ONLY. This is the whole §4.1 compromise in
---    one statement — the chat can resolve a display name and check a
---    trainer-client link, and can do nothing else.
-grant select on users, user_settings, trainer_clients to lifey_chat;
-
--- 5. Schema rights. USAGE to see the objects at all; CREATE because Flyway
---    creates its own history table (flyway_schema_history_chat) on first run.
+-- 2. Schema rights. USAGE to see the objects at all; CREATE so it can build
+--    its own tables and its Flyway history table (flyway_schema_history_chat).
 --    Postgres 15+ no longer grants CREATE on `public` to everyone, so this is
 --    required, not belt-and-braces.
 grant usage, create on schema public to lifey_chat;
+
+-- 3. The monolith's tables. SELECT for the read projections (§4.4) — and
+--    REFERENCES, which is the one that is easy to miss: pointing a foreign key
+--    AT a table is its own privilege in Postgres, separate from reading it.
+--    Without it the chat service dies on its very first migration with
+--    "permission denied for table trainer_clients", because V1000__chat.sql
+--    declares `references trainer_clients (id)` and `references users (id)`.
+grant select, references on users, trainer_clients to lifey_chat;
+
+-- 4. user_settings is read but never referenced by a foreign key, so SELECT
+--    alone is right here.
+grant select on user_settings to lifey_chat;
 ```
+
+**That is all of it.** There are deliberately **no grants on the `chat_*`
+tables or their sequences**: `lifey_chat` *creates* them, and in Postgres the
+creator owns what it creates and holds every privilege on it automatically.
+Trying to grant on them up front is not just unnecessary, it is impossible —
+they do not exist until the service has started once.
 
 **What is deliberately *not* granted**, and why it stays that way:
 
@@ -89,8 +89,11 @@ grant usage, create on schema public to lifey_chat;
 
 ## 3. Verify
 
-Connect **as `lifey_chat`** and run these five. All five outcomes matter; a
-"permission denied" here is the check passing, not failing.
+Run these **after the chat service has started once** — before that, the
+`chat_*` tables do not exist yet.
+
+Connect **as `lifey_chat`**. All five outcomes matter; a "permission denied"
+here is the check passing, not failing.
 
 ```sql
 -- Must SUCCEED — its own table.
@@ -100,7 +103,7 @@ select count(*) from chat_messages;
 select id, first_name, last_name, email, utc_offset_minutes from users limit 1;
 
 -- Must FAIL: "permission denied for table users".
--- This is the definition of done for M2.
+-- This is the whole point of the separate role.
 insert into users (email, password_hash, created_at, utc_offset_minutes)
 values ('nope@example.com', 'x', now(), 0);
 
@@ -139,13 +142,10 @@ docker compose exec postgres psql -U lifey -d lifey
 Then run the block from step 2 with a throwaway password (`lifey_chat` is fine
 locally — it never leaves your machine).
 
-**Order matters, and differently than you might expect.** The grants in step 2
-name tables, so those tables have to exist first — but `lifey-chat` is the thing
-that creates them, and it cannot until it has the grants. Locally, break the
-circle by running the chat service once as the `lifey` role (the default in
-`application.yml`), letting it build the schema, then applying the grants and
-switching the role. In production the same applies: create the role and the
-schema-level grants first, deploy once, then add the table-level grants.
+**Order matters:** the grants in step 2 name the monolith's tables, so run
+`lifey-api` once first and let Flyway build them. After that the chat service
+can start as `lifey_chat` straight away — it creates its own tables, so there is
+nothing left to grant.
 
 ## Flyway ownership
 
@@ -208,15 +208,14 @@ split.
 ## Undo
 
 ```sql
--- Grants first: Postgres refuses to drop a role that still holds any.
-revoke all on chat_conversations, chat_messages, chat_participants,
-    chat_message_attachments, users, user_settings, trainer_clients from lifey_chat;
-revoke all on sequence chat_conversations_id_seq, chat_messages_id_seq,
-    chat_participants_id_seq, chat_message_attachments_id_seq from lifey_chat;
-revoke all on schema public from lifey_chat;
+-- The chat tables are OWNED by lifey_chat, so they have to be reassigned or
+-- dropped before the role can go. Reassign keeps the data.
+reassign owned by lifey_chat to lifey;
+drop owned by lifey_chat;          -- removes the remaining grants
 drop role lifey_chat;
 ```
 
-If `drop role` still complains about dependent objects, `\drds` and
-`select * from pg_shdepend` will name them — most likely the
-`flyway_schema_history_chat` table, if the chat service has already run once.
+`reassign owned by` moves the `chat_*` tables and
+`flyway_schema_history_chat` to the owner role; `drop owned by` then clears the
+grants that are left. Without the first statement, `drop role` fails with
+"cannot be dropped because some objects depend on it".
