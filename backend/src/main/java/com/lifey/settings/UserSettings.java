@@ -11,6 +11,15 @@ import java.time.LocalTime;
 /**
  * One row per user, created lazily (with defaults) on first access rather than
  * at registration time, so the auth module stays unaware of this feature.
+ *
+ * <p><b>Read across a service boundary.</b> The chat service reads
+ * {@code user_settings.(user_id, chat_push_enabled, chat_quiet_hours_start,
+ * chat_quiet_hours_end, language)} directly — those five drive the whole push
+ * gate ladder. Renaming or dropping one is a breaking change for a separate
+ * deployable, not a local refactor: see
+ * docs/chat/44-chat-service-extraction-plan.md §4.4. The lazily-created row is
+ * also why "no row" has to keep meaning "all defaults" — see
+ * {@code ChatPreferencesAdapter}.
  */
 @Getter
 @Setter

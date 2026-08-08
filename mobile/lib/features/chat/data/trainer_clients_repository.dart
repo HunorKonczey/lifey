@@ -27,5 +27,8 @@ class TrainerClientsRepository {
 }
 
 final trainerClientsRepositoryProvider = Provider<TrainerClientsRepository>((ref) {
+  // The MAIN api client, not chatDioProvider — despite living under
+  // features/chat/. This calls /trainer/clients, which lifey-api owns; the chat
+  // service has no such route (docs/chat/44-chat-service-extraction-plan.md §7.2).
   return TrainerClientsRepository(ref.watch(dioClientProvider));
 });

@@ -1,4 +1,4 @@
-import { env } from "@/lib/env";
+import { chatBaseUrl } from "@/lib/api/base-url";
 import { getAccessToken, refreshAccessToken } from "@/lib/api/client";
 
 /**
@@ -60,7 +60,9 @@ export function connectChatStream({ onFrame, onConnectionChange }: ChatStreamOpt
 
   /** @returns true if the stream ended normally (server timeout / close). */
   const readStream = async (): Promise<boolean> => {
-    const response = await fetch(`${env.NEXT_PUBLIC_API_BASE_URL}/chat/stream`, {
+    // The chat service's origin, resolved at runtime (§7.1) — read on every
+      // attempt, so a reconnect after a base-URL change lands on the new host.
+      const response = await fetch(`${chatBaseUrl()}/chat/stream`, {
       method: "GET",
       signal: controller.signal,
       credentials: "include",

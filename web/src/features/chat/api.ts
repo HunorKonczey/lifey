@@ -1,4 +1,4 @@
-import { api } from "@/lib/api/client";
+import { chatClient } from "@/lib/api/client";
 import type {
   ConversationListResponse,
   ConversationResponse,
@@ -12,17 +12,21 @@ import type {
  * client-side app and authorize on participation in the thread, never on a role
  * (docs/chat/40-trainer-chat-plan.md §4). The web only exposes the trainer's
  * entry point to them, but the API itself is role-agnostic.
+ *
+ * Every call goes through {@link chatClient} rather than `api`: these routes
+ * live in the chat service, on its own origin
+ * (docs/chat/44-chat-service-extraction-plan.md §7.3). The session is the same.
  */
 export const chatApi = {
-  conversations: () => api.get<ConversationListResponse>("/chat/conversations"),
+  conversations: () => chatClient.get<ConversationListResponse>("/chat/conversations"),
 
   /** Lazy-create from the relationship id — the id the client detail page holds. */
   openConversation: (trainerClientId: number) =>
-    api.post<ConversationResponse>("/chat/conversations", { trainerClientId }),
+    chatClient.post<ConversationResponse>("/chat/conversations", { trainerClientId }),
 
   /** Lazy-create from the peer's user id, for entry points that only know the user. */
   openConversationWithUser: (userId: number) =>
-    api.post<ConversationResponse>(`/chat/conversations/with-user/${userId}`),
+    chatClient.post<ConversationResponse>(`/chat/conversations/with-user/${userId}`),
 
   /**
    * Keyset paging, always answered newest-first. `before` walks into history
@@ -35,7 +39,7 @@ export const chatApi = {
     if (params.after != null) search.set("after", String(params.after));
     if (params.limit != null) search.set("limit", String(params.limit));
     const qs = search.toString();
-    return api.get<MessageListResponse>(
+    return chatClient.get<MessageListResponse>(
       `/chat/conversations/${conversationId}/messages${qs ? `?${qs}` : ""}`,
     );
   },
@@ -52,14 +56,14 @@ export const chatApi = {
     const search = new URLSearchParams({ q: query });
     if (params.before != null) search.set("before", String(params.before));
     if (params.limit != null) search.set("limit", String(params.limit));
-    return api.get<MessageListResponse>(
+    return chatClient.get<MessageListResponse>(
       `/chat/conversations/${conversationId}/messages/search?${search.toString()}`,
     );
   },
 
   /** Idempotent on clientMessageId: replaying the same id returns the stored message. */
   send: (conversationId: number, body: SendMessageRequest) =>
-    api.post<MessageResponse>(`/chat/conversations/${conversationId}/messages`, body),
+    chatClient.post<MessageResponse>(`/chat/conversations/${conversationId}/messages`, body),
 
   /**
    * The same send with an image, as multipart. One request rather than
@@ -74,31 +78,31 @@ export const chatApi = {
     formData.append("file", file);
     if (body) formData.append("body", body);
     formData.append("clientMessageId", clientMessageId);
-    return api.postForm<MessageResponse>(`/chat/conversations/${conversationId}/messages`, formData);
+    return chatClient.postForm<MessageResponse>(`/chat/conversations/${conversationId}/messages`, formData);
   },
 
   /** Bubble-sized image. 404 for a message without one, same as for a stranger's thread. */
   attachmentThumbnail: (messageId: number) =>
-    api.getBlob(`/chat/messages/${messageId}/attachment/thumbnail`),
+    chatClient.getBlob(`/chat/messages/${messageId}/attachment/thumbnail`),
 
   /** Full-size image, fetched only when someone opens the picture. */
-  attachment: (messageId: number) => api.getBlob(`/chat/messages/${messageId}/attachment`),
+  attachment: (messageId: number) => chatClient.getBlob(`/chat/messages/${messageId}/attachment`),
 
   /** Tombstone, not a hard delete — only your own message. */
-  deleteMessage: (messageId: number) => api.delete(`/chat/messages/${messageId}`),
+  deleteMessage: (messageId: number) => chatClient.delete(`/chat/messages/${messageId}`),
 
   /** Monotonic and clamped server-side, so a stale cursor is harmless. */
   markRead: (conversationId: number, lastReadMessageId: number) =>
-    api.post<void>(`/chat/conversations/${conversationId}/read`, { lastReadMessageId }),
+    chatClient.post<void>(`/chat/conversations/${conversationId}/read`, { lastReadMessageId }),
 
   /** "I'm looking at this thread" — null when leaving it or hiding the tab (§5.1). */
   presence: (activeConversationId: number | null) =>
-    api.post<void>("/chat/presence", { activeConversationId }),
+    chatClient.post<void>("/chat/presence", { activeConversationId }),
 
   /** "I'm writing here." Fire and forget; throttled on both sides (§19). */
-  typing: (conversationId: number) => api.post<void>("/chat/typing", { conversationId }),
+  typing: (conversationId: number) => chatClient.post<void>("/chat/typing", { conversationId }),
 
   /** Silences this thread's pushes until the given instant; null unmutes (§I5). */
   mute: (conversationId: number, mutedUntil: string | null) =>
-    api.put<void>(`/chat/conversations/${conversationId}/mute`, { mutedUntil }),
+    chatClient.put<void>(`/chat/conversations/${conversationId}/mute`, { mutedUntil }),
 };

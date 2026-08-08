@@ -738,7 +738,7 @@ class ChatRepository {
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
   return ChatRepository(
     ref.watch(appDatabaseProvider),
-    ref.watch(dioClientProvider),
+    ref.watch(chatDioProvider),
     // No separate call: the id is already a claim on the access token the
     // session was built from.
     () => ref.read(authControllerProvider).value?.id ?? -1,

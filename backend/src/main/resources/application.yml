@@ -72,10 +72,10 @@ management:
   endpoints:
     web:
       # Health is public (the deploy probe hits it); metrics is exposed but
-      # locked to ROLE_SUPER_ADMIN in SecurityConfig — it is the only way to
-      # read the chat counters (docs/chat/40-trainer-chat-plan.md §21) on a
-      # platform with no metrics scraper. Everything else (env, beans,
-      # mappings, ...) stays unreachable, so no internals leak.
+      # locked to ROLE_SUPER_ADMIN in SecurityConfig — on a platform with no
+      # metrics scraper that endpoint is the only way to read this
+      # application's counters. Everything else (env, beans, mappings, ...)
+      # stays unreachable, so no internals leak.
       exposure:
         include: health,metrics
   endpoint:
@@ -161,71 +161,28 @@ lifey:
     # Used to build the accept/decline links in the invite email; the links
     # point back at this backend's own public endpoint, not a frontend route.
     public-base-url: ${TRAINER_INVITE_PUBLIC_BASE_URL:http://localhost:8080}
-  chat:
-    # Kill switch for the trainer<->client chat (docs/chat/40-trainer-chat-plan.md).
-    # Turning this off leaves every thread readable and only refuses new
-    # messages (503) — the incident lever, not a feature flag for rollout.
-    enabled: ${CHAT_ENABLED:true}
-    # Max characters per message, enforced after trimming.
-    max-body-length: ${CHAT_MAX_BODY_LENGTH:2000}
-    # Keyset page sizes for GET /chat/conversations/{id}/messages.
-    default-page-size: ${CHAT_DEFAULT_PAGE_SIZE:30}
-    max-page-size: ${CHAT_MAX_PAGE_SIZE:100}
-    # Per-user send budget. Abuse protection, not accounting: enforced in
-    # memory, so each instance applies it separately (see ChatRateLimiter).
-    rate-limit-per-minute: ${CHAT_RATE_LIMIT_PER_MINUTE:30}
-    rate-limit-per-day: ${CHAT_RATE_LIMIT_PER_DAY:600}
-    # SSE realtime (GET /api/v1/chat/stream). One connection is deliberately
-    # short-lived: the client reconnects with Last-Event-ID, and a bounded
-    # lifetime means a leaked emitter cannot outlive this window.
-    stream-timeout: ${CHAT_STREAM_TIMEOUT:5m}
-    # Comment frames keeping proxies from closing an idle stream. Must stay
-    # comfortably under any reverse-proxy read timeout in front of the app.
-    stream-heartbeat: ${CHAT_STREAM_HEARTBEAT:20s}
-    # Most messages a reconnect replays from Last-Event-ID before the server
-    # gives up and tells the client to reload over REST instead.
-    stream-catch-up-limit: ${CHAT_STREAM_CATCH_UP_LIMIT:200}
-    # How long "the user is looking at thread X" is believed without a refresh.
-    # Losing it is safe: the fallback is sending a push that wasn't needed.
-    presence-ttl: ${CHAT_PRESENCE_TTL:2m}
-    # At most one push per thread per window (§5.3). A burst of messages is one
-    # interruption; the count in the body comes from the read cursor, so it is
-    # accurate no matter how many sends the window swallowed.
-    push-coalesce-window: ${CHAT_PUSH_COALESCE_WINDOW:60s}
-    # How long a message stays unread before ChatUnreadReminderJob comes back
-    # for it — the safety net for a quiet hour, a mute, or a dropped push.
-    reminder-after: ${CHAT_REMINDER_AFTER:30m}
-    # Most reminders one user can get in a day. The reminder is the last line of
-    # defence, not a second notification channel.
-    reminder-daily-cap: ${CHAT_REMINDER_DAILY_CAP:1}
-    # §5.5 — off by default: an email about an unread chat message reads as spam
-    # very easily. Turn it on only after the metrics show how often it fires.
-    email-fallback-enabled: ${CHAT_EMAIL_FALLBACK_ENABLED:false}
-    email-fallback-after: ${CHAT_EMAIL_FALLBACK_AFTER:24h}
-    # Image attachments (§18). The byte cap is the chat's own, checked on the
-    # raw upload before re-encoding — deliberately below the container-wide
-    # multipart limit, which is shared with avatar and recipe photos.
-    attachment-max-bytes: ${CHAT_ATTACHMENT_MAX_BYTES:8388608}
-    # Longest side of the stored image and of the bubble thumbnail; both keep
-    # the picture's aspect ratio and neither enlarges a smaller original.
-    # Larger than the recipe photo's 1024: a chat picture is often a form check
-    # or a screenshot of a plan, where detail is the point, and it is stored
-    # once and read many times.
-    attachment-max-side: ${CHAT_ATTACHMENT_MAX_SIDE:1600}
-    attachment-thumbnail-size: ${CHAT_ATTACHMENT_THUMBNAIL_SIZE:400}
-    # Typing indicator (§19). The clients throttle at 3s; this is the server's
-    # own guard, because a keystroke-driven endpoint is the easiest one in the
-    # API to hammer and every accepted call writes to someone else's socket.
-    typing-throttle: ${CHAT_TYPING_THROTTLE:2s}
-    # How long a received "is typing" stays on screen. Not enforced anywhere on
-    # the server — nothing about typing is stored — it is the shared number the
-    # clients hide the indicator after.
-    typing-ttl: ${CHAT_TYPING_TTL:5s}
-    # In-thread search (§20). Shorter terms answer with an empty page rather
-    # than an error — the clients search as you type, so a single character is
-    # a normal request, not a mistake. One character would also match most of
-    # a thread, which is a scan for no useful answer.
-    search-min-length: ${CHAT_SEARCH_MIN_LENGTH:2}
+  # The seam with lifey-chat, in both directions
+  # (docs/chat/44-chat-service-extraction-plan.md §5.5, §6.1).
+  internal:
+    # Shared secret for /internal/**. EMPTY CLOSES the internal API rather than
+    # opening it: with no secret configured every inbound call is rejected.
+    token: ${LIFEY_INTERNAL_TOKEN:}
+    # Where lifey-chat lives, for the revoke webhook (§5.4). Empty disables the
+    # webhook — useful locally when no chat service is running.
+    chat-url: ${CHAT_INTERNAL_URL:}
+    # Short: the webhook fires after the revoke has already committed, so a slow
+    # chat service must not hold a request thread.
+    connect-timeout: ${CHAT_INTERNAL_CONNECT_TIMEOUT:2s}
+    read-timeout: ${CHAT_INTERNAL_READ_TIMEOUT:5s}
+  client-config:
+    # Where clients should send chat traffic, handed to them by
+    # GET /api/v1/client-config (§7.1). EMPTY means "this API serves the chat",
+    # which is what every client falls back to — so an unset variable degrades
+    # to a 404 on the chat routes rather than to a broken app.
+    chat-base-url: ${CHAT_PUBLIC_BASE_URL:}
+    # How long clients may cache the answer. Drop this to 300 around a rollout
+    # so a change — or a rollback — propagates in minutes.
+    ttl-seconds: ${CLIENT_CONFIG_TTL_SECONDS:21600}
   jobs:
     password-reset-cleanup:
       # Daily sweep removing expired/used password reset tokens (PasswordResetTokenCleanupJob).
@@ -239,8 +196,3 @@ lifey:
     workout-reminder:
       # Per-user-local-time workout reminder tick, every 15 minutes (WorkoutReminderJob).
       cron: ${JOB_WORKOUT_REMINDER_CRON:0 */15 * * * *}
-    chat-unread-reminder:
-      # "Still not read" sweep every 5 minutes (ChatUnreadReminderJob, §5.4).
-      # Frequent because the decision is per-user-local (quiet hours) and each
-      # tick only acts on users whose window has just opened.
-      cron: ${JOB_CHAT_UNREAD_REMINDER_CRON:0 */5 * * * *}

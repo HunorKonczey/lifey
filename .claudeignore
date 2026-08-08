@@ -13,6 +13,8 @@ mobile/build/
 # Java build outputs
 backend/target/
 backend/build/
+chat/target/
+chat/build/
 
 # Git internals
 .git/

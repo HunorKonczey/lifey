@@ -1,0 +1,11 @@
+# Production-only overrides. Activate with SPRING_PROFILES_ACTIVE=prod
+# (set in render.yaml for the lifey-chat service).
+#
+# Swagger UI and the OpenAPI spec are dev/internal tooling — disabling both
+# means /swagger-ui.html and /v3/api-docs return 404 in production, so the API
+# surface isn't advertised publicly. Same as lifey-api.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
