@@ -139,6 +139,7 @@ stops being irrelevant, the fix is object storage, not a cleanup job (plan §18.
 | Symptom | Look at | Likely cause |
 |---|---|---|
 | "Messages arrive late / only when I reopen the app" | `lifey.chat.stream.connections` ≈ 0 while people are online | The stream is not connecting. Check that the reverse proxy isn't buffering (`X-Accel-Buffering: no` is set by `ChatStreamController`), and that nothing in front of Render is capping response time below `CHAT_STREAM_TIMEOUT`. |
+| "Realtime is late **on the web only** — mobile is instant" | `curl -sI -H 'Accept-Encoding: br' https://<chat-host>/api/v1/chat/stream` | An intermediary is **compressing** the stream, and a compressor holds each frame until its window flushes. Render fronts this service with Cloudflare, which brotli-compresses even a 118-byte response, and browsers offer `br`/`zstd` while the Dart client only offers `gzip` — which is exactly why one client looked broken and the other did not. `ChatStreamController` sends `Cache-Control: no-transform` + `Content-Encoding: identity` to stop it; if the symptom returns, check those headers survived to the client. |
 | "I get pushes for messages I already read" | `skipped-viewing` near zero | Presence isn't reaching the server. Losing presence is the safe direction by design — an extra notification, never a missed message. |
 | "I get no push at all" | `push.decisions` by outcome | Walk the gates in the table above. |
 | "Sending fails with 503" | `CHAT_ENABLED` | Someone flipped the kill switch on `lifey-chat`. |

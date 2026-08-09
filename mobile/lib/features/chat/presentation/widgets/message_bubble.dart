@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -239,6 +241,10 @@ class MessageBubble extends StatelessWidget {
   }
 
   Future<void> _showActions(BuildContext context, AppLocalizations l10n) async {
+    // The press is what opened this, and a long press has no visual "armed"
+    // state to see — the tap that confirms it is the buzz, same as the set
+    // logger's long-press actions.
+    unawaited(HapticFeedback.mediumImpact());
     final failed = _state == ChatMessageState.failed;
     await showModalBottomSheet<void>(
       context: context,

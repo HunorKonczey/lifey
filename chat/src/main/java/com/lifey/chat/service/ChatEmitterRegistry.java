@@ -65,6 +65,17 @@ public class ChatEmitterRegistry {
     }
 
     /**
+     * Padding written ahead of the first real frame, sized to push any
+     * intermediary's write buffer past its threshold immediately.
+     *
+     * <p>A proxy that holds a response until it has N bytes turns "connected"
+     * into "connected in a few minutes" on a stream whose frames are a few
+     * hundred bytes each. 2 KB of comment is nothing to send once per
+     * connection and is the conventional size for this.
+     */
+    private static final String BUFFER_PRIMER = " ".repeat(2048);
+
+    /**
      * A comment frame written the moment a stream opens.
      *
      * <p>Not cosmetic: until something is written, the servlet container has
@@ -77,7 +88,7 @@ public class ChatEmitterRegistry {
      */
     public void sendOpeningComment(Long userId, SseEmitter emitter) {
         try {
-            emitter.send(SseEmitter.event().comment("connected"));
+            emitter.send(SseEmitter.event().comment(BUFFER_PRIMER).comment("connected"));
         } catch (IOException | IllegalStateException ex) {
             log.debug("Chat stream for user {} closed before it opened: {}", userId, ex.getMessage());
             remove(userId, emitter);

@@ -96,45 +96,64 @@ export function MessageBubble({
         ))}
 
       <div className={`min-w-0 flex flex-col gap-1 ${own ? "items-end" : "items-start"}`} style={{ maxWidth: "65ch" }}>
-        {image && (
-          <div
-            aria-label={t("bubbleA11y", {
-              sender: own ? t("you") : peerName,
-              time,
-              text: spokenText,
-              state: stateLabel,
-            })}
-          >
-            <ChatAttachment message={message} uploading={message.state === "pending"} />
+        {/* The delete button belongs to the message, so it is centred on the
+            bubble rather than on the row: the row also holds the time/state
+            line, and aligning to that pushes the icon visibly low. */}
+        <div className={`flex items-center gap-2 max-w-full ${own ? "flex-row-reverse" : ""}`}>
+          <div className={`min-w-0 flex flex-col gap-1 ${own ? "items-end" : "items-start"}`}>
+            {image && (
+              <div
+                aria-label={t("bubbleA11y", {
+                  sender: own ? t("you") : peerName,
+                  time,
+                  text: spokenText,
+                  state: stateLabel,
+                })}
+              >
+                <ChatAttachment message={message} uploading={message.state === "pending"} />
+              </div>
+            )}
+            {/* No empty bubble under a caption-less picture — the image is the message. */}
+            {(text || !image) && (
+              <p
+                className="px-4 py-2.5 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words"
+                style={{
+                  background: own
+                    ? "color-mix(in srgb, var(--primary) 20%, transparent)"
+                    : "var(--surface-container)",
+                  color: deleted ? "var(--on-surface-variant)" : "var(--on-surface)",
+                  fontStyle: deleted ? "italic" : undefined,
+                  fontWeight: 500,
+                  borderRadius: radius,
+                }}
+                aria-label={
+                  image
+                    ? undefined
+                    : t("bubbleA11y", {
+                        sender: own ? t("you") : peerName,
+                        time,
+                        text: spokenText,
+                        state: stateLabel,
+                      })
+                }
+              >
+                {text}
+              </p>
+            )}
           </div>
-        )}
-        {/* No empty bubble under a caption-less picture — the image is the message. */}
-        {(text || !image) && (
-          <p
-            className="px-4 py-2.5 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words"
-            style={{
-              background: own
-                ? "color-mix(in srgb, var(--primary) 20%, transparent)"
-                : "var(--surface-container)",
-              color: deleted ? "var(--on-surface-variant)" : "var(--on-surface)",
-              fontStyle: deleted ? "italic" : undefined,
-              fontWeight: 500,
-              borderRadius: radius,
-            }}
-            aria-label={
-              image
-                ? undefined
-                : t("bubbleA11y", {
-                    sender: own ? t("you") : peerName,
-                    time,
-                    text: spokenText,
-                    state: stateLabel,
-                  })
-            }
-          >
-            {text}
-          </p>
-        )}
+
+          {own && !deleted && message.id !== null && (
+            <button
+              onClick={() => onDelete(message.id as number)}
+              title={t("deleteMessage")}
+              aria-label={t("deleteMessage")}
+              className="w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+              style={{ color: "var(--on-surface-variant)" }}
+            >
+              <span className="material-symbols-rounded text-[17px]">delete</span>
+            </button>
+          )}
+        </div>
 
         {groupEnd && (
           <div className={`flex items-center gap-1 mt-1 ${own ? "mr-1" : "ml-1"}`}>
@@ -177,18 +196,6 @@ export function MessageBubble({
           </div>
         )}
       </div>
-
-      {own && !deleted && message.id !== null && (
-        <button
-          onClick={() => onDelete(message.id as number)}
-          title={t("deleteMessage")}
-          aria-label={t("deleteMessage")}
-          className="mb-5 w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
-          style={{ color: "var(--on-surface-variant)" }}
-        >
-          <span className="material-symbols-rounded text-[17px]">delete</span>
-        </button>
-      )}
     </div>
   );
 }
