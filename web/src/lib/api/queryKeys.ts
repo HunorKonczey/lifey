@@ -111,6 +111,17 @@ export const queryKeys = {
      * there like any other frame. Holds a timestamp, or nothing.
      */
     typing: (conversationId: number) => ["chat", "typing", conversationId] as const,
+    /**
+     * Keyed by user, not by conversation: the same person can appear in a row,
+     * a thread header and a bubble at once, and all three should share the one
+     * download.
+     */
+    peerAvatar: (userId: number) => ["chat", "peer-avatar", userId] as const,
+    /**
+     * Also not a query anyone fetches: whether the SSE stream is up, written by
+     * the shell that holds it and read by the screens that degrade without it.
+     */
+    streamStatus: () => ["chat", "stream-status"] as const,
     search: (conversationId: number, query: string) =>
       ["chat", "search", conversationId, query] as const,
   },

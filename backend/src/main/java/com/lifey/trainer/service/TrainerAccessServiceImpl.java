@@ -65,6 +65,22 @@ public class TrainerAccessServiceImpl implements TrainerAccessService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean isActivelyLinked(Long userId, Long otherUserId) {
+        if (userId == null || otherUserId == null) {
+            return false;
+        }
+        // Both directions, because the caller may be either side of the pair.
+        // Two derived finders rather than one hand-written either-direction
+        // query: both hit the same index, and the question is asked from a
+        // cached avatar request, not from a hot path.
+        return trainerClientRepository.existsByTrainerIdAndClientIdAndStatus(
+                        userId, otherUserId, TrainerClientStatus.ACTIVE)
+                || trainerClientRepository.existsByTrainerIdAndClientIdAndStatus(
+                        otherUserId, userId, TrainerClientStatus.ACTIVE);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<TrainerClientResponse> findActiveClientsForTrainer() {
         Long trainerId = currentUserProvider.getUserId();
         return trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(

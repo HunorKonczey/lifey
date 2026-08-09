@@ -131,6 +131,22 @@ class ChatRepository {
     await _storeMessages(items);
   }
 
+  /// Re-reads the newest page and folds it over what we already hold.
+  ///
+  /// [loadNewer] only ever walks *forward*, which is right for messages —
+  /// they never change once sent — and wrong for the one write that reaches
+  /// back into a row we already have: a deletion. Without this, a message the
+  /// peer deleted while we were away keeps its text on this device
+  /// indefinitely, because `after=<id>` will never look at that row again.
+  ///
+  /// One page, not the whole thread: a deletion the other side made weeks ago
+  /// is not worth re-reading history for, and the server also replays recent
+  /// tombstones on stream connect (`stream-tombstone-window`). This is the
+  /// path that works when the stream does not.
+  Future<void> reconcileNewestPage(int conversationId) async {
+    await _storeMessages(await _fetchMessages(conversationId));
+  }
+
   /// One page further into history. Returns whether more remain, so the
   /// thread controller knows when to stop asking.
   Future<bool> loadOlder(int conversationId) async {

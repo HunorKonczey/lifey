@@ -66,11 +66,11 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           // V2: barcode scanner support — foods can be tagged with a barcode.
           if (from < 2) {
-            await m.addColumn(foods, foods.barcode);
+            await _addColumnIfMissing(m, foods, foods.barcode);
           }
           // V3: UI language preference, synced like theme.
           if (from < 3) {
-            await m.addColumn(userSettingsTable, userSettingsTable.language);
+            await _addColumnIfMissing(m, userSettingsTable, userSettingsTable.language);
           }
           // V4: no schema change — meals used to queue their `dateTime` as a
           // zone-less string the backend has since stopped accepting, so any
@@ -83,7 +83,7 @@ class AppDatabase extends _$AppDatabase {
           }
           // V5: recipes can be marked as favorite.
           if (from < 5) {
-            await m.addColumn(recipes, recipes.favorite);
+            await _addColumnIfMissing(m, recipes, recipes.favorite);
           }
           // V6: sets carry a performedAt timestamp (for rest-time display).
           // Added via raw SQL rather than m.addColumn because the column is
@@ -96,9 +96,9 @@ class AppDatabase extends _$AppDatabase {
           // V7: Apple Health import fields on workout sessions (all nullable,
           // no backfill — pre-existing sessions simply weren't imported).
           if (from < 7) {
-            await m.addColumn(workoutSessions, workoutSessions.activeCalories);
-            await m.addColumn(workoutSessions, workoutSessions.averageHeartRate);
-            await m.addColumn(workoutSessions, workoutSessions.healthWorkoutId);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.activeCalories);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.averageHeartRate);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.healthWorkoutId);
           }
           // V8: offline-first daily step counts (one row per day, upserted as
           // the running total accumulates throughout the day).
@@ -107,49 +107,52 @@ class AppDatabase extends _$AppDatabase {
           }
           // V9: daily step goal added to user settings.
           if (from < 9) {
-            await m.addColumn(userSettingsTable, userSettingsTable.dailyStepGoal);
+            await _addColumnIfMissing(m, userSettingsTable, userSettingsTable.dailyStepGoal);
           }
           // V10: exercise category (muscle group) and equipment — both nullable,
           // existing exercises stay uncategorized until edited.
           if (from < 10) {
-            await m.addColumn(exercises, exercises.category);
-            await m.addColumn(exercises, exercises.equipment);
+            await _addColumnIfMissing(m, exercises, exercises.category);
+            await _addColumnIfMissing(m, exercises, exercises.equipment);
           }
           // V11: target set count per exercise in a workout template — nullable,
           // pre-existing template links carry no set target until updated.
           if (from < 11) {
-            await m.addColumn(workoutTemplateExercises, workoutTemplateExercises.targetSets);
+            await _addColumnIfMissing(
+                m, workoutTemplateExercises, workoutTemplateExercises.targetSets);
           }
           // V12: display order for exercises within a template. Pre-existing
           // links get sort_order = 0 (the column default); order is restored
           // after the next save or server pull.
           if (from < 12) {
-            await m.addColumn(workoutTemplateExercises, workoutTemplateExercises.sortOrder);
+            await _addColumnIfMissing(
+                m, workoutTemplateExercises, workoutTemplateExercises.sortOrder);
           }
           // V13: target set count per exercise in a workout session — nullable,
           // pre-existing session exercises carry no set target.
           if (from < 13) {
-            await m.addColumn(workoutSessionExercises, workoutSessionExercises.targetSets);
+            await _addColumnIfMissing(
+                m, workoutSessionExercises, workoutSessionExercises.targetSets);
           }
           // V14: hidden flag on foods — quick-entry macros are stored as foods
           // with hidden=true so they don't appear in the catalog or autocomplete.
           if (from < 14) {
-            await m.addColumn(foods, foods.hidden);
+            await _addColumnIfMissing(m, foods, foods.hidden);
           }
           // V15: a recipe stores how many servings it yields; pre-existing
           // recipes default to 1 (the column default).
           if (from < 15) {
-            await m.addColumn(recipes, recipes.servings);
+            await _addColumnIfMissing(m, recipes, recipes.servings);
           }
           // V16: meals can carry an optional name (set when logging from a recipe).
           if (from < 16) {
-            await m.addColumn(meals, meals.name);
+            await _addColumnIfMissing(m, meals, meals.name);
           }
           // V17: workout sessions record which template they were started
           // from, if any — the template's clientId plus a name snapshot.
           if (from < 17) {
-            await m.addColumn(workoutSessions, workoutSessions.templateClientId);
-            await m.addColumn(workoutSessions, workoutSessions.templateName);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.templateClientId);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.templateName);
           }
           // V18: per-entity delta-sync cursor (docs/15-delta-sync.md). No
           // rows yet for any entity means every _pull* still takes the
@@ -161,10 +164,10 @@ class AppDatabase extends _$AppDatabase {
           // §2) — nullable, existing rows simply have no "Edzőtől" badge until
           // the next pull re-fetches them with the new field populated.
           if (from < 19) {
-            await m.addColumn(foods, foods.originTrainerId);
-            await m.addColumn(exercises, exercises.originTrainerId);
-            await m.addColumn(recipes, recipes.originTrainerId);
-            await m.addColumn(workoutTemplates, workoutTemplates.originTrainerId);
+            await _addColumnIfMissing(m, foods, foods.originTrainerId);
+            await _addColumnIfMissing(m, exercises, exercises.originTrainerId);
+            await _addColumnIfMissing(m, recipes, recipes.originTrainerId);
+            await _addColumnIfMissing(m, workoutTemplates, workoutTemplates.originTrainerId);
           }
           // V20: trainer-scheduled ("upcoming") workout sessions (docs/personal_trainer/
           // 09-utemezett-edzesek-domain-backend.md) — scheduledFor/scheduledTime/scheduleId
@@ -183,53 +186,57 @@ class AppDatabase extends _$AppDatabase {
           }
           // V21: free-text description/notes (e.g. machine setting) per exercise.
           if (from < 21) {
-            await m.addColumn(exercises, exercises.description);
+            await _addColumnIfMissing(m, exercises, exercises.description);
           }
           // V22: recipe photos (docs/22-profile-picture-plan.md's pattern,
           // applied to recipes) — nullable, existing recipes simply have no
           // photo until the next pull or an explicit upload sets it.
           if (from < 22) {
-            await m.addColumn(recipes, recipes.imageUpdatedAt);
+            await _addColumnIfMissing(m, recipes, recipes.imageUpdatedAt);
           }
           // V23: post-workout difficulty rating (RPE 1-10) + optional note,
           // captured after finishing a session — nullable, existing sessions
           // simply stay unrated.
           if (from < 23) {
-            await m.addColumn(workoutSessions, workoutSessions.rpe);
-            await m.addColumn(workoutSessions, workoutSessions.feedbackNote);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.rpe);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.feedbackNote);
           }
           // V24: workout-reminder push opt-out (docs/30-push-notifications-plan.md)
           // — defaults true (the column default), matching the backend.
           if (from < 24) {
-            await m.addColumn(userSettingsTable, userSettingsTable.workoutReminderEnabled);
+            await _addColumnIfMissing(
+                m, userSettingsTable, userSettingsTable.workoutReminderEnabled);
           }
           // V25: trainer comment on a session (docs/31-session-feedback-loop-plan.md)
           // — nullable, existing sessions simply stay uncommented — plus its
           // push opt-out, defaulting true like every other push preference.
           if (from < 25) {
-            await m.addColumn(workoutSessions, workoutSessions.trainerComment);
-            await m.addColumn(workoutSessions, workoutSessions.trainerCommentAt);
-            await m.addColumn(userSettingsTable, userSettingsTable.trainerCommentPushEnabled);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.trainerComment);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.trainerCommentAt);
+            await _addColumnIfMissing(
+                m, userSettingsTable, userSettingsTable.trainerCommentPushEnabled);
           }
           // V26: trainer-nutrition-goals-changed push opt-out
           // (docs/32-trainer-nutrition-goals-plan.md) — defaults true, same
           // shape as every other push preference here.
           if (from < 26) {
-            await m.addColumn(userSettingsTable, userSettingsTable.trainerGoalsPushEnabled);
+            await _addColumnIfMissing(
+                m, userSettingsTable, userSettingsTable.trainerGoalsPushEnabled);
           }
           // V27: program-assigned push opt-out
           // (docs/34-multi-week-program-plan.md, M6) — defaults true, same
           // shape as every other push preference here.
           if (from < 27) {
-            await m.addColumn(userSettingsTable, userSettingsTable.programAssignedPushEnabled);
+            await _addColumnIfMissing(
+                m, userSettingsTable, userSettingsTable.programAssignedPushEnabled);
           }
           // V28: rest timer (docs/39-rest-timer-plan.md) — master toggle
           // (defaults true) and default duration (defaults 90s) on
           // settings, plus a nullable per-exercise override.
           if (from < 28) {
-            await m.addColumn(userSettingsTable, userSettingsTable.restTimerEnabled);
-            await m.addColumn(userSettingsTable, userSettingsTable.defaultRestSeconds);
-            await m.addColumn(exercises, exercises.defaultRestSeconds);
+            await _addColumnIfMissing(m, userSettingsTable, userSettingsTable.restTimerEnabled);
+            await _addColumnIfMissing(m, userSettingsTable, userSettingsTable.defaultRestSeconds);
+            await _addColumnIfMissing(m, exercises, exercises.defaultRestSeconds);
           }
           // V29: trainer <-> client chat (docs/chat/40-trainer-chat-plan.md,
           // I2). Two brand-new tables plus the push opt-out that goes with
@@ -238,41 +245,68 @@ class AppDatabase extends _$AppDatabase {
           if (from < 29) {
             await m.createTable(chatConversations);
             await m.createTable(chatMessages);
-            await m.addColumn(userSettingsTable, userSettingsTable.chatPushEnabled);
+            await _addColumnIfMissing(m, userSettingsTable, userSettingsTable.chatPushEnabled);
           }
           // V30: chat realtime (I4) — the peer's delivered/read cursors, so a
           // sent bubble can show whether it landed and was opened. Null until
           // the next conversation refresh, which is the same as "unknown" and
           // renders as a plain "sent" tick.
           if (from < 30) {
-            await m.addColumn(chatConversations, chatConversations.peerLastDeliveredMessageId);
-            await m.addColumn(chatConversations, chatConversations.peerLastReadMessageId);
+            await _addColumnIfMissing(
+                m, chatConversations, chatConversations.peerLastDeliveredMessageId);
+            await _addColumnIfMissing(
+                m, chatConversations, chatConversations.peerLastReadMessageId);
           }
           // V31: chat quiet hours (I5) — a local-time window in which chat
           // pushes are held back. Null on both sides means no window, which is
           // the existing behaviour, so there is nothing to backfill.
           if (from < 31) {
-            await m.addColumn(userSettingsTable, userSettingsTable.chatQuietHoursStart);
-            await m.addColumn(userSettingsTable, userSettingsTable.chatQuietHoursEnd);
+            await _addColumnIfMissing(m, userSettingsTable, userSettingsTable.chatQuietHoursStart);
+            await _addColumnIfMissing(m, userSettingsTable, userSettingsTable.chatQuietHoursEnd);
           }
           // V32: per-thread mute (I5). Null means not muted, which is the
           // existing behaviour — nothing to backfill.
           if (from < 32) {
-            await m.addColumn(chatConversations, chatConversations.mutedUntil);
+            await _addColumnIfMissing(m, chatConversations, chatConversations.mutedUntil);
           }
           // V33: image attachments (I6). Every column is nullable or defaulted,
           // so existing text messages need no backfill.
           if (from < 33) {
-            await m.addColumn(chatMessages, chatMessages.attachmentWidth);
-            await m.addColumn(chatMessages, chatMessages.attachmentHeight);
-            await m.addColumn(chatMessages, chatMessages.attachmentByteSize);
-            await m.addColumn(chatMessages, chatMessages.attachmentLocalPath);
-            await m.addColumn(chatConversations, chatConversations.lastMessageHasAttachment);
+            await _addColumnIfMissing(m, chatMessages, chatMessages.attachmentWidth);
+            await _addColumnIfMissing(m, chatMessages, chatMessages.attachmentHeight);
+            await _addColumnIfMissing(m, chatMessages, chatMessages.attachmentByteSize);
+            await _addColumnIfMissing(m, chatMessages, chatMessages.attachmentLocalPath);
+            await _addColumnIfMissing(
+                m, chatConversations, chatConversations.lastMessageHasAttachment);
           }
         },
       );
 
+  /// [Migrator.addColumn], skipped when the column is already there.
+  ///
+  /// Drift writes the new `user_version` only after every step of [migration]
+  /// has succeeded, so a run interrupted half-way (app killed, a later step
+  /// throwing) leaves the file with columns from a version it isn't marked as
+  /// having yet. The next launch then re-runs those `ALTER TABLE ... ADD
+  /// COLUMN`s and dies with "duplicate column name", permanently — the version
+  /// can never advance past the failing step. Skipping what's already applied
+  /// lets such a database heal itself on the next open.
+  Future<void> _addColumnIfMissing(
+    Migrator m,
+    TableInfo table,
+    GeneratedColumn column,
+  ) async {
+    if (await _hasColumn(table.actualTableName, column.name)) return;
+    await m.addColumn(table, column);
+  }
+
+  Future<bool> _hasColumn(String table, String column) async {
+    final rows = await customSelect('PRAGMA table_info($table)').get();
+    return rows.any((row) => row.read<String>('name') == column);
+  }
+
   Future<void> _addExerciseSetPerformedAtColumn() async {
+    if (await _hasColumn('exercise_sets', 'performed_at')) return;
     await customStatement(
       'ALTER TABLE exercise_sets ADD COLUMN performed_at INTEGER NOT NULL DEFAULT 0',
     );
@@ -308,9 +342,8 @@ class AppDatabase extends _$AppDatabase {
         continue;
       }
 
-      final entryRows = await (select(mealEntries)
-            ..where((t) => t.mealClientId.equals(op.clientId)))
-          .get();
+      final entryRows =
+          await (select(mealEntries)..where((t) => t.mealClientId.equals(op.clientId))).get();
       final rebuiltPayload = {
         'dateTime': mealRow.mealDateTime.toUtc().toIso8601String(),
         'mealType': payload['mealType'],

@@ -100,7 +100,7 @@ class ChatUnreadReminderJobTest {
 
     private ChatUnreadReminderJob newJob(boolean emailFallbackEnabled) {
         ChatProperties properties = new ChatProperties(true, 2000, 30, 100, 30, 600,
-                Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
+                Duration.ofMinutes(5), 200, Duration.ofDays(7), Duration.ofMinutes(2),
                 Duration.ofSeconds(60), Duration.ofMinutes(30), 1,
                 emailFallbackEnabled, Duration.ofHours(24), 8L * 1024 * 1024, 1600, 400, Duration.ofSeconds(2), Duration.ofSeconds(5), 2);
         return new ChatUnreadReminderJob(participantRepository, messageRepository, preferences,

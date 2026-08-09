@@ -34,29 +34,33 @@ class ChatThreadScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatThreadScreen> createState() => _ChatThreadScreenState();
 }
 
-class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
-    with WidgetsBindingObserver {
+class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with WidgetsBindingObserver {
   final _scrollController = ScrollController();
+
+  /// Kept in sync by [build] because `ref` is off limits in [dispose] — the
+  /// element is already unmounted by then. Watched rather than read once, so
+  /// this stays the live controller if `chatStreamControllerProvider` is
+  /// rebuilt (see its doc comment) while the thread is open.
+  late ChatStreamController _streamController;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScroll);
+    _streamController = ref.read(chatStreamControllerProvider);
     // Tells the server this thread is on screen, so a message arriving now is
     // read on arrival and no push goes out for it (§5.1). The background case
     // is handled centrally by ChatStreamController, not here.
-    unawaited(
-      ref.read(chatStreamControllerProvider).setActiveConversation(widget.conversationId),
-    );
+    unawaited(_streamController.setActiveConversation(widget.conversationId));
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // Read off `ref` before the element is gone; leaving the thread must
-    // clear presence or pushes would stay silenced until the server's TTL.
-    unawaited(ref.read(chatStreamControllerProvider).setActiveConversation(null));
+    // Leaving the thread must clear presence, or pushes would stay silenced
+    // until the server's TTL.
+    unawaited(_streamController.setActiveConversation(null));
     _scrollController.dispose();
     super.dispose();
   }
@@ -160,6 +164,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    _streamController = ref.watch(chatStreamControllerProvider);
     final conversation = ref.watch(chatConversationProvider(widget.conversationId)).value;
     final messages = ref.watch(_controllerProvider);
     final currentUserId = ref.watch(currentUserIdProvider);
@@ -176,7 +181,11 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
             ? const SizedBox.shrink()
             : Row(
                 children: [
-                  ChatAvatar(monogram: conversation.peer.monogram, size: 34),
+                  ChatAvatar(
+                    monogram: conversation.peer.monogram,
+                    userId: conversation.peer.userId,
+                    size: 34,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -239,13 +248,12 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
                 ? const ArchivedComposerNotice()
                 : ChatComposer(
                     onSend: _send,
-                    onTyping: () => ref
-                        .read(chatTypingReporterProvider)
-                        .report(widget.conversationId),
-                    peerTypingName: ref.watch(chatTypingControllerProvider)
-                            .contains(widget.conversationId)
-                        ? conversation?.peer.displayName
-                        : null,
+                    onTyping: () =>
+                        ref.read(chatTypingReporterProvider).report(widget.conversationId),
+                    peerTypingName:
+                        ref.watch(chatTypingControllerProvider).contains(widget.conversationId)
+                            ? conversation?.peer.displayName
+                            : null,
                   ),
           ),
         ],
@@ -289,12 +297,11 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen>
           // hand rather than baked into the row.
           receiptState: receiptStateFor(message, conversation),
           isOwn: isOwn,
-          senderName: isOwn
-              ? ''
-              : (conversation?.peer.displayName ?? ''),
+          senderName: isOwn ? '' : (conversation?.peer.displayName ?? ''),
           showTail: endsRun,
           showAvatar: endsRun,
           peerMonogram: conversation?.peer.monogram ?? '',
+          peerUserId: conversation?.peer.userId,
           uploadProgress: uploads[message.clientId],
           onRetry: () => ref.read(_controllerProvider.notifier).retry(message.clientId),
           onDelete: () => message.isUnsent
@@ -399,10 +406,7 @@ class _ThreadError extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             l10n.chatLoadErrorBody,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: scheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
           FilledButton.tonalIcon(

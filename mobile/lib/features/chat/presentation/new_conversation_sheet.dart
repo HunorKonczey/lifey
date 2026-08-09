@@ -131,7 +131,7 @@ class _NewConversationSheetState extends ConsumerState<_NewConversationSheet> {
                     itemBuilder: (context, index) {
                       final client = visible[index];
                       return ListTile(
-                        leading: ChatAvatar(monogram: client.monogram, size: 40),
+                        leading: ChatAvatar(monogram: client.monogram, userId: client.userId, size: 40),
                         title: Text(client.displayName),
                         subtitle: Text(client.email),
                         trailing: const Icon(Icons.chevron_right),

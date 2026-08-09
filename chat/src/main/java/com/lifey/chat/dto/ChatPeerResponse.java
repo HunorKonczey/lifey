@@ -3,10 +3,12 @@ package com.lifey.chat.dto;
 /**
  * The other participant, as the caller sees them.
  *
- * <p>No {@code avatarUrl} yet: profile pictures are only reachable for the
- * caller's own account ({@code /api/v1/users/me/avatar}), there is no
- * cross-user avatar route to point at. The chat design uses monogram avatars
- * derived from {@code displayName}, so nothing is blocked on it — see
+ * <p>No {@code avatarUrl}, deliberately: profile pictures live in the
+ * monolith's {@code user} feature, which this service cannot read at all (its
+ * database role has no grant on {@code user_avatars}). Clients fetch the
+ * picture themselves from {@code GET /api/v1/users/{userId}/avatar} — the
+ * monolith authorizes it on the same trainer-client link the thread rests on —
+ * and fall back to a monogram derived from {@code displayName}. See
  * docs/chat/40-trainer-chat-plan.md §11.
  */
 public record ChatPeerResponse(

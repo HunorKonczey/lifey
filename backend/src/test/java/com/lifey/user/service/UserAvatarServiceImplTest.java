@@ -3,6 +3,7 @@ package com.lifey.user.service;
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.InvalidImageException;
 import com.lifey.common.exception.ResourceNotFoundException;
+import com.lifey.trainer.service.TrainerAccessService;
 import com.lifey.user.AvatarSource;
 import com.lifey.user.User;
 import com.lifey.user.UserAvatar;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.when;
 class UserAvatarServiceImplTest {
 
     private static final Long USER_ID = 1L;
+    private static final Long PEER_ID = 2L;
 
     @Mock
     UserAvatarRepository repository;
@@ -43,6 +45,9 @@ class UserAvatarServiceImplTest {
 
     @Mock
     CurrentUserProvider currentUserProvider;
+
+    @Mock
+    TrainerAccessService trainerAccessService;
 
     @InjectMocks
     UserAvatarServiceImpl service;
@@ -57,6 +62,35 @@ class UserAvatarServiceImplTest {
         when(repository.findByUserId(USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.find()).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void findForPeer_servesThePictureOfAnActivelyLinkedUser() {
+        UserAvatar peerAvatar = new UserAvatar();
+        when(trainerAccessService.isActivelyLinked(USER_ID, PEER_ID)).thenReturn(true);
+        when(repository.findByUserId(PEER_ID)).thenReturn(Optional.of(peerAvatar));
+
+        assertThat(service.findForPeer(PEER_ID)).isSameAs(peerAvatar);
+    }
+
+    @Test
+    void findForPeer_doesNotReadTheRowOfAStranger() {
+        when(trainerAccessService.isActivelyLinked(USER_ID, PEER_ID)).thenReturn(false);
+
+        // 404, not 403: the answer must not distinguish "no link" from "no
+        // picture", or it would tell a caller which accounts exist.
+        assertThatThrownBy(() -> service.findForPeer(PEER_ID))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(repository, never()).findByUserId(PEER_ID);
+    }
+
+    @Test
+    void findForPeer_needsNoRelationshipForTheCallersOwnPicture() {
+        UserAvatar own = new UserAvatar();
+        when(repository.findByUserId(USER_ID)).thenReturn(Optional.of(own));
+
+        assertThat(service.findForPeer(USER_ID)).isSameAs(own);
+        verify(trainerAccessService, never()).isActivelyLinked(USER_ID, USER_ID);
     }
 
     @Test

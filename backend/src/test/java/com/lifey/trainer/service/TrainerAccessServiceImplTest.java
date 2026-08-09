@@ -99,6 +99,26 @@ class TrainerAccessServiceImplTest {
     }
 
     @Test
+    void isActivelyLinked_findsThePairFromTheClientsSideToo() {
+        // The client asking about their trainer is the mirror image of the row
+        // in the table, and the chat asks this question from both sides.
+        when(trainerClientRepository.existsByTrainerIdAndClientIdAndStatus(
+                CLIENT_ID, TRAINER_ID, TrainerClientStatus.ACTIVE)).thenReturn(false);
+        when(trainerClientRepository.existsByTrainerIdAndClientIdAndStatus(
+                TRAINER_ID, CLIENT_ID, TrainerClientStatus.ACTIVE)).thenReturn(true);
+
+        assertThat(service.isActivelyLinked(CLIENT_ID, TRAINER_ID)).isTrue();
+    }
+
+    @Test
+    void isActivelyLinked_isFalseForTwoUnrelatedUsers() {
+        when(trainerClientRepository.existsByTrainerIdAndClientIdAndStatus(
+                any(), any(), eq(TrainerClientStatus.ACTIVE))).thenReturn(false);
+
+        assertThat(service.isActivelyLinked(TRAINER_ID, 99L)).isFalse();
+    }
+
+    @Test
     void findActiveClientsForTrainer_mapsToClientResponses() {
         when(currentUserProvider.getUserId()).thenReturn(TRAINER_ID);
         TrainerClient tc = new TrainerClient();

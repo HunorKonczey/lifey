@@ -15,6 +15,14 @@ public interface TrainerAccessService {
      */
     TrainerClient requireActiveClient(Long trainerId, Long clientId);
 
+    /**
+     * Whether these two users are linked right now, in either direction. The
+     * one relationship question that is not asked from a trainer's point of
+     * view: the chat — and the profile pictures it renders — is the same
+     * feature for both sides of the pair.
+     */
+    boolean isActivelyLinked(Long userId, Long otherUserId);
+
     List<TrainerClientResponse> findActiveClientsForTrainer();
 
     void revokeClient(Long clientId);

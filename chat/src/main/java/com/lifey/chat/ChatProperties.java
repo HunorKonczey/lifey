@@ -21,6 +21,14 @@ import java.time.Duration;
  * @param streamCatchUpLimit  most messages a reconnect will replay from
  *                            {@code Last-Event-ID}; beyond it the server sends
  *                            {@code resync} and the client reloads over REST
+ * @param streamTombstoneWindow how far back a reconnect replays <em>deletions</em>
+ *                            of messages the client already holds. The message
+ *                            gap fill only walks forward, so a deletion that
+ *                            happened while the client was away has no other
+ *                            way home (§17.5). Bounded because this is a sweep
+ *                            over already-delivered rows on every connect, and
+ *                            a client that has been gone longer than this
+ *                            window is better served by a full reload anyway
  * @param presenceTtl         how long a reported "I am looking at this thread"
  *                            stays believed without a refresh (§4.3)
  * @param pushCoalesceWindow  at most one push per thread per window, so a burst
@@ -59,6 +67,7 @@ public record ChatProperties(
         int rateLimitPerDay,
         Duration streamTimeout,
         int streamCatchUpLimit,
+        Duration streamTombstoneWindow,
         Duration presenceTtl,
         Duration pushCoalesceWindow,
         Duration reminderAfter,

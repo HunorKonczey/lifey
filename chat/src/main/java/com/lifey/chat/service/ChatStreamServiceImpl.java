@@ -3,6 +3,7 @@ package com.lifey.chat.service;
 import com.lifey.chat.ChatMapper;
 import com.lifey.chat.ChatProperties;
 import com.lifey.chat.dto.ChatEvent;
+import com.lifey.chat.dto.MessageDeletedEventPayload;
 import com.lifey.chat.dto.MessageEventPayload;
 import com.lifey.chat.dto.TypingEventPayload;
 import com.lifey.chat.entity.ChatConversation;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Instant;
 import java.util.List;
 
 @Slf4j
@@ -107,6 +109,30 @@ public class ChatStreamServiceImpl implements ChatStreamService {
         for (ChatMessage message : missed) {
             registry.sendTo(userId, emitter, ChatEvent.message(new MessageEventPayload(
                     message.getConversation().getId(), ChatMapper.toMessageResponse(message))));
+        }
+        replayTombstones(userId, lastEventId, emitter);
+    }
+
+    /**
+     * The other half of catching up: what was <em>deleted</em> below the
+     * client's cursor while it was away.
+     *
+     * <p>Without this a tombstone exists only as a live frame — miss it, and
+     * the peer goes on showing text the server has already destroyed, for as
+     * long as their cache lives (§17.5 named this limit; this is where the plan
+     * said the fix belongs). Replaying is safe to do on every connect because
+     * applying a tombstone is idempotent on both clients, and it is bounded by
+     * {@code stream-tombstone-window} so it stays a small, recent sweep rather
+     * than the whole history of the thread.
+     */
+    private void replayTombstones(Long userId, Long lastEventId, SseEmitter emitter) {
+        Instant since = Instant.now().minus(properties.streamTombstoneWindow());
+        List<ChatMessage> deleted = messageRepository.findTombstonesForParticipantUpTo(
+                userId, lastEventId, since, PageRequest.of(0, properties.streamCatchUpLimit()));
+
+        for (ChatMessage message : deleted) {
+            registry.sendTo(userId, emitter, ChatEvent.deleted(new MessageDeletedEventPayload(
+                    message.getConversation().getId(), message.getId(), message.getDeletedAt())));
         }
     }
 }

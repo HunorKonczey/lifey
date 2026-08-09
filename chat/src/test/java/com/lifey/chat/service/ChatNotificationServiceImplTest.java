@@ -114,7 +114,7 @@ class ChatNotificationServiceImplTest {
 
     private static ChatProperties properties() {
         return new ChatProperties(true, 2000, 30, 100, 30, 600,
-                Duration.ofMinutes(5), 200, Duration.ofMinutes(2),
+                Duration.ofMinutes(5), 200, Duration.ofDays(7), Duration.ofMinutes(2),
                 COALESCE_WINDOW, Duration.ofMinutes(30), 1, false, Duration.ofHours(24),
                 8L * 1024 * 1024, 1600, 400, Duration.ofSeconds(2), Duration.ofSeconds(5), 2);
     }

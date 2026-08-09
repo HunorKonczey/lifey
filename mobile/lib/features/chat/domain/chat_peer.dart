@@ -4,9 +4,10 @@
 /// (docs/chat/40-trainer-chat-plan.md §6.1).
 enum ChatPeerRole { trainer, client }
 
-/// The other participant. There is no avatar URL — the backend only serves
-/// the *caller's* own picture, so the design uses a monogram built from
-/// [displayName] (see the plan's §11/5).
+/// The other participant. Carries no avatar URL: the picture is fetched by
+/// [userId] from the monolith's `/users/{id}/avatar`, which the chat service
+/// has no access to, and the monogram built from [displayName] stays the
+/// answer for everyone who never set one (see the plan's §11/5).
 class ChatPeer {
   const ChatPeer({
     required this.userId,

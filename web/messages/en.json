@@ -409,6 +409,7 @@
     "searchResultCount": "{count} matches",
     "searchMoreResults": "most recent shown",
     "isTyping": "{name} is typing…",
+    "reconnecting": "Reconnecting… new messages may be delayed",
     "attachImage": "Attach an image",
     "removeImage": "Remove image",
     "openImage": "Open image",

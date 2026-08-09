@@ -1,4 +1,4 @@
-import { chatClient } from "@/lib/api/client";
+import { api, ApiError, chatClient } from "@/lib/api/client";
 import type {
   ConversationListResponse,
   ConversationResponse,
@@ -105,4 +105,23 @@ export const chatApi = {
   /** Silences this thread's pushes until the given instant; null unmutes (§I5). */
   mute: (conversationId: number, mutedUntil: string | null) =>
     chatClient.put<void>(`/chat/conversations/${conversationId}/mute`, { mutedUntil }),
+
+  /**
+   * The peer's profile picture — `api`, not `chatClient`: pictures belong to
+   * the monolith's user feature (docs/22-profile-picture-plan.md), and the chat
+   * service has no read access to them at all.
+   *
+   * Null (not an error) when there is nothing to show — either the peer never
+   * set a picture, or the relationship that entitles us to it is gone. Both
+   * render the monogram, which is why the caller does not need to tell them
+   * apart.
+   */
+  peerAvatar: async (userId: number): Promise<Blob | null> => {
+    try {
+      return await api.getBlob(`/users/${userId}/avatar`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
 };

@@ -133,6 +133,13 @@ lifey:
     # Most messages a reconnect replays from Last-Event-ID before the server
     # gives up and tells the client to reload over REST instead.
     stream-catch-up-limit: ${CHAT_STREAM_CATCH_UP_LIMIT:200}
+    # How far back a reconnect replays *deletions* of messages the client
+    # already holds. The message gap fill (`after=<id>`) only walks forward, so
+    # without this a tombstone written while the client was offline never
+    # reaches it — the peer keeps showing text the server has already thrown
+    # away (§17.5). A week covers "my phone was off over the weekend"; anything
+    # older is a client that should reload from scratch anyway.
+    stream-tombstone-window: ${CHAT_STREAM_TOMBSTONE_WINDOW:7d}
     # How long "the user is looking at thread X" is believed without a refresh.
     # Losing it is safe: the fallback is sending a push that wasn't needed.
     presence-ttl: ${CHAT_PRESENCE_TTL:2m}

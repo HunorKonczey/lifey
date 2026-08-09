@@ -58,6 +58,24 @@ class UserAvatarControllerTest {
     }
 
     @Test
+    void getForPeer_returnsTheOtherUsersImage() throws Exception {
+        when(service.findForPeer(7L)).thenReturn(avatar(2L, "2026-07-02T00:00:00Z"));
+
+        mockMvc.perform(get("/api/v1/users/7/avatar"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "image/jpeg"))
+                .andExpect(header().exists("ETag"));
+    }
+
+    @Test
+    void getForPeer_returns404WhenTheCallerMayNotSeeIt() throws Exception {
+        when(service.findForPeer(7L)).thenThrow(new ResourceNotFoundException("No profile picture set"));
+
+        mockMvc.perform(get("/api/v1/users/7/avatar"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void upload_returnsNoContent() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "avatar.png", "image/png", new byte[]{1, 2, 3});
 

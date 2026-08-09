@@ -78,7 +78,10 @@ class ConversationTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             child: Row(
               children: [
-                ChatAvatar(monogram: conversation.peer.monogram),
+                ChatAvatar(
+                  monogram: conversation.peer.monogram,
+                  userId: conversation.peer.userId,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
