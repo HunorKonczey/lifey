@@ -65,11 +65,21 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
   const messagesKey = queryKeys.chat.messages(conversationId);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  /** Wraps everything inside the scroller, so its height can be observed. */
+  const contentRef = useRef<HTMLDivElement>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const acknowledgedRef = useRef<number | null>(null);
   /** False until this mount has re-read the newest page once — see the query below. */
   const reconciledRef = useRef(false);
+  /**
+   * Whether the viewport is following the newest message. True on open — a
+   * thread opens at what was just said, never at its beginning — and again
+   * whenever the reader returns to the bottom themselves.
+   */
+  const stickToBottomRef = useRef(true);
+  /** Previous scroll offset, so "scrolling up" can be told from "scrolling down". */
+  const lastScrollTopRef = useRef(0);
 
   const readMessages = useCallback(
     () => queryClient.getQueryData<ThreadMessage[]>(messagesKey) ?? [],
@@ -138,15 +148,37 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
       });
   }, [conversationId, newestId, queryClient]);
 
-  // Stick to the bottom for new arrivals, but never yank the viewport away
-  // from someone reading history further up.
+  // Open at the newest message, and stay there for new arrivals — but never
+  // yank the viewport away from someone reading history further up.
+  //
+  // The old version only checked "is the viewport already near the bottom",
+  // which is false on the very first render with messages: the scroller starts
+  // at 0 and the content is taller than it, so a thread opened at the top
+  // stayed at the top — at its oldest message, with the load-older trigger
+  // right under the reader's cursor.
   const messageCount = thread.length;
   useLayoutEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
-    if (nearBottom || messageCount === 0) el.scrollTop = el.scrollHeight;
+    if (!el || !stickToBottomRef.current) return;
+    el.scrollTop = el.scrollHeight;
+    lastScrollTopRef.current = el.scrollTop;
   }, [messageCount, conversationId]);
+
+  // Pictures arrive after the bubble that holds them and grow the thread under
+  // the viewport; a one-shot scroll on message count would land above the
+  // newest message every time an image finishes loading.
+  useEffect(() => {
+    const el = scrollRef.current;
+    const content = contentRef.current;
+    if (!el || !content) return;
+    const observer = new ResizeObserver(() => {
+      if (!stickToBottomRef.current) return;
+      el.scrollTop = el.scrollHeight;
+      lastScrollTopRef.current = el.scrollTop;
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
 
   const loadOlder = async () => {
     const before = oldestMessageId(readMessages());
@@ -163,7 +195,11 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
       // Prepending grows the scroll height above the viewport; keep the row the
       // trainer was looking at where it was instead of jumping to the top.
       requestAnimationFrame(() => {
-        if (el) el.scrollTop = el.scrollHeight - previousHeight;
+        if (!el) return;
+        el.scrollTop = el.scrollHeight - previousHeight;
+        // The next scroll event compares against this, and a stale value would
+        // read the restore itself as "the reader scrolled up".
+        lastScrollTopRef.current = el.scrollTop;
       });
     } catch {
       show(t("loadOlderFailed"), "error");
@@ -381,66 +417,78 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
       <div
         ref={scrollRef}
         onScroll={(e) => {
-          if (!searching && e.currentTarget.scrollTop < 80) void loadOlder();
+          const el = e.currentTarget;
+          const scrolledUp = el.scrollTop < lastScrollTopRef.current;
+          lastScrollTopRef.current = el.scrollTop;
+          // Follow the newest message again as soon as the reader comes back
+          // down, and stop following the moment they leave.
+          stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+          // One page per approach to the top, and only while actually moving
+          // upwards: a scroll event fired on the way *down* through the top of
+          // a short thread would otherwise keep pulling history nobody asked
+          // for, until the whole conversation was in the DOM.
+          if (!searching && scrolledUp && el.scrollTop < 80) void loadOlder();
         }}
         className="flex-1 min-h-0 overflow-y-auto px-6 py-5"
       >
-        {searching ? (
-          <ChatSearch
-            conversationId={conversationId}
-            ownUserId={ownUserId}
-            peerName={conversation.peer.displayName}
-            query={searchQuery}
-          />
-        ) : isLoading ? (
-          <ThreadSkeleton />
-        ) : isError ? (
-          <ErrorState onRetry={refetch} />
-        ) : items.length === 0 ? (
-          <EmptyState
-            icon="forum"
-            title={t("emptyThreadTitle")}
-            body={t("emptyThreadBody", { name: conversation.peer.displayName })}
-          />
-        ) : (
-          <>
-            {loadingOlder && (
-              <p className="text-center text-[11px] font-semibold pb-3" style={{ color: "var(--muted)" }}>
-                {t("loadingOlder")}
-              </p>
-            )}
-            {items.map((item) =>
-              item.kind === "day" ? (
-                <div key={item.key} className="flex justify-center my-3">
-                  <span
-                    className="rounded-[10px] px-3 py-1 text-[11px] font-bold"
-                    style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
-                  >
-                    {dayLabel(item.at, locale, t("today"), t("yesterday"))}
-                  </span>
-                </div>
-              ) : (
-                <MessageBubble
-                  key={item.key}
-                  message={item.message}
-                  own={item.own}
-                  groupStart={item.groupStart}
-                  groupEnd={item.groupEnd}
-                  peerName={conversation.peer.displayName}
-                  peerUserId={conversation.peer.userId}
-                  receiptState={receiptStateFor(
-                    item.message,
-                    conversation.peerLastDeliveredMessageId,
-                    conversation.peerLastReadMessageId,
-                  )}
-                  onRetry={retry}
-                  onDiscard={discard}
-                  onDelete={setPendingDeleteId}
-                />
-              ),
-            )}
-          </>
-        )}
+        <div ref={contentRef}>
+          {searching ? (
+            <ChatSearch
+              conversationId={conversationId}
+              ownUserId={ownUserId}
+              peerName={conversation.peer.displayName}
+              query={searchQuery}
+            />
+          ) : isLoading ? (
+            <ThreadSkeleton />
+          ) : isError ? (
+            <ErrorState onRetry={refetch} />
+          ) : items.length === 0 ? (
+            <EmptyState
+              icon="forum"
+              title={t("emptyThreadTitle")}
+              body={t("emptyThreadBody", { name: conversation.peer.displayName })}
+            />
+          ) : (
+            <>
+              {loadingOlder && (
+                <p className="text-center text-[11px] font-semibold pb-3" style={{ color: "var(--muted)" }}>
+                  {t("loadingOlder")}
+                </p>
+              )}
+              {items.map((item) =>
+                item.kind === "day" ? (
+                  <div key={item.key} className="flex justify-center my-3">
+                    <span
+                      className="rounded-[10px] px-3 py-1 text-[11px] font-bold"
+                      style={{ background: "var(--surface-container)", color: "var(--on-surface-variant)" }}
+                    >
+                      {dayLabel(item.at, locale, t("today"), t("yesterday"))}
+                    </span>
+                  </div>
+                ) : (
+                  <MessageBubble
+                    key={item.key}
+                    message={item.message}
+                    own={item.own}
+                    groupStart={item.groupStart}
+                    groupEnd={item.groupEnd}
+                    peerName={conversation.peer.displayName}
+                    peerUserId={conversation.peer.userId}
+                    receiptState={receiptStateFor(
+                      item.message,
+                      conversation.peerLastDeliveredMessageId,
+                      conversation.peerLastReadMessageId,
+                    )}
+                    onRetry={retry}
+                    onDiscard={discard}
+                    onDelete={setPendingDeleteId}
+                  />
+                ),
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {searching ? null : archived ? (
