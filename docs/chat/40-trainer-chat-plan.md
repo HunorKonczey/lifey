@@ -1430,6 +1430,22 @@ mióta offline vagy" lekérdezés a chat egészét érintő új szerződés lenn
 már ekkor sincs meg — csak a másik fél elavult másolata él tovább egy ideig. Ha ez
 később mégis kell, a helye a stream catch-up (`ChatStreamServiceImpl`), nem a REST.
 
+> **Utólag: kellett, és pontosan oda került.** A korlát a gyakorlatban nem „egy ideig"
+> tartott, hanem véglegesnek bizonyult: mobilon a lokális Drift-cache miatt egy teljes
+> app-újraindítás sem hozta vissza a tombstone-t, weben pedig a TanStack-cache
+> túléli az oldalon belüli navigációt, tehát az `after=<id>` csapdája ott is
+> bezárult. A javítás két rétegű:
+>
+> 1. **Szerver** — `ChatStreamServiceImpl.replayTombstones`: újracsatlakozáskor a
+>    kurzor **alatti** sorok friss törlései is visszamennek `deleted` frame-ként,
+>    `lifey.chat.stream-tombstone-window` (7 nap) korláttal, a `resync`-ág előtt
+>    kilépve. Nem kellett hozzá `updated_at` és delta végpont: a `deleted_at` maga
+>    az időbélyeg, amire szűrni lehet.
+> 2. **Kliensek** — a szál megnyitása egyszer újraolvassa a **legfrissebb oldalt**
+>    (`ChatRepository.reconcileNewestPage`, illetve weben a `reconciledRef` első
+>    lekérése), utána marad az olcsó előre-hézagpótlás. Ez az az út, ami akkor is
+>    működik, ha a stream épp nem szállít.
+
 ---
 
 ## 18. Megvalósítási napló — I6/2 (kép-csatolmány)

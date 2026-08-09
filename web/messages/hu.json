@@ -409,6 +409,7 @@
     "searchResultCount": "{count} találat",
     "searchMoreResults": "a legfrissebbek",
     "isTyping": "{name} gépel…",
+    "reconnecting": "Újracsatlakozás… az új üzenetek késhetnek",
     "attachImage": "Kép csatolása",
     "removeImage": "Kép eltávolítása",
     "openImage": "Kép megnyitása",

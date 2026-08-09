@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,7 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "User Avatar", description = "Profile picture upload/download")
 @RestController
-@RequestMapping("/api/v1/users/me/avatar")
+@RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserAvatarController {
 
@@ -29,10 +30,42 @@ public class UserAvatarController {
 
     @Operation(summary = "Get the current user's profile picture",
             description = "Supports conditional GET via If-None-Match/ETag. 404 if no picture is set.")
-    @GetMapping
+    @GetMapping("/me/avatar")
     public ResponseEntity<byte[]> get(
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
-        UserAvatar avatar = service.find();
+        return imageResponse(service.find(), ifNoneMatch);
+    }
+
+    @Operation(summary = "Get another user's profile picture",
+            description = "Only for a user the caller has an ACTIVE trainer-client relationship "
+                    + "with — the chat renders the peer's picture in every row and thread header. "
+                    + "404 both when there is no picture and when the caller may not see it, so "
+                    + "this cannot be used to probe which accounts exist. Same ETag/304 support "
+                    + "as the /me route.")
+    @GetMapping("/{userId}/avatar")
+    public ResponseEntity<byte[]> getForPeer(
+            @PathVariable Long userId,
+            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        return imageResponse(service.findForPeer(userId), ifNoneMatch);
+    }
+
+    @Operation(summary = "Upload or replace the current user's profile picture",
+            description = "Accepts JPEG/PNG up to 5MB; the server re-encodes it to a "
+                    + "center-cropped 512x512 JPEG, stripping metadata.")
+    @PutMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void upload(@RequestParam("file") MultipartFile file) {
+        service.upload(file);
+    }
+
+    @Operation(summary = "Remove the current user's profile picture")
+    @DeleteMapping("/me/avatar")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete() {
+        service.delete();
+    }
+
+    private ResponseEntity<byte[]> imageResponse(UserAvatar avatar, String ifNoneMatch) {
         String etag = etagOf(avatar);
         if (etag.equals(ifNoneMatch)) {
             return ResponseEntity.status(HttpStatus.NOT_MODIFIED).eTag(etag).build();
@@ -42,22 +75,6 @@ public class UserAvatarController {
                 .contentType(MediaType.parseMediaType(avatar.getContentType()))
                 .cacheControl(CacheControl.noCache().cachePrivate())
                 .body(avatar.getImage());
-    }
-
-    @Operation(summary = "Upload or replace the current user's profile picture",
-            description = "Accepts JPEG/PNG up to 5MB; the server re-encodes it to a "
-                    + "center-cropped 512x512 JPEG, stripping metadata.")
-    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void upload(@RequestParam("file") MultipartFile file) {
-        service.upload(file);
-    }
-
-    @Operation(summary = "Remove the current user's profile picture")
-    @DeleteMapping
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete() {
-        service.delete();
     }
 
     private String etagOf(UserAvatar avatar) {

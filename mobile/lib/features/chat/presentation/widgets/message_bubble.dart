@@ -26,6 +26,7 @@ class MessageBubble extends StatelessWidget {
     required this.showTail,
     required this.showAvatar,
     required this.peerMonogram,
+    this.peerUserId,
     this.receiptState,
     this.onRetry,
     this.onDelete,
@@ -54,6 +55,10 @@ class MessageBubble extends StatelessWidget {
   /// Peer-side runs show the avatar once, next to the last bubble.
   final bool showAvatar;
   final String peerMonogram;
+
+  /// Whose picture that avatar shows. Null falls back to the monogram — the
+  /// same behaviour as a peer who has no picture set.
+  final int? peerUserId;
 
   final VoidCallback? onRetry;
   final VoidCallback? onDelete;
@@ -98,7 +103,7 @@ class MessageBubble extends StatelessWidget {
             if (!isOwn)
               SizedBox(
                 width: 36,
-                child: showAvatar ? ChatAvatar(monogram: peerMonogram, size: 30) : null,
+                child: showAvatar ? ChatAvatar(monogram: peerMonogram, userId: peerUserId, size: 30) : null,
               ),
             Flexible(
               child: GestureDetector(

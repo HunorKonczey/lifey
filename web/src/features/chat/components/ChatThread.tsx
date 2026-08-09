@@ -18,7 +18,12 @@ import { ArchivedComposerNotice, ChatComposer } from "./ChatComposer";
 import { MessageBubble } from "./MessageBubble";
 import { ChatSearch } from "./ChatSearch";
 import { chatApi } from "../api";
-import { CHAT_POLL_INTERVAL_MS, usePeerTyping, useReportTyping } from "../hooks";
+import {
+  useChatPollInterval,
+  useChatStreamConnected,
+  usePeerTyping,
+  useReportTyping,
+} from "../hooks";
 import {
   MESSAGE_PAGE_SIZE,
   applyDeletion,
@@ -63,6 +68,8 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
   const [hasMore, setHasMore] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const acknowledgedRef = useRef<number | null>(null);
+  /** False until this mount has re-read the newest page once — see the query below. */
+  const reconciledRef = useRef(false);
 
   const readMessages = useCallback(
     () => queryClient.getQueryData<ThreadMessage[]>(messagesKey) ?? [],
@@ -78,11 +85,22 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
    * Since I4 the stream writes into this same cache entry, and the interval is
    * only the backstop for what the stream cannot cover.
    */
+  // While the stream is down this poll is the only way a message arrives, so
+  // it runs far more often — see the constants' comments.
+  const streamConnected = useChatStreamConnected();
+  const pollInterval = useChatPollInterval();
+
   const { data: messages, isLoading, isError, refetch } = useQuery({
     queryKey: messagesKey,
     queryFn: async () => {
       const existing = readMessages();
-      const after = newestMessageId(existing);
+      // The first read after this thread is opened re-reads the newest page
+      // instead of gap-filling above the cursor. The cache survives navigating
+      // away and back, and `after=<id>` never looks at a row again — so a
+      // message the peer deleted meanwhile would keep its text here until a
+      // full page reload. Every later read is the cheap forward fill again.
+      const after = reconciledRef.current ? newestMessageId(existing) : null;
+      reconciledRef.current = true;
       const page = await chatApi.messages(
         conversationId,
         after != null ? { after } : { limit: MESSAGE_PAGE_SIZE },
@@ -91,7 +109,7 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
       return mergeMessages(existing, page.items);
     },
     staleTime: 0,
-    refetchInterval: CHAT_POLL_INTERVAL_MS,
+    refetchInterval: pollInterval,
   });
 
   // The page keys this component on the conversation id, so switching threads
@@ -315,7 +333,7 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
               {/* No "online / last seen" line: presence lands with I4, and the design
                   rules out a status signal that isn't backed by real data. */}
               <p className="text-[11px] font-semibold truncate" style={{ color: "var(--muted)" }}>
-                {conversation.peer.email}
+                {streamConnected === false ? t("reconnecting") : conversation.peer.email}
               </p>
             </div>
             <button

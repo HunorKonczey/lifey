@@ -32,11 +32,16 @@ class ChatThreadController extends StreamNotifier<List<ChatMessage>> {
   }
 
   /// Opening, and every app resume: pull whatever arrived while we were away
-  /// (gap fill above the newest id we hold), replay anything still unsent,
+  /// (gap fill above the newest id we hold), re-read the newest page so a
+  /// deletion the gap fill cannot see lands too, replay anything still unsent,
   /// and acknowledge the thread as read.
   Future<void> catchUp() async {
     try {
       await _repo.loadNewer(conversationId);
+      // Costs one extra page on open/resume and is what makes a peer's
+      // deletion visible without a live stream frame — see the repository's
+      // note on why forward-only paging can't do it.
+      await _repo.reconcileNewestPage(conversationId);
       await _repo.flushPending();
       await _repo.markRead(conversationId);
     } catch (_) {

@@ -73,7 +73,7 @@ class ChatStreamServiceImplTest {
 
     private static ChatProperties properties() {
         return new ChatProperties(true, 2000, 30, 100, 30, 600,
-                Duration.ofMinutes(5), CATCH_UP_LIMIT, Duration.ofMinutes(2),
+                Duration.ofMinutes(5), CATCH_UP_LIMIT, Duration.ofDays(7), Duration.ofMinutes(2),
                 Duration.ofSeconds(60), Duration.ofMinutes(30), 1, false,
                 Duration.ofHours(24), 8L * 1024 * 1024, 1600, 400,
                 // Zero: the throttle has its own test, and a real interval here
@@ -146,12 +146,63 @@ class ChatStreamServiceImplTest {
     }
 
     @Test
+    void aReconnectAlsoReplaysDeletionsOfMessagesTheClientAlreadyHolds() {
+        // The whole point: this row is *below* the cursor, so the forward gap
+        // fill will never look at it again — without the tombstone replay the
+        // client keeps showing text the server has already destroyed (§17.5).
+        when(messageRepository.findAllForParticipantAfter(eq(USER_ID), eq(100L), any(Pageable.class)))
+                .thenReturn(List.of());
+        when(messageRepository.findTombstonesForParticipantUpTo(eq(USER_ID), eq(100L), any(Instant.class),
+                any(Pageable.class))).thenReturn(List.of(tombstone(42L)));
+
+        SseEmitter emitter = streamService.open(100L);
+
+        ArgumentCaptor<ChatEvent> frame = ArgumentCaptor.captor();
+        verify(registry).sendTo(eq(USER_ID), eq(emitter), frame.capture());
+        assertThat(frame.getValue().name()).isEqualTo(ChatEvent.DELETED);
+        // No id, for the same reason a live deletion carries none: the deleted
+        // message is older than the cursor, and setting it would replay the end
+        // of the thread on every reconnect (§17.3).
+        assertThat(frame.getValue().id()).isNull();
+    }
+
+    @Test
+    void aFreshClientIsNotSentTombstonesEither_itLoadsTheThreadOverRest() {
+        streamService.open(null);
+
+        verify(messageRepository, never()).findTombstonesForParticipantUpTo(anyLong(), anyLong(),
+                any(Instant.class), any(Pageable.class));
+    }
+
+    @Test
+    void aClientTooFarBehindGetsResyncInsteadOfTombstones() {
+        // A reload covers the deletions too, so replaying them on top of a
+        // resync would be work nobody reads.
+        when(messageRepository.findAllForParticipantAfter(eq(USER_ID), eq(1L), any(Pageable.class)))
+                .thenReturn(IntStream.rangeClosed(2, 2 + CATCH_UP_LIMIT)
+                        .mapToObj(id -> message((long) id))
+                        .toList());
+
+        streamService.open(1L);
+
+        verify(messageRepository, never()).findTombstonesForParticipantUpTo(anyLong(), anyLong(),
+                any(Instant.class), any(Pageable.class));
+    }
+
+    @Test
     void presenceIsForwardedToTheRegistry() {
         streamService.updatePresence(CONVERSATION_ID);
         verify(presenceRegistry).set(USER_ID, CONVERSATION_ID);
 
         streamService.updatePresence(null);
         verify(presenceRegistry).set(USER_ID, null);
+    }
+
+    private static ChatMessage tombstone(Long id) {
+        ChatMessage message = message(id);
+        message.setBody(null);
+        message.setDeletedAt(Instant.parse("2026-08-06T10:00:00Z"));
+        return message;
     }
 
     private static ChatMessage message(Long id) {

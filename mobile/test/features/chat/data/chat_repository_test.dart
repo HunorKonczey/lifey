@@ -313,6 +313,40 @@ void main() {
       expect(query.containsKey('before'), isFalse);
     });
 
+    test('reconcileNewestPage brings back a deletion the forward fill cannot see', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [_messageJson(id: 100, clientMessageId: 'a', body: 'holnap 17:00')],
+        'hasMore': false,
+      };
+      await repo.loadNewer(_conversationId);
+
+      // The peer deletes it while we are away: the row is below our cursor, so
+      // `after=100` will never return it again — only a re-read of the page can
+      // tell us, which is the whole reason this method exists.
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [
+          _messageJson(
+            id: 100,
+            clientMessageId: 'a',
+            body: null,
+            deletedAt: '2026-08-06T10:00:00Z',
+          ),
+        ],
+        'hasMore': false,
+      };
+
+      await repo.reconcileNewestPage(_conversationId);
+
+      final message = (await repo.watchMessages(_conversationId).first).single;
+      expect(message.isDeleted, isTrue);
+      expect(message.body, isNull);
+      // No cursor: the point is to look at rows we already hold.
+      final query =
+          requestFor('GET', '/chat/conversations/$_conversationId/messages').queryParameters;
+      expect(query.containsKey('after'), isFalse);
+    });
+
     test('the first load has no cursor at all', () async {
       await seedConversation();
       adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {

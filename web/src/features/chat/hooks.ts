@@ -33,13 +33,26 @@ export const TYPING_THROTTLE_MS = 3_000;
  */
 export const CHAT_POLL_INTERVAL_MS = 60_000;
 
+/**
+ * The same poll while the stream is **down**, when it is not a safety net but
+ * the only channel there is.
+ *
+ * A minute of latency is a reasonable price for a backstop nobody is waiting
+ * on; it is not a reasonable price for the message itself. Frequent enough
+ * that a broken stream reads as "a bit sluggish" rather than "the chat is
+ * broken", and rare enough that a tab left open on a dead connection is not a
+ * request per second.
+ */
+export const CHAT_POLL_INTERVAL_DISCONNECTED_MS = 8_000;
+
 export function useConversations(enabled = true) {
+  const interval = useChatPollInterval();
   return useQuery({
     queryKey: queryKeys.chat.conversations(),
     queryFn: chatApi.conversations,
     select: (data): ConversationResponse[] => sortConversations(data.items),
     staleTime: 0,
-    refetchInterval: CHAT_POLL_INTERVAL_MS,
+    refetchInterval: interval,
     enabled,
   });
 }
@@ -82,12 +95,51 @@ export function useChatStream(enabled: boolean): boolean {
     if (!enabled) return;
     const disconnect = connectChatStream({
       onFrame: (frame) => applyFrame(queryClient, frame),
-      onConnectionChange: setConnected,
+      onConnectionChange: (isConnected) => {
+        setConnected(isConnected);
+        // Published through the cache for the same reason frames are: the
+        // stream lives in the admin shell and the chat screens live elsewhere,
+        // and this is the one channel that already runs between them.
+        queryClient.setQueryData<boolean>(queryKeys.chat.streamStatus(), isConnected);
+      },
     });
-    return disconnect;
+    return () => {
+      disconnect();
+      // Unmounting the shell is not "the connection dropped" — clear the flag
+      // rather than leaving a stale "reconnecting" behind for whatever mounts
+      // next.
+      queryClient.setQueryData<boolean | null>(queryKeys.chat.streamStatus(), null);
+    };
   }, [enabled, queryClient]);
 
   return connected;
+}
+
+/**
+ * Whether the realtime stream is up right now.
+ *
+ * `null` means "no stream is being held at all" — nobody has mounted
+ * {@link useChatStream} — which is not a failure and must not be reported as
+ * one. Only an explicit `false` is a stream that tried and could not.
+ */
+export function useChatStreamConnected(): boolean | null {
+  const { data } = useQuery<boolean | null>({
+    queryKey: queryKeys.chat.streamStatus(),
+    queryFn: () => null,
+    enabled: false,
+    staleTime: Infinity,
+  });
+  return data ?? null;
+}
+
+/**
+ * How often the chat screens should fall back to REST — see
+ * {@link CHAT_POLL_INTERVAL_DISCONNECTED_MS} for why the two differ.
+ */
+export function useChatPollInterval(): number {
+  return useChatStreamConnected() === false
+    ? CHAT_POLL_INTERVAL_DISCONNECTED_MS
+    : CHAT_POLL_INTERVAL_MS;
 }
 
 function applyFrame(queryClient: QueryClient, frame: ChatStreamFrame) {
@@ -160,7 +212,11 @@ function applyFrame(queryClient: QueryClient, frame: ChatStreamFrame) {
 
   if (frame.name === "resync") {
     // The stream gave up on bridging the gap — the REST API is the truth.
-    queryClient.invalidateQueries({ queryKey: ["chat"] });
+    // Only what the gap can have changed: the other `chat` keys are pictures
+    // and connection state, and re-downloading an avatar because a thread fell
+    // behind would be pure waste.
+    queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations() });
+    queryClient.invalidateQueries({ queryKey: ["chat", "messages"] });
   }
 }
 

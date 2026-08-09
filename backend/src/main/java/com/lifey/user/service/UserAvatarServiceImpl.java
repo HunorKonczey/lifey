@@ -3,6 +3,7 @@ package com.lifey.user.service;
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.common.image.ImageReencoder;
+import com.lifey.trainer.service.TrainerAccessService;
 import com.lifey.user.AvatarSource;
 import com.lifey.user.UserAvatar;
 import com.lifey.user.UserAvatarRepository;
@@ -26,11 +27,25 @@ public class UserAvatarServiceImpl implements UserAvatarService {
     private final UserAvatarRepository repository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final TrainerAccessService trainerAccessService;
 
     @Override
     @Transactional(readOnly = true)
     public UserAvatar find() {
         return repository.findByUserId(currentUserProvider.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("No profile picture set"));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserAvatar findForPeer(Long userId) {
+        Long callerId = currentUserProvider.getUserId();
+        // The relationship is checked before the row is read, so "no link" and
+        // "no picture" cost the same and answer the same — see the interface.
+        if (!callerId.equals(userId) && !trainerAccessService.isActivelyLinked(callerId, userId)) {
+            throw new ResourceNotFoundException("No profile picture set");
+        }
+        return repository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No profile picture set"));
     }
 

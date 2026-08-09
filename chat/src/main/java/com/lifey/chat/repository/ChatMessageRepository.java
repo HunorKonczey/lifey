@@ -77,6 +77,27 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
                                                  Pageable pageable);
 
     /**
+     * Tombstones the client cannot learn about any other way: messages it
+     * already holds ({@code id <= :upTo}, i.e. at or below its stream cursor)
+     * that were deleted recently.
+     *
+     * <p>{@link #findAllForParticipantAfter} only walks forward, which is
+     * exactly right for messages — they are immutable once sent — and exactly
+     * wrong for the one write that reaches back into an existing row. Newer
+     * deletions need no help: those rows are replayed as {@code message}
+     * frames, and a replayed message carries its own {@code deletedAt}.
+     */
+    @Query("select m from ChatMessage m "
+            + "join fetch m.conversation c "
+            + "where (c.trainerId = :userId or c.clientId = :userId) "
+            + "and m.id <= :upTo and m.deletedAt is not null and m.deletedAt > :since "
+            + "order by m.id asc")
+    List<ChatMessage> findTombstonesForParticipantUpTo(@Param("userId") Long userId,
+                                                       @Param("upTo") Long upTo,
+                                                       @Param("since") java.time.Instant since,
+                                                       Pageable pageable);
+
+    /**
      * Unread counts for every thread of one user in a single query — the
      * conversation list would otherwise be an N+1. Counts messages above the
      * viewer's read cursor that they did not send and that are not tombstoned.
