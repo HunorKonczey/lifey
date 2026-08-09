@@ -42,7 +42,9 @@ class ChatRepository {
   /// testable without a signed-in session.
   final int Function() _currentUserId;
 
-  static const _pageSize = 30;
+  /// Page size for both directions of paging, and the size of one step of the
+  /// on-screen window (see [watchMessages]).
+  static const pageSize = 30;
 
   // --- conversations -----------------------------------------------------
 
@@ -108,16 +110,49 @@ class ChatRepository {
 
   // --- messages ----------------------------------------------------------
 
-  Stream<List<ChatMessage>> watchMessages(int conversationId) {
+  /// The thread's messages, oldest first.
+  ///
+  /// [limit] bounds the window to the *newest* that many rows — the thread
+  /// opens on one page and grows as the reader walks back (see
+  /// `ChatThreadController.loadOlder`). Without it, every incoming message
+  /// re-reads and re-emits the entire history of the conversation, which is
+  /// work that grows forever on a device that never forgets anything.
+  Stream<List<ChatMessage>> watchMessages(int conversationId, {int? limit}) {
+    if (limit == null) {
+      final query = _db.select(_db.chatMessages)
+        ..where((t) => t.conversationId.equals(conversationId))
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.createdAt),
+          // Stable tiebreaker so two messages in the same millisecond don't
+          // swap places between rebuilds.
+          (t) => OrderingTerm(expression: t.clientId),
+        ]);
+      return query.watch().map((rows) => rows.map(_toMessage).toList());
+    }
+
+    // A window is "the newest N", so it has to be taken from the other end and
+    // turned back around — SQLite cannot limit from the tail.
     final query = _db.select(_db.chatMessages)
       ..where((t) => t.conversationId.equals(conversationId))
       ..orderBy([
-        (t) => OrderingTerm(expression: t.createdAt),
-        // Stable tiebreaker so two messages in the same millisecond don't
-        // swap places between rebuilds.
-        (t) => OrderingTerm(expression: t.clientId),
-      ]);
-    return query.watch().map((rows) => rows.map(_toMessage).toList());
+        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
+        (t) => OrderingTerm(expression: t.clientId, mode: OrderingMode.desc),
+      ])
+      ..limit(limit);
+    return query
+        .watch()
+        .map((rows) => rows.reversed.map(_toMessage).toList(growable: false));
+  }
+
+  /// How many messages of this thread are on the device — the number the
+  /// window is walked against, so "load older" only goes to the network once
+  /// the local rows have run out.
+  Future<int> countMessages(int conversationId) async {
+    final count = _db.chatMessages.clientId.count();
+    final query = _db.selectOnly(_db.chatMessages)
+      ..addColumns([count])
+      ..where(_db.chatMessages.conversationId.equals(conversationId));
+    return (await query.getSingle()).read(count) ?? 0;
   }
 
   /// Fetches everything newer than what we already hold. Used on open and on
@@ -153,7 +188,7 @@ class ChatRepository {
     final oldest = await _oldestServerId(conversationId);
     final response = await _dio.get<Map<String, dynamic>>(
       ApiEndpoints.chatMessages(conversationId),
-      queryParameters: {'limit': _pageSize, if (oldest != null) 'before': oldest},
+      queryParameters: {'limit': pageSize, if (oldest != null) 'before': oldest},
     );
     final items = (response.data?['items'] as List<dynamic>? ?? [])
         .map((json) => ChatMessage.fromJson(json as Map<String, dynamic>))
@@ -246,7 +281,7 @@ class ChatRepository {
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       ApiEndpoints.chatMessageSearch(conversationId),
-      queryParameters: {'q': query, 'limit': _pageSize, if (before != null) 'before': before},
+      queryParameters: {'q': query, 'limit': pageSize, if (before != null) 'before': before},
     );
     return (response.data?['items'] as List<dynamic>? ?? [])
         .map((json) => ChatMessage.fromJson(json as Map<String, dynamic>))
@@ -529,7 +564,7 @@ class ChatRepository {
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       ApiEndpoints.chatMessages(conversationId),
-      queryParameters: {'limit': _pageSize, ...?query},
+      queryParameters: {'limit': pageSize, ...?query},
     );
     return (response.data?['items'] as List<dynamic>? ?? [])
         .map((json) => ChatMessage.fromJson(json as Map<String, dynamic>))

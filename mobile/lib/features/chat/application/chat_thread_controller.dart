@@ -23,12 +23,41 @@ class ChatThreadController extends StreamNotifier<List<ChatMessage>> {
   bool _hasMoreHistory = true;
   bool _loadingHistory = false;
 
+    /// How many of the newest messages are on screen. Grows one page at a time
+  /// as the reader walks back; the thread opens on a single page no matter how
+  /// much of the conversation this device has cached.
+  int _window = ChatRepository.pageSize;
+
+  /// Points the stream at the current [_window]. Assigned in [build].
+  void Function()? _resubscribe;
+
   bool get hasMoreHistory => _hasMoreHistory;
 
+  /// Re-subscribing rather than rebuilding the provider: `ref.invalidateSelf()`
+  /// would put the screen back through its loading state, which for a widened
+  /// window means flashing a skeleton over a thread the reader is looking at.
   @override
   Stream<List<ChatMessage>> build() {
+    final out = StreamController<List<ChatMessage>>();
+    StreamSubscription<List<ChatMessage>>? subscription;
+
+    void subscribe() {
+      final previous = subscription;
+      subscription = _repo
+          .watchMessages(conversationId, limit: _window)
+          .listen(out.add, onError: out.addError);
+      unawaited(previous?.cancel());
+    }
+
+    _resubscribe = subscribe;
+    subscribe();
+    ref.onDispose(() {
+      unawaited(subscription?.cancel());
+      unawaited(out.close());
+    });
+
     unawaited(catchUp());
-    return _repo.watchMessages(conversationId);
+    return out.stream;
   }
 
   /// Opening, and every app resume: pull whatever arrived while we were away
@@ -52,14 +81,27 @@ class ChatThreadController extends StreamNotifier<List<ChatMessage>> {
 
   /// One page further back. Guarded against re-entry so a fast scroll can't
   /// fire several overlapping page loads.
+  ///
+  /// Two sources, in this order: rows already on the device — widening the
+  /// window costs a local query and no network at all — and only once those
+  /// run out, a page from the server.
   Future<void> loadOlder() async {
-    if (_loadingHistory || !_hasMoreHistory) return;
+    if (_loadingHistory) return;
     _loadingHistory = true;
     try {
-      _hasMoreHistory = await _repo.loadOlder(conversationId);
-    } catch (_) {
-      // Leave _hasMoreHistory alone — a failed page is worth retrying on the
-      // next scroll, unlike a page that genuinely came back empty.
+      final cached = await _repo.countMessages(conversationId);
+      if (_window >= cached) {
+        if (!_hasMoreHistory) return;
+        try {
+          _hasMoreHistory = await _repo.loadOlder(conversationId);
+        } catch (_) {
+          // Leave _hasMoreHistory alone — a failed page is worth retrying on
+          // the next scroll, unlike a page that genuinely came back empty.
+          return;
+        }
+      }
+      _window += ChatRepository.pageSize;
+      _resubscribe?.call();
     } finally {
       _loadingHistory = false;
     }

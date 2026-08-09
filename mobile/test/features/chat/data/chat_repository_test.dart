@@ -385,6 +385,33 @@ void main() {
       expect(second['before'], 199);
     });
 
+    test('a windowed watch shows the newest page, oldest first', () async {
+      await seedConversation();
+      adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
+        'items': [
+          for (var i = 1; i <= 5; i++)
+            _messageJson(
+              id: i,
+              clientMessageId: 'm$i',
+              body: 'msg $i',
+              createdAt: '2026-08-06T09:0$i:00Z',
+            ),
+        ],
+        'hasMore': true,
+      };
+      await repo.loadNewer(_conversationId);
+
+      expect(await repo.countMessages(_conversationId), 5);
+
+      final window = await repo.watchMessages(_conversationId, limit: 2).first;
+      // The newest two, but still in reading order — the window is taken from
+      // the end and turned back around.
+      expect(window.map((m) => m.body), ['msg 4', 'msg 5']);
+
+      final all = await repo.watchMessages(_conversationId).first;
+      expect(all, hasLength(5));
+    });
+
     test('pages stitch together without duplicating the overlap', () async {
       await seedConversation();
       adapter.responses['GET /chat/conversations/$_conversationId/messages'] = {
