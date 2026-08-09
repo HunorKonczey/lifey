@@ -55,7 +55,11 @@ export function ConversationList({
       className="flex flex-col gap-1.5 rounded-[var(--r-card)] p-3.5 min-h-0"
       style={{ background: "var(--surface)" }}
     >
+      {/* Ringed on the wrapper, not the bare input: the input is exactly as tall
+          as its text, so its own focus ring would hug the letters (see the
+          [data-ring-frame] rule in globals.css). */}
       <label
+        data-ring-frame
         className="flex items-center gap-2.5 rounded-[var(--r-md)] px-3.5 py-2.5 mb-1 shrink-0"
         style={{ background: "var(--surface-container)" }}
       >

@@ -94,12 +94,15 @@ export function ChatThread({ conversation, ownUserId, onBack }: ChatThreadProps)
     queryKey: messagesKey,
     queryFn: async () => {
       const existing = readMessages();
-      // The first read after this thread is opened re-reads the newest page
-      // instead of gap-filling above the cursor. The cache survives navigating
-      // away and back, and `after=<id>` never looks at a row again — so a
-      // message the peer deleted meanwhile would keep its text here until a
-      // full page reload. Every later read is the cheap forward fill again.
-      const after = reconciledRef.current ? newestMessageId(existing) : null;
+      // Two cases re-read the newest page instead of gap-filling above the
+      // cursor, because `after=<id>` never looks at an existing row again and
+      // a deletion is a change to one: the first read after this thread opens
+      // (the cache survives navigating away and back), and every read while
+      // the stream is down (no `deleted` frame can arrive, so this poll is the
+      // only thing that will ever notice). With the stream up it stays the
+      // cheap forward fill — the frame has already done the work.
+      const reconcile = !reconciledRef.current || streamConnected === false;
+      const after = reconcile ? null : newestMessageId(existing);
       reconciledRef.current = true;
       const page = await chatApi.messages(
         conversationId,

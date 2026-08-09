@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,6 +49,19 @@ public class ChatStreamController {
         // nginx and friends buffer proxied responses by default, which turns a
         // stream into a batch delivered whenever the buffer fills (§9).
         response.setHeader("X-Accel-Buffering", "no");
+        // The one that actually bit us in production. Render fronts this
+        // service with Cloudflare, which compresses responses on the way out —
+        // measured: a 118-byte JSON error came back `content-encoding: br`. A
+        // compressor on a long-lived stream holds each frame until its window
+        // flushes, so the browser (which offers br/zstd) saw messages and
+        // typing hints arrive in batches, seconds to minutes late, while the
+        // mobile client — which only offers gzip — looked instant.
+        //
+        // `no-transform` is the standard way to tell an intermediary to leave
+        // the body alone, and Cloudflare honours it; `identity` says the same
+        // thing in the other direction, for anything that doesn't.
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, no-transform");
+        response.setHeader(HttpHeaders.CONTENT_ENCODING, "identity");
         return streamService.open(lastEventId);
     }
 
