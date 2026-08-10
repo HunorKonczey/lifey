@@ -1,0 +1,252 @@
+# 59 – Cardio: fejlesztési terv (lépésekre bontva)
+
+Státusz: **KÉSZ TERV, a fejlesztés nem indult el.** A design **elkészült** (§1), tehát minden
+UI-t szállító lépés indítható.
+Előzmény: [51](51-cardio-overview-plan.md) (iterációk, kockázatok), [52](52-cardio-domain-backend-plan.md) (séma),
+[53](53-cardio-mobile-plan.md) (mobil), [54](54-cardio-gps-route-plan.md) (GPS),
+[55](55-cardio-watch-plan.md) (óra), [56](56-cardio-statistics-plan.md) (statisztika),
+[57](57-cardio-design-prompt.md) (design prompt), [58](58-cardio-web-plan.md) (web).
+
+> **Mi ez a doc, és mi nem.** Ez a **végrehajtási** terv: az 51-es doc iterációit (C0, C1, C2 …)
+> **prompt-méretű lépésekre** bontja, mindegyikhez megadva az érintett fájlokat, a hozzá tartozó
+> **design-frame-et** és a *kész-ha* feltételt. A *miért* és a döntések a fenti docokban vannak —
+> itt nem ismételjük meg őket, csak hivatkozunk rájuk.
+>
+> **Egy lépés = egy beszélgetés = egy commit.** Ha egy lépés nem fér el ennyiben, az a lépés
+> rosszul van vágva — bontsd tovább, ne told ki a határt.
+
+---
+
+## 1. A design elkészült (2026-08-10)
+
+| Canvas | Tartalom |
+|---|---|
+| [`design/Lifey Cardio Design.dc.html`](design/Lifey%20Cardio%20Design.dc.html) | **Mobil**: M01–M29 (sötét téma, magyar) · M30–M32 (világos téma, angol minta) · **Web**: W01–W02 · mozgás/haptika-terv · nyitott termékkérdések |
+| [`design/Lifey Cardio Watch Design.dc.html`](design/Lifey%20Cardio%20Watch%20Design.dc.html) | **Apple Watch**: AW 16–22 · **Wear OS**: W 15–21 — a meglévő watch-canvas számozásának folytatása |
+
+**Ezzel az [51 §4](51-cardio-overview-plan.md) design-blokkolása feloldva**: a C2, C3, C5 és a
+C6+ iterációk kódolása elindulhat.
+
+### 1.1 Frame-leltár → melyik lépés használja
+
+| Frame | Tartalom | Lépés |
+|---|---|---|
+| M01 · M02 · M03 | Gyorsindító lap · hidegindítás · „Összes” kibontva | C2.6, C2.7 |
+| M04 · M05 | Aktív DISTANCE · MACHINE | C2.2, C2.3 |
+| M06 · M07 | Aktív GAME — pályán · padon | C2.4 |
+| M08 · M09 | Kézi szünet · **auto-pause** (vizuálisan elkülönítve) | C2.5, C4a.5 |
+| M10 | Gyenge GPS-jel | C4a.4 |
+| M11 | **Nincs távforrás** — futópad / GPS nélkül (a domináns szám idő lesz) | C2.2 |
+| M12 | Befejezés — húzás közben | C2.5 |
+| M13 · M14 · M15 | Összegzés útvonallal · legörgetve (értékelés + „szerkesztve”) · útvonal nélkül | C2.8 (M15), C4a.6 (M13) |
+| M16 | Túra — magasságprofil + GPS-hézag | C4a.6, C8 |
+| M17 · M18 | Kézi rögzítés — DISTANCE · GAME | C1.8, C1.9 |
+| M19 · M20 | Edzéslista mind a hét típussal · fajta-szűrő | C1.6, C1.7 |
+| M21 · M22 | Statisztika vegyes hét · nincs adat erre a fajtára | C3.3, C3.4 |
+| M23 · M24 · M25 | iOS Live Activity · Dynamic Island · Android tartós értesítés | C2.9, C2.10 |
+| M26 · M27 · M28 | Engedély-magyarázó · megtagadva · véglegesen megtagadva / pontatlan | C4a.2 |
+| M29 | Kezdőképernyő-widget (közepes + kicsi) | C2.11 |
+| M30 · M31 · M32 | Világos téma + angol minta | **minden UI-lépés kilépési feltétele** |
+| W01 · W02 | Web `ActivityChip` · web lista-sor | C1w.2, C1w.3 |
+| AW 16 / W 15 | Egyesített indító lista | C5.4 |
+| AW 17–20 / W 16–19 | Aktív cardio ×3 család + GAME padon | C5.5, C5.6 |
+| AW 21 / W 20 | Összegzés + szinkron | C5.7 |
+| AW 22 / W 21 | Gyenge jel · nincs pulzus | C5.5 |
+
+**Nincs frame nélküli UI-lépés, és nincs lépés nélküli frame** — a kettő fedi egymást.
+
+### 1.2 Amit a design szándékosan nyitva hagyott (termékdöntés)
+
+A canvas 15. szekciója négy kérdést tesz fel. Mindegyik mellé odaírtam, **mikor válik
+blokkolóvá** — addig nem kell dönteni:
+
+| # | Kérdés | Blokkol ettől |
+|---|---|---|
+| Q-D1 | A splitek megjelenítési mélysége mobilon (csak km+tempó, vagy szint+pulzus is), és javítható-e kézzel egy szakasz | **C6** (futás-specifikum) |
+| Q-D2 | A GAME pont/gól-számláló alapból látszik-e (javaslat: rejtve, egyszeri felajánlással) | **C2.4** |
+| Q-D3 | Az auto-pause alapból be van-e kapcsolva, és típusonként külön-e | **C4a.5** |
+| Q-D4 | A kézzel szerkesztett metrika egyenrangú-e a mérttel a heti összesítésben | **C3.2** |
+
+---
+
+## 2. A sorrend elve
+
+Négy szabály döntötte el a lépések sorrendjét — ha valamit előre akarsz hozni, ezekbe ütközöl:
+
+1. **Az audit legelöl.** A meglévő szett-feltételezések javítása (C0) *azelőtt* történik, hogy
+   bármilyen cardio adat létezne — így regressziómentesen tesztelhető, és nem keveredik az új
+   funkcióval ([51 R1](51-cardio-overview-plan.md)).
+2. **A fogadó előbb, mint a küldő.** A szerver előbb fogadja el a cardio payloadot, mint hogy a
+   kliens küldeni tudná; a telefon-oldali watch-feldolgozó előbb kész, mint a natív watch-küldő
+   ([55 D-C5.4](55-cardio-watch-plan.md)). Így félkész oldal sosem termel feldolgozhatatlan adatot.
+3. **Minden mérföldkő végén szállítható az app.** Nem maradhat félig bekötött képernyő két
+   beszélgetés között.
+4. **A GPS a legvégén a mag-funkcióhoz képest.** A C2 végén az élő cardio GPS nélkül is teljes
+   ([54 §1](54-cardio-gps-route-plan.md)) — ha a GPS csúszik, semmi nem áll miatta.
+
+### 2.1 Szállítási mérföldkövek
+
+| MF | Mit lát a felhasználó | Iterációk |
+|---|---|---|
+| **MF1** | Semmit — de az app stabil marad üres session-öknél | C0 |
+| **MF2** | Kézzel rögzíthet cardio edzést, a lista ikonos és szűrhető | C1 |
+| **MF3** | Élőben futtathat cardio edzést, gyorsan indítja, a zárolási képernyőn látja | C2 |
+| **MF4** | A statisztika helyes és fajtánként szűrhető; a weben is látszik | C3, C1w, C3w |
+| **MF5** | Kültéren nyomvonalat rögzít, és az órájáról is indíthat | C4a, C5 |
+| **MF6** | Sport-specifikus finomságok | C6–C9 |
+
+---
+
+## 3. C0 — Fundamentum (5 lépés) · MF1
+
+| # | Lépés | Fájlok | Kész-ha |
+|---|---|---|---|
+| **C0.1** | Backend enumok: `SessionKind`, `ActivityType`, `ActivityFamily` | `workout/session/SessionKind.java`, `workout/session/cardio/` | Fordul, a család a típusból származik ([52 D-C1.5](52-cardio-domain-backend-plan.md)) |
+| **C0.2** | Dart taxonómia: `activity_type.dart` (kódlista, label, **ikon**, **szín**, család) + ARB-kulcsok EN/HU | `features/workouts/domain/activity_type.dart`, `l10n/` | Az ikon-/szín-térkép **bitre az M01 frame** szerint; unit-teszt a kód↔label teljességre |
+| **C0.3** | **Audit**: minden `sets`/`exercises`/`templateName` olvasási hely `kind`-tudatossá vagy üres-tűrővé tétele | [53 §0](53-cardio-mobile-plan.md) táblája | Üres session minden képernyőn megnyitható, nem dob, nincs „0 gyakorlat” folt — a teszt bent marad a suite-ban |
+| **C0.4** | Egyetlen `kind`-elágazási pont: `open_workout_screens.dart` (+ `workout_resume_prompt`), a cardio ág egyelőre `TODO` | `presentation/open_workout_screens.dart`, `application/workout_resume_prompt.dart` | Az elágazás **egy** helyen van; a strength út változatlan |
+| **C0.5** | `recommended_template_provider` és a PR-motor erősítő-szűrője | `application/recommended_template_provider.dart`, `domain/personal_record.dart` | Cardio session nem visz zajt a terv-ciklusba, és nem termel erősítő PR-t |
+
+---
+
+## 4. C1 — Adat-mag és kézi rögzítés (9 lépés) · MF2
+
+**Backend (C1.1–C1.4)** — a fogadó előbb.
+
+| # | Lépés | Fájlok | Kész-ha |
+|---|---|---|---|
+| **C1.1** | V66 migráció: `session_kind`, `activity_type`, `moving_seconds` + CHECK + parciális index; entitás-mezők | `db/migration/V66__*.sql`, `WorkoutSession.java` | Meglévő sorok `STRENGTH`-ek; a CHECK sértése elbukik (teszt) |
+| **C1.2** | V67 `cardio_details` + `CardioDetails` entitás (1:1) | `V67__*.sql`, `cardio/CardioDetails.java` | Cascade-törlés működik |
+| **C1.3** | V68 `cardio_splits` + `CardioSplit` entitás | `V68__*.sql`, `cardio/CardioSplit.java` | Egyedi `(session, index)`; a splitek kliensről jönnek, nem itt számolódnak |
+| **C1.4** | DTO-bővítés + mapper + **keresztmezős validáció** + `?kind=` szűrő + **`updatedAt`-bump** | `dto/`, `WorkoutSessionMapper`, `service/WorkoutSessionServiceImpl`, `WorkoutSessionController` | Régi kliens payloadja `STRENGTH`-et ad; `exercises: []` sosem null; **„csak a cardio-blokk változott” → a session `updatedAt`-je nő és megjelenik a deltában** ([52 §4](52-cardio-domain-backend-plan.md)); Postman frissítve |
+
+**Mobil adatréteg (C1.5)**
+
+| # | Lépés | Fájlok | Kész-ha |
+|---|---|---|---|
+| **C1.5** | Drift-táblák + séma-migráció + domain-bővítés + repository (create/update/pull, payload-builder, outbox-bump) + `watchByKind` + `CardioFormatter` | `core/local_db/tables/workout_session_tables.dart`, `domain/workout_session.dart`, `data/workout_session_repository.dart`, `core/format/` | Cardio session offline létrehozható és delta-synccel átér; a **`STRENGTH` payload bájtra azonos a maival** (regressziós teszt); metric/imperial formázás tesztelve |
+
+**Mobil UI (C1.6–C1.9)**
+
+| # | Lépés | Frame | Fájlok | Kész-ha |
+|---|---|---|---|---|
+| **C1.6** | `ActivityChip` (20/32/56 px) + session-kártya ikon-chippel és családfüggő fő metrikával | **M19** | `shared/widgets/activity_chip.dart`, `presentation/sessions_tab.dart`, `session_row_plan.dart` | Mind a hét típus renderel; az erősítő kártya vizuálisan változatlan, csak chipet kap |
+| **C1.7** | Fajta-szűrő (mind / erősítő / cardio) + másodlagos típus-szűrő | **M20** | `presentation/workouts_screen.dart` | A szűrő állapota megmarad tab-váltáskor |
+| **C1.8** | `LogCardioSheet` — típusválasztó, dátum/idő (múltbeli is), időtartam, DISTANCE + MACHINE mezők | **M17** | `presentation/log_cardio_sheet.dart` | Minden numerikus mező `MANUAL` forrásjelzést kap; múltbeli dátum menthető |
+| **C1.9** | `LogCardioSheet` GAME ága (intenzitás, helyszín, opcionális box score) + RPE/jegyzet újrahasznosítás + olvasó összegzés-nézet | **M18**, M15 | ua. + `presentation/cardio_summary_screen.dart` | A GAME mezők a családhoz kötöttek; a mentett edzés megnyitható és olvasható |
+
+---
+
+## 5. C2 — Élő cardio, gyorsindítás, élő felületek (11 lépés) · MF3
+
+| # | Lépés | Frame | Kész-ha |
+|---|---|---|---|
+| **C2.1** | `CardioSessionScreen` váz: állapotgép (`IDLE→RUNNING⇄PAUSED→ENDING→SUMMARY`), ticker, **minden állapotváltás driftbe írva** | – | App-kilövés után az edzés helyreáll a pontos mozgásidővel |
+| **C2.2** | DISTANCE elrendezés + a **„nincs távforrás”** ág (domináns szám időre vált) | **M04**, **M11** | A domináns szám a [57 §2](57-cardio-design-prompt.md) szabálya szerint vált; nincs „0,00 km” nagy helyen |
+| **C2.3** | MACHINE elrendezés | **M05** | Kadencia/teljesítmény/ellenállás bevihető menet közben |
+| **C2.4** | GAME elrendezés + **pályán/padon kapcsoló** (a `movingSeconds` csak „pályán” nő) | **M06**, **M07** | A játékidő és a bruttó idő külön viselkedik (teszt); *(Q-D2 döntés kell a pontszámlálóhoz)* |
+| **C2.5** | Szünet-állapotok (kézi vs. **auto-pause vizuálisan elkülönítve**) + befejezés húzással | **M08**, **M09**, **M12** | Az auto-pause más, mint a kézi; a befejezés koppintásra **nem** történik meg |
+| **C2.6** | `activity_ranking.dart` — recency-súlyozott rangsor (21 napos felezés), tisztán tesztelhető | – | Felezés, döntetlen-feloldás, hidegindítás, vegyes lista mind tesztelve ([53 §3.4](53-cardio-mobile-plan.md)) |
+| **C2.7** | Gyorsindító lap a FAB hosszú nyomására + „Összes” aktivitás-választó | **M01**, **M02**, **M03** | Hosszú nyomás + egy koppintás = fut az edzés, köztes képernyő nélkül |
+| **C2.8** | Összegzés-képernyő (útvonal nélküli változat) + RPE + kézi szerkesztés „szerkesztve” jelöléssel | **M15**, **M14** | A szerkesztett érték felülírja a mértet, és jelölve marad ([51 R8](51-cardio-overview-plan.md)) |
+| **C2.9** | `WorkoutSessionState` `kind`+`cardio` bővítés (előformázott stringek, epoch-alapú idő) | – | Régi natív build a `STRENGTH` ágra esik vissza, nem törik |
+| **C2.10** | iOS Live Activity + Dynamic Island cardio-layout · Android tartós értesítés | **M23**, **M24**, **M25** | Nem „0 szett” látszik; frissítés ≤ 5 mp és csak változásra |
+| **C2.11** | Deep-link route + dinamikus app-shortcutok (natív híd) + kezdőképernyő-widget gombok | **M29** | App-ikon hosszú nyomásából **egy** gesztussal indul az edzés |
+
+---
+
+## 6. C3 — Statisztika (5 lépés) · MF4
+
+| # | Lépés | Frame | Kész-ha |
+|---|---|---|---|
+| **C3.1** | Backend: repository-lekérdezések + `StatisticsResponse` additív bővítés | – | A meglévő mezők értéke **változatlan** rögzített adathalmazon (teszt) |
+| **C3.2** | Mobil: `StatMetric` bővítés + **`weightedAverage`** aggregációs típus + `effectiveMinutes` szabály | – | A tempó távval súlyozott, 0 távon nem oszt nullával; erősítőnél a régi perc-szabály bitre azonos *(Q-D4 döntés kell)* |
+| **C3.3** | Statisztika-képernyő: fajta-szűrő + cardio-metrikák + hiány-kezelés | **M21**, **M22** | Üres nap ≠ 0 pont ([56 D-C3.5](56-cardio-statistics-plan.md)) |
+| **C3.4** | Dashboard bontás-sor + heti visszatekintő + **streak-küszöb** (15 perc mozgásidő) | – | A küszöb egyetlen konstans, tesztelve |
+| **C3.5** | PR-motor cardio-ága (leghosszabb táv / mozgásidő / szintemelkedés) + edzői heti riport bővítés | – | Cardio nem termel erősítő PR-t és fordítva |
+
+---
+
+## 7. C1w / C3w — Web (5 lépés) · MF4
+
+| # | Lépés | Frame | Kész-ha |
+|---|---|---|---|
+| **C1w.1** | `types.ts` + API-réteg átengedi az új mezőket | – | Típusok fordulnak, semmi más nem változik |
+| **C1w.2** | Web `ActivityChip` + lista-sor `kind`-elágazás | **W01**, **W02** | Nincs üres cím és „· 0 szett” |
+| **C1w.3** | **`SessionLogger` `kind`-kapu + olvasó cardio részletnézet** + útvonal-SVG | W02-ből származtatva | Cardio session megnyitása **nem** nyit szett-logolót ([58 W1](58-cardio-web-plan.md)) |
+| **C1w.4** | Edzői kliens-nézet + naptár-előnézet `kind`-elágazása; `recommendation.ts` szűrő; `progress.ts` regressziós teszt | – | Az edző nem lát „0 gyakorlat / 0 kg volumen” cardio edzést ([58 W2](58-cardio-web-plan.md)) |
+| **C3w.1** | `aggregate.ts` fajta-szűrő + cardio-adatsorok + dashboard-bontás + **paritás-teszt a mobillal** | – | Azonos bemenetre a web és a mobil ugyanazt a heti összesítést adja |
+
+---
+
+## 8. C4a — GPS és nyomvonal (6 lépés) · MF5
+
+| # | Lépés | Frame | Kész-ha |
+|---|---|---|---|
+| **C4a.1** | `geolocator` bevezetése + platform-konfiguráció + `LocationService` (engedély- és pozíció-stream, teszt-implementációval) | – | Teszt-implementáció nélkül is fordul minden platformon |
+| **C4a.2** | Engedély-utak: magyarázó lap a rendszer-kérdés előtt, megtagadva / véglegesen / pontatlan ágak | **M26**, **M27**, **M28** | **Megtagadott engedéllyel is elindul és menthető az edzés** ([51 D-C.5](51-cardio-overview-plan.md)) |
+| **C4a.3** | `CardioTrackPoints` drift-tábla + azonnali pontírás | – | Kilőtt app legfeljebb egy pontot veszít |
+| **C4a.4** | `track_filter.dart`: pontosság-/sebesség-/elmozdulás-kapuk, magasság-simítás, haversine-táv + gyenge jel UI | **M10** | Rögzített minta-nyomvonalakon a táv ≤ 5% hibával |
+| **C4a.5** | Háttérfutás (Android előtér-szolgáltatás **a meglévő értesítéssel egyesítve**, iOS háttér-mód) + auto-pause bekötése | M09 | **Nem keletkezik két Android értesítés** ([54 §4.4](54-cardio-gps-route-plan.md)); akku ≤ 8%/óra, mérés dokumentálva *(Q-D3 döntés kell)* |
+| **C4a.6** | Záró feldolgozás (ritkítás → polyline → outbox-bump, splitek) + `RoutePainter` + magasságprofil + kártya-miniatűr + 90 napos pont-karbantartás | **M13**, **M16** | Az útvonal mindkét témában olvasható; a hézag szaggatott |
+
+---
+
+## 9. C5 — Óra (7 lépés) · MF5
+
+| # | Lépés | Frame | Kész-ha |
+|---|---|---|---|
+| **C5.1** | **Telefon-oldali fogadó előbb**: `standalone_session_processor` + `watch_session_merge` + `watch_set_log_decision` cardio-ága | – | Cardio payload feldolgozható, mielőtt bárki küldené ([55 D-C5.4](55-cardio-watch-plan.md)) |
+| **C5.2** | Indító payload `activityType`/`venue` + `WatchWorkoutService` API-bővítés + állapot-átvitel | – | A `locationType` a `venue`-ból jön, nem találgatásból |
+| **C5.3** | Egyesített picker payload (`version: 2`) a `rankQuickStartEntries()`-ből | – | Régi natív build a fallbackre esik, nem renderel ismeretlen sort |
+| **C5.4** | watchOS: aktivitástípus-térkép + egyesített indító lista | **AW 16** | A kiemelt „Quick strength” kártya marad legfelül |
+| **C5.5** | watchOS: aktív cardio ×3 család + gyenge jel / nincs pulzus | **AW 17–20**, **AW 22** | A pulzus a kiemelt másodlagos metrika |
+| **C5.6** | Wear OS: `ExerciseType`/`dataTypes` térkép + ugyanazok a képernyők | **W 15–19**, **W 21** | Nem kérünk olyan adattípust, amit a szenzorkészlet nem tud |
+| **C5.7** | Zárás-összegzés bővítés (zónák, táv, szint) + standalone cardio + pályán/padon kétirányú szinkron + **eszközös végpróba** | **AW 21**, **W 20** | Az óra-mérés csak akkor ír felül, ha a telefonnak nincs sajátja; végpróba mindkét platformon |
+
+---
+
+## 10. C6–C9 — Sport-specifikumok · MF6
+
+Ezek egymástól függetlenek, tetszőleges sorrendben és ütemben csúsztathatók.
+
+| # | Iteráció | Lépések | Függés |
+|---|---|---|---|
+| **C6** | Futás | km-splitek + tempó-diagram · kadencia · **legjobb 1/5/10 km csúszóablakkal** · futás-PR-ok · hangos/haptikus km-visszajelzés | C4a · *(Q-D1 döntés kell)* |
+| **C7** | Szobabicikli | teljesítmény/kadencia/ellenállás bekötése · összmunka (kJ) · **intervallum-szerkesztő és -lejátszó** · gép-kalória külön kezelése | C2 |
+| **C8** | Túra | magasságprofil-részletek · max magasság · GAP · útpont-jelölés · hátizsák-súly · időjárás-pillanatkép | C4a |
+| **C9** | Játék | pulzuszóna-panel · box score · formátum/helyszín · kültéri GPS-mód | C5 |
+
+---
+
+## 11. Kockázati ellenőrzőpontok
+
+Négy hely, ahol a hiba **néma** (semmi nem hibázik, csak rossz az eredmény) — ezért mindegyikhez
+külön teszt tartozik, nem csak kézi ellenőrzés:
+
+| Hol | Mi a néma hiba | Ellenőrzőpont |
+|---|---|---|
+| C1.4 / C1.5 | A cardio-mező változása nem bumpolja a session `updatedAt`-jét → **soha nem szinkronizál** | Kötelező teszt mindkét oldalon ([52 §4](52-cardio-domain-backend-plan.md)) |
+| C3.1–C3.2 | A statisztika definíciója csendben megváltozik | Regressziós teszt rögzített, tisztán erősítő adathalmazon: **minden szám bitre azonos** |
+| C3w.1 | A web és a mobil aggregációja szétcsúszik | Paritás-teszt ([56 ST11](56-cardio-statistics-plan.md)) |
+| C4a.5 | Két Android értesítés, vagy csendben megölt háttér-mérés | Hosszú (60+ perces) eszközös próba + akku-mérés naplózva ([54 §8](54-cardio-gps-route-plan.md)) |
+
+---
+
+## 12. Összefoglaló
+
+| Iteráció | Lépések | Mérföldkő |
+|---|---|---|
+| C0 | 5 | MF1 |
+| C1 | 9 | MF2 |
+| C2 | 11 | MF3 |
+| C3 · C1w · C3w | 5 + 4 + 1 | MF4 |
+| C4a · C5 | 6 + 7 | MF5 |
+| C6–C9 | iterációnként 4–6 | MF6 |
+
+**Összesen ~48 lépés az MF5-ig**, plusz a sport-specifikumok. A javasolt vágási pont, ha
+részletekben szállítanál: **MF2** (kézi rögzítés) már önmagában hasznos funkció, **MF3** az,
+amitől a funkció „igazi”.
+
+**Kezdésre javasolt:** `C0.1` és `C0.2` egy beszélgetésben (mindkettő tiszta hozzáadás,
+semmit nem tör el), utána `C0.3` külön — az az egyetlen lépés, ami meglévő viselkedést módosít.
