@@ -20,6 +20,7 @@ import '../domain/exercise_enums.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'log_session_screen.dart';
+import 'open_workout_screens.dart';
 import 'widgets/recommended_workout_card.dart';
 import 'widgets/upcoming_sessions_section.dart';
 
@@ -55,9 +56,7 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
   }
 
   Future<void> _edit(BuildContext context, WorkoutSession session) {
-    return Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(builder: (_) => LogSessionScreen(session: session)),
-    );
+    return openSessionScreen(Navigator.of(context, rootNavigator: true), session);
   }
 
   Future<void> _startRecommended(BuildContext context, WorkoutTemplate template) {

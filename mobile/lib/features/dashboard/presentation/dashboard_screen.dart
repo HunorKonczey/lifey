@@ -24,6 +24,7 @@ import '../../workouts/application/workout_session_controller.dart';
 import '../../workouts/domain/exercise_enums.dart';
 import '../../workouts/domain/workout_template.dart';
 import '../../workouts/presentation/log_session_screen.dart';
+import '../../workouts/presentation/open_workout_screens.dart';
 import '../../workouts/presentation/widgets/post_workout_feedback_sheet.dart';
 import '../../workouts/presentation/widgets/recommended_workout_card.dart';
 import '../../nutrition/domain/meal.dart';
@@ -67,9 +68,7 @@ Future<void> _openWorkout(BuildContext context, WidgetRef ref, String clientId) 
     context.go('/workouts');
     return;
   }
-  await Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => LogSessionScreen(session: session)),
-  );
+  await openSessionScreen(Navigator.of(context), session);
 }
 
 Future<void> _startRecommendedWorkout(BuildContext context, WorkoutTemplate template) {

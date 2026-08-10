@@ -9,7 +9,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../trainer_invite/application/trainer_invite_controller.dart';
 import '../../application/workout_session_controller.dart';
 import '../../domain/workout_session.dart';
-import '../log_session_screen.dart';
+import '../open_workout_screens.dart';
 
 const _dismissedOnKey = 'lifey.upcomingWorkoutCardDismissedOn';
 
@@ -90,9 +90,7 @@ class _UpcomingWorkoutCardState extends ConsumerState<UpcomingWorkoutCard>
   }
 
   void _start(WorkoutSession session) {
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(builder: (_) => LogSessionScreen(session: session)),
-    );
+    openSessionScreen(Navigator.of(context, rootNavigator: true), session);
   }
 
   @override

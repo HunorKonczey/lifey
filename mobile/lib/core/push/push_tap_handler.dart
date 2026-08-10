@@ -2,12 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/workouts/data/workout_session_repository.dart';
-import '../../features/workouts/presentation/log_session_screen.dart';
+import '../../features/workouts/presentation/open_workout_screens.dart';
 import '../notifications/notification_service.dart';
 import '../router/app_router.dart';
 import 'firebase_bootstrap.dart';
@@ -143,10 +142,9 @@ class PushTapHandler {
         : null;
 
     _ref.read(appRouterProvider).go('/workouts');
-    if (session != null) {
-      rootNavigatorKey.currentState?.push(
-        MaterialPageRoute(builder: (_) => LogSessionScreen(session: session)),
-      );
+    final navigator = rootNavigatorKey.currentState;
+    if (session != null && navigator != null) {
+      openSessionScreen(navigator, session);
     }
   }
 }

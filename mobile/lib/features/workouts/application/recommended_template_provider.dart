@@ -9,18 +9,24 @@ import 'workout_template_controller.dart';
 /// (newest first, as returned by [WorkoutSessionController]) and predicts
 /// the clientId of the template that continues it.
 ///
-/// Unfinished sessions (started but not yet completed) are excluded before
-/// taking the most recent 10, so a workout still in progress doesn't skew
-/// the detected pattern. Only the most recent 10 finished sessions are
-/// considered, so a routine change a few weeks ago doesn't keep influencing
-/// today's suggestion. Returns null when there's too little history or no
-/// exact repeating pattern — no recommendation is better than a wrong one.
+/// Unfinished sessions (started but not yet completed) are excluded first,
+/// so a workout still in progress doesn't skew the detected pattern.
+/// Sessions with no template — a freeform strength start today, and every
+/// cardio session once those exist (docs/cardio/51-cardio-overview-plan.md
+/// §1.1: cardio has no templates in V1) — are filtered out **before** taking
+/// the most recent 10, not after: they carry no template-cycle signal, so
+/// letting them each consume a "recent" slot would just shrink the window
+/// the cycle detector actually gets to look at (docs/cardio/56, risk S11).
+/// Only the most recent 10 *templated* sessions are considered, so a routine
+/// change a few weeks ago doesn't keep influencing today's suggestion.
+/// Returns null when there's too little history or no exact repeating
+/// pattern — no recommendation is better than a wrong one.
 String? predictNextTemplateClientId(List<WorkoutSession> sessionsDesc) {
   final seq = sessionsDesc
       .where((s) => !s.inProgress)
-      .take(10)
       .map((s) => s.templateClientId)
       .whereType<String>()
+      .take(10)
       .toList()
       .reversed
       .toList();

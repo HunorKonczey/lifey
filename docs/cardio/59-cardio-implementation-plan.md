@@ -101,11 +101,11 @@ Négy szabály döntötte el a lépések sorrendjét — ha valamit előre akars
 
 | # | Lépés | Fájlok | Kész-ha |
 |---|---|---|---|
-| **C0.1** | Backend enumok: `SessionKind`, `ActivityType`, `ActivityFamily` | `workout/session/SessionKind.java`, `workout/session/cardio/` | Fordul, a család a típusból származik ([52 D-C1.5](52-cardio-domain-backend-plan.md)) |
-| **C0.2** | Dart taxonómia: `activity_type.dart` (kódlista, label, **ikon**, **szín**, család) + ARB-kulcsok EN/HU | `features/workouts/domain/activity_type.dart`, `l10n/` | Az ikon-/szín-térkép **bitre az M01 frame** szerint; unit-teszt a kód↔label teljességre |
-| **C0.3** | **Audit**: minden `sets`/`exercises`/`templateName` olvasási hely `kind`-tudatossá vagy üres-tűrővé tétele | [53 §0](53-cardio-mobile-plan.md) táblája | Üres session minden képernyőn megnyitható, nem dob, nincs „0 gyakorlat” folt — a teszt bent marad a suite-ban |
-| **C0.4** | Egyetlen `kind`-elágazási pont: `open_workout_screens.dart` (+ `workout_resume_prompt`), a cardio ág egyelőre `TODO` | `presentation/open_workout_screens.dart`, `application/workout_resume_prompt.dart` | Az elágazás **egy** helyen van; a strength út változatlan |
-| **C0.5** | `recommended_template_provider` és a PR-motor erősítő-szűrője | `application/recommended_template_provider.dart`, `domain/personal_record.dart` | Cardio session nem visz zajt a terv-ciklusba, és nem termel erősítő PR-t |
+| **C0.1** ✅ | Backend enumok: `SessionKind`, `ActivityType`, `ActivityFamily` | `workout/session/SessionKind.java`, `workout/session/cardio/` | Fordul, a család a típusból származik ([52 D-C1.5](52-cardio-domain-backend-plan.md)) |
+| **C0.2** ✅ | Dart taxonómia: `activity_type.dart` (kódlista, label, **ikon**, **szín**, család) + ARB-kulcsok EN/HU | `features/workouts/domain/activity_type.dart`, `l10n/` | Az ikon-/szín-térkép **bitre az M01 frame** szerint; unit-teszt a kód↔label teljességre |
+| **C0.3** ✅ | **Audit**: minden `sets`/`exercises`/`templateName` olvasási hely `kind`-tudatossá vagy üres-tűrővé tétele | [53 §0.1](53-cardio-mobile-plan.md) — audit-eredmény | Üres session minden képernyőn megnyitható, nem dob, nincs „0 gyakorlat” folt — a teszt bent marad a suite-ban |
+| **C0.4** ✅ | Egyetlen `kind`-elágazási pont: `open_workout_screens.dart` (+ `workout_resume_prompt`), a cardio ág egyelőre `TODO` | `presentation/open_workout_screens.dart`, `application/workout_resume_prompt.dart` | Az elágazás **egy** helyen van; a strength út változatlan |
+| **C0.5** ✅ | `recommended_template_provider` és a PR-motor erősítő-szűrője | `application/recommended_template_provider.dart`, `domain/personal_record.dart` | Cardio session nem visz zajt a terv-ciklusba, és nem termel erősítő PR-t |
 
 ---
 
@@ -250,3 +250,50 @@ amitől a funkció „igazi”.
 
 **Kezdésre javasolt:** `C0.1` és `C0.2` egy beszélgetésben (mindkettő tiszta hozzáadás,
 semmit nem tör el), utána `C0.3` külön — az az egyetlen lépés, ami meglévő viselkedést módosít.
+
+**Haladás:** `C0.1` és `C0.2` kész (2026-08-10) — `SessionKind`/`ActivityType`/`ActivityFamily`
+enumok backenden, `activity_type.dart` + ARB-kulcsok EN/HU mobilon, unit-teszt a
+kód↔label↔ikon teljességre. Backend fordul, `flutter analyze` és a teszt zöld.
+
+`C0.3` is kész (2026-08-10) — a teljes audit-lista végigolvasva, a meglévő kód **nem tartalmazott
+hibát**: a `sets`/`exercises`-t olvasó helyek már ma `isEmpty`/`whereType` őrökkel tolerálják az
+üres listát. Ezt egy új widget-teszt (`sessions_tab_empty_session_test.dart`, 4 forgatókönyv)
+zárja le tartósan a suite-ban; a teljes `test/features/workouts` suite (229 teszt) zöld maradt.
+Két tétel, ami valódi kódmódosítást igényel, a C0.4/C0.5-re halasztva — azok nem hibajavítás,
+hanem előkészítés a C1+ számára.
+
+`C0.4` is kész (2026-08-10) — `open_workout_screens.dart` kapott egy `openSessionScreen(navigator,
+session, {watchMastered, watchCurrentExerciseIndex})` függvényt: az **egyetlen** hely, ahol egy
+meglévő session megnyitásakor eldől, melyik képernyő nyíljon. Az öt hívási hely
+(`sessions_tab.dart`, `dashboard_screen.dart`, `upcoming_workout_card.dart`,
+`workout_resume_prompt.dart`, `push_tap_handler.dart`) mind ezen keresztül megy — mindegyiknél a
+navigátor-feloldás (pl. `rootNavigator: true` vs. nélküle) és az await/fire-and-forget viselkedés
+pontosan megmaradt, csak a „melyik képernyő” döntés lett kiemelve. A cardio-ág egyelőre `TODO`
+kommentben (a `sessionKind` mező hiányában nincs mit elágaztatni — az C1.5-ben érkezik). A
+sablon-indítás (`LogSessionScreen(template: ...)`) szándékosan **kívül maradt**: cardióra V1-ben
+nincs sablon ([51 §5](51-cardio-overview-plan.md)). `flutter analyze` teljes projektre és a teljes
+`flutter test` (645 teszt) tiszta — nulla regresszió.
+
+`C0.5` is kész (2026-08-10) — két külön eredménnyel:
+
+- **`recommended_template_provider.dart`: valódi fix.** A `.take(10)` mostantól a
+  `.whereType<String>()` **után** fut, nem előtte — így egy sablon nélküli session (ma egy
+  szabadon indított erősítő edzés, holnap minden cardio session, [51 §1.1](51-cardio-overview-plan.md):
+  cardio V1-ben nem kap sablont) **nem foglal helyet** a legutóbbi-10 ablakban, csak egyszerűen
+  kimarad belőle. Új tesztfájl (`recommended_template_provider_test.dart`, 7 teszt, első lefedettség
+  ennek a fájlnak) — a legfontosabb köztük kézzel kiszámolt regresszió: 8 sablon nélküli session a
+  lista elején a **régi** kódot null-t visszaadásra kényszerítette volna (a 10-es ablak 8 helyét
+  elvitte a zaj, a valódi 6-elemű A/B ciklusból csak 2 fért be), az **új** kód helyesen felismeri a
+  ciklust és `tA`-t javasol.
+- **`personal_record.dart` / PR-motor: nincs ma javítandó kód.** A [53 §0.1](53-cardio-mobile-plan.md)
+  audit már megállapította: a `getPrBaseline` az `exercise_sets` táblát joinolja, aminek egy cardio
+  session sosem lesz sora — a kizárás szerkezeti, védőháló nélkül is helyes. Egy explicit
+  `kind`-szűrő nem írható meg addig, amíg a mező nem létezik (C1.5) — ez a **C3.5** feladata marad,
+  ahogy az 51/53-as doc is jelezte. A domain-réteg (`personal_record_test.dart`) már ma is teljes
+  körűen teszteli az üres-lista eseteket minden függvényen (`PrBaseline.fromSets([])`,
+  `computePrHistory([])`, `detectPrsInOrder(baseline, [])`), tehát nincs lefedettségi rés sem.
+
+`flutter analyze` teljes projektre és a teljes `flutter test` (652 teszt, +7 az új
+`recommended_template_provider_test.dart`-ból) tiszta — nulla regresszió. Ezzel a **teljes C0
+iteráció kész.** **Következő: `C1.1`** — a backend V66 migráció (`session_kind`,
+`activity_type`, `moving_seconds` + CHECK + parciális index).

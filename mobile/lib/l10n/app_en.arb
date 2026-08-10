@@ -3241,5 +3241,38 @@
   "chatPushToggleSubtitle": "Get notified when a new message arrives",
   "@chatPushToggleSubtitle": {
     "description": "Subtitle for the chat push notification toggle"
+  },
+
+  "activityTypeRunning": "Running",
+  "@activityTypeRunning": {
+    "description": "Cardio activity type: running (DISTANCE family)"
+  },
+  "activityTypeWalking": "Walking",
+  "@activityTypeWalking": {
+    "description": "Cardio activity type: walking (DISTANCE family)"
+  },
+  "activityTypeHiking": "Hiking",
+  "@activityTypeHiking": {
+    "description": "Cardio activity type: hiking (DISTANCE family)"
+  },
+  "activityTypeIndoorBike": "Indoor bike",
+  "@activityTypeIndoorBike": {
+    "description": "Cardio activity type: stationary/indoor bike (MACHINE family)"
+  },
+  "activityTypeBasketball": "Basketball",
+  "@activityTypeBasketball": {
+    "description": "Cardio activity type: basketball (GAME family)"
+  },
+  "activityTypeFootball": "Football",
+  "@activityTypeFootball": {
+    "description": "Cardio activity type: football/soccer (GAME family)"
+  },
+  "activityTypeOtherCardio": "Other",
+  "@activityTypeOtherCardio": {
+    "description": "Cardio activity type escape hatch for a type without a dedicated entry yet (GAME family)"
+  },
+  "activityTypeStrength": "Strength",
+  "@activityTypeStrength": {
+    "description": "Label for the existing set-based workout when it appears alongside cardio activity types in a mixed list (e.g. the quick-start picker)"
   }
 }

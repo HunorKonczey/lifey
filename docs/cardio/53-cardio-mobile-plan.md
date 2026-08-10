@@ -45,6 +45,30 @@ Kötelezően átnézendő helyek (a keresés kiindulópontja, nem a teljes lista
 session minden képernyőn megnyitható, nem dob, és nem mutat „NaN”/„0 gyakorlat” helyett üres
 foltot. Ez a teszt a C0 után is a suite-ban marad.
 
+### 0.1 Audit-eredmény (C0.3, 2026-08-10)
+
+Végigmenve a fenti listán, kódolvasással + egy új regressziós teszttel
+(`test/features/workouts/presentation/sessions_tab_empty_session_test.dart`):
+
+| Fájl | Eredmény |
+|---|---|
+| `session_row_plan.dart` | **Nem hiba.** Tiszta függvény, gyakorlatonként hívva — üres `exercises` listánál egyszerűen nulla hívás történik. A „nincs terv, nincs szett” eset már ma is tesztelve (`session_row_plan_test.dart`, „an exercise with no sets and no plan shows a single empty row”). |
+| `sessions_tab.dart` | **Nem hiba, ellenőrizve widget-teszttel.** Az `exerciseNames` üres string esetén a „Exercise names” sor `if (exerciseNames.isNotEmpty)`-tel ki van hagyva; a szettszám mindig `l10n.setsCountLabel(session.sets.length)` (helyesen „0 szett”, nem crash). |
+| `personal_record.dart` | **Nem hiba, szerkezetileg kizárva.** A `getPrBaseline` az `exercise_sets` drift-táblát joinolja `exerciseClientId`-re — egy cardio session (aminek soha nem lesz `exercise_sets` sora, a metrikái a leendő `cardio_details`-be írnak) automatikusan nem termel PR-t, védőháló nélkül is. A C3.5-ös explicit `kind`-szűrő ennek ellenére bekerül védekező rétegként, de a mai kód nem hibás. |
+| `recommended_template_provider.dart` | **Nem hiba ma, de a zaj valós volt — javítva C0.5-ben.** A `.whereType<String>()` már a C0.3 idején is kiszűrte a template nélküli session-öket a mintafelismerésből (nem crashelt, nem adott hibás választ), de a `.take(10)` a szűrés *előtt* futott, tehát sok egymást követő template nélküli (jövőben: cardio) session felhígította a mintaablakot. A C0.5 megcserélte a sorrendet — lásd [59 C0.5](59-cardio-implementation-plan.md). |
+| `watch_session_merge.dart`, `standalone_session_processor.dart` | **Ma nincs `kind` mező, nincs mit auditálni még.** A `kind`-tudatos ág a C5-ös (óra) munka része, a `sessionKind` mező C1.5-ben kerül a domain-modellbe. |
+| `workout_resume_prompt.dart` | **Nem hiba** — `.watchAll().first` egy Drift-stream első eleme, nem egy lehetségesen üres lista `.first`-je. A cardio-irányítás (`CardioSessionScreen`-re) a C0.4 feladata, a képernyő létezése után. |
+| `open_workout_screens.dart` | Az egyetlen `kind`-elágazási pont kialakítása **C0.4**, nem C0.3 — ma nincs mit elágaztatni, mert nincs `kind` mező. |
+| dashboard „legutóbbi edzések” (`dashboard_screen.dart` `_WorkoutTile`) | **Nem hiba, ellenőrizve kódolvasással.** `workout.exerciseNames.isEmpty ? '—' : ...` — mindig renderel valamit, sosem üres foltot; `exCount > 0` őrzi a „N gyakorlat” statisztika-sort. Widget-tesztet **nem** kapott (a teljes `DashboardScreen` felhúzása táplálkozás/víz/súly/lépés providerekkel aránytalan lenne egy megerősítő teszthez) — a kódolvasásos ellenőrzés elég, mert a logika azonos mintát követ, mint a már widget-teszttel lefedett `sessions_tab.dart`. |
+
+**Következtetés:** a mai kód — a fenti audit szerint — **nem tartalmaz olyan hibát**, amit az
+üres `sets`/`exercises` lista kiváltana; a meglévő `isEmpty`/`whereType` őrök már véd(t)ék ezt
+az esetet. A regressziós teszt négy forgatókönyvet zár le tartósan a suite-ban: template nélküli
+üres session, template-es üres session, futó üres session, és üres + normál session vegyesen egy
+listában. A C0-ban valódi kódmódosítást igénylő tételek (`open_workout_screens.dart` elágazása,
+`recommended_template_provider.dart` zaj-szűrése) a C0.4/C0.5 lépésekre halasztva, mert azok nem
+*javítanak* egy mai hibát, hanem a C1+ számára készítik elő a terepet.
+
 ---
 
 ## 1. Adatréteg (C1)

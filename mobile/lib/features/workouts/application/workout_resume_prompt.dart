@@ -47,14 +47,11 @@ Future<void> _pushSessionScreen(
   int? watchCurrentExerciseIndex,
 }) async {
   if (isWorkoutScreenOpenFor(active.clientId)) return;
-  await navigator.push(
-    MaterialPageRoute(
-      builder: (_) => LogSessionScreen(
-        session: active,
-        watchMastered: watchMastered,
-        watchCurrentExerciseIndex: watchCurrentExerciseIndex,
-      ),
-    ),
+  await openSessionScreen(
+    navigator,
+    active,
+    watchMastered: watchMastered,
+    watchCurrentExerciseIndex: watchCurrentExerciseIndex,
   );
 }
 

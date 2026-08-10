@@ -702,5 +702,14 @@
   "chatUnmutedMessage": "A némítás feloldva",
   "chatMutedLabel": "Némítva",
   "chatPushToggleLabel": "Chat üzenetek",
-  "chatPushToggleSubtitle": "Értesítés, ha új üzenetet kapsz"
+  "chatPushToggleSubtitle": "Értesítés, ha új üzenetet kapsz",
+
+  "activityTypeRunning": "Futás",
+  "activityTypeWalking": "Séta",
+  "activityTypeHiking": "Túrázás",
+  "activityTypeIndoorBike": "Szobabicikli",
+  "activityTypeBasketball": "Kosárlabda",
+  "activityTypeFootball": "Foci",
+  "activityTypeOtherCardio": "Egyéb",
+  "activityTypeStrength": "Erősítő"
 }
