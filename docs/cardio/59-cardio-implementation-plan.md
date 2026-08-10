@@ -124,7 +124,7 @@ Négy szabály döntötte el a lépések sorrendjét — ha valamit előre akars
 
 | # | Lépés | Fájlok | Kész-ha |
 |---|---|---|---|
-| **C1.5** | Drift-táblák + séma-migráció + domain-bővítés + repository (create/update/pull, payload-builder, outbox-bump) + `watchByKind` + `CardioFormatter` | `core/local_db/tables/workout_session_tables.dart`, `domain/workout_session.dart`, `data/workout_session_repository.dart`, `core/format/` | Cardio session offline létrehozható és delta-synccel átér; a **`STRENGTH` payload bájtra azonos a maival** (regressziós teszt); metric/imperial formázás tesztelve |
+| **C1.5** ✅ | Drift-táblák + séma-migráció + domain-bővítés + repository (create/update/pull, payload-builder, outbox-bump) + `watchByKind` + `CardioFormatter` | `core/local_db/tables/workout_session_tables.dart`, `domain/workout_session.dart`, `data/workout_session_repository.dart`, `core/format/` | Cardio session offline létrehozható és delta-synccel átér; a **`STRENGTH` payload bájtra azonos a maival** (regressziós teszt); metric/imperial formázás tesztelve |
 
 **Mobil UI (C1.6–C1.9)**
 
@@ -444,14 +444,11 @@ véget** a backenddel. C1.5–C1.9 (mobil adatréteg + kézi rögzítés) is a C
 fájlokban; ezek nélkül a backend cardio API-nak nincs semmilyen mobil fogyasztója. A helyes
 folytatás:
 
-**Következő: `C1.5`** — Drift-táblák + séma-migráció + domain-bővítés (`sessionKind`,
-`activityType`, `movingSeconds`, `cardio`, `splits` a `WorkoutSession` Dart-modellen) +
-repository (create/update/pull, payload-builder, outbox-bump) + `watchByKind` + `CardioFormatter`.
-Ez a mobil oldali párja a backend C1.1–C1.4-nek — a `STRENGTH` payloadnak **bájtra azonosnak**
-kell maradnia (regressziós teszt).
+`C1.5` kész — lásd lentebb a részletes leírást. **Következő: `C1.6`** — `ActivityChip` widget
+(20/32/56 px) + session-kártya ikon-chippel és családfüggő fő metrikával.
 
 A `C2.1` (`CardioSessionScreen` váz) csak **C1.5–C1.9 után** jön — a C2 (élő cardio) a C1.5-ös
-Drift-adatrétegre épül, ami még nincs meg.
+Drift-adatrétegre épül, ami mostantól megvan.
 
 ---
 
@@ -490,3 +487,69 @@ context-indításkor, nem csak az adott teszthez tartozó táblákat.
 Ezzel a C1.1–C1.4 minden korábbi „nem tudtam lefuttatni” fenntartása feloldva — a teljes cardio
 backend-munka (séma + entitások + API) most már **valósan, végponttól végpontig igazolt**, nem
 csak fordítás-szinten ellenőrzött.
+
+---
+
+## C1.5 kész (2026-08-10) — mobil adatréteg
+
+A backend C1.1–C1.4 mobil oldali párja: a Drift-táblák, a domain-modell és a repository most már
+teljes egészében ismeri a cardio mezőket, `STRENGTH`-nél pedig bájtra azonos marad a viselkedés.
+
+**Drift-séma** (`core/local_db/tables/workout_session_tables.dart`, `core/local_db/app_database.dart`):
+- `WorkoutSessions`-höz hozzáadva: `sessionKind`, `activityType`, `movingSeconds`.
+- Két új tábla: `CardioDetails` (`@DataClassName('CardioDetailsRow')`, PK = `sessionClientId`, ~27
+  nullable mező a backend `cardio_details`-t tükrözve) és `CardioSplits`
+  (`@DataClassName('CardioSplitRow')`, PK = `clientId`).
+- `schemaVersion` 33 → 34, `_addColumnIfMissing()` mintát követő migrációs blokk (idempotens,
+  megszakított migrációt is túlél); `dart run build_runner build` lefuttatva, a generált
+  `app_database.g.dart` ellenőrizve.
+
+**Domain** (`domain/workout_session.dart`):
+- Új `CardioMetrics` (elnevezve, nem `CardioDetails`, hogy ne ütközzön a Drift tábla-osztály
+  nevével egy fájlon belül) és `CardioSplit` value class.
+- `WorkoutSession` bővítve `sessionKind` (default `'STRENGTH'`), `activityType`, `movingSeconds`,
+  `cardio`, `splits` mezőkkel, plusz `isCardio`, `family`, `effectiveDuration` derived gettereket.
+
+**Repository** (`data/workout_session_repository.dart`) — a legnagyobb változás:
+- `create()`/`update()` mindkettő tudja a cardio mezőket; az `update()` a kodbázis meglévő
+  „hiányzó = megőriz, jelenlévő-nullal = töröl” (`Value<T>`) mintáját követi, mert a `rate()` és az
+  `enrichHealthMetrics()` is hívja anélkül, hogy minden mezőt ismerné.
+- `_payload()`: `STRENGTH`-nél a cardio mezők **ki vannak hagyva** a payloadból (nem csak nullák) —
+  ez tartja a bájtra-azonos szinkron-alakot; `sets`/`exercises`/`cardio`/`splits` mindig teljes
+  csere (a kliens mindig a jelenlegi teljes állapotot küldi).
+- Új `watchByKind(String? kind)` — `null` esetén `watchAll()`-ra esik vissza.
+- `delete()` és `entity_sync_config.dart`'s `_cleanupWorkoutSessionChildren()` gondoskodik a
+  `cardio_details`/`cardio_splits` sorok törléséről is.
+
+**Pull engine** (`core/sync/pull_engine.dart`):
+- `_upsertWorkoutSession()` beolvassa a `sessionKind`/`activityType`/`movingSeconds` mezőket
+  (hiányzó `sessionKind` esetén lokálisan `'STRENGTH'`-re esik vissza — legacy/cache-elt válasz
+  esetére); cardio_details/cardio_splits törlés + újrabeszúrás minden pullnál (nem duplikál).
+
+**`CardioFormatter`** (új: `core/format/cardio_formatter.dart`):
+- Tiszta függvények `(érték, UnitSystem)` → formázott string — nincs `BuildContext`/Riverpod
+  függőség, hogy a Live Activity payload-építő (natív oldal, izolált szálon) is használhassa
+  ugyanazt a logikát, ne csak a widget-fa.
+- `distance` (km/mi, 2 tizedes), `elevation` (m/ft, egész), `pace` (perc:mp /km vagy /mi, `null` ha
+  a táv 0 vagy negatív — osztás-nullával elkerülve), `speed` (km/h vagy mph, 1 tizedes, `null` ha az
+  időtartam 0), `duration` (`m:ss` egy óra alatt, `h:mm:ss` egy óra fölött, a meglévő stopper-konvenciót
+  követve: csak a legbaloldalibb egység nem nullázott elől).
+- Szándékos eltérés a meglévő `core/utils/unit_converters.dart` mintától (ami nyers
+  szám-konverziókat ad, a hívóra bízva a metric/imperial elágazást): itt az elágazás egy helyen,
+  magában a formázóban van, mert a jövőbeli hívási pontok száma nagy lesz (élő cardio képernyő,
+  statisztika, óra-híd) és mindegyiknél ismételni kellene.
+
+**Tesztek:**
+- `test/features/workouts/data/workout_session_repository_cardio_test.dart` — 13 teszt: `STRENGTH`
+  payload bájtra azonos, cardio oda-vissza, csere-nem-hozzáfűzés, `rate()`/`enrichHealthMetrics()`
+  megőrzés, explicit-null törlés szemantika, `watchByKind`, törlési cleanup.
+- `test/core/sync/pull_engine_cardio_test.dart` — 4 teszt: `STRENGTH` válasz, hiányzó
+  `sessionKind` kulcs (legacy), teljes `CARDIO` válasz feltöltés, újra-pull csere-nem-duplikálás.
+- `test/core/format/cardio_formatter_test.dart` — 14 teszt: minden formázó függvény metric és
+  imperial ágon, plusz a nulla/negatív perem-esetek.
+
+**Eredmény:** teljes `flutter test` futtatás — **682/682 zöld** (668 korábbi + 14 új
+`CardioFormatter`-teszt; a repository/pull-engine cardio-tesztek már a 668-ban benne voltak).
+
+A `C1` mobil adatrétege (Drift + domain + repository + pull + formázó) ezzel készen áll — a C1.6
+onnantól UI-réteg (`ActivityChip` + session-kártya), ami már csak olvassa ezt az adatot.

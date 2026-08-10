@@ -1,3 +1,122 @@
+import 'activity_type.dart';
+
+/// Cardio metrics for a CARDIO-kind session (docs/cardio/51-cardio-overview-plan.md
+/// §3, docs/cardio/52-cardio-domain-backend-plan.md §2.2). Every field is
+/// optional — a family fills in only the columns that apply to it.
+///
+/// Named `CardioMetrics`, not `CardioDetails`, to avoid colliding with the
+/// Drift table class of that name
+/// (`core/local_db/tables/workout_session_tables.dart`), which mirrors the
+/// backend entity/table naming instead.
+class CardioMetrics {
+  const CardioMetrics({
+    this.distanceMeters,
+    this.elevationGainMeters,
+    this.elevationLossMeters,
+    this.maxAltitudeMeters,
+    this.steps,
+    this.avgCadence,
+    this.maxCadence,
+    this.avgWatts,
+    this.maxWatts,
+    this.resistanceLevel,
+    this.deviceCalories,
+    this.maxHeartRate,
+    this.hrZone1Seconds,
+    this.hrZone2Seconds,
+    this.hrZone3Seconds,
+    this.hrZone4Seconds,
+    this.hrZone5Seconds,
+    this.intensity,
+    this.venue,
+    this.gameFormat,
+    this.scorePoints,
+    this.scoreAssists,
+    this.scoreRebounds,
+    this.distanceSource,
+    this.caloriesSource,
+    this.routePolyline,
+    this.routePointCount,
+  });
+
+  // DISTANCE + MACHINE
+  final double? distanceMeters;
+  final double? elevationGainMeters;
+  final double? elevationLossMeters;
+  final double? maxAltitudeMeters;
+  final int? steps;
+
+  /// Steps/min for running, rpm for the indoor bike.
+  final double? avgCadence;
+  final double? maxCadence;
+
+  // MACHINE
+  final double? avgWatts;
+  final double? maxWatts;
+  final int? resistanceLevel;
+
+  /// The machine's own displayed calorie count — never auto-summed into
+  /// daily active calories (docs/cardio/51-cardio-overview-plan.md Q4).
+  final double? deviceCalories;
+
+  // Shared physiological
+  final double? maxHeartRate;
+  final int? hrZone1Seconds;
+  final int? hrZone2Seconds;
+  final int? hrZone3Seconds;
+  final int? hrZone4Seconds;
+  final int? hrZone5Seconds;
+
+  // GAME
+  /// Subjective 1-5 intensity (docs/cardio/51-cardio-overview-plan.md §3.4).
+  final int? intensity;
+
+  /// `INDOOR` or `OUTDOOR` — drives GPS and the watch's activity locationType.
+  final String? venue;
+
+  /// Free-text format code, e.g. `5V5`, `SMALL_SIDED`, `PRACTICE`.
+  final String? gameFormat;
+
+  /// Basketball: points. Football: goals.
+  final int? scorePoints;
+  final int? scoreAssists;
+  final int? scoreRebounds;
+
+  // Provenance (docs/cardio/51-cardio-overview-plan.md R8) — a manual
+  // override always wins over a measured value.
+  final String? distanceSource;
+  final String? caloriesSource;
+
+  // Route (docs/cardio/54-cardio-gps-route-plan.md)
+  /// Encoded, simplified polyline — raw GPS points never leave the phone.
+  final String? routePolyline;
+  final int? routePointCount;
+}
+
+/// One per-km/lap split for a DISTANCE-family cardio session
+/// (docs/cardio/52-cardio-domain-backend-plan.md §2.3) — computed
+/// client-side at close time, never derived server-side.
+class CardioSplit {
+  const CardioSplit({
+    required this.splitIndex,
+    required this.distanceMeters,
+    required this.durationSeconds,
+    this.elevationDeltaM,
+    this.avgHeartRate,
+  });
+
+  /// 0-based position within the session's split list.
+  final int splitIndex;
+
+  /// Usually exactly 1000 (one km); the last split of a run is shorter.
+  final double distanceMeters;
+  final int durationSeconds;
+
+  /// Net elevation change over the split; null when no altitude data was available.
+  final double? elevationDeltaM;
+  final double? avgHeartRate;
+}
+
 /// A single set within a logged session (response side).
 class ExerciseSet {
   const ExerciseSet({
@@ -51,6 +170,11 @@ class WorkoutSession {
     this.feedbackNote,
     this.trainerComment,
     this.trainerCommentAt,
+    this.sessionKind = 'STRENGTH',
+    this.activityType,
+    this.movingSeconds,
+    this.cardio,
+    this.splits = const [],
   });
 
   final String clientId;
@@ -115,7 +239,53 @@ class WorkoutSession {
   /// When [trainerComment] was last written; null when uncommented.
   final DateTime? trainerCommentAt;
 
+  /// `'STRENGTH'` or `'CARDIO'` (docs/cardio/51-cardio-overview-plan.md
+  /// D-C.1) — a plain `String`, not a Dart enum: an unrecognized value from
+  /// a future server build must fall back gracefully (see
+  /// `activity_type.dart`'s doc), not throw a parse error. Never null —
+  /// defaults to `'STRENGTH'` for every session that predates cardio.
+  final String sessionKind;
+
+  /// Non-null exactly when [sessionKind] is `'CARDIO'` — one of
+  /// [kActivityTypes]. See `activity_type.dart`.
+  final String? activityType;
+
+  /// Time actually spent moving, in seconds — the wall-clock span minus
+  /// pauses and auto-pause gaps (docs/cardio/56-cardio-statistics-plan.md
+  /// D-C3.3). Null for a STRENGTH session, where [effectiveDuration] already
+  /// is the wall-clock span.
+  final int? movingSeconds;
+
+  /// Cardio metrics; non-null only when [isCardio] and at least one metric
+  /// was recorded.
+  final CardioMetrics? cardio;
+
+  /// Per-km/lap splits; empty unless [isCardio] and splits were recorded.
+  final List<CardioSplit> splits;
+
   bool get inProgress => startedAt != null && finishedAt == null;
+
+  /// True for a cardio/sport session — see [sessionKind].
+  bool get isCardio => sessionKind == 'CARDIO';
+
+  /// The metric/UI family [activityType] belongs to, or null for a STRENGTH
+  /// session (or the rare case of a cardio session with no activityType at
+  /// all, which the server rejects but a not-yet-synced local draft could
+  /// theoretically pass through).
+  ActivityFamily? get family => activityType == null ? null : activityFamilyOf(activityType!);
+
+  /// The training time statistics should count: [movingSeconds] when tracked
+  /// (every cardio session with a recorded moving time), else the wall-clock
+  /// span between [startedAt] and [finishedAt] (every STRENGTH session, and
+  /// a cardio session that never tracked moving time separately). Null while
+  /// still running or not yet started.
+  Duration? get effectiveDuration {
+    if (movingSeconds != null) return Duration(seconds: movingSeconds!);
+    if (startedAt != null && finishedAt != null) {
+      return finishedAt!.difference(startedAt!);
+    }
+    return null;
+  }
 
   /// Trainer-scheduled and not yet started — shows in the "Közelgő" section
   /// while [scheduledFor] is within the client's 7-day visibility window.

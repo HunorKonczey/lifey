@@ -45,6 +45,8 @@ part 'app_database.g.dart';
   WorkoutSessions,
   WorkoutSessionExercises,
   ExerciseSets,
+  CardioDetails,
+  CardioSplits,
   WaterSources,
   WaterEntries,
   UserSettingsTable,
@@ -58,7 +60,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 33;
+  int get schemaVersion => 34;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -278,6 +280,20 @@ class AppDatabase extends _$AppDatabase {
             await _addColumnIfMissing(m, chatMessages, chatMessages.attachmentLocalPath);
             await _addColumnIfMissing(
                 m, chatConversations, chatConversations.lastMessageHasAttachment);
+          }
+          // V34: cardio & sport sessions (docs/cardio/51-cardio-overview-plan.md,
+          // docs/cardio/59-cardio-implementation-plan.md C1.5) — sessionKind
+          // defaults to 'STRENGTH' (a literal SQLite column default, same as
+          // V24's workoutReminderEnabled), so every pre-cardio row keeps
+          // behaving exactly as before; activityType/movingSeconds are new
+          // and nullable, so nothing to backfill for them either. The two new
+          // child tables start empty — no existing session had cardio data.
+          if (from < 34) {
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.sessionKind);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.activityType);
+            await _addColumnIfMissing(m, workoutSessions, workoutSessions.movingSeconds);
+            await m.createTable(cardioDetails);
+            await m.createTable(cardioSplits);
           }
         },
       );

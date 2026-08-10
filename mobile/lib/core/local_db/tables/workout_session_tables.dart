@@ -64,6 +64,120 @@ class WorkoutSessions extends Table {
   /// When [trainerComment] was last written; null when uncommented.
   DateTimeColumn get trainerCommentAt => dateTime().nullable()();
 
+  /// STRENGTH (the original, set-based workout) or CARDIO — see
+  /// docs/cardio/51-cardio-overview-plan.md D-C.1. Defaults to STRENGTH so a
+  /// pre-cardio row (and any client build that doesn't send it) keeps
+  /// behaving exactly as before — mirrors the backend's V66 column default.
+  TextColumn get sessionKind => text().withDefault(const Constant('STRENGTH'))();
+
+  /// Non-null exactly when [sessionKind] is `'CARDIO'` — see
+  /// `features/workouts/domain/activity_type.dart` for the code list.
+  TextColumn get activityType => text().nullable()();
+
+  /// Time actually spent moving, in seconds — the wall-clock span minus
+  /// pauses and auto-pause gaps (docs/cardio/56 D-C3.3). Null for a STRENGTH
+  /// session, where the wall-clock span already is the workout.
+  IntColumn get movingSeconds => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {clientId};
+}
+
+/// Cardio metrics for a CARDIO-kind [WorkoutSessions] row (docs/cardio/52
+/// §2.2) — one row per cardio session, 1:1 keyed directly by
+/// [sessionClientId] rather than its own `clientId`, since it's always
+/// created/replaced/deleted alongside its session (see
+/// `WorkoutSessionRepository._replaceCardio`).
+///
+/// Named `CardioDetails` (matching the backend entity/table name) rather
+/// than the domain-layer value object, which is called `CardioMetrics` to
+/// avoid colliding with this class in files that import both.
+@DataClassName('CardioDetailsRow')
+class CardioDetails extends Table {
+  @override
+  String get tableName => 'cardio_details';
+
+  TextColumn get sessionClientId => text().references(WorkoutSessions, #clientId)();
+
+  // DISTANCE + MACHINE
+  RealColumn get distanceMeters => real().nullable()();
+  RealColumn get elevationGainMeters => real().nullable()();
+  RealColumn get elevationLossMeters => real().nullable()();
+  RealColumn get maxAltitudeMeters => real().nullable()();
+  IntColumn get steps => integer().nullable()();
+
+  /// Steps/min for running, rpm for the indoor bike.
+  RealColumn get avgCadence => real().nullable()();
+  RealColumn get maxCadence => real().nullable()();
+
+  // MACHINE
+  RealColumn get avgWatts => real().nullable()();
+  RealColumn get maxWatts => real().nullable()();
+  IntColumn get resistanceLevel => integer().nullable()();
+
+  /// The machine's own displayed calorie count — never auto-summed into
+  /// daily active calories (docs/cardio/51 Q4).
+  RealColumn get deviceCalories => real().nullable()();
+
+  // Shared physiological
+  RealColumn get maxHeartRate => real().nullable()();
+  IntColumn get hrZone1Seconds => integer().nullable()();
+  IntColumn get hrZone2Seconds => integer().nullable()();
+  IntColumn get hrZone3Seconds => integer().nullable()();
+  IntColumn get hrZone4Seconds => integer().nullable()();
+  IntColumn get hrZone5Seconds => integer().nullable()();
+
+  // GAME
+  /// Subjective 1-5 intensity (docs/cardio/51 §3.4).
+  IntColumn get intensity => integer().nullable()();
+
+  /// `INDOOR` or `OUTDOOR` — drives GPS and the watch's activity locationType.
+  TextColumn get venue => text().nullable()();
+
+  /// Free-text format code, e.g. `5V5`, `SMALL_SIDED`, `PRACTICE`.
+  TextColumn get gameFormat => text().nullable()();
+
+  /// Basketball: points. Football: goals.
+  IntColumn get scorePoints => integer().nullable()();
+  IntColumn get scoreAssists => integer().nullable()();
+  IntColumn get scoreRebounds => integer().nullable()();
+
+  // Provenance (docs/cardio/51 R8) — a manual override always wins.
+  TextColumn get distanceSource => text().nullable()();
+  TextColumn get caloriesSource => text().nullable()();
+
+  // Route (docs/cardio/54) — encoded, simplified polyline; raw GPS points
+  // never leave the phone (that's CardioTrackPoints, added in C4a).
+  TextColumn get routePolyline => text().nullable()();
+  IntColumn get routePointCount => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {sessionClientId};
+}
+
+/// Per-km/lap splits for a DISTANCE-family cardio session (docs/cardio/52
+/// §2.3) — computed client-side at close time, never derived server-side, so
+/// the server has nothing to disagree with; a session's split list is always
+/// replaced in full, same as [ExerciseSets] for a session's set list.
+@DataClassName('CardioSplitRow')
+class CardioSplits extends Table {
+  @override
+  String get tableName => 'cardio_splits';
+
+  TextColumn get clientId => text()();
+  TextColumn get sessionClientId => text().references(WorkoutSessions, #clientId)();
+
+  /// 0-based position within the session's split list.
+  IntColumn get splitIndex => integer()();
+
+  /// Usually exactly 1000 (one km); the last split of a run is shorter.
+  RealColumn get distanceMeters => real()();
+  IntColumn get durationSeconds => integer()();
+
+  /// Net elevation change over the split; null when no altitude data was available.
+  RealColumn get elevationDeltaM => real().nullable()();
+  RealColumn get avgHeartRate => real().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

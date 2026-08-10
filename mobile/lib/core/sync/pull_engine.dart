@@ -729,6 +729,10 @@ class PullEngine {
             .go();
         await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId)))
             .go();
+        await (_db.delete(_db.cardioDetails)..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
+        await (_db.delete(_db.cardioSplits)..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
       },
     );
     if (maxUpdatedAt != null) {
@@ -797,6 +801,13 @@ class PullEngine {
       trainerComment: Value(json['trainerComment'] as String?),
       trainerCommentAt:
           Value(trainerCommentAtRaw != null ? DateTime.parse(trainerCommentAtRaw) : null),
+      // docs/cardio/53-cardio-mobile-plan.md §1.4: a response is expected to
+      // always carry sessionKind now (the backend never omits it, C1.4), but
+      // fall back to 'STRENGTH' rather than null for any response that
+      // somehow doesn't — this column is NOT NULL locally too.
+      sessionKind: Value(json['sessionKind'] as String? ?? 'STRENGTH'),
+      activityType: Value(json['activityType'] as String?),
+      movingSeconds: Value((json['movingSeconds'] as num?)?.toInt()),
     );
     // Planned exercises, each with the set count the server holds for it.
     // Resolved to local clientIds here, dropping any dangling reference (an
@@ -880,7 +891,74 @@ class PullEngine {
               ),
             );
       }
+
+      // Cardio metrics + splits — same full-replace model as the two
+      // children above (docs/cardio/52-cardio-domain-backend-plan.md §3.3:
+      // `cardio`/`splits` are never independently delta-synced, only the
+      // parent session is).
+      await (_db.delete(_db.cardioDetails)..where((t) => t.sessionClientId.equals(clientId)))
+          .go();
+      final cardioJson = json['cardio'] as Map<String, dynamic>?;
+      if (cardioJson != null) {
+        await _db.into(_db.cardioDetails).insert(_cardioDetailsCompanion(clientId, cardioJson));
+      }
+
+      await (_db.delete(_db.cardioSplits)..where((t) => t.sessionClientId.equals(clientId)))
+          .go();
+      final splitsJson =
+          (json['splits'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+      for (final splitJson in splitsJson) {
+        await _db.into(_db.cardioSplits).insert(_cardioSplitCompanion(clientId, splitJson));
+      }
     });
+  }
+
+  /// Field order mirrors the backend's `CardioDetailsResponse` exactly
+  /// (docs/cardio/52-cardio-domain-backend-plan.md §3.3).
+  CardioDetailsCompanion _cardioDetailsCompanion(
+      String sessionClientId, Map<String, dynamic> json) {
+    return CardioDetailsCompanion.insert(
+      sessionClientId: sessionClientId,
+      distanceMeters: Value((json['distanceMeters'] as num?)?.toDouble()),
+      elevationGainMeters: Value((json['elevationGainMeters'] as num?)?.toDouble()),
+      elevationLossMeters: Value((json['elevationLossMeters'] as num?)?.toDouble()),
+      maxAltitudeMeters: Value((json['maxAltitudeMeters'] as num?)?.toDouble()),
+      steps: Value((json['steps'] as num?)?.toInt()),
+      avgCadence: Value((json['avgCadence'] as num?)?.toDouble()),
+      maxCadence: Value((json['maxCadence'] as num?)?.toDouble()),
+      avgWatts: Value((json['avgWatts'] as num?)?.toDouble()),
+      maxWatts: Value((json['maxWatts'] as num?)?.toDouble()),
+      resistanceLevel: Value((json['resistanceLevel'] as num?)?.toInt()),
+      deviceCalories: Value((json['deviceCalories'] as num?)?.toDouble()),
+      maxHeartRate: Value((json['maxHeartRate'] as num?)?.toDouble()),
+      hrZone1Seconds: Value((json['hrZone1Seconds'] as num?)?.toInt()),
+      hrZone2Seconds: Value((json['hrZone2Seconds'] as num?)?.toInt()),
+      hrZone3Seconds: Value((json['hrZone3Seconds'] as num?)?.toInt()),
+      hrZone4Seconds: Value((json['hrZone4Seconds'] as num?)?.toInt()),
+      hrZone5Seconds: Value((json['hrZone5Seconds'] as num?)?.toInt()),
+      intensity: Value((json['intensity'] as num?)?.toInt()),
+      venue: Value(json['venue'] as String?),
+      gameFormat: Value(json['gameFormat'] as String?),
+      scorePoints: Value((json['scorePoints'] as num?)?.toInt()),
+      scoreAssists: Value((json['scoreAssists'] as num?)?.toInt()),
+      scoreRebounds: Value((json['scoreRebounds'] as num?)?.toInt()),
+      distanceSource: Value(json['distanceSource'] as String?),
+      caloriesSource: Value(json['caloriesSource'] as String?),
+      routePolyline: Value(json['routePolyline'] as String?),
+      routePointCount: Value((json['routePointCount'] as num?)?.toInt()),
+    );
+  }
+
+  CardioSplitsCompanion _cardioSplitCompanion(String sessionClientId, Map<String, dynamic> json) {
+    return CardioSplitsCompanion.insert(
+      clientId: newClientId(),
+      sessionClientId: sessionClientId,
+      splitIndex: (json['splitIndex'] as num).toInt(),
+      distanceMeters: (json['distanceMeters'] as num).toDouble(),
+      durationSeconds: (json['durationSeconds'] as num).toInt(),
+      elevationDeltaM: Value((json['elevationDeltaM'] as num?)?.toDouble()),
+      avgHeartRate: Value((json['avgHeartRate'] as num?)?.toDouble()),
+    );
   }
 
   Future<void> _deleteWorkoutSessionTombstone(int serverId) async {
@@ -892,6 +970,8 @@ class PullEngine {
             ..where((t) => t.sessionClientId.equals(clientId)))
           .go();
       await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId))).go();
+      await (_db.delete(_db.cardioDetails)..where((t) => t.sessionClientId.equals(clientId))).go();
+      await (_db.delete(_db.cardioSplits)..where((t) => t.sessionClientId.equals(clientId))).go();
       await (_db.delete(_db.workoutSessions)..where((t) => t.clientId.equals(clientId))).go();
     });
   }
