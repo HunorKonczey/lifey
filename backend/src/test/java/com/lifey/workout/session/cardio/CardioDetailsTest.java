@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -24,6 +26,7 @@ import java.sql.Statement;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,6 +38,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Postgres so the DB-level invariants (the 1:1 uniqueness, the CHECK
  * constraints, the cascade delete) are actually exercised, not just assumed
  * from the SQL text.
+ *
+ * <p>Not {@code @Transactional}: that would roll every test back at the end,
+ * which would hide the {@link #hardDeletingTheSessionCascadesToItsCardioDetails}
+ * test's writes from the separate, non-transactional raw-JDBC connection it
+ * uses to check the cascade — a rolled-back write and a genuinely absent
+ * cascade would look identical. Instead, each write runs in its own,
+ * immediately-committing transaction via {@link #inTransaction}.
  */
 @SpringBootTest
 @Testcontainers
@@ -56,10 +66,16 @@ class CardioDetailsTest {
     @PersistenceContext
     EntityManager entityManager;
 
+    @Autowired
+    PlatformTransactionManager transactionManager;
+
+    TransactionTemplate txTemplate;
     WorkoutSession cardioSession;
 
     @BeforeEach
     void seedCardioSession() {
+        txTemplate = new TransactionTemplate(transactionManager);
+
         User user = new User();
         user.setEmail("cardio-details-" + System.nanoTime() + "@example.com");
         user.setPasswordHash("irrelevant");
@@ -73,6 +89,16 @@ class CardioDetailsTest {
         session.setSessionKind(SessionKind.CARDIO);
         session.setActivityType(ActivityType.RUNNING);
         cardioSession = workoutSessionRepository.save(session);
+    }
+
+    /** Runs a write in its own, immediately-committing transaction — see class doc. */
+    private void inTransaction(Runnable action) {
+        txTemplate.executeWithoutResult(status -> action.run());
+    }
+
+    /** Same as {@link #inTransaction(Runnable)}, for reads that return a value. */
+    private <T> T inTransaction(Supplier<T> action) {
+        return txTemplate.execute(status -> action.get());
     }
 
     @Test
@@ -90,11 +116,10 @@ class CardioDetailsTest {
         details.setRoutePolyline("encoded-polyline-stub");
         details.setRoutePointCount(842);
 
-        entityManager.persist(details);
-        entityManager.flush();
+        inTransaction(() -> entityManager.persist(details));
         entityManager.clear();
 
-        CardioDetails reloaded = entityManager.find(CardioDetails.class, details.getId());
+        CardioDetails reloaded = inTransaction(() -> entityManager.find(CardioDetails.class, details.getId()));
         assertThat(reloaded.getWorkoutSession().getId()).isEqualTo(cardioSession.getId());
         assertThat(reloaded.getDistanceMeters()).isEqualTo(7320.5);
         assertThat(reloaded.getElevationGainMeters()).isEqualTo(112.0);
@@ -115,8 +140,7 @@ class CardioDetailsTest {
         CardioDetails details = new CardioDetails();
         details.setWorkoutSession(cardioSession);
 
-        entityManager.persist(details);
-        entityManager.flush();
+        inTransaction(() -> entityManager.persist(details));
 
         assertThat(details.getId()).isNotNull();
     }
@@ -125,8 +149,7 @@ class CardioDetailsTest {
     void aSecondCardioDetailsForTheSameSessionViolatesTheOneToOneUniqueness() {
         CardioDetails first = new CardioDetails();
         first.setWorkoutSession(cardioSession);
-        entityManager.persist(first);
-        entityManager.flush();
+        inTransaction(() -> entityManager.persist(first));
 
         CardioDetails second = new CardioDetails();
         second.setWorkoutSession(cardioSession);
@@ -134,7 +157,7 @@ class CardioDetailsTest {
         // BaseEntity's id is GenerationType.IDENTITY, so Hibernate can't batch
         // the insert — it executes (and the constraint fires) right here on
         // persist(), not on a later flush().
-        assertThatThrownBy(() -> entityManager.persist(second))
+        assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(second)))
                 .isInstanceOf(PersistenceException.class);
     }
 
@@ -144,7 +167,7 @@ class CardioDetailsTest {
         details.setWorkoutSession(cardioSession);
         details.setIntensity(6);
 
-        assertThatThrownBy(() -> entityManager.persist(details))
+        assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(details)))
                 .isInstanceOf(PersistenceException.class)
                 .hasStackTraceContaining("cardio_details_intensity_ck");
     }
@@ -155,7 +178,7 @@ class CardioDetailsTest {
         details.setWorkoutSession(cardioSession);
         details.setVenue("SPACE");
 
-        assertThatThrownBy(() -> entityManager.persist(details))
+        assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(details)))
                 .isInstanceOf(PersistenceException.class)
                 .hasStackTraceContaining("cardio_details_venue_ck");
     }
@@ -164,15 +187,16 @@ class CardioDetailsTest {
     void hardDeletingTheSessionCascadesToItsCardioDetails() throws Exception {
         CardioDetails details = new CardioDetails();
         details.setWorkoutSession(cardioSession);
-        entityManager.persist(details);
-        entityManager.flush();
+        inTransaction(() -> entityManager.persist(details));
         long detailsId = details.getId();
         long sessionId = cardioSession.getId();
 
         // The app itself only ever soft-deletes a WorkoutSession (deletedAt),
         // so this exercises the DB-level ON DELETE CASCADE directly — the
         // safety net for any future hard-delete path (e.g. a superadmin
-        // purge), not something the mobile/web flow relies on today.
+        // purge), not something the mobile/web flow relies on today. The
+        // insert above already committed (inTransaction), so this separate
+        // raw connection sees it.
         try (Connection conn = dataSource.getConnection();
              Statement st = conn.createStatement()) {
             st.executeUpdate("delete from workout_sessions where id = " + sessionId);

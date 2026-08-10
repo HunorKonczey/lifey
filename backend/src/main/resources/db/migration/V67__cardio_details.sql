@@ -36,7 +36,7 @@ create table cardio_details (
     hr_zone5_seconds         integer,
 
     -- GAME
-    intensity                smallint,      -- 1..5, subjective
+    intensity                integer,       -- 1..5, subjective
     venue                    varchar(16),   -- INDOOR | OUTDOOR — drives GPS + watch locationType
     game_format              varchar(32),   -- free-text code: 5V5, SMALL_SIDED, PRACTICE, ...
     score_points             integer,       -- basketball: points · football: goals

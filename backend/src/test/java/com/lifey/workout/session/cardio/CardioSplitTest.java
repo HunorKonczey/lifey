@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -24,6 +26,7 @@ import java.sql.Statement;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,6 +38,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Postgres to exercise the DB-level invariants: the per-session split-index
  * uniqueness (and that it's scoped *per session*, not global), and the
  * cascade delete.
+ *
+ * <p>Not {@code @Transactional}: that would roll every test back at the end,
+ * which would hide the {@link #hardDeletingTheSessionCascadesToItsSplits}
+ * test's writes from the separate, non-transactional raw-JDBC connection it
+ * uses to check the cascade — a rolled-back write and a genuinely absent
+ * cascade would look identical. Instead, each write runs in its own,
+ * immediately-committing transaction via {@link #inTransaction}.
  */
 @SpringBootTest
 @Testcontainers
@@ -56,10 +66,16 @@ class CardioSplitTest {
     @PersistenceContext
     EntityManager entityManager;
 
+    @Autowired
+    PlatformTransactionManager transactionManager;
+
+    TransactionTemplate txTemplate;
     WorkoutSession cardioSession;
 
     @BeforeEach
     void seedCardioSession() {
+        txTemplate = new TransactionTemplate(transactionManager);
+
         User user = new User();
         user.setEmail("cardio-splits-" + System.nanoTime() + "@example.com");
         user.setPasswordHash("irrelevant");
@@ -73,6 +89,16 @@ class CardioSplitTest {
         session.setSessionKind(SessionKind.CARDIO);
         session.setActivityType(ActivityType.RUNNING);
         cardioSession = workoutSessionRepository.save(session);
+    }
+
+    /** Runs a write in its own, immediately-committing transaction — see class doc. */
+    private void inTransaction(Runnable action) {
+        txTemplate.executeWithoutResult(status -> action.run());
+    }
+
+    /** Same as {@link #inTransaction(Runnable)}, for reads that return a value. */
+    private <T> T inTransaction(Supplier<T> action) {
+        return txTemplate.execute(status -> action.get());
     }
 
     private CardioSplit newSplit(int index, double distanceMeters, int durationSeconds) {
@@ -90,11 +116,10 @@ class CardioSplitTest {
         split.setElevationDeltaM(-4.5);
         split.setAvgHeartRate(151.0);
 
-        entityManager.persist(split);
-        entityManager.flush();
+        inTransaction(() -> entityManager.persist(split));
         entityManager.clear();
 
-        CardioSplit reloaded = entityManager.find(CardioSplit.class, split.getId());
+        CardioSplit reloaded = inTransaction(() -> entityManager.find(CardioSplit.class, split.getId()));
         assertThat(reloaded.getWorkoutSession().getId()).isEqualTo(cardioSession.getId());
         assertThat(reloaded.getSplitIndex()).isZero();
         assertThat(reloaded.getDistanceMeters()).isEqualTo(1000.0);
@@ -109,26 +134,26 @@ class CardioSplitTest {
         // be forced to a fake 0.
         CardioSplit split = newSplit(0, 1000.0, 300);
 
-        entityManager.persist(split);
-        entityManager.flush();
+        inTransaction(() -> entityManager.persist(split));
 
         assertThat(split.getId()).isNotNull();
     }
 
     @Test
     void multipleSplitsWithDifferentIndexesCoexistForTheSameSession() {
-        entityManager.persist(newSplit(0, 1000.0, 300));
-        entityManager.persist(newSplit(1, 1000.0, 305));
-        entityManager.persist(newSplit(2, 950.0, 290));
-        entityManager.flush();
+        inTransaction(() -> {
+            entityManager.persist(newSplit(0, 1000.0, 300));
+            entityManager.persist(newSplit(1, 1000.0, 305));
+            entityManager.persist(newSplit(2, 950.0, 290));
+        });
         entityManager.clear();
 
-        List<CardioSplit> splits = entityManager
+        List<CardioSplit> splits = inTransaction(() -> entityManager
                 .createQuery(
                         "select s from CardioSplit s where s.workoutSession.id = :sessionId order by s.splitIndex",
                         CardioSplit.class)
                 .setParameter("sessionId", cardioSession.getId())
-                .getResultList();
+                .getResultList());
 
         assertThat(splits).hasSize(3);
         assertThat(splits).extracting(CardioSplit::getSplitIndex).containsExactly(0, 1, 2);
@@ -136,15 +161,14 @@ class CardioSplitTest {
 
     @Test
     void aRepeatedSplitIndexForTheSameSessionViolatesTheUniqueConstraint() {
-        entityManager.persist(newSplit(0, 1000.0, 300));
-        entityManager.flush();
+        inTransaction(() -> entityManager.persist(newSplit(0, 1000.0, 300)));
 
         CardioSplit duplicate = newSplit(0, 990.0, 295);
 
         // BaseEntity's id is GenerationType.IDENTITY, so Hibernate can't batch
         // the insert — it executes (and the constraint fires) right here on
         // persist(), not on a later flush() (same lesson as CardioDetailsTest).
-        assertThatThrownBy(() -> entityManager.persist(duplicate))
+        assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(duplicate)))
                 .isInstanceOf(PersistenceException.class)
                 .hasStackTraceContaining("cardio_splits_session_index_unique");
     }
@@ -156,18 +180,19 @@ class CardioSplitTest {
         otherSession.setStartedAt(Instant.now());
         otherSession.setSessionKind(SessionKind.CARDIO);
         otherSession.setActivityType(ActivityType.WALKING);
-        otherSession = workoutSessionRepository.save(otherSession);
+        WorkoutSession savedOther = workoutSessionRepository.save(otherSession);
 
         CardioSplit first = newSplit(0, 1000.0, 300);
         CardioSplit second = new CardioSplit();
-        second.setWorkoutSession(otherSession);
+        second.setWorkoutSession(savedOther);
         second.setSplitIndex(0);
         second.setDistanceMeters(1000.0);
         second.setDurationSeconds(600);
 
-        entityManager.persist(first);
-        entityManager.persist(second);
-        entityManager.flush();
+        inTransaction(() -> {
+            entityManager.persist(first);
+            entityManager.persist(second);
+        });
 
         assertThat(first.getId()).isNotNull();
         assertThat(second.getId()).isNotNull();
@@ -176,14 +201,14 @@ class CardioSplitTest {
     @Test
     void hardDeletingTheSessionCascadesToItsSplits() throws Exception {
         CardioSplit split = newSplit(0, 1000.0, 300);
-        entityManager.persist(split);
-        entityManager.flush();
+        inTransaction(() -> entityManager.persist(split));
         long splitId = split.getId();
         long sessionId = cardioSession.getId();
 
         // The app itself only ever soft-deletes a WorkoutSession (deletedAt) —
         // this exercises the DB-level ON DELETE CASCADE directly, same as
-        // CardioDetailsTest's equivalent case.
+        // CardioDetailsTest's equivalent case. The insert above already
+        // committed (inTransaction), so this separate raw connection sees it.
         try (Connection conn = dataSource.getConnection();
              Statement st = conn.createStatement()) {
             st.executeUpdate("delete from workout_sessions where id = " + sessionId);

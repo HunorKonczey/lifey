@@ -317,6 +317,7 @@ a `UpcomingSessionRegressionTest`-tel azonos, már bevált mintát követi. A gy
 `WorkoutSessionControllerTest` (11 teszt, `@WebMvcTest`) lefutott és zöld — az entitás-bővítés nem
 tört el semmit a kontroller-rétegen. `mvn compile` és `mvn test-compile` mindkettő tiszta.
 **A CI-ben (ahol fut Docker) ellenőrizendő, hogy `CardioSessionKindMigrationTest` ténylegesen zöld.**
+*(Frissítés: lásd a doc legvégén — utólag Docker elérhetővé vált, és ez a teszt is lefutott.)*
 
 `C1.2` is kész (2026-08-10) — `V67__cardio_details.sql` + a `CardioDetails` entitás.
 
@@ -451,3 +452,41 @@ kell maradnia (regressziós teszt).
 
 A `C2.1` (`CardioSessionScreen` váz) csak **C1.5–C1.9 után** jön — a C2 (élő cardio) a C1.5-ös
 Drift-adatrétegre épül, ami még nincs meg.
+
+---
+
+## Testcontainers-utólagos ellenőrzés (2026-08-10, Docker elérhetővé vált)
+
+A C1.1–C1.4 alatt négy Testcontainers-teszt csak **fordítva** volt ellenőrizve (Docker hiányzott
+ebben a sandboxban). A felhasználó saját IDE-jében lefuttatta a teljes suite-ot, és **46 teszt
+elbukott** — nem 46 külön hibáról volt szó, hanem **egyetlen közös okról**: a `CardioSplitTest`
+context-indítási hibája miatt Spring minden más, azonos konfigurációjú `@SpringBootTest`-nél is
+elbukott (`ApplicationContext failure threshold exceeded`), teljesen cardión kívüli teszteket is
+magával rántva (`FoodSearchAccentRegressionTest`, `InternalApiIntegrationTest`,
+`TrainerIdsWithActiveClientsRegressionTest` stb.) — Hibernate a **teljes** sémát validálja
+context-indításkor, nem csak az adott teszthez tartozó táblákat.
+
+**Két valódi hiba derült ki, mindkettő javítva:**
+
+1. **Séma-eltérés** — `V67__cardio_details.sql`-ben `intensity smallint`, de a
+   `CardioDetails.intensity` Java `Integer` mező, amit a Hibernate alapból SQL `integer`-re képez
+   le. A `Schema validation: wrong column type` hiba blokkolta a teljes context-et. Javítás:
+   `smallint` → `integer`, a meglévő `rpe` (1-10 értékelés) mintáját követve — a migráció még
+   sosem futott le sikeresen sehol, tehát a közvetlen szerkesztés (nem új migráció) biztonságos
+   volt.
+2. **Tranzakció-hiba a saját tesztjeimben** — `CardioDetailsTest`/`CardioSplitTest` nyers
+   `EntityManager.persist()`-et hívott tranzakció nélkül (`TransactionRequired` hiba). Class-szintű
+   `@Transactional`-t **szándékosan nem** használtam — az minden tesztet visszagörgetne a végén,
+   ami a hard-delete-cascade tesztek íróit láthatatlanná tenné a külön, nem-tranzakciós nyers JDBC
+   kapcsolat előtt (hamis zöld eredmény, nem valódi teszt). Helyette `TransactionTemplate`-tel
+   minden írás saját, azonnal commitoló tranzakcióban fut — ezt mindkét tesztfájlban bevezettem.
+
+**Eredmény, mindhárom lépésben ellenőrizve:**
+- A négy cardio Testcontainers-teszt önmagában: **20/20 zöld**.
+- `com.lifey.workout.session.**` + `com.lifey.trainer.**` együtt: **277/277 zöld** (beleértve a
+  korábban áldozatként elbukott, cardión kívüli teszteket is).
+- **A teljes backend suite: 696/696 zöld, `BUILD SUCCESS`.**
+
+Ezzel a C1.1–C1.4 minden korábbi „nem tudtam lefuttatni” fenntartása feloldva — a teljes cardio
+backend-munka (séma + entitások + API) most már **valósan, végponttól végpontig igazolt**, nem
+csak fordítás-szinten ellenőrzött.
