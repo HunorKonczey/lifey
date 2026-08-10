@@ -21,11 +21,25 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     List<WorkoutSession> findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullOrderByStartedAtDesc(Long userId);
 
     /**
+     * Same as {@link #findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullOrderByStartedAtDesc},
+     * additionally scoped to one {@link SessionKind} — backs the `?kind=`
+     * list filter (docs/cardio/52-cardio-domain-backend-plan.md §3.2 D-C1.3).
+     * A separate method rather than a nullable-parameter query so the
+     * unfiltered path (and its existing callers/tests) stays untouched.
+     */
+    List<WorkoutSession> findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullAndSessionKindOrderByStartedAtDesc(
+            Long userId, SessionKind kind);
+
+    /**
      * Paged history view — backs `GET /workout-sessions?page=` and the trainer
      * client-workout-sessions endpoint. Excludes upcoming/missed rows, same as
      * {@link #findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullOrderByStartedAtDesc}.
      */
     Page<WorkoutSession> findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNull(Long userId, Pageable pageable);
+
+    /** Same as above, additionally scoped to one {@link SessionKind} — see the unpaged variant's doc. */
+    Page<WorkoutSession> findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullAndSessionKind(
+            Long userId, SessionKind kind, Pageable pageable);
 
     Optional<WorkoutSession> findByIdAndUserId(Long id, Long userId);
 

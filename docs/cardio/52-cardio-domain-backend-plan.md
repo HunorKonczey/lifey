@@ -137,13 +137,18 @@ CREATE TABLE cardio_details (
     route_polyline          text,               -- encoded polyline, tömörített
     route_point_count       integer,
 
-    created_at              timestamptz NOT NULL DEFAULT now(),
-    updated_at              timestamptz NOT NULL DEFAULT now(),
-
     CONSTRAINT cardio_details_intensity_ck CHECK (intensity IS NULL OR intensity BETWEEN 1 AND 5),
     CONSTRAINT cardio_details_venue_ck     CHECK (venue IS NULL OR venue IN ('INDOOR','OUTDOOR'))
 );
 ```
+
+> **Megvalósításkori eltérés (C1.2, 2026-08-10):** a fenti vázlat eredetileg saját
+> `created_at`/`updated_at` oszlopot is javasolt — a ténylegesen megírt `V67__cardio_details.sql`
+> **nem** viszi. Indok: a meglévő gyerektáblák (`workout_session_exercises`,
+> `program_workouts`) egyike sem kap saját időbélyeget, csak a top-level, önmagában
+> szinkronizálandó táblák (pl. `training_programs`); a `cardio_details` sosem szinkronizálódik
+> önállóan (lásd §4), tehát a saját időbélyeg holt súly lett volna. A tényleges migráció:
+> [59-cardio-implementation-plan.md C1.2](59-cardio-implementation-plan.md).
 
 **Miért egy tábla és nem három családonként?** Mert a lekérdezések (statisztika, lista,
 PR-számítás) családoktól függetlenül futnak, és három `LEFT JOIN` háromszoros komplexitás
@@ -259,6 +264,13 @@ A `Response` szimmetrikusan kap `sessionKind`, `activityType`, `movingSeconds`,
 `cardio: CardioDetailsResponse`, `splits`. **Fontos:** a `sessionKind` a válaszban
 **mindig ki van töltve** (sosem null), így a kliensek nem `null`-ból következtetnek.
 
+> **Megvalósításkori pontosítás (C1.4, 2026-08-10):** a `cardio` blokk is **teljes csere**
+> update-kor, ugyanúgy mint `splits` — egy `cardio: null` update **törli** a session meglévő
+> cardio-adatait, nem "hagyja változatlanul". Ez a doksi eredeti szövegéből nem következett
+> egyértelműen, de a `replaceSets`/`replacePlannedExercises` meglévő mintája (mindig teljes
+> csere) és a mobil kliens működése (mindig a teljes aktuális állapotot küldi) ezt diktálja.
+> Lásd [59-cardio-implementation-plan.md C1.4](59-cardio-implementation-plan.md).
+
 ### D-C1.3 — Nincs új controller és nincs új végpont-család
 
 A `/api/v1/workout-sessions` marad az egyetlen belépési pont, minden meglévő végponttal
@@ -274,6 +286,11 @@ GET /api/v1/workout-sessions?page=0&size=20&kind=CARDIO
 `kind` hiánya = minden fajta (a mai viselkedés). A **delta-sync végpont
 (`?updatedSince=`) NEM kap `kind` szűrőt** — a mobil kliensnek minden változás kell, és a
 szűrt delta csendben lyukat ütne a helyi cache-ben.
+
+> **Megvalósításkori pontosítás (C1.4):** a `findPageForUser` (az edzői kliens-nézet, `/api/v1/trainer/clients/{clientId}/workout-sessions`)
+> **sem** kapott `kind` paramétert C1.4-ben — a metódus-szignatúra változatlan maradt, hogy a
+> `TrainerClientDataController` érintetlen legyen. Ha az edzői nézetnek is kell fajta-szűrés,
+> az a web-oldali C1w munka része ([58-cardio-web-plan.md](58-cardio-web-plan.md)), nem itt dől el.
 
 ### 3.3 Mapper
 

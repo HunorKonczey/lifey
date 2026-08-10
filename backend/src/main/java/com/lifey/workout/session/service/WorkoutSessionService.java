@@ -1,5 +1,6 @@
 package com.lifey.workout.session.service;
 
+import com.lifey.workout.session.SessionKind;
 import com.lifey.workout.session.dto.WorkoutSessionRequest;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
 import org.springframework.data.domain.Page;
@@ -10,14 +11,17 @@ import java.util.List;
 
 public interface WorkoutSessionService {
 
-    List<WorkoutSessionResponse> findAll();
+    /** @param kind Optional fajta-szűrő (docs/cardio/52 §3.2 D-C1.3) — null means every kind. */
+    List<WorkoutSessionResponse> findAll(SessionKind kind);
 
     /**
      * Paged history view — backs `GET /workout-sessions?page=`, an additive
-     * alternative to {@link #findAll()} for callers that want to page through
+     * alternative to {@link #findAll} for callers that want to page through
      * a long history instead of pulling everything at once.
+     *
+     * @param kind Optional fajta-szűrő (docs/cardio/52 §3.2 D-C1.3) — null means every kind.
      */
-    Page<WorkoutSessionResponse> findPage(Pageable pageable);
+    Page<WorkoutSessionResponse> findPage(Pageable pageable, SessionKind kind);
 
     /**
      * Same as {@link #findPage(Pageable)}, scoped to an explicit user rather

@@ -26,19 +26,26 @@ public class WorkoutSessionController {
 
     private final WorkoutSessionService workoutSessionService;
 
-    @Operation(summary = "List all workout sessions (newest first)")
+    @Operation(summary = "List all workout sessions (newest first)",
+            description = "Optional `kind` (STRENGTH or CARDIO) narrows the list to one session kind; "
+                    + "omitted means every kind (docs/cardio/52-cardio-domain-backend-plan.md §3.2).")
     @GetMapping(params = {"!updatedSince", "!page"})
-    public List<WorkoutSessionResponse> findAll() {
-        return workoutSessionService.findAll();
+    public List<WorkoutSessionResponse> findAll(
+            @Parameter(description = "Optional session-kind filter — omit for every kind")
+            @RequestParam(required = false) SessionKind kind) {
+        return workoutSessionService.findAll(kind);
     }
 
     @Operation(summary = "List workout sessions, paged (newest first)",
             description = "An additive alternative to the unpaged list, for callers that want to "
-                    + "page through a long history instead of pulling everything at once.")
+                    + "page through a long history instead of pulling everything at once. Optional "
+                    + "`kind` narrows the page to one session kind, same as the unpaged list.")
     @GetMapping(params = {"!updatedSince", "page"})
     public Page<WorkoutSessionResponse> findPage(
-            @PageableDefault(size = 20, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return workoutSessionService.findPage(pageable);
+            @PageableDefault(size = 20, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @Parameter(description = "Optional session-kind filter — omit for every kind")
+            @RequestParam(required = false) SessionKind kind) {
+        return workoutSessionService.findPage(pageable, kind);
     }
 
     @Operation(summary = "Delta-sync feed of workout sessions",

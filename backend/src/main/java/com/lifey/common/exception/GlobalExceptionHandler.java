@@ -19,6 +19,7 @@ import com.lifey.trainer.exception.ScheduleInPastException;
 import com.lifey.trainer.exception.ScheduleNotFoundException;
 import com.lifey.trainer.exception.SelfInviteException;
 import com.lifey.trainer.exception.UserNotFoundForInviteException;
+import com.lifey.workout.session.cardio.InvalidCardioRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -185,6 +186,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, "Access denied", request, List.of(), ex);
+    }
+
+    @ExceptionHandler(InvalidCardioRequestException.class)
+    public ResponseEntity<ApiError> handleInvalidCardioRequest(InvalidCardioRequestException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
     }
 
     /**

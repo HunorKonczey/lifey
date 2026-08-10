@@ -6,6 +6,11 @@ import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.session.*;
+import com.lifey.workout.session.cardio.CardioDetails;
+import com.lifey.workout.session.cardio.CardioSplit;
+import com.lifey.workout.session.cardio.InvalidCardioRequestException;
+import com.lifey.workout.session.dto.CardioDetailsRequest;
+import com.lifey.workout.session.dto.CardioSplitRequest;
 import com.lifey.workout.session.dto.ExerciseSetRequest;
 import com.lifey.workout.session.dto.PlannedExerciseRequest;
 import com.lifey.workout.session.dto.WorkoutSessionRequest;
@@ -40,16 +45,24 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<WorkoutSessionResponse> findAll() {
-        return sessionRepository.findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullOrderByStartedAtDesc(currentUserProvider.getUserId()).stream()
+    public List<WorkoutSessionResponse> findAll(SessionKind kind) {
+        Long userId = currentUserProvider.getUserId();
+        List<WorkoutSession> sessions = kind == null
+                ? sessionRepository.findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullOrderByStartedAtDesc(userId)
+                : sessionRepository.findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullAndSessionKindOrderByStartedAtDesc(userId, kind);
+        return sessions.stream()
                 .map(WorkoutSessionMapper::toResponse)
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<WorkoutSessionResponse> findPage(Pageable pageable) {
-        return findPageForUserInternal(currentUserProvider.getUserId(), pageable);
+    public Page<WorkoutSessionResponse> findPage(Pageable pageable, SessionKind kind) {
+        Long userId = currentUserProvider.getUserId();
+        Page<WorkoutSession> page = kind == null
+                ? sessionRepository.findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNull(userId, pageable)
+                : sessionRepository.findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullAndSessionKind(userId, kind, pageable);
+        return page.map(WorkoutSessionMapper::toResponse);
     }
 
     @Override
@@ -84,6 +97,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
 
     @Override
     public WorkoutSessionResponse create(WorkoutSessionRequest request) {
+        validateCardioConsistency(request);
         WorkoutSession session = new WorkoutSession();
         session.setUser(userRepository.getReferenceById(currentUserProvider.getUserId()));
         session.setStartedAt(request.startedAt());
@@ -93,6 +107,9 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         session.setHealthWorkoutId(request.healthWorkoutId());
         session.setRpe(request.rpe());
         session.setFeedbackNote(request.feedbackNote());
+        session.setSessionKind(request.sessionKind() != null ? request.sessionKind() : SessionKind.STRENGTH);
+        session.setActivityType(request.activityType());
+        session.setMovingSeconds(request.movingSeconds());
         if (request.templateId() != null) {
             WorkoutTemplate template = templateRepository.findByIdAndUserId(
                             request.templateId(), currentUserProvider.getUserId())
@@ -103,11 +120,14 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         }
         replacePlannedExercises(session, request);
         replaceSets(session, request.sets());
+        replaceCardioDetails(session, request.cardio());
+        replaceSplits(session, request.splits());
         return WorkoutSessionMapper.toResponse(sessionRepository.save(session));
     }
 
     @Override
     public WorkoutSessionResponse update(Long id, WorkoutSessionRequest request) {
+        validateCardioConsistency(request);
         WorkoutSession session = getOrThrow(id);
         session.setStartedAt(request.startedAt());
         session.setFinishedAt(request.finishedAt());
@@ -116,12 +136,18 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         session.setHealthWorkoutId(request.healthWorkoutId());
         session.setRpe(request.rpe());
         session.setFeedbackNote(request.feedbackNote());
+        session.setSessionKind(request.sessionKind() != null ? request.sessionKind() : SessionKind.STRENGTH);
+        session.setActivityType(request.activityType());
+        session.setMovingSeconds(request.movingSeconds());
         replacePlannedExercises(session, request);
         replaceSets(session, request.sets());
-        // Sets/planned exercises are child rows with no delta feed of their own
-        // (docs/16 §2.3) — a child-only edit could leave every WorkoutSession
-        // scalar field unchanged, so Hibernate's dirty-checking could skip
-        // @PreUpdate. Bump explicitly so it always fires.
+        replaceCardioDetails(session, request.cardio());
+        replaceSplits(session, request.splits());
+        // Sets/planned exercises/cardio details/splits are child rows with no
+        // delta feed of their own (docs/16 §2.3, docs/cardio/52 §4) — a
+        // child-only edit could leave every WorkoutSession scalar field
+        // unchanged, so Hibernate's dirty-checking could skip @PreUpdate.
+        // Bump explicitly so it always fires.
         session.setUpdatedAt(Instant.now());
         return WorkoutSessionMapper.toResponse(session);
     }
@@ -216,5 +242,99 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
     private boolean isComplete(ExerciseSetRequest item) {
         return item.reps() != null && item.reps() > 0
                 && item.weight() != null && item.weight() >= 0;
+    }
+
+    /**
+     * The {@code sessionKind}/{@code activityType}/{@code cardio}/{@code splits}
+     * discriminator invariant — the same one {@code workout_sessions_kind_activity_ck}
+     * (V66) enforces at the DB layer — checked here so a violation gets a clean
+     * 400 instead of bubbling up as a raw constraint-violation 409 from the
+     * flush (docs/cardio/52-cardio-domain-backend-plan.md §3.2). Cross-field,
+     * so Bean Validation can't express it.
+     */
+    private void validateCardioConsistency(WorkoutSessionRequest request) {
+        SessionKind kind = request.sessionKind() != null ? request.sessionKind() : SessionKind.STRENGTH;
+        if (kind == SessionKind.CARDIO) {
+            if (request.activityType() == null) {
+                throw new InvalidCardioRequestException("activityType is required when sessionKind is CARDIO");
+            }
+        } else {
+            if (request.activityType() != null) {
+                throw new InvalidCardioRequestException("activityType must be null unless sessionKind is CARDIO");
+            }
+            if (request.cardio() != null) {
+                throw new InvalidCardioRequestException("cardio must be null unless sessionKind is CARDIO");
+            }
+            if (request.splits() != null && !request.splits().isEmpty()) {
+                throw new InvalidCardioRequestException("splits must be empty unless sessionKind is CARDIO");
+            }
+        }
+    }
+
+    /**
+     * Rebuilds the session's cardio-metrics row from the request. Full-replace,
+     * same model as {@link #replaceSets}/{@link #replacePlannedExercises}: a
+     * null {@code cardio} block clears any existing row (relies on {@code
+     * orphanRemoval}) rather than leaving it as-is — the client always sends
+     * its complete current cardio state, same as it does for sets.
+     */
+    private void replaceCardioDetails(WorkoutSession session, CardioDetailsRequest request) {
+        if (request == null) {
+            session.setCardioDetails(null);
+            return;
+        }
+        CardioDetails details = session.getCardioDetails();
+        if (details == null) {
+            details = new CardioDetails();
+            details.setWorkoutSession(session);
+            session.setCardioDetails(details);
+        }
+        details.setDistanceMeters(request.distanceMeters());
+        details.setElevationGainMeters(request.elevationGainMeters());
+        details.setElevationLossMeters(request.elevationLossMeters());
+        details.setMaxAltitudeMeters(request.maxAltitudeMeters());
+        details.setSteps(request.steps());
+        details.setAvgCadence(request.avgCadence());
+        details.setMaxCadence(request.maxCadence());
+        details.setAvgWatts(request.avgWatts());
+        details.setMaxWatts(request.maxWatts());
+        details.setResistanceLevel(request.resistanceLevel());
+        details.setDeviceCalories(request.deviceCalories());
+        details.setMaxHeartRate(request.maxHeartRate());
+        details.setHrZone1Seconds(request.hrZone1Seconds());
+        details.setHrZone2Seconds(request.hrZone2Seconds());
+        details.setHrZone3Seconds(request.hrZone3Seconds());
+        details.setHrZone4Seconds(request.hrZone4Seconds());
+        details.setHrZone5Seconds(request.hrZone5Seconds());
+        details.setIntensity(request.intensity());
+        details.setVenue(request.venue());
+        details.setGameFormat(request.gameFormat());
+        details.setScorePoints(request.scorePoints());
+        details.setScoreAssists(request.scoreAssists());
+        details.setScoreRebounds(request.scoreRebounds());
+        details.setDistanceSource(request.distanceSource());
+        details.setCaloriesSource(request.caloriesSource());
+        details.setRoutePolyline(request.routePolyline());
+        details.setRoutePointCount(request.routePointCount());
+    }
+
+    /**
+     * Rebuilds the session's split list from the request. Full-replace, same
+     * model as {@link #replaceSets}. Relies on {@code orphanRemoval} to
+     * delete dropped splits.
+     */
+    private void replaceSplits(WorkoutSession session, List<CardioSplitRequest> requested) {
+        session.getSplits().clear();
+        if (requested == null) return;
+        for (CardioSplitRequest item : requested) {
+            CardioSplit split = new CardioSplit();
+            split.setWorkoutSession(session);
+            split.setSplitIndex(item.splitIndex());
+            split.setDistanceMeters(item.distanceMeters());
+            split.setDurationSeconds(item.durationSeconds());
+            split.setElevationDeltaM(item.elevationDeltaM());
+            split.setAvgHeartRate(item.avgHeartRate());
+            session.getSplits().add(split);
+        }
     }
 }

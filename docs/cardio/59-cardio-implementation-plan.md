@@ -115,10 +115,10 @@ Négy szabály döntötte el a lépések sorrendjét — ha valamit előre akars
 
 | # | Lépés | Fájlok | Kész-ha |
 |---|---|---|---|
-| **C1.1** | V66 migráció: `session_kind`, `activity_type`, `moving_seconds` + CHECK + parciális index; entitás-mezők | `db/migration/V66__*.sql`, `WorkoutSession.java` | Meglévő sorok `STRENGTH`-ek; a CHECK sértése elbukik (teszt) |
-| **C1.2** | V67 `cardio_details` + `CardioDetails` entitás (1:1) | `V67__*.sql`, `cardio/CardioDetails.java` | Cascade-törlés működik |
-| **C1.3** | V68 `cardio_splits` + `CardioSplit` entitás | `V68__*.sql`, `cardio/CardioSplit.java` | Egyedi `(session, index)`; a splitek kliensről jönnek, nem itt számolódnak |
-| **C1.4** | DTO-bővítés + mapper + **keresztmezős validáció** + `?kind=` szűrő + **`updatedAt`-bump** | `dto/`, `WorkoutSessionMapper`, `service/WorkoutSessionServiceImpl`, `WorkoutSessionController` | Régi kliens payloadja `STRENGTH`-et ad; `exercises: []` sosem null; **„csak a cardio-blokk változott” → a session `updatedAt`-je nő és megjelenik a deltában** ([52 §4](52-cardio-domain-backend-plan.md)); Postman frissítve |
+| **C1.1** ✅ | V66 migráció: `session_kind`, `activity_type`, `moving_seconds` + CHECK + parciális index; entitás-mezők | `db/migration/V66__*.sql`, `WorkoutSession.java` | Meglévő sorok `STRENGTH`-ek; a CHECK sértése elbukik (teszt) |
+| **C1.2** ✅ | V67 `cardio_details` + `CardioDetails` entitás (1:1) | `V67__*.sql`, `cardio/CardioDetails.java` | Cascade-törlés működik |
+| **C1.3** ✅ | V68 `cardio_splits` + `CardioSplit` entitás | `V68__*.sql`, `cardio/CardioSplit.java` | Egyedi `(session, index)`; a splitek kliensről jönnek, nem itt számolódnak |
+| **C1.4** ✅ | DTO-bővítés + mapper + **keresztmezős validáció** + `?kind=` szűrő + **`updatedAt`-bump** | `dto/`, `WorkoutSessionMapper`, `service/WorkoutSessionServiceImpl`, `WorkoutSessionController` | Régi kliens payloadja `STRENGTH`-et ad; `exercises: []` sosem null; **„csak a cardio-blokk változott” → a session `updatedAt`-je nő és megjelenik a deltában** ([52 §4](52-cardio-domain-backend-plan.md)); Postman frissítve |
 
 **Mobil adatréteg (C1.5)**
 
@@ -295,5 +295,159 @@ nincs sablon ([51 §5](51-cardio-overview-plan.md)). `flutter analyze` teljes pr
 
 `flutter analyze` teljes projektre és a teljes `flutter test` (652 teszt, +7 az új
 `recommended_template_provider_test.dart`-ból) tiszta — nulla regresszió. Ezzel a **teljes C0
-iteráció kész.** **Következő: `C1.1`** — a backend V66 migráció (`session_kind`,
-`activity_type`, `moving_seconds` + CHECK + parciális index).
+iteráció kész.**
+
+`C1.1` is kész (2026-08-10) — **ez az első lépés, ami valódi cardio-sémát visz be.**
+`V66__cardio_session_kind.sql`: `session_kind varchar(16) not null default 'STRENGTH'`,
+`activity_type varchar(32)` (nullable), `moving_seconds integer` (nullable),
+`workout_sessions_kind_activity_ck` CHECK (a séma szintjén kényszeríti a D-C1 diszkriminátor
+invariánsát: `CARDIO` ⇔ van `activity_type`), és egy parciális index
+(`idx_workout_sessions_user_kind_started`, `where deleted_at is null`) a jövőbeli fajta-szűrt
+listákhoz. A `WorkoutSession` entitás megkapta a három mezőt, a `sessionKind` Java-oldali
+`STRENGTH` alapértékkel (a DB `default`-jával összhangban).
+
+Új Testcontainers-alapú migrációs teszt (`CardioSessionKindMigrationTest`, a meglévő
+`UpcomingSessionRegressionTest` mintáját követve): egy `session_kind` nélküli insert
+`'STRENGTH'`-re és `activity_type IS NULL`-ra fut le; `CARDIO` + `activity_type` együtt elfogadott;
+`CARDIO` + hiányzó `activity_type`, illetve `STRENGTH` + kitöltött `activity_type` mindkettő
+`SQLException`-t dob a CHECK-nevére hivatkozva. **Ezt a tesztet nem tudtam ebben a sandboxban
+lefuttatni** — a Docker daemon nem fut (a Rancher Desktop CLI jelen van, de a VM nincs indítva), és
+a Testcontainers ehhez valódi Dockert igényel; a teszt viszont fordul (`mvn test-compile` zöld), és
+a `UpcomingSessionRegressionTest`-tel azonos, már bevált mintát követi. A gyors, Docker nélküli
+`WorkoutSessionControllerTest` (11 teszt, `@WebMvcTest`) lefutott és zöld — az entitás-bővítés nem
+tört el semmit a kontroller-rétegen. `mvn compile` és `mvn test-compile` mindkettő tiszta.
+**A CI-ben (ahol fut Docker) ellenőrizendő, hogy `CardioSessionKindMigrationTest` ténylegesen zöld.**
+
+`C1.2` is kész (2026-08-10) — `V67__cardio_details.sql` + a `CardioDetails` entitás.
+
+A tábla és az entitás bitre a [52 §2.2/§3.1](52-cardio-domain-backend-plan.md) szerint épült, **egy
+tudatos eltéréssel**: a doksi eredeti SQL-vázlata `created_at`/`updated_at` oszlopot is javasolt a
+táblán, de a meglévő gyerektáblák (`workout_session_exercises`, `program_workouts`) egyike sem visz
+ilyet — csak a **top-level**, önmagában szinkronizálandó táblák (`training_programs`) kapnak
+saját időbélyeget. Mivel a `cardio_details` sosem szinkronizálódik önállóan (csak a szülő
+`workout_sessions.updated_at` számít, [52 §4](52-cardio-domain-backend-plan.md)), a saját
+időbélyeg holt súly lett volna — kihagytam, a bevett gyerektábla-mintát követve.
+
+A `WorkoutSession.java`-t **nem** bővítettem az inverz `@OneToOne(mappedBy = "workoutSession")`
+mezővel — ez a C1.2 fájllistájában sem szerepelt, és a mapper/DTO-munkával (C1.4) egy időben lesz
+értelme bekötni. A `CardioDetails` addig is önállóan perzisztálható és lekérdezhető az owning
+oldali `@OneToOne`-on keresztül.
+
+Új teszt: `CardioDetailsTest` (`com.lifey.workout.session.cardio`), Testcontainerrel valódi
+Postgres ellen — teljes mezőkör írás/olvasás, minden family-specifikus oszlop nullable (egy üresen
+induló cardio session ne bukjon el NOT NULL miatt), az 1:1 egyediség, mindkét CHECK constraint
+(`intensity`, `venue`), és a hard-delete cascade (raw SQL DELETE-tel, mert az app csak
+soft-delete-el — ez a jövőbeli hard-delete útvonalak védőhálója). Egy technikai csapdát menet
+közben javítottam: a `BaseEntity` `GenerationType.IDENTITY`-je miatt Hibernate a beszúrást
+azonnal `persist()`-kor végrehajtja (nem tudja batch-elni), tehát a constraint-sértés már a
+`persist()` hívásán dobódik, nem a később hívott `flush()`-on — az `assertThatThrownBy`-t ennek
+megfelelően a `persist()` köré tettem, `PersistenceException` + `hasStackTraceContaining` páros
+(nem `DataIntegrityViolationException`/`hasMessageContaining`), mert egy nyers `EntityManager`
+nem megy át a Spring Data repository-k kivétel-fordító AOP rétegén, és a Postgres hibaszöveg
+Hibernate becsomagolása után nem biztos, hogy a legfelső kivétel `getMessage()`-ében van — a teljes
+stack trace (a „Caused by” lánccal együtt) viszont mindig tartalmazza.
+
+**Ugyanaz a korlát, mint C1.1-nél: ezt a tesztet sem tudtam lefuttatni** (nincs futó Docker
+daemon ebben a sandboxban). Amit igazolni tudtam: `mvn compile` és `mvn test-compile` mindkettő
+tiszta, a gyors `WorkoutSessionControllerTest` (11 teszt, nem igényel Dockert) továbbra is zöld.
+**A CI-ben ellenőrizendő, hogy `CardioSessionKindMigrationTest` és `CardioDetailsTest` ténylegesen
+zöld** — utóbbinál különös figyelemmel a fenti kivétel-típus feltételezésre.
+
+`C1.3` is kész (2026-08-10) — `V68__cardio_splits.sql` + a `CardioSplit` entitás.
+
+Bitre a [52 §2.3](52-cardio-domain-backend-plan.md) szerint: `(workout_session_id, split_index)`
+egyedi constraint (a splitek 0-tól indexeltek, kliensen számolódnak záráskor, és a szerver sosem
+származtatja őket — nincs is miből, a nyers GPS-pontok sosem érnek fel a szerverre,
+[52 D-C1.2](52-cardio-domain-backend-plan.md)). A `cardio_details`-nél megkezdett mintát követve
+**itt sincs** `created_at`/`updated_at` (tiszta gyerektábla, sosem szinkronizálódik önállóan) —
+ez most már konzisztens a két táblán, tehát nem eltérés, hanem a C1.2-ben lefektetett szabály
+követése. A `WorkoutSession.java` `splits` mezőjét itt sem kötöttem be — az is C1.4-re marad, a
+`cardioDetails` mezővel egy időben.
+
+Új teszt: `CardioSplitTest`, a `CardioDetailsTest` szerkezetét követve — teljes mezőkör
+írás/olvasás, opcionális mezők (szintváltozás, pulzus) nullable-ellenőrzése, több split
+egy session-ön belül (JPQL-lekérdezéssel visszaolvasva, sorrend-ellenőrzéssel), **azonos
+split-index két különböző session-ön nem ütközik** (a composite unique valóban session-re
+szűkített, nem globális), azonos split-index ugyanazon session-ön belül **igen** ütközik
+(`PersistenceException` + a constraint neve a stack trace-ben, ugyanaz a mintázat, mint
+`CardioDetailsTest`-ben), és a hard-delete cascade.
+
+**Ugyanaz a korlát, mint C1.1/C1.2-nél: ezt a tesztet sem tudtam lefuttatni** (nincs futó Docker
+daemon ebben a sandboxban). `mvn compile` és `mvn test-compile` mindkettő tiszta, a gyors
+`WorkoutSessionControllerTest` (11 teszt) továbbra is zöld. **A CI-ben ellenőrizendő, hogy
+`CardioSplitTest` ténylegesen zöld** — ugyanazzal a fenntartással, mint `CardioDetailsTest`-nél.
+
+Ezzel a **backend séma-munka (C1.1–C1.3) kész** — `workout_sessions` diszkriminátora,
+`cardio_details`, `cardio_splits` mind megvan.
+
+`C1.4` is kész (2026-08-10) — **ez volt a legnagyobb C1-es lépés**, ez teszi a cardio adatot
+először elérhetővé a REST API-n. Amit tartalmaz:
+
+- **`WorkoutSession.java`** végre bekapcsolva a `cardioDetails` (`@OneToOne`) és `splits`
+  (`@OneToMany`, `splitIndex` szerint rendezve) mezőkkel — ez volt a C1.2/C1.3-ban tudatosan
+  elhalasztott rész.
+- **4 új DTO**: `CardioDetailsRequest`/`Response`, `CardioSplitRequest`/`Response` — bitre a
+  [52 §2.2/§2.3](52-cardio-domain-backend-plan.md) szerinti mezőkör, `@PositiveOrZero`/`@Min`/`@Max`
+  Bean Validationnel a fizikai mennyiségeken.
+- **`WorkoutSessionRequest`/`Response`** additív bővítés (`sessionKind`, `activityType`,
+  `movingSeconds`, `cardio`, `splits`) — a meglévő mezők **sorrendje és jelentése változatlan**.
+- **Keresztmezős validáció**: `InvalidCardioRequestException` (400) — `CARDIO` ⇔ van
+  `activityType`; `STRENGTH` esetén `activityType`/`cardio` null és `splits` üres. Ugyanazt az
+  invariánst kényszeríti, mint a V66 CHECK constraint, csak a service-ben, hogy tiszta 400-at
+  adjon egy nyers 409 helyett.
+- **`?kind=` szűrő**: két új repository-metódus (`...AndSessionKindOrderByStartedAtDesc`,
+  `...AndSessionKind`) — **additív**, a meglévő szűretlen metódusok és az őket használó tesztek
+  érintetlenek. A delta-sync végpont (`findDelta`) **szándékosan nem** kapott szűrőt
+  ([52 §3.2 D-C1.3](52-cardio-domain-backend-plan.md)). A `findPageForUser` (edzői nézet) sem —
+  az a web-oldali C1w-re marad.
+- **`updatedAt`-bump**: a `WorkoutSessionServiceImpl.update()` már **eleve feltétel nélkül**
+  bumpolt minden hívásnál (`session.setUpdatedAt(Instant.now())`, függetlenül attól, mi
+  változott) — ez a legkockázatosabb pont a [52 §4](52-cardio-domain-backend-plan.md) szerint, de
+  a meglévő kód szerkezete miatt **nem kellett új feltételes logika**: elég volt a
+  `replaceCardioDetails`/`replaceSplits` hívást ugyanabba a feltétel nélküli útba tenni, mint a
+  `replaceSets`/`replacePlannedExercises`-t.
+- **Postman-kollekció** frissítve: „Log a cardio session (example)” és „List cardio workout
+  sessions (kind filter, example)” új kérés, a „List workout sessions” leírása kiegészítve.
+
+**Fontos, tervtől eltérő döntés a `cardio` blokk update-szemantikájára**: a request **teljes
+csere**, nem részleges patch — egy `cardio: null` update **törli** a meglévő cardio-adatokat,
+ugyanúgy, ahogy egy üres `sets: []` törli a szetteket. Ezt a doksik nem mondták ki explicit
+módon, de a meglévő `replaceSets`/`replacePlannedExercises` minta (mindig `.clear()` + újraépítés)
+ezt sugallja, és a mobil kliens úgyis mindig a teljes aktuális állapotot küldi — ez dokumentálva
+van a service kódjában és egy dedikált teszttel (`update_nullCardioBlockClearsAnExistingCardioDetailsRow`).
+
+**Tesztek** (a legkritikusabb pont, a bump-szabály, Mockitóval **ténylegesen lefuttatva**, nem
+csak megírva):
+- `WorkoutSessionServiceImplTest` — 10 új teszt: cardio create teljes round-trip, `sessionKind`
+  hiánya → `STRENGTH` a válaszban, mind a négy keresztmezős validációs hiba, **`update_cardioOnlyEditBumpsParentUpdatedAt`**
+  (a `update_childOnlyEditBumpsParentUpdatedAt` pontos cardio-párja), a meglévő `CardioDetails`
+  sor újrahasznosítása update-kor (nem duplikátum), a null-cardio törlés, a splits teljes csere.
+  **Mind a 31 teszt (21 régi + 10 új) lefutott és zöld** — ez pure-Mockito teszt, nem igényel
+  Dockert.
+- `WorkoutSessionKindFilterRepositoryTest` (új, Testcontainers) — a `?kind=` szűrt derived-query
+  metódusok valódi Postgres ellen, mert egy Mockitós teszt nem kapná el, ha a metódusnév elgépelve
+  rossz SQL-t generálna.
+
+**Ugyanaz a korlát, mint C1.1–C1.3-nál: a Testcontainers-teszteket (`WorkoutSessionKindFilterRepositoryTest`,
+és a C1.1–C1.3-ban írt három) nem tudtam lefuttatni** (nincs Docker daemon). Amit igazolni tudtam:
+`mvn clean compile` és `mvn clean test-compile` mindkettő tiszta; a három Docker-mentes
+tesztosztály (`WorkoutSessionControllerTest` 11, `TrainerClientDataControllerTest` 25,
+`WorkoutSessionServiceImplTest` 31 — összesen 67 teszt) mind lefutott és zöld, beleértve a
+`TrainerClientDataControllerTest`-et is, amit nem szándékoztam módosítani, de a
+`WorkoutSessionResponse` mezőbővítése miatt frissíteni kellett a benne lévő 3 pozíciós
+konstruktor-hívást. **A CI-ben ellenőrizendő mind a négy Testcontainers-teszt** (a három korábbi +
+`WorkoutSessionKindFilterRepositoryTest`).
+
+**Javítás (2026-08-10):** tévesen `C2.1`-et jelöltem következőnek — a C1 iteráció **nem ért
+véget** a backenddel. C1.5–C1.9 (mobil adatréteg + kézi rögzítés) is a C1-hez tartozik, csak más
+fájlokban; ezek nélkül a backend cardio API-nak nincs semmilyen mobil fogyasztója. A helyes
+folytatás:
+
+**Következő: `C1.5`** — Drift-táblák + séma-migráció + domain-bővítés (`sessionKind`,
+`activityType`, `movingSeconds`, `cardio`, `splits` a `WorkoutSession` Dart-modellen) +
+repository (create/update/pull, payload-builder, outbox-bump) + `watchByKind` + `CardioFormatter`.
+Ez a mobil oldali párja a backend C1.1–C1.4-nek — a `STRENGTH` payloadnak **bájtra azonosnak**
+kell maradnia (regressziós teszt).
+
+A `C2.1` (`CardioSessionScreen` váz) csak **C1.5–C1.9 után** jön — a C2 (élő cardio) a C1.5-ös
+Drift-adatrétegre épül, ami még nincs meg.
