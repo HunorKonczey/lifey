@@ -173,6 +173,7 @@ class WorkoutSession {
     this.sessionKind = 'STRENGTH',
     this.activityType,
     this.movingSeconds,
+    this.movingSinceEpochMs,
     this.cardio,
     this.splits = const [],
   });
@@ -253,8 +254,19 @@ class WorkoutSession {
   /// Time actually spent moving, in seconds — the wall-clock span minus
   /// pauses and auto-pause gaps (docs/cardio/56-cardio-statistics-plan.md
   /// D-C3.3). Null for a STRENGTH session, where [effectiveDuration] already
-  /// is the wall-clock span.
+  /// is the wall-clock span. While [isCardioRunning], this is the total
+  /// *before* the current running interval — see [movingSinceEpochMs] and
+  /// `liveMovingSeconds` (docs/cardio/59-cardio-implementation-plan.md C2.1).
   final int? movingSeconds;
+
+  /// Epoch-ms checkpoint for a **live** `CardioSessionScreen` — non-null
+  /// exactly while the session is actively moving (not paused, not
+  /// finished). Client-only, never synced — see the Drift column doc
+  /// (`core/local_db/tables/workout_session_tables.dart`) for the full
+  /// rationale. Use `liveMovingSeconds` to read the current total; don't add
+  /// this to [movingSeconds] directly, since that skips the "already
+  /// finished" / "still absent" guards the helper applies.
+  final int? movingSinceEpochMs;
 
   /// Cardio metrics; non-null only when [isCardio] and at least one metric
   /// was recorded.
@@ -264,6 +276,10 @@ class WorkoutSession {
   final List<CardioSplit> splits;
 
   bool get inProgress => startedAt != null && finishedAt == null;
+
+  /// True while a live `CardioSessionScreen` has this session actively
+  /// moving — i.e. not paused, and not finished. See [movingSinceEpochMs].
+  bool get isCardioRunning => inProgress && movingSinceEpochMs != null;
 
   /// True for a cardio/sport session — see [sessionKind].
   bool get isCardio => sessionKind == 'CARDIO';
@@ -285,6 +301,20 @@ class WorkoutSession {
       return finishedAt!.difference(startedAt!);
     }
     return null;
+  }
+
+  /// Current moving seconds for a **live** cardio session, folding in the
+  /// still-ticking interval when [isCardioRunning] — read this instead of
+  /// [movingSeconds] directly whenever the number needs to be accurate to
+  /// the second (every `CardioSessionScreen` ticker frame). When not
+  /// currently running (paused, finished, or never started), this is just
+  /// [movingSeconds] (or 0 if that's also null — a session that hasn't
+  /// moved yet).
+  int liveMovingSeconds(DateTime now) {
+    final base = movingSeconds ?? 0;
+    final since = movingSinceEpochMs;
+    if (since == null) return base;
+    return base + now.difference(DateTime.fromMillisecondsSinceEpoch(since)).inSeconds;
   }
 
   /// Trainer-scheduled and not yet started — shows in the "Közelgő" section

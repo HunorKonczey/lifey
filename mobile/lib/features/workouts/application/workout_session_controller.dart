@@ -63,6 +63,83 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
     );
   }
 
+  /// Starts a **live** cardio session — `CardioSessionScreen`
+  /// (docs/cardio/59-cardio-implementation-plan.md C2.1). Begins already
+  /// `RUNNING`: `movingSinceEpochMs` is set to [startedAt]'s own epoch, so
+  /// the very first tick already counts. Returns the new session's clientId.
+  Future<String> startCardioSession({
+    required DateTime startedAt,
+    required String activityType,
+  }) {
+    return _repo.create(
+      startedAt: startedAt,
+      exercises: const [],
+      sets: const [],
+      sessionKind: 'CARDIO',
+      activityType: activityType,
+      movingSeconds: 0,
+      movingSinceEpochMs: startedAt.millisecondsSinceEpoch,
+    );
+  }
+
+  /// Pauses a running cardio session: folds the just-finished running
+  /// interval into `movingSeconds` and clears the checkpoint.
+  /// [movingSeconds] is the caller's already-computed total (typically
+  /// `WorkoutSession.liveMovingSeconds(DateTime.now())` at the moment of
+  /// pausing) — resolving "now" is the caller's job, not the repository's,
+  /// so this stays trivially testable without a fake clock.
+  Future<void> pauseCardioSession(
+    String clientId, {
+    required DateTime startedAt,
+    required int movingSeconds,
+  }) {
+    return _repo.update(
+      clientId,
+      startedAt: startedAt,
+      exercises: const [],
+      sets: const [],
+      movingSeconds: Value(movingSeconds),
+      movingSinceEpochMs: const Value(null),
+    );
+  }
+
+  /// Resumes a paused cardio session: opens a new running interval at
+  /// [resumedAt]. `movingSeconds` is left untouched (absent) — it already
+  /// holds the total accumulated up to the pause.
+  Future<void> resumeCardioSession(
+    String clientId, {
+    required DateTime startedAt,
+    required DateTime resumedAt,
+  }) {
+    return _repo.update(
+      clientId,
+      startedAt: startedAt,
+      exercises: const [],
+      sets: const [],
+      movingSinceEpochMs: Value(resumedAt.millisecondsSinceEpoch),
+    );
+  }
+
+  /// Finishes a cardio session: folds any still-running interval into the
+  /// final `movingSeconds` total (same caller-computes-"now" convention as
+  /// [pauseCardioSession]) and sets [finishedAt].
+  Future<void> finishCardioSession(
+    String clientId, {
+    required DateTime startedAt,
+    required DateTime finishedAt,
+    required int movingSeconds,
+  }) {
+    return _repo.update(
+      clientId,
+      startedAt: startedAt,
+      finishedAt: finishedAt,
+      exercises: const [],
+      sets: const [],
+      movingSeconds: Value(movingSeconds),
+      movingSinceEpochMs: const Value(null),
+    );
+  }
+
   Future<void> updateSession(
     String clientId, {
     required DateTime startedAt,

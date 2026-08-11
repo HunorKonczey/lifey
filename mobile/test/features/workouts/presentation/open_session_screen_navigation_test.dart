@@ -8,6 +8,7 @@ import 'package:lifey/features/workouts/application/exercise_controller.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/exercise.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
+import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
 import 'package:lifey/features/workouts/presentation/log_session_screen.dart';
 import 'package:lifey/features/workouts/presentation/open_workout_screens.dart';
@@ -17,6 +18,11 @@ import 'package:lifey/l10n/app_localizations.dart';
 /// actually branches — the TODO left since C0.4 is resolved here. See
 /// docs/cardio/59-cardio-implementation-plan.md C1.9 — kész-ha "a mentett
 /// edzés megnyitható és olvasható".
+///
+/// C2.1 refines the CARDIO branch further: `inProgress` now also decides
+/// between the live [CardioSessionScreen] and the read-only
+/// [CardioSummaryScreen] (previously the only cardio destination, since no
+/// cardio session could be in-progress yet).
 
 class _FakeSessions extends WorkoutSessionController {
   @override
@@ -67,7 +73,8 @@ void main() {
   setUp(resetOpenWorkoutScreens);
   tearDown(resetOpenWorkoutScreens);
 
-  testWidgets('a CARDIO session opens the read-only CardioSummaryScreen', (tester) async {
+  testWidgets('a finished CARDIO session opens the read-only CardioSummaryScreen',
+      (tester) async {
     final session = WorkoutSession(
       clientId: 'c1',
       exercises: const [],
@@ -82,6 +89,29 @@ void main() {
     await _pumpAndOpen(tester, session);
 
     expect(find.byType(CardioSummaryScreen), findsOneWidget);
+    expect(find.byType(CardioSessionScreen), findsNothing);
+    expect(find.byType(LogSessionScreen), findsNothing);
+  });
+
+  testWidgets('an in-progress CARDIO session opens the live CardioSessionScreen',
+      (tester) async {
+    final session = WorkoutSession(
+      clientId: 'c3',
+      exercises: const [],
+      sets: const [],
+      startedAt: DateTime.now().subtract(const Duration(minutes: 10)),
+      sessionKind: 'CARDIO',
+      activityType: 'RUNNING',
+      movingSeconds: 0,
+      movingSinceEpochMs: DateTime.now()
+          .subtract(const Duration(minutes: 10))
+          .millisecondsSinceEpoch,
+    );
+
+    await _pumpAndOpen(tester, session);
+
+    expect(find.byType(CardioSessionScreen), findsOneWidget);
+    expect(find.byType(CardioSummaryScreen), findsNothing);
     expect(find.byType(LogSessionScreen), findsNothing);
   });
 

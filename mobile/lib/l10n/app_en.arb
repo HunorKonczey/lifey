@@ -3370,5 +3370,37 @@
   "paceLabel": "PACE",
   "@paceLabel": {
     "description": "Secondary-metric label for a DISTANCE-family cardio session"
+  },
+  "cardioSessionPausedLabel": "Paused",
+  "@cardioSessionPausedLabel": {
+    "description": "Status label on the live CardioSessionScreen while paused"
+  },
+  "cardioSessionFinishedLabel": "Finished",
+  "@cardioSessionFinishedLabel": {
+    "description": "Status label on the live CardioSessionScreen once the workout is finished"
+  },
+  "pauseButtonLabel": "Pause",
+  "@pauseButtonLabel": {
+    "description": "Button that pauses a running cardio session"
+  },
+  "resumeButtonLabel": "Resume",
+  "@resumeButtonLabel": {
+    "description": "Button that resumes a paused cardio session"
+  },
+  "finishButtonLabel": "Finish",
+  "@finishButtonLabel": {
+    "description": "Button that ends a live cardio session"
+  },
+  "finishCardioConfirmTitle": "Finish workout?",
+  "@finishCardioConfirmTitle": {
+    "description": "Title of the confirm dialog before ending a live cardio session"
+  },
+  "finishCardioConfirmMessage": "This ends the session and saves your moving time.",
+  "@finishCardioConfirmMessage": {
+    "description": "Body of the confirm dialog before ending a live cardio session"
+  },
+  "couldNotUpdateWorkoutMessage": "Couldn't update the workout. Please try again.",
+  "@couldNotUpdateWorkoutMessage": {
+    "description": "Snackbar shown when a live cardio session's pause/resume/finish write fails"
   }
 }

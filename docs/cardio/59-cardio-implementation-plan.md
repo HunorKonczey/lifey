@@ -43,9 +43,10 @@ C6+ iterációk kódolása elindulhat.
 | M17 · M18 | Kézi rögzítés — DISTANCE · GAME | C1.8, C1.9 |
 | M19 · M20 | Edzéslista mind a hét típussal · fajta-szűrő | C1.6, C1.7 |
 | M21 · M22 | Statisztika vegyes hét · nincs adat erre a fajtára | C3.3, C3.4 |
-| M23 · M24 · M25 | iOS Live Activity · Dynamic Island · Android tartós értesítés | C2.9, C2.10 |
+| M23 · M24 | iOS Live Activity · Dynamic Island | C2.9, **C2.10b** |
+| M25 | Android tartós értesítés | C2.9, **C2.10a** |
 | M26 · M27 · M28 | Engedély-magyarázó · megtagadva · véglegesen megtagadva / pontatlan | C4a.2 |
-| M29 | Kezdőképernyő-widget (közepes + kicsi) | C2.11 |
+| M29 | Kezdőképernyő-widget (közepes + kicsi) | **C2.11a**, **C2.11b** |
 | M30 · M31 · M32 | Világos téma + angol minta | **minden UI-lépés kilépési feltétele** |
 | W01 · W02 | Web `ActivityChip` · web lista-sor | C1w.2, C1w.3 |
 | AW 16 / W 15 | Egyesített indító lista | C5.4 |
@@ -137,21 +138,32 @@ Négy szabály döntötte el a lépések sorrendjét — ha valamit előre akars
 
 ---
 
-## 5. C2 — Élő cardio, gyorsindítás, élő felületek (11 lépés) · MF3
+## 5. C2 — Élő cardio, gyorsindítás, élő felületek (13 lépés) · MF3
 
-| # | Lépés | Frame | Kész-ha |
-|---|---|---|---|
-| **C2.1** | `CardioSessionScreen` váz: állapotgép (`IDLE→RUNNING⇄PAUSED→ENDING→SUMMARY`), ticker, **minden állapotváltás driftbe írva** | – | App-kilövés után az edzés helyreáll a pontos mozgásidővel |
-| **C2.2** | DISTANCE elrendezés + a **„nincs távforrás”** ág (domináns szám időre vált) | **M04**, **M11** | A domináns szám a [57 §2](57-cardio-design-prompt.md) szabálya szerint vált; nincs „0,00 km” nagy helyen |
-| **C2.3** | MACHINE elrendezés | **M05** | Kadencia/teljesítmény/ellenállás bevihető menet közben |
-| **C2.4** | GAME elrendezés + **pályán/padon kapcsoló** (a `movingSeconds` csak „pályán” nő) | **M06**, **M07** | A játékidő és a bruttó idő külön viselkedik (teszt); *(Q-D2 döntés kell a pontszámlálóhoz)* |
-| **C2.5** | Szünet-állapotok (kézi vs. **auto-pause vizuálisan elkülönítve**) + befejezés húzással | **M08**, **M09**, **M12** | Az auto-pause más, mint a kézi; a befejezés koppintásra **nem** történik meg |
-| **C2.6** | `activity_ranking.dart` — recency-súlyozott rangsor (21 napos felezés), tisztán tesztelhető | – | Felezés, döntetlen-feloldás, hidegindítás, vegyes lista mind tesztelve ([53 §3.4](53-cardio-mobile-plan.md)) |
-| **C2.7** | Gyorsindító lap a FAB hosszú nyomására + „Összes” aktivitás-választó | **M01**, **M02**, **M03** | Hosszú nyomás + egy koppintás = fut az edzés, köztes képernyő nélkül |
-| **C2.8** | Összegzés-képernyő (útvonal nélküli változat) + RPE + kézi szerkesztés „szerkesztve” jelöléssel | **M15**, **M14** | A szerkesztett érték felülírja a mértet, és jelölve marad ([51 R8](51-cardio-overview-plan.md)) |
-| **C2.9** | `WorkoutSessionState` `kind`+`cardio` bővítés (előformázott stringek, epoch-alapú idő) | – | Régi natív build a `STRENGTH` ágra esik vissza, nem törik |
-| **C2.10** | iOS Live Activity + Dynamic Island cardio-layout · Android tartós értesítés | **M23**, **M24**, **M25** | Nem „0 szett” látszik; frissítés ≤ 5 mp és csak változásra |
-| **C2.11** | Deep-link route + dinamikus app-shortcutok (natív híd) + kezdőképernyő-widget gombok | **M29** | App-ikon hosszú nyomásából **egy** gesztussal indul az edzés |
+C2.1–C2.9 tiszta Flutter/Dart — natív platform-kód nélkül, **Windowson is fejleszthető és
+tesztelhető** (ugyanúgy, ahogy a C0/C1 eddig ment). C2.10 és C2.11 viszont platformspecifikus
+natív kódot is visz (iOS: Swift/SwiftUI a `LifeyWidgets` Xcode-targetben — [24-es
+doc](../24-ios-widget-live-activity-plan.md); Android: Kotlin — [25-ös
+doc](../25-android-widget-ongoing-notification-plan.md)), ezért mindkettő **a/b lépésre bontva**:
+az **a** ág Android + a platformfüggetlen Dart-rész, Windowson kész; a **b** ág iOS, **Xcode-ot,
+tehát Mac-et igényel**. A kész-ha ettől függetlenül lépésenként külön áll — az a/b nem egy
+lépés két fele, hanem két önálló, egymástól függetlenül szállítható lépés.
+
+| # | Lépés | Platform | Frame | Kész-ha |
+|---|---|---|---|---|
+| **C2.1** ✅ | `CardioSessionScreen` váz: állapotgép (`IDLE→RUNNING⇄PAUSED→ENDING→SUMMARY`), ticker, **minden állapotváltás driftbe írva** | Windows | – | App-kilövés után az edzés helyreáll a pontos mozgásidővel |
+| **C2.2** | DISTANCE elrendezés + a **„nincs távforrás”** ág (domináns szám időre vált) | Windows | **M04**, **M11** | A domináns szám a [57 §2](57-cardio-design-prompt.md) szabálya szerint vált; nincs „0,00 km” nagy helyen |
+| **C2.3** | MACHINE elrendezés | Windows | **M05** | Kadencia/teljesítmény/ellenállás bevihető menet közben |
+| **C2.4** | GAME elrendezés + **pályán/padon kapcsoló** (a `movingSeconds` csak „pályán” nő) | Windows | **M06**, **M07** | A játékidő és a bruttó idő külön viselkedik (teszt); *(Q-D2 döntés kell a pontszámlálóhoz)* |
+| **C2.5** | Szünet-állapotok (kézi vs. **auto-pause vizuálisan elkülönítve**) + befejezés húzással | Windows | **M08**, **M09**, **M12** | Az auto-pause más, mint a kézi; a befejezés koppintásra **nem** történik meg |
+| **C2.6** | `activity_ranking.dart` — recency-súlyozott rangsor (21 napos felezés), tisztán tesztelhető | Windows | – | Felezés, döntetlen-feloldás, hidegindítás, vegyes lista mind tesztelve ([53 §3.4](53-cardio-mobile-plan.md)) |
+| **C2.7** | Gyorsindító lap a FAB hosszú nyomására + „Összes” aktivitás-választó | Windows | **M01**, **M02**, **M03** | Hosszú nyomás + egy koppintás = fut az edzés, köztes képernyő nélkül |
+| **C2.8** | Összegzés-képernyő (útvonal nélküli változat) + RPE + kézi szerkesztés „szerkesztve” jelöléssel | Windows | **M15**, **M14** | A szerkesztett érték felülírja a mértet, és jelölve marad ([51 R8](51-cardio-overview-plan.md)) |
+| **C2.9** | `WorkoutSessionState` `kind`+`cardio` bővítés (előformázott stringek, epoch-alapú idő) | Windows | – | Régi natív build a `STRENGTH` ágra esik vissza, nem törik |
+| **C2.10a** | Android tartós értesítés cardio-layout | Windows | **M25** | Nem „0 szett” látszik az Android értesítésben; frissítés csak változásra |
+| **C2.10b** | iOS Live Activity + Dynamic Island cardio-layout | **Mac** | **M23**, **M24** | Nem „0 szett” látszik a zárolási képernyőn / Dynamic Islanden; frissítés ≤ 5 mp és csak változásra (ActivityKit-kvóta) |
+| **C2.11a** | Deep-link route (`go_router`) + Android dinamikus app-shortcutok (`ShortcutManager`, natív híd) + Android kezdőképernyő-widget gombok | Windows | **M29** | Android app-ikon hosszú nyomásából / widgetből **egy** gesztussal indul az edzés; a route C2.11b-nek is kész célpont |
+| **C2.11b** | iOS dinamikus app-shortcutok (`UIApplicationShortcutItem`, natív híd) + iOS kezdőképernyő-widget gombok | **Mac** | **M29** | iOS app-ikon hosszú nyomásából / widgetből **egy** gesztussal indul az edzés |
 
 ---
 
@@ -239,12 +251,12 @@ külön teszt tartozik, nem csak kézi ellenőrzés:
 |---|---|---|
 | C0 | 5 | MF1 |
 | C1 | 9 | MF2 |
-| C2 | 11 | MF3 |
+| C2 | 13 (11 Windowson, 2 Mac-en: C2.10b, C2.11b) | MF3 |
 | C3 · C1w · C3w | 5 + 4 + 1 | MF4 |
 | C4a · C5 | 6 + 7 | MF5 |
 | C6–C9 | iterációnként 4–6 | MF6 |
 
-**Összesen ~48 lépés az MF5-ig**, plusz a sport-specifikumok. A javasolt vágási pont, ha
+**Összesen ~50 lépés az MF5-ig**, plusz a sport-specifikumok. A javasolt vágási pont, ha
 részletekben szállítanál: **MF2** (kézi rögzítés) már önmagában hasznos funkció, **MF3** az,
 amitől a funkció „igazi”.
 
@@ -837,5 +849,100 @@ Windows-fájlzár-flake (lásd C1.6 feljegyzés). Ezzel a **teljes C1 iteráció
 **MF2 elérve**: kézzel rögzíthető egy cardio edzés (mind a hét típus, mind a három család),
 a lista ikonos és szűrhető, a mentett edzés megnyitható és olvasható.
 
-**Következő:** `C2.1` — `CardioSessionScreen` váz: állapotgép
-(`IDLE→RUNNING⇄PAUSED→ENDING→SUMMARY`), ticker, minden állapotváltás driftbe írva.
+---
+
+## C2.1 kész (2026-08-11) — `CardioSessionScreen` váz + epoch-alapú mozgásidő
+
+Ez a **C2 iteráció első lépése** — a Windowson fejleszthető ág (`C2.1`–`C2.9`) kezdete, a fenti
+a/b-bontás szerint. Ez volt az **első valóban új Drift-oszlop C1.5 óta**: a séma-munka (C0–C1)
+mind meglévő táblákat bővített cardio-mezőkkel, ez itt viszont futásidejű, **kliens-only**
+állapotot vezet be, ami sosem szinkronizálódik.
+
+**A tervezési döntés, ami mindent visz: epoch-checkpoint, nem élő számláló.** A kész-ha
+("App-kilövés után az edzés helyreáll a pontos mozgásidővel") két lehetséges megvalósítást
+engedne: (a) egy `movingSeconds`-ot másodpercenként növelő számláló, driftbe írva minden
+tick-nél, vagy (b) egy **epoch-időbélyeg**, amiből a pontos érték bármikor visszaszámolható. A
+(b)-t választottam — ez a kodbázisban **már bevett minta** (a pihenő-időzítő
+`restEndsAtEpochMs`-je, amit az 53-as doc §5 kifejezetten a Live Activity payloadhoz is javasol:
+"Egyetlen kivétel: az idő továbbra is epoch-alapú... hogy a natív felület magától ketyegjen,
+frissítés-kvóta nélkül"). Ennek két közvetlen következménye van:
+- **Nem kell másodpercenkénti DB-írás** — csak a valódi állapotváltásoknál (indítás, szünet,
+  folytatás, befejezés) írunk driftbe; a ticker a képernyőn csak `setState`-et hív.
+- **Az app-kilövés utáni helyreállás "ingyen" jön** — egy `RUNNING` közben megölt appnál a
+  `movingSinceEpochMs` egyszerűen ott marad, ahol volt; amikor a session újra betöltődik
+  (akár másnap), a `liveMovingSeconds(now)` helyesen beleszámolja a **teljes** halott-app
+  intervallumot is, mert nincs "élő" állapot, amit el kellene veszíteni — csak egy
+  falióra-időbélyeg, amit bármikor újra ki lehet értékelni.
+
+**Séma** (`core/local_db/tables/workout_session_tables.dart`, `app_database.dart`): új
+`movingSinceEpochMs` (nullable int) oszlop a `workout_sessions` táblán — `schemaVersion` 34→35,
+a bevett `_addColumnIfMissing` migrációs mintával. **Tudatosan kliens-only**: a
+`WorkoutSessionRepository._payload()` sosem tartalmazza (a szerver nem is ismeri), és a
+`pull_engine.dart`-ot **nem kellett módosítani** — az `_upsertWorkoutSession` már ma is explicit
+mezőnkénti `WorkoutSessionsCompanion`-t épít, ami sosem hivatkozik erre az oszlopra, tehát egy
+pull-lal érkező frissítés a Drift `.write()` szemantikája szerint **érintetlenül hagyja** —
+pontosan ez a kívánt viselkedés (egy másik eszköznek semmi dolga azzal, hogy *ezen* a telefonon
+melyik képernyő van épp tick-elés közben).
+
+**Domain** (`domain/workout_session.dart`): `movingSinceEpochMs` mező + két új tag:
+- `isCardioRunning` getter (`inProgress && movingSinceEpochMs != null`).
+- `liveMovingSeconds(DateTime now)` — a `now`-t explicit paraméterként veszi át (nem
+  `DateTime.now()`-t hív belül), hogy tiszta, órafüggetlen unit-tesztekkel ellenőrizhető legyen.
+
+**Repository/Controller**: `create()`/`update()` bővítve `movingSinceEpochMs` paraméterrel,
+ugyanazzal az "absent-preserving" `Value<T>` konvencióval, mint a többi mező — `rate()`/
+`enrichHealthMetrics()` (amik nem tudnak a cardio-checkpointról) így nem törölhetik ki
+véletlenül egy futó session ellenőrzőpontját. Négy új kontroller-metódus
+(`startCardioSession`/`pauseCardioSession`/`resumeCardioSession`/`finishCardioSession`) — mind
+vékony `_repo.create()`/`update()` hívás; a "mennyi a mozgásidő **most**" számítást szándékosan
+a **hívó** (a képernyő) végzi, nem a repository — így a repository/kontroller réteg
+óra-független és egyszerűen tesztelhető marad.
+
+**`presentation/cardio_session_screen.dart`** (új) — **tudatosan nem családfüggő még**: a
+DISTANCE/MACHINE/GAME elrendezések a C2.2/C2.3/C2.4 lépésekre maradnak, ez a lépés csak a
+vázat építi (ahogy a táblázat-sora is mondja). Amit tartalmaz:
+- `ActivityChip` + típusnév + állapotcímke (Folyamatban/Szünet/Befejezve) + a mozgásidő nagy
+  számjegyekkel (`CardioFormatter.duration`), családtól függetlenül.
+- `Timer.periodic(1s)` csak `setState`-et hív — **nincs másodpercenkénti DB-írás** (l. fent).
+- Szünet/Folytatás/Befejezés gombok, mindegyik a megfelelő kontroller-hívást indítja, hibánál
+  `AppSnackbar`-ral jelez és **nem** változtatja a látható állapotot (a felhasználó újra
+  próbálhatja).
+- **`IDLE` a gyakorlatban sosem renderel** ezen a képernyőn — a képernyő mindig egy már
+  elindított (`startedAt` kitöltött) session-nel példányosul; a "hogyan indul el" (FAB
+  hosszú nyomás) a C2.7 dolga.
+- **`ENDING` egyelőre egy sima megerősítő `AlertDialog`**, nem a húzásos (slide-to-finish)
+  gesztus — az a C2.5 táblázat-sorában külön szerepel ("befejezés húzással"), tudatosan nem
+  itt épült meg. A kész-ha ehhez a lépéshez nem köti ki a gesztust, csak azt, hogy a
+  mozgásidő pontosan helyreálljon.
+- **`SUMMARY` egyelőre egy minimális "Befejezve" placeholder-nézet** (a gombok eltűnnek, a
+  végső mozgásidő látszik) — az RPE-bevitel, kézi szerkesztés és "szerkesztve" jelölés a
+  C2.8 táblázat-sorának a tárgya.
+
+**`open_workout_screens.dart`**: a C1.9-ben épített cardio-ág tovább finomítva —
+`session.isCardio && session.inProgress` → `CardioSessionScreen`; `session.isCardio` és
+befejezve → változatlanul `CardioSummaryScreen`; `STRENGTH` változatlan. Ez a fájl megint nem
+szerepelt a C2.1 táblázat-sorának fájllistájában (ami üres, "–"), de e nélkül a kész-ha nem
+lenne tesztelhető a valós navigációs úton keresztül — ugyanaz a döntés, mint C1.7/C1.9-nél.
+
+**Tesztek** (mindegyik Windowson futtatva, Docker/Testcontainers nélkül — a mobil oldali Drift
+tesztek `NativeDatabase.memory()`-t használnak, nem a backend Postgres-mintát):
+- `workout_session_cardio_live_test.dart` (új, domain-szint, 7 teszt): `liveMovingSeconds`
+  mind a négy eset (szünetel, sosem mozgott, fut, **app-kilövési rés áthidalva** — ez utóbbi
+  szó szerint a kész-ha bizonyítéka, tiszta függvényként, process-kilövés szimulálása nélkül),
+  `isCardioRunning` mindhárom eset.
+- `workout_session_repository_cardio_live_test.dart` (új, Drift, 4 teszt): a mező
+  perzisztálódik, de **sosem** kerül a kimenő payloadba (`create` és `update` is), és egy
+  cardio-t nem ismerő `update()`-hívás (mint `rate()`) nem törli ki véletlenül.
+- `cardio_session_screen_test.dart` (új, 8 teszt): a kritikus eset — egy régóta nyitott
+  checkpointtal újranyíló képernyő **az első frame-en** a teljes eltelt időt mutatja (nem kell
+  hozzá ticker-tick); Szünet/Folytatás/Befejezés helyes kontroller-hívásai a helyes, élőben
+  számolt összeggel; a megerősítő dialógus törlése nem változtat semmin; egy sikertelen írás
+  után a képernyő a régi, látható állapotban marad.
+- `open_session_screen_navigation_test.dart` bővítve a folyamatban lévő cardio esettel.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; `flutter test test/features/workouts`
+**313/313 zöld**; a teljes `flutter test` **746/749 zöld** — a 3 bukás a már ismert,
+cardión kívüli `chat_repository_test.dart` Windows-fájlzár-flake.
+
+**Következő:** `C2.2` — DISTANCE elrendezés a `CardioSessionScreen`-en, a „nincs távforrás” ág
+(a domináns szám időre vált), M04/M11 szerint.

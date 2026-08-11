@@ -79,6 +79,24 @@ class WorkoutSessions extends Table {
   /// session, where the wall-clock span already is the workout.
   IntColumn get movingSeconds => integer().nullable()();
 
+  /// Epoch-ms checkpoint for the **live, running** `CardioSessionScreen`
+  /// (docs/cardio/59-cardio-implementation-plan.md C2.1) — non-null exactly
+  /// while a cardio session is actively moving (not paused, not finished):
+  /// `movingSeconds` holds the total accumulated *before* this checkpoint,
+  /// and the current total is `movingSeconds + (now - movingSinceEpochMs)`.
+  /// Cleared (null) on pause and on finish, where the elapsed interval gets
+  /// folded into `movingSeconds` instead. The same epoch-checkpoint idea as
+  /// the rest timer's `restEndsAtEpochMs` — a wall-clock anchor the UI ticks
+  /// against, rather than a counter that needs a write every second.
+  ///
+  /// **Client-only — never synced.** The server has no matching field and
+  /// `WorkoutSessionRepository._payload()` never includes it; a pull must
+  /// never touch this column either (see `pull_engine.dart`'s
+  /// `_upsertWorkoutSession`, which simply omits it from the write). A
+  /// second device has no use for "is *this device's screen* mid-tick" —
+  /// only the synced `movingSeconds` total matters once the session ends.
+  IntColumn get movingSinceEpochMs => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {clientId};
 }

@@ -230,6 +230,9 @@ class WorkoutSessionRepository {
     String sessionKind = 'STRENGTH',
     String? activityType,
     int? movingSeconds,
+    // Client-only live-session checkpoint (docs/cardio/59-cardio-implementation-plan.md
+    // C2.1) — never part of [_payload], see the Drift column doc for why.
+    int? movingSinceEpochMs,
     CardioMetrics? cardio,
     List<CardioSplit> splits = const [],
   }) async {
@@ -250,6 +253,7 @@ class WorkoutSessionRepository {
               sessionKind: Value(sessionKind),
               activityType: Value(activityType),
               movingSeconds: Value(movingSeconds),
+              movingSinceEpochMs: Value(movingSinceEpochMs),
             ),
           );
       await _insertChildren(resolvedClientId, exercises, sets);
@@ -342,6 +346,10 @@ class WorkoutSessionRepository {
     Value<String> sessionKind = const Value.absent(),
     Value<String?> activityType = const Value.absent(),
     Value<int?> movingSeconds = const Value.absent(),
+    // Client-only live-session checkpoint, same absent-preserving convention
+    // as the rest — never part of [_payload] (docs/cardio/
+    // 59-cardio-implementation-plan.md C2.1).
+    Value<int?> movingSinceEpochMs = const Value.absent(),
     Value<CardioMetrics?> cardio = const Value.absent(),
     Value<List<CardioSplit>> splits = const Value.absent(),
   }) async {
@@ -355,6 +363,7 @@ class WorkoutSessionRepository {
     String mergedSessionKind = 'STRENGTH';
     String? mergedActivityType;
     int? mergedMovingSeconds;
+    int? mergedMovingSinceEpochMs;
     CardioMetrics? mergedCardio;
     List<CardioSplit> mergedSplits = const [];
     await _db.transaction(() async {
@@ -375,6 +384,9 @@ class WorkoutSessionRepository {
       mergedActivityType = activityType.present ? activityType.value : row.activityType;
       mergedMovingSeconds =
           movingSeconds.present ? movingSeconds.value : row.movingSeconds;
+      mergedMovingSinceEpochMs = movingSinceEpochMs.present
+          ? movingSinceEpochMs.value
+          : row.movingSinceEpochMs;
       mergedCardio = cardio.present ? cardio.value : await _loadCardioMetrics(clientId);
       mergedSplits = splits.present ? splits.value : await _loadCardioSplits(clientId);
       await (_db.update(_db.workoutSessions)
@@ -391,6 +403,7 @@ class WorkoutSessionRepository {
           sessionKind: Value(mergedSessionKind),
           activityType: Value(mergedActivityType),
           movingSeconds: Value(mergedMovingSeconds),
+          movingSinceEpochMs: Value(mergedMovingSinceEpochMs),
         ),
       );
       await (_db.delete(_db.workoutSessionExercises)
@@ -839,6 +852,7 @@ class WorkoutSessionRepository {
       sessionKind: row.sessionKind,
       activityType: row.activityType,
       movingSeconds: row.movingSeconds,
+      movingSinceEpochMs: row.movingSinceEpochMs,
       cardio: cardio,
       splits: splits,
     );

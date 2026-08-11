@@ -60,7 +60,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 34;
+  int get schemaVersion => 35;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -294,6 +294,16 @@ class AppDatabase extends _$AppDatabase {
             await _addColumnIfMissing(m, workoutSessions, workoutSessions.movingSeconds);
             await m.createTable(cardioDetails);
             await m.createTable(cardioSplits);
+          }
+          // V35: live CardioSessionScreen (docs/cardio/59-cardio-implementation-plan.md
+          // C2.1) — movingSinceEpochMs is new, nullable, and client-only (never
+          // synced), so nothing to backfill: every existing row simply gets null,
+          // meaning "not currently running", which is correct for every row that
+          // predates this column (a live cardio screen mid-tick never survives an
+          // app update anyway).
+          if (from < 35) {
+            await _addColumnIfMissing(
+                m, workoutSessions, workoutSessions.movingSinceEpochMs);
           }
         },
       );

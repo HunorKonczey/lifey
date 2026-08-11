@@ -735,5 +735,13 @@
   "movingTimeLabel": "MOZGÁSIDŐ",
   "playingTimeLabel": "JÁTÉKIDŐ",
   "grossTimeLabel": "BRUTTÓ IDŐ",
-  "paceLabel": "TEMPÓ"
+  "paceLabel": "TEMPÓ",
+  "cardioSessionPausedLabel": "Szünet",
+  "cardioSessionFinishedLabel": "Befejezve",
+  "pauseButtonLabel": "Szünet",
+  "resumeButtonLabel": "Folytatás",
+  "finishButtonLabel": "Befejezés",
+  "finishCardioConfirmTitle": "Befejezed az edzést?",
+  "finishCardioConfirmMessage": "Ez lezárja az edzést, és elmenti a mozgásidőt.",
+  "couldNotUpdateWorkoutMessage": "Nem sikerült frissíteni az edzést. Próbáld újra."
 }

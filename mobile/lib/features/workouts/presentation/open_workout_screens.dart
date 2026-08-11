@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../domain/workout_session.dart';
+import 'cardio_session_screen.dart';
 import 'cardio_summary_screen.dart';
 import 'log_session_screen.dart';
 
@@ -94,12 +95,13 @@ void resetOpenWorkoutScreens() => _openScreens.clear();
 /// harmless no-ops for a caller that doesn't have them, kept here rather than
 /// on a bespoke strength-only variant so this stays the one call site.
 ///
-/// `CARDIO` pushes the read-only [CardioSummaryScreen] (C1.9) — every cardio
-/// session reachable today was manually logged via `LogCardioSheet` and is
-/// already finished, so there is nothing to resume. Once the live C2 flow
-/// exists (`CardioSessionScreen`, docs/cardio/59-cardio-implementation-plan.md
-/// C2.1), an in-progress cardio session branches there instead; that
-/// distinction doesn't exist yet, so it isn't checked here.
+/// `CARDIO` branches again on [WorkoutSession.inProgress]: a still-running
+/// session (started via `startCardioSession`, C2.1 — today only reachable
+/// from tests, since the quick-start entry point is C2.7) pushes the live
+/// [CardioSessionScreen], which picks up exactly where it left off (see
+/// `WorkoutSession.liveMovingSeconds`); a finished one pushes the read-only
+/// [CardioSummaryScreen] (C1.9) — every cardio session logged via
+/// `LogCardioSheet` is already finished and lands there, unchanged.
 /// `STRENGTH` (the only other value) keeps the [LogSessionScreen] push below,
 /// unchanged.
 Future<void> openSessionScreen(
@@ -109,6 +111,11 @@ Future<void> openSessionScreen(
   int? watchCurrentExerciseIndex,
 }) {
   if (session.isCardio) {
+    if (session.inProgress) {
+      return navigator.push(
+        MaterialPageRoute(builder: (_) => CardioSessionScreen(session: session)),
+      );
+    }
     return navigator.push(
       MaterialPageRoute(builder: (_) => CardioSummaryScreen(session: session)),
     );
