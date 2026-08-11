@@ -1897,6 +1897,10 @@
   "@allFilterLabel": {
     "description": "Filter chip label meaning no filter / show everything"
   },
+  "sessionKindCardioLabel": "Cardio",
+  "@sessionKindCardioLabel": {
+    "description": "Sessions-tab kind filter: any cardio activity type (docs/cardio 59 C1.7)"
+  },
   "muscleGroupChest": "Chest",
   "@muscleGroupChest": {
     "description": "Muscle group: chest"
@@ -3274,5 +3278,97 @@
   "activityTypeStrength": "Strength",
   "@activityTypeStrength": {
     "description": "Label for the existing set-based workout when it appears alongside cardio activity types in a mixed list (e.g. the quick-start picker)"
+  },
+  "logCardioSheetTitle": "Log workout",
+  "@logCardioSheetTitle": {
+    "description": "Title of the manual cardio-logging bottom sheet (docs/cardio 59 C1.8)"
+  },
+  "activityTypeSectionLabel": "TYPE",
+  "@activityTypeSectionLabel": {
+    "description": "Section heading above the activity-type chip row in LogCardioSheet"
+  },
+  "durationSectionLabel": "DURATION",
+  "@durationSectionLabel": {
+    "description": "Section heading above the hour/minute/second duration fields in LogCardioSheet"
+  },
+  "durationHoursAbbrev": "h",
+  "@durationHoursAbbrev": {
+    "description": "Abbreviated unit suffix for the hours field of a duration entry"
+  },
+  "durationMinutesAbbrev": "m",
+  "@durationMinutesAbbrev": {
+    "description": "Abbreviated unit suffix for the minutes field of a duration entry"
+  },
+  "durationSecondsAbbrev": "s",
+  "@durationSecondsAbbrev": {
+    "description": "Abbreviated unit suffix for the seconds field of a duration entry"
+  },
+  "distanceFieldLabel": "DISTANCE",
+  "@distanceFieldLabel": {
+    "description": "Label for the manual distance entry field (DISTANCE/MACHINE families)"
+  },
+  "elevationGainFieldLabel": "ELEVATION GAIN",
+  "@elevationGainFieldLabel": {
+    "description": "Label for the optional elevation-gain entry field (DISTANCE family)"
+  },
+  "avgWattsFieldLabel": "AVG POWER",
+  "@avgWattsFieldLabel": {
+    "description": "Label for the optional average power entry field, in watts (MACHINE family)"
+  },
+  "avgCadenceFieldLabel": "CADENCE",
+  "@avgCadenceFieldLabel": {
+    "description": "Label for the optional cadence entry field, in rpm (MACHINE family)"
+  },
+  "resistanceLevelFieldLabel": "RESISTANCE",
+  "@resistanceLevelFieldLabel": {
+    "description": "Label for the optional resistance-level entry field (MACHINE family)"
+  },
+  "deviceCaloriesFieldLabel": "MACHINE CALORIES",
+  "@deviceCaloriesFieldLabel": {
+    "description": "Label for the optional machine-displayed calorie entry field (MACHINE family)"
+  },
+  "cardioWorkoutLoggedMessage": "Workout logged",
+  "@cardioWorkoutLoggedMessage": {
+    "description": "Snackbar confirming a manually-logged cardio workout was saved"
+  },
+  "couldNotLogWorkoutMessage": "Couldn't log the workout. Please try again.",
+  "@couldNotLogWorkoutMessage": {
+    "description": "Snackbar shown when saving a manually-logged cardio workout fails"
+  },
+  "intensitySectionLabel": "INTENSITY",
+  "@intensitySectionLabel": {
+    "description": "Section heading for the 1-5 subjective intensity chip row (GAME family, CardioMetrics.intensity)"
+  },
+  "venueSectionLabel": "VENUE",
+  "@venueSectionLabel": {
+    "description": "Section heading for the indoor/outdoor toggle (GAME family)"
+  },
+  "venueIndoorLabel": "Indoor",
+  "@venueIndoorLabel": {
+    "description": "Indoor option of the GAME-family venue toggle"
+  },
+  "venueOutdoorLabel": "Outdoor",
+  "@venueOutdoorLabel": {
+    "description": "Outdoor option of the GAME-family venue toggle"
+  },
+  "scorePointsFieldLabel": "SCORE",
+  "@scorePointsFieldLabel": {
+    "description": "Label for the optional points stepper (GAME family box score)"
+  },
+  "movingTimeLabel": "MOVING TIME",
+  "@movingTimeLabel": {
+    "description": "Primary-metric label for a MACHINE-family cardio session"
+  },
+  "playingTimeLabel": "PLAYING TIME",
+  "@playingTimeLabel": {
+    "description": "Primary-metric label for a GAME-family cardio session — time spent actually on court/pitch"
+  },
+  "grossTimeLabel": "GROSS TIME",
+  "@grossTimeLabel": {
+    "description": "Secondary-metric label for a GAME-family cardio session — total wall-clock time including bench time"
+  },
+  "paceLabel": "PACE",
+  "@paceLabel": {
+    "description": "Secondary-metric label for a DISTANCE-family cardio session"
   }
 }

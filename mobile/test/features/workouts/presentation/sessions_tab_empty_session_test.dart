@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/features/settings/application/settings_controller.dart';
+import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/exercise_controller.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/application/workout_template_controller.dart';
@@ -35,6 +37,11 @@ class _FakeWorkoutTemplateController extends WorkoutTemplateController {
   Stream<List<WorkoutTemplate>> build() => Stream.value(const []);
 }
 
+class _FakeSettingsController extends SettingsController {
+  @override
+  Stream<UserSettings> build() => Stream.value(const UserSettings.defaults());
+}
+
 WorkoutSession _emptySession({required String clientId, String? templateName}) {
   final now = DateTime.now();
   return WorkoutSession(
@@ -54,6 +61,7 @@ Future<void> _pumpSessionsTab(WidgetTester tester, List<WorkoutSession> sessions
         workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
         exerciseControllerProvider.overrideWith(_FakeExerciseController.new),
         workoutTemplateControllerProvider.overrideWith(_FakeWorkoutTemplateController.new),
+        settingsControllerProvider.overrideWith(_FakeSettingsController.new),
         syncStatusByClientIdProvider.overrideWithValue(const {}),
       ],
       child: const MaterialApp(

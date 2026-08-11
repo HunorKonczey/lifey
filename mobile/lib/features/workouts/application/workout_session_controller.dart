@@ -36,6 +36,33 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
     );
   }
 
+  /// Manually logs a finished cardio session — `LogCardioSheet`
+  /// (docs/cardio/59-cardio-implementation-plan.md C1.8). [startedAt] can be
+  /// in the past; [finishedAt] is derived from it plus [movingSeconds] since
+  /// a manual entry has no separate pause/gross time to account for.
+  /// Returns the new session's clientId.
+  Future<String> logCardioSession({
+    required DateTime startedAt,
+    required String activityType,
+    required int movingSeconds,
+    CardioMetrics? cardio,
+    int? rpe,
+    String? feedbackNote,
+  }) {
+    return _repo.create(
+      startedAt: startedAt,
+      finishedAt: startedAt.add(Duration(seconds: movingSeconds)),
+      exercises: const [],
+      sets: const [],
+      sessionKind: 'CARDIO',
+      activityType: activityType,
+      movingSeconds: movingSeconds,
+      cardio: cardio,
+      rpe: rpe,
+      feedbackNote: feedbackNote,
+    );
+  }
+
   Future<void> updateSession(
     String clientId, {
     required DateTime startedAt,

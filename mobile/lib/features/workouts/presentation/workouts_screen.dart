@@ -8,6 +8,7 @@ import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../shared/widgets/pill_tab_bar.dart';
 import '../../../shared/widgets/shell_fab.dart';
 import '../application/exercise_controller.dart';
+import '../domain/activity_type.dart';
 import '../domain/exercise_enums.dart';
 import 'create_template_screen.dart';
 import 'exercises_tab.dart';
@@ -32,6 +33,13 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
   late final TabController _tabController;
   DateRangeFilter _sessionFilter = DateRangeFilter.week;
   String? _exerciseCategoryFilter;
+
+  // Empty-string sentinel = "Mind" (all kinds). Otherwise 'STRENGTH',
+  // 'CARDIO' (any cardio type), or a specific `kActivityTypes` code — see
+  // `_decodeSessionKindFilter` (docs/cardio/59-cardio-implementation-plan.md
+  // C1.7). Encoded as one value, not two, so picking a fresh option can
+  // never leave a stale secondary selection behind.
+  String _sessionKindFilterValue = '';
 
   @override
   void initState() {
@@ -102,12 +110,74 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
   // (PopupMenuButton<String> doesn't fire onSelected for null values).
   static const _kCategoryAll = '';
 
+  /// Decodes [_sessionKindFilterValue] into the `(kind, activityType)` pair
+  /// `SessionsTab` filters on — see `matchesSessionKindFilter`.
+  ({String? kind, String? activityType}) get _sessionKindFilter {
+    return switch (_sessionKindFilterValue) {
+      '' => (kind: null, activityType: null),
+      'STRENGTH' => (kind: 'STRENGTH', activityType: null),
+      'CARDIO' => (kind: 'CARDIO', activityType: null),
+      final type => (kind: 'CARDIO', activityType: type),
+    };
+  }
+
+  String _sessionKindFilterLabel(AppLocalizations l10n) {
+    return switch (_sessionKindFilterValue) {
+      '' => l10n.allFilterLabel,
+      'STRENGTH' => l10n.activityTypeStrength,
+      'CARDIO' => l10n.sessionKindCardioLabel,
+      final type => activityTypeLabel(l10n, type),
+    };
+  }
+
+  PopupMenuItem<String> _sessionKindFilterMenuItem(
+    BuildContext context, {
+    required String value,
+    required String label,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(children: [
+        SizedBox(
+          width: 20,
+          child: _sessionKindFilterValue == value
+              ? Icon(Icons.check, size: 16, color: scheme.primary)
+              : null,
+        ),
+        const SizedBox(width: 4),
+        Text(label),
+      ]),
+    );
+  }
+
   Widget? _buildTrailingFilter(BuildContext context, AppLocalizations l10n) {
     switch (_tabController.index) {
       case 0:
-        return DateRangeFilterButton(
-          value: _sessionFilter,
-          onChanged: (f) => setState(() => _sessionFilter = f),
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LabeledFilterButton(
+              label: _sessionKindFilterLabel(l10n),
+              onSelected: (v) => setState(() => _sessionKindFilterValue = v),
+              items: [
+                _sessionKindFilterMenuItem(context, value: '', label: l10n.allFilterLabel),
+                _sessionKindFilterMenuItem(context,
+                    value: 'STRENGTH', label: l10n.activityTypeStrength),
+                const PopupMenuDivider(),
+                _sessionKindFilterMenuItem(context,
+                    value: 'CARDIO', label: l10n.sessionKindCardioLabel),
+                for (final type in kActivityTypes)
+                  _sessionKindFilterMenuItem(context,
+                      value: type, label: activityTypeLabel(l10n, type)),
+              ],
+            ),
+            const SizedBox(width: 4),
+            DateRangeFilterButton(
+              value: _sessionFilter,
+              onChanged: (f) => setState(() => _sessionFilter = f),
+            ),
+          ],
         );
       case 2:
         final exercises =
@@ -182,7 +252,12 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  SessionsTab(topPadding: contentTop, filter: _sessionFilter),
+                  SessionsTab(
+                    topPadding: contentTop,
+                    filter: _sessionFilter,
+                    kindFilter: _sessionKindFilter.kind,
+                    activityTypeFilter: _sessionKindFilter.activityType,
+                  ),
                   TemplatesTab(topPadding: contentTop),
                   ExercisesTab(
                     topPadding: contentTop,

@@ -130,10 +130,10 @@ Négy szabály döntötte el a lépések sorrendjét — ha valamit előre akars
 
 | # | Lépés | Frame | Fájlok | Kész-ha |
 |---|---|---|---|---|
-| **C1.6** | `ActivityChip` (20/32/56 px) + session-kártya ikon-chippel és családfüggő fő metrikával | **M19** | `shared/widgets/activity_chip.dart`, `presentation/sessions_tab.dart`, `session_row_plan.dart` | Mind a hét típus renderel; az erősítő kártya vizuálisan változatlan, csak chipet kap |
-| **C1.7** | Fajta-szűrő (mind / erősítő / cardio) + másodlagos típus-szűrő | **M20** | `presentation/workouts_screen.dart` | A szűrő állapota megmarad tab-váltáskor |
-| **C1.8** | `LogCardioSheet` — típusválasztó, dátum/idő (múltbeli is), időtartam, DISTANCE + MACHINE mezők | **M17** | `presentation/log_cardio_sheet.dart` | Minden numerikus mező `MANUAL` forrásjelzést kap; múltbeli dátum menthető |
-| **C1.9** | `LogCardioSheet` GAME ága (intenzitás, helyszín, opcionális box score) + RPE/jegyzet újrahasznosítás + olvasó összegzés-nézet | **M18**, M15 | ua. + `presentation/cardio_summary_screen.dart` | A GAME mezők a családhoz kötöttek; a mentett edzés megnyitható és olvasható |
+| **C1.6** ✅ | `ActivityChip` (20/32/56 px) + session-kártya ikon-chippel és családfüggő fő metrikával | **M19** | `shared/widgets/activity_chip.dart`, `presentation/sessions_tab.dart`, `session_row_plan.dart` | Mind a hét típus renderel; az erősítő kártya vizuálisan változatlan, csak chipet kap |
+| **C1.7** ✅ | Fajta-szűrő (mind / erősítő / cardio) + másodlagos típus-szűrő | **M20** | `presentation/workouts_screen.dart` | A szűrő állapota megmarad tab-váltáskor |
+| **C1.8** ✅ | `LogCardioSheet` — típusválasztó, dátum/idő (múltbeli is), időtartam, DISTANCE + MACHINE mezők | **M17** | `presentation/log_cardio_sheet.dart` | Minden numerikus mező `MANUAL` forrásjelzést kap; múltbeli dátum menthető |
+| **C1.9** ✅ | `LogCardioSheet` GAME ága (intenzitás, helyszín, opcionális box score) + RPE/jegyzet újrahasznosítás + olvasó összegzés-nézet | **M18**, M15 | ua. + `presentation/cardio_summary_screen.dart` | A GAME mezők a családhoz kötöttek; a mentett edzés megnyitható és olvasható |
 
 ---
 
@@ -553,3 +553,289 @@ teljes egészében ismeri a cardio mezőket, `STRENGTH`-nél pedig bájtra azono
 
 A `C1` mobil adatrétege (Drift + domain + repository + pull + formázó) ezzel készen áll — a C1.6
 onnantól UI-réteg (`ActivityChip` + session-kártya), ami már csak olvassa ezt az adatot.
+
+---
+
+## C1.6 kész (2026-08-11) — `ActivityChip` + session-kártya
+
+Az első mobil **UI**-lépés a cardio munkában — eddig csak adatréteg épült (C0, C1.1–C1.5).
+
+**`shared/widgets/activity_chip.dart`** (új): egy komponens, tetszőleges `size`-zal (a design
+20/32/56 px-en mutatja be, de a session-kártya a saját 44 px-es jelvényméretét használja —
+lásd lent). Kerek háttér az akcentszín 14%-os fedésével sötét, 16%-os fedésével világos témában
+(`Theme.of(context).brightness` szerint elágazva) — bitre a
+`design/Lifey Cardio Design.dc.html` §1 "ActivityChip" leírása szerint. Az ikonméret a chip
+54%-a, kerekítve. Az `activityType`/`activityTypeColor`/`activityTypeIcon` (C0.2) hívásokra épül,
+tehát a `'STRENGTH'` szentinel is működik vele.
+
+**`presentation/session_row_plan.dart`** bővítve `cardioCardPrimaryMetric(session, unitSystem)`
+tiszta függvénnyel — ez adja a session-kártya **családfüggő fő metrikáját**:
+- DISTANCE (futás/séta/túra): a táv, a `design` §2 "cél alakú" száma — ha nincs rögzítve
+  (pl. kézi séta-napló táv nélkül), a `movingSeconds`/wall-clock időtartamra esik vissza,
+  ugyanaz a logika, mint az aktív képernyő "nincs távforrás" ága (C2.2).
+- MACHINE (szobabicikli) és GAME (kosár/foci/egyéb): mindig az időtartam
+  (`effectiveDuration`), sosem a táv — "a szobabicikli negyven perc, nem tizennyolc kilométer".
+- `null`, ha a session sem távval, sem idővel nem rendelkezik még (STRENGTH, vagy egy épp
+  induló cardio session).
+
+**`presentation/sessions_tab.dart`** — `_SessionCard` additív bővítése, **tudatosan minimális
+kockázatú döntéssel**: az erősítő ág (jelvény, szín izomcsoport szerint, "N szett" sor) **egy
+sort sem változott** — a kész-ha ("az erősítő kártya vizuálisan változatlan") szó szerint
+teljesül, nem csak megközelítőleg. Az új cardio ág:
+- Jelvény: `ActivityChip(activityType: session.activityType!, size: 44)` — kör alakú, az
+  erősítő jelvény (44 px, lekerekített négyzet, `Icons.fitness_center`) helyén, de attól
+  vizuálisan megkülönböztethetően (kör vs. négyzet), pontosan ahogy az M19 makett mutatja.
+- Cím: mivel egy cardio sessionnek nincs `templateName`-je, a cím az `activityTypeLabel` lesz
+  (pl. "Futás") — a `title != null` feltétel innentől mindkét ágat lefedi, a dátumsor stílusa
+  (label vs. body) ugyanúgy követi, mint eddig a `templateName`-nél.
+- Fő metrika sor: `cardioCardPrimaryMetric` eredménye a "N szett" helyén — futó session esetén
+  továbbra is az `_StatusPill` ("Folyamatban") nyer, változatlanul.
+- A `unitSystem`-et a `SessionsTab` (`ConsumerStatefulWidget`, van `ref`-je) olvassa ki a
+  `settingsControllerProvider`-ből (`.value ?? UserSettings.defaults()` minta, ugyanaz, mint az
+  `onboarding_edit_screen.dart`-ban) és adja tovább propként a `_SessionCard`-nak (ami
+  `StatelessWidget`, nem érhetné el a Riverpod-ot közvetlenül `ref` nélkül).
+
+**Váratlan lelet, C1.6-hoz nem tartozó, de blokkoló hiba**: a `flutter test` futtatás elsőre
+**fordítási hibával bukott el az egész suite-on** — a generált kód (`lib/l10n/app_localizations*.dart`
+és `lib/core/local_db/app_database.g.dart`) **2026-08-06-i, a C0.2/C1.1–C1.5 ARB-kulcsai és
+Drift-oszlopai előtti** állapotban volt befagyva ebben a sandboxban (`flutter gen-l10n` és
+`dart run build_runner build` a korábbi lépések során lefutott, de a kimenet nem volt jelen a
+munkakönyvtárban ennek a beszélgetésnek az elején). Ez **nem C1.6 regresszió** — bármelyik
+korábbi lépés első tesztfuttatásakor előjött volna, csak eddig egyik sem indított `flutter test`-et
+a teljes projektre ebben a sandboxban. Javítás: `flutter gen-l10n` + `dart run build_runner build`
+újrafuttatva, mindkettő tiszta; utána a teljes suite lefordult.
+
+**Tesztek:**
+- `test/shared/widgets/activity_chip_test.dart` (új, 6 teszt) — méret/kör alak, ikon-arány két
+  méretnél, a `STRENGTH` szentinel, és a sötét/világos alfa **külön** tesztként (egy korábbi,
+  egyetlen tesztbe zsúfolt verzió hamis zöldet adott volna: két egymást követő `pumpWidget`
+  hívás `const` azonos-argumentumú widgettel Dart-konstans-kanonizáció miatt **ugyanaz az
+  objektum**, a Flutter-elemfa ezért nem építi újra — a widget maga helyes volt, a teszt-módszer
+  nem).
+- `session_row_plan_test.dart` bővítve 7 új `cardioCardPrimaryMetric`-teszttel: mindhárom család,
+  a táv-nélküli DISTANCE-fallback, imperial mértékegység, `STRENGTH` → `null`, és a "még semmi
+  sincs rögzítve" eset.
+- `sessions_tab_cardio_test.dart` (új): mind a hét `ActivityType` külön session-ként pumpolva
+  (egy 7-elemű lista egyetlen tesztben túlcsordítaná az alapértelmezett teszt-viewportot, és a
+  `ListView.builder` képernyőn kívüli elemei ezért nem lennének a widgetfában) — mindegyik
+  megjeleníti a saját `ActivityChip`-jét és a lokalizált cím-szövegét; plusz külön teszt a
+  DISTANCE/MACHINE fő metrika helyességére és a futó cardio session pillájára.
+- `sessions_tab_empty_session_test.dart` kapott egy `settingsControllerProvider`-override-ot
+  (`_FakeSettingsController`, a projektben már bevett minta, pl.
+  `statistics_screen_test.dart`) — enélkül az új `unitSystem`-függőség egy valódi, DB-t igénylő
+  Riverpod-providert próbált volna felépíteni a widget-tesztben.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a teljes `flutter test` **701 lefutott
+tesztből 697 zöld** — a 4 bukás mind a `chat_repository_test.dart` "image attachments"
+csoportjában van, Windows-specifikus fájlzár-versenyhelyzet (`PathAccessException` a teszt saját
+temp-könyvtárának törlésekor), teljesen független a cardio-munkától (nem érintettem sem a chat
+feature-t, sem a hozzá tartozó fájlokat) — környezeti flake, nem C1.6-regresszió.
+
+**Következő:** `C1.7` — fajta-szűrő (mind / erősítő / cardio) + másodlagos típus-szűrő a
+`workouts_screen.dart`-on, M20 szerint.
+
+---
+
+## C1.7 kész (2026-08-11) — fajta-szűrő + másodlagos típus-szűrő
+
+**Tudatos eltérés az M20 makett szerkezetétől.** Az M20 canvas egy teljes képernyős lapot mutat
+két szinttel: **CSALÁD** sor (Mind / Táv / Gép / Játék — `ActivityFamily` szerint) és alatta
+**TÍPUS** chip-rács darabszámmal. Ennek a lépésnek a saját táblázat-sora (§4 fent) viszont
+explicit **más** hierarchiát ír elő: *"mind / erősítő / cardio + másodlagos típus-szűrő"* —
+vagyis `SessionKind` szerinti elsődleges szűrés (nem `ActivityFamily` szerinti),
+egy cardio-n belüli másodlagos `ActivityType`-szűrővel. A plan szövegét követtem, mert az az
+ehhez a lépéshez tartozó explicit "kész-ha" forrása; a teljes M20-lap (család-sor, darabszám-
+jelvények, "N edzés megjelenítése" gomb) egy jóval nagyobb, önálló bottom-sheet komponens lenne —
+ha a termék mégis a család-alapú szűrést és a teljes lapot akarja, az egy külön, saját
+kész-ha-val ellátott lépés kellene legyen, nem C1.7 burkolt kibővítése.
+
+**`presentation/sessions_tab.dart`**:
+- Új, tesztelhető, tiszta predikátum: `matchesSessionKindFilter(session, {kindFilter,
+  activityTypeFilter})` — `kindFilter` `null`/`'STRENGTH'`/`'CARDIO'`, `activityTypeFilter`
+  csak `'CARDIO'` alatt számít (egyébként figyelmen kívül marad — egy esetleges elavult
+  másodlagos érték sosem szűrhet lopva).
+- `SessionsTab` két új, opcionális propot kapott (`kindFilter`, `activityTypeFilter`),
+  alkalmazva mind a `filtered` (dátum szerint már szűrt lista), mind az `upcoming`
+  (edző által ütemezett, még el nem indult) szakaszra — így egy "csak erősítő" szűrő egy
+  jövőbeli cardio-ütemezést is elrejt, nem csak a lezárt session-öket.
+
+**`presentation/workouts_screen.dart`**:
+- Egyetlen `String _sessionKindFilterValue` state (üres string = "Mind" szentinel, ugyanaz a
+  minta, mint a meglévő `_exerciseCategoryFilter`-nél) — **nem két külön mező** a
+  kind/activityType párra, hogy egy friss választás sosem hagyhat hátra elavult másodlagos
+  szűrést (a teljes érték cserélődik, nem részlegesen).
+- `_sessionKindFilter` getter dekódolja ezt `(kind, activityType)` párrá; `_sessionKindFilterLabel`
+  adja a gomb feliratát.
+- A trailing terület (AdaptiveAppBar `trailing`) mostantól egy `Row` két gombbal: az új
+  `LabeledFilterButton` (Mind / Erősítő / — elválasztó — / Kardió (mind) / hét konkrét típus,
+  egy lapos lista, `PopupMenuButton`-alapon, ugyanaz a minta, mint a gyakorlat-kategória
+  szűrőnél) + a meglévő `DateRangeFilterButton`. Csak a Sessions fülön (index 0) jelenik meg.
+- Új ARB-kulcs: `sessionKindCardioLabel` ("Cardio" EN / "Kardió" HU) — az egyetlen felirat,
+  ami eddig nem létezett; a többi (`allFilterLabel`, `activityTypeStrength`, az egyes
+  `activityType*` nevek) már megvolt C0.2-ből.
+
+**A kész-ha ("a szűrő állapota megmarad tab-váltáskor") szerkezetileg garantált**: a
+`_sessionKindFilterValue` a `_WorkoutsScreenState`-ben él, ugyanabban az objektumban, mint a már
+működő `_sessionFilter`/`_exerciseCategoryFilter` — a `TabController` fül-váltása nem hozza létre
+újra ezt a State-et, tehát nincs külön tennivaló ennek biztosítására (ugyanaz az architekturális
+garancia, amit a meglévő két szűrő is élvez).
+
+**Tesztek** (`sessions_tab_kind_filter_test.dart`, új):
+- `matchesSessionKindFilter`: mind a négy kombináció (null/STRENGTH/CARDIO, CARDIO+típus) +
+  egy védekező eset (elavult `activityTypeFilter` egy nem-CARDIO `kindFilter` alatt).
+- `SessionsTab` a propokkal bekötve: STRENGTH szűrő elrejti a cardio session-t; CARDIO+RUNNING
+  csak a futást mutatja, a sétát nem; szűrő nélkül minden látszik.
+- A `WorkoutsScreen`-t magát **nem** kapta widget-teszt — a C0.3 auditban a `DashboardScreen`-nél
+  már meghozott döntést követve (aránytalanul nehéz felhúzás sok providerrel egy megerősítő
+  tesztért), a szűrő-perzisztencia pedig architekturálisan, nem futásidőben garantált.
+
+**Eredmény:** `flutter analyze` (teljes projekt) és `flutter test test/features/workouts`
+(**274/274 zöld**) tiszta.
+
+---
+
+## C1.8 kész (2026-08-11) — `LogCardioSheet`, DISTANCE + MACHINE
+
+**Tudatos döntés a típusválasztó terjedelméről.** A mobil-terv (§2) szerint a lapon **mind a
+hét** `kActivityTypes` érték választható — a mezőkészletet a **család** dönti el, nem a típus
+("A típusválasztó a lap tetején marad, mert a választás alatta mindent átrendez"). Ez azt
+jelenti, hogy egy GAME típus (kosár/foci/egyéb) is kiválasztható **már ebben a lépésben**, jóval
+azelőtt, hogy a GAME-specifikus mezők (intenzitás, helyszín, box score — C1.9) elkészülnének. Ez
+nem hiányosság: a megosztott mezők (dátum/idő + időtartam) minden családnál működnek, tehát egy
+"kosaraztam 52 percet" bejegyzés már most menthető, csak intenzitás/pontszám nélkül — a GAME-ág
+C1.9-ben bővül ki, nem C1.8-ban épül újra.
+
+**Tudatos egyszerűsítés a mobil-terv §2 mezőlistájához képest.** A doksi 5. pontja
+("Kalória (opcionális), pulzus-átlag (opcionális)") **nem** került be — a `WorkoutSession.
+activeCalories`/`averageHeartRate` mezők kódkommentje (`domain/workout_session.dart`) explicit
+kimondja, hogy ez a két mező **kizárólag** órás gazdagításból származik 2026-07-16 óta (a régi
+manuális "Import from Health" utat akkor törölték); egy manuális beviteli mezőt visszahozni ide
+szembemenne ezzel a már meghozott döntéssel. A MACHINE család saját, ettől független
+`deviceCalories` mezője ("a gép kijelzett kalóriaértéke, sosem összegződik az napi aktív
+kalóriába") viszont bekerült, mert azt a doksi külön, "gép-kalória" néven listázza, és a
+`CardioMetrics`-nek van rá saját mezője.
+
+**Nincs belépési pont bekötve ebben a lépésben** — a terv fájllistája ehhez a lépéshez kizárólag
+`presentation/log_cardio_sheet.dart`-ot nevezi meg. A lap önmagában teljes és tesztelt
+(`showModalBottomSheet`-tel bárhonnan nyitható, a meglévő `LogRecipeSheet`/`AddExerciseSheet`
+mintát követve), de a Workouts FAB-ba vagy a `TemplatePickerScreen`-be kötése szándékosan
+kimaradt — az a C1.9 (amikor a lap a GAME ággal együtt tényleg feature-complete lesz) vagy a
+C2.7 gyorsindító-lap munkájának a feladata, nem ennek a lépésnek.
+
+**`application/workout_session_controller.dart`**: új `logCardioSession({startedAt,
+activityType, movingSeconds, cardio})` — vékony átadó a már C1.5-ben kész `_repo.create()`
+felé, `sessionKind: 'CARDIO'`-val; a `finishedAt`-et `startedAt + movingSeconds`-ból származtatja,
+mert egy utólagos bejegyzésnek nincs külön szünet/bruttó ideje (az csak a GAME családnál és az
+élő C2-es képernyőn értelmezett fogalom).
+
+**`presentation/log_cardio_sheet.dart`** (új):
+- Típusválasztó: vízszintesen görgethető `ChoiceChip`-sor mind a hét `kActivityTypes` értékkel,
+  ikon+címke, az aktivitás színével kiemelve (`activityTypeColor`/`activityTypeIcon`,
+  C0.2-ből).
+- Dátum/idő: a meglévő `LogRecipeSheet` `showDatePicker`+`showTimePicker` mintája,
+  `lastDate: DateTime.now()`-val — ez zárja ki szerkezetileg a jövőbeli dátumot, és **engedi**
+  a múltbelit (kész-ha).
+- Időtartam: három kompakt szám-mező (ó/p/mp), az M17 makett hh:mm:ss formátumát követve — a
+  mobil-terv doksi eredetileg csak perceket említett, de a makett pontosabb, és ez a makett a
+  frame-forrás ehhez a lépéshez.
+- DISTANCE ág: táv (mértékegység-függő, `Settings` metric/imperial kapcsolóját tiszteletben
+  tartva, `km`↔`mi` váltással a mentéskor) + opcionális szintemelkedés.
+- MACHINE ág: táv (ugyanaz a mező, újrahasznosítva) + átlag-teljesítmény (W) + kadencia (rpm) +
+  ellenállás-szint + gép-kalória.
+- **Kész-ha, "minden numerikus mező MANUAL forrásjelzést kap"**: a `CardioMetrics`-nek
+  ténylegesen csak **két** forrás-mezője van (`distanceSource`, `caloriesSource` — ez az egyetlen
+  provenienciát a domain-modell ismer, [51 R8](51-cardio-overview-plan.md)); a lap mindkettőt
+  `'MANUAL'`-ra állítja, valahányszor a megfelelő érték ki van töltve, egyébként `null` marad.
+- `cardio: null` megy a szerverre, ha **egyetlen** family-specifikus mező sincs kitöltve (csak
+  dátum+időtartam) — ez tartja a C1.5-ben lefektetett invariánst ("cardio non-null csak ha van
+  legalább egy rögzített metrika"), nem küld üres-de-nem-null objektumot.
+
+**Tesztek** (`log_cardio_sheet_test.dart`, új, 8 teszt): a kontroller `logCardioSession()`
+metódusán fake-elve (nem a Drift-repository szintjén — az már C1.5-ben lefedett, ez a lap saját
+számítását ellenőrzi) — alapértelmezett DISTANCE-mezők, Save letiltva nulla időtartamnál, MACHINE
+típusra váltás cseréli a mezőket, GAME típusra váltás csak a közös mezőket hagyja, a beküldött
+`movingSeconds`/`distanceMeters`/`MANUAL`-jelzés helyessége, a csak-időtartam eset `cardio: null`-t
+küld, a múltbeli dátum (a `_startedAt` alapértelmezett "most" értéke) változatlanul átmegy a
+submitba, és az imperial mértékegység helyes mérföld→méter átváltása.
+
+**Eredmény:** `flutter analyze` (teljes projekt) és `flutter test test/features/workouts`
+(**282/282 zöld**, +8 az új `log_cardio_sheet_test.dart`-ból) tiszta.
+
+---
+
+## C1.9 kész (2026-08-11) — GAME ág, RPE/jegyzet, `CardioSummaryScreen`
+
+**`presentation/widgets/rpe_selector.dart`** (új): a `PostWorkoutFeedbackSheet` privát
+`_RpeChip`+sor-logikája kiemelve egy publikus, paraméterezhető `RpeSelector` widgetbe
+(`min`/`max`, opcionális alsó/felső horgony-felirat) — ez a szó szerinti "RPE/jegyzet
+újrahasznosítás". A `PostWorkoutFeedbackSheet` ezt használja változatlan viselkedéssel (1-10,
+"Very easy"/"Maximal effort" horgonyokkal); a `LogCardioSheet` **kétszer** hívja: 1-10-zel a
+univerzális RPE-hez, 5-ös maxszal a GAME család intenzitásához (`CardioMetrics.intensity`) — két
+különböző mező, egy komponens.
+
+**`application/workout_session_controller.dart`**: `logCardioSession` kapott `rpe`/
+`feedbackNote` paramétereket, átadva a C1.5-ben már kész `_repo.create()`-nek.
+
+**`presentation/log_cardio_sheet.dart`** bővítve:
+- GAME ág (csak `_family == ActivityFamily.game` esetén jelenik meg): `SegmentedButton<String>`
+  helyszín-váltó (Terem/Szabadtér), `RpeSelector(max: 5)` intenzitás, +/− pontszámláló
+  (`scorePoints`) — bitre az M18 makett szerint. Az `assists`/`rebounds` mezőket a
+  `CardioMetrics` ismeri, de az M18 makett és a "opcionális box score" szöveg csak egyetlen
+  "Pont" számlálót mutat — a további két mező kimaradt, hogy ne legyen a makettnél gazdagabb a
+  lap egy olyan funkciónál, amit a doksi maga is "opcionálisnak" jelöl.
+- Univerzális RPE (1-10) + jegyzet szekció minden család alatt, a Mentés gomb fölött — az M17
+  makett is mutatja ezt DISTANCE-nál, tehát nem GAME-specifikus, hanem tényleg közös.
+- A `hasAnyMetric` ellenőrzés (ami eldönti, hogy `cardio` `null` legyen-e) kibővült az
+  `intensity`/`venue`/`scorePoints` mezőkkel is.
+
+**`presentation/cardio_summary_screen.dart`** (új) — **tudatosan nem** az M15 makett
+(élő-edzés, szerkeszthető, teljesítmény-görbés) verziója; az a C2.8 feladata. Ez egy egyszerű,
+**csak olvasható** nézet, ami a ma létező egyetlen cardio-forrást (a `LogCardioSheet`-tel
+kézzel rögzített, mindig befejezett session-t) mutatja:
+- Fejléc: `ActivityChip` + típusnév + dátum.
+- Fő metrika kártya, családfüggő: DISTANCE-nál táv (vagy időtartam, ha nincs táv rögzítve —
+  ugyanaz a "nincs távforrás" fallback, mint a C1.6-os kártyán), MACHINE-nél mindig mozgásidő,
+  GAME-nél mindig játékidő.
+- Másodlagos metrika-csempék, családfüggők: DISTANCE → időtartam + tempó (`CardioFormatter.pace`)
+  + szintemelkedés; MACHINE → táv + átlag-teljesítmény + kadencia + ellenállás + gép-kalória;
+  GAME → helyszín + intenzitás + pontszám.
+- **Tudatos egyszerűsítés**: a GAME "bruttó idő" (a design M18-ban külön mutatott, a padon
+  töltött idővel együtt számoló mező) **nem** jelenik meg — egy kézzel rögzített GAME session
+  esetén a bruttó idő mindig **pontosan egyenlő** a játékidővel (a `LogCardioSheet` egyetlen
+  időtartam-mezőt vesz fel, abból lesz mindkettő), tehát a két szám megkettőzése ma
+  félrevezető lenne. A pályán/padon megkülönböztetés csak a C2 élő edzésnél válik valódivá.
+- Nincs "Értékelés" felszólítás egy nem értékelt session-nél, és nincs szerkesztés-gomb — a
+  kész-ha csak "megnyitható és olvasható"-t kér, a szerkesztés a C2.8 dolga.
+
+**`presentation/open_workout_screens.dart`**: a C0.4 óta várakozó `TODO(cardio)` feloldva —
+`openSessionScreen` mostantól `session.isCardio` esetén `CardioSummaryScreen`-t nyit,
+`STRENGTH`-nél változatlanul `LogSessionScreen`-t. **Ez a fájl nem szerepelt a C1.9 fájllistájában**,
+de enélkül a lépés saját kész-ha-ja ("a mentett edzés megnyitható és olvasható") nem teljesülne:
+e nélkül a `sessions_tab.dart` kártyájára koppintva egy cardio session ma is az üres,
+gyakorlat-alapú `LogSessionScreen`-t nyitná meg — nem hibázna (C0.3 audit óta védett eset), de
+helytelen képernyőt mutatna. Ugyanaz a döntés, mint C1.7-nél: a terv fájllistája irányadó, nem
+kimerítő.
+
+**Tesztek:**
+- `rpe_selector` külön tesztfájlt nem kapott — a `PostWorkoutFeedbackSheet`-en és a
+  `LogCardioSheet`-en keresztül már lefedett, önmagában triviális widget.
+- `log_cardio_sheet_test.dart` bővült 4 új teszttel: GAME mezők megjelenése, GAME beküldés
+  (helyszín/intenzitás/pontszám a `cardio`-ban, DISTANCE/MACHINE mezők érintetlenül), RPE+jegyzet
+  helyes átadása, és üres jegyzet → `null` (nem üres string). A meglévő Save-koppintásokat egy
+  közös `_tapSave` helper váltotta ki: az RPE+jegyzet mezőkkel a lap tartalma rendszeresen
+  túlnyúlik az alapértelmezett teszt-viewporton, és egy képernyőn kívüli koppintás korábban csak
+  figyelmeztetett, nem buktatta el a tesztet — most `ensureVisible` előzi meg minden Mentés-tapot.
+- `cardio_summary_screen_test.dart` (új, 6 teszt): mindhárom család fő+másodlagos metrikái,
+  a DISTANCE táv-nélküli fallback, és az értékelt/nem értékelt eset.
+- `open_session_screen_navigation_test.dart` (új, 2 teszt): `openSessionScreen` ténylegesen
+  `CardioSummaryScreen`-t nyit cardio session-re, és változatlanul `LogSessionScreen`-t
+  erősítőre — ez volt az egyetlen ág, amit a C0.4-es `TODO` óta semmilyen teszt nem fedett.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a teljes `flutter test` **724/728
+zöld** — a 4 bukás mind a már ismert, cardión kívüli `chat_repository_test.dart`
+Windows-fájlzár-flake (lásd C1.6 feljegyzés). Ezzel a **teljes C1 iteráció (C1.1–C1.9) kész** —
+**MF2 elérve**: kézzel rögzíthető egy cardio edzés (mind a hét típus, mind a három család),
+a lista ikonos és szűrhető, a mentett edzés megnyitható és olvasható.
+
+**Következő:** `C2.1` — `CardioSessionScreen` váz: állapotgép
+(`IDLE→RUNNING⇄PAUSED→ENDING→SUMMARY`), ticker, minden állapotváltás driftbe írva.

@@ -7,34 +7,66 @@ import 'package:intl/intl.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/activity_chip.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
+import '../../settings/application/settings_controller.dart';
+import '../../settings/domain/user_settings.dart';
 import '../application/exercise_controller.dart';
 import '../application/recommended_template_provider.dart';
 import '../application/workout_session_controller.dart';
+import '../domain/activity_type.dart';
 import '../domain/exercise_enums.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
 import 'log_session_screen.dart';
 import 'open_workout_screens.dart';
+import 'session_row_plan.dart';
 import 'widgets/recommended_workout_card.dart';
 import 'widgets/upcoming_sessions_section.dart';
 
-/// "Sessions" tab: tap to edit/continue; swipe-to-delete with confirm; date filter.
-/// The active [filter] is owned by the parent screen and shown in the AppBar.
+/// Whether [session] passes the sessions-tab kind/type filter
+/// (docs/cardio/59-cardio-implementation-plan.md C1.7).
+///
+/// [kindFilter] is `null` ("Mind" — no filtering), `'STRENGTH'`, or
+/// `'CARDIO'`. [activityTypeFilter] narrows a `'CARDIO'` selection to one
+/// specific [kActivityTypes] code; it's ignored otherwise, so a stale value
+/// left over from a previous selection can never silently narrow the list.
+bool matchesSessionKindFilter(
+  WorkoutSession session, {
+  required String? kindFilter,
+  required String? activityTypeFilter,
+}) {
+  if (kindFilter == null) return true;
+  if (kindFilter == 'STRENGTH') return !session.isCardio;
+  if (!session.isCardio) return false;
+  return activityTypeFilter == null || session.activityType == activityTypeFilter;
+}
+
+/// "Sessions" tab: tap to edit/continue; swipe-to-delete with confirm; date
+/// + kind filters. The active [filter]/[kindFilter]/[activityTypeFilter] are
+/// owned by the parent screen and shown in the AppBar.
 class SessionsTab extends ConsumerStatefulWidget {
   const SessionsTab({
     super.key,
     this.topPadding = 0,
     this.filter = DateRangeFilter.today,
+    this.kindFilter,
+    this.activityTypeFilter,
   });
 
   final double topPadding;
   final DateRangeFilter filter;
+
+  /// `null` (all), `'STRENGTH'`, or `'CARDIO'` — see [matchesSessionKindFilter].
+  final String? kindFilter;
+
+  /// Narrows a `'CARDIO'` [kindFilter] to one [kActivityTypes] code.
+  final String? activityTypeFilter;
 
   @override
   ConsumerState<SessionsTab> createState() => _SessionsTabState();
@@ -106,6 +138,9 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
     final recommended = ref.watch(recommendedTemplateProvider);
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final unitSystem =
+        (ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults())
+            .unitSystem;
 
     // Exercise clientId → muscle-group code, for colouring each card's icon by
     // the session's dominant muscle group.
@@ -126,9 +161,15 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
         // visibility window get their own pinned section, never mixed into
         // history — the history filter (today/week/all) never matches them
         // since they have no startedAt.
-        final upcoming = sessions.where(isWithinUpcomingWindow).toList();
+        bool matchesKind(WorkoutSession s) => matchesSessionKindFilter(
+              s,
+              kindFilter: widget.kindFilter,
+              activityTypeFilter: widget.activityTypeFilter,
+            );
+        final upcoming = sessions.where(isWithinUpcomingWindow).where(matchesKind).toList();
         final filtered = sessions
             .where((s) => !s.isUpcoming && widget.filter.matches(s.startedAt!))
+            .where(matchesKind)
             .toList();
 
         if (sessions.isEmpty || (filtered.isEmpty && upcoming.isEmpty)) {
@@ -169,6 +210,7 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
                 session: filtered[i],
                 categoryCode: _dominantCategory(filtered[i], categoryByExercise),
                 dateLabel: _dateLabel,
+                unitSystem: unitSystem,
                 onEdit: () => _edit(context, filtered[i]),
                 onDelete: () => _confirmDelete(context, ref, filtered[i]),
               );
@@ -211,6 +253,7 @@ class _SessionCard extends StatelessWidget {
     required this.session,
     required this.categoryCode,
     required this.dateLabel,
+    required this.unitSystem,
     required this.onEdit,
     required this.onDelete,
   });
@@ -218,6 +261,7 @@ class _SessionCard extends StatelessWidget {
   final WorkoutSession session;
   final String? categoryCode;
   final DateFormat dateLabel;
+  final UnitSystem unitSystem;
   final VoidCallback onEdit;
 
   /// Asks for confirmation, then deletes. Shared by the swipe gesture and the
@@ -247,6 +291,11 @@ class _SessionCard extends StatelessWidget {
       badgeBg = scheme.primaryContainer;
       badgeIconColor = scheme.onPrimaryContainer;
     }
+
+    // A cardio session has no template name — it's titled by its activity
+    // type instead, the way `templateName` titles a strength session.
+    final title =
+        session.isCardio ? activityTypeLabel(l10n, session.activityType!) : session.templateName;
 
     return Dismissible(
       key: ValueKey(session.clientId),
@@ -283,32 +332,38 @@ class _SessionCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon badge
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: badgeBg,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.fitness_center,
-                      size: 22,
-                      color: badgeIconColor,
+                // Icon badge — cardio gets the shared ActivityChip (colour +
+                // icon keyed by activity type); strength keeps its existing
+                // muscle-group badge unchanged.
+                if (session.isCardio)
+                  ActivityChip(activityType: session.activityType!, size: 44)
+                else
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.fitness_center,
+                        size: 22,
+                        color: badgeIconColor,
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(width: 12),
                 // Content
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Template name, when this session was started from one.
-                      if (session.templateName != null) ...[
+                      // Title: template name (strength) or activity type
+                      // label (cardio) — whichever the session has.
+                      if (title != null) ...[
                         Text(
-                          session.templateName!,
+                          title,
                           style: theme.textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -323,7 +378,7 @@ class _SessionCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               dateLabel.format(session.startedAt!.toLocal()),
-                              style: session.templateName != null
+                              style: title != null
                                   ? theme.textTheme.labelMedium
                                       ?.copyWith(color: scheme.onSurfaceVariant)
                                   : theme.textTheme.bodyLarge,
@@ -349,9 +404,16 @@ class _SessionCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 3),
-                      // Sets count / in-progress pill
+                      // Sets count / cardio primary metric / in-progress pill
                       if (session.inProgress)
                         _StatusPill(label: l10n.inProgressLabel, scheme: scheme)
+                      else if (session.isCardio)
+                        Text(
+                          cardioCardPrimaryMetric(session, unitSystem) ?? '–',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        )
                       else
                         Text(
                           l10n.setsCountLabel(session.sets.length),
