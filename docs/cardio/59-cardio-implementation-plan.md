@@ -152,9 +152,9 @@ lépés két fele, hanem két önálló, egymástól függetlenül szállíthat�
 | # | Lépés | Platform | Frame | Kész-ha |
 |---|---|---|---|---|
 | **C2.1** ✅ | `CardioSessionScreen` váz: állapotgép (`IDLE→RUNNING⇄PAUSED→ENDING→SUMMARY`), ticker, **minden állapotváltás driftbe írva** | Windows | – | App-kilövés után az edzés helyreáll a pontos mozgásidővel |
-| **C2.2** | DISTANCE elrendezés + a **„nincs távforrás”** ág (domináns szám időre vált) | Windows | **M04**, **M11** | A domináns szám a [57 §2](57-cardio-design-prompt.md) szabálya szerint vált; nincs „0,00 km” nagy helyen |
-| **C2.3** | MACHINE elrendezés | Windows | **M05** | Kadencia/teljesítmény/ellenállás bevihető menet közben |
-| **C2.4** | GAME elrendezés + **pályán/padon kapcsoló** (a `movingSeconds` csak „pályán” nő) | Windows | **M06**, **M07** | A játékidő és a bruttó idő külön viselkedik (teszt); *(Q-D2 döntés kell a pontszámlálóhoz)* |
+| **C2.2** ✅ | DISTANCE elrendezés + a **„nincs távforrás”** ág (domináns szám időre vált) | Windows | **M04**, **M11** | A domináns szám a [57 §2](57-cardio-design-prompt.md) szabálya szerint vált; nincs „0,00 km” nagy helyen |
+| **C2.3** ✅ | MACHINE elrendezés | Windows | **M05** | Kadencia/teljesítmény/ellenállás bevihető menet közben |
+| **C2.4** ✅ | GAME elrendezés + **pályán/padon kapcsoló** (a `movingSeconds` csak „pályán” nő) | Windows | **M06**, **M07** | A játékidő és a bruttó idő külön viselkedik (teszt); *(Q-D2 nem oldva meg, ld. C2.4 feljegyzés — pontszámláló C9-re halasztva)* |
 | **C2.5** | Szünet-állapotok (kézi vs. **auto-pause vizuálisan elkülönítve**) + befejezés húzással | Windows | **M08**, **M09**, **M12** | Az auto-pause más, mint a kézi; a befejezés koppintásra **nem** történik meg |
 | **C2.6** | `activity_ranking.dart` — recency-súlyozott rangsor (21 napos felezés), tisztán tesztelhető | Windows | – | Felezés, döntetlen-feloldás, hidegindítás, vegyes lista mind tesztelve ([53 §3.4](53-cardio-mobile-plan.md)) |
 | **C2.7** | Gyorsindító lap a FAB hosszú nyomására + „Összes” aktivitás-választó | Windows | **M01**, **M02**, **M03** | Hosszú nyomás + egy koppintás = fut az edzés, köztes képernyő nélkül |
@@ -944,5 +944,215 @@ tesztek `NativeDatabase.memory()`-t használnak, nem a backend Postgres-mintát)
 **313/313 zöld**; a teljes `flutter test` **746/749 zöld** — a 3 bukás a már ismert,
 cardión kívüli `chat_repository_test.dart` Windows-fájlzár-flake.
 
-**Következő:** `C2.2` — DISTANCE elrendezés a `CardioSessionScreen`-en, a „nincs távforrás” ág
-(a domináns szám időre vált), M04/M11 szerint.
+---
+
+## C2.2 kész (2026-08-11) — DISTANCE elrendezés + „nincs távforrás” ág
+
+**A forrás-konfliktus, amit fel kellett oldani.** Két doc mond mást a DISTANCE család domináns
+számáról: az 53-as doc §4.2 táblája (korábbi, a design-canvas előtti terv) "eltelt mozgásidőt"
+ír; az 57-es doc §2 táblája + a DD-5 döntési napló ("eldöntve 2026-08-09") **táv**-ot mond,
+három indoklással (a táv a "cél alakú" szám, a konzisztenciát a *szerep* tartja — DISTANCE-nál
+táv, MACHINE-nél idő, GAME-nél játékidő —, és a hiányzó távforrást nem elrendezéssel, hanem a
+hiány kimondásával kell kezelni). Az 57-es a **később döntött, explicit "eldöntve" jelölésű**
+forrás, és a C2.2 táblázat-sora saját maga is erre hivatkozik ("A domináns szám a [57 §2]
+szabálya szerint vált") — tehát az 57-es doc nyert: **táv a domináns**, nem idő. Ugyanaz a
+minta, mint C1.7 (M20 vs. a táblázat-sor szövege) és C1.9 (M15 vs. a kész-ha) esetén: a
+design-döntési dokumentum vagy a lépés saját kész-ha-ja explicit iránymutatása erősebb, mint egy
+korábbi tervdoksi táblázata.
+
+**A gyakorlati következmény: C2.2-ben GPS nélkül a "nincs távforrás" ág szinte mindig aktív.**
+A GPS csak C4a-ban érkezik ([51 §4](51-cardio-overview-plan.md): "a C2 végén az élő cardio GPS
+nélkül is teljes"), tehát ebben a lépésben **nincs automatikus távforrás egyáltalán** — a táv
+kizárólag a felhasználó kézi bevitelén keresztül kap értéket, pontosan úgy, ahogy az 57-es doc
+DD-5-je előírja: "távforrás nélkül... a táv szerkeszthető mezőként a másodlagos sorba kerül." Ez
+nem egy ritka szél-eset, hanem **a lépés fő útvonala** — a kézi táv-szerkesztő dialógus ezért
+nem opcionális extra, hanem a kész-ha ("nincs 0,00 km nagy helyen") tényleges megvalósítása:
+enélkül a domináns szám örökre az üres táv-eset maradna.
+
+**`application/workout_session_controller.dart`**: új `updateLiveCardioMetrics(clientId,
+{startedAt, cardio})` — vékony `_repo.update()`-hívás, ami **szándékosan nem nyúl**
+`movingSeconds`/`movingSinceEpochMs`-hez (távolság-szerkesztés sosem érinti az időzítést).
+
+**`presentation/cardio_session_screen.dart`**:
+- `_family` getter (`activityFamilyOf(_activityType)`) dönti el, melyik törzs renderel;
+  MACHINE/GAME egyelőre a C2.1-es family-agnosztikus placeholdert kapja (C2.3/C2.4 dolga).
+- DISTANCE törzs: domináns szám = táv, ha `_distanceMeters` pozitív, egyébként mozgásidő
+  (fallback). Másodlagos sor **mindig 3 csempe**, a design M04/M11 szerint: amelyik a
+  {táv, mozgásidő} párból épp nem domináns, + tempó (kötőjel, ha nincs táv) + pulzus (mindig
+  kötőjel — nincs szenzorforrás bekötve még, ez egy jövőbeli óra-integráció).
+- A táv-csempe **mindig** koppintható (domináns helyen is, másodlagos helyen is) — GPS nélkül
+  ez az egyetlen mód, ahogy a táv valaha értéket kap, tehát nincs értelme csak a fallback-ágra
+  korlátozni a szerkeszthetőséget.
+- A szerkesztő-dialógus mértékegység-tudatos (`Settings` metric/imperial), és a beírt érték
+  `distanceSource: 'MANUAL'`-lel megy a `CardioMetrics`-be — ugyanaz a provenience-konvenció,
+  mint a `LogCardioSheet`-nél (C1.8).
+- **Tudatos egyszerűsítés**: a táv-szerkesztés **teljes cserével** írja a `cardio` blokkot
+  (`CardioMetrics(distanceMeters: ..., distanceSource: 'MANUAL')`), nem összefésüléssel — ma ez
+  biztonságos, mert a DISTANCE család C2.2-ben semmilyen más cardio-mezőt nem állít be még
+  (szintemelkedés stb. később). Egy jövőbeli MACHINE/GAME élő-szerkesztő útvonalnak már
+  össze kellene fésülnie, mint a `LogCardioSheet` submit-ja teszi.
+- **Egy valódi hibát fogott el a teszt, nem csak a design-kérdést**: a dialógus eredetileg egy
+  kézzel kezelt `TextEditingController`-t `dispose()`-olt közvetlenül a `showDialog` visszatérése
+  után — ez "A TextEditingController was used after being disposed" hibát dobott, mert a
+  bezáródó dialógus-átmenet még egy frame-ig a mezőhöz volt csatolva. Javítás: `TextFormField`
+  `initialValue`-val (nincs kézzel kezelt controller, a widget saját State-je intézi az
+  élettartamot) — ez egy általános Flutter-csapda, nem cardio-specifikus, de itt a
+  widget-tesztek (nem a kézi kipróbálás) fogták meg.
+
+**Tesztek:**
+- A meglévő `cardio_session_screen_test.dart` (C2.1) kapott egy `settingsControllerProvider`
+  fake-et — a DISTANCE-törzs mostantól ezt is olvassa, és enélkül egy valódi, DB-függő
+  Riverpod-providert épített volna fel a widget-tesztben (ugyanaz a hiba-osztály, mint
+  C1.6/C1.9-nél, most a képernyő-tesztre is átterjedve). A meglévő 8 teszt asszerciói
+  változatlanul érvényesek maradtak, mert mindegyik fixture táv nélküli RUNNING session — a
+  fallback-ág pontosan ugyanazt a family-agnosztikus megjelenítést adja, mint amit a C2.1-es
+  tesztek eredetileg vártak.
+- `cardio_session_screen_distance_test.dart` (új, 8 teszt): domináns/másodlagos csere mindkét
+  irányban, a nulla táv ugyanúgy fallback-ol, mint a hiányzó, a "sosincs nagy 0,00 km" garancia,
+  a táv-csempe koppintása mindkét pozícióból megnyitja a szerkesztőt, mentés helyesen számol
+  mértékegység szerint (metric és imperial is), Mégse nem ír semmit, és egy MACHINE session
+  változatlanul a generikus törzset kapja.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; `flutter test test/features/workouts`
+**321/321 zöld**.
+
+---
+
+## C2.3 kész (2026-08-11) — MACHINE elrendezés
+
+**Nincs forrás-konfliktus ezúttal** — az 53-as és az 57-es doc egyaránt "eltelt mozgásidőt" mond
+a MACHINE domináns számának, táv · kadencia (rpm) · teljesítmény (W) másodlagos sorral. A
+domináns hely tehát **rögzített**, nem vált (a DISTANCE-nél látott táv/idő-csere itt nem
+értelmezett) — az M05 makett jegyzete szerint is: "a szobabicikli 'negyven perc', nem
+'tizennyolc kilométer' — a gép távja amúgy is becslés."
+
+**Ugyanaz a "nincs automatikus forrás" valóság, mint C2.2-ben, csak három mezőre.** Nincs
+Bluetooth-os edzésgép-párosítás tervben, tehát a táv/kadencia/teljesítmény mindegyike **kézzel
+bevitt** érték — ezt mondja ki a kész-ha szó szerint ("bevihető menet közben"). Az ellenállás
+külön kezelést kapott: az 53-as doc "Extra vezérlő" oszlopa expliciten "ellenállás-léptetőt" kér
+(nem dialógust), a "intervallum-sáv" társát viszont "(C7)"-tel jelöli — vagyis egy **jövőbeli**
+(szobabicikli-specifikus) lépésre halasztva. Az intervallum-sáv ezért **nem** épült meg itt; az
+ellenállás-léptető igen, mert semmi nem jelöli későbbre.
+
+**Refaktor, amit a MACHINE-lépés kikényszerített**: a C2.2-es `_updateDistance` **teljes
+cserével** írta a `CardioMetrics`-et, a kódban dokumentált feltétellel: "ma biztonságos, mert a
+DISTANCE család semmilyen más cardio-mezőt nem állít be még." A MACHINE ág ezt a feltételt
+azonnal megsérti — négy egymástól független mező (táv, kadencia, teljesítmény, ellenállás)
+ugyanazon a session-ön, bármelyik önmagában szerkeszthető. Ha a régi teljes-csere logika marad,
+a kadencia beállítása **kitörölné** a már beírt teljesítményt. Megoldás: mind a négy mező saját
+helyi state-ben követve, egy közös `_updateCardioMetrics({distanceMeters, avgCadence, avgWatts,
+resistanceLevel})` metódus mindig a **teljes**, összefésült `CardioMetrics`-et építi újra és
+küldi — minden `_edit*`/`_adjust*` hívó csak a saját megváltozott mezőjét adja át, a többi a
+jelenlegi state-ből jön. Ugyanaz az elv, mint a `LogCardioSheet` submit-jánál, csak élő
+session-re alkalmazva. Ezt egy dedikált regressziós teszt zárja le (lásd lent) — enélkül a
+hiba csendben marad (a UI helyesen frissülne a *most* szerkesztett mezőre, csak a többi tűnne
+el a háttérben, ugyanaz a "néma hiba" kategória, mint amit a doc 11. szekciója már korábban is
+kiemelt más lépéseknél).
+
+**Refaktor, ami emiatt kifizetődött**: a C2.2-es `_editDistance` egyedi dialógus-kódja
+kiemelve egy általános `_promptNumber(title, suffix, initialText)` helperré — a MACHINE három
+mezője (táv, kadencia, teljesítmény) mind ezt hívja, csak a címke/mértékegység különbözik. A
+domináns-szám blokk is kiemelve egy közös `_DominantMetric` widgetbe (opcionális `onTap`-tal) —
+a DISTANCE-nél koppintható (táv-szerkesztésre), a MACHINE-nél nem (nincs mit felülírni rajta).
+
+**`presentation/cardio_session_screen.dart`**:
+- `_machineBody`: rögzített "mozgásidő" domináns (nem koppintható); táv/kadencia/teljesítmény
+  három csempe, mindegyik koppintható, "—"-t mutat üresen; ellenállás +/− léptető, 0-nál alul
+  zárolva (nincs értelmes negatív ellenállás).
+- `build()` mostantól `switch (_family)`-vel ágazik három irányba (DISTANCE/MACHINE/GAME) — a
+  korábbi bináris `_family == distance ? ... : genericBody` helyett, mert immár két valódi ág
+  van a generikus mellett.
+
+**Tesztek:**
+- `cardio_session_screen_machine_test.dart` (új, 7 teszt): domináns mindig mozgásidő és sosem
+  vált tábra, a domináns blokk nem koppintható, **a kadencia szerkesztése nem törli a már
+  beállított távot/teljesítményt** (a refaktor valódi regressziós próbája), a fordított irány
+  (teljesítmény szerkesztése megőrzi a kadenciát), az ellenállás-léptető növel/perzisztál és
+  0-nál nem enged tovább csökkenni.
+- A meglévő `cardio_session_screen_distance_test.dart`-ban az "egy MACHINE session még mindig a
+  generikus törzset kapja" teszt **elavulttá vált** (a MACHINE immár saját törzset kap) —
+  átírva "egy GAME session"-re, ami tényleg még a C2.1-es placeholdert kapja C2.4-ig.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; `flutter test test/features/workouts`
+**328/328 zöld**.
+
+---
+
+## C2.4 kész (2026-08-11) — GAME elrendezés + pályán/padon kapcsoló
+
+**Ez volt a három családi elrendezés közül a legmélyebb** — nem elrendezés-variáció, hanem egy
+valódi második, a meglévőtől független időzítő bevezetése. A GAME az egyetlen család, ahol a
+C2.1-ben lefektetett egyetlen szünet-fogalom (`_isRunning`/`_isPaused`, a `movingSinceEpochMs`
+nullából/nem-nullból származtatva) többé **nem elég**: a pályán/padon váltás is megállítja a
+játékidőt, de a bruttó idő eközben **tovább fut** — az M07 makett jegyzete szó szerint kimondja,
+hogy ez a "meccs szünet" (a teljes edzés-szintű szünet) **külön** akció a pályán/padon
+kapcsolótól, és csak az utóbbi állítja meg a bruttó időt is.
+
+**A modell, amit ez kikényszerített**: a `_isRunning`/`_isPaused` mostantól egy explicit
+`_manuallyPaused` mezőből származik (nem a `movingSinceEpochMs` null-ságából, mint C2.1–C2.3-ban
+— az a mező immár **két** ok miatt is nullázódhat: kézi szünet VAGY padon). A "gyűjt-e most a
+játékidő" feltétel: `!_manuallyPaused && (nem GAME VAGY pályán)`. Emellett egy **teljesen
+független második epoch-checkpoint pár** (`_grossSeconds`/`_grossSinceEpochMs`) — ugyanaz az elv,
+mint C2.1 `movingSeconds`/`movingSinceEpochMs`-e, csak a bruttó időre, és csak `!_manuallyPaused`
+által vezérelve (a pályán/padon állapot nem érinti).
+
+**Tudatos, dokumentált egyszerűsítés: a bruttó idő és a pályán/padon állapot nem perzisztálódik
+driftbe.** A domain-modellnek/backendnek **nincs** mezője egyikre sem — a `movingSeconds` már ma
+is *a* cardio-időtartam ([56 D-C3.3](56-cardio-statistics-plan.md), streak-küszöb,
+`effectiveDuration`), egy új Drift-oszlop bevezetése (mint C2.1-nél a `movingSinceEpochMs`)
+ehelyütt aránytalan lett volna egy tisztán élő-képernyős, sosem szinkronizálandó
+kényelmi-mérőszámért. Következmény: egy app-kilövés után **nem** lehet eldönteni, hogy egy
+lefagyott `movingSinceEpochMs` kézi szünet vagy padon miatt fagyott-e le — a betöltés ilyenkor a
+**biztonságosabb** olvasatot választja (kézi szünet, tehát Folytatás gombot mutat, nem
+csendben feltételezi, hogy a játékos még pályán van). A bruttó idő ilyenkor a "feltételezzük,
+hogy a szezon kezdete óta futott" becslést kapja (`now - startedAt`) — ez felülbecsül egy
+esetleges korábbi szünet hosszával, de ez így is jobb, mint nullára visszaállni egy órája futó
+meccsnél.
+
+**Q-D2 (pontszámláló láthatósága) — nem megoldva, tudatosan kikerülve.** A táblázat-sor maga
+jelzi, hogy ehhez a lépéshez döntés kellene, de az 53-as doc saját táblázata a "gyors pont/gól
+léptetőt" **"(C9)"**-cel jelöli — egy későbbi, sportspecifikus iterációra ("Játék") halasztva.
+Mivel C2.4 kész-ha-ja saját maga is csak zárójelben, nem a fő kritériumban említi a
+pontszámlálót, és a valódi otthona C9, **nem épült be pontszámláló ebbe a lépésbe** — ez nem
+hiányosság, hanem az 53-as doc saját elhelyezési döntésének követése. (A C1.9-ben épült
+`LogCardioSheet` pontszámláló más eset: utólagos, egyszeri bevitel egy már befejezett
+session-höz, nem élő, játék-közbeni számláló — nem ugyanaz a Q-D2 által felvetett aggály.)
+
+**`presentation/cardio_session_screen.dart`**:
+- `_gameBody`: domináns "JÁTÉKIDŐ" (nem koppintható); másodlagos sor bruttó idő · pulzus (—) ·
+  zóna (—); alatta a nagy pályán/padon kapcsoló (`_CourtToggleButton`, két 130×84 px gomb,
+  haptikus visszajelzéssel — [53 §4.3](53-cardio-mobile-plan.md) explicit mérete/hüvelyk-zóna
+  kérése szerint).
+- A meglévő generikus Szünet/Folytatás gomb-sor **megmarad** GAME-nél is — ez testesíti meg a
+  "meccs szünetet"; a felirat nem lett GAME-specifikusra cserélve ("Meccs szünet" helyett
+  változatlanul "Szünet"/"Folytatás") — apró, tudatos vizuális egyszerűsítés.
+- `_genericBody` **törölve** — mindhárom család saját törzset kapott, nincs több "még nincs
+  elrendezése" eset, tehát a régi fallback holt kóddá vált.
+- Két, a review-ban észlelt holt getter (`_isPaused`, `_shouldAccrueMoving`) eltávolítva —
+  mindkettő a régi, egyszerűbb modellből maradt vissza, és az új, három-ágú logikában már nem
+  volt hívási helyük (a `_resume()`-ban a "fog-e gyűjteni" kérdést muszáj külön, a
+  `_manuallyPaused` **még régi** értékével számolni, tehát a getter maga félrevezető lett volna).
+
+**Tesztek** (`cardio_session_screen_game_test.dart`, új, 8 teszt) — **a numerikus tick-elés nem
+tesztelhető közvetlenül**: mind `_liveMovingSeconds`, mind `_liveGrossSeconds` valódi
+`DateTime.now()`-t olvas, amit a `tester.pump(duration)` nem mozgat előre (csak a Timer-sor fut
+le szimulált időben, a benne olvasott órát nem). A "két óra másképp viselkedik" állítást ezért —
+ugyanúgy, mint C2.1 kilövés-teszteknél — **konstruált, már eltérő állapotú session-ökkel**
+bizonyítja, nem várakozással: egy `movingSeconds: 600` + `startedAt: 20 perce` frissen betöltött,
+lefagyott session az első frame-en **két különböző, determinisztikus** számot mutat
+(játékidő 10:00, bruttó ~20:00) — ez önmagában bizonyítja a független követést. A
+kapcsoló/szünet **vezérlésfolyamát** (mi fagy le, mi nem, mikor van letiltva) közvetlenül, a
+rögzített kontroller-hívásokon keresztül ellenőrzi: Padon → `pauseCardioSession`; Pályán ← Padon
+→ `resumeCardioSession`; kézi szünet közben mindkét kapcsológomb `onTap: null`; kézi szünetből
+Folytatás **pályán maradva** újraindítja a játékidőt, **padon maradva** nem (a `resumeCardioSession`
+egyáltalán nem hívódik ez utóbbi esetben) — ez a lépés legfontosabb regressziós próbája.
+
+A meglévő `cardio_session_screen_distance_test.dart`-ban egy másik elavult teszt ("egy GAME
+session még mindig a generikus törzset kapja") is törölve — GAME immár saját törzzsel
+rendelkezik, nincs több család a generikus placeholderen.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; `flutter test test/features/workouts`
+**335/335 zöld**. Ezzel a **három családi elrendezés (C2.2–C2.4) mind kész.**
+
+**Következő:** `C2.5` — szünet-állapotok (kézi vs. **auto-pause vizuálisan elkülönítve**) +
+befejezés húzással, M08/M09/M12 szerint.

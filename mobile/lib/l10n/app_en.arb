@@ -3402,5 +3402,33 @@
   "couldNotUpdateWorkoutMessage": "Couldn't update the workout. Please try again.",
   "@couldNotUpdateWorkoutMessage": {
     "description": "Snackbar shown when a live cardio session's pause/resume/finish write fails"
+  },
+  "heartRateFieldLabel": "HEART RATE",
+  "@heartRateFieldLabel": {
+    "description": "Secondary-metric label for a live cardio session's heart rate tile (no sensor source yet — always shows the empty placeholder)"
+  },
+  "editDistanceDialogTitle": "Update distance",
+  "@editDistanceDialogTitle": {
+    "description": "Title of the dialog that manually updates a live DISTANCE-family session's distance-so-far"
+  },
+  "editCadenceDialogTitle": "Update cadence",
+  "@editCadenceDialogTitle": {
+    "description": "Title of the dialog that manually updates a live MACHINE-family session's cadence"
+  },
+  "editPowerDialogTitle": "Update power",
+  "@editPowerDialogTitle": {
+    "description": "Title of the dialog that manually updates a live MACHINE-family session's average power"
+  },
+  "zoneFieldLabel": "ZONE",
+  "@zoneFieldLabel": {
+    "description": "Secondary-metric label for a live cardio session's heart-rate-zone tile (no sensor source yet — always shows the empty placeholder)"
+  },
+  "onCourtLabel": "On court",
+  "@onCourtLabel": {
+    "description": "GAME-family live-session toggle: currently playing (movingSeconds accrues)"
+  },
+  "onBenchLabel": "Bench",
+  "@onBenchLabel": {
+    "description": "GAME-family live-session toggle: currently on the bench (movingSeconds paused, gross time keeps running)"
   }
 }

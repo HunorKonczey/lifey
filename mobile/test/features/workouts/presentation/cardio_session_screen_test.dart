@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/features/settings/application/settings_controller.dart';
+import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
@@ -15,11 +17,18 @@ import 'package:lifey/l10n/app_localizations.dart';
 /// same reasoning as `log_cardio_sheet_test.dart`: those are thin,
 /// already-covered passes to the repository, so this file verifies what the
 /// *screen* computes and sends.
+///
+/// Every fixture here uses RUNNING (DISTANCE family) with no distance
+/// recorded, so C2.2's DISTANCE layout falls back to exactly the
+/// family-agnostic moving-time display these C2.1 tests were written
+/// against — see `cardio_session_screen_distance_test.dart` for the
+/// distance-present/distance-editing behavior C2.2 actually added.
 
 class _RecordingSessionController extends WorkoutSessionController {
   final pauseCalls = <Map<String, Object?>>[];
   final resumeCalls = <Map<String, Object?>>[];
   final finishCalls = <Map<String, Object?>>[];
+  final updateLiveCardioMetricsCalls = <Map<String, Object?>>[];
   bool failNext = false;
 
   @override
@@ -60,6 +69,21 @@ class _RecordingSessionController extends WorkoutSessionController {
       'movingSeconds': movingSeconds,
     });
   }
+
+  @override
+  Future<void> updateLiveCardioMetrics(
+    String clientId, {
+    required DateTime startedAt,
+    required CardioMetrics cardio,
+  }) async {
+    if (failNext) throw Exception('boom');
+    updateLiveCardioMetricsCalls.add({'clientId': clientId, 'startedAt': startedAt, 'cardio': cardio});
+  }
+}
+
+class _MetricSettings extends SettingsController {
+  @override
+  Stream<UserSettings> build() => Stream.value(const UserSettings.defaults());
 }
 
 WorkoutSession _runningSession({int movingSeconds = 0, required int movingSinceEpochMs}) {
@@ -91,7 +115,10 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
   final controller = _RecordingSessionController();
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [workoutSessionControllerProvider.overrideWith(() => controller)],
+      overrides: [
+        workoutSessionControllerProvider.overrideWith(() => controller),
+        settingsControllerProvider.overrideWith(_MetricSettings.new),
+      ],
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,

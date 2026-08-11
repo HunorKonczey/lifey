@@ -140,6 +140,26 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
     );
   }
 
+  /// Persists a mid-session edit to a **live** cardio session's metrics —
+  /// e.g. a manually-entered distance update on the DISTANCE layout's "no
+  /// distance source" fallback (docs/cardio/59-cardio-implementation-plan.md
+  /// C2.2). Unlike pause/resume/finish, this never touches
+  /// `movingSeconds`/`movingSinceEpochMs` — left absent, so whichever one is
+  /// currently ticking (or frozen) is untouched by an unrelated metric edit.
+  Future<void> updateLiveCardioMetrics(
+    String clientId, {
+    required DateTime startedAt,
+    required CardioMetrics cardio,
+  }) {
+    return _repo.update(
+      clientId,
+      startedAt: startedAt,
+      exercises: const [],
+      sets: const [],
+      cardio: Value(cardio),
+    );
+  }
+
   Future<void> updateSession(
     String clientId, {
     required DateTime startedAt,
