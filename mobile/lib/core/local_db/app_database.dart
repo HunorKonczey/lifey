@@ -47,6 +47,7 @@ part 'app_database.g.dart';
   ExerciseSets,
   CardioDetails,
   CardioSplits,
+  CardioTrackPoints,
   WaterSources,
   WaterEntries,
   UserSettingsTable,
@@ -60,7 +61,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 35;
+  int get schemaVersion => 36;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -304,6 +305,12 @@ class AppDatabase extends _$AppDatabase {
           if (from < 35) {
             await _addColumnIfMissing(
                 m, workoutSessions, workoutSessions.movingSinceEpochMs);
+          }
+          // V36: raw GPS track points (docs/cardio/54-cardio-gps-route-plan.md
+          // §4.1, C4a.3) — a brand-new, empty table; no existing session ever
+          // recorded a point (GPS didn't exist before this).
+          if (from < 36) {
+            await m.createTable(cardioTrackPoints);
           }
         },
       );

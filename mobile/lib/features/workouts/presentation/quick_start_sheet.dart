@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/location/location_permission_preferences.dart';
+import '../../../core/location/location_service_geolocator.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/quick_start_options_provider.dart';
@@ -12,6 +14,7 @@ import '../domain/workout_template.dart';
 import 'activity_picker_screen.dart';
 import 'log_session_screen.dart';
 import 'open_workout_screens.dart';
+import 'widgets/gps_explainer_sheet.dart';
 
 /// Opens the quick-start sheet — the FAB long-press destination
 /// (docs/cardio/59-cardio-implementation-plan.md C2.7, M01/M02).
@@ -314,13 +317,55 @@ Future<WorkoutSession> createCardioSession(
 /// live [CardioSessionScreen] — the C2.7 entry point `open_workout_screens.dart`'s
 /// own doc comment already anticipated ("today only reachable from tests,
 /// since the quick-start entry point is C2.7").
+///
+/// For a DISTANCE-family activity, the very first call ever additionally
+/// shows [GpsExplainerSheet] before the system location dialog
+/// (docs/cardio/54-cardio-gps-route-plan.md §3.1, C4a.2, M26) — never again
+/// after that, and never blocking the session from starting either way
+/// (D-C.5). Only this quick-start-sheet/full-picker path gates the
+/// explainer; `workout_resume_prompt.dart`'s C2.11a deep-link/app-shortcut/
+/// widget entry point calls [createCardioSession] directly and skips it, on
+/// purpose — a widget/shortcut tap promises "one gesture starts the
+/// workout" (C2.11a's own kész-ha), which an interactive sheet would break.
+/// A session started that way before the explainer has ever been seen just
+/// starts without GPS, exactly like the "Indítás GPS nélkül" choice would —
+/// the in-session status card (`CardioSessionScreen`, M27/M28) still offers
+/// "Allow" from there.
 Future<void> startCardioQuickly(
     BuildContext context, WidgetRef ref, String activityType) async {
   HapticFeedback.mediumImpact();
   final sheetNavigator = Navigator.of(context);
   final rootNavigator = Navigator.of(context, rootNavigator: true);
-  final session = await createCardioSession(
-      ref.read(workoutSessionControllerProvider.notifier), activityType);
+  // Captured up front: `ref` reads the *provider value* here (not a live
+  // reference into the tile's own widget), so these stay valid after
+  // `sheetNavigator.pop()` disposes the tile below — `ref` itself does not.
+  // Using `ref.read(...)` again after that pop throws ("Using 'ref' when a
+  // widget is about to or has been unmounted is unsafe"), caught the hard
+  // way via this function's own widget tests.
+  final sessionController = ref.read(workoutSessionControllerProvider.notifier);
+
+  if (activityFamilyOf(activityType) == ActivityFamily.distance) {
+    final prefs = ref.read(locationPermissionPreferencesProvider);
+    if (!await prefs.hasSeenGpsExplainer()) {
+      final locationService = ref.read(locationServiceProvider);
+      // Marked seen up front, before the sheet even resolves — the doc's own
+      // design note is explicit that this shows exactly once ever, so an
+      // ignored/swiped-away sheet must count as "seen" too, same as either
+      // real button (see GpsExplainerChoice's doc).
+      await prefs.setSeenGpsExplainer();
+      sheetNavigator.pop();
+      if (!rootNavigator.mounted) return;
+      final choice = await showGpsExplainerSheet(rootNavigator.context);
+      if (choice == GpsExplainerChoice.requestPermission) {
+        await locationService.requestPermission();
+      }
+      final session = await createCardioSession(sessionController, activityType);
+      await openSessionScreen(rootNavigator, session);
+      return;
+    }
+  }
+
+  final session = await createCardioSession(sessionController, activityType);
   sheetNavigator.pop();
   await openSessionScreen(rootNavigator, session);
 }

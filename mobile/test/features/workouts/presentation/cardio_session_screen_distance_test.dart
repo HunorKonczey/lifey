@@ -1,6 +1,11 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/local_db/app_database.dart';
+import 'package:lifey/core/local_db/database_provider.dart';
+import 'package:lifey/core/location/location_service.dart';
+import 'package:lifey/core/location/location_service_geolocator.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
@@ -55,6 +60,28 @@ class _ImperialSettings extends SettingsController {
       Stream.value(const UserSettings.defaults().copyWith(unitSystem: UnitSystem.imperial));
 }
 
+/// This file's fixtures are all DISTANCE-family — see `cardio_session_screen_test.dart`'s
+/// identical helper for why every test here overrides `locationServiceProvider`
+/// with a pre-granted stub: it keeps C4a.2's "no GPS" status card/chip out
+/// of a layout these C2.2 tests were written against, and out of scope here.
+LocationServiceStub _grantedLocationStub() => LocationServiceStub(
+      initial: const LocationAvailability(
+        authorization: LocationAuthorization.granted,
+        precise: true,
+        serviceEnabled: true,
+      ),
+    );
+
+/// C4a.3: `CardioSessionScreen.initState` now unconditionally reads
+/// `cardioTrackPointRepositoryProvider` (→ `appDatabaseProvider`) for every
+/// DISTANCE-family session — see `_pump`'s override below and
+/// `cardio_session_screen_test.dart`'s identical helper for why.
+AppDatabase _testDatabase() {
+  final db = AppDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
+  return db;
+}
+
 WorkoutSession _distanceSession({
   double? distanceMeters,
   int movingSeconds = 0,
@@ -86,6 +113,8 @@ Future<_RecordingSessionController> _pump(
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider
             .overrideWith(imperial ? _ImperialSettings.new : _MetricSettings.new),
+        locationServiceProvider.overrideWithValue(_grantedLocationStub()),
+        appDatabaseProvider.overrideWithValue(_testDatabase()),
       ],
       child: MaterialApp(
         locale: const Locale('en'),

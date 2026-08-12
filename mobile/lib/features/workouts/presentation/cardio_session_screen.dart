@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/cardio_formatter.dart';
+import '../../../core/location/location_service.dart';
+import '../../../core/location/location_service_geolocator.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/activity_chip.dart';
@@ -13,6 +15,7 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/workout_session_controller.dart';
+import '../data/cardio_track_point_repository.dart';
 import '../domain/activity_type.dart';
 import '../domain/cardio_personal_record.dart';
 import '../domain/workout_session.dart';
@@ -93,7 +96,8 @@ class CardioSessionScreen extends ConsumerStatefulWidget {
 /// (docs/cardio/53-cardio-mobile-plan.md §4.3).
 enum _PauseReason { none, manual, auto }
 
-class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
+class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
+    with WidgetsBindingObserver {
   late final String _clientId;
   late final DateTime _startedAt;
   late final String _activityType;
@@ -136,6 +140,40 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
   double? _avgCadence;
   double? _avgWatts;
   int? _resistanceLevel;
+
+  // DISTANCE only — the M27/M28 "no GPS" status card (C4a.2). Null until the
+  // first `LocationService.availability` event arrives, which is fine: the
+  // card only ever renders once there's a real answer, never on a guess.
+  LocationAvailability? _locationAvailability;
+  StreamSubscription<LocationAvailability>? _locationSub;
+
+  /// "Nem kell most" — hides the card for the rest of *this* session only;
+  /// the header's [_GpsOffChip] stays regardless (M27's own design note:
+  /// measurement quality is always visible). Never persisted.
+  bool _locationCardDismissed = false;
+  bool _locationActionBusy = false;
+
+  // DISTANCE only, live GPS recording (C4a.3) — active exactly while
+  // running (not paused, not finished) and tracking is actually possible
+  // (see [_syncPositionTracking]). Writes go straight to
+  // `CardioTrackPoints`, immediately, one at a time; nothing here computes
+  // distance/route from them yet — that's `track_filter.dart` (C4a.4) and
+  // the closing pipeline (C4a.6).
+  StreamSubscription<LocationFix>? _positionSub;
+
+  /// Next sequence number to assign — seeded once from the DB
+  /// ([_seedTrackPointSeqAndSync]) so a session reopened after an app kill
+  /// resumes numbering correctly instead of colliding with points already
+  /// on disk. Incremented purely in-memory afterwards: a single live
+  /// subscription is the only writer, so there's no race to guard against
+  /// beyond that one seed read.
+  int _nextTrackPointSeq = 0;
+
+  /// Guards [_syncPositionTracking] from starting a subscription before
+  /// [_nextTrackPointSeq] has actually been seeded — the availability
+  /// listener can fire (and would otherwise try to start tracking) while
+  /// that one-time DB read is still in flight.
+  bool _trackPointSeqSeeded = false;
 
   Timer? _ticker;
   bool _busy = false;
@@ -219,12 +257,83 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
         if (mounted) unawaited(_startSessionNotifier());
       });
     }
+
+    // GPS status visibility (C4a.2) — DISTANCE only (52/54: MACHINE/GAME
+    // never track location). `WidgetsBindingObserver` re-checks on app
+    // resume, the one moment a permission change made in system Settings
+    // (the card's own "Beállítások" action) could otherwise go unnoticed —
+    // see `LocationService.availability`'s doc for why nothing pushes that
+    // change on its own.
+    if (_family == ActivityFamily.distance) {
+      WidgetsBinding.instance.addObserver(this);
+      _locationSub = ref.read(locationServiceProvider).availability.listen((a) {
+        if (mounted) {
+          setState(() => _locationAvailability = a);
+          _syncPositionTracking();
+        }
+      });
+      // Async on purpose (initState itself can't await) — see
+      // [_trackPointSeqSeeded]'s doc for why [_syncPositionTracking] is safe
+      // to call reactively before this resolves.
+      unawaited(_seedTrackPointSeqAndSync());
+    }
+  }
+
+  /// One-time DB read so [_nextTrackPointSeq] resumes correctly after an app
+  /// kill mid-session (C4a.3) — see the field's own doc.
+  Future<void> _seedTrackPointSeqAndSync() async {
+    final count = await ref.read(cardioTrackPointRepositoryProvider).pointCount(_clientId);
+    if (!mounted) return;
+    _nextTrackPointSeq = count;
+    _trackPointSeqSeeded = true;
+    _syncPositionTracking();
+  }
+
+  /// Starts/stops the raw GPS point recording subscription to match current
+  /// conditions — called whenever any of them could have changed:
+  /// [_locationAvailability] updates, [_seedTrackPointSeqAndSync] finishes,
+  /// and every [_pauseAs]/[resume] transition (both flip [_isRunning]).
+  /// Idempotent either way — safe to call from all of those unconditionally.
+  void _syncPositionTracking() {
+    final shouldTrack = _trackPointSeqSeeded &&
+        _family == ActivityFamily.distance &&
+        (_locationAvailability?.canTrack ?? false) &&
+        _isRunning;
+    if (shouldTrack && _positionSub == null) {
+      _positionSub = ref
+          .read(locationServiceProvider)
+          .positionStream(profile: locationTrackingProfileFor(_activityType))
+          .listen(_onPositionFix);
+    } else if (!shouldTrack && _positionSub != null) {
+      _positionSub!.cancel();
+      _positionSub = null;
+    }
+  }
+
+  /// Writes [fix] to `CardioTrackPoints` immediately (C4a.3 — "kilőtt app
+  /// legfeljebb egy pontot veszít"), never buffered in memory. Fire-and-forget:
+  /// a single slow/failed write shouldn't stall the next fix's write, and
+  /// there's nothing meaningful to show the user for one dropped point
+  /// (the whole point of writing immediately is that this is rare).
+  void _onPositionFix(LocationFix fix) {
+    final seq = _nextTrackPointSeq++;
+    unawaited(ref.read(cardioTrackPointRepositoryProvider).addPoint(_clientId, seq, fix));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _family == ActivityFamily.distance) {
+      unawaited(ref.read(locationServiceProvider).refresh());
+    }
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
     _finishProgress.dispose();
+    _locationSub?.cancel();
+    _positionSub?.cancel();
+    if (_family == ActivityFamily.distance) WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -273,6 +382,22 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
   void _showError(AppLocalizations l10n) {
     if (!mounted) return;
     AppSnackbar.showError(context, title: l10n.couldNotUpdateWorkoutMessage);
+  }
+
+  /// Runs [content]'s recovery action (request permission / open app
+  /// settings / open device location settings — see [_locationCardContent])
+  /// against the real [LocationService]. Never touches [_locationAvailability]
+  /// directly: the action itself pushes the new state onto
+  /// `LocationService.availability`, which the [_locationSub] subscription
+  /// already reacts to — this only owns the button's busy spinner.
+  Future<void> _handleLocationCardAction(_LocationCardContent content) async {
+    if (_locationActionBusy) return;
+    setState(() => _locationActionBusy = true);
+    try {
+      await content.onAction(ref.read(locationServiceProvider));
+    } finally {
+      if (mounted) setState(() => _locationActionBusy = false);
+    }
   }
 
   /// The Live Activity / ongoing notification's cardio payload
@@ -448,6 +573,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
         _busy = false;
       });
       unawaited(_updateSessionNotifier());
+      _syncPositionTracking(); // _isRunning just flipped false — stop recording.
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -488,6 +614,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
         _busy = false;
       });
       unawaited(_updateSessionNotifier());
+      _syncPositionTracking(); // _isRunning just flipped true — (re)start recording.
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -931,10 +1058,25 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
         familyBody = _gameBody(context, l10n, theme, scheme);
     }
 
+    // M27/M28 (C4a.2) — computed once here rather than inline in the Column
+    // below, since both the header chip and the card itself need to agree
+    // on "is there actually an issue right now".
+    final availability = _locationAvailability;
+    final locationCardContent = (_family == ActivityFamily.distance &&
+            !_locationCardDismissed &&
+            availability != null)
+        ? _locationCardContent(l10n, availability)
+        : null;
+    final showGpsOffChip =
+        _family == ActivityFamily.distance && availability != null && !availability.canTrack;
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text(activityTypeLabel(l10n, _activityType)),
+        actions: [
+          if (showGpsOffChip) _GpsOffChip(label: l10n.locationOffChipLabel),
+        ],
       ),
       body: Stack(
         children: [
@@ -957,6 +1099,16 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
                       elapsed: _pausedDuration,
                     ),
                   const SizedBox(height: 8),
+                  if (locationCardContent != null) ...[
+                    _LocationStatusCard(
+                      content: locationCardContent,
+                      dismissLabel: l10n.locationDismissButton,
+                      busy: _locationActionBusy,
+                      onAction: () => _handleLocationCardAction(locationCardContent),
+                      onDismiss: () => setState(() => _locationCardDismissed = true),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   // "Szünetben a domináns szám és a metrikák kiszürkülnek" —
                   // M08's note: nothing here is still ticking, so graying it
                   // out keeps that obvious without disabling the tap-to-edit
@@ -1006,6 +1158,183 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
             progressHint: l10n.slideToFinishProgressHint,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// What to show on the in-session "no GPS" card (C4a.2, M27/M28) for a given
+/// [LocationAvailability] — `null` from [_locationCardContent] when tracking
+/// is fully available, meaning there's nothing to show. [onAction] receives
+/// the live [LocationService] so the button can call the right recovery
+/// method for the exact cause (docs/cardio/54-cardio-gps-route-plan.md
+/// §3.3's state matrix).
+typedef _LocationCardContent = ({
+  IconData icon,
+  String title,
+  String body,
+  String buttonLabel,
+  Future<void> Function(LocationService) onAction,
+});
+
+/// Resolves [availability] to the exact card content + recovery action,
+/// checked in the same priority order as docs/cardio/54 §3.3's table:
+/// permanently-denied first (the only case with no in-app recovery path at
+/// all), then not-yet-granted, then the device-wide toggle, then iOS
+/// precision. Returns `null` once every condition is satisfied
+/// ([LocationAvailability.canTrack]).
+///
+/// `notDetermined` and `denied` deliberately share one branch/button: both
+/// route to [LocationService.requestPermission], which — per its own
+/// contract (C4a.1) — only actually shows the system dialog while
+/// permission is still askable, and simply no-ops otherwise. That contract
+/// is exactly what makes a single "Engedélyezés" action correct for both,
+/// without this resolver needing to guess whether the OS will currently
+/// honor a second prompt.
+_LocationCardContent? _locationCardContent(AppLocalizations l10n, LocationAvailability availability) {
+  if (availability.authorization == LocationAuthorization.deniedForever) {
+    return (
+      icon: Icons.block,
+      title: l10n.locationDeniedForeverTitle,
+      body: l10n.locationDeniedForeverBody,
+      buttonLabel: l10n.locationOpenAppSettingsButton,
+      onAction: (service) => service.openAppSettings(),
+    );
+  }
+  if (availability.authorization != LocationAuthorization.granted) {
+    return (
+      icon: Icons.location_off,
+      title: l10n.locationOffTitle,
+      body: l10n.locationOffBody,
+      buttonLabel: l10n.locationRequestButton,
+      onAction: (service) => service.requestPermission(),
+    );
+  }
+  if (!availability.serviceEnabled) {
+    return (
+      icon: Icons.location_off,
+      title: l10n.locationOffTitle,
+      body: l10n.locationOffBody,
+      buttonLabel: l10n.locationEnableServiceButton,
+      onAction: (service) => service.openLocationSettings(),
+    );
+  }
+  if (!availability.precise) {
+    return (
+      icon: Icons.my_location,
+      title: l10n.locationImpreciseTitle,
+      body: l10n.locationImpreciseBody,
+      buttonLabel: l10n.locationEnablePreciseButton,
+      onAction: (service) => service.openAppSettings(),
+    );
+  }
+  return null;
+}
+
+/// The in-session "no GPS" card itself (M27/M28) — one component for every
+/// [_LocationCardContent] variant, same "same shape, different copy"
+/// approach as [_PauseStatusCard] right below. Leads with what still works
+/// (M27's own design note), never with what's missing.
+class _LocationStatusCard extends StatelessWidget {
+  const _LocationStatusCard({
+    required this.content,
+    required this.dismissLabel,
+    required this.busy,
+    required this.onAction,
+    required this.onDismiss,
+  });
+
+  final _LocationCardContent content;
+  final String dismissLabel;
+  final bool busy;
+  final VoidCallback onAction;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 340),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(content.icon, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(content.title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 3),
+                    Text(content.body, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 13),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: busy ? null : onAction,
+                  child: Text(content.buttonLabel),
+                ),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: busy ? null : onDismiss,
+                  child: Text(dismissLabel),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small persistent header chip — stays visible even after
+/// [_LocationStatusCard] is dismissed for the session (M27's own design
+/// note: measurement quality is always visible, only the actionable card is
+/// skippable).
+class _GpsOffChip extends StatelessWidget {
+  const _GpsOffChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(right: 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.location_disabled, size: 15, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     );
   }

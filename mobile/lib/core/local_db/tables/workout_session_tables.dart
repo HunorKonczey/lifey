@@ -200,6 +200,40 @@ class CardioSplits extends Table {
   Set<Column> get primaryKey => {clientId};
 }
 
+/// Raw GPS fixes for a DISTANCE-family cardio session
+/// (docs/cardio/54-cardio-gps-route-plan.md §4.1, C4a.3) — every incoming fix
+/// is written here immediately, not buffered in memory, so a killed app
+/// loses at most one point. **Never synced** (D-C1.2: raw points never leave
+/// the phone — only the closing polyline, C4a.6, goes to the server) and
+/// never read by the outbox. Deleted alongside its session
+/// (`WorkoutSessionRepository.delete`, `entity_sync_config.dart`'s
+/// `_cleanupWorkoutSessionChildren`), and independently pruned after 90 days
+/// by a maintenance job once the polyline it fed is safely on the server
+/// (C4a.6, §5 point 5) — this table is never expected to grow unbounded.
+@DataClassName('CardioTrackPointRow')
+class CardioTrackPoints extends Table {
+  @override
+  String get tableName => 'cardio_track_points';
+
+  TextColumn get sessionClientId => text().references(WorkoutSessions, #clientId)();
+
+  /// 0-based, monotonically increasing per session — the recording order.
+  /// Not derived from [recordedAt]: GPS timestamps aren't guaranteed
+  /// strictly increasing (a fix can repeat or arrive slightly out of order),
+  /// so a separate, caller-assigned sequence is the only reliable ordering.
+  IntColumn get seq => integer()();
+
+  RealColumn get latitude => real()();
+  RealColumn get longitude => real()();
+  RealColumn get altitude => real().nullable()();
+  RealColumn get accuracy => real().nullable()();
+  RealColumn get speed => real().nullable()();
+  DateTimeColumn get recordedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {sessionClientId, seq};
+}
+
 /// Exercises planned for a session (quick-add defaults) — independent of how
 /// many [ExerciseSets] have been logged for them. Mirrors the backend's
 /// `workout_session_exercises` snapshot table.

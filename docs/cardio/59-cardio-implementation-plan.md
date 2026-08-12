@@ -213,9 +213,9 @@ háttér-mód, **Mac-et igényel** a tényleges kipróbáláshoz.
 
 | # | Lépés | Platform | Frame | Kész-ha |
 |---|---|---|---|---|
-| **C4a.1** | `geolocator` bevezetése + platform-konfiguráció + `LocationService` (engedély- és pozíció-stream, teszt-implementációval) | Windows | – | Teszt-implementáció nélkül is fordul minden platformon |
-| **C4a.2** | Engedély-utak: magyarázó lap a rendszer-kérdés előtt, megtagadva / véglegesen / pontatlan ágak | Windows | **M26**, **M27**, **M28** | **Megtagadott engedéllyel is elindul és menthető az edzés** ([51 D-C.5](51-cardio-overview-plan.md)) |
-| **C4a.3** | `CardioTrackPoints` drift-tábla + azonnali pontírás | Windows | – | Kilőtt app legfeljebb egy pontot veszít |
+| **C4a.1** ✅ | `geolocator` bevezetése + platform-konfiguráció + `LocationService` (engedély- és pozíció-stream, teszt-implementációval) | Windows | – | Teszt-implementáció nélkül is fordul minden platformon |
+| **C4a.2** ✅ | Engedély-utak: magyarázó lap a rendszer-kérdés előtt, megtagadva / véglegesen / pontatlan ágak | Windows | **M26**, **M27**, **M28** | **Megtagadott engedéllyel is elindul és menthető az edzés** ([51 D-C.5](51-cardio-overview-plan.md)) |
+| **C4a.3** ✅ | `CardioTrackPoints` drift-tábla + azonnali pontírás | Windows | – | Kilőtt app legfeljebb egy pontot veszít |
 | **C4a.4** | `track_filter.dart`: pontosság-/sebesség-/elmozdulás-kapuk, magasság-simítás, haversine-táv + gyenge jel UI | Windows | **M10** | Rögzített minta-nyomvonalakon a táv ≤ 5% hibával |
 | **C4a.5a** | Android előtér-szolgáltatás **a meglévő ongoing notificationnel egyesítve** ([54 §4.4](54-cardio-gps-route-plan.md)) + auto-pause bekötése a GPS-sebességre (platformfüggetlen Dart, a no-op `LocationService`-szel tesztelve) | Windows | M09 | **Nem keletkezik két Android értesítés**; auto-pause a sebesség-küszöbön ki-/bekapcsol (teszt) *(Q-D3 döntés kell)* |
 | **C4a.5b** | iOS háttér-mód (`AppleSettings.allowBackgroundLocationUpdates` + `UIBackgroundModes: location`) | **Mac** | M09 | Háttérben (képernyő kikapcsolva) is folyik a rögzítés, a Live Activity mutatja |
@@ -2753,3 +2753,228 @@ adathalmazával való vizuális ellenőrzés nem volt elérhető ebben a sandbox
 **Következő:** `C4a` (GPS/útvonal, mobil) — a `cardio.routePolyline`/split-adat, amit a C1w.3 és
 ez a lépés is szándékosan üresen hagyott, itt kezd ténylegesen megtelni. Vagy `C5` (óra), ha az
 aktuálisabb.
+
+---
+
+## C4a.1 kész (2026-08-12) — `geolocator` + `LocationService`
+
+**`geolocator: ^14.0.2`** hozzáadva (`pubspec.yaml`, indoklással a D-C4.1 döntés szerint) —
+`flutter pub add` valódi pub.dev feloldással, nem kézzel felírt verziószám. A federated plugin
+maga Android/iOS/web/Windows/Linux/macOS implementációt is hoz, de ez a projekt csak
+android/ios/web platformot céloz meg ténylegesen (nincs `windows/`/`macos/`/`linux/` mappa) — a
+"Windowson fejleszthető" ugyanazt jelenti itt is, amit a C0–C2 lépéseknél: `flutter analyze`/
+`flutter test` a fejlesztői gépen, natív build nélkül.
+
+**Platform-konfiguráció**: `ios/Runner/Info.plist` — `NSLocationWhenInUseUsageDescription`
+(csak "while in use", sosem "always", §3.2), a meglévő HU-nyelvű usage-description mintát
+követve. `android/app/src/main/AndroidManifest.xml` — `ACCESS_FINE_LOCATION` +
+`ACCESS_COARSE_LOCATION`. **Tudatosan nem** kerül be még a `FOREGROUND_SERVICE_LOCATION`
+engedély, az API 34+ szolgáltatástípus-deklaráció, sem az iOS `UIBackgroundModes`/
+`NSLocationAlwaysUsageDescription` — azok C4a.5a/C4a.5b dolga, nem ennek az alaplépésnek.
+
+**`lib/core/location/`** — két fájl, a `MusicService`/`MusicServiceStub` pár mintáját követve
+(interfész + stream + Riverpod-provideren injektált implementáció), de **egyetlen** valódi
+implementációval, nem platformonként kettővel: a `geolocator` maga dönt Android/iOS között
+belül, nincs saját natív híd, amit külön kellene írni.
+
+- **`location_service.dart`**: `LocationAuthorization` (a geolocator `LocationPermission`
+  leképezve a §3.3 állapot-mátrixra — `always`/`whileInUse` mindkettő `granted`, mert az app
+  sosem kér "always"-t), `LocationAvailability` (authorization + precise + serviceEnabled hármas,
+  `canTrack` derived getterrel), `LocationFix` (a `CardioTrackPoints` C4a.3-as oszlopait tükröző,
+  geolocatortól független domain-típus), `LocationTrackingProfile` (precise/relaxed — az
+  "aktivitás-függő beállítások", *nem* az `ActivityType`-hoz kötve, mert a `core/` réteg
+  szándékosan nem ismeri a `features/workouts` típusokat, ugyanúgy, ahogy `core/health` sem),
+  és `LocationServiceStub` — a lépés saját kész-ha-jában megkövetelt no-op teszt-implementáció.
+- **`location_service_geolocator.dart`**: `GeolocatorLocationService` (a valódi, `geolocator`-ra
+  épülő implementáció) + `locationServiceProvider` (Android/iOS-en a valódi, minden más
+  platformon — **beleértve minden `flutter test` futást**, mivel a teszt-binding sosem jelent
+  Androidot/iOS-t — a stub-ot választja, pontosan úgy, ahogy a `musicServiceProvider` is már
+  ma).
+
+**Egy valódi hibát a saját tesztjeim fogtak el, nem csak a doksi kész-ha-ja**: az első
+`availability` implementáció `async*`-generátorral épült ("yield a jelenlegi érték; yield* a
+live stream") — ez helyesen viselkedett önmagában, de egy `async*` generátor legalább egy
+mikrotaszknyi késéssel ér csak el a `yield*` sorig, ami alatt egy, a feliratkozással **azonos
+szinkron blokkban** történő emisszió (pl. `service.availability.listen(...); service.refresh();`)
+**elveszhet** — a broadcast stream nem pufferel. A `refresh() re-emits...` tesztem pontosan ezt
+buktatta el (`Expected: length 1, Actual: []`). Javítás mindkét implementációban (stub **és**
+valódi): `Stream.multi()`-re váltva, aminek az `onListen` callbackje szinkron fut `listen()`
+hívásakor — a replay és az élő stream-re való feliratkozás ugyanabban a szinkron blokkban
+történik, nincs elveszíthető ablak. Ez nem elméleti finomkodás: bármelyik jövőbeli hívó (C4a.2
+engedély-vezérlő, vagy egy jövőbeli `LocationController`), aki feliratkozás után rögtön
+`refresh()`-t hív, pontosan ebbe a csapdába futott volna bele.
+
+**Tesztek** (`test/core/location/`, 15 új — a webes suite-hoz hasonlóan ez volt e fájlok első
+lefedettsége): `location_service_test.dart` (14) — `canTrack` mind a négy igaz/hamis ága,
+`requestPermission()` mindhárom kiinduló állapotból (beleértve, hogy `deniedForever`-ből **nem**
+granatál csendben — a rendszer-dialógus tényleg nem jelenik meg újra), az `availability` stream
+replay- és élő-viselkedése, a `refresh()` mindig-emittál szabálya, `positionStream`
+fix-továbbítás, és hogy egy hiányzó altitude/accuracy/speed **null** marad, nem 0.0-ra
+konvertálódik (ez a különbség számít majd a C4a.4 szűrésnél). `location_service_geolocator_test.dart`
+(1) — a provider a teszt-környezetben a stub-ot választja, a `musicServiceProvider`-nél már
+bevált mintát követve.
+
+**Ellenőrzés**: `flutter analyze` a teljes projekten tiszta. Teljes `flutter test`:
+**900/903 zöld** (888 régi + 15 új; a 3 bukás a már ismert, cardión kívüli
+`chat_repository_test.dart` Windows-fájlzár-flake — **nulla regresszió**).
+
+**Következő:** `C4a.2` — engedély-utak UI-ja (magyarázó lap a rendszer-kérdés előtt,
+megtagadva/véglegesen megtagadva/pontatlan ágak, M26–M28), a most elkészült `LocationService`
+`availability` streamjére építve.
+
+---
+
+## C4a.2 kész (2026-08-12) — engedély-utak: magyarázó lap + in-session állapot-kártya
+
+**Három új fájl** + két meglévő módosítva, a doc M26/M27/M28 frame-jeit követve.
+
+### M26 — `GpsExplainerSheet` + `LocationPermissionPreferences`
+
+`lib/core/location/location_permission_preferences.dart` — "látta-e már a magyarázó lapot" flag,
+`shared_preferences`-alapú, bitre a `MusicPreferences` mintáját követve (nem secure storage —
+sima, nem titkos, eszköz-szintű flag). Bekötve az `AuthController.logout()`-ba is: más fióknak
+saját "első cardio indítás" élménye legyen ugyanazon az eszközön, ugyanaz az elv, mint a
+`musicPreferencesProvider.clear()`-nél.
+
+`lib/features/workouts/presentation/widgets/gps_explainer_sheet.dart` — a lap maga: ikon + cím +
+szöveg + 3 funkció-felsorolás + **két egyenrangú gomb** ("Helyadat engedélyezése" /
+"Indítás GPS nélkül" — az M26 jegyzete szerint a második **valódi gomb**, nem link). `Navigator.pop`
+egy `GpsExplainerChoice` enumot ad vissza; a hívó dönti el, mit kezd vele.
+
+**A becsatlakozási pont**: `quick_start_sheet.dart`'s `startCardioQuickly()` — DISTANCE családnál,
+ha a preferencia szerint még sosem látta, megjelöli látottnak (**mindegy, melyik gombot nyomta,
+vagy elcsúsztatta-e** — a doc explicit "csak egyszer, valaha" szabálya), megmutatja a lapot, majd
+"Helyadat engedélyezése" esetén hívja a `LocationService.requestPermission()`-t — és **utána
+mindkét ágon** elindítja a session-t, sosem blokkolva (D-C.5). Csak ez a belépési pont (+ a teljes
+aktivitás-választó, ami ugyanezt a függvényt hívja) kapja meg a kaput — a C2.11a widget/app-
+shortcut/deep-link út tudatosan **nem**: az "egy gesztus = fut az edzés" ígéretét törné meg egy
+interaktív lap, és az in-session kártya (lásd alább) onnantól is felajánlja az engedélyt.
+
+**Egy valódi hibát megint a saját widget-tesztjeim fogtak el**: `startCardioQuickly` a
+`sheetNavigator.pop()` **után** próbálta újra használni a `ref`-et (`ref.read(locationServiceProvider)`)
+— ez `StateError`-t dob ("Using 'ref' when a widget is about to or has been unmounted is unsafe"),
+mert a `pop()` már eltávolította azt a widgetet, amihez a `ref` kötődött. Javítás: minden
+`ref.read(...)`-del olvasott **érték** (a `LocationService`, a `WorkoutSessionController`, a
+preferenciák) a `pop()` **előtt** kerül lokális változóba — ez már csak sima Dart-objektum, nem
+függ a widget élettartamától.
+
+### M27/M28 — in-session "nincs GPS" állapot-kártya (`CardioSessionScreen`)
+
+DISTANCE-only kiegészítés a meglévő C2.1-es képernyőn: `WidgetsBindingObserver` figyeli az
+app-resume eseményt (ez az egyetlen módja annak, hogy a "Beállítások"-ból visszatérő felhasználó
+állapota frissüljön, mivel egyik platform sem küld natív "engedély megváltozott" eseményt —
+`LocationService.availability`-nek ez a dokumentált korlátja), és feliratkozik a
+`LocationService.availability` streamre.
+
+Egy **`_locationCardContent` resolver** dönti el, melyik variáns jelenjen meg, a §3.3 táblázat
+prioritási sorrendjében (véglegesen megtagadva → nincs engedélyezve → eszköz-szintű helymeghatározás
+ki → pontatlan hely), és melyik `LocationService`-metódust hívja a gomb — **egy tudatos eltérés a
+doc szó szerinti szövegétől**: a doc "denied" (nem véglegesen) esetére is Settings-linket ír elő,
+de mivel a `LocationService.requestPermission()` C4a.1 óta már maga tudja, hogy csak akkor mutassa
+a rendszer-dialógust, ha az még valóban lehetséges (és no-op, ha `deniedForever`), a `notDetermined`
+és a `denied` ág **közösen** az "Engedélyezés" gombra épül — a Settings-ág ténylegesen csak a
+`deniedForever` és az eszköz-szintű helymeghatározás-kikapcsolt esetnek marad, ami helyesebb és
+egyszerűbb, mint találgatni, mikor mutatna még dialógust az OS.
+
+Egy **fejléc-jelvény** ("Nincs GPS") és egy **eldobható kártya** külön állapot: a kártya "Nem kell
+most" gombja csak erre a session-re rejti el (nem perzisztens), a jelvény marad — pontosan az M27
+jegyzete szerint ("a mérés minősége mindig látszik").
+
+### Egy váratlan, de valós regresszió: a kártya magassága kitolta a régi teszteket
+
+A DISTANCE-only kártya/jelvény **alapértelmezett** (`notDetermined`) állapotban is megjelenik —
+ez helyes (a felhasználó választhatta a "GPS nélkül" utat) —, de emiatt **minden** meglévő,
+DISTANCE-fixture-t használó widget-teszt, ami a rögzített 600 px-es teszt-viewporton kívülre eső
+Pause/Resume/Finish gombokat koppintotta, hibázni kezdett (a kártya extra magassága lejjebb tolta
+őket). Javítás: `cardio_session_screen_test.dart` és `cardio_session_screen_distance_test.dart`
+mindkét pump-helyere felkerült egy `locationServiceProvider` felülbírálás egy előre "granted"
+stubbal — ezek a fájlok pause/resume/finish-ről szólnak, nem GPS-ről, a saját, dedikált
+kártya-tesztek máshol élnek.
+
+### Tesztek
+
+Négy új fájl: `location_permission_preferences_test.dart` (4), `gps_explainer_sheet_test.dart`
+(3), `cardio_session_screen_location_test.dart` (8 — minden §3.3-ág + dismiss + MACHINE/GAME sosem
+renderel), és a `quick_start_sheet_test.dart` bővítése (+4: explainer megjelenik és látottá válik,
+"Allow" ténylegesen engedélyt kér, "Skip" nem kér de mégis indul, MACHINE sosem kapja a lapot).
+
+**Ellenőrzés:** `flutter analyze` teljes projekten tiszta. Teljes `flutter test`: **921/925 zöld**
+(903 régi + ~19-22 új, a pontos szám a meglévő tesztek fentebb leírt javításai miatt nem
+tisztán additív), a 4 bukás a már ismert, cardión kívüli `chat_repository_test.dart`
+Windows-fájlzár-flake (korábban 3 volt ugyanebből a flake-osztályból — ismert, nem-determinisztikus
+variancia, nem regresszió).
+
+**Következő:** `C4a.3` — `CardioTrackPoints` drift-tábla + azonnali pontírás.
+
+---
+
+## C4a.3 kész (2026-08-13) — `CardioTrackPoints` drift-tábla + azonnali pontírás
+
+Séma, repository és a `CardioSessionScreen`-be tényleges bekötés — a doc [54 §4.1](54-cardio-gps-route-plan.md)
+kész-ha feltétele ("kilőtt app legfeljebb egy pontot veszít") ezzel adott: minden fix a saját
+insertjeként, azonnal, sosem memóriában pufferelve.
+
+### Séma és repository
+
+`CardioTrackPoints` új drift-tábla (`schemaVersion` 35→36, `m.createTable`): `sessionClientId`
+(FK a `WorkoutSessions`-ra) + `seq` összetett elsődleges kulcs, `latitude`/`longitude`/`altitude`/
+`accuracy`/`speed`/`recordedAt` oszlopok. A `seq` **nem** a GPS-időbélyegből származik — az nem
+garantáltan monoton (egy fix ismétlődhet vagy kicsit rendezetlenül érkezhet) —, hanem egy külön,
+hívó által kiosztott sorszám, ami a rögzítés sorrendjét tükrözi.
+
+`CardioTrackPointRepository` (`lib/features/workouts/data/cardio_track_point_repository.dart`):
+`addPoint`/`pointCount`/`pointsForSession`/`deleteForSession`. Bekötve a törlési láncba is:
+`entity_sync_config.dart`-ban a session gyerek-cleanup listájába, és
+`WorkoutSessionRepository.delete()` azonnali-törlés tranzakciójába — egy soha nem szinkronizált,
+törölt session pontjai is azonnal eltűnnek, nem maradnak árvák.
+
+`activity_type.dart` kapott egy `locationTrackingProfileFor(activityType)` függvényt: WALKING →
+`relaxed`, minden más DISTANCE-fajta → `precise` — ez választja majd a `geolocator`
+pontossági/gyakorisági profilját.
+
+### Élő bekötés — `CardioSessionScreen`
+
+`_nextTrackPointSeq` egyszer, `initState`-ben töltődik fel a DB-ből (`pointCount`) — ez teszi
+lehetővé, hogy egy app-kill után újranyitott session ne ütközzön a lemezen már meglévő
+sorszámokkal. A tényleges feliratkozás `_syncPositionTracking()`-en át indul/áll le, valahányszor
+bármelyik feltétele változhatott (`_locationAvailability` frissül, a seed-olvasás lezárul, vagy
+`_pauseAs`/`resume` fut) — idempotens, bármelyikből biztonságos hívni.
+
+**Fontos, és a saját tesztem is ezen bukott el először**: szünetkor a feliratkozás **teljesen
+megszűnik** (`_positionSub!.cancel()`), nem csak szűri a beérkező fixeket. Ez azt jelenti, hogy a
+`seq` **nem** az észlelt fixek, hanem a **ténylegesen kiírt pontok** számlálója — egy szünet alatt
+"elveszett" fix nem foglal le sorszámot. A `cardio_session_screen_track_recording_test.dart` egyik
+tesztje eredetileg `[0, 2]`-t várt a szünet utáni második írásra (mintha a kihagyott fix sorszámot
+foglalna) — a valós, helyes viselkedés `[0, 1]`, a teszt hibás elvárását javítottam, miután a
+tényleges implementáció logikáját (`_onPositionFix`: `_nextTrackPointSeq++` csak tényleges íráskor
+fut) visszaellenőriztem.
+
+Az írás fire-and-forget (`unawaited`): egy lassú/hibás írás nem állíthatja meg a következő fix
+feldolgozását, és egyetlen elveszett pontra amúgy sincs értelmes UI-visszajelzés — pont az a lényeg,
+hogy ez ritka legyen. MACHINE/GAME session sosem iratkozik fel (`_family == ActivityFamily.distance`
+feltétel a `_syncPositionTracking`-ben).
+
+### Tesztek
+
+Két új fájl: `cardio_track_point_repository_test.dart` (7 — azonnali írás, roundtrip null-mezőkkel,
+seq-sorrend ≠ beszúrási/`recordedAt`-sorrend, `pointCount`, session-szintű izoláció, cascade-delete),
+`cardio_session_screen_track_recording_test.dart` (7 — azonnali írás, növekvő seq, nincs írás
+engedély nélkül, szünet leállítja/folytatás újraindítja a rögzítést helyes seq-folytonossággal,
+seq helyesen folytatódik egy meglévő pontokkal újranyitott session-nél, MACHINE sosem iratkozik fel).
+
+Öt meglévő teszt-fájl (`cardio_session_screen_test.dart`, `cardio_session_screen_distance_test.dart`,
+`cardio_session_screen_location_test.dart`, `quick_start_sheet_test.dart`,
+`open_session_screen_navigation_test.dart`) kapott egy in-memory `AppDatabase`
+(`appDatabaseProvider.overrideWithValue`) felülbírálást — a képernyő `initState`-je mostantól
+minden DISTANCE session-nél feltétlenül olvassa a `cardioTrackPointRepositoryProvider`-t (→
+`appDatabaseProvider`-t), ami felülbírálás nélkül Drift saját "multiple AppDatabase instances"
+figyelmeztetését váltotta ki (nem valódi teszt-bukást, de a kódbázis már bevett mintáját követi,
+lásd pl. `log_recipe_sheet_test.dart`).
+
+**Ellenőrzés:** `flutter analyze` teljes projekten tiszta. Teljes `flutter test`: **930/934 zöld**
+(903 régi + 31 új/módosított előjelű különbség a fájl-szintű felülbírálásokból), a 4 bukás a már
+ismert, cardión kívüli `chat_repository_test.dart` Windows-fájlzár-flake (nem regresszió — ugyanaz
+a flake-osztály, mint C4a.2-nél).
+
+**Következő:** `C4a.4` — `track_filter.dart`: pontosság-/sebesség-/elmozdulás-kapuk, magasság-simítás,
+haversine-táv + gyenge GPS-jel UI (**M10**).

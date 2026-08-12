@@ -32,6 +32,10 @@
 	<string>A fényképtár elérése szükséges a profilkép kiválasztásához.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>A Lifey az Apple Health-ből olvassa be az edzéseket, a lépésszámot és a testsúlyt, hogy automatikusan kiegészítse a naplódat.</string>
+	<!-- Cardio GPS-nyomvonal (docs/cardio/54-cardio-gps-route-plan.md §3.1–3.2)
+	     — csak "while in use" szintet kérünk, sosem "always". -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Az útvonal és a táv méréséhez helyadat kell; enélkül is elindíthatod az edzést, csak nyomvonal nélkül.</string>
 	<!-- Zenevezérlés edzés közben, Apple Music ág (docs/music/46-workout-music-controls-plan.md §2.2, M3). -->
 	<key>NSAppleMusicUsageDescription</key>
 	<string>A Lifey a Zene könyvtáradhoz fér hozzá, hogy edzés közben megjelenítse a szóló számot, és app-váltás nélkül vezérelhesd a lejátszást (lejátszás, szüneteltetés, következő/előző szám).</string>

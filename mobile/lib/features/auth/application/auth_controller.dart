@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_preferences.dart';
 import '../../../core/local_db/database_provider.dart';
+import '../../../core/location/location_permission_preferences.dart';
 import '../../../core/music/music_controller.dart';
 import '../../../core/music/music_preferences.dart';
 import '../../../core/network/session_events.dart';
@@ -137,6 +138,11 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     // above, even though the choice itself is device-local rather than
     // account-specific (docs/music/46-workout-music-controls-plan.md §3.1).
     await ref.read(musicPreferencesProvider).clear();
+    // Same policy again — a different account signing in on this device
+    // should see the GPS explainer on their own first cardio session, not
+    // inherit the previous account having already dismissed it
+    // (docs/cardio/54-cardio-gps-route-plan.md §3.1, C4a.2).
+    await ref.read(locationPermissionPreferencesProvider).clear();
     await ref.read(avatarRepositoryProvider).clearCache();
     await ref.read(recipeImageRepositoryProvider).clearCache();
     // Chat pictures and anything still queued to upload — same reasoning, and

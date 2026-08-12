@@ -28,6 +28,13 @@
          requestRestTimerExactAlarmPermission) when the user enables the rest
          timer, with an inexact-alarm fallback if denied. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Cardio GPS route recording (docs/cardio/54-cardio-gps-route-plan.md
+         §3.2) — requested lazily, only the first time a DISTANCE-family
+         session starts (LocationService). FOREGROUND_SERVICE_LOCATION and
+         the API 34+ service-type declaration are C4a.5's job, not this
+         base config. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="lifey"
         android:name="${applicationName}"

@@ -3597,5 +3597,85 @@
   "cardioRecordGreatestElevationGain": "Greatest elevation gain",
   "@cardioRecordGreatestElevationGain": {
     "description": "Cardio record type label: this session gained more elevation than any prior running/walking/hiking session"
+  },
+  "gpsExplainerTitle": "So we can see where you ran",
+  "@gpsExplainerTitle": {
+    "description": "Title of the one-time GPS explainer sheet shown before the system location-permission dialog, the first time ever a DISTANCE-family session is started (docs/cardio/54-cardio-gps-route-plan.md §3.1, C4a.2, M26)"
+  },
+  "gpsExplainerBody": "We use your location to calculate distance, pace, and your route. It stays on your phone and works offline.",
+  "@gpsExplainerBody": {
+    "description": "Body text of the GPS explainer sheet, below the title"
+  },
+  "gpsExplainerBulletRoute": "Route and km splits",
+  "@gpsExplainerBulletRoute": {
+    "description": "First feature bullet on the GPS explainer sheet"
+  },
+  "gpsExplainerBulletPace": "Live pace while you run",
+  "@gpsExplainerBulletPace": {
+    "description": "Second feature bullet on the GPS explainer sheet"
+  },
+  "gpsExplainerBulletPrivacy": "We never upload anything",
+  "@gpsExplainerBulletPrivacy": {
+    "description": "Third feature bullet on the GPS explainer sheet — location data stays device-local (docs/cardio/52 D-C1.2)"
+  },
+  "gpsExplainerGrantButton": "Allow location",
+  "@gpsExplainerGrantButton": {
+    "description": "Primary button on the GPS explainer sheet — shows the system permission dialog"
+  },
+  "gpsExplainerSkipButton": "Start without GPS",
+  "@gpsExplainerSkipButton": {
+    "description": "Secondary button on the GPS explainer sheet — an equally prominent real button, not a subtle link (M26's own design note): starts the session without ever showing the system dialog"
+  },
+  "gpsExplainerFootnote": "You can enter the distance manually afterward.",
+  "@gpsExplainerFootnote": {
+    "description": "Small reassuring footnote under both buttons on the GPS explainer sheet"
+  },
+  "locationOffTitle": "Location is off",
+  "@locationOffTitle": {
+    "description": "Title of the in-session card shown on a DISTANCE-family CardioSessionScreen when location can't be tracked because permission isn't granted or the device-wide Location Services toggle is off (M27)"
+  },
+  "locationOffBody": "The workout keeps running — we're tracking time and heart rate. No distance or route.",
+  "@locationOffBody": {
+    "description": "Body of the locationOffTitle card — leads with what still works, not what's missing (M27's own design note)"
+  },
+  "locationRequestButton": "Allow",
+  "@locationRequestButton": {
+    "description": "Button on the locationOffTitle card when permission is still askable (notDetermined/denied, not deniedForever) — re-shows the system permission dialog"
+  },
+  "locationEnableServiceButton": "Turn on Location Services",
+  "@locationEnableServiceButton": {
+    "description": "Button on the locationOffTitle card when the device-wide Location Services toggle (not this app's permission) is off — opens the device's location settings"
+  },
+  "locationDeniedForeverTitle": "You permanently denied location",
+  "@locationDeniedForeverTitle": {
+    "description": "Title of the in-session card shown when location permission was permanently denied — the app can no longer show the system dialog at all (M28 card 1)"
+  },
+  "locationDeniedForeverBody": "We can no longer ask from inside the app. You can turn it back on in system Settings → Lifey → Location.",
+  "@locationDeniedForeverBody": {
+    "description": "Body of the locationDeniedForeverTitle card, naming the exact Settings path"
+  },
+  "locationOpenAppSettingsButton": "Open Settings",
+  "@locationOpenAppSettingsButton": {
+    "description": "Button on the locationDeniedForeverTitle card — opens this app's own OS Settings page"
+  },
+  "locationImpreciseTitle": "Precise location is off",
+  "@locationImpreciseTitle": {
+    "description": "Title of the in-session card shown on iOS when the user granted only approximate location (M28 card 2) — Android has no equivalent state, see LocationAvailability.precise"
+  },
+  "locationImpreciseBody": "We only get an approximate location, so no route can be drawn, and the distance could be off by hundreds of meters. The workout still starts — the time is accurate.",
+  "@locationImpreciseBody": {
+    "description": "Body of the locationImpreciseTitle card"
+  },
+  "locationEnablePreciseButton": "Turn on precise location",
+  "@locationEnablePreciseButton": {
+    "description": "Button on the locationImpreciseTitle card — opens this app's own OS Settings page, where iOS keeps the Precise Location toggle"
+  },
+  "locationDismissButton": "Not now",
+  "@locationDismissButton": {
+    "description": "Dismisses the in-session location-status card for the rest of this session — the header's GPS-off indicator stays regardless (M27's own design note: measurement quality is always visible)"
+  },
+  "locationOffChipLabel": "No GPS",
+  "@locationOffChipLabel": {
+    "description": "Small persistent header chip on a DISTANCE-family CardioSessionScreen whenever location can't be tracked, for any reason — stays visible even after the in-session card is dismissed"
   }
 }

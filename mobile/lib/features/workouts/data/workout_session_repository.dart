@@ -550,6 +550,9 @@ class WorkoutSessionRepository {
         await (_db.delete(_db.cardioSplits)
               ..where((t) => t.sessionClientId.equals(clientId)))
             .go();
+        await (_db.delete(_db.cardioTrackPoints)
+              ..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
         await (_db.delete(_db.workoutSessions)
               ..where((t) => t.clientId.equals(clientId)))
             .go();

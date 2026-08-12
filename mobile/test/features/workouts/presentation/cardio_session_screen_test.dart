@@ -1,6 +1,11 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/local_db/app_database.dart';
+import 'package:lifey/core/local_db/database_provider.dart';
+import 'package:lifey/core/location/location_service.dart';
+import 'package:lifey/core/location/location_service_geolocator.dart';
 import 'package:lifey/core/workout_session_notifier/workout_session_notifier_service.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
@@ -93,6 +98,21 @@ class _MetricSettings extends SettingsController {
   Stream<UserSettings> build() => Stream.value(const UserSettings.defaults());
 }
 
+/// This file's fixtures are all DISTANCE-family (see the class doc above),
+/// so every test here would otherwise also render C4a.2's "no GPS" status
+/// card/chip — pure layout noise for tests that are about pause/resume/
+/// finish/Live-Activity payloads, not location. Overriding
+/// `locationServiceProvider` with a pre-granted stub keeps `canTrack` true
+/// throughout, matching this file's pre-C4a.2 assumptions; the location
+/// card itself has its own dedicated tests elsewhere.
+LocationServiceStub _grantedLocationStub() => LocationServiceStub(
+      initial: const LocationAvailability(
+        authorization: LocationAuthorization.granted,
+        precise: true,
+        serviceEnabled: true,
+      ),
+    );
+
 WorkoutSession _runningSession({int movingSeconds = 0, required int movingSinceEpochMs}) {
   return WorkoutSession(
     clientId: 'live-1',
@@ -169,6 +189,21 @@ class _RecordingNotifierService extends WorkoutSessionNotifierService {
   }
 }
 
+/// C4a.3: `CardioSessionScreen.initState` now unconditionally reads
+/// `cardioTrackPointRepositoryProvider` (→ `appDatabaseProvider`) for every
+/// DISTANCE-family session, to seed its GPS-point sequence counter — see
+/// `CardioSessionScreenState._seedTrackPointSeqAndSync`. An in-memory
+/// database (the established pattern — see e.g.
+/// `test/features/recipes/presentation/log_recipe_sheet_test.dart`) keeps
+/// that real, instead of leaving `appDatabaseProvider` to its default (a
+/// real on-disk connection Drift then warns about opening repeatedly, once
+/// per test in this file).
+AppDatabase _testDatabase() {
+  final db = AppDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
+  return db;
+}
+
 Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession session) async {
   final controller = _RecordingSessionController();
   await tester.pumpWidget(
@@ -176,6 +211,8 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
       overrides: [
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
+        locationServiceProvider.overrideWithValue(_grantedLocationStub()),
+        appDatabaseProvider.overrideWithValue(_testDatabase()),
       ],
       child: MaterialApp(
         locale: const Locale('en'),
@@ -205,6 +242,8 @@ Future<(_RecordingSessionController, _RecordingNotifierService)> _pumpWithNotifi
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         workoutSessionNotifierServiceProvider.overrideWithValue(notifier),
+        locationServiceProvider.overrideWithValue(_grantedLocationStub()),
+        appDatabaseProvider.overrideWithValue(_testDatabase()),
       ],
       child: MaterialApp(
         locale: const Locale('en'),

@@ -1,6 +1,9 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/local_db/app_database.dart';
+import 'package:lifey/core/local_db/database_provider.dart';
 import 'package:lifey/core/sync/sync_status_provider.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
@@ -39,6 +42,16 @@ class _FakeSettings extends SettingsController {
   Stream<UserSettings> build() => Stream.value(const UserSettings.defaults());
 }
 
+/// C4a.3: an in-progress CARDIO session's `CardioSessionScreen.initState`
+/// now unconditionally reads `cardioTrackPointRepositoryProvider` (→
+/// `appDatabaseProvider`) — see `cardio_session_screen_test.dart`'s
+/// identical helper for why an in-memory database is needed here too.
+AppDatabase _testDatabase() {
+  final db = AppDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
+  return db;
+}
+
 Future<void> _pumpAndOpen(WidgetTester tester, WorkoutSession session) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -47,6 +60,7 @@ Future<void> _pumpAndOpen(WidgetTester tester, WorkoutSession session) async {
         exerciseControllerProvider.overrideWith(_FakeExercises.new),
         settingsControllerProvider.overrideWith(_FakeSettings.new),
         syncStatusByClientIdProvider.overrideWithValue(const {}),
+        appDatabaseProvider.overrideWithValue(_testDatabase()),
       ],
       child: MaterialApp(
         locale: const Locale('en'),

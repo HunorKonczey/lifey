@@ -1,6 +1,12 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/local_db/app_database.dart';
+import 'package:lifey/core/local_db/database_provider.dart';
+import 'package:lifey/core/location/location_permission_preferences.dart';
+import 'package:lifey/core/location/location_service.dart';
+import 'package:lifey/core/location/location_service_geolocator.dart';
 import 'package:lifey/core/sync/sync_status_provider.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
@@ -15,6 +21,7 @@ import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart'
 import 'package:lifey/features/workouts/presentation/open_workout_screens.dart';
 import 'package:lifey/features/workouts/presentation/quick_start_sheet.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// C2.7: the FAB long-press quick-start sheet.
 /// docs/cardio/59-cardio-implementation-plan.md C2.7 — kész-ha: "Hosszú
@@ -23,6 +30,13 @@ import 'package:lifey/l10n/app_localizations.dart';
 /// Every fixture here is a cold start (no sessions) so the top-4 tiles are
 /// the deterministic M02 default order — see `activity_ranking_test.dart`
 /// for the ranking logic itself, already covered there.
+///
+/// C4a.2 added a one-time GPS explainer sheet before the *first-ever*
+/// DISTANCE-family quick-start — every test below except the two dedicated
+/// "gpsExplainer" ones pre-seeds `LocationPermissionPreferences` as already
+/// seen (`setUp` below), so tapping "Running"/"Hiking" still starts
+/// immediately, matching what this file was written to verify. The
+/// first-time path has its own tests.
 
 class _RecordingSessionController extends WorkoutSessionController {
   final startCardioCalls = <Map<String, Object?>>[];
@@ -66,10 +80,21 @@ WorkoutTemplate _template({required String clientId, required String name, int e
   );
 }
 
+/// C4a.3: a started cardio session's `CardioSessionScreen.initState` now
+/// unconditionally reads `cardioTrackPointRepositoryProvider` (→
+/// `appDatabaseProvider`) — see `cardio_session_screen_test.dart`'s
+/// identical helper for why an in-memory database is needed here too.
+AppDatabase _testDatabase() {
+  final db = AppDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
+  return db;
+}
+
 Future<_RecordingSessionController> _pumpAndOpenSheet(
   WidgetTester tester, {
   List<WorkoutSession> sessions = const [],
   List<WorkoutTemplate> templates = const [],
+  LocationServiceStub? locationService,
 }) async {
   final sessionController = _RecordingSessionController()..sessions = sessions;
   final templateController = _FakeTemplates()..templates = templates;
@@ -81,6 +106,8 @@ Future<_RecordingSessionController> _pumpAndOpenSheet(
         exerciseControllerProvider.overrideWith(_FakeExercises.new),
         settingsControllerProvider.overrideWith(_FakeSettings.new),
         syncStatusByClientIdProvider.overrideWithValue(const {}),
+        locationServiceProvider.overrideWithValue(locationService ?? LocationServiceStub()),
+        appDatabaseProvider.overrideWithValue(_testDatabase()),
       ],
       child: MaterialApp(
         locale: const Locale('en'),
@@ -107,6 +134,15 @@ Future<_RecordingSessionController> _pumpAndOpenSheet(
 void main() {
   setUp(resetOpenWorkoutScreens);
   tearDown(resetOpenWorkoutScreens);
+
+  // Default: the GPS explainer has already been seen, so every existing
+  // "one tap starts the workout" test below keeps exercising exactly that —
+  // see the class doc. The dedicated gpsExplainer tests reset this to
+  // simulate the very first DISTANCE-family start instead.
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await LocationPermissionPreferences().setSeenGpsExplainer();
+  });
 
   testWidgets('a cold start shows the M02 default order: running, walking, strength, bike',
       (tester) async {
@@ -217,5 +253,85 @@ void main() {
     expect(controller.startCardioCalls.single['activityType'], 'HIKING');
     expect(find.byType(CardioSessionScreen), findsOneWidget);
     expect(find.byType(ActivityPickerScreen), findsNothing);
+  });
+
+  group('GPS explainer (C4a.2, M26) — the very first DISTANCE-family start', () {
+    // Overrides this file's default setUp (already-seen) back to "never
+    // seen" — simulates a real first-ever cardio start.
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    testWidgets('shows the explainer instead of starting immediately, and marks it seen',
+        (tester) async {
+      final controller = await _pumpAndOpenSheet(tester);
+
+      await tester.tap(find.text('Running'));
+      await tester.pumpAndSettle();
+
+      // Not started yet, and the quick-start sheet is gone (popped before
+      // the explainer shows, per startCardioQuickly's own doc).
+      expect(controller.startCardioCalls, isEmpty);
+      expect(find.byType(CardioSessionScreen), findsNothing);
+      expect(find.text('Quick start'), findsNothing);
+      expect(find.text('So we can see where you ran'), findsOneWidget);
+
+      expect(await LocationPermissionPreferences().hasSeenGpsExplainer(), isTrue);
+    });
+
+    testWidgets('"Allow location" requests permission, then starts the session',
+        (tester) async {
+      final location = LocationServiceStub();
+      final controller = await _pumpAndOpenSheet(tester, locationService: location);
+
+      await tester.tap(find.text('Running'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Allow location'));
+      await tester.pumpAndSettle();
+
+      expect((await location.currentAvailability()).authorization, LocationAuthorization.granted);
+      expect(controller.startCardioCalls, hasLength(1));
+      expect(controller.startCardioCalls.single['activityType'], 'RUNNING');
+      expect(find.byType(CardioSessionScreen), findsOneWidget);
+    });
+
+    testWidgets('"Start without GPS" never requests permission, but still starts the session',
+        (tester) async {
+      final location = LocationServiceStub();
+      final controller = await _pumpAndOpenSheet(tester, locationService: location);
+
+      await tester.tap(find.text('Running'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start without GPS'));
+      await tester.pumpAndSettle();
+
+      expect(
+        (await location.currentAvailability()).authorization,
+        LocationAuthorization.notDetermined,
+      );
+      expect(controller.startCardioCalls, hasLength(1));
+      expect(controller.startCardioCalls.single['activityType'], 'RUNNING');
+      expect(find.byType(CardioSessionScreen), findsOneWidget);
+    });
+
+    // Not re-tested end-to-end with a second sheet instance in this same
+    // test (pumping a whole second widget tree mid-test collides with
+    // `open_workout_screens.dart`'s module-level navigation guard, which
+    // only resets between tests via `setUp`/`tearDown` above). Persistence
+    // itself is covered by the "shows the explainer... and marks it seen"
+    // test above; every *other* test in this file already demonstrates the
+    // "seen" steady state starts immediately, since that's what this file's
+    // default `setUp` seeds.
+
+    testWidgets('a non-DISTANCE activity (MACHINE: indoor bike) never shows the explainer',
+        (tester) async {
+      final controller = await _pumpAndOpenSheet(tester);
+
+      await tester.ensureVisible(find.text('Indoor bike'));
+      await tester.tap(find.text('Indoor bike'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('So we can see where you ran'), findsNothing);
+      expect(controller.startCardioCalls, hasLength(1));
+      expect(controller.startCardioCalls.single['activityType'], 'INDOOR_BIKE');
+    });
   });
 }

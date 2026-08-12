@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/location/location_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -45,6 +46,17 @@ ActivityFamily activityFamilyOf(String activityType) {
     'BASKETBALL' || 'FOOTBALL' || 'OTHER_CARDIO' => ActivityFamily.game,
     _ => throw ArgumentError.value(activityType, 'activityType', 'Unknown ActivityType code'),
   };
+}
+
+/// The GPS accuracy/power tradeoff to record a DISTANCE-family activity type
+/// at (docs/cardio/54-cardio-gps-route-plan.md §4.1) — running/hiking want
+/// the tightest fix; walking tolerates a coarser, more battery-friendly one.
+/// Only meaningful for `activityFamilyOf(activityType) == ActivityFamily.distance`
+/// — callers outside that family never call `positionStream` at all.
+LocationTrackingProfile locationTrackingProfileFor(String activityType) {
+  return activityType == 'WALKING'
+      ? LocationTrackingProfile.relaxed
+      : LocationTrackingProfile.precise;
 }
 
 /// Localized label for a cardio activity type code, or for the sentinel
