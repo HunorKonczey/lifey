@@ -10,7 +10,7 @@ import { weightApi } from "@/features/weight/api";
 import { waterApi } from "@/features/water/api";
 import { stepsApi } from "@/features/steps/api";
 import { workoutSessionApi } from "@/features/workouts/api";
-import { aggregate, type RawData } from "@/features/statistics/aggregate";
+import { aggregate, type RawData, type StatKindFilter } from "@/features/statistics/aggregate";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { KpiCard } from "@/components/data/KpiCard";
 import { TimeSeriesChart } from "@/components/data/TimeSeriesChartLazy";
@@ -39,11 +39,20 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 export default function StatisticsPage() {
   const t = useTranslations("statistics");
   const [range, setRange] = useState<Range>("WEEK");
+  const [kindFilter, setKindFilter] = useState<StatKindFilter>("ALL");
 
   const RANGE_OPTIONS: { value: Range; label: string }[] = [
     { value: "WEEK", label: t("week") },
     { value: "MONTH", label: t("month") },
     { value: "YEAR", label: t("year") },
+  ];
+
+  // Fajta-szűrő (docs/cardio/56 D-C3.4) — re-scopes workoutCount/trainingVolume,
+  // not the nutrition/weight/water/steps charts, which aren't "edzés jellegű".
+  const KIND_OPTIONS: { value: StatKindFilter; label: string }[] = [
+    { value: "ALL", label: t("kindAll") },
+    { value: "STRENGTH", label: t("kindStrength") },
+    { value: "CARDIO", label: t("kindCardio") },
   ];
 
   const results = useQueries({
@@ -77,10 +86,10 @@ export default function StatisticsPage() {
     const prevStart = startOfDay(subDays(now, days * 2 - 1));
     const prevEnd = endOfDay(subDays(now, days));
     return {
-      current: aggregate(raw, curStart, curEnd, label),
-      previous: aggregate(raw, prevStart, prevEnd, label),
+      current: aggregate(raw, curStart, curEnd, label, kindFilter),
+      previous: aggregate(raw, prevStart, prevEnd, label, kindFilter),
     };
-  }, [raw, range]);
+  }, [raw, range, kindFilter]);
 
   const exportCsv = () => {
     const rows = [["date", "calories", "protein", "water_l", "steps", "volume"]];
@@ -135,8 +144,11 @@ export default function StatisticsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <SegmentedControl options={RANGE_OPTIONS} value={range} onChange={setRange} />
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <SegmentedControl options={RANGE_OPTIONS} value={range} onChange={setRange} />
+          <SegmentedControl options={KIND_OPTIONS} value={kindFilter} onChange={setKindFilter} size="sm" />
+        </div>
         <button onClick={exportCsv}
           className="flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
           style={{ background: "var(--surface)", border: "1px solid var(--outline)", color: "var(--on-surface-variant)" }}>
@@ -149,7 +161,8 @@ export default function StatisticsPage() {
         <KpiCard label={t("avgCalories")} value={current.avgCalories.toLocaleString()} icon="local_fire_department"
           color="var(--metric-kcal)" delta={current.avgCalories - previous.avgCalories} higherIsBetter={false} />
         <KpiCard label={t("workouts")} value={String(current.workoutCount)} icon="exercise"
-          color="var(--tertiary)" delta={current.workoutCount - previous.workoutCount} higherIsBetter />
+          color="var(--tertiary)" delta={current.workoutCount - previous.workoutCount} higherIsBetter
+          subtitle={t("workoutsBreakdown", { strength: current.strengthWorkoutCount, cardio: current.cardioWorkoutCount })} />
         <KpiCard label={t("weight")} value={current.latestWeight != null ? `${current.latestWeight.toFixed(1)} kg` : "—"}
           icon="monitor_weight" color="var(--metric-weight)" delta={weightDeltaPrev} higherIsBetter={false} deltaUnit=" kg" />
         <KpiCard label={t("trainingVolume")} value={`${Math.round(current.totalVolume).toLocaleString()} kg`} icon="fitness_center"
@@ -175,6 +188,14 @@ export default function StatisticsPage() {
             <TimeSeriesChart data={current.volumeSeries} color="var(--metric-protein)" unit=" kg" />
           ) : (
             <p className="text-sm text-center py-16" style={{ color: "var(--muted)" }}>{t("noSetsLogged")}</p>
+          )}
+        </ChartCard>
+
+        <ChartCard title={t("cardioDistance")}>
+          {current.cardioDistanceSeries.length > 0 ? (
+            <TimeSeriesChart data={current.cardioDistanceSeries} color="var(--tertiary)" unit=" km" />
+          ) : (
+            <p className="text-sm text-center py-16" style={{ color: "var(--muted)" }}>{t("noCardioDistance")}</p>
           )}
         </ChartCard>
 

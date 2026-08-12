@@ -572,7 +572,8 @@
     "goal": "Goal: {value}",
     "workoutFallback": "Workout",
     "minutes": "min",
-    "setGoalsHint": "Set your daily goals to track progress"
+    "setGoalsHint": "Set your daily goals to track progress",
+    "workoutsBreakdown": "{strength} strength · {cardio} cardio"
   },
   "nutrition": {
     "meals": "Meals",
@@ -923,7 +924,13 @@
     "noWeightEntries": "No weight entries in this period",
     "noSetsLogged": "No sets logged in this period",
     "noDataYet": "No data yet",
-    "logToSeeStats": "Log meals, workouts, weight, water or steps to see your statistics."
+    "logToSeeStats": "Log meals, workouts, weight, water or steps to see your statistics.",
+    "kindAll": "All",
+    "kindStrength": "Strength",
+    "kindCardio": "Cardio",
+    "workoutsBreakdown": "{strength} strength · {cardio} cardio",
+    "cardioDistance": "Cardio distance",
+    "noCardioDistance": "No cardio distance logged in this period"
   },
   "settings": {
     "profile": "Profile",

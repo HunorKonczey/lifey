@@ -11,10 +11,12 @@ interface KpiCardProps {
   /** If true, a positive delta is "good" (green); if false, negative is good. */
   higherIsBetter?: boolean;
   deltaUnit?: string;
+  /** Quiet line under the value — e.g. a strength/cardio breakdown. */
+  subtitle?: string;
 }
 
 export function KpiCard({
-  label, value, icon, color, delta, higherIsBetter = true, deltaUnit = "",
+  label, value, icon, color, delta, higherIsBetter = true, deltaUnit = "", subtitle,
 }: KpiCardProps) {
   const t = useTranslations("common");
   const hasDelta = delta != null && delta !== 0;
@@ -29,6 +31,9 @@ export function KpiCard({
         <span className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>{label}</span>
       </div>
       <span className="text-2xl font-extrabold tabular" style={{ color: "var(--on-surface)" }}>{value}</span>
+      {subtitle && (
+        <span className="text-xs" style={{ color: "var(--muted)" }}>{subtitle}</span>
+      )}
       {hasDelta && (
         <div className="flex items-center gap-1 text-xs font-semibold"
           style={{ color: good ? "var(--goal-positive)" : "var(--goal-negative)" }}>

@@ -572,7 +572,8 @@
     "goal": "Cél: {value}",
     "workoutFallback": "Edzés",
     "minutes": "perc",
-    "setGoalsHint": "Állítsd be a napi céljaidat a haladás követéséhez"
+    "setGoalsHint": "Állítsd be a napi céljaidat a haladás követéséhez",
+    "workoutsBreakdown": "{strength} erősítő · {cardio} cardio"
   },
   "nutrition": {
     "meals": "Étkezések",
@@ -923,7 +924,13 @@
     "noWeightEntries": "Nincs testsúly bejegyzés ebben az időszakban",
     "noSetsLogged": "Nincs rögzített szett ebben az időszakban",
     "noDataYet": "Még nincs adat",
-    "logToSeeStats": "Rögzíts étkezéseket, edzéseket, testsúlyt, vizet vagy lépéseket a statisztikák megtekintéséhez."
+    "logToSeeStats": "Rögzíts étkezéseket, edzéseket, testsúlyt, vizet vagy lépéseket a statisztikák megtekintéséhez.",
+    "kindAll": "Mind",
+    "kindStrength": "Erősítő",
+    "kindCardio": "Cardio",
+    "workoutsBreakdown": "{strength} erősítő · {cardio} cardio",
+    "cardioDistance": "Cardio táv",
+    "noCardioDistance": "Nincs rögzített cardio táv ebben az időszakban"
   },
   "settings": {
     "profile": "Profil",

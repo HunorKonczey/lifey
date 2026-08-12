@@ -3,7 +3,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { useDateStore } from "@/lib/hooks/useDateStore";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -16,6 +16,8 @@ import { mealApi } from "@/features/nutrition/api";
 import { workoutSessionApi, templateApi } from "@/features/workouts/api";
 import { RecommendedWorkoutCard } from "@/features/workouts/components/RecommendedWorkoutCard";
 import { recommendedTemplate } from "@/features/workouts/recommendation";
+import { ActivityChip } from "@/features/workouts/components/ActivityChip";
+import { buildCardioSummaryLine } from "@/features/workouts/cardioSummaryLine";
 import { OnboardingBanner } from "@/components/app/OnboardingBanner";
 import { HeroMetricCard } from "@/components/data/HeroMetricCard";
 import { MacroRing } from "@/components/data/MacroRing";
@@ -48,6 +50,9 @@ function filterToday<T extends { dateTime?: string; consumedAt?: string; date?: 
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
+  const tw = useTranslations("workouts");
+  const ta = useTranslations("workouts.activityTypes");
+  const locale = useLocale();
   const { date } = useDateStore();
   const router = useRouter();
   const dateStr = localDateStr(date);
@@ -283,30 +288,42 @@ export default function DashboardPage() {
             </p>
           ) : (
             <div className="flex flex-col gap-2">
-              {recentSessions.map((s: WorkoutSessionResponse) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between py-2 border-b last:border-0"
-                  style={{ borderColor: "var(--outline)" }}
-                >
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {s.templateName ?? (s.exercises.map((e) => e.exerciseName).join(", ") || t("workoutFallback"))}
-                    </p>
-                    <p className="text-xs" style={{ color: "var(--muted)" }}>
-                      {format(new Date(s.startedAt), "MMM d, HH:mm")}
-                    </p>
+              {recentSessions.map((s: WorkoutSessionResponse) => {
+                const isCardio = s.sessionKind === "CARDIO";
+                return (
+                  <div
+                    key={s.id}
+                    className="flex items-center gap-3 py-2 border-b last:border-0"
+                    style={{ borderColor: "var(--outline)" }}
+                  >
+                    {isCardio && <ActivityChip activityType={s.activityType} />}
+                    <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">
+                          {isCardio
+                            ? ta(s.activityType ?? "OTHER_CARDIO")
+                            : s.templateName ?? (s.exercises.map((e) => e.exerciseName).join(", ") || t("workoutFallback"))}
+                        </p>
+                        <p className="text-xs" style={{ color: "var(--muted)" }}>
+                          {format(new Date(s.startedAt), "MMM d, HH:mm")}
+                        </p>
+                      </div>
+                      {isCardio ? (
+                        <span className="text-xs font-semibold shrink-0 tabular" style={{ color: "var(--on-surface-variant)" }}>
+                          {buildCardioSummaryLine(s, tw, locale)}
+                        </span>
+                      ) : s.finishedAt && (
+                        <span className="text-xs font-semibold shrink-0" style={{ color: "var(--on-surface-variant)" }}>
+                          {Math.round(
+                            (new Date(s.finishedAt).getTime() - new Date(s.startedAt).getTime()) / 60000,
+                          )}{" "}
+                          {t("minutes")}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {s.finishedAt && (
-                    <span className="text-xs font-semibold" style={{ color: "var(--on-surface-variant)" }}>
-                      {Math.round(
-                        (new Date(s.finishedAt).getTime() - new Date(s.startedAt).getTime()) / 60000,
-                      )}{" "}
-                      {t("minutes")}
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -331,9 +348,16 @@ export default function DashboardPage() {
                     : "—"}
                 </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span style={{ color: "var(--on-surface-variant)" }}>{t("workouts")}</span>
-                <span className="font-semibold tabular">{weeklyStats?.workoutCount ?? "—"}</span>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: "var(--on-surface-variant)" }}>{t("workouts")}</span>
+                  <span className="font-semibold tabular">{weeklyStats?.workoutCount ?? "—"}</span>
+                </div>
+                {weeklyStats && weeklyStats.workoutCount != null && weeklyStats.workoutCount > 0 && (
+                  <p className="text-xs text-right" style={{ color: "var(--muted)" }}>
+                    {t("workoutsBreakdown", { strength: weeklyStats.strengthWorkoutCount, cardio: weeklyStats.cardioWorkoutCount })}
+                  </p>
+                )}
               </div>
               <div className="flex justify-between text-sm">
                 <span style={{ color: "var(--on-surface-variant)" }}>{t("avgWater")}</span>

@@ -187,20 +187,44 @@ lépés két fele, hanem két önálló, egymástól függetlenül szállíthat�
 | **C1w.2** ✅ | Web `ActivityChip` + lista-sor `kind`-elágazás | **W01**, **W02** | Nincs üres cím és „· 0 szett” |
 | **C1w.3** ✅ | **`SessionLogger` `kind`-kapu + olvasó cardio részletnézet** + útvonal-SVG | W02-ből származtatva | Cardio session megnyitása **nem** nyit szett-logolót ([58 W1](58-cardio-web-plan.md)) |
 | **C1w.4** ✅ | Edzői kliens-nézet + naptár-előnézet `kind`-elágazása; `recommendation.ts` szűrő; `progress.ts` regressziós teszt | – | Az edző nem lát „0 gyakorlat / 0 kg volumen” cardio edzést ([58 W2](58-cardio-web-plan.md)) |
-| **C3w.1** | `aggregate.ts` fajta-szűrő + cardio-adatsorok + dashboard-bontás + **paritás-teszt a mobillal** | – | Azonos bemenetre a web és a mobil ugyanazt a heti összesítést adja |
+| **C3w.1** ✅ | `aggregate.ts` fajta-szűrő + cardio-adatsorok + dashboard-bontás + **paritás-teszt a mobillal** | – | Azonos bemenetre a web és a mobil ugyanazt a heti összesítést adja |
 
 ---
 
-## 8. C4a — GPS és nyomvonal (6 lépés) · MF5
+## 8. C4a — GPS és nyomvonal (7 lépés) · MF5
 
-| # | Lépés | Frame | Kész-ha |
-|---|---|---|---|
-| **C4a.1** | `geolocator` bevezetése + platform-konfiguráció + `LocationService` (engedély- és pozíció-stream, teszt-implementációval) | – | Teszt-implementáció nélkül is fordul minden platformon |
-| **C4a.2** | Engedély-utak: magyarázó lap a rendszer-kérdés előtt, megtagadva / véglegesen / pontatlan ágak | **M26**, **M27**, **M28** | **Megtagadott engedéllyel is elindul és menthető az edzés** ([51 D-C.5](51-cardio-overview-plan.md)) |
-| **C4a.3** | `CardioTrackPoints` drift-tábla + azonnali pontírás | – | Kilőtt app legfeljebb egy pontot veszít |
-| **C4a.4** | `track_filter.dart`: pontosság-/sebesség-/elmozdulás-kapuk, magasság-simítás, haversine-táv + gyenge jel UI | **M10** | Rögzített minta-nyomvonalakon a táv ≤ 5% hibával |
-| **C4a.5** | Háttérfutás (Android előtér-szolgáltatás **a meglévő értesítéssel egyesítve**, iOS háttér-mód) + auto-pause bekötése | M09 | **Nem keletkezik két Android értesítés** ([54 §4.4](54-cardio-gps-route-plan.md)); akku ≤ 8%/óra, mérés dokumentálva *(Q-D3 döntés kell)* |
-| **C4a.6** | Záró feldolgozás (ritkítás → polyline → outbox-bump, splitek) + `RoutePainter` + magasságprofil + kártya-miniatűr + 90 napos pont-karbantartás | **M13**, **M16** | Az útvonal mindkét témában olvasható; a hézag szaggatott |
+C4a.1–C4a.4 és C4a.6 tiszta Flutter/Dart — a `geolocator` maga egy federated plugin
+(előre kész Android/iOS natív implementációval, nincs benne saját natív kódunk), a szűrés
+(`track_filter.dart`), a Drift-tábla, az engedély-UI és a `RoutePainter` (saját `CustomPainter`,
+zéró platform-csatorna) mind **Windowson is fejleszthető és tesztelhető** — a `LocationService`
+G2-es no-op teszt-implementációja pontosan ezért került a tervbe, hogy a pozíció-streamet ne
+kelljen valódi GPS-hez kötni a fejlesztés alatt (ugyanaz az elv, mint a C0–C2 eddigi
+Windows-lépéseinél). Az iOS `Info.plist` engedély-kulcsok szövegszerkesztése (C4a.1) sem igényel
+Xcode-ot — csak a tényleges iOS-buildel való kipróbálásuk, amit ez a terv nem is vár el ezekben a
+lépésekben.
+
+Egyedül **C4a.5** (háttérfutás) natív, platformspecifikus **futásidejű** viselkedés — ellentétben
+C2.10/C2.11-gyel, itt nincs saját Swift/Kotlin kód, de a szolgáltatás/háttér-mód tényleges
+működése csak egy valódi platform-buildel ellenőrizhető, és iOS-t Flutterből **csak Mac-ről lehet
+buildelni**, függetlenül attól, hogy írtunk-e hozzá natív kódot. Ezért **a/b lépésre bontva**,
+a C2.10/C2.11 mintáját követve: az **a** ág Android + a platformfüggetlen auto-pause-bekötés,
+Windowson kész (és közvetlenül a C2.10a-ban épített ongoing notificationre épül); a **b** ág iOS
+háttér-mód, **Mac-et igényel** a tényleges kipróbáláshoz.
+
+| # | Lépés | Platform | Frame | Kész-ha |
+|---|---|---|---|---|
+| **C4a.1** | `geolocator` bevezetése + platform-konfiguráció + `LocationService` (engedély- és pozíció-stream, teszt-implementációval) | Windows | – | Teszt-implementáció nélkül is fordul minden platformon |
+| **C4a.2** | Engedély-utak: magyarázó lap a rendszer-kérdés előtt, megtagadva / véglegesen / pontatlan ágak | Windows | **M26**, **M27**, **M28** | **Megtagadott engedéllyel is elindul és menthető az edzés** ([51 D-C.5](51-cardio-overview-plan.md)) |
+| **C4a.3** | `CardioTrackPoints` drift-tábla + azonnali pontírás | Windows | – | Kilőtt app legfeljebb egy pontot veszít |
+| **C4a.4** | `track_filter.dart`: pontosság-/sebesség-/elmozdulás-kapuk, magasság-simítás, haversine-táv + gyenge jel UI | Windows | **M10** | Rögzített minta-nyomvonalakon a táv ≤ 5% hibával |
+| **C4a.5a** | Android előtér-szolgáltatás **a meglévő ongoing notificationnel egyesítve** ([54 §4.4](54-cardio-gps-route-plan.md)) + auto-pause bekötése a GPS-sebességre (platformfüggetlen Dart, a no-op `LocationService`-szel tesztelve) | Windows | M09 | **Nem keletkezik két Android értesítés**; auto-pause a sebesség-küszöbön ki-/bekapcsol (teszt) *(Q-D3 döntés kell)* |
+| **C4a.5b** | iOS háttér-mód (`AppleSettings.allowBackgroundLocationUpdates` + `UIBackgroundModes: location`) | **Mac** | M09 | Háttérben (képernyő kikapcsolva) is folyik a rögzítés, a Live Activity mutatja |
+| **C4a.6** | Záró feldolgozás (ritkítás → polyline → outbox-bump, splitek) + `RoutePainter` + magasságprofil + kártya-miniatűr + 90 napos pont-karbantartás | Windows | **M13**, **M16** | Az útvonal mindkét témában olvasható; a hézag szaggatott |
+
+A `G11` (akku-mérés, [54 §4.5](54-cardio-gps-route-plan.md)) nem önálló kódolási lépés — egy 60+
+perces, valódi eszközön futó mérés, amit C4a.5a/C4a.5b **mindegyike** után külön el kell végezni
+(ez Windowson sosem futtatható, Mac-en sem közvetlenül — mindkét platform saját fizikai/emulált
+eszközt igényel), az eredmény az [54 §8](54-cardio-gps-route-plan.md) mérési naplójába kerül.
 
 ---
 
@@ -241,7 +265,7 @@ külön teszt tartozik, nem csak kézi ellenőrzés:
 | C1.4 / C1.5 | A cardio-mező változása nem bumpolja a session `updatedAt`-jét → **soha nem szinkronizál** | Kötelező teszt mindkét oldalon ([52 §4](52-cardio-domain-backend-plan.md)) |
 | C3.1–C3.2 | A statisztika definíciója csendben megváltozik | Regressziós teszt rögzített, tisztán erősítő adathalmazon: **minden szám bitre azonos** |
 | C3w.1 | A web és a mobil aggregációja szétcsúszik | Paritás-teszt ([56 ST11](56-cardio-statistics-plan.md)) |
-| C4a.5 | Két Android értesítés, vagy csendben megölt háttér-mérés | Hosszú (60+ perces) eszközös próba + akku-mérés naplózva ([54 §8](54-cardio-gps-route-plan.md)) |
+| C4a.5a/b | Két Android értesítés, vagy csendben megölt háttér-mérés | Hosszú (60+ perces) eszközös próba + akku-mérés naplózva ([54 §8](54-cardio-gps-route-plan.md)) |
 
 ---
 
@@ -253,7 +277,7 @@ külön teszt tartozik, nem csak kézi ellenőrzés:
 | C1 | 9 | MF2 |
 | C2 | 13 (11 Windowson, 2 Mac-en: C2.10b, C2.11b) | MF3 |
 | C3 · C1w · C3w | 5 + 4 + 1 | MF4 |
-| C4a · C5 | 6 + 7 | MF5 |
+| C4a · C5 | 7 (6 Windowson, 1 Mac-en: C4a.5b) + 7 | MF5 |
 | C6–C9 | iterációnként 4–6 | MF6 |
 
 **Összesen ~50 lépés az MF5-ig**, plusz a sport-specifikumok. A javasolt vágási pont, ha
@@ -2636,3 +2660,96 @@ sandboxban.
 **Következő:** `C3w.1` (`aggregate.ts` fajta-szűrő + cardio-adatsorok + dashboard-bontás +
 paritás-teszt a mobillal, a C3-mal egy időben futtatva) — vagy `C4a`/`C5` a mobil oldalon,
 amelyik előbb aktuális.
+
+---
+
+## C3w.1 kész (2026-08-12) — web statisztika: fajta-szűrő, cardio-adatsorok, dashboard-bontás
+
+A 58-as terv ezt a lépést háromra bontja (WB10–WB12); az 59-es végrehajtási terv egy lépésként
+listázza — mindhármat egy menetben szállítottam, a doc saját §4 táblázatát követve.
+
+### `statistics/types.ts` — additív backend-mezők (W6)
+
+`StatisticsResponse` megkapta a backend C3.1-ben már leszállított öt additív mezőt
+(`strengthWorkoutCount`, `cardioWorkoutCount`, `movingMinutes`, `totalDistanceMeters`,
+`totalElevationGainMeters`) — bitre a backend `StatisticsResponse` rekordja szerint, primitív
+(sosem null) típusokkal, ahogy a Java oldalon is `int`/`double`, nem `Integer`/`Double`.
+
+### `aggregate.ts` — fajta-szűrő + cardio-adatsorok (WB10, W5)
+
+- **`StatKindFilter`** (`"ALL" | "STRENGTH" | "CARDIO"`) — új, opcionális 5. paraméter
+  `aggregate()`-en, alapértéke `"ALL"` (a meglévő 4-paraméteres hívások bitre változatlanok
+  maradnak — ezt a `"reproduces the pre-cardio behavior bit-for-bit"` teszt zárja le). A szűrő
+  csak a **"edzés jellegű"** számokat (`workoutCount`, `totalVolume`/`volumeSeries`) szűkíti,
+  a táplálkozás/víz/testsúly/lépés-sorokhoz nem nyúl — bitre a mobil D-C3.4 szabálya.
+- **`cardioDistanceSeries`** (ritka sorozat, D-C3.5 "hiányzó, nem 0") + **`totalCardioDistanceKm`**
+  — DISTANCE+MACHINE család, `cardio.distanceMeters/1000`, napi összegezve. `STRENGTH` szűrő
+  alatt üres (a mobil `stat_chart_data.dart` szó szerinti szabálya: *"Cardio-only metrics only
+  ever contain cardio sessions regardless of the filter — under `strength` there's nothing to
+  show at all"*), `CARDIO`/`ALL` alatt változatlan (a cardio-adat maga sosem szűkül tovább —
+  hiszen már eleve csak cardióból jön).
+- **`strengthWorkoutCount`/`cardioWorkoutCount`** — additív bontás (D-C3.2), a **teljes**,
+  szűretlen `raw.sessions`-ből számolva, függetlenül az aktív `kindFilter`-től — ugyanaz az elv,
+  mint a backend `StatisticsResponse`-nál: a bontás mindig mindkét számot mutatja, nem csak az
+  éppen kiválasztott fajtáét.
+
+### `statistics/page.tsx` — fajta-szűrő UI + cardio-táv grafikon (WB11, W10)
+
+- Új `SegmentedControl` (Mind/Erősítő/Cardio, `size="sm"`) a tartomány-választó mellett, a
+  meglévő komponens újrafelhasználásával (nem új UI-primitív).
+- A "Edzések" `KpiCard` kapott egy `subtitle`-t ("N erősítő · M cardio") — ehhez a `KpiCard`
+  komponens (`src/components/data/KpiCard.tsx`) kapott egy új, opcionális `subtitle` propot,
+  a szomszédos `StatCard` már meglévő mintáját követve (nem egyedi eset, konzisztens a
+  design-rendszerrel).
+- Új "Cardio táv" `ChartCard`, ugyanazzal a feltételes-üres-állapot mintával, mint a meglévő
+  "Edzésmennyiség" kártya (`current.totalVolume > 0 ? grafikon : "nincs adat" szöveg"`) — a kártya
+  **mindig** ott van a rácsban (nem tűnik el teljesen egy tisztán erősítős felhasználónál),
+  konzisztensen a lap többi kártyájával.
+
+### `dashboard/page.tsx` — bontás-sor + **egy negyedik hely, ahol ugyanaz a régi hiba bujkált**
+
+A "Ez a hét" panel "Edzések" sora kapott egy halk bontás-sort (`weeklyStats.strengthWorkoutCount`
+/ `cardioWorkoutCount`, csak ha `workoutCount > 0`) — ez a `weeklyStats`-ot már eleve a
+`/statistics/weekly` backend-végpontról kapja, tehát **nem** kellett hozzá kliens-oldali
+újraszámolás, csak az új mezők megjelenítése.
+
+A "Legutóbbi edzések" lista viszont **a C1w.4-ben már háromszor javított hibát hordozta
+negyedjére**: `s.templateName ?? (exNames || t("workoutFallback"))` cím + nyers "X min" alcím —
+egy cardio session itt is "Workout"-ként, gyakorlatszám és mértékegység nélkül jelent volna meg.
+Mivel a `SessionsView`/`ClientWorkoutsTab`/`ClientOverviewTab` mind ugyanezt a mintát (kind-ág +
+`ActivityChip` + `buildCardioSummaryLine`) már megkapta és tesztelve van, ez itt tisztán
+újrahasznosítás volt, nem új logika — a doc W10 sora nem nevezte meg explicit ezt a listát
+(csak "edzésszám, metrika-választó"-t), de ugyanaz a felhasználó-szembeni hiba, amit a kész-ha
+általánosan tilt, ezért javítottam.
+
+### Paritás-teszt a mobillal — **mit jelent ez gyakorlatban két külön nyelvű kódbázisnál**
+
+A Vitest nem tudja ténylegesen lefuttatni a mobil Dart-suite-ot ugyanabban a menetben — a
+"paritás" itt azt jelenti, amit a D-C3.7 is kimond: **mindkét kódbázis ugyanazt a dokumentált
+képletet (56 §2–§3) implementálja**, és ahol a mobilnak már van saját tesztje ugyanarra a
+szabályra (`stat_chart_data_test.dart`), a webes teszt **ugyanazokat a fixture-számokat**
+használja — így egy ember, aki egymás mellé teszi a két suite-ot, azonos bemenetre azonos
+kimenetet lát. Konkrétan: a `cardioDistance` teszt szó szerint a mobil
+`'cardioDistance: sums km for DISTANCE and MACHINE families, skips GAME'` tesztjének
+5000 m futás + 15 000 m szobabicikli + 2000 m kosárlabda fixture-jét veszi át, és ugyanazt a
+20,0 km eredményt várja (a kosárlabda GAME családja kimarad).
+
+Új tesztek `aggregate.test.ts`-ben (7, `describe('aggregate — cardio parity with mobile')`):
+D-C3.1 (workoutCount változatlan összeg), D-C3.2 (additív bontás összege = workoutCount),
+cardioDistance mobil-fixture, D-C3.5 (hiányzó nap nem 0-pont), D-C3.4 mindkét iránya
+(`STRENGTH` kizárja a cardiót, `CARDIO` kizárja az erősítőt), és a bit-azonossági regresszió
+(alapértelmezett hívás == explicit `"ALL"` hívás egy tisztán erősítős adathalmazon).
+
+### Ellenőrzés
+
+`npx tsc --noEmit` és `npx eslint` (mind a nyolc érintett/új fájlon) tiszta. Teljes
+`npx vitest run`: **219/219 zöld** (23 fájl, 212 régi + 7 új). Böngészős ellenőrzés: a Next.js dev
+szerver `/statistics` **és** `/dashboard` mindkettő **200**-zal fordult, nulla szerver-/
+konzolhiba. Mint az előző C1w-lépéseknél, valódi bejelentkezett felhasználó vegyes (erősítő+cardio)
+adathalmazával való vizuális ellenőrzés nem volt elérhető ebben a sandboxban.
+
+**Ezzel a teljes C3w iteráció (és a teljes MF4 mérföldkő webes fele) kész.**
+
+**Következő:** `C4a` (GPS/útvonal, mobil) — a `cardio.routePolyline`/split-adat, amit a C1w.3 és
+ez a lépés is szándékosan üresen hagyott, itt kezd ténylegesen megtelni. Vagy `C5` (óra), ha az
+aktuálisabb.
