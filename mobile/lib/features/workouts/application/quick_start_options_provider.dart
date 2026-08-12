@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../domain/activity_type.dart';
 import '../domain/workout_template.dart';
 import 'activity_ranking.dart';
 import 'workout_session_controller.dart';
@@ -36,6 +38,27 @@ final quickStartEntriesProvider = Provider<List<ResolvedQuickStartEntry>>((ref) 
       (entry: entry, template: templatesById[entry.templateClientId]),
   ];
 });
+
+/// The display title for a [ResolvedQuickStartEntry] — the quick-start
+/// sheet tile's headline (`quick_start_sheet.dart`), and (C2.11a) the
+/// Android dynamic app-shortcut's `shortLabel` / the home-screen widget's
+/// quick-start button text, so a shortcut or widget button always names the
+/// exact same thing the sheet would have shown for that rank. Lives here
+/// (application layer) rather than in the presentation-layer sheet so
+/// core-layer consumers (`WidgetSnapshotWriter`, the shortcuts updater)
+/// don't have to import a widget file to get it.
+///
+/// A deleted template (ranked once, since removed) falls back to the
+/// generic "Strength" label — tapping starts an empty workout instead,
+/// there's nothing left to start "from".
+String quickStartEntryTitle(AppLocalizations l10n, ResolvedQuickStartEntry resolved) {
+  final entry = resolved.entry;
+  if (entry.isCardio) return activityTypeLabel(l10n, entry.activityType!);
+  final template = resolved.template;
+  if (template != null) return template.name;
+  if (entry.templateClientId == null) return l10n.emptyWorkoutLabel;
+  return l10n.activityTypeStrength;
+}
 
 /// Below this many completed sessions, the ranking hasn't seen enough usage
 /// to mean anything yet — the quick-start sheet shows an explanatory banner

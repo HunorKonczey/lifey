@@ -4,21 +4,32 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetPlugin
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import org.json.JSONArray
 import org.json.JSONObject
 
 private const val SNAPSHOT_KEY = "today_snapshot"
 
+// Base request code for the quick-start buttons' PendingIntents — offset
+// from the widget's own tap intent (request code 0) and from each other by
+// slot index, so Android doesn't collapse two distinct targets into one
+// cached PendingIntent (FLAG_UPDATE_CURRENT matches on request code, not
+// intent data).
+private const val QUICKSTART_REQUEST_CODE_BASE = 1
+
 /**
- * Renders the "today's calories" home screen widget from the snapshot the
- * Flutter app writes via `home_widget` (see widget_snapshot_writer.dart and
- * docs/25-android-widget-ongoing-notification-plan.md). Read-only and
- * silent — tapping anywhere opens the app, there is no other interaction.
+ * Renders the "today's calories" home screen widget — and, since C2.11a,
+ * its quick-start row — from the snapshot the Flutter app writes via
+ * `home_widget` (see widget_snapshot_writer.dart and
+ * docs/25-android-widget-ongoing-notification-plan.md). Read-only outside
+ * the quick-start buttons — tapping anywhere else opens the app.
  */
 class TodaySummaryWidgetProvider : AppWidgetProvider() {
 
@@ -59,6 +70,7 @@ class TodaySummaryWidgetProvider : AppWidgetProvider() {
             steps = steps,
             stepGoal = stepGoal,
         )
+        renderQuickStart(context, views, snapshot.optJSONArray("quickStart"))
         return views
     }
 
@@ -128,5 +140,46 @@ class TodaySummaryWidgetProvider : AppWidgetProvider() {
         } else {
             views.setViewVisibility(R.id.widget_steps_row, View.GONE)
         }
+    }
+
+    // Fixed two-slot layout (docs/cardio/59-cardio-implementation-plan.md
+    // C2.11a) — WidgetSnapshotWriter already caps `quickStart` at 2 entries,
+    // this is just the belt-and-braces other side of that contract.
+    private val quickStartSlots = listOf(
+        Triple(R.id.widget_quickstart_1, R.id.widget_quickstart_1_label, 0),
+        Triple(R.id.widget_quickstart_2, R.id.widget_quickstart_2_label, 1),
+    )
+
+    private fun renderQuickStart(context: Context, views: RemoteViews, quickStart: JSONArray?) {
+        val entries = quickStart ?: JSONArray()
+        val anyVisible = entries.length() > 0
+        views.setViewVisibility(R.id.widget_quickstart_row, if (anyVisible) View.VISIBLE else View.GONE)
+
+        for ((chipId, labelId, index) in quickStartSlots) {
+            val entry = entries.optJSONObject(index)
+            if (entry == null) {
+                views.setViewVisibility(chipId, View.GONE)
+                continue
+            }
+            val label = entry.optString("label")
+            val deepLinkUri = entry.optString("deepLinkUri")
+            if (label.isNullOrEmpty() || deepLinkUri.isNullOrEmpty()) {
+                views.setViewVisibility(chipId, View.GONE)
+                continue
+            }
+            views.setViewVisibility(chipId, View.VISIBLE)
+            views.setTextViewText(labelId, label)
+            views.setOnClickPendingIntent(chipId, quickStartPendingIntent(context, index, deepLinkUri))
+        }
+    }
+
+    private fun quickStartPendingIntent(context: Context, index: Int, deepLinkUri: String): PendingIntent {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLinkUri), context, MainActivity::class.java)
+        return PendingIntent.getActivity(
+            context,
+            QUICKSTART_REQUEST_CODE_BASE + index,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 }

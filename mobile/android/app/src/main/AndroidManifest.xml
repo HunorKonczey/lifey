@@ -59,6 +59,19 @@
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
             </intent-filter>
+            <!-- `lifey://workout/start?...` — the C2.11a dynamic app-shortcuts
+                 and home-screen widget quick-start buttons, plus the existing
+                 `lifey://workout` / `lifey://today` links iOS already used
+                 (docs/cardio/59-cardio-implementation-plan.md C2.11a,
+                 docs/24-ios-widget-live-activity-plan.md). go_router's
+                 `onException` in app_router.dart parses the URI Flutter hands
+                 it via this filter — no native routing code needed. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="lifey"/>
+            </intent-filter>
         </activity>
         <!-- Health Connect's "view permission usage" entry point — links back
              to this app from Health Connect's own settings UI. Required to
@@ -78,6 +91,12 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Lets the Flutter engine forward the `lifey://` intent-filter
+             above to go_router as a real route instead of only reading it
+             once from the cold-start intent (C2.11a). -->
+        <meta-data
+            android:name="flutter_deeplinking_enabled"
+            android:value="true" />
         <!-- Today's calories home screen widget (docs/25-android-widget-ongoing-notification-plan.md). -->
         <receiver
             android:name=".TodaySummaryWidgetProvider"

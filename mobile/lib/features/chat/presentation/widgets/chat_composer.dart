@@ -281,10 +281,21 @@ class _TypingDots extends StatefulWidget {
 }
 
 class _TypingDotsState extends State<_TypingDots> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1200),
-  )..repeat();
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Eager, not a lazy `late final` initializer — see the identical fix
+    // (and its full rationale) in music_sticky_button.dart's
+    // _MusicStickyButtonState.initState: a lazy initializer's first access
+    // can otherwise end up being dispose() itself, crashing on a
+    // TickerMode ancestor lookup against an already-inactive element.
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
 
   @override
   void dispose() {

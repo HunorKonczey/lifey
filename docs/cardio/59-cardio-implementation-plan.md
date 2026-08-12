@@ -160,9 +160,9 @@ lépés két fele, hanem két önálló, egymástól függetlenül szállíthat�
 | **C2.7** ✅ | Gyorsindító lap a FAB hosszú nyomására + „Összes” aktivitás-választó | Windows | **M01**, **M02**, **M03** | Hosszú nyomás + egy koppintás = fut az edzés, köztes képernyő nélkül |
 | **C2.8** ✅ | Összegzés-képernyő (útvonal nélküli változat) + RPE + kézi szerkesztés „szerkesztve” jelöléssel | Windows | **M15**, **M14** | A szerkesztett érték felülírja a mértet, és jelölve marad ([51 R8](51-cardio-overview-plan.md)) |
 | **C2.9** ✅ | `WorkoutSessionState` `kind`+`cardio` bővítés (előformázott stringek, epoch-alapú idő) | Windows | – | Régi natív build a `STRENGTH` ágra esik vissza, nem törik |
-| **C2.10a** | Android tartós értesítés cardio-layout | Windows | **M25** | Nem „0 szett” látszik az Android értesítésben; frissítés csak változásra |
+| **C2.10a** ✅ | Android tartós értesítés cardio-layout | Windows | **M25** | Nem „0 szett” látszik az Android értesítésben; frissítés csak változásra |
 | **C2.10b** | iOS Live Activity + Dynamic Island cardio-layout | **Mac** | **M23**, **M24** | Nem „0 szett” látszik a zárolási képernyőn / Dynamic Islanden; frissítés ≤ 5 mp és csak változásra (ActivityKit-kvóta) |
-| **C2.11a** | Deep-link route (`go_router`) + Android dinamikus app-shortcutok (`ShortcutManager`, natív híd) + Android kezdőképernyő-widget gombok | Windows | **M29** | Android app-ikon hosszú nyomásából / widgetből **egy** gesztussal indul az edzés; a route C2.11b-nek is kész célpont |
+| **C2.11a** ✅ | Deep-link route (`go_router`) + Android dinamikus app-shortcutok (`ShortcutManager`, natív híd) + Android kezdőképernyő-widget gombok | Windows | **M29** | Android app-ikon hosszú nyomásából / widgetből **egy** gesztussal indul az edzés; a route C2.11b-nek is kész célpont |
 | **C2.11b** | iOS dinamikus app-shortcutok (`UIApplicationShortcutItem`, natív híd) + iOS kezdőképernyő-widget gombok | **Mac** | **M29** | iOS app-ikon hosszú nyomásából / widgetből **egy** gesztussal indul az edzés |
 
 ---
@@ -1577,3 +1577,157 @@ Activity, Mac kell) és C2.11a/b (deep-link + app-shortcut + kezdőképernyő-wi
 
 **Következő:** `C2.10a` — Android tartós értesítés cardio-layout (M25) — ezt a Dart-oldali
 `_renderAndroidNotification`-t bővíti `kind == 'CARDIO'`-ágra, natív Kotlin-kód nélkül.
+
+---
+
+## C2.10a kész (2026-08-12) — Android tartós értesítés cardio-layout
+
+**Tisztán Dart-oldali, ahogy a kész-ha ígérte** — nincs Kotlin-változás, mert
+`flutter_local_notifications` már ma is támogatja mindazt, amire szükség volt
+(`usesChronometer` kapcsolható); csak eddig senki nem tette elérhetővé hívóoldalról.
+
+**`_renderAndroidNotification` `kind == 'CARDIO'`-ága, a C2.9-ben pontosan erre épített
+`movingSecondsBase`/`movingSinceEpochMs` checkpoint-párra támaszkodva:**
+
+- **A body a `CardioLiveMetrics` primary/secondary/tertiary értékeiből épül**
+  (`" · "`-tal fűzve), a `'—'` helykitöltők kihagyásával — ugyanaz a szemlélet, mint a
+  "nincs 0 szett": egy meg nem mért érték (pl. a GAME pulzusa ma) inkább hiányzik, mint
+  hogy csúnyán látsszon.
+- **A chronometer natívan ketyeg, JS-oldali percenkénti/másodperces frissítés nélkül**: a
+  `when` epochot a `movingSinceEpochMs - movingSecondsBase*1000` képlet adja — ez az a
+  trükk, ami miatt a C2.9 kész-ha megjegyzése kifejezetten ezt a párost nevezte meg
+  "ennek lesz az alapja" — Android saját "now - when" chronometere így egyetlen
+  epoch-eltolással jeleníti meg helyesen a bázis + élő-telt időt, anélkül hogy a Dart
+  oldal minden másodpercben újraküldene egy stringet.
+- **Szünetben a chronometer kikapcsol** (`usesChronometer: false`), nem csak befagy —
+  Android saját maga számolja a chronometert a rendszeróra alapján, ezt Dartból nem lehet
+  "megállítani" anélkül, hogy ki ne kapcsolnánk; enélkül a szünetelt idő alatt is
+  tovább nőtt volna a kijelzett szám, pont azt hazudva, amit ez a lépés ki akart javítani.
+  Ez az egyetlen hely, ahol `NotificationService.showWorkoutSession` és
+  `WorkoutSessionNotifierService`'s injectable `_showAndroidNotificationCall` típusa
+  bővült egy `usesChronometer` paraméterrel (alapértéke `true`, tehát a STRENGTH-ág
+  viselkedése változatlan).
+
+**"frissítés csak változásra"** — a kész-ha másik fele, és nem cardio-specifikus: egy
+`_lastAndroidRender` rekord (`title, body, subText, whenEpochMs, chronometerCountDown,
+usesChronometer`) gyorsítótárazza az utoljára ténylegesen kiküldött tartalmat, és
+`_renderAndroidNotification` kilép, mielőtt meghívná a natív réteget, ha semmi nem
+változott. `start()`/`end()`/`endAll()` nullázza — enélkül egy új munkamenet, aminek a
+tartalma véletlenül egyezik az előző munkamenet utolsó állapotával, néma maradna.
+
+**Tesztek** (`workout_session_notifier_service_test.dart`, 8 új): a meglévő ~10 fake
+closure mind kapott egy `usesChronometer = true` paramétert (a régi szignatúra már nem
+illeszkedett az új konstruktor-típusra); új tesztek: cardio body összefűzése és a `'—'`
+kiszűrése, futó cardio chronometer-epochja, szünetelt cardio `usesChronometer: false`-ja
++ statikus body-ja, két azonos `update()` csak egyszer renderel, egy változás a
+duplikátumsorozat után újra renderel, és egy új munkamenet azonos tartalommal mégis
+renderel (a cross-session reset ellenőrzése).
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a teljes `flutter test`
+**827/830 zöld** (818 + 9 nettó új — 8 új teszt, 1 régi net bővült paraméterlistával, nem
+számít újnak), a 3 bukás a már ismert, cardión kívüli `chat_repository_test.dart`
+Windows-fájlzár-flake. Ezzel a **C2 iteráció 10 Windowson fejleszthető lépéséből
+(C2.1–C2.10a) mind kész** — hátra van C2.10b (iOS Live Activity, Mac kell) és
+C2.11a/b (deep-link + app-shortcut + kezdőképernyő-widget, C2.11a Windowson,
+C2.11b Mac-en).
+
+**Következő:** `C2.11a` — deep-link route (`go_router`) + Android dinamikus
+app-shortcutok + Android kezdőképernyő-widget gombok (M29) — Windowson fejleszthető, a
+másik útja `C2.10b`-nek (Mac kell hozzá).
+
+---
+
+## C2.11a kész (2026-08-12) — Deep-link route + Android dinamikus app-shortcutok + widget gombok
+
+**Három rész, egy közös alapon.** A [`53 §3.4`](53-cardio-mobile-plan.md) D-C.8 által előre
+megnevezett három fogyasztó (gyorsindító lap, shortcut-frissítő, watch-payload) közül ez a lépés
+a másodikat építette meg — és egy negyediket is (widget), amit a doc ugyanoda sorolt. Egyik sem
+duplikálja a rangsorolást: mind `rankQuickStartEntries`-ből (C2.6) és a már meglévő
+`quickStartEntriesProvider`-ből (C2.7) dolgozik.
+
+**A deep-link, mert ez a másik kettő közös alapja.** `quickStartDeepLinkUri`/
+`quickStartEntryFromDeepLinkUri` ([activity_ranking.dart](../../mobile/lib/features/workouts/application/activity_ranking.dart))
+egy `QuickStartEntry`-t old fel `lifey://workout/start?activity=CODE[&template=clientId]`
+URI-vá és vissza — `'STRENGTH'` itt tisztán URI-szintű sentinel (nem valódi
+`kActivityTypes`-érték), hogy egyetlen `activity` paraméter válasszon a cardio/erősítő ág között.
+`app_router.dart` meglévő `onException`-ága (ami eddig csak a `lifey://workout` bare linket
+kezelte — újra megnyitja a futó edzést) bővült: ha az URI egy felismert `start` linket hordoz,
+`workout_resume_prompt.dart` új `startQuickStartEntryFromDeepLink`-je indítja el — **de csak ha
+nincs már futó edzés**, különben ugyanúgy azt nyitja meg újra, mint a bare link (a shortcutra/widget
+gombra edzés közben kattintás nem hoz létre árva második session-t).
+
+**A tényleges indítás nem a C2.7 sheet-függvényeit hívja.** `startCardioQuickly`/
+`startStrengthQuickly` ([quick_start_sheet.dart](../../mobile/lib/features/workouts/presentation/quick_start_sheet.dart))
+egy `BuildContext`-et és egy popolható bottom sheet-et tételeznek fel — egy hidegindítású
+shortcut-tapnak egyik sincs. A cardio ág adatlétrehozó fele kivált egy önálló
+`createCardioSession`-be (navigáció nélkül), amit mindkét hívó (a sheet csempéje és az új
+deep-link belépési pont) megoszt; az erősítő ág a sablon feloldása után közvetlenül
+`LogSessionScreen`-t push-ol, ugyanúgy mint eddig, csak sheet-pop nélkül.
+
+**A `quickStartEntryTitle` átköltözött** a presentation-rétegből (`quick_start_sheet.dart`) az
+application-rétegbe (`quick_start_options_provider.dart`) — a shortcut/widget-frissítőnek
+(core-réteg) kellett ugyanaz a cím-feloldás, amit a sheet csempéje mutat, és a core-réteg nem
+importálhat egy widget-fájlt anélkül, hogy a rétegződést (`CLAUDE.md` "feature-based packaging")
+megsértené.
+
+**Android natív oldal, mindkettő ugyanazt a mintát követi, mint a `workout_session_notifier`/
+`WatchBridge`/`MediaSessionBridge`** — plain `MethodChannel`-osztály, nem Flutter-plugin
+(D-C2.2):
+
+- **`lifey/shortcuts`** ([ShortcutsBridge.kt](../../mobile/android/app/src/main/kotlin/com/khunor/lifey/ShortcutsBridge.kt)) —
+  `ShortcutManager.setDynamicShortcuts`, API 25 alatt csendes no-op. Minden shortcut ugyanazt az
+  app-ikont kapja (nincs aktivitás-típusonkénti drawable-készlet — ez a másodlagos belépési pontért
+  nem éri meg 8 vektor-ikont karbantartani), a cím és a deep-link különbözteti őket. Az `Intent`
+  explicit `MainActivity`-re célzott (`ACTION_VIEW` + `Uri` + komponens), nem implicit — nincs
+  esély chooser-dialógusra, és Flutter deep-link-kezelése az `Intent.data`-t olvassa,
+  a felbontás módjától függetlenül.
+- **Widget-gombsor** ([TodaySummaryWidgetProvider.kt](../../mobile/android/app/src/main/kotlin/com/khunor/lifey/TodaySummaryWidgetProvider.kt),
+  [widget_today_summary.xml](../../mobile/android/app/src/main/res/layout/widget_today_summary.xml)) —
+  két fix csempe-slot (a `WidgetSnapshotWriter` már top-2-re vágja a listát, ez csak a másik oldali
+  biztosíték), mindegyik saját `PendingIntent`-tel (`FLAG_UPDATE_CURRENT`, egyedi request-code
+  slotonként, hogy Android ne cache-elje össze a két különböző célt). Csak szöveges címke, nincs
+  ikon a csempéken — ugyanaz az egyszerűsítés, mint a shortcutoknál.
+- **`AndroidManifest.xml`**: `lifey://` scheme intent-filter (`VIEW`/`DEFAULT`/`BROWSABLE`) +
+  `flutter_deeplinking_enabled` meta-data — eddig **egyáltalán nem volt** regisztrálva Androidon
+  (csak iOS Info.plist-jében), az ongoing-notification tap ugyanis eddig natív plugin-callbacket
+  használt, nem URI-t (docs/25-android-widget-ongoing-notification-plan.md mintája) — ezúttal
+  viszont a doc kifejezetten `go_router`-be parse-olandó URI-t kért (D-C2.2), hogy a route
+  C2.11b-nek (iOS) is kész célpont legyen.
+
+**A frissítési ütem, dokumentált D-döntés szerint** ("app háttérbe kerülésekor, nem minden
+képernyőnyitáskor", [53 §3.2](53-cardio-mobile-plan.md)): a meglévő `WidgetSnapshotController`
+(eddig csak a kalória/lépés-számláló debounced írója) kapott egy `_refreshQuickStart()`-ot, amit
+**csak** a konstruktor és `didChangeAppLifecycleState(paused)` hív — szándékosan **nem**
+figyeli `quickStartEntriesProvider`-t közvetlenül, mert az minden edzés-befejezésen (tehát a
+dashboard-számlálót is mozgató minden szett-logoláson) újraszámolna, ami pont az a "minden
+build-ben" viselkedés, amit a doc kizár. A közte lévő debounced írásokhoz a legutóbb
+kiszámolt lista cache-elve marad (`_quickStart` mező).
+
+**Amit ez a lépés szándékosan leegyszerűsített a design canvashoz képest** (M29 mockup: 4 csempés
+"Gyors indítás" widget + kétállapotú kis widget élő számlálóval): az 53-as doc §3.3 tényleges
+szövege csak "gyorsindítás gombsort a top-2 edzéssel" ígér, ugyanarra a deep-linkre — ez a lépés
+pontosan ezt építette, nem a mockup teljes vizuális gazdagságát (nincs élő/futó állapot a
+widgetben, nincs 4-csempés elrendezés) — ugyanaz a fegyelem, mint C2.10a-nál a mockup 3.
+metrika-sorával szemben.
+
+**Tesztek:** `activity_ranking_test.dart` (+7, URI oda-vissza + hibás/idegen URI elutasítása),
+`app_shortcuts_service_test.dart` (új fájl, 4 teszt: unavailable no-op, JSON-alak, üres lista
+ténylegesen törli — nem skip-eli —, hiányzó natív handler nyelése),
+`widget_snapshot_writer_test.dart` (+1, top-2 vágás + címke/deep-link helyesség). A router/
+resume-prompt új ága (`startQuickStartEntryFromDeepLink`) nem kapott dedikált widget-tesztet —
+navigátor-/BuildContext-függő integrációs felszín, amit ez a kódbázis eddig sem tesztelt
+közvetlenül (lásd `openActiveWorkoutSession` sem).
+
+**Natív build-ellenőrzés:** mivel ez a lépés Kotlin-t és AndroidManifest-et is módosít, amit
+`flutter analyze`/`flutter test` nem fordít le, egy teljes `flutter build apk --debug` futott
+ellenőrzésként — sikeresen lefordult (`ShortcutsBridge.kt`, a bővített
+`TodaySummaryWidgetProvider.kt`, az új XML/drawable erőforrások, a manifest-bővítés).
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; `flutter build apk --debug` sikeres; a
+teljes `flutter test` **839/842 zöld** (827 + 12 nettó új: 7 URI-teszt, 4 shortcuts-teszt, 1
+widget-snapshot-teszt), a 3 bukás a már ismert, cardión kívüli `chat_repository_test.dart`
+Windows-fájlzár-flake.
+
+**Következő:** `C2.10b` (iOS Live Activity + Dynamic Island, Mac kell) vagy `C2.11b` (iOS
+dinamikus app-shortcutok + kezdőképernyő-widget gombok, szintén Mac kell) — a C2 iteráció
+mind a 11 Windowson fejleszthető lépése (C2.1–C2.11a) kész.

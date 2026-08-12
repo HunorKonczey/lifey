@@ -256,4 +256,59 @@ void main() {
       expect(result, isEmpty);
     });
   });
+
+  group('quickStartDeepLinkUri / quickStartEntryFromDeepLinkUri (C2.11a)', () {
+    test('a cardio entry round-trips through its deep link', () {
+      const entry = QuickStartEntry.cardio('RUNNING');
+
+      final uri = quickStartDeepLinkUri(entry);
+
+      expect(uri.toString(), 'lifey://workout/start?activity=RUNNING');
+      expect(quickStartEntryFromDeepLinkUri(uri), entry);
+    });
+
+    test('a specific-template strength entry round-trips, template included', () {
+      const entry = QuickStartEntry.strength('template-123');
+
+      final uri = quickStartDeepLinkUri(entry);
+
+      expect(uri.toString(), 'lifey://workout/start?activity=STRENGTH&template=template-123');
+      expect(quickStartEntryFromDeepLinkUri(uri), entry);
+    });
+
+    test('a freeform strength entry (no template) round-trips without a template param', () {
+      const entry = QuickStartEntry.strength();
+
+      final uri = quickStartDeepLinkUri(entry);
+
+      expect(uri.queryParameters.containsKey('template'), isFalse);
+      expect(quickStartEntryFromDeepLinkUri(uri), entry);
+    });
+
+    test('the bare lifey://workout link (no /start path) is not a quick-start URI', () {
+      expect(quickStartEntryFromDeepLinkUri(Uri.parse('lifey://workout')), isNull);
+    });
+
+    test('an unrecognized activity code is rejected rather than crashing downstream', () {
+      expect(
+        quickStartEntryFromDeepLinkUri(Uri.parse('lifey://workout/start?activity=TELEPORTING')),
+        isNull,
+      );
+    });
+
+    test('a URI missing the activity param entirely is rejected', () {
+      expect(quickStartEntryFromDeepLinkUri(Uri.parse('lifey://workout/start')), isNull);
+    });
+
+    test('the wrong scheme or host is rejected', () {
+      expect(
+        quickStartEntryFromDeepLinkUri(Uri.parse('https://workout/start?activity=RUNNING')),
+        isNull,
+      );
+      expect(
+        quickStartEntryFromDeepLinkUri(Uri.parse('lifey://today/start?activity=RUNNING')),
+        isNull,
+      );
+    });
+  });
 }

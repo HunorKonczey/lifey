@@ -80,6 +80,50 @@ QuickStartEntry _keyOf(WorkoutSession session) => session.isCardio
     ? QuickStartEntry.cardio(session.activityType!)
     : QuickStartEntry.strength(session.templateClientId);
 
+/// The deep link a [QuickStartEntry] starts from — one gesture, no
+/// intermediate screen (docs/cardio/59-cardio-implementation-plan.md
+/// C2.11a/b, D-C2.2). Consumed by the Android dynamic app-shortcuts bridge,
+/// the home-screen widget's quick-start buttons, and (C2.11b) iOS's
+/// `UIApplicationShortcutItem`s — all three just need a URI, not the ranking
+/// logic itself. `go_router`'s `onException` in `app_router.dart` parses it
+/// back with [quickStartEntryFromDeepLinkUri].
+///
+/// `'STRENGTH'` for [QuickStartEntry.activityType] is a query-string
+/// sentinel local to this URI shape, not a real [kActivityTypes] value
+/// (mirrors the existing `'STRENGTH'` sentinel `activityTypeLabel` etc.
+/// already accept) — chosen so a single `activity` param unambiguously
+/// selects the cardio/strength branch without a separate `kind` param.
+Uri quickStartDeepLinkUri(QuickStartEntry entry) {
+  return Uri(
+    scheme: 'lifey',
+    host: 'workout',
+    path: '/start',
+    queryParameters: {
+      'activity': entry.isCardio ? entry.activityType! : 'STRENGTH',
+      if (entry.templateClientId != null) 'template': entry.templateClientId!,
+    },
+  );
+}
+
+/// The inverse of [quickStartDeepLinkUri] — `null` for anything that isn't a
+/// recognized quick-start URI (wrong scheme/host/path, missing/unknown
+/// `activity`), so the router can fall back to its normal "unrecognized
+/// deep link" handling instead of crashing on a malformed or stale one (an
+/// app-shortcut or widget button can outlive an app update that renamed
+/// something).
+QuickStartEntry? quickStartEntryFromDeepLinkUri(Uri uri) {
+  if (uri.scheme != 'lifey' || uri.host != 'workout' || uri.path != '/start') {
+    return null;
+  }
+  final activity = uri.queryParameters['activity'];
+  if (activity == null) return null;
+  if (activity == 'STRENGTH') {
+    return QuickStartEntry.strength(uri.queryParameters['template']);
+  }
+  if (!kActivityTypes.contains(activity)) return null;
+  return QuickStartEntry.cardio(activity);
+}
+
 /// Cardio-vs-cardio tie-break order (docs/cardio/53-cardio-mobile-plan.md
 /// §3.4: "ha az is egyezik, a `kActivityTypes` megjelenítési sorrend") — a
 /// strength entry always wins a tie against any cardio entry (`-1` sorts

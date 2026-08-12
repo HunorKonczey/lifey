@@ -9,6 +9,7 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterFragmentActivity() {
     private var watchBridge: WatchBridge? = null
     private var mediaSessionBridge: MediaSessionBridge? = null
+    private var shortcutsBridge: ShortcutsBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -16,5 +17,7 @@ class MainActivity : FlutterFragmentActivity() {
         watchBridge = WatchBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         // docs/music/46-workout-music-controls-plan.md §2.1, M2.
         mediaSessionBridge = MediaSessionBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+        // docs/cardio/59-cardio-implementation-plan.md C2.11a.
+        shortcutsBridge = ShortcutsBridge(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 }

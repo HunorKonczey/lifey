@@ -197,31 +197,20 @@ class _QuickStartTile extends ConsumerWidget {
 
     final IconData icon;
     final Color color;
-    final String title;
+    final String title = quickStartEntryTitle(l10n, resolved);
     final String subtitle;
     if (entry.isCardio) {
       final type = entry.activityType!;
       icon = activityTypeIcon(type);
       color = activityTypeColor(type, context);
-      title = activityTypeLabel(l10n, type);
       subtitle = activityModalitySubtitle(l10n, activityFamilyOf(type));
     } else {
       icon = activityTypeIcon('STRENGTH');
       color = activityTypeColor('STRENGTH', context);
       final template = resolved.template;
-      if (template != null) {
-        title = template.name;
-        subtitle = l10n.exercisesCountLabel(template.exercises.length);
-      } else if (entry.templateClientId == null) {
-        title = l10n.emptyWorkoutLabel;
-        subtitle = l10n.emptyWorkoutSubtitle;
-      } else {
-        // The ranked template was deleted since its last use — fall back to
-        // a generic label; tapping starts an empty workout instead (there's
-        // nothing left to start "from").
-        title = l10n.activityTypeStrength;
-        subtitle = l10n.emptyWorkoutSubtitle;
-      }
+      subtitle = template != null
+          ? l10n.exercisesCountLabel(template.exercises.length)
+          : l10n.emptyWorkoutSubtitle;
     }
 
     return Material(
@@ -290,31 +279,26 @@ String activityModalitySubtitle(AppLocalizations l10n, ActivityFamily family) {
   };
 }
 
-/// Starts a cardio session for [activityType] and pushes straight into the
-/// live [CardioSessionScreen] — the C2.7 entry point `open_workout_screens.dart`'s
-/// own doc comment already anticipated ("today only reachable from tests,
-/// since the quick-start entry point is C2.7").
+/// Creates+persists a new cardio session for [activityType] — pure data
+/// work, no navigation. Builds the navigation [WorkoutSession] locally
+/// rather than waiting for [workoutSessionControllerProvider]'s stream to
+/// emit the freshly-created row: the repository already knows
+/// `startedAt`/`movingSinceEpochMs` are the same value and `movingSeconds`
+/// starts at 0 (see `WorkoutSessionController.startCardioSession`), so
+/// there's nothing to wait for — this mirrors exactly what gets persisted,
+/// without a stream-lookup race.
 ///
-/// Builds the navigation [WorkoutSession] locally rather than waiting for
-/// [workoutSessionControllerProvider]'s stream to emit the freshly-created
-/// row: the repository already knows `startedAt`/`movingSinceEpochMs` are
-/// the same value and `movingSeconds` starts at 0 (see
-/// `WorkoutSessionController.startCardioSession`), so there's nothing to
-/// wait for — this mirrors exactly what gets persisted, without a
-/// stream-lookup race.
-Future<void> startCardioQuickly(
-    BuildContext context, WidgetRef ref, String activityType) async {
-  HapticFeedback.mediumImpact();
-  final sheetNavigator = Navigator.of(context);
-  final rootNavigator = Navigator.of(context, rootNavigator: true);
+/// Split out of [startCardioQuickly] so `workout_resume_prompt.dart`'s
+/// C2.11a deep-link/app-shortcut/widget entry point can reuse the exact same
+/// creation logic without a [BuildContext] or a sheet to pop.
+Future<WorkoutSession> createCardioSession(
+    WorkoutSessionController controller, String activityType) async {
   final startedAt = DateTime.now();
-  final clientId = await ref
-      .read(workoutSessionControllerProvider.notifier)
-      .startCardioSession(
-        startedAt: startedAt,
-        activityType: activityType,
-      );
-  final session = WorkoutSession(
+  final clientId = await controller.startCardioSession(
+    startedAt: startedAt,
+    activityType: activityType,
+  );
+  return WorkoutSession(
     clientId: clientId,
     exercises: const [],
     sets: const [],
@@ -324,6 +308,19 @@ Future<void> startCardioQuickly(
     movingSeconds: 0,
     movingSinceEpochMs: startedAt.millisecondsSinceEpoch,
   );
+}
+
+/// Starts a cardio session for [activityType] and pushes straight into the
+/// live [CardioSessionScreen] — the C2.7 entry point `open_workout_screens.dart`'s
+/// own doc comment already anticipated ("today only reachable from tests,
+/// since the quick-start entry point is C2.7").
+Future<void> startCardioQuickly(
+    BuildContext context, WidgetRef ref, String activityType) async {
+  HapticFeedback.mediumImpact();
+  final sheetNavigator = Navigator.of(context);
+  final rootNavigator = Navigator.of(context, rootNavigator: true);
+  final session = await createCardioSession(
+      ref.read(workoutSessionControllerProvider.notifier), activityType);
   sheetNavigator.pop();
   await openSessionScreen(rootNavigator, session);
 }

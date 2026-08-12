@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quick-start button background (C2.11a) — a nested surface against
+     @drawable/widget_background's card, same idea as AppRadius.md chips in
+     lib/core/theme/app_tokens.dart. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_surface"/>
+    <corners android:radius="14dp"/>
+</shape>
