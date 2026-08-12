@@ -66,7 +66,7 @@ blokkolóvá** — addig nem kell dönteni:
 | Q-D1 | A splitek megjelenítési mélysége mobilon (csak km+tempó, vagy szint+pulzus is), és javítható-e kézzel egy szakasz | **C6** (futás-specifikum) |
 | Q-D2 | A GAME pont/gól-számláló alapból látszik-e (javaslat: rejtve, egyszeri felajánlással) | **C2.4** |
 | Q-D3 | Az auto-pause alapból be van-e kapcsolva, és típusonként külön-e | **C4a.5** |
-| Q-D4 | A kézzel szerkesztett metrika egyenrangú-e a mérttel a heti összesítésben | **C3.2** |
+| Q-D4 | **Eldöntve** (2026-08-12): egyenrangú, nincs extra jelzés — a kézzel szerkesztett (MANUAL-source) érték simán belemegy a heti/statisztikai összegbe, ugyanúgy, mint egy mért érték; az összesítés szintjén nincs megkülönböztetés. A session-részletnézet R8 szerint továbbra is mutatja a "kézzel szerkesztve" jelölést. Ez már a C3.1-ben leszállított `sum*Since` lekérdezések tényleges viselkedése is (nincs `distanceSource` szűrés) — C3.2-nek ehhez nincs extra munkája. | – |
 
 ---
 
@@ -171,8 +171,8 @@ lépés két fele, hanem két önálló, egymástól függetlenül szállíthat�
 
 | # | Lépés | Frame | Kész-ha |
 |---|---|---|---|
-| **C3.1** | Backend: repository-lekérdezések + `StatisticsResponse` additív bővítés | – | A meglévő mezők értéke **változatlan** rögzített adathalmazon (teszt) |
-| **C3.2** | Mobil: `StatMetric` bővítés + **`weightedAverage`** aggregációs típus + `effectiveMinutes` szabály | – | A tempó távval súlyozott, 0 távon nem oszt nullával; erősítőnél a régi perc-szabály bitre azonos *(Q-D4 döntés kell)* |
+| **C3.1** ✅ | Backend: repository-lekérdezések + `StatisticsResponse` additív bővítés | – | A meglévő mezők értéke **változatlan** rögzített adathalmazon (teszt) |
+| **C3.2** | Mobil: `StatMetric` bővítés + **`weightedAverage`** aggregációs típus + `effectiveMinutes` szabály | – | A tempó távval súlyozott, 0 távon nem oszt nullával; erősítőnél a régi perc-szabály bitre azonos (Q-D4 eldöntve — lásd §1.2) |
 | **C3.3** | Statisztika-képernyő: fajta-szűrő + cardio-metrikák + hiány-kezelés | **M21**, **M22** | Üres nap ≠ 0 pont ([56 D-C3.5](56-cardio-statistics-plan.md)) |
 | **C3.4** | Dashboard bontás-sor + heti visszatekintő + **streak-küszöb** (15 perc mozgásidő) | – | A küszöb egyetlen konstans, tesztelve |
 | **C3.5** | PR-motor cardio-ága (leghosszabb táv / mozgásidő / szintemelkedés) + edzői heti riport bővítés | – | Cardio nem termel erősítő PR-t és fordítva |
@@ -1897,3 +1897,98 @@ kérésére, ugyanúgy, mint C2.10b-nél. Ezzel a **C2 iteráció mind a 13 lép
 csak a saját eszközön futó vizuális/interakciós végpróba maradt nyitva mindkét Mac-lépésnél
 (C2.10b, C2.11b).
 lépése.
+
+---
+
+## C3.1 kész (2026-08-12) — Backend: repository-lekérdezések + `StatisticsResponse` additív bővítés
+
+**Párhuzamosan a C2.10b/C2.11b Mac-es munkájával** — tisztán backend (Spring Boot), semmi közös
+felszín a mobil-natív munkával, ezért ugyanabban az ablakban haladhatott.
+
+**A meglévő mezők jelentése és értéke tényleg nem változott** (D-C3.1): `workoutCount` továbbra is
+"összes edzés", ugyanaz a Spring Data derived query
+(`countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual`) számolja, ugyanazokkal a
+paraméterekkel. Az öt új mező (D-C3.2) tisztán additív a `StatisticsResponse` recordban:
+
+```java
+public record StatisticsResponse(
+        Double totalCalories, Double totalProtein, Double totalCarbs, Double totalFat,
+        Integer workoutCount, Double latestWeight, Double totalWater,
+        int strengthWorkoutCount, int cardioWorkoutCount, int movingMinutes,
+        double totalDistanceMeters, double totalElevationGainMeters
+) {}
+```
+
+**A `strengthWorkoutCount` levezetett, nem lekérdezett** — csak egy új repository-metódus kell
+(`countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind(..., CARDIO)`), a
+strength-szám `workoutCount - cardioWorkoutCount`, mivel a `SessionKind` enumnak pontosan két
+értéke van és minden session-nek pontosan az egyike (a mező `nullable = false`). Egy lekérdezéssel
+kevesebb, mint egy naiv "mindkét fajtát külön megszámolom" megoldás.
+
+**`distanceMeters`/`elevationGainMeters` a `CardioDetails` táblán élnek, nem a
+`WorkoutSession`-ön** (docs/cardio/52 §2.2 — hibrid tárolás, a `moving_seconds` viszont a
+`WorkoutSession`-ön van közvetlenül) — a Σ-lekérdezéseknek ezért `join w.cardioDetails c`-t kell
+tenniük, ami a house-style `sum*Since` JPQL-mintát követi (`MealRepository`/`WaterEntryRepository`):
+`coalesce(sum(...), 0)`, hogy üres eredményhalmazon a primitív `long`/`double` visszatérési típus
+sose `null`-ra unboxoljon. A `moving_seconds` összegzés nem szűr `sessionKind`-ra — mivel
+STRENGTH session-nél a mező mindig `null`, a `sum` már eleve csak a cardio sorokat számolja (a
+SQL/JPQL `sum` kihagyja a null-okat).
+
+**A `StatisticsResponse` konstruktor pozicionális** — a bővítés a Java record kanonikus
+konstruktorát is bővíti, tehát minden meglévő hívóhelyet frissíteni kellett (1 valódi + 7 teszt):
+`StatisticsServiceImpl`, `StatisticsControllerTest` (×3), `TrainerClientDataControllerTest` (×4).
+Egyik sem szemantikai változás, csak a trailing paraméterek pótlása.
+
+**Tesztek, három szinten:**
+- `StatisticsServiceImplTest` — a meglévő `stubAggregates` 4-argumentumos overloadja megmaradt
+  (a 4 régi teszt változatlan), egy új 8-argumentumos verzió is stubolja az új
+  repository-hívásokat. Két új teszt: `cardioBreakdown_addsNewFieldsWithoutChangingOldOnes`
+  (vegyes adathalmazon a **régi mezők bitre azonosak**, ez a kész-ha), és
+  `cardioBreakdown_isZeroForAPurelyStrengthHistory` (a régi 4-argumentumos hívás nullázza az
+  összes új mezőt).
+- `StatisticsControllerTest`/`TrainerClientDataControllerTest` — a 7 hívóhely frissítve, a
+  `daily_returnsOk` teszt kapott `jsonPath`-asszerciókat az öt új JSON-mezőre is.
+- `WorkoutSessionStatisticsQueriesRepositoryTest` (új fájl, a `WorkoutSessionKindFilterRepositoryTest`
+  mintáját követve) — **valódi Postgres Testcontainers-szel**, mert a `CardioDetails`-join
+  helyességét egy mockolt repository-teszt nem tudja ellenőrizni. Vegyes adathalmaz: 1 STRENGTH +
+  2 CARDIO (ablakon belül) + 1 CARDIO (ablakon kívül, `from` előtt) + 1 puhán törölt CARDIO
+  (ablakon belül) — a két utóbbi egyike sem jelenhet meg egyik összegben/számban sem. Külön teszt
+  az üres eredményhalmaz `coalesce`-ára (jövőbeli `from`), hogy a primitív visszatérési típus
+  sose dobjon NPE-t unboxoláskor.
+
+**Eredmény:** `./mvnw compile`/`test-compile` tiszta; a teljes `./mvnw test` **702/702 zöld**
+(693 + 9 nettó új: 4 repository-teszt új fájlban, 2 új `StatisticsServiceImplTest`, 3 bővített
+JSON-asszerció a meglévő controller-tesztekben nem számít újnak), 0 bukás, 0 hiba.
+
+**Következő:** `C3.2` — Mobil: `StatMetric` bővítés + `weightedAverage` aggregációs típus +
+`effectiveMinutes` szabály (Q-D4 már eldöntve, lásd §1.2) — vagy folytatás Mac-en C2.10b/C2.11b-vel.
+
+---
+
+## C2.7 kiegészítés (2026-08-12) — Cardio belépési pont a `TemplatePickerScreen`-en (felfedezhetőségi javítás)
+
+**A probléma, valódi felhasználói visszajelzésből**: a "+ Log" FAB **hosszú nyomása** nyitja a
+gyorsindító lapot (cardio + erősítő vegyesen), a **sima koppintása** viszont a változatlan, tisztán
+erősítő `TemplatePickerScreen`-t — és semmi vizuális jel nincs azon a képernyőn, hogy egy hosszú
+nyomás mást csinál. Cardio indítása így egy fel nem fedezhető gesztuson múlt.
+
+**A megoldás nem egy új gesztus, hanem egy új, koppintható ajtó ugyanoda.** A
+`TemplatePickerScreen` ("Choose template") az "Empty workout" alá kapott egy "Cardio" csempét,
+ami a már meglévő `ActivityPickerScreen`-re navigál (a hosszú nyomás → gyorsindító lap → "Összes
+edzéstípus" sor végállomása) — tehát **nem duplikál** semmilyen cardio-indítási logikát, csak egy
+második, koppintással elérhető utat nyit ugyanoda. A hosszú nyomás megmarad (gyorsabb út annak, aki
+már tudja), de a felfedezhetőség többé nem függ tőle.
+
+**A csempe-widget megosztott, nem duplikált**: az "Empty workout" saját `_EmptyWorkoutTile`-ja
+általánosodott `_PickerActionTile`-lá (icon/szín/cím/alcím paraméterezve) — ugyanaz a vizuális forma
+szolgálja ki mindkét belépési pontot, egy helyen karbantartva.
+
+**Két új l10n-kulcs** (`cardioWorkoutTileLabel`/`cardioWorkoutTileSubtitle`, HU+EN) — a
+`cardioSectionLabel` ("CARDIO", csupa nagybetűs szekció-fejléc) nem volt újrahasználható egy
+Title Case csempe-címhez.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a `test/features/workouts/presentation/`
+alatti tesztek (204) mind zöldek — `TemplatePickerScreen`-nek eddig sem volt dedikált tesztje,
+ez a lépés sem ad neki (a navigáció maga `ActivityPickerScreen`-re mutat, aminek megvan a saját
+tesztje). **Élő eszközön/emulátoron nem lett vizuálisan ellenőrizve** — a jelenlegi eszközkészlet
+nem tud Flutter mobil előnézetet futtatni; a felhasználó saját debug buildjén tudja ellenőrizni.

@@ -1075,6 +1075,14 @@
   "@emptyWorkoutSubtitle": {
     "description": "Subtitle for the empty workout option on the template picker"
   },
+  "cardioWorkoutTileLabel": "Cardio",
+  "@cardioWorkoutTileLabel": {
+    "description": "Option on the template picker that opens the cardio activity picker"
+  },
+  "cardioWorkoutTileSubtitle": "Running, cycling, hiking & more",
+  "@cardioWorkoutTileSubtitle": {
+    "description": "Subtitle for the cardio option on the template picker"
+  },
   "recommendedWorkoutLabel": "Recommended workout",
   "@recommendedWorkoutLabel": {
     "description": "Label on the recommended-workout card, above the suggested template's name"

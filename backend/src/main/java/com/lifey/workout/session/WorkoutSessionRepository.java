@@ -56,6 +56,55 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(Long userId, Instant from);
 
     /**
+     * Same as {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual},
+     * scoped to one {@link SessionKind} — the statistics fajta-bontás
+     * (docs/cardio/56-cardio-statistics-plan.md §2, D-C3.2). Only the CARDIO
+     * count is queried; strengthWorkoutCount is derived as
+     * {@code workoutCount - cardioWorkoutCount} in the service, since every
+     * session has exactly one of the two {@link SessionKind} values.
+     */
+    long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind(
+            Long userId, Instant from, SessionKind kind);
+
+    /**
+     * Σ moving_seconds over the same "since" window — the mozgásidő the
+     * statistics `movingMinutes` field uses for cardio
+     * (docs/cardio/56-cardio-statistics-plan.md D-C3.3), not the wall-clock
+     * startedAt/finishedAt span. {@link WorkoutSession#movingSeconds} is
+     * null for every STRENGTH session (see its own doc comment), so summing
+     * across all kinds already yields the cardio-only total — SQL/JPQL
+     * {@code sum} ignores nulls — without an extra kind filter.
+     */
+    @Query("""
+            select coalesce(sum(w.movingSeconds), 0) from WorkoutSession w
+            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+            """)
+    long sumMovingSecondsSince(@Param("userId") Long userId, @Param("from") Instant from);
+
+    /**
+     * Σ distance_meters over the same window, joined through
+     * {@link WorkoutSession#cardioDetails} — those fields live on
+     * {@code CardioDetails}, not {@code WorkoutSession} itself
+     * (docs/cardio/52-cardio-domain-backend-plan.md §2.2). The join alone
+     * excludes every STRENGTH session (no {@code CardioDetails} row to join
+     * to); {@code coalesce} still guards the "no cardio sessions in range at
+     * all" case, where the join yields no rows and a plain {@code sum}
+     * would otherwise be {@code null}.
+     */
+    @Query("""
+            select coalesce(sum(c.distanceMeters), 0) from WorkoutSession w join w.cardioDetails c
+            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+            """)
+    double sumDistanceMetersSince(@Param("userId") Long userId, @Param("from") Instant from);
+
+    /** Same as {@link #sumDistanceMetersSince}, for elevation gain. */
+    @Query("""
+            select coalesce(sum(c.elevationGainMeters), 0) from WorkoutSession w join w.cardioDetails c
+            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+            """)
+    double sumElevationGainMetersSince(@Param("userId") Long userId, @Param("from") Instant from);
+
+    /**
      * Completed (not just started) sessions in a range — weekly trainer report
      * (docs/33): an achievement metric, unlike {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual}
      * which counts starts for a pace metric. {@code from} inclusive, {@code toExclusive} exclusive.
