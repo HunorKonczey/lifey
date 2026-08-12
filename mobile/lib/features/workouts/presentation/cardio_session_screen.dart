@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/format/cardio_formatter.dart';
+import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/activity_chip.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -13,17 +14,33 @@ import '../../settings/domain/user_settings.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
 import '../domain/workout_session.dart';
+import 'cardio_summary_screen.dart';
+import 'widgets/prompt_number_dialog.dart';
 
 /// The live cardio screen — skeleton (docs/cardio/59-cardio-implementation-plan.md
 /// C2.1) plus all three family layouts: DISTANCE (C2.2), MACHINE (C2.3), and
-/// GAME (C2.4).
+/// GAME (C2.4), plus pause-reason visuals and slide-to-finish (C2.5).
 ///
 /// `IDLE` never actually renders here: the screen is always constructed with
 /// an already-started [session] (`startCardioSession` runs before the push —
 /// today only reachable from tests, since the real entry point is C2.7's
-/// quick-start flow). `ENDING` is a plain confirm dialog for now, standing in
-/// for the slide-to-finish gesture C2.5 adds — accidental-tap protection
-/// beyond "are you sure?" isn't this step's job.
+/// quick-start flow). `ENDING` is the slide-to-finish bar built in C2.5
+/// (see [_SlideToFinishBar]) — finishing never reacts to a plain tap.
+///
+/// ## Auto-pause hook (C2.5)
+///
+/// [autoPause] exists for [C4a.5](../../../../docs/cardio/59-cardio-implementation-plan.md)'s
+/// GPS-driven background tracker to call later — nothing calls it yet, since
+/// GPS doesn't exist until C4a. It's public (hence this State class being
+/// public, not `_`-prefixed, the same shape as `FormState`/`ScaffoldState`)
+/// so that future GPS code can reach it via a `GlobalKey<CardioSessionScreenState>`
+/// without this screen needing to know anything about location services.
+/// [pause]/[resume] are public for the same reason — a manual pause and an
+/// auto-pause both freeze the same underlying moving-time checkpoint (see
+/// [_PauseReason]), only the *reason*, and therefore the on-screen card,
+/// differs (docs/cardio/57-cardio-design-prompt.md DD-6, M08 vs M09).
+/// Resuming — whether the user taps or GPS detects motion again — is the
+/// same call either way, so there's no separate `autoResume`.
 ///
 /// ## GAME's two independent clocks (C2.4)
 ///
@@ -62,10 +79,18 @@ class CardioSessionScreen extends ConsumerStatefulWidget {
   final WorkoutSession session;
 
   @override
-  ConsumerState<CardioSessionScreen> createState() => _CardioSessionScreenState();
+  ConsumerState<CardioSessionScreen> createState() => CardioSessionScreenState();
 }
 
-class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
+/// A manual pause and a system-triggered auto-pause freeze the exact same
+/// moving-time checkpoint — [_manuallyPaused] alone can't tell them apart.
+/// This is the orthogonal bit that decides which card the screen shows (M08
+/// vs M09) — see the [CardioSessionScreenState] class doc. Never meaningful
+/// for GAME: auto-pause is a DISTANCE-only, GPS-driven concept
+/// (docs/cardio/53-cardio-mobile-plan.md §4.3).
+enum _PauseReason { none, manual, auto }
+
+class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
   late final String _clientId;
   late final DateTime _startedAt;
   late final String _activityType;
@@ -76,6 +101,19 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
   /// True whenever `movingSeconds` is frozen because of a whole-session
   /// pause (as opposed to, for GAME, just being benched) — see the class doc.
   late bool _manuallyPaused;
+
+  /// Why [_manuallyPaused] is currently true — drives which pause card
+  /// renders (M08 vs M09). Local-only, like [_onCourt] below: nothing
+  /// persists it, so a reload can't distinguish a manual pause from an
+  /// auto-pause either — same "assume the safer reading" call as
+  /// [_manuallyPaused] itself (see `initState`).
+  _PauseReason _pauseReason = _PauseReason.none;
+
+  /// Wall-clock moment the current pause began — only meaningful while
+  /// [_manuallyPaused] is true. Drives the "X ago" text on the pause card;
+  /// unlike [_movingSinceEpochMs] this never gets sent anywhere, it's purely
+  /// for that one line of display.
+  int? _pauseStartedAtMs;
 
   /// GAME only; meaningless (left `true`) for every other family.
   bool _onCourt = true;
@@ -98,6 +136,26 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
 
   Timer? _ticker;
   bool _busy = false;
+
+  /// Live progress (0..1) of an in-flight slide-to-finish drag — `0` when
+  /// nothing is being dragged. A shared controller (not plain state) because
+  /// two independent widgets need to read *and* write it: [_SlideToFinishBar]
+  /// drives it from the raw pointer gesture, and [_FinishConfirmationOverlay]
+  /// (drawn separately, higher in this screen's [Stack]) both renders it and
+  /// resets it to `0` from its Cancel row — routing that through `setState`
+  /// round-trips on every dragged pixel would be needless rebuild churn.
+  final ValueNotifier<double> _finishProgress = ValueNotifier<double>(0);
+
+  // Live Activity / ongoing notification bridge (C2.9) — same three-flag
+  // shape as `LogSessionScreen`'s own `_startSessionNotifier`/
+  // `_updateSessionNotifier`: `_startingSessionNotifier` guards against a
+  // second `start()` racing the first while one is in flight,
+  // `_sessionNotifierStarted`/`_sessionNotifierUnavailable` remember the
+  // outcome so a later `update()` isn't wasted retrying a refusal that
+  // won't change (Live Activities off, notification permission denied).
+  bool _startingSessionNotifier = false;
+  bool _sessionNotifierStarted = false;
+  bool _sessionNotifierUnavailable = false;
 
   @override
   void initState() {
@@ -122,6 +180,15 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
     // the player is still on court.
     final wasFrozen = _finishedAt == null && _movingSinceEpochMs == null;
     _manuallyPaused = wasFrozen;
+    if (wasFrozen) {
+      // No persisted pause-reason or pause-start-time either (both are
+      // local-only, see the field docs) — "just paused, right now" is the
+      // least-wrong guess, same spirit as the GAME gross-time fallback right
+      // below: it undercounts the true pause duration, but that's far less
+      // misleading than fabricating a specific elapsed time.
+      _pauseReason = _PauseReason.manual;
+      _pauseStartedAtMs = DateTime.now().millisecondsSinceEpoch;
+    }
     if (_family == ActivityFamily.game && _finishedAt == null) {
       if (wasFrozen) {
         // No persisted gross checkpoint to resume from (see class doc) — the
@@ -135,12 +202,26 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
         _grossSinceEpochMs = _startedAt.millisecondsSinceEpoch;
       }
     }
-    if (!_manuallyPaused && _finishedAt == null) _startTicker();
+    // Runs whenever the session isn't finished, paused or not — while
+    // paused it only drives the pause card's live "X ago" text, since
+    // `_liveMovingSeconds`/`_liveGrossSeconds` are frozen (no `*SinceEpochMs`
+    // set) and simply return their static counts either way.
+    if (_finishedAt == null) _startTicker();
+
+    // Deferred a frame, same as `LogSessionScreen` — this can run during
+    // `initState`, before ancestor InheritedWidgets are guaranteed ready
+    // for `AppLocalizations.of(context)`.
+    if (_finishedAt == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_startSessionNotifier());
+      });
+    }
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
+    _finishProgress.dispose();
     super.dispose();
   }
 
@@ -169,6 +250,16 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
     return _grossSeconds + DateTime.now().difference(runningSince).inSeconds;
   }
 
+  /// How long the current whole-session pause has lasted so far — `null`
+  /// while running/finished. Feeds the "X ago" line on the pause card; ticks
+  /// live because [_startTicker] keeps running through a pause (see its call
+  /// site in `initState`).
+  Duration? get _pausedDuration {
+    final since = _pauseStartedAtMs;
+    if (since == null || !_manuallyPaused) return null;
+    return DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(since));
+  }
+
   void _startTicker() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -181,9 +272,150 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
     AppSnackbar.showError(context, title: l10n.couldNotUpdateWorkoutMessage);
   }
 
-  /// "Meccs szünet" — a whole-session pause. Freezes playing time *and*
-  /// (for GAME) gross time; see the class doc.
-  Future<void> _pause() async {
+  /// The Live Activity / ongoing notification's cardio payload
+  /// (docs/cardio/59-cardio-implementation-plan.md C2.9, D-C2.3) — the same
+  /// dominant + up-to-two-secondary shape each family's body already shows
+  /// on screen, pre-formatted so neither native side re-implements
+  /// [CardioFormatter]. Re-derives rather than reads from the body widgets
+  /// (which build their own `Text`s) since there's no shared data object
+  /// between "what's on screen" and "what's in the payload" — same
+  /// resigned-to-a-little-duplication trade `_finish()`'s closing
+  /// `CardioMetrics` already makes.
+  CardioLiveMetrics _cardioLiveMetrics(AppLocalizations l10n, UnitSystem unitSystem) {
+    final movingDuration = Duration(seconds: _liveMovingSeconds);
+    switch (_family) {
+      case ActivityFamily.distance:
+        final hasDistance = (_distanceMeters ?? 0) > 0;
+        return CardioLiveMetrics(
+          primaryLabel: hasDistance ? l10n.distanceFieldLabel : l10n.movingTimeLabel,
+          primaryValue: hasDistance
+              ? CardioFormatter.distance(_distanceMeters!, unitSystem)
+              : CardioFormatter.duration(movingDuration),
+          secondaryLabel: hasDistance ? l10n.movingTimeLabel : l10n.distanceFieldLabel,
+          secondaryValue: hasDistance ? CardioFormatter.duration(movingDuration) : '—',
+          tertiaryLabel: l10n.paceLabel,
+          tertiaryValue: hasDistance
+              ? (CardioFormatter.pace(_distanceMeters!, movingDuration, unitSystem) ?? '—')
+              : '—',
+          paused: _manuallyPaused,
+          movingSecondsBase: _movingSeconds,
+          movingSinceEpochMs: _movingSinceEpochMs,
+        );
+      case ActivityFamily.machine:
+        return CardioLiveMetrics(
+          primaryLabel: l10n.movingTimeLabel,
+          primaryValue: CardioFormatter.duration(movingDuration),
+          secondaryLabel: l10n.avgCadenceFieldLabel,
+          secondaryValue: _avgCadence == null ? '—' : '${_avgCadence!.round()} rpm',
+          tertiaryLabel: l10n.avgWattsFieldLabel,
+          tertiaryValue: _avgWatts == null ? '—' : '${_avgWatts!.round()} W',
+          paused: _manuallyPaused,
+          movingSecondsBase: _movingSeconds,
+          movingSinceEpochMs: _movingSinceEpochMs,
+        );
+      case ActivityFamily.game:
+        return CardioLiveMetrics(
+          primaryLabel: l10n.playingTimeLabel,
+          primaryValue: CardioFormatter.duration(movingDuration),
+          secondaryLabel: l10n.grossTimeLabel,
+          secondaryValue: CardioFormatter.duration(Duration(seconds: _liveGrossSeconds)),
+          tertiaryLabel: l10n.heartRateFieldLabel,
+          tertiaryValue: '—',
+          paused: _manuallyPaused,
+          movingSecondsBase: _movingSeconds,
+          movingSinceEpochMs: _movingSinceEpochMs,
+        );
+    }
+  }
+
+  /// The full state pushed to both native surfaces. [WorkoutSessionState]'s
+  /// legacy strength fields ([WorkoutSessionState.exerciseName] etc.) are
+  /// filled with cardio-appropriate fallbacks, not left at their defaults —
+  /// see [WorkoutSessionState.kind]'s doc for why that's what actually makes
+  /// the C2.9 kész-ha ("régi natív build... nem törik") true: an old native
+  /// build renders exactly these fields, nothing more.
+  WorkoutSessionState _liveSessionState(AppLocalizations l10n) {
+    final unitSystem =
+        (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults())
+            .unitSystem;
+    final cardio = _cardioLiveMetrics(l10n, unitSystem);
+    return WorkoutSessionState(
+      exerciseName: '${activityTypeLabel(l10n, _activityType)} — ${cardio.primaryValue}',
+      setsDone: 0,
+      // Null, not 0 — `WorkoutSessionNotifierService`'s Android renderer
+      // only appends the "N/total" fraction when `setsTotal` is non-null,
+      // so this is what keeps a cardio session from showing "· 0/null"
+      // even on today's unmodified Android branch.
+      setsTotal: null,
+      totalSetsDone: 0,
+      kind: 'CARDIO',
+      activityType: _activityType,
+      cardio: cardio,
+    );
+  }
+
+  /// Brings up the Live Activity / ongoing notification. Safe to call
+  /// repeatedly — the retry entry point as well as the first attempt:
+  /// no-ops while one is in flight, once it's up, or once the platform has
+  /// refused for good. Mirrors `LogSessionScreen._startSessionNotifier`
+  /// exactly, minus the watch-mirror push: that's C5's job, not C2.9's —
+  /// docs/cardio/55-cardio-watch-plan.md's own D-C5.1 has the phone-side
+  /// cardio processor land *before* anything sends it a payload.
+  Future<void> _startSessionNotifier() async {
+    if (!mounted || _isFinished) return;
+    if (_startingSessionNotifier || _sessionNotifierStarted || _sessionNotifierUnavailable) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    _startingSessionNotifier = true;
+    try {
+      final result = await ref.read(workoutSessionNotifierServiceProvider).start(
+            sessionClientId: _clientId,
+            title: activityTypeLabel(l10n, _activityType),
+            startedAt: _startedAt,
+            startedLabel: l10n.startedLabel,
+            state: _liveSessionState(l10n),
+          );
+      _sessionNotifierStarted = result.started;
+      // A retryable refusal leaves both flags false: the next state change
+      // and the next foreground both try again.
+      _sessionNotifierUnavailable = result.status == WorkoutSessionNotifierStatus.unavailable;
+    } finally {
+      _startingSessionNotifier = false;
+    }
+  }
+
+  /// Pushes the current state to the native surface. No-ops there when
+  /// nothing's showing (iOS finds no activity, Android has no notification
+  /// to re-render), so this is safe to call after every state change
+  /// regardless of whether [_startSessionNotifier] ever actually succeeded.
+  Future<void> _updateSessionNotifier() async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    await ref.read(workoutSessionNotifierServiceProvider).update(
+          sessionClientId: _clientId,
+          startedLabel: l10n.startedLabel,
+          state: _liveSessionState(l10n),
+        );
+  }
+
+  /// "Meccs szünet" — a whole-session pause, initiated by the user tapping
+  /// the Pause button. Freezes playing time *and* (for GAME) gross time; see
+  /// the class doc. Public so the Pause button (below) and tests can call it
+  /// directly, same shape as [autoPause].
+  Future<void> pause() => _pauseAs(_PauseReason.manual);
+
+  /// A DISTANCE-only, GPS-driven pause — see the class doc. No caller exists
+  /// yet (that's C4a.5's job); this only differs from [pause] in the reason
+  /// it records, which decides whether the manual (M08) or auto (M09) card
+  /// renders. A no-op outside the DISTANCE family, since auto-pause isn't a
+  /// concept MACHINE or GAME have (docs/cardio/53-cardio-mobile-plan.md §4.3).
+  Future<void> autoPause() {
+    if (_family != ActivityFamily.distance) return Future<void>.value();
+    return _pauseAs(_PauseReason.auto);
+  }
+
+  Future<void> _pauseAs(_PauseReason reason) async {
     if (_busy || _manuallyPaused || _isFinished) return;
     final l10n = AppLocalizations.of(context)!;
     setState(() => _busy = true);
@@ -198,9 +430,10 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
             );
       }
       if (!mounted) return;
-      _ticker?.cancel();
       setState(() {
         _manuallyPaused = true;
+        _pauseReason = reason;
+        _pauseStartedAtMs = DateTime.now().millisecondsSinceEpoch;
         if (wasAccruingMoving) {
           _movingSeconds = totalMoving;
           _movingSinceEpochMs = null;
@@ -211,6 +444,7 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
         }
         _busy = false;
       });
+      unawaited(_updateSessionNotifier());
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -218,7 +452,12 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
     }
   }
 
-  Future<void> _resume() async {
+  /// Resumes from a whole-session pause — manual or auto, the call is
+  /// identical either way (docs/cardio/57-cardio-design-prompt.md DD-6:
+  /// nothing about *resuming* differs, only the paused-state card). Public
+  /// for the same reason as [pause]/[autoPause] — GPS-driven motion
+  /// detection (C4a.5) resumes exactly like a manual tap does.
+  Future<void> resume() async {
     if (_busy || !_manuallyPaused || _isFinished) return;
     final l10n = AppLocalizations.of(context)!;
     setState(() => _busy = true);
@@ -237,13 +476,15 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
       if (!mounted) return;
       setState(() {
         _manuallyPaused = false;
+        _pauseReason = _PauseReason.none;
+        _pauseStartedAtMs = null;
         if (willAccrueMoving) _movingSinceEpochMs = resumedAt.millisecondsSinceEpoch;
         if (_family == ActivityFamily.game) {
           _grossSinceEpochMs = resumedAt.millisecondsSinceEpoch;
         }
         _busy = false;
       });
-      _startTicker();
+      unawaited(_updateSessionNotifier());
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -251,8 +492,8 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
     }
   }
 
-  /// GAME only — the "Pályán/Padon" toggle. Independent of [_pause]/
-  /// [_resume]: benching never touches gross time, and re-pausing while
+  /// GAME only — the "Pályán/Padon" toggle. Independent of [pause]/
+  /// [resume]: benching never touches gross time, and re-pausing while
   /// benched is a no-op for `movingSeconds` (it's already frozen).
   Future<void> _setOnCourt(bool onCourt) async {
     if (_busy || _isFinished || _manuallyPaused || _onCourt == onCourt) return;
@@ -273,6 +514,7 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
           _movingSinceEpochMs = resumedAt.millisecondsSinceEpoch;
           _busy = false;
         });
+        unawaited(_updateSessionNotifier());
       } else {
         final total = _liveMovingSeconds;
         await ref.read(workoutSessionControllerProvider.notifier).pauseCardioSession(
@@ -287,6 +529,7 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
           _movingSinceEpochMs = null;
           _busy = false;
         });
+        unawaited(_updateSessionNotifier());
       }
     } catch (_) {
       if (!mounted) return;
@@ -295,32 +538,22 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
     }
   }
 
-  Future<void> _confirmFinish() async {
+  /// The **only** way a live cardio session ends — reached exclusively
+  /// through [_SlideToFinishBar]'s drag-past-threshold or long-press, never
+  /// a plain tap (docs/cardio/59-cardio-implementation-plan.md C2.5 kész-ha).
+  /// The confirmation text that used to live in a tap-through `AlertDialog`
+  /// now overlays the drag itself — see `_FinishConfirmationOverlay` — so
+  /// there's no separate confirm step to bypass.
+  /// Ends the session and hands off to [CardioSummaryScreen] — that screen,
+  /// not this one, owns everything past this point (RPE, manual edits,
+  /// re-viewing later — docs/cardio/59-cardio-implementation-plan.md C2.8).
+  /// `pushReplacement`, not `push`: this screen has nothing left to show
+  /// once finished (no controls, no live numbers), so it doesn't belong on
+  /// the back stack underneath the summary.
+  Future<void> _finish() async {
     if (_busy || _isFinished) return;
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.finishCardioConfirmTitle),
-        content: Text(l10n.finishCardioConfirmMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.cancelButton),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.finishButtonLabel),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    await _finish();
-  }
-
-  Future<void> _finish() async {
-    final l10n = AppLocalizations.of(context)!;
+    final navigator = Navigator.of(context);
     setState(() => _busy = true);
     final total = _liveMovingSeconds;
     final finishedAt = DateTime.now();
@@ -333,59 +566,36 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
           );
       if (!mounted) return;
       _ticker?.cancel();
-      setState(() {
-        _movingSeconds = total;
-        _movingSinceEpochMs = null;
-        _finishedAt = finishedAt;
-        _busy = false;
-      });
+      unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
+      final originalCardio = widget.session.cardio;
+      final finishedSession = WorkoutSession(
+        clientId: _clientId,
+        exercises: const [],
+        sets: const [],
+        startedAt: _startedAt,
+        finishedAt: finishedAt,
+        sessionKind: 'CARDIO',
+        activityType: _activityType,
+        movingSeconds: total,
+        cardio: CardioMetrics(
+          distanceMeters: _distanceMeters,
+          avgCadence: _avgCadence,
+          avgWatts: _avgWatts,
+          resistanceLevel: _resistanceLevel,
+          venue: originalCardio?.venue,
+          intensity: originalCardio?.intensity,
+          scorePoints: originalCardio?.scorePoints,
+          distanceSource: _distanceMeters == null ? null : 'MANUAL',
+        ),
+      );
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => CardioSummaryScreen(session: finishedSession)),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
       _showError(l10n);
     }
-  }
-
-  /// A single-field numeric-entry dialog, shared by every manual metric edit
-  /// on this screen (distance, cadence, power). `TextFormField` — not a
-  /// manually-owned `TextEditingController` — so its own State disposes it;
-  /// a controller disposed by hand right as `showDialog` resolves can still
-  /// be attached to the outgoing route's closing transition for a frame,
-  /// throwing "used after being disposed".
-  Future<double?> _promptNumber(
-    AppLocalizations l10n, {
-    required String title,
-    required String? suffix,
-    required String initialText,
-  }) {
-    var enteredText = initialText;
-    return showDialog<double>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: TextFormField(
-          initialValue: enteredText,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
-          onChanged: (value) => enteredText = value,
-          decoration: InputDecoration(suffixText: suffix, border: const OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.cancelButton),
-          ),
-          FilledButton(
-            onPressed: () {
-              final parsed = double.tryParse(enteredText.replaceAll(',', '.').trim());
-              Navigator.of(dialogContext).pop(parsed);
-            },
-            child: Text(l10n.saveButton),
-          ),
-        ],
-      ),
-    );
   }
 
   /// Opens a dialog to manually set the distance-so-far — the only way a
@@ -402,7 +612,8 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
     final imperial = unitSystem == UnitSystem.imperial;
     final unitMeters = imperial ? 1609.344 : 1000.0;
     final current = _distanceMeters;
-    final result = await _promptNumber(
+    final result = await promptNumber(
+      context,
       l10n,
       title: l10n.editDistanceDialogTitle,
       suffix: imperial ? 'mi' : 'km',
@@ -415,7 +626,8 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
   Future<void> _editCadence() async {
     if (_busy || _isFinished) return;
     final l10n = AppLocalizations.of(context)!;
-    final result = await _promptNumber(
+    final result = await promptNumber(
+      context,
       l10n,
       title: l10n.editCadenceDialogTitle,
       suffix: 'rpm',
@@ -428,7 +640,8 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
   Future<void> _editPower() async {
     if (_busy || _isFinished) return;
     final l10n = AppLocalizations.of(context)!;
-    final result = await _promptNumber(
+    final result = await promptNumber(
+      context,
       l10n,
       title: l10n.editPowerDialogTitle,
       suffix: 'W',
@@ -482,6 +695,7 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
         _resistanceLevel = newResistance;
         _busy = false;
       });
+      unawaited(_updateSessionNotifier());
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -670,20 +884,22 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    final statusLabel = _isFinished
-        ? l10n.cardioSessionFinishedLabel
-        : _isRunning
-            ? l10n.inProgressLabel
-            : l10n.cardioSessionPausedLabel;
+    // No "finished" branch here: `_finish()` navigates straight to
+    // `CardioSummaryScreen` (C2.8) rather than setting local state, and
+    // `open_workout_screens.dart` — the only real entry point — never
+    // constructs this screen with an already-finished session in the first
+    // place, so `_isFinished` never actually flips true while this widget
+    // is on screen to render.
+    final paused = !_isRunning;
 
-    final Widget body;
+    final Widget familyBody;
     switch (_family) {
       case ActivityFamily.distance:
-        body = _distanceBody(context, l10n, theme, scheme);
+        familyBody = _distanceBody(context, l10n, theme, scheme);
       case ActivityFamily.machine:
-        body = _machineBody(context, l10n, theme, scheme);
+        familyBody = _machineBody(context, l10n, theme, scheme);
       case ActivityFamily.game:
-        body = _gameBody(context, l10n, theme, scheme);
+        familyBody = _gameBody(context, l10n, theme, scheme);
     }
 
     return Scaffold(
@@ -691,46 +907,401 @@ class _CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
         automaticallyImplyLeading: false,
         title: Text(activityTypeLabel(l10n, _activityType)),
       ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ActivityChip(activityType: _activityType, size: 56),
-            const SizedBox(height: 16),
-            Text(
-              statusLabel,
-              style: theme.textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            body,
-            const SizedBox(height: 32),
-            if (!_isFinished)
-              Row(
+      body: Stack(
+        children: [
+          Center(
+            child: SingleChildScrollView(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  ActivityChip(activityType: _activityType, size: 56),
+                  const SizedBox(height: 16),
+                  if (!paused)
+                    Text(
+                      l10n.inProgressLabel,
+                      style: theme.textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
+                    )
+                  else
+                    _PauseStatusCard(
+                      l10n: l10n,
+                      auto: _pauseReason == _PauseReason.auto,
+                      elapsed: _pausedDuration,
+                    ),
+                  const SizedBox(height: 8),
+                  // "Szünetben a domináns szám és a metrikák kiszürkülnek" —
+                  // M08's note: nothing here is still ticking, so graying it
+                  // out keeps that obvious without disabling the tap-to-edit
+                  // affordances underneath (those stay live on purpose — a
+                  // paused session is exactly when correcting a metric by
+                  // hand is easiest).
+                  Opacity(opacity: paused ? 0.6 : 1, child: familyBody),
+                  const SizedBox(height: 32),
                   if (_isRunning)
                     FilledButton.icon(
-                      onPressed: _busy ? null : _pause,
+                      onPressed: _busy ? null : pause,
                       icon: const Icon(Icons.pause),
                       label: Text(l10n.pauseButtonLabel),
                     )
+                  else if (_pauseReason == _PauseReason.auto)
+                    _AutoPauseResumeButton(
+                      onPressed: _busy ? null : resume,
+                      titleLabel: l10n.autoPauseResumeHintTitle,
+                      subtitleLabel: l10n.autoPauseResumeHintSubtitle,
+                    )
                   else
                     FilledButton.icon(
-                      onPressed: _busy ? null : _resume,
+                      onPressed: _busy ? null : resume,
                       icon: const Icon(Icons.play_arrow),
                       label: Text(l10n.resumeButtonLabel),
                     ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : _confirmFinish,
-                    icon: const Icon(Icons.check),
-                    label: Text(l10n.finishButtonLabel),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    key: const Key('slideToFinishBar'),
+                    width: 280,
+                    child: _SlideToFinishBar(
+                      progress: _finishProgress,
+                      onFinish: _finish,
+                      label: l10n.slideToFinishLabel,
+                      releaseLabel: l10n.slideToFinishReleaseLabel,
+                    ),
                   ),
                 ],
               ),
-          ],
+            ),
+          ),
+          _FinishConfirmationOverlay(
+            progress: _finishProgress,
+            title: l10n.finishCardioConfirmTitle,
+            message: l10n.finishCardioConfirmMessage,
+            cancelLabel: l10n.slideToFinishCancelLabel,
+            progressHint: l10n.slideToFinishProgressHint,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The paused-state card — M08 (manual) vs M09 (auto), visually distinct per
+/// docs/cardio/57-cardio-design-prompt.md DD-6: same information shape
+/// (icon + title + one line of detail), different color and copy so a
+/// glance tells you which one this is without reading the words.
+class _PauseStatusCard extends StatelessWidget {
+  const _PauseStatusCard({required this.l10n, required this.auto, required this.elapsed});
+
+  final AppLocalizations l10n;
+  final bool auto;
+  final Duration? elapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // Auto-pause gets the design's dedicated amber/tan tone (M09) so it
+    // reads as "the system did this", not the neutral tone a manual pause
+    // (M08) uses — matching that color to any semantic theme color would
+    // be a coincidence, so it's a literal, non-themed accent here.
+    const autoAccent = Color(0xFFC49A6C);
+    final accent = auto ? autoAccent : scheme.onSurfaceVariant;
+    final title = auto ? l10n.autoPauseCardTitle : l10n.manualPauseCardTitle;
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 340),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: auto ? autoAccent.withValues(alpha: 0.14) : scheme.surfaceContainerLow,
+        border: auto ? Border.all(color: autoAccent.withValues(alpha: 0.5), width: 1.5) : null,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(auto ? Icons.motion_photos_paused : Icons.pause_circle, color: accent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontWeight: FontWeight.w800, color: accent)),
+                const SizedBox(height: 3),
+                Text(
+                  auto
+                      ? l10n.autoPauseCardMessage
+                      : l10n.manualPauseCardSubtitle(
+                          elapsed == null ? '—' : CardioFormatter.duration(elapsed!)),
+                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The auto-pause card's own resume affordance — dashed border, two lines,
+/// deliberately *not* a solid filled button like the manual-pause "Folytatás"
+/// (M08): the primary expectation here is that motion resumes it, tapping is
+/// the fallback (docs/cardio/design M09 note).
+class _AutoPauseResumeButton extends StatelessWidget {
+  const _AutoPauseResumeButton({
+    required this.onPressed,
+    required this.titleLabel,
+    required this.subtitleLabel,
+  });
+
+  final VoidCallback? onPressed;
+  final String titleLabel;
+  final String subtitleLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    const autoAccent = Color(0xFFC49A6C);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          width: 280,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            border: Border.all(color: autoAccent.withValues(alpha: 0.6), width: 2),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                titleLabel,
+                style: const TextStyle(fontWeight: FontWeight.w800, color: autoAccent),
+              ),
+              const SizedBox(height: 2),
+              Text(subtitleLabel, style: TextStyle(fontSize: 12, color: autoAccent.withValues(alpha: 0.85))),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Finishing a live cardio session never reacts to a plain tap
+/// (docs/cardio/59-cardio-implementation-plan.md C2.5 kész-ha) — this is the
+/// **only** control that can end one, and it only fires on a drag past
+/// [_threshold] of its own width or on a [_longPressDuration] hold, either
+/// released via raw [Listener] pointer callbacks rather than
+/// [GestureDetector]'s tap/drag recognizers so a plain, no-movement tap
+/// genuinely never crosses the finish threshold (a `GestureDetector` tap
+/// recognizer would still fire `onTapUp` for that same gesture).
+class _SlideToFinishBar extends StatefulWidget {
+  const _SlideToFinishBar({
+    required this.progress,
+    required this.onFinish,
+    required this.label,
+    required this.releaseLabel,
+  });
+
+  final ValueNotifier<double> progress;
+  final Future<void> Function() onFinish;
+  final String label;
+  final String releaseLabel;
+
+  @override
+  State<_SlideToFinishBar> createState() => _SlideToFinishBarState();
+}
+
+class _SlideToFinishBarState extends State<_SlideToFinishBar> {
+  static const _threshold = 0.75;
+  static const _longPressDuration = Duration(milliseconds: 600);
+
+  double _width = 0;
+  Timer? _longPressTimer;
+  bool _completing = false;
+
+  void _armLongPress() {
+    _longPressTimer?.cancel();
+    _longPressTimer = Timer(_longPressDuration, () {
+      _longPressTimer = null;
+      HapticFeedback.mediumImpact();
+      _complete();
+    });
+  }
+
+  void _disarmLongPress() {
+    _longPressTimer?.cancel();
+    _longPressTimer = null;
+  }
+
+  void _setProgress(double value) => widget.progress.value = value.clamp(0.0, 1.0);
+
+  Future<void> _complete() async {
+    if (_completing) return;
+    _completing = true;
+    _setProgress(1);
+    await widget.onFinish();
+    _completing = false;
+    if (mounted) _setProgress(0);
+  }
+
+  void _releasePointer() {
+    if (widget.progress.value >= _threshold) {
+      _complete();
+    } else {
+      _setProgress(0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _longPressTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _width = constraints.maxWidth;
+        return Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: (_) => _armLongPress(),
+          onPointerMove: (event) {
+            _disarmLongPress();
+            if (_width > 0) _setProgress(event.localPosition.dx / _width);
+          },
+          onPointerUp: (_) {
+            _disarmLongPress();
+            _releasePointer();
+          },
+          onPointerCancel: (_) {
+            _disarmLongPress();
+            _setProgress(0);
+          },
+          child: ValueListenableBuilder<double>(
+            valueListenable: widget.progress,
+            builder: (context, value, _) {
+              final released = value >= _threshold;
+              return Container(
+                height: 72,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: value,
+                        child: Container(
+                          color: released
+                              ? scheme.primary
+                              : scheme.primary.withValues(alpha: 0.55),
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 18),
+                        child: Icon(Icons.flag, color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        released ? widget.releaseLabel : widget.label,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: value > 0.4 ? scheme.onPrimary : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The dimmed, full-screen M12 confirmation — appears the moment a
+/// slide-to-finish drag starts (any `progress > 0`) and disappears the
+/// moment it ends, whichever way. Purely a read of the same
+/// [ValueNotifier] the bar drives, except for its Cancel row, which writes
+/// back to it directly — see the `_finishProgress` field doc on why it's
+/// shared through a controller rather than plain `setState`.
+class _FinishConfirmationOverlay extends StatelessWidget {
+  const _FinishConfirmationOverlay({
+    required this.progress,
+    required this.title,
+    required this.message,
+    required this.cancelLabel,
+    required this.progressHint,
+  });
+
+  final ValueNotifier<double> progress;
+  final String title;
+  final String message;
+  final String cancelLabel;
+  final String Function(int percent) progressHint;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ValueListenableBuilder<double>(
+      valueListenable: progress,
+      builder: (context, value, _) {
+        if (value <= 0) return const SizedBox.shrink();
+        final remainingPercent = (100 * (1 - value)).clamp(0, 100).round();
+        return Positioned.fill(
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.55),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.flag_circle, size: 56, color: scheme.primary),
+                  const SizedBox(height: 16),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    progressHint(remainingPercent),
+                    style: TextStyle(color: scheme.primary, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 24),
+                  TextButton.icon(
+                    onPressed: () => progress.value = 0,
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    label: Text(cancelLabel, style: const TextStyle(color: Colors.white70)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

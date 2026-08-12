@@ -28,6 +28,9 @@ class WorkoutSessionState {
     this.removedExerciseIndexes,
     this.sessionPlan,
     this.setsDoneExerciseId,
+    this.kind = 'STRENGTH',
+    this.activityType,
+    this.cardio,
   });
 
   /// Current (last touched) exercise name; pass a pre-localized fallback
@@ -147,6 +150,32 @@ class WorkoutSessionState {
   /// to the index.
   final String? setsDoneExerciseId;
 
+  /// `'STRENGTH'` or `'CARDIO'` (docs/cardio/51-cardio-overview-plan.md
+  /// D-C.1, mirroring `WorkoutSession.sessionKind`) — defaults to
+  /// `'STRENGTH'` so every call site that predates cardio (this whole class,
+  /// until C2.9) keeps compiling and keeps meaning exactly what it always
+  /// meant, without touching them.
+  ///
+  /// This is also *why* an old native build that has never heard of `kind`
+  /// still renders something sane for a cardio session
+  /// (docs/cardio/59-cardio-implementation-plan.md C2.9 kész-ha, "régi
+  /// natív build a STRENGTH ágra esik vissza, nem törik"): it just reads
+  /// [exerciseName]/[setsDone]/[setsTotal] as always, and
+  /// `CardioSessionScreen`'s state builder deliberately fills those with
+  /// cardio-appropriate values (the activity + primary metric as
+  /// [exerciseName], `setsTotal: null` so no "0/0" ever renders) — not
+  /// because the old build understands cardio, but because the *fallback*
+  /// fields were chosen to degrade gracefully on their own.
+  final String kind;
+
+  /// One of `activity_type.dart`'s `kActivityTypes` — icon/title lookup for
+  /// a native layout that knows about `kind == 'CARDIO'` (C2.10a/C2.10b).
+  /// Null for `'STRENGTH'`, mirroring `WorkoutSession.activityType`.
+  final String? activityType;
+
+  /// Non-null exactly when [kind] is `'CARDIO'`. See [CardioLiveMetrics].
+  final CardioLiveMetrics? cardio;
+
   Map<String, dynamic> toJson() => {
         'exerciseName': exerciseName,
         'setsDone': setsDone,
@@ -163,6 +192,69 @@ class WorkoutSessionState {
         'removedExerciseIndexes': removedExerciseIndexes,
         'sessionPlan': sessionPlan,
         'setsDoneExerciseId': setsDoneExerciseId,
+        'kind': kind,
+        'activityType': activityType,
+        'cardio': cardio?.toJson(),
+      };
+}
+
+/// Pre-formatted cardio metrics for the Live Activity / ongoing notification
+/// (docs/cardio/53-cardio-mobile-plan.md §5, D-C2.3) — up to three
+/// label+value pairs, already localized and unit-converted (metric/imperial
+/// per Settings), because neither the Swift nor the Kotlin side should have
+/// to reimplement `CardioFormatter`. [primaryLabel]/[primaryValue] is the
+/// dominant number (matches whatever `CardioSessionScreen` shows as
+/// dominant for the session's family); [secondary]/[tertiary] are the up-to-
+/// two supporting values (e.g. DISTANCE: duration + pace; MACHINE: cadence +
+/// power; GAME: gross time + heart rate).
+class CardioLiveMetrics {
+  const CardioLiveMetrics({
+    required this.primaryLabel,
+    required this.primaryValue,
+    this.secondaryLabel,
+    this.secondaryValue,
+    this.tertiaryLabel,
+    this.tertiaryValue,
+    required this.paused,
+    this.movingSecondsBase,
+    this.movingSinceEpochMs,
+  });
+
+  final String primaryLabel;
+  final String primaryValue;
+  final String? secondaryLabel;
+  final String? secondaryValue;
+  final String? tertiaryLabel;
+  final String? tertiaryValue;
+
+  /// Whole-session pause, mirroring `CardioSessionScreen._manuallyPaused`
+  /// (C2.5) — manual vs. auto-pause isn't distinguished here yet; that's
+  /// C4a.5's addition once GPS can actually detect one, at which point this
+  /// class gains a reason field the same way it gained this one.
+  final bool paused;
+
+  /// Epoch-checkpoint pair mirroring `CardioSessionScreen`'s own
+  /// `movingSeconds`/`movingSinceEpochMs` (C2.1) — lets the native Live
+  /// Activity / notification tick a live chronometer itself
+  /// (docs/cardio/53-cardio-mobile-plan.md §5: "az idő továbbra is
+  /// epoch-alapú... hogy a natív felület magától ketyegjen, frissítés-kvóta
+  /// nélkül"), instead of this app pushing a JSON update every second.
+  /// [movingSinceEpochMs] is null exactly when [paused] is true — the
+  /// native side then renders the static [movingSecondsBase] instead of
+  /// ticking.
+  final int? movingSecondsBase;
+  final int? movingSinceEpochMs;
+
+  Map<String, dynamic> toJson() => {
+        'primaryLabel': primaryLabel,
+        'primaryValue': primaryValue,
+        'secondaryLabel': secondaryLabel,
+        'secondaryValue': secondaryValue,
+        'tertiaryLabel': tertiaryLabel,
+        'tertiaryValue': tertiaryValue,
+        'paused': paused,
+        'movingSecondsBase': movingSecondsBase,
+        'movingSinceEpochMs': movingSinceEpochMs,
       };
 }
 

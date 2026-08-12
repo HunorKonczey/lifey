@@ -103,6 +103,9 @@ void main() {
           'removedExerciseIndexes': null,
           'sessionPlan': null,
           'setsDoneExerciseId': null,
+          'kind': 'STRENGTH',
+          'activityType': null,
+          'cardio': null,
         },
       });
     });
@@ -219,6 +222,9 @@ void main() {
           'removedExerciseIndexes': null,
           'sessionPlan': null,
           'setsDoneExerciseId': null,
+          'kind': 'STRENGTH',
+          'activityType': null,
+          'cardio': null,
         },
       });
     });
@@ -275,6 +281,9 @@ void main() {
           'removedExerciseIndexes': null,
           'sessionPlan': null,
           'setsDoneExerciseId': null,
+          'kind': 'STRENGTH',
+          'activityType': null,
+          'cardio': null,
         },
       });
     });
@@ -622,6 +631,124 @@ void main() {
       await service.endAll();
 
       expect(cancelCalls, 1);
+    });
+  });
+
+  group('WorkoutSessionState / CardioLiveMetrics — cardio payload shape (C2.9)', () {
+    test('kind defaults to STRENGTH — every pre-C2.9 construction keeps meaning what it did', () {
+      const state = WorkoutSessionState(exerciseName: 'Fekvenyomás', setsDone: 1, totalSetsDone: 1);
+
+      expect(state.kind, 'STRENGTH');
+      expect(state.activityType, isNull);
+      expect(state.cardio, isNull);
+      expect(state.toJson()['kind'], 'STRENGTH');
+    });
+
+    test('a CARDIO state carries activityType + a full CardioLiveMetrics block', () {
+      const cardio = CardioLiveMetrics(
+        primaryLabel: 'DISTANCE',
+        primaryValue: '5.24 km',
+        secondaryLabel: 'MOVING TIME',
+        secondaryValue: '28:14',
+        tertiaryLabel: 'PACE',
+        tertiaryValue: '5:23 /km',
+        paused: false,
+        movingSecondsBase: 1694,
+        movingSinceEpochMs: 1783075260000,
+      );
+      const state = WorkoutSessionState(
+        exerciseName: 'Futás — 5.24 km',
+        setsDone: 0,
+        totalSetsDone: 0,
+        kind: 'CARDIO',
+        activityType: 'RUNNING',
+        cardio: cardio,
+      );
+
+      expect(state.toJson(), {
+        'exerciseName': 'Futás — 5.24 km',
+        'setsDone': 0,
+        'setsTotal': null,
+        'totalSetsDone': 0,
+        'lastSetAtEpochMs': null,
+        'restEndsAtEpochMs': null,
+        'restTotalSeconds': null,
+        'restRemainingSeconds': null,
+        'nextSetWeight': null,
+        'nextSetReps': null,
+        'setsDoneExerciseIndex': null,
+        'setsDonePerExercise': null,
+        'removedExerciseIndexes': null,
+        'sessionPlan': null,
+        'setsDoneExerciseId': null,
+        'kind': 'CARDIO',
+        'activityType': 'RUNNING',
+        'cardio': {
+          'primaryLabel': 'DISTANCE',
+          'primaryValue': '5.24 km',
+          'secondaryLabel': 'MOVING TIME',
+          'secondaryValue': '28:14',
+          'tertiaryLabel': 'PACE',
+          'tertiaryValue': '5:23 /km',
+          'paused': false,
+          'movingSecondsBase': 1694,
+          'movingSinceEpochMs': 1783075260000,
+        },
+      });
+    });
+
+    test('a paused CardioLiveMetrics has no movingSinceEpochMs', () {
+      const cardio = CardioLiveMetrics(
+        primaryLabel: 'MOVING TIME',
+        primaryValue: '42:18',
+        paused: true,
+        movingSecondsBase: 2538,
+      );
+
+      expect(cardio.toJson()['paused'], isTrue);
+      expect(cardio.toJson()['movingSinceEpochMs'], isNull);
+    });
+
+    test('a CARDIO start() call over the iOS channel sends the cardio block', () async {
+      const channel = MethodChannel('lifey/live_activity');
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        return 'activity-1';
+      });
+      addTearDown(() => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null));
+      final service = WorkoutSessionNotifierService(isAvailable: true, useAndroidBranch: false);
+
+      await service.start(
+        sessionClientId: 'cardio-1',
+        title: 'Futás',
+        startedAt: DateTime(2026, 8, 12, 7),
+        startedLabel: 'Elkezdve',
+        state: const WorkoutSessionState(
+          exerciseName: 'Futás — 5.24 km',
+          setsDone: 0,
+          setsTotal: null,
+          totalSetsDone: 0,
+          kind: 'CARDIO',
+          activityType: 'RUNNING',
+          cardio: CardioLiveMetrics(
+            primaryLabel: 'DISTANCE',
+            primaryValue: '5.24 km',
+            paused: false,
+            movingSinceEpochMs: 1783075260000,
+          ),
+        ),
+      );
+
+      final sentState = calls.single.arguments['state'] as Map;
+      // The legacy fields an old build (that has never heard of `kind`)
+      // reads: a real name, and no "0/0" fraction — the C2.9 kész-ha.
+      expect(sentState['exerciseName'], 'Futás — 5.24 km');
+      expect(sentState['setsTotal'], isNull);
+      expect(sentState['kind'], 'CARDIO');
+      expect((sentState['cardio'] as Map)['primaryValue'], '5.24 km');
     });
   });
 }

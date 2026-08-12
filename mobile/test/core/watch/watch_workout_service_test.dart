@@ -110,6 +110,9 @@ void main() {
           'removedExerciseIndexes': null,
           'sessionPlan': null,
           'setsDoneExerciseId': null,
+          'kind': 'STRENGTH',
+          'activityType': null,
+          'cardio': null,
         },
       });
     });
@@ -152,6 +155,9 @@ void main() {
           'removedExerciseIndexes': null,
           'sessionPlan': null,
           'setsDoneExerciseId': null,
+          'kind': 'STRENGTH',
+          'activityType': null,
+          'cardio': null,
         },
       });
     });

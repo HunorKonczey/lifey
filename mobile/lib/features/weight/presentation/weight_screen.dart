@@ -58,6 +58,7 @@ class _WeightScreenState extends ConsumerState<WeightScreen> {
       label: '',
       onPressed: _openAddSheet,
       extended: false,
+      onLongPress: null,
     ));
   }
 

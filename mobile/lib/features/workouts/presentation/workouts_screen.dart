@@ -12,6 +12,7 @@ import '../domain/activity_type.dart';
 import '../domain/exercise_enums.dart';
 import 'create_template_screen.dart';
 import 'exercises_tab.dart';
+import 'quick_start_sheet.dart';
 import 'sessions_tab.dart';
 import 'template_picker_screen.dart';
 import 'templates_tab.dart';
@@ -70,6 +71,13 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
       label: fab.label,
       onPressed: fab.onPressed,
       extended: true,
+      // Only the Sessions tab's FAB (plain-tap already starts a workout via
+      // the template picker) gets the quick-start long-press
+      // (docs/cardio/59-cardio-implementation-plan.md C2.7, §3.1) — the
+      // Templates/Exercises tabs' FABs create different things entirely,
+      // and a long-press there would open a sheet unrelated to what the
+      // button says it does.
+      onLongPress: _tabController.index == 0 ? () => showQuickStartSheet(context) : null,
     ));
   }
 
