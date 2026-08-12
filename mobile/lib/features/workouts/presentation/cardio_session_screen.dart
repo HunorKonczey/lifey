@@ -14,12 +14,16 @@ import '../../../shared/widgets/activity_chip.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
+import '../application/auto_pause_preferences.dart';
 import '../application/workout_session_controller.dart';
 import '../data/cardio_track_point_repository.dart';
 import '../domain/activity_type.dart';
+import '../domain/auto_pause_detector.dart';
 import '../domain/cardio_personal_record.dart';
+import '../domain/track_filter.dart';
 import '../domain/workout_session.dart';
 import 'cardio_summary_screen.dart';
+import 'widgets/auto_pause_settings_sheet.dart';
 import 'widgets/prompt_number_dialog.dart';
 import 'workouts_screen.dart';
 
@@ -96,6 +100,10 @@ class CardioSessionScreen extends ConsumerStatefulWidget {
 /// (docs/cardio/53-cardio-mobile-plan.md §4.3).
 enum _PauseReason { none, manual, auto }
 
+/// The header GPS chip's four mutually-exclusive states (C4a.2's original
+/// "off" plus C4a.4's "weak"/"healthy") — see [CardioSessionScreenState._gpsChipState].
+enum _GpsChipState { none, off, weak, healthy }
+
 class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     with WidgetsBindingObserver {
   late final String _clientId;
@@ -156,9 +164,10 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   // DISTANCE only, live GPS recording (C4a.3) — active exactly while
   // running (not paused, not finished) and tracking is actually possible
   // (see [_syncPositionTracking]). Writes go straight to
-  // `CardioTrackPoints`, immediately, one at a time; nothing here computes
-  // distance/route from them yet — that's `track_filter.dart` (C4a.4) and
-  // the closing pipeline (C4a.6).
+  // `CardioTrackPoints`, immediately, one at a time; the closing pipeline
+  // (polyline simplification, splits, C4a.6) still happens later, but the
+  // *live* running distance/weak-signal state below (C4a.4) is derived from
+  // the exact same fixes as they arrive.
   StreamSubscription<LocationFix>? _positionSub;
 
   /// Next sequence number to assign — seeded once from the DB
@@ -174,6 +183,57 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// listener can fire (and would otherwise try to start tracking) while
   /// that one-time DB read is still in flight.
   bool _trackPointSeqSeeded = false;
+
+  /// §4.2's gates + running distance/elevation, replayed from every
+  /// existing `CardioTrackPoints` row on open ([_seedTrackPointSeqAndSync])
+  /// and then fed one fix at a time as they arrive ([_onPositionFix]) — one
+  /// accumulator per session, so a resumed session continues the same
+  /// running total instead of restarting from zero. `null` until seeding
+  /// completes, same lifetime as [_trackPointSeqSeeded].
+  TrackFilterAccumulator? _trackFilter;
+
+  /// Whether GPS has contributed any distance yet this session (C4a.4) —
+  /// once true, it's the authoritative distance source for the rest of the
+  /// session: the dominant metric's manual-edit affordance disables, and
+  /// `CardioMetrics.distanceSource` persists as `'MEASURED'` rather than
+  /// `'MANUAL'` from here on (see [_editDistance], [_updateCardioMetrics],
+  /// `_finish`). Always `false` for MACHINE/GAME, whose [_trackFilter]
+  /// never exists.
+  bool get _hasGpsDistance => (_trackFilter?.distanceMeters ?? 0) > 0;
+
+  /// M10's "gyenge jel" state — true whenever GPS tracking is active but no
+  /// fix has passed the accuracy gate in the last [_weakSignalThreshold].
+  /// Driven by [_weakSignalTimer] (armed/disarmed in [_armWeakSignalTimer]/
+  /// [_disarmWeakSignalTimer]) rather than polled from a wall-clock
+  /// comparison, so it's exact and immediately testable via `tester.pump`
+  /// instead of racing real elapsed time.
+  bool _weakSignal = false;
+  Timer? _weakSignalTimer;
+
+  /// How long GPS tracking can go without a single accuracy-gate-passing
+  /// fix before the UI calls it "weak" (M10). Deliberately much shorter
+  /// than §4.3's 60 s route-gap threshold, which is a separate, later
+  /// concern (marking a dashed segment on the drawn route, C4a.6) — this one
+  /// is just "something looks off right now", so it should fire well before
+  /// that. Not activity-specific: a lost signal is a lost signal regardless
+  /// of what's being tracked.
+  static const _weakSignalThreshold = Duration(seconds: 15);
+
+  /// GPS-driven auto-pause (C4a.5a, docs/cardio/53-cardio-mobile-plan.md
+  /// §4.3) — `null` for MACHINE/GAME, created once in `initState` for
+  /// DISTANCE. Owns its own countdown; this screen only reacts to its two
+  /// callbacks (see `initState`) and feeds it every fix, running or not
+  /// (see `_onPositionFix` and `_syncPositionTracking`'s widened
+  /// `shouldTrack` — an auto-paused session must keep listening in order to
+  /// ever detect the motion that resumes it).
+  AutoPauseDetector? _autoPauseDetector;
+
+  /// Seeded once from [AutoPausePreferences] in `initState` (Q-D3: on by
+  /// default) and refreshed once after [showAutoPauseSettingsSheet] closes
+  /// — cached rather than re-read from `shared_preferences` on every fix,
+  /// since [_onPositionFix] fires far more often than the setting could
+  /// plausibly change.
+  bool _autoPauseEnabled = true;
 
   Timer? _ticker;
   bool _busy = false;
@@ -276,17 +336,65 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       // [_trackPointSeqSeeded]'s doc for why [_syncPositionTracking] is safe
       // to call reactively before this resolves.
       unawaited(_seedTrackPointSeqAndSync());
+
+      // C4a.5a — auto-pause. Created unconditionally here (cheap, no I/O);
+      // [_autoPauseEnabled] gates whether [onSustainedStop] actually acts on
+      // it, seeded right after.
+      _autoPauseDetector = AutoPauseDetector(
+        accuracyThresholdMeters: trackFilterProfileFor(_activityType).accuracyThresholdMeters,
+        onSustainedStop: () {
+          if (_autoPauseEnabled && !_manuallyPaused) unawaited(autoPause());
+        },
+        onMotion: () {
+          if (_manuallyPaused && _pauseReason == _PauseReason.auto) unawaited(resume());
+        },
+      );
+      unawaited(_seedAutoPauseEnabled());
     }
   }
 
-  /// One-time DB read so [_nextTrackPointSeq] resumes correctly after an app
-  /// kill mid-session (C4a.3) — see the field's own doc.
+  /// One-time DB read so [_nextTrackPointSeq] and [_trackFilter] resume
+  /// correctly after an app kill mid-session (C4a.3/C4a.4) — replaying every
+  /// existing point through a fresh [TrackFilterAccumulator] rebuilds the
+  /// exact same running distance/elevation/reference-point state a live
+  /// session would have reached, since it's the same pure gates fed the same
+  /// points in the same order. A brand-new session just replays zero rows.
   Future<void> _seedTrackPointSeqAndSync() async {
-    final count = await ref.read(cardioTrackPointRepositoryProvider).pointCount(_clientId);
+    final points = await ref.read(cardioTrackPointRepositoryProvider).pointsForSession(_clientId);
     if (!mounted) return;
-    _nextTrackPointSeq = count;
+    _nextTrackPointSeq = points.length;
+    final filter = TrackFilterAccumulator(trackFilterProfileFor(_activityType));
+    for (final p in points) {
+      filter.addFix(LocationFix(
+        latitude: p.latitude,
+        longitude: p.longitude,
+        recordedAt: p.recordedAt,
+        altitude: p.altitude,
+        accuracy: p.accuracy,
+        speed: p.speed,
+      ));
+    }
+    _trackFilter = filter;
+    if (filter.distanceMeters > 0) _distanceMeters = filter.distanceMeters;
     _trackPointSeqSeeded = true;
     _syncPositionTracking();
+  }
+
+  /// One-time read of [AutoPausePreferences] (C4a.5a) — see
+  /// [_autoPauseEnabled]'s own doc for why it's cached rather than re-read
+  /// per fix.
+  Future<void> _seedAutoPauseEnabled() async {
+    final enabled = await ref.read(autoPausePreferencesProvider).isEnabled();
+    if (mounted) _autoPauseEnabled = enabled;
+  }
+
+  /// Opens [AutoPauseSettingsSheet] and refreshes [_autoPauseEnabled] from
+  /// whatever the user left it as — the sheet writes straight through
+  /// [AutoPausePreferences] itself, so this is just picking the new value
+  /// back up for the in-flight [_autoPauseDetector] to actually honor.
+  Future<void> _openAutoPauseSettings() async {
+    await showAutoPauseSettingsSheet(context);
+    if (mounted) unawaited(_seedAutoPauseEnabled());
   }
 
   /// Starts/stops the raw GPS point recording subscription to match current
@@ -294,30 +402,82 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// [_locationAvailability] updates, [_seedTrackPointSeqAndSync] finishes,
   /// and every [_pauseAs]/[resume] transition (both flip [_isRunning]).
   /// Idempotent either way — safe to call from all of those unconditionally.
+  ///
+  /// [shouldTrack] includes [_PauseReason.auto] alongside [_isRunning]
+  /// (C4a.5a) — a manual pause has no reason to keep listening, but an
+  /// auto-paused session must, or it could never detect the motion that
+  /// resumes it. [_onPositionFix] is what actually tells the two apart
+  /// (recording/distance only while truly running; auto-pause detection
+  /// either way).
   void _syncPositionTracking() {
     final shouldTrack = _trackPointSeqSeeded &&
         _family == ActivityFamily.distance &&
         (_locationAvailability?.canTrack ?? false) &&
-        _isRunning;
+        (_isRunning || _pauseReason == _PauseReason.auto);
     if (shouldTrack && _positionSub == null) {
+      final l10n = AppLocalizations.of(context)!;
       _positionSub = ref
           .read(locationServiceProvider)
-          .positionStream(profile: locationTrackingProfileFor(_activityType))
+          .positionStream(
+            profile: locationTrackingProfileFor(_activityType),
+            androidNotificationTitle: activityTypeLabel(l10n, _activityType),
+            androidNotificationText: l10n.gpsForegroundNotificationText,
+          )
           .listen(_onPositionFix);
+      // Tracking just (re)started — give it [_weakSignalThreshold] to
+      // produce a first/next fix before calling it weak.
+      _armWeakSignalTimer();
     } else if (!shouldTrack && _positionSub != null) {
       _positionSub!.cancel();
       _positionSub = null;
+      // Not tracking on purpose (finished, manually paused, GPS lost, family
+      // change) — there's no signal to expect right now, so nothing should
+      // read as "weak", and no stale countdown should carry over to next time.
+      _disarmWeakSignalTimer();
+      _autoPauseDetector?.reset();
     }
   }
 
-  /// Writes [fix] to `CardioTrackPoints` immediately (C4a.3 — "kilőtt app
-  /// legfeljebb egy pontot veszít"), never buffered in memory. Fire-and-forget:
-  /// a single slow/failed write shouldn't stall the next fix's write, and
-  /// there's nothing meaningful to show the user for one dropped point
-  /// (the whole point of writing immediately is that this is rare).
+  /// Writes [fix] to `CardioTrackPoints` and updates the running
+  /// distance/weak-signal state (C4a.3/C4a.4) **only while truly running**
+  /// — during an auto-pause, [_syncPositionTracking] keeps the subscription
+  /// open purely so [_autoPauseDetector] can watch for resumed motion, not
+  /// to keep recording a session that's currently frozen. The detector
+  /// itself, on the other hand, always sees every fix — it's the one thing
+  /// that needs to know about a fix arriving *during* the pause it caused.
   void _onPositionFix(LocationFix fix) {
-    final seq = _nextTrackPointSeq++;
-    unawaited(ref.read(cardioTrackPointRepositoryProvider).addPoint(_clientId, seq, fix));
+    if (_isRunning) {
+      final seq = _nextTrackPointSeq++;
+      unawaited(ref.read(cardioTrackPointRepositoryProvider).addPoint(_clientId, seq, fix));
+
+      final filter = _trackFilter;
+      if (filter != null && filter.addFix(fix)) {
+        _armWeakSignalTimer();
+        if (mounted && filter.distanceMeters > 0) {
+          setState(() => _distanceMeters = filter.distanceMeters);
+        }
+      }
+    }
+    _autoPauseDetector?.addFix(fix);
+  }
+
+  /// (Re)starts the countdown to [_weakSignal] — cancels any timer already
+  /// running (a fresh fix resets the clock) and, if the UI was showing
+  /// "weak", clears it immediately rather than waiting for the next tick.
+  void _armWeakSignalTimer() {
+    _weakSignalTimer?.cancel();
+    if (_weakSignal && mounted) setState(() => _weakSignal = false);
+    _weakSignalTimer = Timer(_weakSignalThreshold, () {
+      if (mounted) setState(() => _weakSignal = true);
+    });
+  }
+
+  /// Stops expecting a signal — used when tracking itself stops (pause, GPS
+  /// lost), where "weak" would be a misleading label for "not trying".
+  void _disarmWeakSignalTimer() {
+    _weakSignalTimer?.cancel();
+    _weakSignalTimer = null;
+    if (_weakSignal && mounted) setState(() => _weakSignal = false);
   }
 
   @override
@@ -333,6 +493,8 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     _finishProgress.dispose();
     _locationSub?.cancel();
     _positionSub?.cancel();
+    _weakSignalTimer?.cancel();
+    _autoPauseDetector?.dispose();
     if (_family == ActivityFamily.distance) WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -341,6 +503,20 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
 
   bool get _isRunning => _finishedAt == null && !_manuallyPaused;
   bool get _isFinished => _finishedAt != null;
+
+  /// Resolves the header chip's state in the same priority order the
+  /// existing C4a.2 card already uses ("off" first — a permission/service
+  /// problem outranks a signal-quality one), then adds the two new C4a.4
+  /// states — [_GpsChipState.none] while tracking simply isn't expected
+  /// right now (paused, or not DISTANCE), never a false "weak" reading.
+  _GpsChipState get _gpsChipState {
+    if (_family != ActivityFamily.distance) return _GpsChipState.none;
+    final availability = _locationAvailability;
+    if (availability == null) return _GpsChipState.none;
+    if (!availability.canTrack) return _GpsChipState.off;
+    if (!_isRunning) return _GpsChipState.none;
+    return _weakSignal ? _GpsChipState.weak : _GpsChipState.healthy;
+  }
 
   /// The number this screen actually displays — folds in the still-ticking
   /// interval while running. Mirrors `WorkoutSession.liveMovingSeconds`
@@ -727,7 +903,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
           venue: originalCardio?.venue,
           intensity: originalCardio?.intensity,
           scorePoints: originalCardio?.scorePoints,
-          distanceSource: _distanceMeters == null ? null : 'MANUAL',
+          distanceSource: _hasGpsDistance ? 'MEASURED' : (_distanceMeters == null ? null : 'MANUAL'),
         ),
       );
       // Baseline is every other cardio session already known locally — read
@@ -754,13 +930,15 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     }
   }
 
-  /// Opens a dialog to manually set the distance-so-far — the only way a
-  /// DISTANCE session's distance ever gets a value until GPS (C4a) exists.
+  /// Opens a dialog to manually set the distance-so-far — the only source
+  /// for a DISTANCE session's distance until GPS starts contributing
+  /// ([_hasGpsDistance]), after which it's disabled: overwriting a live GPS
+  /// total by hand would just be immediately re-overwritten by the next fix.
   /// Also used by MACHINE's distance tile (a stationary bike's own distance
-  /// is an estimate anyway — docs/cardio/design M05 note — so it's just
-  /// another manually-entered secondary field there, no fallback logic).
+  /// is an estimate anyway — docs/cardio/design M05 note — and MACHINE never
+  /// has a [_trackFilter], so [_hasGpsDistance] is always false there).
   Future<void> _editDistance() async {
-    if (_busy || _isFinished) return;
+    if (_busy || _isFinished || _hasGpsDistance) return;
     final l10n = AppLocalizations.of(context)!;
     final unitSystem =
         (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults())
@@ -840,7 +1018,13 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
               avgCadence: newCadence,
               avgWatts: newWatts,
               resistanceLevel: newResistance,
-              distanceSource: newDistance == null ? null : 'MANUAL',
+              // GPS wins permanently once it's contributed anything this
+              // session ([_hasGpsDistance]'s own doc) — even a call that's
+              // only changing cadence/watts/resistance still carries the
+              // *current* distance along in this merged `CardioMetrics`, and
+              // that value is GPS-sourced whenever `_hasGpsDistance` is true,
+              // regardless of which field this particular call is editing.
+              distanceSource: _hasGpsDistance ? 'MEASURED' : (newDistance == null ? null : 'MANUAL'),
             ),
           );
       if (!mounted) return;
@@ -876,16 +1060,26 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         : CardioFormatter.duration(duration);
     final secondaryLabel = hasDistance ? l10n.movingTimeLabel : l10n.distanceFieldLabel;
     final secondaryValue = hasDistance ? CardioFormatter.duration(duration) : '—';
-    final paceValue =
-        hasDistance ? (CardioFormatter.pace(_distanceMeters!, duration, unitSystem) ?? '—') : '—';
+
+    // M10: while the signal's weak, pace is blanked rather than showing a
+    // stale average — "a tempó nem hazudik" — and the distance number (still
+    // shown, since it's a monotonic total that stays meaningful even through
+    // a gap) is labelled "estimated" instead. M04's healthy state shows
+    // neither: a plain "GPS" chip is enough there.
+    final weakSignal = _weakSignal;
+    final paceLabel = weakSignal ? l10n.noSignalLabel : l10n.paceLabel;
+    final paceValue = weakSignal
+        ? '—:—'
+        : (hasDistance ? (CardioFormatter.pace(_distanceMeters!, duration, unitSystem) ?? '—') : '—');
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _DominantMetric(
           label: dominantLabel,
+          badge: (hasDistance && weakSignal) ? l10n.distanceEstimatedBadgeLabel : null,
           value: dominantValue,
-          onTap: _busy || _isFinished ? null : _editDistance,
+          onTap: _busy || _isFinished || _hasGpsDistance ? null : _editDistance,
         ),
         const SizedBox(height: 20),
         Row(
@@ -897,7 +1091,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
               onTap: hasDistance || _busy || _isFinished ? null : _editDistance,
             ),
             const SizedBox(width: 10),
-            _MetricTile(label: l10n.paceLabel, value: paceValue),
+            _MetricTile(
+              label: paceLabel,
+              value: paceValue,
+              color: weakSignal ? scheme.secondary : null,
+            ),
             const SizedBox(width: 10),
             _MetricTile(label: l10n.heartRateFieldLabel, value: '—'),
           ],
@@ -1067,15 +1265,44 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             availability != null)
         ? _locationCardContent(l10n, availability)
         : null;
-    final showGpsOffChip =
-        _family == ActivityFamily.distance && availability != null && !availability.canTrack;
+    // C4a.4 — same resolved state feeds the header chip, the weak-signal
+    // banner below, and `_distanceBody`'s badge/pace, so it's read once here.
+    final gpsChipState = _gpsChipState;
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text(activityTypeLabel(l10n, _activityType)),
         actions: [
-          if (showGpsOffChip) _GpsOffChip(label: l10n.locationOffChipLabel),
+          if (gpsChipState == _GpsChipState.off)
+            _GpsStatusChip(
+              icon: Icons.location_disabled,
+              label: l10n.locationOffChipLabel,
+              color: scheme.onSurfaceVariant,
+            )
+          else if (gpsChipState == _GpsChipState.weak)
+            _GpsStatusChip(
+              icon: Icons.gps_not_fixed,
+              label: l10n.gpsWeakChipLabel,
+              color: scheme.secondary,
+              tinted: true,
+            )
+          else if (gpsChipState == _GpsChipState.healthy)
+            _GpsStatusChip(
+              icon: Icons.gps_fixed,
+              label: l10n.gpsHealthyChipLabel,
+              color: scheme.primary,
+              tinted: true,
+            ),
+          // C4a.5a — the "Kikapcsolható" half of auto-pause; DISTANCE only,
+          // regardless of GPS chip state (it's a standing preference, not
+          // conditional on tracking currently being possible).
+          if (_family == ActivityFamily.distance)
+            IconButton(
+              tooltip: l10n.autoPauseSettingsIconTooltip,
+              icon: const Icon(Icons.timer_outlined),
+              onPressed: () => unawaited(_openAutoPauseSettings()),
+            ),
         ],
       ),
       body: Stack(
@@ -1107,6 +1334,15 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                       onAction: () => _handleLocationCardAction(locationCardContent),
                       onDismiss: () => setState(() => _locationCardDismissed = true),
                     ),
+                    const SizedBox(height: 8),
+                  ],
+                  // M10 — mutually exclusive with the card above: this only
+                  // ever shows once `canTrack` is already true (see
+                  // `_gpsChipState`), never alongside a permission/service
+                  // problem. Not dismissible on purpose — it should track
+                  // the live signal state, not a one-time acknowledgement.
+                  if (gpsChipState == _GpsChipState.weak) ...[
+                    _WeakSignalBanner(text: l10n.gpsWeakSignalBannerBody),
                     const SizedBox(height: 8),
                   ],
                   // "Szünetben a domináns szám és a metrikák kiszürkülnek" —
@@ -1307,11 +1543,27 @@ class _LocationStatusCard extends StatelessWidget {
 /// Small persistent header chip — stays visible even after
 /// [_LocationStatusCard] is dismissed for the session (M27's own design
 /// note: measurement quality is always visible, only the actionable card is
-/// skippable).
-class _GpsOffChip extends StatelessWidget {
-  const _GpsOffChip({required this.label});
+/// skippable). One widget for all three [_GpsChipState] variants that render
+/// a chip (M26-28's grey "off" plus C4a.4's tinted "weak"/"healthy", M04/M10)
+/// — same shape, different color/icon/copy, same pattern as
+/// [_LocationStatusCard] itself.
+class _GpsStatusChip extends StatelessWidget {
+  const _GpsStatusChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    this.tinted = false,
+  });
 
+  final IconData icon;
   final String label;
+  final Color color;
+
+  /// False for the neutral "off" chip (grey background, unchanged from
+  /// C4a.2); true for the weak/healthy chips, whose background is a tint of
+  /// [color] instead — a plain grey pill wouldn't read as either good or
+  /// concerning news.
+  final bool tinted;
 
   @override
   Widget build(BuildContext context) {
@@ -1321,20 +1573,53 @@ class _GpsOffChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
         decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
+          color: tinted ? color.withValues(alpha: 0.16) : scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.location_disabled, size: 15, color: scheme.onSurfaceVariant),
+            Icon(icon, size: 15, color: color),
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// M10's in-session weak-signal banner — informational only (no button, not
+/// dismissible), auto-appearing/disappearing with [_GpsChipState.weak]
+/// itself rather than an acknowledgement the user clears once.
+class _WeakSignalBanner extends StatelessWidget {
+  const _WeakSignalBanner({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 340),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.secondary.withValues(alpha: 0.12),
+        border: Border.all(color: scheme.secondary.withValues(alpha: 0.34)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.satellite_alt, size: 20, color: scheme.secondary),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Text(text, style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+          ),
+        ],
       ),
     );
   }
@@ -1668,10 +1953,15 @@ class _FinishConfirmationOverlay extends StatelessWidget {
 /// [onTap] is given (DISTANCE, while showing distance; never for MACHINE's
 /// or GAME's fixed dominant metric).
 class _DominantMetric extends StatelessWidget {
-  const _DominantMetric({required this.label, required this.value, this.onTap});
+  const _DominantMetric({required this.label, required this.value, this.badge, this.onTap});
 
   final String label;
   final String value;
+
+  /// Small pill next to [label] — M10's "BECSÜLT" while the GPS signal is
+  /// weak (docs/cardio/59-cardio-implementation-plan.md C4a.4). `null` the
+  /// rest of the time, including M04's healthy-GPS and every non-GPS state.
+  final String? badge;
   final VoidCallback? onTap;
 
   @override
@@ -1685,13 +1975,36 @@ class _DominantMetric extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Column(
           children: [
-            Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w700,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (badge != null) ...[
+                  const SizedBox(width: 7),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: scheme.secondary.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      badge!,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.secondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
             Text(
               value,
@@ -1704,13 +2017,16 @@ class _DominantMetric extends StatelessWidget {
   }
 }
 
-/// One secondary-metric box — tappable when [onTap] is given.
+/// One secondary-metric box — tappable when [onTap] is given. [color], when
+/// given, tints both the value and the label (M10's amber pace tile while
+/// the signal is weak); otherwise both use the normal theme colors.
 class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.label, required this.value, this.onTap});
+  const _MetricTile({required this.label, required this.value, this.onTap, this.color});
 
   final String label;
   final String value;
   final VoidCallback? onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -1731,12 +2047,12 @@ class _MetricTile extends StatelessWidget {
           children: [
             Text(
               value,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: color),
             ),
             Text(
               label,
               textAlign: TextAlign.center,
-              style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+              style: theme.textTheme.labelSmall?.copyWith(color: color ?? scheme.onSurfaceVariant),
             ),
           ],
         ),

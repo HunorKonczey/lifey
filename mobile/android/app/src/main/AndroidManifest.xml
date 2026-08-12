@@ -30,11 +30,20 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <!-- Cardio GPS route recording (docs/cardio/54-cardio-gps-route-plan.md
          §3.2) — requested lazily, only the first time a DISTANCE-family
-         session starts (LocationService). FOREGROUND_SERVICE_LOCATION and
-         the API 34+ service-type declaration are C4a.5's job, not this
-         base config. -->
+         session starts (LocationService). -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- C4a.5a — lets the `geolocator` plugin run its own foreground service
+         while a DISTANCE-family session is active, so GPS tracking survives
+         the screen turning off/app backgrounding without needing the
+         "always" location permission (docs/cardio/54 §4.4). The service
+         itself (`GeolocatorLocationService`, with its own
+         `foregroundServiceType="location"`) comes from the plugin's own
+         merged manifest — nothing to declare here beyond the two
+         permissions. FOREGROUND_SERVICE_LOCATION is required from Android 14
+         (API 34) onward. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
     <application
         android:label="lifey"
         android:name="${applicationName}"

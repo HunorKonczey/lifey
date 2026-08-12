@@ -69,8 +69,18 @@ class GeolocatorLocationService implements LocationService {
   }
 
   @override
-  Stream<LocationFix> positionStream({required LocationTrackingProfile profile}) {
-    return geo.Geolocator.getPositionStream(locationSettings: _settingsFor(profile)).map(
+  Stream<LocationFix> positionStream({
+    required LocationTrackingProfile profile,
+    String androidNotificationTitle = 'Lifey',
+    String androidNotificationText = 'Recording your route',
+  }) {
+    return geo.Geolocator.getPositionStream(
+      locationSettings: _settingsFor(
+        profile,
+        androidNotificationTitle: androidNotificationTitle,
+        androidNotificationText: androidNotificationText,
+      ),
+    ).map(
       (p) => LocationFix(
         latitude: p.latitude,
         longitude: p.longitude,
@@ -97,14 +107,40 @@ class GeolocatorLocationService implements LocationService {
   /// `NSLocationAlwaysUsageDescription` + `UIBackgroundModes: location` in
   /// Info.plist, neither of which this step adds (§3.2: only `whileInUse`
   /// is requested at all). Wiring background tracking is C4a.5b's job.
-  geo.LocationSettings _settingsFor(LocationTrackingProfile profile) {
+  ///
+  /// On Android, [androidNotificationTitle]/[androidNotificationText]
+  /// (C4a.5a, §4.4) enable `geolocator`'s own foreground service — required
+  /// for fixes to keep arriving once the app backgrounds/the screen locks,
+  /// under `whileInUse` permission alone (no "always"/background location).
+  /// `setOngoing: true` mirrors the app's own workout notification, even
+  /// though Android pins a genuine foreground-service notification
+  /// regardless of that flag — this just keeps the two visually consistent.
+  geo.LocationSettings _settingsFor(
+    LocationTrackingProfile profile, {
+    String androidNotificationTitle = 'Lifey',
+    String androidNotificationText = 'Recording your route',
+  }) {
     final accuracy = profile == LocationTrackingProfile.precise
         ? geo.LocationAccuracy.best
         : geo.LocationAccuracy.high;
     final distanceFilter = profile == LocationTrackingProfile.precise ? 5 : 10;
 
     if (Platform.isAndroid) {
-      return geo.AndroidSettings(accuracy: accuracy, distanceFilter: distanceFilter);
+      return geo.AndroidSettings(
+        accuracy: accuracy,
+        distanceFilter: distanceFilter,
+        foregroundNotificationConfig: geo.ForegroundNotificationConfig(
+          notificationTitle: androidNotificationTitle,
+          notificationText: androidNotificationText,
+          // Fixed, not localized — this is core/, decoupled from l10n (same
+          // as the rest of this file), and a notification *channel* name is
+          // low-visibility system chrome (Settings > Apps > Lifey >
+          // Notifications), not user-facing copy worth threading a third
+          // parameter through the whole call chain for.
+          notificationChannelName: 'Lifey location tracking',
+          setOngoing: true,
+        ),
+      );
     }
     if (Platform.isIOS) {
       return geo.AppleSettings(
