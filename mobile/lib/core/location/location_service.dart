@@ -163,7 +163,23 @@ abstract class LocationService {
   /// the subscription's lifetime — cancelling it stops tracking. Callers
   /// should check [LocationAvailability.canTrack] first; an implementation
   /// is free to simply not emit (rather than throw) when it can't track.
-  Stream<LocationFix> positionStream({required LocationTrackingProfile profile});
+  ///
+  /// [androidNotificationTitle]/[androidNotificationText] are Android-only
+  /// (C4a.5a, docs/cardio/54-cardio-gps-route-plan.md §4.4): Android
+  /// requires a visible foreground-service notification to keep delivering
+  /// fixes once the app backgrounds/the screen locks, and `geolocator`'s own
+  /// foreground service always shows its own, separate system notification
+  /// for that — there's no public API to make it reuse/update the app's own
+  /// rich, live-ticking ongoing workout notification (C2.9/C2.10a), only a
+  /// static title/text set once per subscription. The defaults exist so
+  /// every implementation/caller isn't forced to pass real copy (tests,
+  /// iOS/the stub, which both ignore these entirely); the real
+  /// `CardioSessionScreen` call site always supplies localized text.
+  Stream<LocationFix> positionStream({
+    required LocationTrackingProfile profile,
+    String androidNotificationTitle = 'Lifey',
+    String androidNotificationText = 'Recording your route',
+  });
 
   /// Opens the app's own OS Settings page (the [LocationAuthorization.denied]
   /// / [LocationAuthorization.deniedForever] "Engedélyezés" link, §3.3).
@@ -244,7 +260,11 @@ class LocationServiceStub implements LocationService {
   }
 
   @override
-  Stream<LocationFix> positionStream({required LocationTrackingProfile profile}) =>
+  Stream<LocationFix> positionStream({
+    required LocationTrackingProfile profile,
+    String androidNotificationTitle = 'Lifey',
+    String androidNotificationText = 'Recording your route',
+  }) =>
       _positionController.stream;
 
   @override

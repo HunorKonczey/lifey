@@ -3677,5 +3677,45 @@
   "locationOffChipLabel": "No GPS",
   "@locationOffChipLabel": {
     "description": "Small persistent header chip on a DISTANCE-family CardioSessionScreen whenever location can't be tracked, for any reason — stays visible even after the in-session card is dismissed"
+  },
+  "gpsHealthyChipLabel": "GPS",
+  "@gpsHealthyChipLabel": {
+    "description": "Header chip (M04) shown while GPS tracking is active and producing fixes normally — the positive counterpart of locationOffChipLabel/gpsWeakChipLabel"
+  },
+  "gpsWeakChipLabel": "Weak GPS",
+  "@gpsWeakChipLabel": {
+    "description": "Header chip (M10) shown while GPS tracking is active but no fix has arrived in a while — distinct from locationOffChipLabel, which means tracking isn't possible at all"
+  },
+  "gpsWeakSignalBannerBody": "Signal is weak — distance and pace may be off. Tracking keeps running, and we'll mark the gap afterward.",
+  "@gpsWeakSignalBannerBody": {
+    "description": "In-session banner (M10) shown while the GPS signal is weak — informational only, not dismissible, appears/disappears automatically with the signal"
+  },
+  "distanceEstimatedBadgeLabel": "ESTIMATED",
+  "@distanceEstimatedBadgeLabel": {
+    "description": "Small badge next to the dominant distance number (M10) while the GPS signal is weak, signalling the number may be off"
+  },
+  "noSignalLabel": "no signal",
+  "@noSignalLabel": {
+    "description": "Replaces the PACE tile's label while the GPS signal is weak (M10) — the value itself also blanks to —:— rather than showing a stale pace"
+  },
+  "gpsForegroundNotificationText": "Recording your route",
+  "@gpsForegroundNotificationText": {
+    "description": "Android-only: the body text of geolocator's own foreground-service notification, required to keep GPS fixes arriving while the app is backgrounded/the screen is locked (C4a.5a). Separate from and secondary to the app's own rich ongoing workout notification."
+  },
+  "autoPauseSettingsIconTooltip": "Auto-pause settings",
+  "@autoPauseSettingsIconTooltip": {
+    "description": "Tooltip on the CardioSessionScreen header icon (DISTANCE only) that opens the auto-pause settings sheet"
+  },
+  "autoPauseSettingsTitle": "Auto-pause",
+  "@autoPauseSettingsTitle": {
+    "description": "Title of the auto-pause settings sheet"
+  },
+  "autoPauseSettingsDescription": "Pauses automatically after 15 seconds of no movement, and resumes as soon as you start moving again. Only works while GPS is tracking.",
+  "@autoPauseSettingsDescription": {
+    "description": "Explanatory body text on the auto-pause settings sheet"
+  },
+  "autoPauseSettingsSwitchLabel": "Enable auto-pause",
+  "@autoPauseSettingsSwitchLabel": {
+    "description": "Label on the auto-pause settings sheet's on/off switch"
   }
 }

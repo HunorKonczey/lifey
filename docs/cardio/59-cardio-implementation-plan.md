@@ -216,8 +216,8 @@ háttér-mód, **Mac-et igényel** a tényleges kipróbáláshoz.
 | **C4a.1** ✅ | `geolocator` bevezetése + platform-konfiguráció + `LocationService` (engedély- és pozíció-stream, teszt-implementációval) | Windows | – | Teszt-implementáció nélkül is fordul minden platformon |
 | **C4a.2** ✅ | Engedély-utak: magyarázó lap a rendszer-kérdés előtt, megtagadva / véglegesen / pontatlan ágak | Windows | **M26**, **M27**, **M28** | **Megtagadott engedéllyel is elindul és menthető az edzés** ([51 D-C.5](51-cardio-overview-plan.md)) |
 | **C4a.3** ✅ | `CardioTrackPoints` drift-tábla + azonnali pontírás | Windows | – | Kilőtt app legfeljebb egy pontot veszít |
-| **C4a.4** | `track_filter.dart`: pontosság-/sebesség-/elmozdulás-kapuk, magasság-simítás, haversine-táv + gyenge jel UI | Windows | **M10** | Rögzített minta-nyomvonalakon a táv ≤ 5% hibával |
-| **C4a.5a** | Android előtér-szolgáltatás **a meglévő ongoing notificationnel egyesítve** ([54 §4.4](54-cardio-gps-route-plan.md)) + auto-pause bekötése a GPS-sebességre (platformfüggetlen Dart, a no-op `LocationService`-szel tesztelve) | Windows | M09 | **Nem keletkezik két Android értesítés**; auto-pause a sebesség-küszöbön ki-/bekapcsol (teszt) *(Q-D3 döntés kell)* |
+| **C4a.4** ✅ | `track_filter.dart`: pontosság-/sebesség-/elmozdulás-kapuk, magasság-simítás, haversine-táv + gyenge jel UI | Windows | **M10** | Rögzített minta-nyomvonalakon a táv ≤ 5% hibával |
+| **C4a.5a** ✅ | Android előtér-szolgáltatás ~~a meglévő ongoing notificationnel egyesítve~~ (plugin-korlát miatt: két visszafogott notification, lásd a kész-szakaszt) + auto-pause bekötése a GPS-sebességre (platformfüggetlen Dart, a no-op `LocationService`-szel tesztelve) | Windows | M09 | ~~Nem keletkezik két Android értesítés~~; auto-pause a sebesség-küszöbön ki-/bekapcsol (teszt) ✅ *(Q-D3 eldöntve: alapból be, minden DISTANCE-fajtánál egységesen)* |
 | **C4a.5b** | iOS háttér-mód (`AppleSettings.allowBackgroundLocationUpdates` + `UIBackgroundModes: location`) | **Mac** | M09 | Háttérben (képernyő kikapcsolva) is folyik a rögzítés, a Live Activity mutatja |
 | **C4a.6** | Záró feldolgozás (ritkítás → polyline → outbox-bump, splitek) + `RoutePainter` + magasságprofil + kártya-miniatűr + 90 napos pont-karbantartás | Windows | **M13**, **M16** | Az útvonal mindkét témában olvasható; a hézag szaggatott |
 
@@ -2978,3 +2978,182 @@ a flake-osztály, mint C4a.2-nél).
 
 **Következő:** `C4a.4` — `track_filter.dart`: pontosság-/sebesség-/elmozdulás-kapuk, magasság-simítás,
 haversine-táv + gyenge GPS-jel UI (**M10**).
+
+---
+
+## C4a.4 kész (2026-08-13) — `track_filter.dart` + élő GPS-táv/gyenge-jel UI
+
+Két rész: egy tiszta, állapottartó szűrő ([54 §4.2](54-cardio-gps-route-plan.md)) + ennek élő
+bekötése a `CardioSessionScreen`-be (M04 egészséges jel, M10 gyenge jel).
+
+### `track_filter.dart` — a szűrő
+
+`TrackFilterAccumulator` a doc saját sorrendjében fut minden egyes beérkező ponton: **pontosság-kapu**
+(RUNNING/WALKING 20 m, HIKING 30 m — "az erdő alatt különben mindent eldobnánk") → **sebesség-kapu**
+(WALKING 8 km/h, RUNNING/HIKING 30 km/h — a túra plafonja nincs külön megadva a docban, a futáséval
+egyezik, mert a `locationTrackingProfileFor` C4a.3 óta is `precise`-ként, nem `relaxed`-ként kezeli
+a túrát) → **minimális elmozdulás** (3 m — a referenciapont **nem** lép tovább egy elutasított
+ponton, így egy lassú, valódi mozgás több apró, egyenként küszöb-alatti fixen át is helyesen
+összeadódik, nem null-ázódik minden egyes fixnél) → **magasság-simítás** (5 pontos mozgóátlag,
+csak az **1 m-nél nagyobb, megszakítatlan emelkedő szakaszok** számítanak bele — egy még folyamatban
+lévő emelkedést a `elevationGainMeters` getter ad hozzá utólag, nem egy tárolt összeg zárja le) →
+**haversine távösszegzés**.
+
+**Kész-ha-teszt**: egy 500 m-es, szintetikus egyenes nyomvonal (51 pont, 10 m-enként), belekeverve
+jitter-pontokkal (minden tiszta pont után egy <3 m-es zajos pont), egy rossz pontosságú ponttal
+(999 m) és egy GPS-ugrással (1 km, 1 másodperc alatt) — a számított táv **5%-on belül** egyezik a
+valós 500 m-rel (`track_filter_test.dart`, 19 teszt: minden kapu külön + a kombinált minta-nyomvonal).
+
+### Élő bekötés — `CardioSessionScreen`
+
+`_seedTrackPointSeqAndSync` (C4a.3) mostantól nem csak a `pointCount`-ot olvassa, hanem az összes
+meglévő pontot (`pointsForSession`) **visszajátssza** egy friss `TrackFilterAccumulator`-on —
+ugyanaz a tiszta függvény, ugyanabban a sorrendben, mint élőben, tehát egy app-kill utáni
+újranyitás pontosan ugyanoda jut vissza (táv, referenciapont, magasság-simítási ablak), mintha a
+folyamat sosem szakadt volna meg. Minden új fix (`_onPositionFix`) ugyanezen az accumulatoron megy
+át; ha a táv nőtt, `setState` frissíti a kijelzett számot.
+
+**A "gyenge jel" állapot ([_weakSignal]) időzítő-vezérelt, nem pollozott**: minden feliratkozás-
+indítás és minden pontosság-kaput átütő fix újraindít egy 15 másodperces `Timer`-t
+(`_armWeakSignalTimer`); ha ez lejár, `weakSignal = true`. Szándékosan **nem** `DateTime.now()`
+összehasonlítás — az nem lenne determinisztikusan tesztelhető, mert a `flutter_test` fake-async
+órája csak a `Timer`/`Future.delayed` API-kon át vezetett időt mozgatja előre, a nyers
+`DateTime.now()`-t nem. Timer-alapú megoldással a teszt egyetlen `tester.pump(Duration(seconds: 16))`
+hívással determinisztikusan kiváltja az állapotváltást, valós várakozás nélkül. A 15 mp szándékosan
+jóval rövidebb, mint a [54 §4.3](54-cardio-gps-route-plan.md) 60 mp-es "hézag" küszöbe — az egy
+külön, később (C4a.6, útvonal-rajz szaggatott szakasza) eldöntendő kérdés, ez itt csak annyit mond:
+"valami nem stimmel most".
+
+**Négy fejléc-chip-állapot** (`_GpsChipState`): `off` (C4a.2-ből változatlan, "Nincs GPS"), `weak`
+("Gyenge", `scheme.secondary` tintelt), `healthy` ("GPS", `scheme.primary` tintelt, **új** — eddig
+semmi nem jelezte pozitívan, hogy a GPS jól működik), `none` (nem DISTANCE, vagy épp szünetel — egy
+tudatos szünet nem "gyenge jel", hanem egyszerűen nincs elvárás rá). A gyenge-jel banner (M10) csak
+a `weak` állapotban jelenik meg, nem eldobható (a kártyától eltérően, ami egy egyszeri
+elismerés — ez a folyamatos jelállapotot tükrözi).
+
+**GPS véglegesen átveszi a táv forrását, amint hozzájárult valamennyivel** (`_hasGpsDistance`):
+ekkor a domináns szám kézi szerkesztése letiltódik (a következő fix úgyis felülírná), "BECSÜLT"
+jelvényt kap gyenge jel esetén (M10), és a `CardioMetrics.distanceSource` `'MEASURED'`-re vált
+`'MANUAL'` helyett — minden ezt követő mentésnél (`_updateCardioMetrics`, `_finish`), akkor is, ha
+épp egy másik mezőt (kadencia, ellenállás) szerkesztünk, hiszen a mentés mindig a teljes,
+összefésült `CardioMetrics`-et írja. A tempó-csempe M10 szerint **sosem hazudik**: gyenge jelnél
+azonnal "—:—"-ra vált, nem az utolsó ismert értéket mutatja tovább.
+
+### Tesztek
+
+Két új fájl: `track_filter_test.dart` (19 — kapuk egyenként, magasság-simítás, a fenti kész-ha
+minta-nyomvonal), `cardio_session_screen_gps_tracking_test.dart` (9 — egészséges/gyenge chip-váltás,
+banner, BECSÜLT jelvény, tempó-elnémítás, szünet töli a chipet, szerkesztés-tiltás GPS után,
+`distanceSource` MEASURED befejezéskor, újranyitás visszajátssza a meglévő pontokat, egy rossz
+pontosságú fix nem indítja újra a visszaszámlálót, MACHINE sosem kap chipet).
+
+**Ellenőrzés:** `flutter analyze` teljes projekten tiszta. Teljes `flutter test`: **963 zöld / 3 bukás
+/ 966 összesen** — mindhárom bukás a már ismert, cardión kívüli `chat_repository_test.dart`
+Windows-fájlzár-flake (ugyanaz a flake-osztály, mint C4a.2/C4a.3-nál; a pontos bukásszám ennél a
+flake-osztálynál futásonként ingadozik, 0 regresszió a cardio-kódban).
+
+**Következő:** `C4a.5a` — Android előtér-szolgáltatás a meglévő ongoing notificationnel egyesítve +
+auto-pause bekötése a GPS-sebességre (**M09**, Q-D3 döntés kell), vagy `C4a.5b` (iOS háttér-mód,
+**Mac** kell).
+
+---
+
+## C4a.5a kész (2026-08-13) — Android előtér-szolgáltatás + GPS-alapú auto-pause
+
+Két, egymástól független rész, mindkettő tiszta Windowson fejleszthető.
+
+### Egy valós ütközés a doc szó szerinti ígéretével — döntés kellett
+
+A doc §4.4 azt ígéri: "a C2 ongoing notification és a C4a előtér-szolgáltatás ugyanaz a
+notification legyen". A `geolocator_android` plugin natív forrását (`BackgroundNotification.java`)
+és Dart-API-ját átnézve kiderült: **ez technikailag nem megoldható natív kód nélkül** — a
+`ForegroundNotificationConfig` a plugin **saját, különálló** csatornáján és id-jén mutat egy
+statikus (indításkor egyszer beállított) szöveget, nincs publikus API a `WorkoutSessionNotifierService`
+saját, élő chronometerrel frissülő értesítésének újrahasznosítására vagy tartalmának menet közbeni
+frissítésére (az `updateOptions` natív metódus létezik, de csak a plugin belső
+előtér/háttér-váltásakor fut, Dart-oldalról nem hívható). Igazi "egy notification" csak natív
+Kotlin-kóddal érhető el — pont az, amit a [D-C4.1](54-cardio-gps-route-plan.md) döntés a `geolocator`
+választásával el akart kerülni.
+
+**A felhasználóval egyeztetett döntés**: **két rendszer-notification marad**, de a `geolocator`
+sajátja tudatosan **visszafogott** — statikus "Nyomvonal rögzítése" szöveg, saját ("Lifey location
+tracking") csatorna, nem versenyez figyelemért a gazdag, élő cardio-notification-nel. A doc §4.4
+literális "nem két értesítés" ígérete **nem teljesül szó szerint** — ez egy tudatos, dokumentált
+eltérés, nem hiba.
+
+### Android előtér-szolgáltatás
+
+`AndroidManifest.xml`: `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION` (API 34+) engedélyek —
+magát a `GeolocatorLocationService`-t (saját `foregroundServiceType="location"` deklarációval) a
+plugin saját manifestje hozza be automatikusan, nincs mit hozzáadni.
+
+`LocationService.positionStream` két új, opcionális paramétert kapott:
+`androidNotificationTitle`/`androidNotificationText` — Android-only jelentésűek, alapértékkel (a
+stub és iOS egyszerűen figyelmen kívül hagyja őket). A `core/location/` réteg **nem** lát
+l10n-t (ugyanaz a döntés, mint eddig mindenhol ebben a fájlban) — a valós, lokalizált szöveget a
+`CardioSessionScreen._syncPositionTracking` adja át (`activityTypeLabel` + egy új
+`gpsForegroundNotificationText` kulcs), a `GeolocatorLocationService` pedig ebből épít
+`AndroidSettings(foregroundNotificationConfig: ForegroundNotificationConfig(...))`-ot.
+
+**Ellenőrizhetetlen Windowson**: az, hogy a két notification ténylegesen békésen megfér-e egymás
+mellett (nincs villogás, nincs csatorna-ütközés), csak valódi Android-eszközön/emulátoron
+deríthető ki — ugyanaz a korlát, mint a §4.5 akku-mérésé (G11), amit a doc már eddig is
+"C4a.5a/b után külön elvégzendő" 60+ perces eszközös próbaként kezelt. Ez a lépés a kód-oldalt
+szállítja; a device-smoke-test a következő, eszközön futtatható munka.
+
+### GPS-alapú auto-pause
+
+**`AutoPauseDetector`** (`lib/features/workouts/domain/auto_pause_detector.dart`) — ugyanaz a
+Timer-vezérelt minta, mint a C4a.4-es gyenge-jel időzítő: egy trükkösen pontatlan fixet a §4.2-vel
+azonos pontosság-kapun átengedve figyeli a `speed` mezőt; `< 0,5 m/s` 15 mp-en át megszakítás
+nélkül → `onSustainedStop()`; `≥ 0,5 m/s` bármikor → `onMotion()`, azonnal, akár már fut valami,
+akár nem. `null` sebesség (nincs jel) egyszerűen kimarad — se nem indít, se nem szakít meg
+számlálást, ugyanaz a "nem találgatunk" elv, mint a `track_filter.dart` `null` pontosságánál.
+
+**A screen-oldali bekötés egyik nem-nyilvánvaló pontja**: `_syncPositionTracking`'s `shouldTrack`
+feltétele mostantól `_isRunning || _pauseReason == _PauseReason.auto` — egy **kézi** szünet
+lecsatlakoztatja a GPS-streamet (nincs értelme figyelni), de egy **automatikus** szünetnek muszáj
+életben tartania a feliratkozást, különben soha nem észlelné az újraindulást, ami feloldaná saját
+magát. `_onPositionFix` ennek megfelelően két félre bomlik: a pontírás/távszámítás csak
+`_isRunning` alatt fut, az `_autoPauseDetector.addFix(fix)` viszont mindig, a szünet alatt
+érkező fixekre is — ez az egyetlen módja annak, hogy egy auto-pause valaha is auto-resume-má
+váljon.
+
+**`AutoPausePreferences`** (`lib/features/workouts/application/auto_pause_preferences.dart`) —
+**Q-D3 eldöntve: alapból bekapcsolva, egységesen minden DISTANCE-fajtánál**, nincs
+fajtánkénti felülbírálás. Sima, nem szinkronizált `shared_preferences`-flag, **nem** a
+backend-szinkronizált `UserSettings`-be került — ugyanaz az indoklás, mint a
+`LocationPermissionPreferences`-nél (C4a.2): eszköz-szintű kényelmi kapcsoló, nem
+fiók-azonossághoz kötött preferencia, és egy új szinkronizált mezőhöz backend-migráció is kellene,
+ami túlmutat egy Windowson fejleszthető mobil-lépésen. Eltérően a `LocationPermissionPreferences`-től,
+**nem törlődik kijelentkezéskor** — ez egy stabil eszköz/edzés-preferencia, nem egyszeri
+fiók-specifikus onboarding-jelző.
+
+**`AutoPauseSettingsSheet`** — a "Kikapcsolható" fele: egy kis lap egyetlen kapcsolóval, a
+`CardioSessionScreen` fejlécének új ikonjáról nyitható (DISTANCE only), nem a fő Beállítások
+képernyőn — az utóbbi a teljes `UserSettings`-objektumot menti egyben, ide egy különálló,
+nem-szinkronizált flag nem illeszkedne zökkenőmentesen anélkül, hogy saját mentési logikát vinne be
+abba a már nagy képernyőbe.
+
+### Tesztek
+
+Három új fájl: `auto_pause_detector_test.dart` (9 — a detektor tiszta logikája: teljes
+visszaszámlálás, korai felgyorsulás megszakítja, pontos küszöbérték, pontatlan fix kimarad, `null`
+sebesség kimarad, `reset()`/`dispose()` nem tüzel, egy második lassú fix nem tolja ki a határidőt),
+`auto_pause_preferences_test.dart` (4), `auto_pause_settings_sheet_test.dart` (4). Plusz egy
+screen-szintű fájl, `cardio_session_screen_auto_pause_test.dart` (7) — ez demonstrálja a **kész-ha**
+tételét ("auto-pause a sebesség-küszöbön ki-/bekapcsol"): 15 mp lassú sebesség tényleg
+automatikus szünetet indít (M09 kártya), egy gyors fix 15 mp előtt megszakítja a visszaszámlálást,
+egy auto-pause alatti gyors fix tényleg auto-resume-ol, **auto-pause alatt egy fix nem ír
+track pointot, de a feliratkozás életben marad**, kézi szünet után egy gyors fix **nem**
+auto-resume-ol (a stream le van csatlakoztatva), a beállításban kikapcsolt auto-pause soha nem
+tüzel, és a beállítás-lap menet közbeni kikapcsolása azonnal érvényesül.
+
+**Ellenőrzés:** `flutter analyze` teljes projekten tiszta. Teljes `flutter test`: **987 zöld / 3
+bukás / 990 összesen** (963→987, pontosan a +24 új teszttel — 9+4+4+7 — additív, 0 regresszió),
+mindhárom bukás a már ismert, cardión kívüli `chat_repository_test.dart` Windows-fájlzár-flake.
+
+**Következő:** `C4a.5b` — iOS háttér-mód (`AppleSettings.allowBackgroundLocationUpdates` +
+`UIBackgroundModes: location`, **Mac** kell), vagy `C4a.6` — záró feldolgozás (ritkítás → polyline
+→ outbox-bump, splitek) + `RoutePainter` + magasságprofil + kártya-miniatűr + 90 napos
+pont-karbantartás (**M13**, **M16**, Windowson fejleszthető).

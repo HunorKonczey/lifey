@@ -808,5 +808,15 @@
   "locationImpreciseBody": "Csak hozzávetőleges helyet kapunk, ebből nem készül nyomvonal, és a táv több száz métert tévedhet. Az edzés indul, az idő pontos.",
   "locationEnablePreciseButton": "Pontos hely bekapcsolása",
   "locationDismissButton": "Nem kell most",
-  "locationOffChipLabel": "Nincs GPS"
+  "locationOffChipLabel": "Nincs GPS",
+  "gpsHealthyChipLabel": "GPS",
+  "gpsWeakChipLabel": "Gyenge",
+  "gpsWeakSignalBannerBody": "Gyenge a jel — a táv és a tempó pontatlan lehet. A mérés fut, a hézagot utólag jelöljük.",
+  "distanceEstimatedBadgeLabel": "BECSÜLT",
+  "noSignalLabel": "nincs jel",
+  "gpsForegroundNotificationText": "Nyomvonal rögzítése",
+  "autoPauseSettingsIconTooltip": "Automatikus szünet beállításai",
+  "autoPauseSettingsTitle": "Automatikus szünet",
+  "autoPauseSettingsDescription": "15 másodperc mozdulatlanság után automatikusan szünetel, és amint elindulsz, automatikusan folytatja. Csak akkor működik, ha fut a GPS-nyomkövetés.",
+  "autoPauseSettingsSwitchLabel": "Automatikus szünet engedélyezése"
 }
