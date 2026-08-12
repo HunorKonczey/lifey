@@ -1,6 +1,11 @@
-/// The three daily goals a streak can be tracked against
-/// (docs/37-streaks-weekly-recap-plan.md).
-enum StreakMetric { calories, steps, water }
+/// The daily goals a streak can be tracked against
+/// (docs/37-streaks-weekly-recap-plan.md), plus [workout]
+/// (docs/cardio/51-cardio-overview-plan.md §8 Q1, docs/cardio/59-cardio-implementation-plan.md
+/// C3.4) — the one entry here that isn't a *goal* at all: it has no
+/// settings threshold, "met" is a fixed rule
+/// (`streaksProvider.workoutStreakMovingSecondsThreshold`), and it's always
+/// present regardless of what the user has configured.
+enum StreakMetric { calories, steps, water, workout }
 
 /// A metric's current/best consecutive-day streak, purely derived — never
 /// persisted (see [Streak.compute]).

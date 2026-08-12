@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/format/cardio_formatter.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
@@ -13,9 +14,11 @@ import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
+import '../domain/cardio_personal_record.dart';
 import '../domain/workout_session.dart';
 import 'cardio_summary_screen.dart';
 import 'widgets/prompt_number_dialog.dart';
+import 'workouts_screen.dart';
 
 /// The live cardio screen — skeleton (docs/cardio/59-cardio-implementation-plan.md
 /// C2.1) plus all three family layouts: DISTANCE (C2.2), MACHINE (C2.3), and
@@ -567,6 +570,18 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
       if (!mounted) return;
       _ticker?.cancel();
       unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
+      // So the summary screen's back button lands on the session list
+      // (docs/cardio/59-cardio-implementation-plan.md) instead of wherever
+      // the shell happened to be showing when this workout was started —
+      // the FAB long-press that starts a quick cardio session is reachable
+      // from any tab, not just Workouts. Switching the shell now, while
+      // it's hidden underneath the still-showing CardioSessionScreen, is
+      // invisible to the user; only the eventual pop reveals it.
+      // `GoRouter.maybeOf` guards this screen being pumped without a
+      // router at all, as every existing widget test here does (plain
+      // `MaterialApp`) — a no-op there, never reached in the real app.
+      ref.read(workoutsSessionsTabRequestProvider.notifier).request();
+      if (GoRouter.maybeOf(context) != null) context.go('/workouts');
       final originalCardio = widget.session.cardio;
       final finishedSession = WorkoutSession(
         clientId: _clientId,
@@ -588,8 +603,22 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen> {
           distanceSource: _distanceMeters == null ? null : 'MANUAL',
         ),
       );
+      // Baseline is every other cardio session already known locally — read
+      // once, here, rather than a dedicated repository query: the whole list
+      // is already resident via `workoutSessionControllerProvider`
+      // (`watchAll()`), and the strength engine's own `getPrBaseline` is the
+      // only place that owns a second raw-row query, for a table
+      // (`exerciseSets`) `WorkoutSession` doesn't already assemble.
+      final priorSessions = (ref.read(workoutSessionControllerProvider).value ?? const [])
+          .where((s) => s.clientId != _clientId);
+      final newRecords = detectCardioPrs(
+        CardioPrBaseline.fromSessions(priorSessions),
+        finishedSession,
+      );
       navigator.pushReplacement(
-        MaterialPageRoute(builder: (_) => CardioSummaryScreen(session: finishedSession)),
+        MaterialPageRoute(
+          builder: (_) => CardioSummaryScreen(session: finishedSession, newRecords: newRecords),
+        ),
       );
     } catch (_) {
       if (!mounted) return;

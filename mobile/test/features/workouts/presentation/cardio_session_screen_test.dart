@@ -8,6 +8,7 @@ import 'package:lifey/features/workouts/application/workout_session_controller.d
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_session_screen.dart';
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
+import 'package:lifey/features/workouts/presentation/workouts_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
 /// C2.1: `CardioSessionScreen` — the live state machine skeleton.
@@ -347,6 +348,25 @@ void main() {
       expect(find.byType(CardioSummaryScreen), findsOneWidget);
       expect(find.byType(CardioSessionScreen), findsNothing);
       expect(find.byKey(const Key('slideToFinishBar')), findsNothing);
+    });
+
+    testWidgets(
+        'finishing requests the Workouts screen jump back to its Sessions sub-tab '
+        '(docs/cardio/59-cardio-implementation-plan.md)', (tester) async {
+      await _pump(tester, _pausedSession(movingSeconds: 754));
+      final container = ProviderScope.containerOf(tester.element(find.byType(CardioSessionScreen)));
+      expect(container.read(workoutsSessionsTabRequestProvider), 0);
+
+      final gesture = await _dragFinishBarTo(tester, 0.85);
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Read via the still-mounted summary screen — CardioSessionScreen
+      // itself is gone (pushReplacement), but the ProviderScope above both
+      // is the same instance either way.
+      final containerAfter =
+          ProviderScope.containerOf(tester.element(find.byType(CardioSummaryScreen)));
+      expect(containerAfter.read(workoutsSessionsTabRequestProvider), 1);
     });
 
     testWidgets('dragging below the threshold snaps back without finishing', (tester) async {

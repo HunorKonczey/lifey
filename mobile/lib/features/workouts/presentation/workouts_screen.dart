@@ -18,6 +18,26 @@ import 'template_picker_screen.dart';
 import 'templates_tab.dart';
 import 'widgets/add_exercise_sheet.dart';
 
+/// Bumped to force [WorkoutsScreen] back onto its "Sessions" sub-tab —
+/// `CardioSessionScreen._finish` requests this so the summary screen's
+/// back button always lands where the just-finished session is visible
+/// (docs/cardio/59-cardio-implementation-plan.md), regardless of which
+/// Workouts sub-tab (or which shell tab entirely) was active before the
+/// workout started. A plain counter, not a bool: `ref.listen` only fires
+/// on a value *change*, so a second request while already sitting on
+/// Sessions still needs a new value to re-trigger the jump.
+class _WorkoutsSessionsTabRequestNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() => state++;
+}
+
+final workoutsSessionsTabRequestProvider =
+    NotifierProvider<_WorkoutsSessionsTabRequestNotifier, int>(
+  _WorkoutsSessionsTabRequestNotifier.new,
+);
+
 /// Workouts: "Sessions" (logged workouts), "Templates", and "Exercises" tabs.
 ///
 /// The AdaptiveAppBar + PillTabBar form a single floating header unit that
@@ -249,6 +269,10 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen>
         if (!mounted) return;
         _pushFab();
       });
+    });
+
+    ref.listen(workoutsSessionsTabRequestProvider, (_, __) {
+      if (_tabController.index != 0) _tabController.animateTo(0);
     });
 
     return Scaffold(

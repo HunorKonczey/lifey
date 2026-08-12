@@ -12,6 +12,7 @@ import com.lifey.user.User;
 import com.lifey.user.UserRepository;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
+import com.lifey.workout.session.SessionKind;
 import com.lifey.workout.session.WorkoutSessionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -127,9 +128,39 @@ class WeeklyReportServiceImplTest {
         WeeklyTrainerReport.ClientWeekSummary summary = report.clients().getFirst();
         assertThat(summary.completedWorkouts()).isZero();
         assertThat(summary.missedWorkouts()).isZero();
+        assertThat(summary.strengthWorkouts()).isZero();
+        assertThat(summary.cardioWorkouts()).isZero();
+        assertThat(summary.cardioDistanceMeters()).isZero();
         assertThat(summary.daysLogged()).isZero();
         assertThat(summary.avgCalories()).isNull();
         assertThat(summary.weightKg()).isNull();
+    }
+
+    @Test
+    void cardioBreakdown_strengthWorkoutsIsCompletedMinusCardio() {
+        when(trainerClientRepository.findTrainerIdsWithActiveClients()).thenReturn(List.of(TRAINER_ID));
+        stubTrainerEnabled(TRAINER_ID, true);
+        when(trainerClientRepository.findByTrainerIdAndStatusOrderByRespondedAtDesc(TRAINER_ID, TrainerClientStatus.ACTIVE))
+                .thenReturn(List.of(trainerClient(client(CLIENT_ID))));
+        stubClientDefaults(CLIENT_ID);
+        when(workoutSessionRepository
+                        .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNull(
+                                eq(CLIENT_ID), any(), any()))
+                .thenReturn(5L);
+        when(workoutSessionRepository
+                        .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNullAndSessionKind(
+                                eq(CLIENT_ID), any(), any(), eq(SessionKind.CARDIO)))
+                .thenReturn(2L);
+        when(workoutSessionRepository.sumDistanceMetersBetweenForCompleted(eq(CLIENT_ID), any(), any()))
+                .thenReturn(10500.0);
+        when(userRepository.findById(TRAINER_ID)).thenReturn(Optional.of(user(TRAINER_ID)));
+
+        WeeklyTrainerReport.ClientWeekSummary summary = captureReport().clients().getFirst();
+
+        assertThat(summary.completedWorkouts()).isEqualTo(5);
+        assertThat(summary.cardioWorkouts()).isEqualTo(2);
+        assertThat(summary.strengthWorkouts()).isEqualTo(3);
+        assertThat(summary.cardioDistanceMeters()).isEqualTo(10500.0);
     }
 
     @Test
@@ -278,6 +309,12 @@ class WeeklyReportServiceImplTest {
                 .thenReturn(0L);
         lenient().when(workoutSessionRepository.countMissedOccurrences(eq(TRAINER_ID), eq(clientId), any(), any()))
                 .thenReturn(0L);
+        lenient().when(workoutSessionRepository
+                        .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNullAndSessionKind(
+                                eq(clientId), any(), any(), eq(SessionKind.CARDIO)))
+                .thenReturn(0L);
+        lenient().when(workoutSessionRepository.sumDistanceMetersBetweenForCompleted(eq(clientId), any(), any()))
+                .thenReturn(0.0);
         lenient().when(mealRepository.sumCaloriesBetween(eq(clientId), any(), any())).thenReturn(0.0);
         lenient().when(weightEntryRepository.findByUserIdAndDeletedAtIsNullAndDateRange(clientId, WEEK_START, WEEK_END))
                 .thenReturn(List.of());

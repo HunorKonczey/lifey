@@ -11,6 +11,7 @@ import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
+import '../domain/cardio_personal_record.dart';
 import '../domain/workout_session.dart';
 import 'widgets/prompt_number_dialog.dart';
 import 'widgets/rpe_selector.dart';
@@ -47,9 +48,16 @@ import 'widgets/rpe_selector.dart';
 /// `MANUAL` source) on the two fields where it's real today, and leaves the
 /// rest read-only, carried over unchanged from however they were recorded.
 class CardioSummaryScreen extends ConsumerStatefulWidget {
-  const CardioSummaryScreen({super.key, required this.session});
+  const CardioSummaryScreen({super.key, required this.session, this.newRecords = const []});
 
   final WorkoutSession session;
+
+  /// Cardio records [session] just broke, detected by
+  /// `CardioSessionScreen._finish()` right before handing off here — always
+  /// empty when this screen is reached by reopening an already-finished
+  /// session (`open_workout_screens.dart`), since re-viewing a past session
+  /// isn't the moment it earned anything. See `cardio_personal_record.dart`.
+  final List<CardioPrType> newRecords;
 
   @override
   ConsumerState<CardioSummaryScreen> createState() => _CardioSummaryScreenState();
@@ -274,6 +282,10 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
               ),
             ],
           ),
+          if (widget.newRecords.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _NewRecordBanner(types: widget.newRecords, l10n: l10n, theme: theme, scheme: scheme),
+          ],
           const SizedBox(height: 20),
           ..._metricSections(l10n, theme, scheme, unitSystem),
           const SizedBox(height: 10),
@@ -445,6 +457,70 @@ class _PrimaryMetricCard extends StatelessWidget {
               Text(value, style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800)),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Celebrates whatever [types] the just-finished session broke. Deliberately
+/// a plain banner, not the strength `WorkoutSuccessDialog`'s confetti
+/// treatment — that dialog cascades many per-exercise chips built from
+/// `ExerciseBlock`s, which a routeless cardio session has none of, and this
+/// screen's whole tone (read-only carry-over, no gimmicks — see the class
+/// doc) is calmer than a post-workout dialog. Reuses the same trophy icon +
+/// amber accent as `exercise_session_card.dart`'s `_prBadge` for a
+/// consistent "you just set a record" visual language app-wide.
+class _NewRecordBanner extends StatelessWidget {
+  const _NewRecordBanner({
+    required this.types,
+    required this.l10n,
+    required this.theme,
+    required this.scheme,
+  });
+
+  final List<CardioPrType> types;
+  final AppLocalizations l10n;
+  final ThemeData theme;
+  final ColorScheme scheme;
+
+  static const _amber = Color(0xFFD8B35A);
+
+  String _label(CardioPrType type) => switch (type) {
+        CardioPrType.longestDistance => l10n.cardioRecordLongestDistance,
+        CardioPrType.longestMovingTime => l10n.cardioRecordLongestMovingTime,
+        CardioPrType.greatestElevationGain => l10n.cardioRecordGreatestElevationGain,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: _amber.withValues(alpha: 0.14),
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.emoji_events, color: _amber),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.cardioNewRecordBannerTitle,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    types.map(_label).join(' · '),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -112,6 +112,37 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNull(
             Long userId, Instant from, Instant toExclusive);
 
+    /**
+     * Same as {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNull},
+     * scoped to one {@link SessionKind} — the weekly trainer report's
+     * strength/cardio breakdown line (docs/cardio/56-cardio-statistics-plan.md
+     * §6 ST9). Only the CARDIO count is queried; the strength count is derived
+     * as {@code completedWorkouts - cardioWorkouts} in the service, mirroring
+     * {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind}.
+     */
+    long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNullAndSessionKind(
+            Long userId, Instant from, Instant toExclusive, SessionKind kind);
+
+    /**
+     * Σ distance_meters over a bounded range, restricted to completed
+     * sessions — the weekly trainer report's cardio distance line. Unlike
+     * {@link #sumDistanceMetersSince} (open-ended, used by the statistics
+     * screen's "since X" totals, which deliberately include an
+     * still-in-progress session's accrued distance), this report only ever
+     * covers a week that has already fully elapsed by the time the job runs,
+     * so an unfinished session here is an abandoned one — excluded the same
+     * way {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNullAndSessionKind}
+     * excludes it from the breakdown count, keeping the two numbers
+     * consistent with each other.
+     */
+    @Query("""
+            select coalesce(sum(c.distanceMeters), 0) from WorkoutSession w join w.cardioDetails c
+            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+              and w.startedAt < :toExclusive and w.finishedAt is not null
+            """)
+    double sumDistanceMetersBetweenForCompleted(
+            @Param("userId") Long userId, @Param("from") Instant from, @Param("toExclusive") Instant toExclusive);
+
     /** Every trainer-scheduled occurrence for a client in a date range — upcoming, missed, done and cancelled alike. */
     List<WorkoutSession> findByUserIdAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(
             Long userId, LocalDate from, LocalDate to);

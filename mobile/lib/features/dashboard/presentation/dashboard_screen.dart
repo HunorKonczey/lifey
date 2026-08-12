@@ -9,6 +9,7 @@ import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/activity_chip.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../auth/application/auth_controller.dart';
@@ -34,6 +35,7 @@ import '../../streaks/application/streaks_provider.dart';
 import '../../streaks/domain/streak.dart';
 import '../../streaks/presentation/widgets/recap_ready_card.dart';
 import '../../streaks/presentation/widgets/streak_chip_row.dart';
+import '../../workouts/domain/activity_type.dart';
 import '../application/dashboard_controller.dart';
 import '../application/today_steps_controller.dart';
 import '../domain/dashboard_data.dart';
@@ -439,6 +441,23 @@ class _DashboardBody extends StatelessWidget {
 
         // ── Recent workouts ───────────────────────────────────────────
         _SectionTitle(l10n.recentWorkoutsSectionTitle),
+        // Quiet kind breakdown (docs/cardio/56-cardio-statistics-plan.md §4:
+        // "az „edzések" szám alá egy halk bontás-sor") — there's no bare
+        // workout-count stat card on this screen to sit literally "under",
+        // so this sits under the closest thing to one, the section heading
+        // above the list it describes. Reuses the existing
+        // strength/cardio filter-chip label strings rather than a new
+        // composed sentence.
+        if (stats.workoutCount > 0) ...[
+          const SizedBox(height: 2),
+          Text(
+            '${stats.strengthWorkoutCount} ${l10n.activityTypeStrength} · '
+            '${stats.cardioWorkoutCount} ${l10n.sessionKindCardioLabel}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+                ),
+          ),
+        ],
         const SizedBox(height: 10),
         if (data.recentWorkouts.isEmpty)
           _EmptyHint(l10n.noWorkoutsLoggedYetPeriodMessage)
@@ -488,19 +507,15 @@ class _WorkoutTile extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final dateLabel = DateFormat('MMM d, HH:mm').format(workout.startedAt.toLocal());
-    final exercises = workout.exerciseNames.isEmpty ? '—' : workout.exerciseNames.join(', ');
+    // A cardio session never has exercises to list — its activity type
+    // (e.g. "Running") is the meaningful equivalent, not the "—" a
+    // strength-shaped fallback would otherwise show here.
+    final exercises = workout.isCardio
+        ? activityTypeLabel(l10n, workout.activityType!)
+        : workout.exerciseNames.isEmpty
+            ? '—'
+            : workout.exerciseNames.join(', ');
     final statsLine = _statsLine(l10n);
-
-    final Color badgeBg;
-    final Color badgeIconColor;
-    if (workout.categoryCode != null) {
-      final mc = muscleGroupColor(workout.categoryCode!, context);
-      badgeBg = mc.withValues(alpha: 0.15);
-      badgeIconColor = mc;
-    } else {
-      badgeBg = theme.colorScheme.primaryContainer;
-      badgeIconColor = theme.colorScheme.onPrimaryContainer;
-    }
 
     return Card(
       elevation: 0,
@@ -516,22 +531,14 @@ class _WorkoutTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              // Rounded icon box
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.fitness_center,
-                    size: 22,
-                    color: badgeIconColor,
-                  ),
-                ),
-              ),
+              // Rounded icon box — cardio gets the same ActivityChip used
+              // elsewhere for a session of its kind (docs/cardio/56 §4:
+              // "a legutóbbi edzések listája ikonos"); strength keeps its
+              // existing muscle-group badge, unchanged.
+              if (workout.isCardio)
+                ActivityChip(activityType: workout.activityType!, size: 44)
+              else
+                _StrengthBadge(categoryCode: workout.categoryCode),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -594,6 +601,40 @@ class _WorkoutTile extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The strength-session icon badge — unchanged from before cardio sessions
+/// existed, just extracted so [_WorkoutTile] can pick between this and
+/// [ActivityChip] instead of hard-coding [Icons.fitness_center] for every
+/// session regardless of kind.
+class _StrengthBadge extends StatelessWidget {
+  const _StrengthBadge({required this.categoryCode});
+
+  final String? categoryCode;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final Color badgeBg;
+    final Color badgeIconColor;
+    if (categoryCode != null) {
+      final mc = muscleGroupColor(categoryCode!, context);
+      badgeBg = mc.withValues(alpha: 0.15);
+      badgeIconColor = mc;
+    } else {
+      badgeBg = theme.colorScheme.primaryContainer;
+      badgeIconColor = theme.colorScheme.onPrimaryContainer;
+    }
+
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(13)),
+      child: Center(
+        child: Icon(Icons.fitness_center, size: 22, color: badgeIconColor),
       ),
     );
   }

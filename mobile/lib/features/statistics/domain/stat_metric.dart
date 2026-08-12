@@ -8,6 +8,12 @@ enum StatAggregationType {
   /// Average every value recorded that day (e.g. average heart rate).
   average,
 
+  /// Σ numerator / Σ denominator across the day's values, not the arithmetic
+  /// mean of each value's own ratio (docs/cardio/56-cardio-statistics-plan.md
+  /// D-C3.6) — e.g. pace: Σ moving time / Σ distance, so a 1 km jog and a
+  /// 20 km run on the same day don't count equally toward the day's pace.
+  weightedAverage,
+
   /// Keep only the most recently recorded value that day (e.g. weight).
   lastOfDay,
 }
@@ -27,7 +33,19 @@ enum StatMetric {
   activeCalories,
   water,
   weight,
-  steps;
+  steps,
+
+  // Cardio fajta-bontás (docs/cardio/56-cardio-statistics-plan.md §3, C3.2)
+  // — deliberately not exposed as `strengthWorkoutCount`/`cardioWorkoutCount`
+  // duplicates of [workoutCount] (D-C3.4): the statistics screen's kind
+  // filter narrows the existing metrics instead, these six are the metrics
+  // that only exist *for* cardio in the first place.
+  cardioDistance,
+  cardioMovingMinutes,
+  cardioElevationGain,
+  cardioAvgPace,
+  maxHeartRate,
+  cardioSessions;
 
   String label(AppLocalizations l10n) => switch (this) {
         StatMetric.calories => l10n.caloriesLabel,
@@ -40,10 +58,22 @@ enum StatMetric {
         StatMetric.water => l10n.waterLabel,
         StatMetric.weight => l10n.weightTitle,
         StatMetric.steps => l10n.stepsLabel,
+        StatMetric.cardioDistance => l10n.statMetricCardioDistanceLabel,
+        StatMetric.cardioMovingMinutes => l10n.statMetricCardioMovingMinutesLabel,
+        StatMetric.cardioElevationGain => l10n.statMetricCardioElevationGainLabel,
+        StatMetric.cardioAvgPace => l10n.statMetricCardioAvgPaceLabel,
+        StatMetric.maxHeartRate => l10n.statMetricMaxHeartRateLabel,
+        StatMetric.cardioSessions => l10n.statMetricCardioSessionsLabel,
       };
 
   /// Unit shown next to the value (e.g. "kcal", "g"). Empty for the
-  /// dimensionless [workoutCount].
+  /// dimensionless [workoutCount]/[cardioSessions].
+  ///
+  /// Always metric (km, m), matching [weight]/[water] on this screen already
+  /// ignoring `UnitSystem` — the statistics screen has never been
+  /// unit-system-aware, and giving these two new metrics that awareness
+  /// alone (while weight/water still aren't) would be a bigger, inconsistent
+  /// change than C3.2 asks for.
   String unitLabel(AppLocalizations l10n) => switch (this) {
         StatMetric.calories => l10n.statUnitKcal,
         StatMetric.protein => l10n.statUnitGrams,
@@ -55,6 +85,12 @@ enum StatMetric {
         StatMetric.water => l10n.statUnitLiters,
         StatMetric.weight => l10n.statUnitKg,
         StatMetric.steps => l10n.statUnitSteps,
+        StatMetric.cardioDistance => l10n.statUnitKm,
+        StatMetric.cardioMovingMinutes => l10n.statUnitMinutes,
+        StatMetric.cardioElevationGain => l10n.statUnitMeters,
+        StatMetric.cardioAvgPace => l10n.statUnitPaceMinPerKm,
+        StatMetric.maxHeartRate => l10n.statUnitBpm,
+        StatMetric.cardioSessions => '',
       };
 
   /// How daily values for this metric should be combined into one point.
@@ -69,5 +105,15 @@ enum StatMetric {
         StatMetric.water => StatAggregationType.sum,
         StatMetric.weight => StatAggregationType.lastOfDay,
         StatMetric.steps => StatAggregationType.sum,
+        StatMetric.cardioDistance => StatAggregationType.sum,
+        StatMetric.cardioMovingMinutes => StatAggregationType.sum,
+        StatMetric.cardioElevationGain => StatAggregationType.sum,
+        StatMetric.cardioAvgPace => StatAggregationType.weightedAverage,
+        // Each day's point is already that day's max (see
+        // `_maxHeartRatePoints`, stat_chart_data.dart) — `average` here
+        // describes what the summary card then does across days ("average
+        // of daily maximums", 56 §3), not a within-day average.
+        StatMetric.maxHeartRate => StatAggregationType.average,
+        StatMetric.cardioSessions => StatAggregationType.sum,
       };
 }

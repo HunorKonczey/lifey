@@ -252,6 +252,20 @@ class _WorkoutsSection extends StatelessWidget {
                         ),
                       ),
                     ],
+                    // Only when there was cardio this week (D-C3.5's
+                    // "missing, not zero" — weeklyCardioDistanceMeters is
+                    // null, not 0, on a cardio-free week).
+                    if (recap.weeklyCardioDistanceMeters != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.recapWorkoutsDistance(
+                          (recap.weeklyCardioDistanceMeters! / 1000.0).toStringAsFixed(1),
+                        ),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -589,6 +603,12 @@ class _GoalRow extends StatelessWidget {
         StreakMetric.calories => l10n.streakMetricCalories,
         StreakMetric.steps => l10n.streakMetricSteps,
         StreakMetric.water => l10n.streakMetricWater,
+        // Never actually reached today — this section only renders a row
+        // per *goal* (calorieGoalSet/stepGoalSet/waterGoalSet), and the
+        // workout streak isn't a goal (Q1: "Nem beállítás"), so no
+        // `_GoalRow` is ever built for it here. Still required for
+        // exhaustiveness — `StreakMetric` grew a fourth value.
+        StreakMetric.workout => l10n.streakMetricWorkout,
       };
 
   @override

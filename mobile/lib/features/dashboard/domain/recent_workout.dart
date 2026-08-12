@@ -11,6 +11,8 @@ class RecentWorkout {
     this.categoryCode,
     this.templateName,
     this.rpe,
+    this.sessionKind = 'STRENGTH',
+    this.activityType,
   });
 
   final String clientId;
@@ -18,6 +20,17 @@ class RecentWorkout {
   final DateTime? finishedAt;
   final int setCount;
   final List<String> exerciseNames;
+
+  /// `'STRENGTH'` or `'CARDIO'` — mirrors `WorkoutSession.sessionKind`,
+  /// drives the tile's icon (docs/cardio/56-cardio-statistics-plan.md §4:
+  /// "a legutóbbi edzések listája ikonos").
+  final String sessionKind;
+
+  /// One of `kActivityTypes`, non-null exactly when [sessionKind] is
+  /// `'CARDIO'` — mirrors `WorkoutSession.activityType`.
+  final String? activityType;
+
+  bool get isCardio => sessionKind == 'CARDIO';
 
   /// Snapshot of the template's name this session was started from, if any.
   final String? templateName;

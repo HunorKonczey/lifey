@@ -1284,6 +1284,30 @@
   "@statMetricActiveCaloriesLabel": {
     "description": "Statistics metric label: calories burned during workouts (Health)"
   },
+  "statMetricCardioDistanceLabel": "Cardio distance",
+  "@statMetricCardioDistanceLabel": {
+    "description": "Statistics metric label: total distance covered in cardio sessions per day"
+  },
+  "statMetricCardioMovingMinutesLabel": "Cardio moving time",
+  "@statMetricCardioMovingMinutesLabel": {
+    "description": "Statistics metric label: total moving time (excluding pauses) in cardio sessions per day"
+  },
+  "statMetricCardioElevationGainLabel": "Elevation gain",
+  "@statMetricCardioElevationGainLabel": {
+    "description": "Statistics metric label: total elevation gained in cardio sessions per day"
+  },
+  "statMetricCardioAvgPaceLabel": "Average pace",
+  "@statMetricCardioAvgPaceLabel": {
+    "description": "Statistics metric label: distance-weighted average running/walking pace per day"
+  },
+  "statMetricMaxHeartRateLabel": "Max heart rate",
+  "@statMetricMaxHeartRateLabel": {
+    "description": "Statistics metric label: highest heart rate recorded in a cardio session per day"
+  },
+  "statMetricCardioSessionsLabel": "Cardio sessions",
+  "@statMetricCardioSessionsLabel": {
+    "description": "Statistics metric label: number of cardio sessions per day"
+  },
   "statisticsTitle": "Statistics",
   "@statisticsTitle": {
     "description": "Title of the statistics screen"
@@ -1343,6 +1367,22 @@
   "statUnitLiters": "L",
   "@statUnitLiters": {
     "description": "Unit suffix for the water statistics metric"
+  },
+  "statUnitKm": "km",
+  "@statUnitKm": {
+    "description": "Unit suffix for the cardio-distance statistics metric"
+  },
+  "statUnitMeters": "m",
+  "@statUnitMeters": {
+    "description": "Unit suffix for the cardio elevation-gain statistics metric"
+  },
+  "statUnitPaceMinPerKm": "/km",
+  "@statUnitPaceMinPerKm": {
+    "description": "Unit suffix for the cardio average-pace statistics metric — appended after an M:SS-formatted value, e.g. '5:23 /km', matching CardioFormatter.pace's convention elsewhere in the app"
+  },
+  "statUnitBpm": "bpm",
+  "@statUnitBpm": {
+    "description": "Unit suffix for the max-heart-rate statistics metric"
   },
   "comingSoonMessage": "{title} — coming soon",
   "@comingSoonMessage": {
@@ -2714,6 +2754,10 @@
   "@streakMetricWater": {
     "description": "Lowercase noun for the water goal, used inside the streak chip tooltip sentence"
   },
+  "streakMetricWorkout": "workouts",
+  "@streakMetricWorkout": {
+    "description": "Lowercase noun for the workout streak, used inside the streak chip tooltip sentence"
+  },
   "streakActiveTooltip": "{count}-day {metric} streak",
   "@streakActiveTooltip": {
     "description": "Tooltip for a dashboard streak chip that has at least one day logged",
@@ -2768,6 +2812,15 @@
     "placeholders": {
       "count": {
         "type": "int"
+      }
+    }
+  },
+  "recapWorkoutsDistance": "{km} km",
+  "@recapWorkoutsDistance": {
+    "description": "Total cardio distance during the recap week, only shown when there was any (docs/cardio/56-cardio-statistics-plan.md §4) — km already formatted to one decimal, e.g. '24.3'",
+    "placeholders": {
+      "km": {
+        "type": "String"
       }
     }
   },
@@ -3528,5 +3581,21 @@
   "editDeviceCaloriesDialogTitle": "Update machine calories",
   "@editDeviceCaloriesDialogTitle": {
     "description": "Title of the dialog that manually sets a MACHINE-family session's device-displayed calorie count on the summary screen (C2.8)"
+  },
+  "cardioNewRecordBannerTitle": "New personal record!",
+  "@cardioNewRecordBannerTitle": {
+    "description": "Title of the banner shown on the cardio summary screen when the just-finished session beat a prior cardio record (C3.5)"
+  },
+  "cardioRecordLongestDistance": "Longest distance",
+  "@cardioRecordLongestDistance": {
+    "description": "Cardio record type label: this session covered a longer distance than any prior running/walking/hiking/indoor-bike session"
+  },
+  "cardioRecordLongestMovingTime": "Longest moving time",
+  "@cardioRecordLongestMovingTime": {
+    "description": "Cardio record type label: this session's moving time is longer than any prior cardio session's"
+  },
+  "cardioRecordGreatestElevationGain": "Greatest elevation gain",
+  "@cardioRecordGreatestElevationGain": {
+    "description": "Cardio record type label: this session gained more elevation than any prior running/walking/hiking session"
   }
 }

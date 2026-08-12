@@ -9,6 +9,8 @@ import 'package:lifey/features/steps/domain/daily_step_count.dart';
 import 'package:lifey/features/streaks/application/streaks_provider.dart';
 import 'package:lifey/features/streaks/domain/streak.dart';
 import 'package:lifey/features/water/application/daily_water_totals_provider.dart';
+import 'package:lifey/features/workouts/application/workout_session_controller.dart';
+import 'package:lifey/features/workouts/domain/workout_session.dart';
 
 /// Anchors every test's dates relative to "now", same convention as
 /// `stat_chart_data_test.dart`, so the suite never goes stale.
@@ -24,6 +26,29 @@ DailyStepCount _steps(DateTime day, int steps) {
   return DailyStepCount(clientId: 'steps-${day.microsecondsSinceEpoch}', date: day, steps: steps);
 }
 
+WorkoutSession _strengthSession(DateTime startedAt) {
+  return WorkoutSession(
+    clientId: 'strength-${startedAt.microsecondsSinceEpoch}',
+    startedAt: startedAt,
+    finishedAt: startedAt.add(const Duration(minutes: 45)),
+    exercises: const [],
+    sets: const [],
+  );
+}
+
+WorkoutSession _cardioSession(DateTime startedAt, {required int movingSeconds}) {
+  return WorkoutSession(
+    clientId: 'cardio-${startedAt.microsecondsSinceEpoch}',
+    startedAt: startedAt,
+    finishedAt: startedAt.add(const Duration(hours: 1)),
+    exercises: const [],
+    sets: const [],
+    sessionKind: 'CARDIO',
+    activityType: 'RUNNING',
+    movingSeconds: movingSeconds,
+  );
+}
+
 class _FakeSettingsController extends SettingsController {
   _FakeSettingsController(this._settings);
   final UserSettings _settings;
@@ -32,11 +57,23 @@ class _FakeSettingsController extends SettingsController {
   Stream<UserSettings> build() => Stream.value(_settings);
 }
 
+class _FakeWorkoutSessionController extends WorkoutSessionController {
+  _FakeWorkoutSessionController(this._sessions);
+  final List<WorkoutSession> _sessions;
+
+  @override
+  Stream<List<WorkoutSession>> build() => Stream.value(_sessions);
+}
+
 ProviderContainer _buildContainer({
   required UserSettings settings,
   List<DailyMacros>? macros,
   List<DailyStepCount>? steps,
   Map<DateTime, double>? water,
+  // Always overridden (not conditional like the three above): the workout
+  // streak is unconditional (Q1: "Nem beállítás"), so streaksProvider reads
+  // this on every call, not just when a goal is set.
+  List<WorkoutSession> sessions = const [],
 }) {
   return ProviderContainer(
     overrides: [
@@ -45,6 +82,7 @@ ProviderContainer _buildContainer({
       if (steps != null) allStepCountsProvider.overrideWith((ref) => Stream.value(steps)),
       if (water != null)
         dailyWaterTotalsProvider.overrideWith((ref) => AsyncValue.data(water)),
+      workoutSessionControllerProvider.overrideWith(() => _FakeWorkoutSessionController(sessions)),
     ],
   );
 }
@@ -55,12 +93,15 @@ Future<void> _settle(ProviderContainer container) async {
 
 void main() {
   group('streaksProvider', () {
-    test('no goals set -> empty list, no sources touched', () async {
+    test('no goals set -> only the always-present workout streak', () async {
       final container = _buildContainer(settings: const UserSettings.defaults());
       addTearDown(container.dispose);
       await _settle(container);
+      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
 
-      expect(container.read(streaksProvider), isEmpty);
+      final streak = container.read(streaksProvider).single;
+      expect(streak.metric, StreakMetric.workout);
+      expect(streak.current, 0);
     });
 
     test('calorie streak: consecutive under-budget days ending today extends the streak', () async {
@@ -77,8 +118,10 @@ void main() {
       await _settle(container);
       await container.listen(dailyMacrosProvider.future, (previous, next) {}).read();
 
-      final streak = container.read(streaksProvider).single;
-      expect(streak.metric, StreakMetric.calories);
+      // The always-present workout streak is also in the list now — filter
+      // to the one this test cares about rather than assuming `.single`.
+      final streak =
+          container.read(streaksProvider).firstWhere((s) => s.metric == StreakMetric.calories);
       expect(streak.current, 4);
       expect(streak.best, 4);
       expect(streak.todayMet, isTrue);
@@ -96,7 +139,8 @@ void main() {
       await _settle(container);
       await container.listen(dailyMacrosProvider.future, (previous, next) {}).read();
 
-      final streak = container.read(streaksProvider).single;
+      final streak =
+          container.read(streaksProvider).firstWhere((s) => s.metric == StreakMetric.calories);
       expect(streak.current, 1); // only today, yesterday was over
       expect(streak.todayMet, isTrue);
     });
@@ -111,7 +155,8 @@ void main() {
       await _settle(container);
       await container.listen(dailyMacrosProvider.future, (previous, next) {}).read();
 
-      final streak = container.read(streaksProvider).single;
+      final streak =
+          container.read(streaksProvider).firstWhere((s) => s.metric == StreakMetric.calories);
       expect(streak.current, 1);
       expect(streak.best, 1);
     });
@@ -129,8 +174,8 @@ void main() {
       await _settle(container);
       await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
 
-      final streak = container.read(streaksProvider).single;
-      expect(streak.metric, StreakMetric.steps);
+      final streak =
+          container.read(streaksProvider).firstWhere((s) => s.metric == StreakMetric.steps);
       expect(streak.current, 2); // today not yet met doesn't break it
       expect(streak.todayMet, isFalse);
     });
@@ -146,8 +191,8 @@ void main() {
       addTearDown(container.dispose);
       await _settle(container);
 
-      final streak = container.read(streaksProvider).single;
-      expect(streak.metric, StreakMetric.water);
+      final streak =
+          container.read(streaksProvider).firstWhere((s) => s.metric == StreakMetric.water);
       expect(streak.current, 2);
       expect(streak.todayMet, isTrue);
     });
@@ -173,7 +218,78 @@ void main() {
         StreakMetric.calories,
         StreakMetric.steps,
         StreakMetric.water,
+        StreakMetric.workout,
       ]);
+    });
+
+    group('workout streak (docs/cardio/51-cardio-overview-plan.md §8 Q1)', () {
+      test('a STRENGTH session always counts, regardless of length', () async {
+        final container = _buildContainer(
+          settings: const UserSettings.defaults(),
+          sessions: [_strengthSession(_day(1)), _strengthSession(_day(0))],
+        );
+        addTearDown(container.dispose);
+        await _settle(container);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        final streak = container.read(streaksProvider).single;
+        expect(streak.metric, StreakMetric.workout);
+        expect(streak.current, 2);
+        expect(streak.todayMet, isTrue);
+      });
+
+      test('a cardio session below the 15-minute moving-time threshold does not count', () async {
+        final container = _buildContainer(
+          settings: const UserSettings.defaults(),
+          sessions: [_cardioSession(_day(0), movingSeconds: 899)],
+        );
+        addTearDown(container.dispose);
+        await _settle(container);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        final streak = container.read(streaksProvider).single;
+        expect(streak.current, 0);
+        expect(streak.todayMet, isFalse);
+      });
+
+      test('a cardio session at exactly the 15-minute threshold counts', () async {
+        final container = _buildContainer(
+          settings: const UserSettings.defaults(),
+          sessions: [
+            _cardioSession(_day(0), movingSeconds: workoutStreakMovingSecondsThreshold),
+          ],
+        );
+        addTearDown(container.dispose);
+        await _settle(container);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        final streak = container.read(streaksProvider).single;
+        expect(streak.current, 1);
+        expect(streak.todayMet, isTrue);
+      });
+
+      test('two sessions the same day: one unmet cardio + one strength still meets the day',
+          () async {
+        final container = _buildContainer(
+          settings: const UserSettings.defaults(),
+          sessions: [
+            _cardioSession(_day(0).add(const Duration(hours: 7)), movingSeconds: 120),
+            _strengthSession(_day(0).add(const Duration(hours: 18))),
+          ],
+        );
+        addTearDown(container.dispose);
+        await _settle(container);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        final streak = container.read(streaksProvider).single;
+        expect(streak.current, 1);
+        expect(streak.todayMet, isTrue);
+      });
+
+      test('the threshold is not configurable — it stays constant regardless of settings',
+          () async {
+        expect(workoutStreakMovingSecondsThreshold, 900); // 15 minutes
+      });
     });
   });
 }

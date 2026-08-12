@@ -172,10 +172,10 @@ lépés két fele, hanem két önálló, egymástól függetlenül szállíthat�
 | # | Lépés | Frame | Kész-ha |
 |---|---|---|---|
 | **C3.1** ✅ | Backend: repository-lekérdezések + `StatisticsResponse` additív bővítés | – | A meglévő mezők értéke **változatlan** rögzített adathalmazon (teszt) |
-| **C3.2** | Mobil: `StatMetric` bővítés + **`weightedAverage`** aggregációs típus + `effectiveMinutes` szabály | – | A tempó távval súlyozott, 0 távon nem oszt nullával; erősítőnél a régi perc-szabály bitre azonos (Q-D4 eldöntve — lásd §1.2) |
-| **C3.3** | Statisztika-képernyő: fajta-szűrő + cardio-metrikák + hiány-kezelés | **M21**, **M22** | Üres nap ≠ 0 pont ([56 D-C3.5](56-cardio-statistics-plan.md)) |
-| **C3.4** | Dashboard bontás-sor + heti visszatekintő + **streak-küszöb** (15 perc mozgásidő) | – | A küszöb egyetlen konstans, tesztelve |
-| **C3.5** | PR-motor cardio-ága (leghosszabb táv / mozgásidő / szintemelkedés) + edzői heti riport bővítés | – | Cardio nem termel erősítő PR-t és fordítva |
+| **C3.2** ✅ | Mobil: `StatMetric` bővítés + **`weightedAverage`** aggregációs típus + `effectiveMinutes` szabály | – | A tempó távval súlyozott, 0 távon nem oszt nullával; erősítőnél a régi perc-szabály bitre azonos (Q-D4 eldöntve — lásd §1.2) |
+| **C3.3** ✅ | Statisztika-képernyő: fajta-szűrő + cardio-metrikák + hiány-kezelés | **M21**, **M22** | Üres nap ≠ 0 pont ([56 D-C3.5](56-cardio-statistics-plan.md)) |
+| **C3.4** ✅ | Dashboard bontás-sor + heti visszatekintő + **streak-küszöb** (15 perc mozgásidő) | – | A küszöb egyetlen konstans, tesztelve |
+| **C3.5** ✅ | PR-motor cardio-ága (leghosszabb táv / mozgásidő / szintemelkedés) + edzői heti riport bővítés | – | Cardio nem termel erősítő PR-t és fordítva |
 
 ---
 
@@ -1992,3 +1992,373 @@ alatti tesztek (204) mind zöldek — `TemplatePickerScreen`-nek eddig sem volt 
 ez a lépés sem ad neki (a navigáció maga `ActivityPickerScreen`-re mutat, aminek megvan a saját
 tesztje). **Élő eszközön/emulátoron nem lett vizuálisan ellenőrizve** — a jelenlegi eszközkészlet
 nem tud Flutter mobil előnézetet futtatni; a felhasználó saját debug buildjén tudja ellenőrizni.
+
+---
+
+## C2.8 kiegészítés (2026-08-12) — a cardio-összegzés vissza gombja a Sessions fülre ugrik
+
+**A probléma, ismét élő tesztelésből**: `CardioSessionScreen._finish()` `pushReplacement`-tel
+cseréli le magát `CardioSummaryScreen`-re — helyesen, hiszen a futó képernyőnek nincs mit mutatnia
+befejezés után. A vissza gomb viszont ezután azt mutatta, ami **a `CardioSessionScreen` alatt már
+ott volt a navigator-veremben** — ami a gyorsindítás sok belépési pontja miatt (FAB hosszú nyomás
+bármelyik shell-fülről, `ActivityPickerScreen`, C2.11a/b deep-link/shortcut/widget) szinte sosem a
+Workouts képernyő Sessions füle, hanem amit a felhasználó épp nézett edzéskezdéskor (pl. Dashboard).
+
+**A megoldás: a shell állapotát a befejezéskor állítjuk be, nem a vissza gombnál.** Amíg a
+`CardioSummaryScreen` még a képernyőn van, a mögötte lévő shell láthatatlan — ezért `_finish()`
+ekkor (nem a pop pillanatában) két dolgot állít be:
+- `context.go('/workouts')` — a shell aktív alsó-navigációs füle Workouts lesz.
+- egy új, apró `workoutsSessionsTabRequestProvider` (`workouts_screen.dart`, `Notifier<int>`
+  számláló, nem bool — `ref.listen` csak *változásra* tüzel, egy második kérés is új értéket
+  igényel) — ezt a `WorkoutsScreen` `build()`-je figyeli, és ha tüzel, `_tabController.animateTo(0)`-t
+  hív, vagyis a belső "Sessions/Templates/Exercises" pill-válogatót is Sessionsre állítja, még akkor
+  is, ha az `IndexedStack` miatt élő `WorkoutsScreen`-példány korábban másik al-fülön állt.
+
+**Miért nem globális `CardioSummaryScreen`-viselkedés, hanem csak a friss befejezés ága**: a
+`CardioSummaryScreen` egy **régebbi**, már befejezett cardio session megtekintésekor is megnyílik
+(pl. a Sessions listából koppintva) — ott a sima `pop()` már ma is helyesen oda visz vissza, ahonnan
+jöttek (lehet az Dashboard egy "legutóbbi edzések" kártyája is). A javítás ezért kizárólag
+`_finish()`-ben ül, nem a `CardioSummaryScreen` widgetben — a megtekintés-ág érintetlen marad.
+
+**Teszt-védelem, ami majdnem törött volna**: mind a négy `cardio_session_screen*_test.dart` fájl
+saját, router nélküli (`MaterialApp`, nem `MaterialApp.router`) `_pump` segédfüggvénnyel dolgozik —
+`context.go(...)` egy ilyen host-ban `GoError`-ral dobna. A tényleges kódban ezért
+`GoRouter.maybeOf(context) != null` őrzi a hívást: a valódi appban (mindig van router) változatlan
+a viselkedés, a router nélküli tesztekben csendes no-op — a `workoutsSessionsTabRequestProvider`
+számláló-bővítése viszont routertől függetlenül lefut, ez külön tesztelve is van.
+
+**Tesztek:** `cardio_session_screen_test.dart` +1 (`finishing requests the Workouts screen jump
+back to its Sessions sub-tab`) — a provider értékét `ProviderScope.containerOf` olvassa ki a
+befejezés előtt/után, a `context.go` natív végrehajtását (ami valódi `GoRouter`-t igényelne) nem
+teszteli közvetlenül, csak a `GoRouter.maybeOf` őrzőn keresztül közvetve (a meglévő
+finish-tesztek továbbra is zöldek maradtak router nélkül is).
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a 4 `cardio_session_screen*_test.dart`
+fájl mind zöld (beleértve az új tesztet); a teljes `flutter test` **840/843 zöld**, a 3 bukás a
+már ismert, cardión kívüli `chat_repository_test.dart` Windows-fájlzár-flake.
+
+**Következő:** `C3.2` — Mobil: `StatMetric` bővítés + `weightedAverage` aggregációs típus +
+`effectiveMinutes` szabály (Q-D4 már eldöntve, lásd §1.2).
+
+---
+
+## C3.2 kész (2026-08-12) — Mobil: `StatMetric` bővítés + `weightedAverage` + `effectiveMinutes`
+
+**Tisztán mobil, backend/Dart-modell nélkül** — a statisztika-képernyő a `WorkoutSession`-lista
+helyi (Drift-alapú) forrásaiból számol mindent, ugyanúgy, mint eddig is (`workoutMinutes`,
+`workoutCount`, `activeCalories`); a C3.1-ben bővített backend `StatisticsResponse`-t a mobil
+oldal ehhez a képernyőhöz **nem is olvassa** — az más felületeké (dashboard bontás-sor, edzői heti
+riport), nem ennek a lépésnek a dolga.
+
+**Hat új `StatMetric`** (56 §3 táblázata szerint): `cardioDistance`, `cardioMovingMinutes`,
+`cardioElevationGain`, `cardioAvgPace`, `maxHeartRate`, `cardioSessions` — mind
+`stat_metric.dart`-ban, saját címkével/mértékegységgel/aggregációval. Szándékosan **nem**
+`strengthWorkoutCount`/`cardioWorkoutCount` duplikátumok a meglévő `workoutCount` mellé (D-C3.4,
+az a C3.3 fajta-szűrőjének dolga) — ez a hat az, ami **csak** cardiónál létezik.
+
+**`StatAggregationType.weightedAverage`** — új enum-érték, D-C3.6: Σ idő / Σ táv, nem az egyes
+session-ek saját tempójának számtani átlaga (egy 1 km-es kocogás és egy 20 km-es futam nem
+számíthat egyenlő súllyal). A `_cardioAvgPacePoints` (`stat_chart_data.dart`) két párhuzamos
+napi-összeg map-et épít (mozgásidő, táv), és csak a végén oszt — egy nap csak akkor kap pontot, ha
+legalább egy session-nek van valódi (`> 0`) távja aznap, így nullával osztás fizikailag nem
+történhet meg, és egy "semmi használható" nap egyszerűen **hiányzik** a sorozatból, nem egy hamis
+0:00/km pontként jelenik meg (D-C3.5 szellemében, bár maga a hiány-kezelés UI-ja C3.3 dolga).
+**Szándékosan kizárja a túrázást** a DISTANCE családból — az 56 §3 zárójele ("futás, séta")
+kifejezetten csak ezt a kettőt nevezi meg, a túra tempója pihenő/fotó-megállók miatt nem egy
+értelmes "milyen gyors voltam" szám.
+
+**`effectiveMinutes` (D-C3.3), a kész-ha szó szerinti "bitre azonos" próbája**: a
+`WorkoutSession.effectiveDuration` gettert (a C2.1-es élő cardio munkából, eddig kihasználatlanul)
+köti be mind `stat_chart_data.dart` `_sessionPoints`-ja, mind `weekly_recap.dart`
+`WeeklyRecap.compute`-ja — a `finishedAt?.difference(startedAt)` bruttó számítás helyett. Mivel
+`movingSeconds` STRENGTH session-nél sosem áll be, `effectiveDuration` ugyanoda esik vissza, mint a
+régi kód — **bitre azonos**, tesztben is bizonyítva.
+
+**A `maxHeartRate` `average` aggregációja trükk nélkül működik**: a `_maxHeartRatePoints` minden
+napra a nap **maximumát** teszi be pontnak (nem átlagot); az `average` felirat innentől arra
+utal, amit a képernyő generikus Sum/Average/Min/Max összesítő rétege (`stat_summary_data.dart`,
+amit ez a lépés **nem** módosított) magától csinál a napi pontokkal — "napi maximumok átlaga" (56
+§3) ingyen adódik, mert a napi pont maga már a helyes maximum.
+
+**Amit szándékosan nem oldott meg ez a lépés** (a `_summarize` réteg metrika-agnosztikus marad):
+egy `weightedAverage` metrika "Sum"/"Average" KPI-kártyája a képernyő tetején a **napi már helyesen
+súlyozott pontok** feletti sima számtani átlagot/összeget mutatja, nem egy elméletileg tiszta,
+teljes-időszakra súlyozott értéket — ugyanaz a már meglévő, el nem hallgatott kompromisszum, mint
+amit a `weight` metrika "Sum" kártyája is képvisel ma (testsúlyok összege sem értelmes szám, mégis
+megjelenik). Konzisztens a képernyő meglévő viselkedésével, nem ad hozzá új, máshol nem létező
+speciális esetet.
+
+**Mértékegység, szándékosan nem `UnitSystem`-tudatos**: km/m fixen, ugyanúgy, ahogy `weight`/`water`
+is fixen kg/L-ben jelenik meg ezen a képernyőn ma — a statisztika-képernyő sosem volt
+mértékegység-váltó-tudatos, és ezt a hat új metrikát kiemelni ez alól nagyobb, következetlen
+változás lett volna, mint amit a C3.2 kért.
+
+**A tempó saját formázást kapott**: `_formatValue` most `cardioAvgPace`-re M:SS formátumot ad
+("5:23 /km"), nem a képernyő általános tizedesjegyes formázását — ez illeszkedik
+`CardioFormatter.pace` már bevett konvenciójához a cardio-képernyőkön, ahelyett hogy egy idegen
+"5.4 /km" jelenne meg itt.
+
+**11 új l10n-kulcs** (6 metrika-címke + 4 mértékegység + a pace-egység átírása "min/km"-ről
+"/km"-re, hogy M:SS formátum után illeszkedjen), HU+EN.
+
+**Tesztek:** `stat_chart_data_test.dart` (+11: 6 fajta-specifikus lekérdezés, a súlyozott tempó 3
+esete — súlyozott vs. naiv átlag, túra kizárva, nullával osztás elkerülve —, a napi maximum-e a
+pulzus, plusz egy `availableStatMetricsProvider` cardio-teszt), `weekly_recap_test.dart` (+1,
+D-C3.3 a heti visszatekintőben). A meglévő `workoutMinutes`/`availableStatMetricsProvider`
+tesztek (tisztán erősítő adathalmazon) változtatás nélkül zöldek maradtak — ez maga a "bitre
+azonos" regresszió-bizonyíték.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a teljes `flutter test` **851/854 zöld**
+(840 + 11 nettó új: 10 `stat_chart_data_test.dart`, 1 `weekly_recap_test.dart`), a 3 bukás a már
+ismert, cardión kívüli `chat_repository_test.dart` Windows-fájlzár-flake.
+
+**Következő:** `C3.3` — Statisztika-képernyő: fajta-szűrő (D-C3.4 SegmentedButton: Mind/Erősítő/
+Cardio) + a hat új cardio-metrika felvétele a képernyő pickerébe + hiány-kezelés (D-C3.5), **M21**,
+**M22** — vagy folytatás Mac-en, ha C2.10b/C2.11b még nincs kész.
+
+---
+
+## C3.3 kész (2026-08-12) — Statisztika-képernyő: fajta-szűrő + cardio-metrikák + hiány-kezelés
+
+**A három alrészből kettő már gyakorlatilag megvolt a C3.2 óta** — csak most vált nyilvánvalóvá:
+
+- **"cardio-metrikák a képernyőn"**: a hat új `StatMetric` a `_StatsMetricButton` picker
+  `for (final m in StatMetric.values) if (pickableMetrics.contains(m))` ciklusán keresztül **már
+  C3.2 óta** megjelenik, mihelyt van hozzá adat (`availableStatMetricsProvider` már ott bővült) —
+  ehhez a lépéshez nem kellett új kód.
+- **"hiány-kezelés" (D-C3.5, "üres nap ≠ 0 pont")**: a C3.2-es pont-építő függvények (`_sessionPoints`,
+  `_cardioAvgPacePoints`, `_maxHeartRatePoints`) soha nem írnak 0-s pontot egy adat nélküli napra —
+  egyszerűen kihagyják. A teljes tartományra üres eredmény a meglévő `EmptyView`-t mutatja. A C3.2
+  saját tesztjei (pl. "a day with only zero/missing distance is absent") már bizonyítják ezt.
+
+**Amit ez a lépés ténylegesen épített: a fajta-szűrő (D-C3.4).** Új `StatKindFilter` enum
+(`all`/`strength`/`cardio`) + `StatKindFilterController`, és egy valódi `SegmentedButton` a
+képernyő tetején (nem egy harmadik popup-chip a meglévő kettő mellé — D-C3.4 kifejezetten
+`SegmentedButton`-t kér, és ez **mindig látható** kell legyen, hogy egy üres cardio-nézetből
+(M22) egy koppintással vissza lehessen lépni "Mind"-ra vagy "Erősítő"-re). Három meglévő l10n-kulcs
+(`allFilterLabel`/`activityTypeStrength`/`sessionKindCardioLabel`) újrahasznosítva, egy sem új.
+
+**A szűrő az "edzés jellegű" metrikákat (workoutCount/workoutMinutes/activeCalories) újra-skálázza**,
+nem csak megjeleníti/elrejti őket — `_filterByKind` a session-listát fajtára szűkíti *mielőtt* a
+napi összegzés lefut, így "Erősítő" alatt a `workoutCount` tényleg csak az erősítő session-eket
+számolja, "Cardio" alatt csak a cardiókat. A hat cardio-only metrika (amik eleve csak cardio
+session-t tartalmaznak) "Erősítő" alatt egyszerűen semmit sem mutatnak — nincs értelmes
+"erősítő cardio-táv" szám. Az `availableStatMetricsProvider` **ugyanazt a szűrt session-listát**
+használja minden predikátumhoz, így a hat cardio-only metrika a pickerből is eltűnik "Erősítő"
+alatt, plusz redundáns explicit `kindFilter` guard nélkül — a már szűrt lista magától kizárja őket.
+
+**Amit szándékosan nem épített meg** (a mockup gazdagsága, nem az L-szintű döntés): az M21 mockup
+egy jóval gazdagabb dashboard (3 mini-összegző csempe, aktivitás-színes napi oszlopok, külön
+tempó- és szintemelkedés-grafikon fix layoutban), és az M22 üres állapot fajta-specifikus
+"3 hete fociztál utoljára, 1:10 játékidő, átl. 146 bpm" szöveget mutat. A tényleges D-C3.4 szöveg
+csak egy 3-utas `SegmentedButton`-t ír elő, a D-C3.5 csak azt, hogy hiányzó nap ≠ 0 pont — ez a
+lépés pontosan ezt építette, a meglévő általános (nem fajta-specifikus) `EmptyView`-t és a meglévő
+egy-metrika-egy-diagram elrendezést megtartva, ugyanaz a fegyelem, mint C2.10a-nál és a C2.7
+felfedezhetőségi kiegészítésénél.
+
+**Tesztek:** `stat_chart_data_test.dart` (+5, `StatKindFilter` csoport: Mind változatlan
+viselkedés, Erősítő/Cardio újra-skálázás mindkét irányban, egy cardio-only metrika "Erősítő" alatt
+teljesen üres, `availableStatMetricsProvider` "Erősítő" alatt kizárja mind a hat cardio-only
+metrikát), `statistics_screen_test.dart` (+1, a `SegmentedButton` alapértéke "Mind", koppintásra
+vált). A meglévő három screen-teszt (EmptyView/chart+KPI/ErrorView) változtatás nélkül zöld maradt.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a teljes `flutter test` **856/858 zöld**
+(851 + 6 nettó új: 5 `stat_chart_data_test.dart`, 1 `statistics_screen_test.dart` — a
+Windows-fájlzár-flake ezúttal csak 2-t a `chat_repository_test.dart` 3 ismert bukásából).
+
+**Következő:** `C3.4` — Dashboard bontás-sor + heti visszatekintő + **streak-küszöb** (15 perc
+mozgásidő) — vagy folytatás Mac-en, ha C2.10b/C2.11b még nincs kész.
+
+---
+
+## C3.4 kész (2026-08-12) — Dashboard bontás-sor + heti visszatekintő táv + streak-küszöb
+
+**Három, egymástól független alrész.** A kész-ha kifejezetten csak az egyikről szól ("A küszöb
+egyetlen konstans, tesztelve") — a streak-küszöb a mérhető elfogadási kritérium, a másik kettő a
+lépés-sor saját leírásából jött, de nincs hozzájuk mérőszám.
+
+### Streak-küszöb (a tényleges kész-ha)
+
+**A felfedezés, ami átalakította a feladatot**: a kódbázisban **korábban nem létezett semmiféle
+"edzés streak" fogalom** — a `Streak`/`StreakMetric` csak kalóriát/lépést/vizet ismert, és a
+`streaksProvider` sosem olvasott `WorkoutSession`-t. A [51 §8 Q1](51-cardio-overview-plan.md)
+szabály ("≥ 15 perc mozgásidőtől vagy STRENGTH session") bevezetése ezért nem egy meglévő szűrő
+finomítása volt, hanem egy új `StreakMetric.workout` felépítése a nulláról.
+
+- **`workoutStreakMovingSecondsThreshold = 900`** (`streaks_provider.dart`) — egyetlen top-level
+  konstans, nem `UserSettings`-mező, pontosan a [quick_start_options_provider.dart](../../mobile/lib/features/workouts/application/quick_start_options_provider.dart)-ban
+  már bevett "named constant, nem beállítás" mintát követve.
+- **Feltétel nélküli, nem `settings.dailyXGoal != null` mögé zárva** — a másik hárommal
+  ellentétben ez mindig fut, hiszen Q1 kifejezetten kimondja: "Nem beállítás".
+- **Egy nap akkor számít, ha VAGY van rajta STRENGTH session, VAGY egy cardio session
+  mozgásideje eléri a küszöböt** — `_meetsWorkoutStreak` a `movingSeconds`-t nézi, nem a bruttó
+  időt (ugyanaz a D-C3.3 elv, mint mindenhol máshol).
+- **Előre aggregált nap→bool map, nem nyers session-lista a meglévő `_computeStreak<T>`-nek** —
+  ez a megosztott segédfüggvény minden meglévő forrásnál (kalória/lépés/víz) pontosan egy
+  bejegyzést tételez fel naponta; egy nap **több** session-je (pl. egy rövid, nem-számító cardio
+  + egy erősítő ugyanazon a napon) a `todayMet`-et **felülírná**, nem VAGY-olná, ha nyersen
+  kapná meg őket. A `workoutMetByDay` előzetes VAGY-olása ezt elkerüli anélkül, hogy a másik három
+  streak működő logikájához hozzá kellett volna nyúlni.
+- **Két kimerítő `switch` frissült** (`streak_chip_row.dart`, `weekly_recap_screen.dart`) — az
+  új enum-érték miatt a fordító kikényszerítette mindkettőt, de a recap-képernyő "Célok" szekciója
+  szándékosan **nem** kapott új sort az edzés-streaknek (az nem cél, nincs `workoutGoalSet`
+  mezője) — a dashboard meglévő `StreakChipRow`-ja viszont feltétel nélkül mutatja, mert az
+  minden `streaksProvider`-elemen végigmegy, nem csak a beállított célokon.
+
+### Dashboard bontás-sor + ikonos lista
+
+**A doc szövege egy nem létező UI-elem "alá" helyezné a sort** — "Az „edzések" szám alá" —, de a
+dashboard **sosem** jelenítette meg a `workoutCount`-ot saját kártyaként (kiszámolva volt,
+sehol nem olvasva). Mivel ehhez a lépéshez nincs mockup-keret sem, a legközelebbi értelmes hely
+mellette döntöttem: a "Legutóbbi edzések" szekciócím **alá**, halk `labelSmall` stílusban,
+csak ha `workoutCount > 0`. A szöveg a meglévő `activityTypeStrength`/`sessionKindCardioLabel`
+feliratokat fűzi össze (" · "-tal), nem egy új összetett ICU-string — nincs "N erősítő/M cardio"
+mondat máshol a kódbázisban, amit újra tudtam volna hasznosítani, de az egyes szavak igen.
+
+**Az ikonos lista a már bevett `ActivityChip`/muscle-group-badge kettősséget veszi át**
+(`sessions_tab.dart` ugyanezt csinálja) — `_WorkoutTile` mostantól `ActivityChip`-et rajzol
+cardiónál, a régi erősítő-badge-et (kiemelve `_StrengthBadge`-be) máshol. Egy melléklet, amit a
+puszta "ikonos" kérés önmagában felfedett: a gyakorlat-sor korábban `'—'`-t mutatott minden
+cardio session-nél (nincs gyakorlatnév) — ez most az aktivitás címkéjére (`activityTypeLabel`)
+vált, hogy ne látszódjon egy értelmetlen kötőjel minden cardio tile-on.
+
+**Amit tudatosan nem javítottam**: `_WorkoutTile._statsLine` a **bruttó** időt mutatja
+(`finishedAt - startedAt`), nem a D-C3.3 mozgásidő-szabályt — ugyanaz a hiba, amit a
+statisztika/heti-visszatekintő oldalán C3.2 már kijavított, de ezen a konkrét dashboard-csempén
+nem volt C3.4 explicit feladata, és egy önmagában is jó méretű, külön diffet érdemelne.
+
+### Heti visszatekintő — heti cardio-táv sor
+
+**`weeklyCardioDistanceMeters`**, ugyanazzal a DISTANCE+MACHINE családi szűréssel, mint a
+`stat_chart_data.dart` `cardioDistance` metrikája (D-C3.7: egy közös definíció) — `null`, nem 0,
+ha nem volt a héten minősítő táv (D-C3.5 "hiányzó, nem nulla" elve). A recap-képernyőn a
+meglévő szám+perc sor mellé, harmadik elemként jelenik meg, csak ha nem null.
+
+**Tesztek:** `streaks_provider_test.dart` (+5, workout-streak csoport: STRENGTH mindig számít,
+cardio a küszöb alatt/pontosan a küszöbön, két session ugyanazon a napon VAGY-ol, a küszöb
+konstans-értéke), plusz 5 meglévő teszt frissítve `.single`-ről metrika-szerinti szűrésre (mivel
+mostantól mindig van egy plusz workout-streak elem a listában). `weekly_recap_test.dart` (+5,
+heti táv csoport). `dashboard_controller_test.dart` (**új fájl** — a dashboard funkciónak eddig
+egyáltalán nem volt tesztje; ez a C3.4 által ténylegesen módosított logikára szorítkozik, nem
+próbálja utólag lefedni a kalória/fehérje/víz számítást, amit ez a lépés nem érintett).
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a teljes `flutter test` **869/872 zöld**
+(15 nettó új teszt), a 3 bukás a már ismert, cardión kívüli `chat_repository_test.dart`
+Windows-fájlzár-flake.
+
+**Következő:** `C3.5` — PR-motor cardio-ága (leghosszabb táv / mozgásidő / szintemelkedés) +
+edzői heti riport bővítés — vagy folytatás Mac-en, ha C2.10b/C2.11b még nincs kész. Ezzel a C3
+mobil-oldali statisztika-munka (C3.1–C3.4) kész.
+
+---
+
+## C3.5 kész (2026-08-12) — PR-motor cardio-ága + edzői heti riport bővítés
+
+**Két, egymástól teljesen független fél** — a mobil PR-motor és a backend edzői heti riport —,
+ugyanúgy, ahogy a kész-ha is csak az elsőt méri ("Cardio nem termel erősítő PR-t és fordítva").
+A kettőt párhuzamos felderítő ügynökök térképezték fel előre.
+
+### A felfedezés, ami leegyszerűsítette a fél feladatot
+
+**A "cardio nem termel erősítő PR-t" irány már eleve, szerkezetileg igaz volt** — a
+`personal_record.dart`/`getPrBaseline` az `exercise_sets` Drift-táblát joinolja, aminek egy
+cardio session sosem ír sort (minden cardio-mentési útvonal `sets: const []`-tal hív). Ezt a
+[53 §0.1] és a [59 C0.5] audit már korábban megállapította és dokumentálta — nem volt hozzá
+javítandó kód, és nem kapott új regressziós tesztet sem: a védelem a séma szintjén van, nem egy
+futásidejű ágban, amit egy teszt megvédhetne a jövőbeli sérüléstől anélkül, hogy magát a sémát
+is védené (ahhoz Drift-szintű teszt kellene, ami már létezik más C1-es lépések alól).
+
+**A tényleges munka a fordított irány**: egy vadonatúj, `personal_record.dart`-tól **teljesen
+különálló** cardio-motor felépítése, mert az erősítő motor szett/ismétlés-alapú (`PrSet`,
+`(weight, reps, performedAt)`), a cardio-rekordok pedig session-szintű mennyiségek (táv,
+mozgásidő, szintemelkedés) — nem ugyanaz az adatalak, nem lehet ráépíteni.
+
+### Mobil: `cardio_personal_record.dart` (új fájl)
+
+- **`CardioPrType`** — pontosan a [56 §5.2] három típusa: `longestDistance` (DISTANCE + MACHINE
+  család együtt — futás/gyaloglás/túrázás/szobabicikli **egy közös** rekordként, nem
+  aktivitás-típusonként külön, ugyanúgy, ahogy a `stat_chart_data.dart` `cardioDistance`
+  metrikája is összevonja őket), `longestMovingTime` (minden család, hiszen minden cardio
+  session mér mozgásidőt), `greatestElevationGain` (csak DISTANCE család — a szobabicikli nem
+  emelkedik, még ha az oszlop létezik is rá). Gyorsított 1/5/10 km és a kerékpáros kJ-összteljesítmény
+  tudatosan kimaradt (C6/C7, D-C3.8 — GPS-track kell hozzájuk, amit az app még nem rögzít).
+- **`CardioPrBaseline`/`detectCardioPrs`** — 1:1 tükrözi az erősítő motor
+  `PrBaseline`/`detectPrs` alakját (szigorúan-nagyobb szemantika, üres baseline sosem termel
+  rekordot), de a bemenete `WorkoutSession`, nem `PrSet`. Egy session csak akkor számít
+  baseline-nak vagy jelöltnek, ha `isCardio && finishedAt != null` — egy még futó élő session
+  `movingSeconds`-mezője csak egy checkpoint (a valódi élő érték `liveMovingSeconds`-ban van),
+  ezért kizárva, a mobil felderítő ügynök által javasolt konvenció szerint.
+- **Baseline-forrás**: nincs új Drift-lekérdezés — a `workoutSessionControllerProvider` már
+  memóriában tartja a teljes session-listát (`watchAll()`), ezt szűröm Dart-oldalon a jelenlegi
+  session `clientId`-jét kizárva, ugyanazt az elvet követve, amit a `watchByKind` doksija is
+  kimond ("egyetlen hely gyűjti össze egy session gyakorlatait/szettjeit/cardióját").
+
+### Mobil: UI-felszín
+
+**A doc szövege az erősítő `WorkoutSuccessDialog`-ot nevezi meg jövőbeli mintaként, de az
+`ExerciseBlock`-okra épül és konfetti-dialógusként cascade-eli a több chipet** — ez nem 1:1
+map-elhető egy cardio sessionre, ahol legfeljebb 1-3 rekord dől meg egyszerre, és a
+`cardio_summary_screen.dart` egész hangneme amúgy is nyugodtabb (read-only carry-over, nincs
+"gimmick" — lásd a képernyő saját class-doksiját). Emiatt egy **saját, egyszerűbb sáv-widget**
+(`_NewRecordBanner`) mellett döntöttem: trófea-ikon + amber szín (ugyanaz a `0xFFD8B35A`, mint
+az erősítő `_prBadge`-é, vizuális konzisztencia kedvéért), egy sorban felsorolva a megdőlt
+típusokat. Ez a `CardioSummaryScreen` fejléc alá kerül, csak akkor jelenik meg, ha
+`newRecords` nem üres.
+
+**`newRecords` alapértéke `const []`** — a `CardioSessionScreen._finish()` a friss befejezéskor
+számítja ki és adja át (`detectCardioPrs` + a fentebb leírt baseline), az
+`open_workout_screens.dart` (egy már lezárt session újranyitása) viszont sosem ad át semmit, így
+a sáv csak az élő befejezés pillanatában jelenik meg — egy régi session újbóli megnyitása nem
+"ünnepli újra" ugyanazt a rekordot.
+
+### Backend: edzői heti riport bővítés
+
+- **`WeeklyTrainerReport.ClientWeekSummary`** additívan bővült: `strengthWorkouts`,
+  `cardioWorkouts`, `cardioDistanceMeters`. `strengthWorkouts` levezetett
+  (`completedWorkouts - cardioWorkouts`), nem külön lekérdezett — ugyanaz a minta, mint a C3.1
+  `StatisticsServiceImpl`-jében.
+- **Két új, korlátozott tartományú repository-lekérdezés** (`WorkoutSessionRepository`):
+  `...FinishedAtIsNotNullAndSessionKind` (a meglévő, korlátozott `completedWorkouts`-lekérdezés
+  `SessionKind`-dal bővített párja) és `sumDistanceMetersBetweenForCompleted`. **Tudatosan
+  `finishedAt is not null`-lal szűrve**, eltérően a C3.1 nyitott végű `sumDistanceMetersSince`-től
+  (ami a statisztika-képernyő "X óta" nyitott összegeihez kell, és szándékosan beleszámít egy még
+  futó session felgyűlt távját is) — egy már lezárult riport-hét közepén "még folyó" session
+  gyakorlatilag egy elhagyott/be nem fejezett session, amit ugyanúgy kizárok, mint ahogy a
+  meglévő `completedWorkouts` is kizárja a saját, "elért eredmény, nem tempó-mutató" jellege miatt.
+  Ez azt is biztosítja, hogy a bontás-sor számai pontosan összeadódjanak a fejléc `completedWorkouts`
+  számával.
+- **`WeeklyReportFormatting.summarize()`**: új sor, `"{strength} strength · {cardio} cardio ·
+  {km} km"` alakban (`mail.weekly-report.cardio-breakdown-line`, HU/EN mindkettőben), **csak
+  akkor jelenik meg, ha `cardioWorkouts() > 0`** — egy tisztán erősítős ügyfélnél a bontás
+  semmi újat nem mondana a már meglévő workouts-sor fölött, csak zajt jelentene.
+- **Nem a mail-sablonfájlokban** történt a változtatás — a `weekly_report_row_{hu,en}.{html,txt}`
+  csak `{{clientName}}`/`{{summary}}` tokent ismer, a `{{summary}}` tartalmát Java-oldalon,
+  string-összefűzéssel építi a `WeeklyReportFormatting`, ahogy eddig is.
+
+### Tesztek
+
+- **`cardio_personal_record_test.dart`** (új fájl, 14 teszt) — a `personal_record_test.dart`
+  stílusát követve: baseline-építés családi szűréssel, STRENGTH/be nem fejezett session teljes
+  kizárása, több típus egyidejű megdőlése, "nincs baseline → nincs rekord" él-eset.
+- **`cardio_summary_screen_test.dart`** (+2 teszt) — a sáv megjelenik `newRecords`-szal, és nem
+  jelenik meg nélküle (a "régi session újranyitása" eset szimulációja).
+- **`WeeklyReportServiceImplTest`** (+1 teszt, plusz a meglévő zéró-aktivitás teszt kiegészítve) —
+  `strengthWorkouts = completedWorkouts - cardioWorkouts` számítás.
+- **`WeeklyReportFormattingTest`** (+2 teszt, a többi 8 pozíciós konstruktorhívása frissítve az
+  új mezőkkel) — a bontás-sor megjelenik cardióval, és hiányzik cardio nélkül; HU/EN szöveg is
+  ellenőrizve.
+- **`ResendMailServiceTest`** — a `sampleReport()` konstruktorhívása frissítve.
+- **`WorkoutSessionWeeklyReportQueriesRepositoryTest`** (új fájl, valódi Postgres/Testcontainers,
+  a meglévő `WorkoutSessionStatisticsQueriesRepositoryTest` stílusát követve) — a két új
+  korlátozott lekérdezés: csak a befejezett, tartományon belüli cardio session-ök számítanak
+  bele, a soft-deletelt és a be nem fejezett sorok nem.
+- **`MailMessagesKeysConsistencyTest`** — automatikusan zöld maradt, mivel az új kulcs mindkét
+  `mail_{en,hu}.properties`-be bekerült.
+
+**Eredmény:** mobil `flutter analyze` (érintett fájlok) tiszta; a teljes `flutter test`
+**888 teszt, 16 nettó új** (14 + 2, pontosan a fenti két új/bővített fájlból), a 3 bukás a már
+ismert, cardión kívüli `chat_repository_test.dart` Windows-fájlzár-flake. Backend: teljes
+`./mvnw test` **708/708 zöld**, 0 hiba.
+
+**Következő:** C4a (GPS/útvonal) vagy C5 (óra) — vagy folytatás Mac-en C2.10b/C2.11b-n, ha azok
+még nincsenek kész.

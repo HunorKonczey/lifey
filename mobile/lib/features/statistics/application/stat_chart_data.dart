@@ -11,8 +11,11 @@ import '../../water/domain/water_entry.dart';
 import '../../weight/application/weight_controller.dart';
 import '../../weight/domain/weight_entry.dart';
 import '../../workouts/application/workout_session_controller.dart';
+import '../../workouts/domain/activity_type.dart';
 import '../../workouts/domain/workout_session.dart';
+import '../domain/stat_kind_filter.dart';
 import '../domain/stat_metric.dart';
+import 'stat_kind_filter_controller.dart';
 import 'stat_metric_controller.dart';
 import 'stats_range_controller.dart';
 
@@ -25,6 +28,7 @@ import 'stats_range_controller.dart';
 final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) {
   final metric = ref.watch(statMetricControllerProvider);
   final range = ref.watch(statsRangeControllerProvider);
+  final kindFilter = ref.watch(statKindFilterControllerProvider);
 
   switch (metric) {
     case StatMetric.calories:
@@ -32,12 +36,28 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
     case StatMetric.carbs:
     case StatMetric.fat:
       return ref.watch(mealControllerProvider).whenData((all) => _mealPoints(all, metric, range));
+    // "edzés jellegű" (D-C3.4) — re-scoped to whichever kind is selected,
+    // not just filtered out entirely under `strength`/`cardio` like the six
+    // cardio-only metrics below are.
     case StatMetric.workoutMinutes:
     case StatMetric.workoutCount:
     case StatMetric.activeCalories:
-      return ref
-          .watch(workoutSessionControllerProvider)
-          .whenData((all) => _sessionPoints(all, metric, range));
+      return ref.watch(workoutSessionControllerProvider).whenData(
+          (all) => _sessionPoints(_filterByKind(all, kindFilter), metric, range));
+    // Cardio-only metrics only ever contain cardio sessions regardless of
+    // the filter — under `strength` there's nothing to show at all.
+    case StatMetric.cardioDistance:
+    case StatMetric.cardioMovingMinutes:
+    case StatMetric.cardioElevationGain:
+    case StatMetric.cardioSessions:
+      return ref.watch(workoutSessionControllerProvider).whenData((all) =>
+          kindFilter == StatKindFilter.strength ? const [] : _sessionPoints(all, metric, range));
+    case StatMetric.cardioAvgPace:
+      return ref.watch(workoutSessionControllerProvider).whenData((all) =>
+          kindFilter == StatKindFilter.strength ? const [] : _cardioAvgPacePoints(all, range));
+    case StatMetric.maxHeartRate:
+      return ref.watch(workoutSessionControllerProvider).whenData((all) =>
+          kindFilter == StatKindFilter.strength ? const [] : _maxHeartRatePoints(all, range));
     case StatMetric.water:
       return ref.watch(allWaterEntriesProvider).whenData((all) => _waterPoints(all, range));
     case StatMetric.weight:
@@ -47,6 +67,14 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
   }
 });
 
+List<WorkoutSession> _filterByKind(List<WorkoutSession> sessions, StatKindFilter filter) {
+  return switch (filter) {
+    StatKindFilter.all => sessions,
+    StatKindFilter.strength => sessions.where((s) => !s.isCardio).toList(),
+    StatKindFilter.cardio => sessions.where((s) => s.isCardio).toList(),
+  };
+}
+
 /// Which [StatMetric]s actually have at least one usable value, ever — not
 /// range-filtered, since a metric with no data for *any* day (e.g.
 /// activeCalories with no paired Apple Health workouts) would otherwise
@@ -55,9 +83,18 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
 /// of letting the user select a perpetually-empty one.
 final availableStatMetricsProvider = Provider<Set<StatMetric>>((ref) {
   final meals = ref.watch(mealControllerProvider).value ?? const [];
-  final sessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+  final allSessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
   final water = ref.watch(allWaterEntriesProvider).value ?? const [];
   final weights = ref.watch(weightControllerProvider).value ?? const [];
+  // Same re-scoping `statChartDataProvider` applies (D-C3.4) — pre-filtering
+  // here, rather than adding a separate `kindFilter` guard per metric below,
+  // means every "edzés jellegű" predicate (including the six cardio-only
+  // ones, which already only ever match cardio sessions) naturally reflects
+  // the current filter for free: under `strength`, `sessions` holds no
+  // cardio rows at all, so every cardio-only `any(...)` below is already
+  // false without needing its own explicit filter check.
+  final kindFilter = ref.watch(statKindFilterControllerProvider);
+  final sessions = _filterByKind(allSessions, kindFilter);
 
   return {
     if (meals.isNotEmpty) ...[
@@ -69,6 +106,24 @@ final availableStatMetricsProvider = Provider<Set<StatMetric>>((ref) {
     if (sessions.isNotEmpty) StatMetric.workoutCount,
     if (sessions.any((s) => s.finishedAt != null)) StatMetric.workoutMinutes,
     if (sessions.any((s) => s.activeCalories != null)) StatMetric.activeCalories,
+    if (sessions.any((s) => s.isCardio)) StatMetric.cardioSessions,
+    if (sessions.any((s) => s.isCardio && s.movingSeconds != null))
+      StatMetric.cardioMovingMinutes,
+    if (sessions.any((s) =>
+        s.isCardio &&
+        (s.family == ActivityFamily.distance || s.family == ActivityFamily.machine) &&
+        s.cardio?.distanceMeters != null))
+      StatMetric.cardioDistance,
+    if (sessions.any((s) =>
+        s.isCardio && s.family == ActivityFamily.distance && s.cardio?.elevationGainMeters != null))
+      StatMetric.cardioElevationGain,
+    if (sessions.any((s) =>
+        (s.activityType == 'RUNNING' || s.activityType == 'WALKING') &&
+        s.movingSeconds != null &&
+        (s.cardio?.distanceMeters ?? 0) > 0))
+      StatMetric.cardioAvgPace,
+    if (sessions.any((s) => s.isCardio && s.cardio?.maxHeartRate != null))
+      StatMetric.maxHeartRate,
     if (water.isNotEmpty) StatMetric.water,
     if (weights.isNotEmpty) StatMetric.weight,
     if (ref.watch(allStepCountsProvider).value?.isNotEmpty ?? false) StatMetric.steps,
@@ -117,19 +172,99 @@ List<TimeSeriesPoint> _sessionPoints(
     final startedAt = session.startedAt!;
     final day = _localDay(startedAt);
     if (cutoff != null && day.isBefore(cutoff)) continue;
-    final finishedAt = session.finishedAt;
     final value = switch (metric) {
-      // Skip in-progress sessions: there's no finished duration to sum yet.
-      StatMetric.workoutMinutes =>
-        finishedAt?.difference(startedAt).inMinutes.toDouble(),
+      // Moving time, not wall-clock (docs/cardio/56-cardio-statistics-plan.md
+      // D-C3.3): `effectiveDuration` is `movingSeconds` when set (cardio) or
+      // falls back to `finishedAt - startedAt` (always the case for
+      // STRENGTH, where `movingSeconds` is never set) — bit-identical to the
+      // old `finishedAt?.difference(startedAt)` for every pre-cardio session.
+      StatMetric.workoutMinutes => session.effectiveDuration?.inMinutes.toDouble(),
       StatMetric.workoutCount => 1.0,
       StatMetric.activeCalories => session.activeCalories,
+      StatMetric.cardioSessions => session.isCardio ? 1.0 : null,
+      StatMetric.cardioMovingMinutes =>
+        (session.isCardio && session.movingSeconds != null)
+            ? session.movingSeconds! / 60.0
+            : null,
+      // DISTANCE + MACHINE (56 §3) — an indoor bike's odometer counts too,
+      // hiking/running/walking distance from GPS.
+      StatMetric.cardioDistance => (session.isCardio &&
+              (session.family == ActivityFamily.distance ||
+                  session.family == ActivityFamily.machine) &&
+              session.cardio?.distanceMeters != null)
+          ? session.cardio!.distanceMeters! / 1000.0
+          : null,
+      // DISTANCE only (56 §3) — an indoor bike gains no real elevation even
+      // though the column exists for it.
+      StatMetric.cardioElevationGain => (session.isCardio &&
+              session.family == ActivityFamily.distance &&
+              session.cardio?.elevationGainMeters != null)
+          ? session.cardio!.elevationGainMeters!
+          : null,
       _ => null,
     };
     if (value == null) continue;
     sumsByDay.update(day, (sum) => sum + value, ifAbsent: () => value);
   }
   return _pointsFromSums(sumsByDay);
+}
+
+/// D-C3.6 (docs/cardio/56-cardio-statistics-plan.md): each day's pace is
+/// Σ moving time / Σ distance across that day's sessions, not the arithmetic
+/// mean of each session's own pace — a 1 km jog and a 20 km run on the same
+/// day must not count equally. Scoped to running/walking specifically, not
+/// the whole DISTANCE family (which also includes hiking): 56 §3's own
+/// parenthetical ("futás, séta") excludes hiking on purpose — stops for
+/// photos/rest make its pace not a meaningful "how fast was I" number.
+///
+/// A day only gets a point once at least one qualifying session has a real
+/// (`> 0`) distance — zero/missing distance never contributes to either sum,
+/// so the division below can't hit zero, and a day with nothing usable is
+/// simply absent (missing, not a 0:00/km point) rather than crashing or
+/// lying, matching D-C3.5's "missing, not zero" rule for cardio metrics.
+List<TimeSeriesPoint> _cardioAvgPacePoints(List<WorkoutSession> sessions, StatsRange range) {
+  final cutoff = range.cutoff();
+  final secondsByDay = <DateTime, double>{};
+  final metersByDay = <DateTime, double>{};
+  for (final session in sessions) {
+    if (session.isUpcoming) continue;
+    if (session.activityType != 'RUNNING' && session.activityType != 'WALKING') continue;
+    final seconds = session.movingSeconds;
+    final meters = session.cardio?.distanceMeters;
+    if (seconds == null || meters == null || meters <= 0) continue;
+    final day = _localDay(session.startedAt!);
+    if (cutoff != null && day.isBefore(cutoff)) continue;
+    secondsByDay.update(day, (s) => s + seconds, ifAbsent: () => seconds.toDouble());
+    metersByDay.update(day, (m) => m + meters, ifAbsent: () => meters);
+  }
+  final days = secondsByDay.keys.toList()..sort();
+  return [
+    for (final day in days)
+      TimeSeriesPoint(
+        date: day,
+        value: (secondsByDay[day]! / 60.0) / (metersByDay[day]! / 1000.0),
+      ),
+  ];
+}
+
+/// Each day's point is that day's *highest* recorded max heart rate across
+/// its cardio sessions — [StatMetric.maxHeartRate]'s `average` aggregation
+/// then means "average of daily maximums" (56 §3) for free, once the
+/// statistics screen's generic sum/average/min/max summary
+/// (`stat_summary_data.dart`) runs over these already-per-day-maxed points.
+List<TimeSeriesPoint> _maxHeartRatePoints(List<WorkoutSession> sessions, StatsRange range) {
+  final cutoff = range.cutoff();
+  final maxByDay = <DateTime, double>{};
+  for (final session in sessions) {
+    if (session.isUpcoming || !session.isCardio) continue;
+    final heartRate = session.cardio?.maxHeartRate;
+    if (heartRate == null) continue;
+    final day = _localDay(session.startedAt!);
+    if (cutoff != null && day.isBefore(cutoff)) continue;
+    final current = maxByDay[day];
+    if (current == null || heartRate > current) maxByDay[day] = heartRate;
+  }
+  return _pointsFromSums(maxByDay);
 }
 
 List<TimeSeriesPoint> _waterPoints(List<WaterEntry> entries, StatsRange range) {

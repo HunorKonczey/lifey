@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
+import 'package:lifey/features/workouts/domain/cardio_personal_record.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
@@ -49,7 +50,11 @@ class _RecordingSessionController extends WorkoutSessionController {
   }
 }
 
-Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession session) async {
+Future<_RecordingSessionController> _pump(
+  WidgetTester tester,
+  WorkoutSession session, {
+  List<CardioPrType> newRecords = const [],
+}) async {
   final controller = _RecordingSessionController();
   await tester.pumpWidget(
     ProviderScope(
@@ -61,7 +66,7 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: CardioSummaryScreen(session: session),
+        home: CardioSummaryScreen(session: session, newRecords: newRecords),
       ),
     ),
   );
@@ -93,6 +98,30 @@ WorkoutSession _session({
 }
 
 void main() {
+  group('new-record banner (C3.5)', () {
+    testWidgets('shows one line per broken record type when newRecords is non-empty',
+        (tester) async {
+      await _pump(
+        tester,
+        _session(activityType: 'RUNNING', cardio: const CardioMetrics(distanceMeters: 5000)),
+        newRecords: const [CardioPrType.longestDistance, CardioPrType.longestMovingTime],
+      );
+
+      expect(find.text('New personal record!'), findsOneWidget);
+      expect(find.text('Longest distance · Longest moving time'), findsOneWidget);
+    });
+
+    testWidgets('shows nothing when newRecords is empty (e.g. reopening a past session)',
+        (tester) async {
+      await _pump(
+        tester,
+        _session(activityType: 'RUNNING', cardio: const CardioMetrics(distanceMeters: 5000)),
+      );
+
+      expect(find.text('New personal record!'), findsNothing);
+    });
+  });
+
   testWidgets('DISTANCE with a recorded distance shows distance as primary, pace as secondary',
       (tester) async {
     await _pump(

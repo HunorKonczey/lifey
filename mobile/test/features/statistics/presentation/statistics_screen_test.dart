@@ -5,6 +5,8 @@ import 'package:lifey/features/nutrition/application/meal_controller.dart';
 import 'package:lifey/features/nutrition/domain/meal.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
+import 'package:lifey/features/statistics/application/stat_kind_filter_controller.dart';
+import 'package:lifey/features/statistics/domain/stat_kind_filter.dart';
 import 'package:lifey/features/statistics/presentation/statistics_screen.dart';
 import 'package:lifey/features/steps/data/step_count_repository.dart';
 import 'package:lifey/features/water/data/water_entry_repository.dart';
@@ -118,5 +120,23 @@ void main() {
     expect(find.byType(ErrorView), findsOneWidget);
     expect(find.byType(TimeSeriesChart), findsNothing);
     expect(find.byType(EmptyView), findsNothing);
+  });
+
+  testWidgets(
+      'the kind-filter SegmentedButton (D-C3.4) defaults to "All" and switches on tap',
+      (tester) async {
+    await _pumpStatisticsScreen(tester, () => _FakeMealController([_meal(DateTime.now())]));
+    final container = ProviderScope.containerOf(tester.element(find.byType(StatisticsScreen)));
+
+    expect(find.byType(SegmentedButton<StatKindFilter>), findsOneWidget);
+    expect(container.read(statKindFilterControllerProvider), StatKindFilter.all);
+
+    await tester.tap(find.text('Strength'));
+    await tester.pumpAndSettle();
+    expect(container.read(statKindFilterControllerProvider), StatKindFilter.strength);
+
+    await tester.tap(find.text('Cardio'));
+    await tester.pumpAndSettle();
+    expect(container.read(statKindFilterControllerProvider), StatKindFilter.cardio);
   });
 }
