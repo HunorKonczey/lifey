@@ -238,6 +238,8 @@
   "chooseTemplateTitle": "Válassz sablont",
   "emptyWorkoutLabel": "Üres edzés",
   "emptyWorkoutSubtitle": "Sablon nélkül indulj",
+  "cardioWorkoutTileLabel": "Cardio",
+  "cardioWorkoutTileSubtitle": "Futás, bicikli, túra és más",
   "recommendedWorkoutLabel": "Ajánlott edzés",
   "recommendedWorkoutSubtitle": "A szokásos sorrended alapján",
   "exerciseFabLabel": "Gyakorlat",

@@ -8,6 +8,7 @@ import com.lifey.user.UserRepository;
 import com.lifey.water.WaterEntryRepository;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
+import com.lifey.workout.session.SessionKind;
 import com.lifey.workout.session.WorkoutSessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -92,8 +93,19 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .orElse(null);
         double totalWater = waterEntryRepository.sumVolumeLitersSince(userId, fromInstant);
 
+        // Additive fajta-bontás (docs/cardio/56-cardio-statistics-plan.md D-C3.2)
+        // — workoutCount above keeps its exact pre-cardio meaning and value.
+        long cardioWorkoutCount = workoutSessionRepository
+                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind(userId, fromInstant, SessionKind.CARDIO);
+        long strengthWorkoutCount = workoutCount - cardioWorkoutCount;
+        long movingSeconds = workoutSessionRepository.sumMovingSecondsSince(userId, fromInstant);
+        double totalDistanceMeters = workoutSessionRepository.sumDistanceMetersSince(userId, fromInstant);
+        double totalElevationGainMeters = workoutSessionRepository.sumElevationGainMetersSince(userId, fromInstant);
+
         return new StatisticsResponse(totalCalories, totalProtein, totalCarbs, totalFat,
-                (int) workoutCount, latestWeight, totalWater);
+                (int) workoutCount, latestWeight, totalWater,
+                (int) strengthWorkoutCount, (int) cardioWorkoutCount, (int) (movingSeconds / 60),
+                totalDistanceMeters, totalElevationGainMeters);
     }
 
     /**

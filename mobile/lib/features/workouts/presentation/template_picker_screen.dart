@@ -5,15 +5,27 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/exercise_controller.dart';
 import '../application/workout_template_controller.dart';
+import '../domain/activity_type.dart';
 import '../domain/exercise.dart';
 import '../domain/exercise_enums.dart';
 import '../domain/workout_template.dart';
+import 'activity_picker_screen.dart';
 import 'log_session_screen.dart';
 
-/// Full-screen template picker shown when the "Log" FAB is tapped.
+/// Full-screen template picker shown when the "Log" FAB is **tapped**
+/// (a **long press** on the same FAB reaches cardio directly via the C2.7
+/// quick-start sheet — see `workouts_screen.dart`). That gesture split
+/// turned out to hide cardio too well: nothing on this, the plain-tap
+/// screen, hinted a long press did something different. The [_PickerActionTile]
+/// for [ActivityPickerScreen] below is this screen's own reachable-by-tap
+/// door to the same cardio types, so cardio doesn't depend on a hidden
+/// gesture to be found at all (docs/cardio/59-cardio-implementation-plan.md,
+/// C2.7 discoverability follow-up, 2026-08-12).
 ///
-/// Lists an "Empty workout" option followed by all saved templates.
-/// Selecting any option navigates to [LogSessionScreen].
+/// Lists an "Empty workout" option, then "Cardio", then all saved templates.
+/// Selecting "Empty workout" or a template navigates to [LogSessionScreen];
+/// selecting "Cardio" navigates to [ActivityPickerScreen], where each row
+/// starts its own activity type immediately.
 class TemplatePickerScreen extends ConsumerWidget {
   const TemplatePickerScreen({super.key});
 
@@ -22,6 +34,12 @@ class TemplatePickerScreen extends ConsumerWidget {
       MaterialPageRoute(
         builder: (_) => LogSessionScreen(template: template),
       ),
+    );
+  }
+
+  void _openActivityPicker(BuildContext context) {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => const ActivityPickerScreen()),
     );
   }
 
@@ -53,9 +71,24 @@ class TemplatePickerScreen extends ConsumerWidget {
         ),
         children: [
           // ── Empty workout option ─────────────────────────────────────────
-          _EmptyWorkoutTile(
-            l10n: l10n,
+          _PickerActionTile(
+            icon: Icons.add_rounded,
+            iconBackground: scheme.secondaryContainer,
+            iconColor: scheme.onSecondaryContainer,
+            title: l10n.emptyWorkoutLabel,
+            subtitle: l10n.emptyWorkoutSubtitle,
             onTap: () => _start(context),
+          ),
+          const SizedBox(height: 10),
+
+          // ── Cardio option — same door the FAB's long-press opens ────────
+          _PickerActionTile(
+            icon: Icons.directions_run,
+            iconBackground: activityTypeColor('RUNNING', context).withValues(alpha: 0.16),
+            iconColor: activityTypeColor('RUNNING', context),
+            title: l10n.cardioWorkoutTileLabel,
+            subtitle: l10n.cardioWorkoutTileSubtitle,
+            onTap: () => _openActivityPicker(context),
           ),
 
           if (templates.isNotEmpty) ...[
@@ -87,13 +120,25 @@ class TemplatePickerScreen extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Empty workout tile
+// Generic action tile — "Empty workout" and "Cardio" are the same shape,
+// only icon/color/text differ, so this is shared rather than duplicated.
 // ---------------------------------------------------------------------------
 
-class _EmptyWorkoutTile extends StatelessWidget {
-  const _EmptyWorkoutTile({required this.l10n, required this.onTap});
+class _PickerActionTile extends StatelessWidget {
+  const _PickerActionTile({
+    required this.icon,
+    required this.iconBackground,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
-  final AppLocalizations l10n;
+  final IconData icon;
+  final Color iconBackground;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
   @override
@@ -117,15 +162,11 @@ class _EmptyWorkoutTile extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: scheme.secondaryContainer,
+                  color: iconBackground,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
-                  child: Icon(
-                    Icons.add_rounded,
-                    size: 24,
-                    color: scheme.onSecondaryContainer,
-                  ),
+                  child: Icon(icon, size: 24, color: iconColor),
                 ),
               ),
               const SizedBox(width: 14),
@@ -134,7 +175,7 @@ class _EmptyWorkoutTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l10n.emptyWorkoutLabel,
+                      title,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -142,7 +183,7 @@ class _EmptyWorkoutTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      l10n.emptyWorkoutSubtitle,
+                      subtitle,
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
