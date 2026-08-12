@@ -41,6 +41,8 @@ describe("aggregate", () => {
         activeCalories: null, averageHeartRate: null, healthWorkoutId: null,
         templateId: null, templateName: null, rpe: null, feedbackNote: null,
         trainerComment: null, trainerCommentAt: null,
+        sessionKind: "STRENGTH", activityType: null, movingSeconds: null,
+        cardio: null, splits: [],
       },
     ];
     const r = aggregate({ ...emptyRaw, sessions }, new Date("2026-06-01T00:00:00Z"), new Date("2026-06-07T00:00:00Z"));

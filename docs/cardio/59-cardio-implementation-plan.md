@@ -183,10 +183,10 @@ lépés két fele, hanem két önálló, egymástól függetlenül szállíthat�
 
 | # | Lépés | Frame | Kész-ha |
 |---|---|---|---|
-| **C1w.1** | `types.ts` + API-réteg átengedi az új mezőket | – | Típusok fordulnak, semmi más nem változik |
-| **C1w.2** | Web `ActivityChip` + lista-sor `kind`-elágazás | **W01**, **W02** | Nincs üres cím és „· 0 szett” |
-| **C1w.3** | **`SessionLogger` `kind`-kapu + olvasó cardio részletnézet** + útvonal-SVG | W02-ből származtatva | Cardio session megnyitása **nem** nyit szett-logolót ([58 W1](58-cardio-web-plan.md)) |
-| **C1w.4** | Edzői kliens-nézet + naptár-előnézet `kind`-elágazása; `recommendation.ts` szűrő; `progress.ts` regressziós teszt | – | Az edző nem lát „0 gyakorlat / 0 kg volumen” cardio edzést ([58 W2](58-cardio-web-plan.md)) |
+| **C1w.1** ✅ | `types.ts` + API-réteg átengedi az új mezőket | – | Típusok fordulnak, semmi más nem változik |
+| **C1w.2** ✅ | Web `ActivityChip` + lista-sor `kind`-elágazás | **W01**, **W02** | Nincs üres cím és „· 0 szett” |
+| **C1w.3** ✅ | **`SessionLogger` `kind`-kapu + olvasó cardio részletnézet** + útvonal-SVG | W02-ből származtatva | Cardio session megnyitása **nem** nyit szett-logolót ([58 W1](58-cardio-web-plan.md)) |
+| **C1w.4** ✅ | Edzői kliens-nézet + naptár-előnézet `kind`-elágazása; `recommendation.ts` szűrő; `progress.ts` regressziós teszt | – | Az edző nem lát „0 gyakorlat / 0 kg volumen” cardio edzést ([58 W2](58-cardio-web-plan.md)) |
 | **C3w.1** | `aggregate.ts` fajta-szűrő + cardio-adatsorok + dashboard-bontás + **paritás-teszt a mobillal** | – | Azonos bemenetre a web és a mobil ugyanazt a heti összesítést adja |
 
 ---
@@ -2362,3 +2362,277 @@ ismert, cardión kívüli `chat_repository_test.dart` Windows-fájlzár-flake. B
 
 **Következő:** C4a (GPS/útvonal) vagy C5 (óra) — vagy folytatás Mac-en C2.10b/C2.11b-n, ha azok
 még nincsenek kész.
+
+---
+
+## C1w.1 kész (2026-08-12) — web `types.ts` bővítés
+
+Az első web-oldali cardio-lépés — tisztán típus-bővítés, nulla viselkedésváltozás, ahogy a
+kész-ha is kéri.
+
+**`web/src/features/workouts/types.ts`**:
+- `SESSION_KINDS`/`SessionKind` (`STRENGTH`/`CARDIO`) és `ACTIVITY_TYPES`/`ActivityType` union
+  típus a mobil `activity_type.dart` kódlistájával megegyező hét értékkel (`RUNNING`, `WALKING`,
+  `HIKING`, `INDOOR_BIKE`, `BASKETBALL`, `FOOTBALL`, `OTHER_CARDIO`) — bitre a backend
+  `ActivityType` enumja szerint.
+- Új `CardioDetailsResponse`/`CardioDetailsRequest` és `CardioSplitResponse`/`CardioSplitRequest`
+  interfészek, mezőnként 1:1 a backend `CardioDetailsResponse`/`Request` és
+  `CardioSplitResponse`/`Request` rekordjaival (a request oldalon minden mező opcionális, ahogy a
+  backend DTO-ban is csak a `@PositiveOrZero`/`@Min`/`@Max` védi őket, nem a nullability).
+- `WorkoutSessionResponse` additívan bővült: `sessionKind` (nem opcionális — a backend "sosem
+  null" garanciáját tükrözi), `activityType`, `movingSeconds`, `cardio`, `splits`. A többi mező
+  (és a web típusnak eddig is hiányzó, response-only mezői, pl. `scheduledFor`/`updatedAt`)
+  érintetlen — a web types.ts sosem volt 1:1 tükre a backend DTO-nak, csak a ténylegesen
+  felhasznált mezőket vitte át, ezt a mintát követtem.
+- `WorkoutSessionRequest` ugyanezekkel a mezőkkel bővült, mind opcionálisan (`sessionKind?`,
+  `activityType?`, `movingSeconds?`, `cardio?`, `splits?`) — egy régi kérés-építő (pl.
+  `SessionsView.tsx` induló `create()` hívása, `SessionLogger.tsx` `buildRequest()`-je) ezek
+  nélkül is fordul, mert egyik mező sem kötelező.
+
+**API-réteg**: `web/src/features/workouts/api.ts` nem igényelt módosítást — a `workoutSessionApi`
+metódusai generikusan a `WorkoutSessionResponse`/`Request` típuson keresztül engedik át a JSON-t,
+a bővített típus automatikusan "átengedi az új mezőket", nincs kézzel felsorolt mezőlista, amit
+frissíteni kellene.
+
+**Egyetlen érintett hívóhely**: `aggregate.test.ts` egy kézzel felépített
+`WorkoutSessionResponse[]` fixture-t tartalmazott a régi (öt mezővel rövidebb) alakban — ez a
+`sessionKind` nem-opcionális mezője miatt már nem fordult volna. Az öt új mezővel kiegészítve
+(`sessionKind: "STRENGTH"`, a többi `null`/`[]`) — ez nem funkcionális változás, csak a fixture
+igazítása az új, teljesebb típushoz.
+
+**Ellenőrzés:** `npx tsc --noEmit` a teljes projekten tiszta; `npx eslint` a két érintett fájlon
+tiszta; a teljes `npx vitest run` **168/168 zöld** (17 tesztfájl, nulla regresszió).
+
+**Következő:** `C1w.2` — web `ActivityChip` komponens a web design-rendszer tokenjeivel (a mobil
+`ActivityChip` párja) + a `SessionsView` kártya `kind`-elágazása.
+
+---
+
+## C1w.2 kész (2026-08-12) — web `ActivityChip` + `SessionsView` kind-elágazás
+
+**Három új fájl** a `web/src/features/workouts/` alatt, a mobil `activity_type.dart` +
+`activity_chip.dart` páros web-megfelelője:
+
+- **`activityType.ts`** — `activityFamilyOf`, `activityTypeIcon`, `activityTypeColor`. Az
+  ikon-térkép bitre a W01 frame szerint (`directions_run`, `directions_walk`, `hiking`,
+  `pedal_bike`, `sports_basketball`, `sports_soccer`, `fitness_center`, `bolt` az `OTHER_CARDIO`/
+  ismeretlen ágra). A színek nem hex-értékek, hanem a `globals.css`-ben **már létező**
+  `--metric-*`/`--tertiary` CSS-változók — a W01 frame minden egyes chip-színe pontosan egy
+  meglévő metrika-tokennel egyezik (pl. futás = `--metric-kcal`, gyaloglás = `--metric-steps`,
+  túrázás = `--tertiary`), így a light/dark témaváltás **automatikus**, nincs `BuildContext`-szerű
+  elágazás, amit a mobil `activityTypeColor`-nak kézzel kellett megoldania.
+- **`cardioFormat.ts`** — `formatDistanceKm` (locale-érzékeny, `Intl.NumberFormat` a HU
+  vessző-tizedesjelhez), `formatDuration` (m:ss / h:mm:ss), `formatPace` (perc:mp /km, `null` 0
+  vagy negatív távon). Csak metrikus — a webnek (a mobillal ellentétben) még nincs
+  mértékegység-váltója, ezért ez a mobil `CardioFormatter`-nek csak a ténylegesen szükséges
+  részhalmaza, nem 1:1 másolat.
+- **`components/ActivityChip.tsx`** — két méret (24 px lista-sor, 40 px részletnézet-fejléc,
+  ahogy a W01 jegyzete mondja: "a weben csak két méret kell, mert nincs csempe és nincs
+  értesítés"). A háttér-fedés **flat 16% mindkét témában** — ez a W01 frame jegyzetében explicit
+  eltérés a mobil 14% sötét / 16% világos szabályától ("egyetlen szabályt kell fejben tartani").
+
+**`SessionsView.tsx` `SessionRow` `kind`-elágazása** (W3 hívóhely a 58-as tervben):
+- Cím: `STRENGTH`-nél változatlan (`templateName` → gyakorlatnevek → fallback-szöveg lánc),
+  `CARDIO`-nál az aktivitás lokalizált neve (`workouts.activityTypes.*`, új ARB-szerű kulcsok
+  EN/HU-ban, a `muscleGroups`/`equipmentTypes` mintáját követve) — ez zárja a doc által
+  megnevezett üres-cím hibát (a `session.exercises` egy cardio session-nél mindig üres, tehát a
+  régi `exNames || fallback` lánc sosem talált volna értelmes címet).
+- Alcím: családfüggő `cardioSummaryLine()` — DISTANCE: táv · időtartam · tempó; MACHINE:
+  időtartam · táv · átlag watt; GAME: mozgásidő · bruttó idő · átlagpulzus. Minden rész csak akkor
+  jelenik meg, ha van hozzá adat (nincs megtévesztő "0,00 km" vagy "0 szett" — ez utóbbi egyébként
+  már eddig is védve volt a meglévő `sets.length > 0` őrrel, csak a cím-ág hiányzott). A duplikált
+  `cardioSummaryLine(session)`-hívást egyetlen `summaryLine` konstansra vontam össze a sorban.
+- `ActivityChip` csak a cardio ágon jelenik meg a cím előtt; az erősítő sor vizuálisan
+  változatlan (`flex items-center gap-3` becsomagolás, de a chip feltételes renderelése miatt a
+  strength-ágon egyszerűen nincs ott).
+
+**Két új ARB-szerű i18n kulcscsoport** (`en.json`/`hu.json`, `workouts` névtér): `activityTypes.*`
+(hét kód + `STRENGTH`, a mobil ARB HU/EN szövegeivel egyezően) és két lapos kulcs, `movingTime`/
+`totalTime` — a design 12. szekciójának hivatalos rövid HU/EN pár-választása ("mozgásidő"/"moving
+time", "bruttó idő"/"total time"), nem az általam kitalált "playing time"/"gross time" szöveg.
+
+**Tesztek** (`activityType.test.ts` +8, `cardioFormat.test.ts` +6 — a webes suite először nem
+`.test.ts` konvenciót lát cardio-logikára): a `formatPace`/`formatDuration` tesztadatai szándékosan
+a W02 frame saját számait használják (8420 m / 2716 s → "5:23 /km"), így a teszt egyúttal azt is
+igazolja, hogy a formázó **pontosan** a mockup számait adja vissza, nem csak plauzibilis
+kerekítést. `SessionsView`/`SessionRow`-hoz nem készült komponens-teszt — a `vitest.config.ts`
+`environment: "node"` és `include: ["src/**/*.test.ts"]` (nem `.tsx`) jelzi, hogy a web-projekt
+eddig kizárólag tiszta logikát tesztel, nincs jsdom/React Testing Library bekötve; új
+komponens-teszt infrastruktúra bevezetése túlment volna ennek a lépésnek a keretein.
+
+**Ellenőrzés:** `npx tsc --noEmit` és `npx eslint` (mind a négy érintett/új fájlon) tiszta. Teljes
+`npx vitest run`: **182/182 zöld** (19 fájl, 168 régi + 14 új). Böngészős ellenőrzés: a Next.js dev
+szerver elindítva, a `/workouts` route (ami a `SessionsView`/`ActivityChip`/`activityType.ts`/
+`cardioFormat.ts` teljes láncot betölti) **200**-zal fordult, nulla szerver- vagy konzolhiba — a
+valódi bejelentkezés + cardio session-adat (backend indítás, teszt-user, seedelt cardio rekord)
+ehhez a lépéshez nem volt elérhető ebben a sandboxban, ezért a vizuális (pixel-szintű) egyezés a
+W01/W02 frame-mel **nincs** böngészőben leellenőrizve, csak a típus-/logika-szintű helyesség.
+
+**Következő:** `C1w.3` — **`SessionLogger` `kind`-kapu + olvasó cardio részletnézet** +
+útvonal-SVG — ez a legfontosabb C1w tétel: egy cardio session megnyitása ma még a szett-logolót
+nyitná meg (üres állapotban), ezt kell egy csak-olvasható részletnézetre cserélni.
+
+---
+
+## C1w.3 kész (2026-08-12) — `SessionLogger` kind-kapu + olvasó cardio részletnézet
+
+**A `kind`-kapu** (`SessionsView.tsx` aktív-session ág): `active.sessionKind === "CARDIO"` esetén
+`CardioSessionDetail`, egyébként a meglévő `SessionLogger` — a "vissza a történelemhez" gomb és a
+körülötte lévő váz változatlan, csak a belső komponens vált. Mivel a `SessionRow.onOpen` (C1w.2
+óta) minden session típusra ugyanazt az `setActiveId(s.id)`-t hívja, egy cardio sor megnyitása
+mostantól ide fut be, nem a szett-logolóba — ez zárja a lépés kész-ha feltételét.
+
+**Tudatos, dokumentált scope-szűkítés az útvonal-SVG-re**: a lépés címe említi, de **nem
+épült meg**. Az ok ugyanaz, amit a mobil `CardioSummaryScreen` saját class-doksija már kimond:
+*"GPS doesn't exist anywhere in the app before C4a, so no cardio session has a route to show yet,
+live or logged."* — a `cardio.routePolyline` mező létezik a DTO-ban (C1.4 óta), de **soha nem lesz
+kitöltve** semmilyen ma létező session-nél, mert a kódolás formátumát maga a C4a.6 lépés
+("`RoutePainter`") fogja eldönteni. Egy polyline-dekódert most megírni találgatás lenne egy még
+el nem döntött formátumra — ehelyett a döntést és a munkát C4a.6-ra hagytam, ugyanígy tett a
+mobil is ugyanezen indokkal. Ugyanez vonatkozik a **split-táblázatra** is (W03 frame mutatja, de a
+mobil `CardioSummaryScreen` explicit módon **nem** rendereli — "the GPS route, splits, and
+elevation profile are C4a.6's job") — a splitek is GPS-ből számolódnak, tehát ma egyetlen
+session-nek sincs split-adata.
+
+**Három új fájl a `web/src/features/workouts/` alatt:**
+- **`cardioTiles.ts`** — `buildCardioTiles(session, t, locale)`, tiszta függvény (nincs React/DOM
+  függőség), ami a családfüggő metrika-csempéket építi. **Nem** a W03 desktop-mockup teljes
+  metrika-rácsát + zóna-sávját + split-táblázatát követi, hanem bitre a mobil
+  `CardioSummaryScreen._metricSections` mezőválasztását — ugyanaz a session ugyanazokat a
+  mezőket mutatja mindkét platformon (pl. a GAME családnál a mobil **csak egy** időtartam-csempét
+  mutat "játékidő" címkével, movingSeconds-t vagy ennek hiányában bruttó időt, **nem** két külön
+  csempét mozgás-/bruttó időre — ez eltér attól, amit a C1w.2-es `SessionsView` sor-összegzője
+  mutat, de az szándékos: a sor a W02 frame-et követi, a részletnézet a mobil tényleges
+  `CardioSummaryScreen`-jét).
+- **`components/CardioSessionDetail.tsx`** — a renderelő héj: fejléc (`ActivityChip` 40px +
+  aktivitás-név + dátum + RPE-jelvény, ha van + "Csak olvasható" lakat-jelvény, ami a
+  [D-W.2](58-cardio-web-plan.md) döntést teszi láthatóvá), opcionális `feedbackNote` szövegsáv,
+  majd a csempék `grid grid-cols-2 sm:grid-cols-3`-ban, a meglévő megosztott `StatCard`
+  komponensen keresztül (nem új csempe-stílus — a dashboard/statisztika ugyanezt a komponenst
+  használja, csak itt `icon`/`color`/`label`/`value` propokkal hívva).
+- **`cardioTiles.test.ts`** (12 teszt) — a családonkénti mezőválasztást fedi, beleértve az M11
+  "nincs távforrás → csak időtartam" szabályt, a 0 méteres táv "nincs megtévesztő 0,00 km" esetét,
+  és a duration-fallback láncot (`movingSeconds` → bruttó span → `—`, ha egyik sincs). A tesztek
+  identitás-fordítóval futnak (`t = (key) => key`), hogy a label-kulcsokat, ne a fordított
+  szöveget ellenőrizzék — a fordítás helyessége a JSON-fájlok felelőssége, nem ezé a tesztfájlé.
+
+**Nincs szerkesztés** (D-W.2 explicit tiltása): a `CardioSessionDetail` sehol nem hív
+`workoutSessionApi.update`-et, nincs RPE-szelektor, nincs jegyzet-mező — csak megjeleníti, ami
+már a session-ben van. Ez a mobil `CardioSummaryScreen`-től eltér (az ott szerkeszthető), de a
+weben ez **szándékos** platform-különbség, nem hiányosság.
+
+**Új i18n kulcsok** (`en.json`/`hu.json`, `workouts` névtér): `readOnly` +
+`cardio{Duration,Distance,Pace,ElevationGain,MovingTime,PlayingTime,AvgWatts,AvgCadence,
+Resistance,DeviceCalories,Venue,VenueIndoor,VenueOutdoor,Intensity,Score}Label`-szerű kulcsok,
+a mobil ARB HU/EN szövegeivel egyezően (`distanceFieldLabel`, `movingTimeLabel` stb. párjai) —
+normál esetben írva, nem csupa nagybetűvel, mert a `StatCard` a labelSmall-stílust (ALL CAPS,
+`text-label-sm`) CSS-transzformként adja hozzá, nem a stringbe sütve.
+
+**Ellenőrzés:** `npx tsc --noEmit` és `npx eslint` (mind az öt érintett/új fájlon) tiszta. Teljes
+`npx vitest run`: **194/194 zöld** (20 fájl, 182 régi + 12 új). Böngészős ellenőrzés: a Next.js dev
+szerver `/workouts` route-ja (ami a teljes új láncot — `CardioSessionDetail`, `cardioTiles`,
+`SessionsView` kind-kapu — betölti) **200**-zal fordult, nulla szerver-/konzolhiba. Mint a
+C1w.2-nél, a valódi böngészős megnyitás (bejelentkezett felhasználó, létező cardio session,
+kattintás a sorra) ehhez a lépéshez sem volt elérhető ebben a sandboxban (nincs futó backend +
+seedelt teszt-user) — ezt a `cardioTiles.test.ts` 12 teszte fedi logika-szinten.
+
+**Következő:** `C1w.4` — edzői kliens-nézet (`ClientWorkoutsTab`) + naptár-előnézet
+(`CalendarSessionPeek`) `kind`-elágazása, `recommendation.ts` cardio-szűrő, `progress.ts`
+regressziós teszt. Ezzel lezárul a teljes C1w iteráció.
+
+---
+
+## C1w.4 kész (2026-08-12) — edzői nézet, `recommendation.ts` fix, `progress.ts` védőháló
+
+Négy külön fél, mindegyik a maga módján zárult — az egyik valódi bug volt, az egyik hamis
+riasztásnak bizonyult vizsgálat után.
+
+### `CalendarSessionPeek.tsx` — **megvizsgálva, nem érintett** (a doc W4-es tétele téves feltevés volt)
+
+A backendet végigkövetve: egy naptár-"occurrence" ([`WorkoutScheduleServiceImpl.toCalendarResponse`](../../backend/src/main/java/com/lifey/trainer/service/WorkoutScheduleServiceImpl.java))
+egy **előre létrehozott, sablonhoz kötött** `WorkoutSession` sor (`schedule.setClientTemplate(...)`
++ `occurrence.setTemplate(clientTemplate)` a `createSchedule`-ben) — és mivel cardióra V1-ben
+nincs sablon ([51 §1.1](51-cardio-overview-plan.md), a C0.4 jegyzete is megerősíti), egy
+ütemezett occurrence **strukturálisan sosem lehet cardio**. A `TrainerCalendarSessionResponse` DTO
+ezt tükrözi is: nincs rajta `sessionKind`/`activityType` mező, tehát nincs is mit elágaztatni.
+A `templateName ?? "unnamedTemplate"` fallback, amit a doc problémásnak jelölt, valós STRENGTH-
+edzéseknél fut (pl. egy törölt sablon), cardiónál soha — ez a **doc W4-es sora téves feltevés
+volt**, nem egy fel nem fedezett hiba. Nincs kódmódosítás ebben a fájlban.
+
+### `recommendation.ts` — **valódi hiba, javítva** (ugyanaz a minta, mint a mobil C0.5)
+
+`predictNextTemplateId` a `.slice(0, 10)`-et a null-`templateId` szűrés **előtt** futtatta — egy
+cardio session is kap `finishedAt`-et, tehát a "legutóbbi 10 befejezett" ablakba belefért volna,
+kiszorítva a valódi (nem-null `templateId`-jű) jeleket, mielőtt azok egyáltalán szóba kerülhettek
+volna. **Bitre ugyanaz a hiba**, amit a mobil `recommended_template_provider.dart` a C0.5-ben
+javított (`.take(10)` a `.whereType<String>()` után, nem előtte). A javítás: a null-szűrés fut
+előbb, a `.slice(0, 10)` utána. **A doc saját javaslata** (`kind === 'STRENGTH'` explicit szűrő)
+**feleslegesnek bizonyult**: mivel egy cardio session `templateId`-je szerkezetileg mindig `null`
+(nincs cardio sablon), a null-szűrés önmagában strukturálisan kizár minden cardio session-t —
+pontosan ugyanaz a felismerés, mint a C0.5 PR-motor felénél ("a kizárás szerkezeti, védőháló
+nélkül is helyes").
+
+Új `recommendation.test.ts` (5 teszt, **a webes projekt első tesztje ehhez a fájlhoz**) — a
+legfontosabb köztük a regressziós eset: egy valódi 6-elemű A/B ciklus + 8 cardio session zaj a
+lista elején. **Igazolva a javítás előtti kóddal is** (ideiglenesen visszaállítva, lefuttatva,
+majd visszajavítva): a régi kód `null`-t adott volna vissza, az új a helyes (zaj nélkülivel
+azonos) javaslatot.
+
+### `progress.ts` — **nincs kódmódosítás, csak védőháló** (a doc pontosan ezt kérte)
+
+`previousSets` a `s.sets.some(set => ...)` szűrőn keresztül eleve kizár minden cardio session-t
+(egy cardio session `sets`-je mindig `[]`, [52 §3.3](52-cardio-domain-backend-plan.md)) — ugyanaz
+a szerkezeti védelem, mint fent. **Ezt nem feltételeztem, hanem leteszteltem** (a doc explicit
+kérése): új `progress.test.ts` (5 teszt) — cardio session a történelemben nem termel hamis
+"előző szettet", tisztán cardio történelem üres listát ad, és `computeWorkoutProgress` pontszáma
+byte-azonos cardio-zajjal és anélkül.
+
+### `ClientWorkoutsTab.tsx` **+ `ClientOverviewTab.tsx`** — a valódi W2-es hiba, **két helyen**
+
+A doc csak a `ClientWorkoutsTab.tsx`-et nevezte meg, de a felderítés során kiderült: az edzői
+"Áttekintés" fül `ClientOverviewTab.tsx`-ben lévő "Legutóbbi edzések" kártyája **bitre ugyanazt a
+hibát** hordozza (`s.exercises[0]?.exerciseName ?? t("freeWorkout")` cím + `sessionSummary`
+"{count} gyakorlat · {volume} kg volumen" alcím) — egy cardio session itt is "Free workout · 0
+exercises · 0 kg volume"-ként jelent volna meg. Mivel a kész-ha ("az edző nem lát 0 gyakorlat/0 kg
+volumen cardio edzést") nem egyetlen fájlra szól, mindkettőt javítottam.
+
+Mindkét helyen ugyanaz a minta: `isCardio = s.sessionKind === "CARDIO"` elágazás,
+- **cím**: `ClientOverviewTab`-ban az aktivitás-név váltja a gyakorlatnév/`freeWorkout`-fallbacket
+  (itt a cím volt a hibás rész); `ClientWorkoutsTab`-ban a cím már eddig is a dátum/idő volt,
+  változatlan marad,
+- **alcím**: mindkét helyen az új, megosztott `buildCardioSummaryLine()` váltja a
+  "gyakorlat/volumen" szöveget,
+- **jelvény**: a meglévő `templateName`-pill mintáját követve, cardiónál egy aktivitás-szín/-ikon
+  pill jelenik meg helyette (kölcsönösen kizáróak — cardiónak sosem lehet `templateName`-je).
+
+**`ClientWorkoutsTab.tsx` legördítve** is kapott bővítést: a korábban teljesen üres (0 gyakorlat,
+tehát semmi) kibontott panel most a meglévő, C1w.3-ban épített `buildCardioTiles()`-t hívja, és
+kompakt chipekként (`label: érték`) mutatja a családfüggő metrikákat — újrahasznosított,
+már tesztelt logika, nem új üzleti szabály.
+
+### Megosztott kód — `cardioSummaryLine.ts` kiemelve
+
+A C1w.2-ben a `SessionsView.tsx`-be írt `cardioSummaryLine` most **három helyen** kellett volna
+(a sor, és a két edzői kártya) — ez lépte át azt a pontot, ahol a másolás rosszabb, mint a
+kiemelés. Kiemeltem `cardioSummaryLine.ts`-be (`buildCardioSummaryLine(session, t, locale)`), a
+`SessionsView.tsx` a saját nested függvényét eldobta, és mindhárom hívó ugyanazt hívja. Új,
+dedikált `cardioSummaryLine.test.ts` (8 teszt) — korábban ez a logika csak közvetve, a
+`cardioFormat`-teszteken keresztül volt lefedve; most a családonkénti összeállítás (beleértve a
+W02 mockup pontos számait: "8.42 km · 45:16 · 5:23 /km") saját tesztet kapott.
+
+### Ellenőrzés
+
+`npx tsc --noEmit` és `npx eslint` (mind a kilenc érintett/új fájlon) tiszta. Teljes
+`npx vitest run`: **212/212 zöld** (23 fájl, 194 régi + 18 új: 5 `recommendation.test.ts` + 5
+`progress.test.ts` + 8 `cardioSummaryLine.test.ts`). Böngészős ellenőrzés: a Next.js dev szerver
+`/workouts` **és** `/admin/clients/1` (ami a `ClientOverviewTab`/`ClientWorkoutsTab` teljes láncát
+betölti) mindkettő **200**-zal fordult, nulla szerver-/konzolhiba. Mint az előző lépéseknél, a
+valódi bejelentkezett edzői nézet (létező kliens, cardio session) nem volt elérhető ebben a
+sandboxban.
+
+**Ezzel a teljes C1w iteráció kész** — `types.ts` bővítés (C1w.1), `ActivityChip` + lista-sor
+(C1w.2), olvasó cardio részletnézet (C1w.3), edzői nézet + ajánló/progresszió védőháló (C1w.4).
+
+**Következő:** `C3w.1` (`aggregate.ts` fajta-szűrő + cardio-adatsorok + dashboard-bontás +
+paritás-teszt a mobillal, a C3-mal egy időben futtatva) — vagy `C4a`/`C5` a mobil oldalon,
+amelyik előbb aktuális.
