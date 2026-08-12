@@ -6,29 +6,241 @@ import '../../../core/format/cardio_formatter.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/activity_chip.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
+import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
 import '../domain/workout_session.dart';
+import 'widgets/prompt_number_dialog.dart';
+import 'widgets/rpe_selector.dart';
 
-/// One (label, value) tile for the secondary-metrics section.
-typedef _MetricEntry = (String label, String value);
-
-/// Read-only view of a saved cardio session — manually logged via
-/// `LogCardioSheet` (C1.8/C1.9) today; the live C2 flow will land its own
-/// editable summary later (M15, C2.8) rather than growing this screen into
-/// one, per docs/cardio/59-cardio-implementation-plan.md C1.9's kész-ha:
-/// "a mentett edzés megnyitható és olvasható" — openable and readable, no
-/// editing.
-class CardioSummaryScreen extends ConsumerWidget {
+/// The cardio summary screen (docs/cardio/59-cardio-implementation-plan.md
+/// C2.8, M14/M15) — reached two ways, always the same widget:
+/// `CardioSessionScreen._finish()` replaces itself with this the instant a
+/// live session ends, and `open_workout_screens.dart` opens it for any
+/// already-finished cardio session reopened later (manually logged via
+/// `LogCardioSheet`, C1.8/C1.9, or a past live one). One screen, not two —
+/// a value edited here reads back the same whether you edit it the moment
+/// you finish or three weeks later.
+///
+/// **Route-free, deliberately** — the plan's own C2.8 row calls this the
+/// "útvonal nélküli változat" (routeless variant); the GPS route, splits,
+/// and elevation profile are C4a.6's job, and MACHINE's power-curve chart
+/// needs time-series power samples this app doesn't record yet. Showing
+/// none of that isn't a placeholder gap: GPS doesn't exist anywhere in the
+/// app before C4a, so *no* cardio session has a route to show yet, live or
+/// logged.
+///
+/// **Editing, per docs/cardio/51-cardio-overview-plan.md R8**: "minden
+/// metrikának van `source` jelzése (`MEASURED`/`MANUAL`/`DEVICE`); a kézi
+/// felülírás nyer és megjelölődik." Only [CardioMetrics.distanceMeters] and
+/// [CardioMetrics.deviceCalories] actually carry a `source` field today
+/// (`distanceSource`/`caloriesSource`, set by C1.8/C2.2/C2.3's existing
+/// manual-entry paths) — every other metric (elevation, cadence, watts,
+/// resistance, GAME fields) has no provenance column at all, since nothing
+/// in this app can measure them automatically yet either (no GPS, no BLE
+/// trainer pairing, docs/cardio/53-cardio-mobile-plan.md §4.2's own "Extra
+/// vezérlő" notes). Building per-metric provenance for fields nothing can
+/// yet measure would be schema work with no payoff before it's needed —
+/// this screen implements the *pattern* (tap to edit, "Edited" badge on a
+/// `MANUAL` source) on the two fields where it's real today, and leaves the
+/// rest read-only, carried over unchanged from however they were recorded.
+class CardioSummaryScreen extends ConsumerStatefulWidget {
   const CardioSummaryScreen({super.key, required this.session});
 
   final WorkoutSession session;
 
+  @override
+  ConsumerState<CardioSummaryScreen> createState() => _CardioSummaryScreenState();
+}
+
+class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   static final _dateLabel = DateFormat('EEE, MMM d · HH:mm');
 
+  late final String _clientId;
+  late final DateTime _startedAt;
+  late final String _activityType;
+  late final ActivityFamily _family;
+  late final Duration? _duration;
+
+  double? _distanceMeters;
+  String? _distanceSource;
+  double? _deviceCalories;
+  String? _caloriesSource;
+
+  // Read-only carry-over — no provenance field exists for any of these yet
+  // (see the class doc), so they're never edited on this screen, just
+  // preserved byte-for-byte across every write this screen makes.
+  double? _elevationGainMeters;
+  double? _avgCadence;
+  double? _avgWatts;
+  int? _resistanceLevel;
+  String? _venue;
+  int? _intensity;
+  int? _scorePoints;
+
+  int? _rpe;
+  late final TextEditingController _noteController;
+  late final FocusNode _noteFocusNode;
+  bool _busy = false;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    final s = widget.session;
+    _clientId = s.clientId;
+    _startedAt = s.startedAt!;
+    _activityType = s.activityType!;
+    _family = s.family!;
+    _duration = s.effectiveDuration;
+
+    final cardio = s.cardio;
+    _distanceMeters = cardio?.distanceMeters;
+    _distanceSource = cardio?.distanceSource;
+    _deviceCalories = cardio?.deviceCalories;
+    _caloriesSource = cardio?.caloriesSource;
+    _elevationGainMeters = cardio?.elevationGainMeters;
+    _avgCadence = cardio?.avgCadence;
+    _avgWatts = cardio?.avgWatts;
+    _resistanceLevel = cardio?.resistanceLevel;
+    _venue = cardio?.venue;
+    _intensity = cardio?.intensity;
+    _scorePoints = cardio?.scorePoints;
+
+    _rpe = s.rpe;
+    _noteController = TextEditingController(text: s.feedbackNote ?? '');
+    _noteFocusNode = FocusNode()..addListener(_onNoteFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _noteFocusNode.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  void _showError(AppLocalizations l10n) {
+    if (!mounted) return;
+    AppSnackbar.showError(context, title: l10n.couldNotUpdateWorkoutMessage);
+  }
+
+  void _onNoteFocusChange() {
+    if (!_noteFocusNode.hasFocus) _saveFeedback();
+  }
+
+  /// Saves [_rpe]/the note together, same pairing `LogCardioSheet` submits
+  /// at creation time. A no-op until the session has been rated at least
+  /// once — `rateSession` requires a non-null `rpe`, so a note typed before
+  /// ever tapping a rating simply doesn't have anywhere to attach yet.
+  Future<void> _saveFeedback() async {
+    final rpe = _rpe;
+    if (rpe == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    final note = _noteController.text.trim();
+    try {
+      await ref.read(workoutSessionControllerProvider.notifier).rateSession(
+            _clientId,
+            rpe: rpe,
+            feedbackNote: note.isEmpty ? null : note,
+          );
+    } catch (_) {
+      _showError(l10n);
+    }
+  }
+
+  Future<void> _setRpe(int value) async {
+    setState(() => _rpe = value);
+    await _saveFeedback();
+  }
+
+  /// Persists a metric edit, merged against every other field this screen
+  /// already knows about — a full replace of [CardioMetrics], same
+  /// "reconstruct the whole object" shape `CardioSessionScreen._updateCardioMetrics`
+  /// and `LogCardioSheet`'s submit both already use. Only the two fields
+  /// named here ever get a new value; everything else round-trips through
+  /// unchanged from local state.
+  Future<void> _persistCardio({
+    double? distanceMeters,
+    String? distanceSource,
+    double? deviceCalories,
+    String? caloriesSource,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final newDistance = distanceMeters ?? _distanceMeters;
+    final newDistanceSource = distanceSource ?? _distanceSource;
+    final newCalories = deviceCalories ?? _deviceCalories;
+    final newCaloriesSource = caloriesSource ?? _caloriesSource;
+    setState(() => _busy = true);
+    try {
+      await ref.read(workoutSessionControllerProvider.notifier).updateLiveCardioMetrics(
+            _clientId,
+            startedAt: _startedAt,
+            cardio: CardioMetrics(
+              distanceMeters: newDistance,
+              elevationGainMeters: _elevationGainMeters,
+              avgCadence: _avgCadence,
+              avgWatts: _avgWatts,
+              resistanceLevel: _resistanceLevel,
+              deviceCalories: newCalories,
+              venue: _venue,
+              intensity: _intensity,
+              scorePoints: _scorePoints,
+              distanceSource: newDistanceSource,
+              caloriesSource: newCaloriesSource,
+            ),
+          );
+      if (!mounted) return;
+      setState(() {
+        _distanceMeters = newDistance;
+        _distanceSource = newDistanceSource;
+        _deviceCalories = newCalories;
+        _caloriesSource = newCaloriesSource;
+        _busy = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      _showError(l10n);
+    }
+  }
+
+  Future<void> _editDistance() async {
+    if (_busy) return;
+    final l10n = AppLocalizations.of(context)!;
+    final unitSystem =
+        (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults())
+            .unitSystem;
+    final imperial = unitSystem == UnitSystem.imperial;
+    final unitMeters = imperial ? 1609.344 : 1000.0;
+    final current = _distanceMeters;
+    final result = await promptNumber(
+      context,
+      l10n,
+      title: l10n.editDistanceDialogTitle,
+      suffix: imperial ? 'mi' : 'km',
+      initialText: current == null ? '' : (current / unitMeters).toStringAsFixed(2),
+    );
+    if (result == null || result < 0 || !mounted) return;
+    await _persistCardio(distanceMeters: result * unitMeters, distanceSource: 'MANUAL');
+  }
+
+  Future<void> _editDeviceCalories() async {
+    if (_busy) return;
+    final l10n = AppLocalizations.of(context)!;
+    final result = await promptNumber(
+      context,
+      l10n,
+      title: l10n.editDeviceCaloriesDialogTitle,
+      suffix: 'kcal',
+      initialText: _deviceCalories?.round().toString() ?? '',
+    );
+    if (result == null || result < 0 || !mounted) return;
+    await _persistCardio(deviceCalories: result, caloriesSource: 'MANUAL');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -36,211 +248,206 @@ class CardioSummaryScreen extends ConsumerWidget {
         (ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults())
             .unitSystem;
 
-    final activityType = session.activityType!;
-    final family = session.family!;
-    final cardio = session.cardio;
-    final duration = session.effectiveDuration;
-
-    final (primaryLabel, primaryValue) =
-        _primaryMetric(l10n, family, cardio, duration, unitSystem);
-    final secondary = _secondaryMetrics(l10n, family, cardio, duration, unitSystem);
-
     return Scaffold(
-      appBar: AppBar(title: Text(activityTypeLabel(l10n, activityType))),
+      appBar: AppBar(title: Text(activityTypeLabel(l10n, _activityType))),
       body: ListView(
         padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.paddingOf(context).bottom + 24),
         children: [
           Row(
             children: [
-              ActivityChip(activityType: activityType, size: 52),
+              ActivityChip(activityType: _activityType, size: 52),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      activityTypeLabel(l10n, activityType),
+                      activityTypeLabel(l10n, _activityType),
                       style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                     ),
-                    if (session.startedAt != null)
-                      Text(
-                        _dateLabel.format(session.startedAt!.toLocal()),
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(color: scheme.onSurfaceVariant),
-                      ),
+                    Text(
+                      _dateLabel.format(_startedAt.toLocal()),
+                      style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(AppRadius.card),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  primaryLabel,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    letterSpacing: 1.2,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  primaryValue,
-                  style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800),
-                ),
-              ],
-            ),
+          ..._metricSections(l10n, theme, scheme, unitSystem),
+          const SizedBox(height: 10),
+          _FeedbackCard(
+            l10n: l10n,
+            scheme: scheme,
+            theme: theme,
+            rpe: _rpe,
+            noteController: _noteController,
+            noteFocusNode: _noteFocusNode,
+            busy: _busy,
+            onRpeChanged: _busy ? (_) {} : _setRpe,
           ),
-          if (secondary.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (final (label, value) in secondary)
-                  _MetricTile(label: label, value: value, scheme: scheme, theme: theme),
-              ],
-            ),
-          ],
-          if (session.isRated) ...[
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(AppRadius.card),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    alignment: Alignment.center,
-                    decoration:
-                        BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-                    child: Text(
-                      '${session.rpe}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onPrimaryContainer,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.postWorkoutFeedbackSectionTitle,
-                            style: theme.textTheme.labelLarge),
-                        if (session.feedbackNote != null && session.feedbackNote!.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              session.feedbackNote!,
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
 
-  static (String, String) _primaryMetric(
+  List<Widget> _metricSections(
     AppLocalizations l10n,
-    ActivityFamily family,
-    CardioMetrics? cardio,
-    Duration? duration,
+    ThemeData theme,
+    ColorScheme scheme,
     UnitSystem unitSystem,
   ) {
-    final durationLabel = l10n.durationSectionLabel;
-    final durationValue = duration == null ? '—' : CardioFormatter.duration(duration);
-    switch (family) {
-      case ActivityFamily.distance:
-        final meters = cardio?.distanceMeters;
-        if (meters != null && meters > 0) {
-          return (l10n.distanceFieldLabel, CardioFormatter.distance(meters, unitSystem));
-        }
-        return (durationLabel, durationValue);
-      case ActivityFamily.machine:
-        return (l10n.movingTimeLabel, durationValue);
-      case ActivityFamily.game:
-        return (l10n.playingTimeLabel, durationValue);
-    }
-  }
+    final durationValue = _duration == null ? '—' : CardioFormatter.duration(_duration);
+    final hasDistance = (_distanceMeters ?? 0) > 0;
 
-  static List<_MetricEntry> _secondaryMetrics(
-    AppLocalizations l10n,
-    ActivityFamily family,
-    CardioMetrics? cardio,
-    Duration? duration,
-    UnitSystem unitSystem,
-  ) {
-    final entries = <_MetricEntry>[];
-    switch (family) {
+    switch (_family) {
       case ActivityFamily.distance:
-        final meters = cardio?.distanceMeters;
-        // Duration is the primary number only when there's no distance;
-        // when distance *is* primary, duration belongs here as a secondary.
-        if (meters != null && meters > 0) {
-          if (duration != null) {
-            entries.add((l10n.durationSectionLabel, CardioFormatter.duration(duration)));
-            final pace = CardioFormatter.pace(meters, duration, unitSystem);
-            if (pace != null) entries.add((l10n.paceLabel, pace));
-          }
+        final primaryLabel = hasDistance ? l10n.distanceFieldLabel : l10n.durationSectionLabel;
+        final primaryValue =
+            hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : durationValue;
+        final secondary = <Widget>[];
+        if (hasDistance && _duration != null) {
+          secondary.add(_MetricTile(label: l10n.durationSectionLabel, value: durationValue));
+          final pace = CardioFormatter.pace(_distanceMeters!, _duration, unitSystem);
+          if (pace != null) secondary.add(_MetricTile(label: l10n.paceLabel, value: pace));
         }
-        final elevation = cardio?.elevationGainMeters;
-        if (elevation != null) {
-          entries.add((l10n.elevationGainFieldLabel, CardioFormatter.elevation(elevation, unitSystem)));
-        }
-      case ActivityFamily.machine:
-        final meters = cardio?.distanceMeters;
-        if (meters != null && meters > 0) {
-          entries.add((l10n.distanceFieldLabel, CardioFormatter.distance(meters, unitSystem)));
-        }
-        final watts = cardio?.avgWatts;
-        if (watts != null) entries.add((l10n.avgWattsFieldLabel, '${watts.round()} W'));
-        final cadence = cardio?.avgCadence;
-        if (cadence != null) entries.add((l10n.avgCadenceFieldLabel, '${cadence.round()} rpm'));
-        final resistance = cardio?.resistanceLevel;
-        if (resistance != null) entries.add((l10n.resistanceLevelFieldLabel, '$resistance'));
-        final calories = cardio?.deviceCalories;
-        if (calories != null) {
-          entries.add((l10n.deviceCaloriesFieldLabel, '${calories.round()} kcal'));
-        }
-      case ActivityFamily.game:
-        final venue = cardio?.venue;
-        if (venue != null) {
-          entries.add((
-            l10n.venueSectionLabel,
-            venue == 'INDOOR' ? l10n.venueIndoorLabel : l10n.venueOutdoorLabel,
+        if (_elevationGainMeters != null) {
+          secondary.add(_MetricTile(
+            label: l10n.elevationGainFieldLabel,
+            value: CardioFormatter.elevation(_elevationGainMeters!, unitSystem),
           ));
         }
-        final intensity = cardio?.intensity;
-        if (intensity != null) entries.add((l10n.intensitySectionLabel, '$intensity/5'));
-        final score = cardio?.scorePoints;
-        if (score != null) entries.add((l10n.scorePointsFieldLabel, '$score'));
+        return [
+          _PrimaryMetricCard(
+            label: primaryLabel,
+            value: primaryValue,
+            edited: hasDistance && _distanceSource == 'MANUAL',
+            editedLabel: l10n.manuallyEditedBadgeLabel,
+            scheme: scheme,
+            theme: theme,
+            onTap: _busy ? null : _editDistance,
+          ),
+          if (secondary.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(spacing: 10, runSpacing: 10, children: secondary),
+          ],
+        ];
+      case ActivityFamily.machine:
+        final secondary = <Widget>[
+          _MetricTile(
+            label: l10n.distanceFieldLabel,
+            value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
+            edited: _distanceSource == 'MANUAL',
+            editedLabel: l10n.manuallyEditedBadgeLabel,
+            onTap: _busy ? null : _editDistance,
+          ),
+          if (_avgWatts != null)
+            _MetricTile(label: l10n.avgWattsFieldLabel, value: '${_avgWatts!.round()} W'),
+          if (_avgCadence != null)
+            _MetricTile(label: l10n.avgCadenceFieldLabel, value: '${_avgCadence!.round()} rpm'),
+          if (_resistanceLevel != null)
+            _MetricTile(label: l10n.resistanceLevelFieldLabel, value: '$_resistanceLevel'),
+          _MetricTile(
+            label: l10n.deviceCaloriesFieldLabel,
+            value: _deviceCalories == null ? '—' : '${_deviceCalories!.round()} kcal',
+            edited: _caloriesSource == 'MANUAL',
+            editedLabel: l10n.manuallyEditedBadgeLabel,
+            onTap: _busy ? null : _editDeviceCalories,
+          ),
+        ];
+        return [
+          _PrimaryMetricCard(
+            label: l10n.movingTimeLabel,
+            value: durationValue,
+            scheme: scheme,
+            theme: theme,
+          ),
+          const SizedBox(height: 10),
+          Wrap(spacing: 10, runSpacing: 10, children: secondary),
+        ];
+      case ActivityFamily.game:
+        final secondary = <Widget>[
+          if (_venue != null)
+            _MetricTile(
+              label: l10n.venueSectionLabel,
+              value: _venue == 'INDOOR' ? l10n.venueIndoorLabel : l10n.venueOutdoorLabel,
+            ),
+          if (_intensity != null) _MetricTile(label: l10n.intensitySectionLabel, value: '$_intensity/5'),
+          if (_scorePoints != null)
+            _MetricTile(label: l10n.scorePointsFieldLabel, value: '$_scorePoints'),
+        ];
+        return [
+          _PrimaryMetricCard(
+            label: l10n.playingTimeLabel,
+            value: durationValue,
+            scheme: scheme,
+            theme: theme,
+          ),
+          if (secondary.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(spacing: 10, runSpacing: 10, children: secondary),
+          ],
+        ];
     }
-    return entries;
+  }
+}
+
+class _PrimaryMetricCard extends StatelessWidget {
+  const _PrimaryMetricCard({
+    required this.label,
+    required this.value,
+    required this.scheme,
+    required this.theme,
+    this.edited = false,
+    this.editedLabel,
+    this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final ColorScheme scheme;
+  final ThemeData theme;
+  final bool edited;
+  final String? editedLabel;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  if (edited) _EditedBadge(label: editedLabel!, scheme: scheme),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(value, style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800)),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -248,35 +455,138 @@ class _MetricTile extends StatelessWidget {
   const _MetricTile({
     required this.label,
     required this.value,
-    required this.scheme,
-    required this.theme,
+    this.edited = false,
+    this.editedLabel,
+    this.onTap,
   });
 
   final String label;
   final String value;
+  final bool edited;
+  final String? editedLabel;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Material(
+      color: scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(AppRadius.input),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 100),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              Text(label, style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+              if (edited) ...[
+                const SizedBox(height: 4),
+                _EditedBadge(label: editedLabel!, scheme: scheme),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The "kézzel szerkesztve" tag (docs/cardio/design M14) — shown whenever
+/// the field's `source` is `'MANUAL'`, which today is the *only* non-null
+/// source any metric ever has (see the screen's class doc) — so this reads
+/// as "you typed this in" rather than "this differs from a measurement",
+/// but the mechanism is exactly R8's: a manual value always wins, and
+/// always says so.
+class _EditedBadge extends StatelessWidget {
+  const _EditedBadge({required this.label, required this.scheme});
+
+  final String label;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFFC49A6C);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.edit, size: 12, color: accent),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accent)),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Hogy ment?" — RPE + note, always visible and always editable (unlike
+/// the old read-only screen, which only showed this section once already
+/// rated). Autosaves per docs/cardio/59-cardio-implementation-plan.md C2.8:
+/// no "Mentés" button, matching the live screen's per-field-autosave
+/// convention rather than the mockup's single bottom Save button — a
+/// deliberate simplification, since a separate "unsaved changes" state
+/// would be new complexity this screen doesn't otherwise need.
+class _FeedbackCard extends StatelessWidget {
+  const _FeedbackCard({
+    required this.l10n,
+    required this.scheme,
+    required this.theme,
+    required this.rpe,
+    required this.noteController,
+    required this.noteFocusNode,
+    required this.busy,
+    required this.onRpeChanged,
+  });
+
+  final AppLocalizations l10n;
   final ColorScheme scheme;
   final ThemeData theme;
+  final int? rpe;
+  final TextEditingController noteController;
+  final FocusNode noteFocusNode;
+  final bool busy;
+  final ValueChanged<int> onRpeChanged;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minWidth: 100),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadius.input),
+        color: scheme.primary.withValues(alpha: 0.08),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            value,
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          Text(l10n.postWorkoutFeedbackTitle, style: theme.textTheme.labelLarge),
+          const SizedBox(height: 8),
+          RpeSelector(
+            value: rpe,
+            onChanged: busy ? (_) {} : onRpeChanged,
+            lowAnchorLabel: l10n.postWorkoutFeedbackAnchorEasy,
+            highAnchorLabel: l10n.postWorkoutFeedbackAnchorMax,
           ),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+          const SizedBox(height: 16),
+          TextField(
+            controller: noteController,
+            focusNode: noteFocusNode,
+            enabled: !busy,
+            minLines: 1,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: l10n.postWorkoutFeedbackNoteHint,
+              border: const OutlineInputBorder(),
+            ),
           ),
         ],
       ),

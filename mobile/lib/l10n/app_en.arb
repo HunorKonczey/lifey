@@ -3371,14 +3371,6 @@
   "@paceLabel": {
     "description": "Secondary-metric label for a DISTANCE-family cardio session"
   },
-  "cardioSessionPausedLabel": "Paused",
-  "@cardioSessionPausedLabel": {
-    "description": "Status label on the live CardioSessionScreen while paused"
-  },
-  "cardioSessionFinishedLabel": "Finished",
-  "@cardioSessionFinishedLabel": {
-    "description": "Status label on the live CardioSessionScreen once the workout is finished"
-  },
   "pauseButtonLabel": "Pause",
   "@pauseButtonLabel": {
     "description": "Button that pauses a running cardio session"
@@ -3393,11 +3385,61 @@
   },
   "finishCardioConfirmTitle": "Finish workout?",
   "@finishCardioConfirmTitle": {
-    "description": "Title of the confirm dialog before ending a live cardio session"
+    "description": "Title shown on the slide-to-finish confirmation overlay while dragging (C2.5) — the last moment to notice before ending a live cardio session"
   },
   "finishCardioConfirmMessage": "This ends the session and saves your moving time.",
   "@finishCardioConfirmMessage": {
-    "description": "Body of the confirm dialog before ending a live cardio session"
+    "description": "Body text shown on the slide-to-finish confirmation overlay while dragging (C2.5)"
+  },
+  "manualPauseCardTitle": "Paused",
+  "@manualPauseCardTitle": {
+    "description": "Title of the pause-status card shown when the user manually paused a live cardio session (C2.5, M08)"
+  },
+  "manualPauseCardSubtitle": "You stopped it · {duration} ago",
+  "@manualPauseCardSubtitle": {
+    "description": "Subtitle of the manual-pause card, showing how long ago the pause started",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "autoPauseCardTitle": "Automatic pause",
+  "@autoPauseCardTitle": {
+    "description": "Title of the pause-status card shown when the system auto-paused a live DISTANCE-family cardio session (C2.5, M09) — visually distinct from a manual pause"
+  },
+  "autoPauseCardMessage": "You stopped moving, so we paused tracking. It'll resume automatically once you start moving again.",
+  "@autoPauseCardMessage": {
+    "description": "Explanatory body text of the auto-pause card"
+  },
+  "autoPauseResumeHintTitle": "Move to resume",
+  "@autoPauseResumeHintTitle": {
+    "description": "Primary line of the auto-pause dashed resume button"
+  },
+  "autoPauseResumeHintSubtitle": "or tap here to resume manually",
+  "@autoPauseResumeHintSubtitle": {
+    "description": "Secondary line of the auto-pause dashed resume button"
+  },
+  "slideToFinishLabel": "Slide to finish",
+  "@slideToFinishLabel": {
+    "description": "Label on the slide-to-finish bar before it's been dragged (C2.5, M08/M09) — finishing a live cardio session never reacts to a plain tap, only a drag past the threshold or a long press"
+  },
+  "slideToFinishReleaseLabel": "Release",
+  "@slideToFinishReleaseLabel": {
+    "description": "Label on the slide-to-finish bar once the drag has passed the completion threshold"
+  },
+  "slideToFinishProgressHint": "{percent}% more — release to finish",
+  "@slideToFinishProgressHint": {
+    "description": "Helper text below the slide-to-finish bar while dragging, showing the remaining percent before it completes",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "slideToFinishCancelLabel": "Cancel — back to the workout",
+  "@slideToFinishCancelLabel": {
+    "description": "Cancel row shown alongside the slide-to-finish confirmation overlay while dragging"
   },
   "couldNotUpdateWorkoutMessage": "Couldn't update the workout. Please try again.",
   "@couldNotUpdateWorkoutMessage": {
@@ -3430,5 +3472,53 @@
   "onBenchLabel": "Bench",
   "@onBenchLabel": {
     "description": "GAME-family live-session toggle: currently on the bench (movingSeconds paused, gross time keeps running)"
+  },
+  "quickStartSheetTitle": "Quick start",
+  "@quickStartSheetTitle": {
+    "description": "Title of the bottom sheet opened by long-pressing the Workouts FAB (C2.7, M01/M02)"
+  },
+  "quickStartSheetSubtitle": "One tap — the workout starts right away.",
+  "@quickStartSheetSubtitle": {
+    "description": "Subtitle under the quick-start sheet's title"
+  },
+  "quickStartColdStartBanner": "You don't have any workout history yet. These are the most common starting points — the order adjusts itself after your first week.",
+  "@quickStartColdStartBanner": {
+    "description": "Explanatory banner shown on the quick-start sheet while there's too little completed-session history for the ranking to be personalized yet (M02)"
+  },
+  "allActivityTypesLabel": "All workout types",
+  "@allActivityTypesLabel": {
+    "description": "Row at the bottom of the quick-start sheet that opens the full activity/template picker (M01/M02 \"Összes edzéstípus\")"
+  },
+  "activityPickerTitle": "What are you starting?",
+  "@activityPickerTitle": {
+    "description": "Title of the full activity-type + template picker opened from the quick-start sheet's \"All workout types\" row (M03)"
+  },
+  "cardioSectionLabel": "CARDIO",
+  "@cardioSectionLabel": {
+    "description": "Section header above the seven cardio activity types in the full activity picker (M03)"
+  },
+  "strengthTemplatesSectionLabel": "STRENGTH TEMPLATES",
+  "@strengthTemplatesSectionLabel": {
+    "description": "Section header above the user's saved templates in the full activity picker (M03)"
+  },
+  "distanceModalitySubtitle": "Distance · pace · GPS",
+  "@distanceModalitySubtitle": {
+    "description": "Modality hint subtitle for a DISTANCE-family entry in the quick-start sheet and full activity picker — deliberately family-generic, not per-type (docs/cardio/59-cardio-implementation-plan.md C2.7 simplification), so running/walking/hiking share it"
+  },
+  "machineModalitySubtitle": "Cadence · power",
+  "@machineModalitySubtitle": {
+    "description": "Modality hint subtitle for a MACHINE-family entry in the quick-start sheet and full activity picker"
+  },
+  "gameModalitySubtitle": "Playing time · heart-rate zones",
+  "@gameModalitySubtitle": {
+    "description": "Modality hint subtitle for a GAME-family entry in the quick-start sheet and full activity picker"
+  },
+  "manuallyEditedBadgeLabel": "Edited",
+  "@manuallyEditedBadgeLabel": {
+    "description": "Badge shown on a cardio summary metric tile whose value came from a manual entry rather than a measured source (docs/cardio/51-cardio-overview-plan.md R8, C2.8) — today that's every value with source == 'MANUAL', since no automatic source (GPS/device) exists yet"
+  },
+  "editDeviceCaloriesDialogTitle": "Update machine calories",
+  "@editDeviceCaloriesDialogTitle": {
+    "description": "Title of the dialog that manually sets a MACHINE-family session's device-displayed calorie count on the summary screen (C2.8)"
   }
 }

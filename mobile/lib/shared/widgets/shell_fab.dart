@@ -7,6 +7,7 @@ typedef ShellFabConfig = ({
   String label,
   VoidCallback onPressed,
   bool extended,
+  VoidCallback? onLongPress,
 });
 
 // ---------------------------------------------------------------------------

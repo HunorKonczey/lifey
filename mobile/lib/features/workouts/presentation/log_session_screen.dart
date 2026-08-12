@@ -1556,6 +1556,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       setsDonePerExercise: _watchSetsDonePerExercise(),
       removedExerciseIndexes: _watchRemovedExerciseIndexes(),
       sessionPlan: _watchSessionPlan(),
+      kind: 'STRENGTH',
     );
   }
 

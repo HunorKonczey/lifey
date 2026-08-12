@@ -155,11 +155,11 @@ lépés két fele, hanem két önálló, egymástól függetlenül szállíthat�
 | **C2.2** ✅ | DISTANCE elrendezés + a **„nincs távforrás”** ág (domináns szám időre vált) | Windows | **M04**, **M11** | A domináns szám a [57 §2](57-cardio-design-prompt.md) szabálya szerint vált; nincs „0,00 km” nagy helyen |
 | **C2.3** ✅ | MACHINE elrendezés | Windows | **M05** | Kadencia/teljesítmény/ellenállás bevihető menet közben |
 | **C2.4** ✅ | GAME elrendezés + **pályán/padon kapcsoló** (a `movingSeconds` csak „pályán” nő) | Windows | **M06**, **M07** | A játékidő és a bruttó idő külön viselkedik (teszt); *(Q-D2 nem oldva meg, ld. C2.4 feljegyzés — pontszámláló C9-re halasztva)* |
-| **C2.5** | Szünet-állapotok (kézi vs. **auto-pause vizuálisan elkülönítve**) + befejezés húzással | Windows | **M08**, **M09**, **M12** | Az auto-pause más, mint a kézi; a befejezés koppintásra **nem** történik meg |
-| **C2.6** | `activity_ranking.dart` — recency-súlyozott rangsor (21 napos felezés), tisztán tesztelhető | Windows | – | Felezés, döntetlen-feloldás, hidegindítás, vegyes lista mind tesztelve ([53 §3.4](53-cardio-mobile-plan.md)) |
-| **C2.7** | Gyorsindító lap a FAB hosszú nyomására + „Összes” aktivitás-választó | Windows | **M01**, **M02**, **M03** | Hosszú nyomás + egy koppintás = fut az edzés, köztes képernyő nélkül |
-| **C2.8** | Összegzés-képernyő (útvonal nélküli változat) + RPE + kézi szerkesztés „szerkesztve” jelöléssel | Windows | **M15**, **M14** | A szerkesztett érték felülírja a mértet, és jelölve marad ([51 R8](51-cardio-overview-plan.md)) |
-| **C2.9** | `WorkoutSessionState` `kind`+`cardio` bővítés (előformázott stringek, epoch-alapú idő) | Windows | – | Régi natív build a `STRENGTH` ágra esik vissza, nem törik |
+| **C2.5** ✅ | Szünet-állapotok (kézi vs. **auto-pause vizuálisan elkülönítve**) + befejezés húzással | Windows | **M08**, **M09**, **M12** | Az auto-pause más, mint a kézi; a befejezés koppintásra **nem** történik meg |
+| **C2.6** ✅ | `activity_ranking.dart` — recency-súlyozott rangsor (21 napos felezés), tisztán tesztelhető | Windows | – | Felezés, döntetlen-feloldás, hidegindítás, vegyes lista mind tesztelve ([53 §3.4](53-cardio-mobile-plan.md)) |
+| **C2.7** ✅ | Gyorsindító lap a FAB hosszú nyomására + „Összes” aktivitás-választó | Windows | **M01**, **M02**, **M03** | Hosszú nyomás + egy koppintás = fut az edzés, köztes képernyő nélkül |
+| **C2.8** ✅ | Összegzés-képernyő (útvonal nélküli változat) + RPE + kézi szerkesztés „szerkesztve” jelöléssel | Windows | **M15**, **M14** | A szerkesztett érték felülírja a mértet, és jelölve marad ([51 R8](51-cardio-overview-plan.md)) |
+| **C2.9** ✅ | `WorkoutSessionState` `kind`+`cardio` bővítés (előformázott stringek, epoch-alapú idő) | Windows | – | Régi natív build a `STRENGTH` ágra esik vissza, nem törik |
 | **C2.10a** | Android tartós értesítés cardio-layout | Windows | **M25** | Nem „0 szett” látszik az Android értesítésben; frissítés csak változásra |
 | **C2.10b** | iOS Live Activity + Dynamic Island cardio-layout | **Mac** | **M23**, **M24** | Nem „0 szett” látszik a zárolási képernyőn / Dynamic Islanden; frissítés ≤ 5 mp és csak változásra (ActivityKit-kvóta) |
 | **C2.11a** | Deep-link route (`go_router`) + Android dinamikus app-shortcutok (`ShortcutManager`, natív híd) + Android kezdőképernyő-widget gombok | Windows | **M29** | Android app-ikon hosszú nyomásából / widgetből **egy** gesztussal indul az edzés; a route C2.11b-nek is kész célpont |
@@ -1154,5 +1154,426 @@ rendelkezik, nincs több család a generikus placeholderen.
 **Eredmény:** `flutter analyze` (teljes projekt) tiszta; `flutter test test/features/workouts`
 **335/335 zöld**. Ezzel a **három családi elrendezés (C2.2–C2.4) mind kész.**
 
-**Következő:** `C2.5` — szünet-állapotok (kézi vs. **auto-pause vizuálisan elkülönítve**) +
-befejezés húzással, M08/M09/M12 szerint.
+---
+
+## C2.5 kész (2026-08-12) — szünet-állapotok (kézi vs. auto-pause) + befejezés húzással
+
+**A GPS-hiány miatti tervezési döntés, ami mindent visz.** Az auto-pause **tényleges kiváltása**
+GPS-sebességre épül ([53 §4.3](53-cardio-mobile-plan.md)), ami csak C4a-ban érkezik — a
+táblázat-sor ezt maga is jelzi: az auto-pause *bekötése* külön, C4a.5 alatt szerepel. C2.5 tehát
+nem építhet valódi triggert, csak a **vázat és a vizuált**: egy `autoPause()` publikus hívást,
+amit ma senki nem hív (a GPS-kód C4a.5-ben fog), plusz a két állapot (kézi/auto) vizuálisan
+elkülönített megjelenítését. Ugyanaz a minta, mint C2.1 `movingSinceEpochMs`-e vagy C2.4
+`_onCourt`-ja: egy jövőbeli lépésnek szánt horgony, ami már ma tesztelhető és helyes.
+
+**A horgony konkrétan: a State-osztály publikussá tétele.** A `_CardioSessionScreenState` mostantól
+`CardioSessionScreenState` — ugyanaz a minta, mint a Flutter saját `Form`/`FormState`,
+`Scaffold`/`ScaffoldState` párosa. Három publikus metódus rajta: `pause()`/`resume()` (a gombok
+mögötti, korábban privát logika átnevezve, változatlan viselkedéssel) és az új `autoPause()` — ez
+utóbbi a `_family != distance` esetben nyugodt no-op (auto-pause csak DISTANCE-nél értelmezett,
+[53 §4.3](53-cardio-mobile-plan.md)), egyébként ugyanazt a checkpoint-fagyasztást végzi, mint
+`pause()`, csak `_PauseReason.auto`-t jelölve. C4a.5 dolga lesz egy `GlobalKey<CardioSessionScreenState>`-en
+keresztül hívni, amint a GPS-sebesség 15 mp-ig 0,5 m/s alatt marad — ez a lépés csak azt
+garantálja, hogy amikor az a hívás megérkezik, a képernyő helyesen reagál rá.
+
+**Miért nincs külön `autoResume()`.** A design (DD-6, [57 §](57-cardio-design-prompt.md)) és az
+53-as doc is csak a *szüneteltetett* állapot vizuálját különbözteti meg — a folytatás, akár a
+felhasználó koppint, akár a GPS észlel újra mozgást, ugyanaz a hívás (`resume()`), ugyanaz a
+checkpoint-nyitás. Nincs mit külön "auto-folytatásnak" jelölni a képernyőn.
+
+**Pause-kártya, M08 vs M09.** Új `_PauseStatusCard`: kézi szünetnél semleges (`onSurfaceVariant`)
+szín, `pause_circle` ikon, "Paused" cím + "You stopped it · X ago" alcím (élő, a szünet kezdete
+óta ketyegő időtartammal — ehhez a tickernek **futnia kell szünet alatt is**, nem csak futás
+közben: az `initState`/`_pauseAs` mostantól sosem állítja le a tickert pause-kor, csak
+`_finish()`-nél). Auto-pause-nál a design saját, nem témázott barnás-drapp árnyalata
+(`#C49A6C`, [design M09](design/Lifey%20Cardio%20Design.dc.html)), `motion_photos_paused` ikon,
+szegélyezett kártya, és a doksi saját szövege ("Megálltál, ezért a mérést mi állítottuk meg.
+Magától folytatódik, amint elindulsz."). A szünetelt família-törzs (`familyBody`) 0,6 opacitással
+kiszürkül szünet alatt (M08 jegyzete: "egyik sem változik"), de **tapinthatóság nélkül nem**
+csorbul — a metrika-szerkesztő dialógusok szünet alatt is elérhetők maradnak, mert épp ilyenkor a
+legkényelmesebb kézzel korrigálni egy értéket.
+
+**A folytatás-gomb is elágazik reason szerint**: kézi szünetnél a megszokott teli zöld
+"Folytatás" `FilledButton`; auto-pause-nál egy új `_AutoPauseResumeButton` — szaggatott szegély,
+két sor ("Move to resume" / "or tap here to resume manually"), tudatosan **nem** teli gomb, mert
+az elsődleges elvárás itt a mozgás, nem a koppintás (design M09 jegyzete).
+
+**Befejezés húzással — a régi `AlertDialog` teljesen eltűnt.** A kész-ha szó szerint kimondja:
+"a befejezés koppintásra nem történik meg." Egy `showDialog` + `FilledButton('Finish')` pár
+strukturálisan **mindig** koppintásra zárható, tehát nem csak kiegészítésre, hanem **cserére**
+szorult. Az új `_SlideToFinishBar` nyers `Listener`-t használ (nem `GestureDetector`-t) — ez a
+döntés nem esztétikai: egy `GestureDetector` tap-recognizere egy mozdulatlan le-fel koppintásra is
+lefutna, pont azt engedve meg, amit a kész-ha tilt. A `Listener` pointer-eseményei ezzel szemben
+nyers adatot adnak, a "koppintás" fogalma sehol nem jelenik meg a döntési logikában:
+- **Húzás**: `onPointerMove` a helyi `dx`/szélesség arányból élő `progress`-t számol; 75%
+  fölötti elengedésnél (`onPointerUp`) fut le a befejezés, alatta 0-ra ugrik vissza.
+- **Hosszú nyomás (600 ms)**: `onPointerDown`-kor egy `Timer` indul; ha 600 ms-en belül nincs
+  `onPointerMove`/`onPointerUp`, lefut ugyanaz a befejezés-út, haptikus jelzéssel — ez az M08
+  jegyzet "hosszú nyomás (600 ms a zászlóra) ugyanezt teszi" sorának a megvalósítása.
+- **Sima koppintás**: sem 75%-os elmozdulás, sem 600 ms várakozás nem történik, tehát egyik ág sem
+  fut le — ez pontosan a kész-ha bizonyítéka, és ezt egy dedikált teszt is lezárja (lásd lent).
+
+**M12 megerősítő overlay, megosztott `ValueNotifier`-en át.** A húzás közben megjelenő,
+elsötétített összegző réteg (`_FinishConfirmationOverlay`) és maga a sáv két külön widget — az
+overlay a képernyő `Stack`-jének tetején, a sáv a görgethető tartalom belsejében. Mindkettő
+ugyanazt a `ValueNotifier<double> _finishProgress`-t olvassa/írja (nem `setState`-en át
+szinkronizálva): a sáv minden pixelnyi húzásnál írja, az overlay `ValueListenableBuilder`-rel
+olvassa **és** a saját "Mégse" sora közvetlenül nullázza — enélkül a Mégse gomb nem tudná
+visszaállítani a sáv belső húzás-állapotát, mert a kettő nem ugyanaz a widget-példány.
+**Tudatos átvétel, nem duplikálás**: az overlay szövege a már meglévő `finishCardioConfirmTitle`/
+`finishCardioConfirmMessage` ARB-kulcsokat használja (a leírásuk frissítve "dialógus" → "overlay"),
+mivel tartalmilag ugyanaz a megerősítő szöveg, csak más felületen jelenik meg.
+
+**Váratlan lelet, C2.5-höz nem tartozó, de a munka során felfedezett holt ARB-kulcs**: a régi
+`cardioSessionPausedLabel` ("Paused"/"Szünet") a plain "Paused" állapot-szöveget adta, amit ez a
+lépés lecserélt a pause-kártyára — a kulcs emiatt **teljesen árva** lett (semmilyen fájl nem
+hivatkozott rá a törlés után, ellenőrizve `grep`-pel). Töröltem mindkét ARB-ból és
+újragenaráltam a lokalizációt, ahelyett hogy holt súlyként otthagytam volna — ugyanaz az elv,
+amit a doc korábban is követett (pl. C1.2 `cardio_details` időbélyeg-mezőjének tudatos
+kihagyása).
+
+**Tesztek** (`cardio_session_screen_test.dart`, jelentősen bővítve — a régi "Finish asks for
+confirmation"/"cancelling the finish confirmation" két teszt törölve, hiszen a mögöttük álló
+`AlertDialog` megszűnt):
+- A meglévő futó/szüneteltetett teszteket kiegészítettem a pause-kártya és a sáv jelenlétének
+  ellenőrzésével (a régi `OutlinedButton('Finish')` helyett `find.text('Slide to finish')`).
+- `slide-to-finish` csoport (5 teszt): sima koppintás nem fejez be (600 ms várakozással is
+  ellenőrizve, hogy nem marad égve egy késleltetett timer); 75% fölötti húzás + elengedés az
+  overlay-t mutatja, majd befejez és eltünteti a vezérlőket; 75% alatti húzás visszaugrik;
+  az overlay Mégse sora nullázza az állapotot anélkül, hogy a még lenyomva tartott pointer
+  bármit tenne utána; 600 ms-es hosszú nyomás (mozgás nélkül) befejez.
+- `auto-pause` csoport (3 teszt): `state.autoPause()` (a publikus State-en, `tester.state<
+  CardioSessionScreenState>`-tel elérve) auto-pause kártyát mutat, nem a kézit; a dashed
+  folytatás-gomb koppintása ugyanúgy `resumeCardioSession`-t hív, mint a kézi Folytatás; MACHINE
+  családon `autoPause()` no-op (nincs `pauseCalls`, nincs kártya).
+- Egy kockázati pont, amit a hosszú-nyomás és a sikeres húzás tesztjei tudatosan kerülnek: a
+  befejezés után a `_SlideToFinishBar` (és a rajta lévő `Listener`) **eltűnik a fából** (`_isFinished`
+  igazra vált, a teljes vezérlő-sor feltétele hamis lesz) — egy `gesture.up()` hívás egy már
+  eltávolított `Listener`-re pointer-esemény-küldést kockáztatna. A hosszú-nyomásos tesztben ezért
+  szándékosan **nem** hívok `gesture.up()`-ot a Timer általi befejezés után; a húzásos tesztben az
+  `up()` maga még biztonságos (a leválasztás csak a rákövetkező `pump`/`pumpAndSettle` alatt,
+  aszinkron módon történik meg, az `up()` szinkron dispatch-e után).
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; `flutter test test/features/workouts`
+**341/341 zöld** (335 + 6 nettó — 2 elavult teszt törölve, 8 új: 5 slide-to-finish + 3 auto-pause);
+a teljes `flutter test` **774/777 zöld**, a 3 bukás a már ismert, cardión kívüli
+`chat_repository_test.dart` Windows-fájlzár-flake (lásd C1.6 feljegyzés).
+
+---
+
+## C2.6 kész (2026-08-12) — `activity_ranking.dart`, recency-súlyozott rangsor
+
+Tisztán Dart, semmilyen widget vagy Riverpod-provider nélkül — a `recommended_template_provider.dart`
+mintáját követve (ami a *tiszta* predikciós függvényt egy külön, provider-szintű join-tól
+elválasztja): ez a lépés csak a rangsoroló függvényt adja, a cím/ikon feloldását (pl. egy
+`templateClientId`-hoz tartozó terv neve) a jövőbeli fogyasztókra hagyva (C2.7 gyorsindító lap,
+C2.11 app-shortcut, C5.3 óra-payload) — egyik sem épült még, ez a doc §3.4-ben ("D-C.8") leírt,
+mindhárom közös igazságforrása.
+
+**A rangsor-kulcs típusa, `QuickStartEntry`.** A doksi szövege szerint a kulcs cardiónál az
+`activityType`, erősítőnél a `templateClientId` (sablon nélküli erősítő → egyetlen közös "üres
+edzés" vödör). Két névvel-konstruált, értékegyenlőségű osztály (`QuickStartEntry.strength([id])`
+és `QuickStartEntry.cardio(type)`) — a `activityTypeLabel`/`Icon`/`Color` (C0.2) már ma is ismeri
+a `'STRENGTH'` szentinelt kevert listákhoz ([activity_type.dart:50](../../mobile/lib/features/workouts/domain/activity_type.dart#L50)
+sajátdokstringje kifejezetten erre a §3.4-es funkcióra hivatkozik), de a `QuickStartEntry` nem ezt
+a string-szentinelt viszi tovább, mert a kulcsnak a sablon-azonosítót is hordoznia kell (két
+különböző terv **külön** rangsorolt bejegyzés, nem egy közös "erősítő" alatt).
+
+**A pontszám-formula szó szerint**: `Σ 0.5^(nap / 21)` a kulcs **befejezett**
+(`finishedAt != null`) session-jein — egy folyamatban lévő session nulla jelet hordoz, ki van
+zárva a `for` ciklus elején. A `nap` tört napokban számol (`inMilliseconds /
+millisecondsPerDay`), nem egész napokban — élesebb, teszthez pontosabban számolható decay, és
+elkerüli a naphatár-műterméket, amit egy `inDays`-alapú kerekítés okozna.
+
+**A döntetlen-lánc három szintje, a doksi kettő helyett.** A doksi csak kettőt mond ("a frissebb
+utolsó használat nyer; ha az is egyezik, a `kActivityTypes` megjelenítési sorrend"), de ez a
+sorrend **csak azokra az elemekre ad választ, amik szerepelnek is `_defaultOrder`-ben** (a hét
+cardio típus + az üres-edzés vödör) — két **különböző, valódi sablon** (`tPushA` vs. `tPullB`)
+egyike sincs ebben a listában, tehát mindkettő ugyanarra a "lista végén" indexre esne, változatlan
+döntetlennel. Mivel a `List.sort` Dartban **nem garantáltan stabil**, ez elvben nemdeterminisztikus
+kimenetet adhatna azonos bemeneten két futtatás között. Hozzáadtam egy negyedik, a doksiban nem
+szereplő, tisztán a determinizmusért felvett szabályt: azonosító szerinti ábécésorrend
+(`_identityTiebreak`) — ez a doksi szabályait sosem írja felül (csak azután fut le, hogy mindhárom
+korábbi szint már döntetlen), és valós adaton szinte sosem aktiválódik (két különböző sablonnak
+egyszerre pontra **és** másodpercre egyező utolsó használata kellene hozzá).
+
+**Hidegindítás = feltöltés, nem csere.** A `_defaultOrder` (üres edzés, majd a hét cardio típus
+`kActivityTypes` sorrendben) csak azt a maradékot tölti be, ami a valódi rangsorból hiányzik a
+`max`-ig — egy már rangsorolt kulcs (akár valós, akár korábban már betöltött default-elem) nem
+kerül be kétszer. Ez azt jelenti, hogy egyetlen valós session esetén is a **valós** bejegyzés áll
+elöl, a lista csak alatta egészül ki — nem "vagy-vagy" döntés a valós rangsor és a hidegindítási
+lista között, ahogy egy naiv "ha kevés az előzmény, mutasd a defaultot" megvalósítás tenné.
+
+**Tesztek** (`activity_ranking_test.dart`, 15 teszt, öt csoportban): hidegindítás (üres lista,
+egyetlen valós bejegyzés + feltöltés, nincs duplikált feltöltés); felezési idő (azonos
+gyakoriságnál a frissebb nyer; **két 42 napos session pontra ugyanannyit ér, mint egy 21 napos**
+— ez a lépés legfontosabb, kézzel kiszámolt bizonyítéka a felezési időre és az összegzésre
+egyszerre; gyakoriság felülírja az egyetlen friss használatot, ha az összpontszám nagyobb);
+döntetlen-lánc mindhárom szintje (recency → default sorrend, beleértve az üres-edzés vs. cardio
+esetet is → azonosító-ábécésorrend két valódi sablon között); csoportosítás (több sablon nélküli
+erősítő session **egy** vödörbe összegződik; különböző sablonok **külön** bejegyzések maradnak);
+folyamatban lévő session nem termel pontot és nem jelenik meg; vegyes lista (erősítő + cardio
+együtt, kombinált pontszám szerint); `max` levágás és `max: 0` üres lista. Minden pontszám-alapú
+asszerció kézzel kiszámolt `0.5^(nap/21)` értékekre épül a teszt kommentjében, nem csak a végső
+sorrendre hivatkozik — így egy jövőbeli, hibásan átírt kitevő (pl. `nap/30`) elbukna, nem csak egy
+durva sorrend-csere.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; az új `activity_ranking_test.dart`
+**15/15 zöld**; a teljes `flutter test` **789/792 zöld** (774 + 15 új), a 3 bukás a már ismert,
+cardión kívüli `chat_repository_test.dart` Windows-fájlzár-flake.
+
+**Következő:** `C2.7` — gyorsindító lap a FAB hosszú nyomására + „Összes” aktivitás-választó,
+M01/M02/M03 szerint. Ez lesz `rankQuickStartEntries()` első valódi UI-fogyasztója — itt kell majd
+megoldani a `templateClientId` → sablonnév feloldást is (a `recommendedTemplateProvider` mintáját
+követve).
+
+---
+
+## C2.7 kész (2026-08-12) — gyorsindító lap + „Összes edzéstípus” választó
+
+**Visszamenőleges javítás a C2.6-ban épített `_defaultOrder`-en, mielőtt bármi más történt volna.**
+A C2.6-os "hidegindítás" lista szövegesen az 53-as doc §3.4 mondatát követte ("erősítő → futás →
+séta → szobabicikli"), de ez a lépés az M02 design-frame-hez lett rendelve — és az M02 mockup
+**más** sorrendet mutat, kimondott indoklással: "futás · séta · erősítő · szobabicikli — a két
+GPS-es típus előre, mert azokat nem lehet utólag rekonstruálni." Ugyanaz a minta, mint C1.7/C2.2-nél
+korábban: a design-frame (itt: a *saját* frame-je ennek a lépésnek) erősebb forrás, mint egy
+korábbi doc táblázatának szövege. Javítás `activity_ranking.dart`-ban: `_defaultOrder` mostantól
+`[RUNNING, WALKING, strength(), INDOOR_BIKE, HIKING, BASKETBALL, FOOTBALL, OTHER_CARDIO]`.
+
+Eközben egy **második, tudatosan szét nem választott** hibát is találtam a C2.6-os kódban: a
+döntetlen-feloldás (recency után) és a hidegindítás-feltöltés **ugyanazt** a listát használta
+(`_defaultOrderIndex`), holott a doksi két **külön** szabályt ír le — "ha [a recency] is egyezik, a
+`kActivityTypes` megjelenítési sorrend" (döntetlen) vs. "a lista feltöltve az alapértelmezett
+sorrendből" (hidegindítás). Szétválasztva: `_cardioTiebreakIndex` (cardio-cardio döntetlenre,
+`kActivityTypes` alapján, erősítő mindig nyer egy cardióval szembeni döntetlent) és `_defaultOrder`
+(csak feltöltésre, M02 szerint) — a kettőnek **nem kell** megegyeznie, és az M02 szerint ténylegesen
+nem is egyezik (az erősítő a feltöltésben 3. helyen áll, egy döntetlenben viszont mindig nyer).
+`activity_ranking_test.dart` érintett tesztjei frissítve az új sorrendre és a szétválasztott
+mechanizmusra hivatkozó kommentekkel — mind a 15 teszt továbbra is zöld.
+
+**A FAB hosszú nyomás, megosztott mechanizmus.** A `ShellFabConfig` (`shared/widgets/shell_fab.dart`)
+kapott egy opcionális `onLongPress` mezőt; a tényleges FAB-ot render elő `main_shell.dart`
+`GestureDetector`-ba csomagolja, amikor ez nem null — a `FloatingActionButton`-nak nincs saját
+`onLongPress`-e, ez az egyetlen mód hozzáadni anélkül, hogy a widgetet villázni kellene. A
+Nutrition/Weight tabok (a `shellFabProvider` másik két fogyasztója) `onLongPress: null`-t adnak —
+viselkedésük változatlan. A `workouts_screen.dart`-ban csak a Sessions fül (index 0) FAB-ja kap
+tényleges hosszú nyomást (a Templates/Exercises fülek FAB-ja mást csinál, hosszú nyomásuk
+félrevezető lenne).
+
+**`activity_ranking.dart` első valódi fogyasztója: `quick_start_options_provider.dart`** (új) — a
+`recommendedTemplateProvider` mintáját követve két réteg: a C2.6-os tiszta `rankQuickStartEntries()`
+változatlan marad, ez a fájl csak **összeköti** a kimenetét a `workoutTemplateControllerProvider`
+sablonlistájával (`ResolvedQuickStartEntry = ({entry, template})`), hogy a UI névvel/gyakorlatszámmal
+tudja megjeleníteni a sablon-bejegyzéseket. Plusz `isQuickStartColdStartProvider` (< 3 befejezett
+session — M02 jegyzete: "amíg nincs elég adat a rangsorhoz (≥3 edzés)").
+
+**`quick_start_sheet.dart`** (új) — a gyorsindító lap (M01/M02): cím + alcím, opcionális
+hidegindítás-magyarázó sáv, 2×2 rács a top-4 rangsorolt elemből, "Összes edzéstípus" sor. **Egy
+koppintás = fut az edzés** — a kész-ha szó szerint: `startCardioQuickly`/`startStrengthQuickly` a
+sáv bezárása **után** azonnal a megfelelő élő képernyőt pusholja, köztes beállító képernyő nélkül.
+
+- **Cardio indítás**: `startCardioSession()` (C2.1, ma először hívva UI-ból — a
+  `open_workout_screens.dart` saját kommentje már C2.1 óta ezt a lépést várta: "today only reachable
+  from tests, since the quick-start entry point is C2.7"). A navigációhoz szükséges `WorkoutSession`
+  objektumot **helyben** építi fel (nem várja meg a repository stream frissülését) — a
+  `startCardioSession` implementációja pontosan ismert (`movingSeconds: 0`,
+  `movingSinceEpochMs == startedAt`), tehát nincs mit egy stream-lookupra várni, és ez elkerül egy
+  verseny-helyzetet. Utána `openSessionScreen(rootNavigator, session)` — a C0.4 óta épülő **egyetlen
+  elágazási pont** újrahasznosítva, nem egy saját `CardioSessionScreen`-push.
+- **Erősítő indítás**: **tudatosan nem** `openSessionScreen`-en át — annak saját dokstringje
+  kifejezetten kizárja a friss sablon-indítást ("Deliberately not used for starting a fresh session
+  from a template… that path has nothing to branch on"). Helyette bitre a meglévő
+  `TemplatePickerScreen._start` mintája: közvetlen `LogSessionScreen(template: template)` push.
+- Mindkét indító függvény **megosztott** a lap csempéi és az `ActivityPickerScreen` sorai között —
+  nem duplázott logika, csak más lista-alak hívja ugyanazt.
+
+**`activity_picker_screen.dart`** (új) — az "Összes edzéstípus" célja (M03): CARDIO szekció mind a
+hét típussal, ERŐSÍTŐ TERVEK szekció a felhasználó sablonjaival. **Tudatos eltérés a mockuptól**:
+nincs keresőmező (a lista amúgy is rövid, 7 + néhány sablon, és a keresés élő szűrése + a két
+különböző adattípus együttes szűrése aránytalan pluszmunka lett volna ehhez a lépéshez), és nincs
+"Üres edzés" sor az erősítő szekcióban — ez utóbbi **nem hiányosság**, maga az M03 makett sem mutat
+ilyet ("aki idáig eljutott, jó eséllyel olyat keres, ami nincs a négy csempén"), és az üres edzés
+továbbra is egy koppintásra van a FAB sima érintésén és a meglévő `TemplatePickerScreen`-en át.
+
+**Tudatos egyszerűsítés a csempe-alcímeken**: az M01 makett gyakoriság-szöveget mutat ("Heti 3× ·
+kedden"), az M02 hideg állapotban helyszín-jelzést ("Kültéri"/"Beltéri"), az M03 pedig
+típusonként eltérő metrika-leírást. Mindhárom helyett **egyetlen, család-alapú** alcím-mechanizmus
+(`activityModalitySubtitle`) — DISTANCE/MACHINE/GAME csak három szöveg, nem hét plusz a
+gyakoriság-számítás — a heti gyakoriság/nap kiszámítása új logikát igényelt volna a rangsorolón
+kívül, a kész-ha pedig ("hosszú nyomás + egy koppintás = fut az edzés") ezt nem követeli meg.
+
+**Váratlan, C2.7-hez nem tartozó, de a munka során felfedezett teszt-környezeti korlát**: a
+`LogSessionScreen(template: …)` (friss sablon-indítás) widget-tesztben történő teljes felhúzása
+(`pumpAndSettle`) egy `AnimationController`-hibába fut (`elapsedInSeconds >= 0.0` assertion a
+`MusicStickyButton` körüli page-transition/ticker interakcióban) — feltehetően azért, mert a
+képernyő közvetlenül a valódi `workoutSessionRepositoryProvider`-t olvassa (nem a tesztekben
+mockolt controllert), Drift-adatbázis nélkül. **Ez a meglévő `template_picker_screen.dart`-ra is
+igaz** (aminek szintén nincs saját tesztje, ugyanezzel a push-mintával) — nem C2.7-regresszió, csak
+eddig senki nem próbálta widget-teszttel elérni ezt az utat. A gyorsindító lap tesztjei ezért csak
+a csempe-tartalmat és a lap bezárását ellenőrzik erősítő-indításnál, a cardio-utat viszont
+végponttól végpontig (a `CardioSessionScreen` ilyen probléma nélkül felhúzható).
+
+**Tesztek:**
+- `activity_ranking_test.dart` — a C2.6-os 15 teszt frissítve az M02-korrekcióra (lásd fent),
+  továbbra is 15/15 zöld.
+- `quick_start_sheet_test.dart` (új, 7 teszt): hidegindítás-sorrend (M02), hidegindítás-banner
+  3-as küszöbnél, cardio-csempe koppintása ténylegesen elindítja és a `CardioSessionScreen`-t
+  nyitja (a lap eltűnik alóla), erősítő-csempék (üres/sablonos) helyes felirata, "Összes
+  edzéstípus" az `ActivityPickerScreen`-t nyitja, egy ottani sor is azonnal indít.
+- `activity_picker_screen_test.dart` (új, 5 teszt): mind a hét cardio típus a családfüggő
+  alcímmel, az erősítő szekció rejtve sablon nélkül, sablonok gyakorlatszámmal (üres edzés sor
+  nélkül), cardio sor indítása, bezárás gomb.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a teljes `flutter test` **801/804 zöld**
+(789 + 12 nettó új: 7 quick-start-sheet + 5 activity-picker), a 3 bukás a már ismert, cardión
+kívüli `chat_repository_test.dart` Windows-fájlzár-flake. Ezzel **C2.1–C2.7 mind kész** — hátra
+van C2.8/C2.9 (mindkettő Windowson fejleszthető), majd C2.10/C2.11 (natív kód, részben Mac-et
+igényel).
+
+**Következő:** `C2.8` — összegzés-képernyő (útvonal nélküli változat) + RPE + kézi szerkesztés
+„szerkesztve” jelöléssel, M15/M14 szerint.
+
+---
+
+## C2.8 kész (2026-08-12) — összegzés-képernyő: szerkeszthető, RPE, „szerkesztve” jelölés
+
+**A legfontosabb szerkezeti döntés: egy képernyő, nem kettő.** A C1.9-es `CardioSummaryScreen`
+saját dokstringje már akkor kimondta: "tudatosan **nem** az M15 makett (élő-edzés, szerkeszthető,
+teljesítmény-görbés) verziója; **az C2.8 feladata**." Ez azt jelenti, hogy C2.8 célfájlja nem egy
+új képernyő, hanem a meglévő `cardio_summary_screen.dart` **felváltása** — ugyanaz a widget
+szolgálja ki mindkét elérési utat: a `CardioSessionScreen._finish()` most már `pushReplacement`-tel
+egyenesen ide navigál (a korábbi, C2.1 óta ismert "Befejezve" placeholder-t felváltva — ld. C2.1
+saját feljegyzése: "az RPE-bevitel, kézi szerkesztés és 'szerkesztve' jelölés a C2.8 táblázat-sorának
+a tárgya"), **és** az `open_workout_screens.dart` egy héttel később újranyitott, befejezett cardio
+session-re is ugyanide mutat, változatlanul. Egy érték, amit most szerkesztesz, ugyanúgy jelenik meg,
+akár most zártad le az edzést, akár három hete csináltad.
+
+**A "szerkesztve" jelölés hatóköre: pontosan a két mező, aminek ma valódi eredet-jelzése van.**
+Az [51 R8](51-cardio-overview-plan.md) szó szerint azt mondja, "minden metrikának van `source`
+jelzése" — de a mai séma (C1.5/C1.8/C2.2/C2.3) ezt ténylegesen csak két mezőre építette ki:
+`distanceSource` és `caloriesSource`. Elevation/kadencia/watt/ellenállás/GAME-mezők nem kapnak
+`source` oszlopot, mert **semmilyen automatikus forrásuk sincs ma** (nincs GPS, nincs BLE-s
+edzőgép-párosítás, [53 §4.2](53-cardio-mobile-plan.md) "Extra vezérlő" oszlopa is csak jövőbeli
+munkaként említi őket) — egy teljes séma-bővítés minden mezőre olyan munka lenne, aminek ma nincs
+kifizetődése (nincs mihez képest "szerkesztettnek" jelölni egy elevation-t, amíg nincs GPS-becslés).
+C2.8 ezért a **mintát** építi meg (koppintás-szerkeszt-jelölés) a két mezőn, ahol ma valóban létezik
+az eredet-fogalom, a többit érintetlenül, olvashatóan hordozza tovább.
+
+**Tudatos eltérés a mockup Mentés-gombjától: mezőnkénti autosave, nem egy közös "Mentés".** Az M14
+alján egy "Mentés" gomb van; ehelyett ez a lépés a `CardioSessionScreen` már bevett mintáját
+folytatja (koppintás → dialógus → azonnali perzisztálás) — az RPE-koppintás és a jegyzet-mező
+fókuszvesztése is azonnal ír. Ez elkerüli egy "mentetlen módosítás" állapot bevezetését, amire
+másképp semmi szükség nem lenne.
+
+**Kód-újrahasznosítás, nem duplikálás.** A `_promptNumber` (C2.2-ben a `CardioSessionScreen`
+privát metódusa) kiemelve egy közös `widgets/prompt_number_dialog.dart`-ba (`promptNumber(context,
+l10n, {title, suffix, initialText})`) — mindkét képernyő ugyanazt hívja, most már tényleg egy
+helyen. Az RPE-szekció az `RpeSelector` + a `postWorkoutFeedbackTitle`/`Anchor*`/`NoteHint`
+ARB-kulcsokat használja, amiket a `LogCardioSheet` (C1.9) már bevezetett — nulla új string ehhez.
+A `rateSession()`/`updateLiveCardioMetrics()` controller-metódusok is már léteztek (C1.x/C2.2) —
+ehhez a lépéshez **egyetlen új controller-metódus sem kellett**.
+
+**Amit a képernyő tudatosan nem tartalmaz**: útvonal, split-lista, pulzuszóna-sáv (mind C4a/C5
+GPS/óra-adatot igényel, ami ma nem létezik — "GPS nélkül nincs útvonal, sehol"), és a MACHINE
+teljesítmény-görbe (idősoros watt-mintavétel, amit az app ma nem rögzít). Ezek nem hiányosságok,
+hanem a doc saját "útvonal nélküli változat" megnevezésének szó szerinti követése.
+
+**`cardio_session_screen.dart` mellékhatásai**: a `_finish()` most már a helyi állapotból
+(`_distanceMeters`/`_avgCadence`/`_avgWatts`/`_resistanceLevel`) építi fel a záró `WorkoutSession`-t
+— ez pontosan az, amit a `_updateCardioMetrics` a háttérben már perzisztált, tehát nincs
+stream-lekérdezési verseny. A build()-ből eltűnt az `_isFinished`-ág ("Befejezve" felirat + a
+vezérlők elrejtése) — az invariáns szerint (`open_workout_screens.dart` az egyetlen valódi belépési
+pont) ez a képernyő **mindig** egy folyamatban lévő session-nel példányosul, tehát ez az ág a
+gyakorlatban sosem futott volna le; az orphánná vált `cardioSessionFinishedLabel` ARB-kulcs törölve
+(ugyanaz az audit-fegyelem, mint C2.5-ben).
+
+**Tesztek:**
+- `cardio_summary_screen_test.dart` — a C1.9-es 6 olvasási teszt megtartva (egy MACHINE-fixture
+  ellenállás-értéke 6→14-re módosítva, hogy ne ütközzön az RPE 1-10 chip-feliratokkal), plusz 9 új:
+  "szerkesztve" jelölés egy már manuális `distanceSource`-ú session-ön; RPE-chip koppintás azonnal
+  ír; jegyzet csak fókuszvesztéskor ír, **és csak, ha már van értékelés** (a `rateSession` `rpe`
+  paramétere nem nullable); táv-szerkesztés perzisztál és jelöl, **más MACHINE-mezőt nem töröl**
+  (regressziós teszt, ugyanaz a minta, mint a C2.3-as `_updateCardioMetrics`-tesztnél); gép-kalória
+  szerkesztése ugyanígy; sikertelen írás nem változtatja a látható értéket.
+- `cardio_session_screen_test.dart` — a C2.5-ös két befejezés-teszt ("Finished" szöveg helyett)
+  most `find.byType(CardioSummaryScreen)`-t ellenőriz, és hogy a `CardioSessionScreen` már nincs a
+  fában.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a teljes `flutter test` **809/812 zöld**
+(801 + 8 nettó új), a 3 bukás a már ismert, cardión kívüli `chat_repository_test.dart`
+Windows-fájlzár-flake.
+
+**Következő:** `C2.9` — `WorkoutSessionState` `kind`+`cardio` bővítés (előformázott stringek,
+epoch-alapú idő) a Live Activity / ongoing notification hídhoz.
+
+---
+
+## C2.9 kész (2026-08-12) — `WorkoutSessionState` cardio-bővítés + a híd bekötése
+
+**A kész-ha ("régi natív build a STRENGTH ágra esik vissza, nem törik") két külön dolgot kényszerít
+ki, nem egyet.** Először: a `kind` mezőnek **alapértéke** van (`'STRENGTH'`), pontosan úgy, ahogy a
+domain-modell `WorkoutSession.sessionKind`-ja is teszi — így a `LogSessionScreen` és mind a ~15
+meglévő teszt-konstrukció ebben és a `watch_workout_service_test.dart`-ban **változtatás nélkül**
+továbbra is azt jelenti, amit eddig, `kind: 'STRENGTH'`-ként. Másodszor, és ez a finomabb rész: egy
+régi build, ami a `kind`-ot **egyáltalán nem ismeri**, kizárólag a meglévő mezőket
+(`exerciseName`, `setsDone`, `setsTotal`) olvassa — tehát a "nem törik" nem attól igaz, hogy a
+natív oldal helyesen ágazik el (azt csak C2.10a/C2.10b építi meg), hanem attól, hogy a
+`CardioSessionScreen` **tudatosan** ezekbe a régi mezőkbe is értelmes cardio-tartalmat ír:
+`exerciseName: "Futás — 5,24 km"` (típus + domináns metrika), `setsTotal: null` (nem `0`) — ez
+utóbbi már ma, C2.10a natív munkája nélkül is elkerüli a "0 szett" csúnya megjelenést a
+meglévő, változatlan Android-renderelőn, mert a `_renderAndroidNotification` már ma is csak akkor
+fűzi hozzá az "N/total" törtet, ha `setsTotal` nem null.
+
+**`CardioLiveMetrics`, három szint, szó szerint a doc saját megfogalmazása szerint.** Az 53-as doc
+D-C2.3 kódrészlete ezt írja: "`CardioLiveMetrics? cardio; // primary/secondary/tertiary metrika,
+előre formázva`" — ez a lépés pontosan ezt a három szintet építette meg (`primaryLabel/Value`,
+`secondaryLabel/Value`, `tertiaryLabel/Value`), amit az M23/M24 (iOS Live Activity, C2.10b) és M25
+(Android, C2.10a) mockupok is következetesen mutatnak: DISTANCE → táv/mozgásidő/tempó; MACHINE →
+mozgásidő/kadencia/watt; GAME → játékidő/bruttó idő/pulzus. A `CardioSessionScreenState`-ben új
+`_cardioLiveMetrics()` ezt a hármat származtatja, **ugyanazokból a helyi mezőkből**
+(`_distanceMeters` stb.), amiket a családfüggő `_distanceBody`/`_machineBody`/`_gameBody` már ma is
+megjelenít — nem megosztott adatobjektumból, mert ilyen ma nincs a widget-fa és a payload között
+(ugyanaz a "kis duplikáció elfogadható" döntés, mint a `_finish()` záró `CardioMetrics`-énél).
+
+**Az epoch-alapú idő, a doc kifejezett kérése.** "Egyetlen kivétel: az idő továbbra is
+epoch-alapú... hogy a natív felület magától ketyegjen, frissítés-kvóta nélkül" — a
+`CardioLiveMetrics` ezért nem egy statikus "mozgásidő" stringet visz, hanem a C2.1 óta bevett
+`movingSecondsBase`/`movingSinceEpochMs` checkpoint-párt (a szünetnél `null` az utóbbi) —
+ugyanaz a minta, mint a meglévő `restEndsAtEpochMs`, amit a natív oldal már ma is önállóan tud
+ketyegtetni. Ez a C2.10a/C2.10b natív munkájának lesz az alapja, ezt a lépést önmagában nem
+igényli semmi (a Windows-tesztek csak a JSON-alak helyességét ellenőrzik).
+
+**A híd tényleges bekötése `CardioSessionScreen`-be** — enélkül a kész-ha üres állítás maradt
+volna ("egy régi build nem törik", de sosem kap semmit, amin törhetne). A `LogSessionScreen`
+pontosan ugyanazt a három-zászlós mintát követi (`_startingSessionNotifier`/
+`_sessionNotifierStarted`/`_sessionNotifierUnavailable`), **watch-mirror hívás nélkül** — az C5
+dolga, nem C2.9-é ([55 D-C5.1](55-cardio-watch-plan.md): a telefon-oldali cardio-feldolgozó előbb
+kell elkészüljön, mint bármi, ami payloadot küldene neki). `start()` a képernyő `initState`-jéből,
+egy postFrame-callback mögé rejtve (ugyanaz az ok, mint `LogSessionScreen`-nél: `AppLocalizations.of`
+nem biztonságos `initState` közben); `update()` minden állapotváltó műveletnél
+(`pause`/`resume`/`_setOnCourt` mindkét ága/`_updateCardioMetrics`); `end()` a `_finish()`-ben, a
+navigáció előtt, `unawaited`-ként, hogy ne késleltesse az összegzésre lépést.
+
+**Tesztek:**
+- `workout_session_notifier_service_test.dart` — a meglévő ~10 pontos map-egyezőségi teszt
+  frissítve a három új kulccsal (`kind: 'STRENGTH', activityType: null, cardio: null` a
+  STRENGTH-fixture-öknél); 4 új teszt: `kind` alapértéke, egy teljes CARDIO `toJson()`-alak,
+  szüneteltetett `CardioLiveMetrics` `movingSinceEpochMs`-e null, és egy valódi CARDIO `start()`
+  hívás az iOS csatornán.
+- `watch_workout_service_test.dart` — ugyanaz a map-frissítés két helyen (ez a fájl is
+  `WorkoutSessionState.toJson()`-t szerializál, a `LogSessionScreen` watch-mirror hívásán
+  keresztül — a teljes tesztkészlet futtatása fogta ezt el, nem előre látott érintettség).
+- `cardio_session_screen_test.dart` (új csoport, 5 teszt, egy második `_pumpWithNotifier`
+  segédfüggvénnyel és egy `_RecordingNotifierService` fake-kel, ami felülírja
+  `start`/`update`/`end`-et): indításkor `kind: 'CARDIO'` + a "0 szett" nélküli fallback-mezők;
+  szünet → `update(paused: true)`; folytatás → `update(paused: false)`; táv-szerkesztés →
+  frissített `primaryValue`; befejezés → `end()`.
+
+**Eredmény:** `flutter analyze` (teljes projekt) tiszta; a teljes `flutter test` **818/821 zöld**
+(809 + 9 nettó új), a 3 bukás a már ismert, cardión kívüli `chat_repository_test.dart`
+Windows-fájlzár-flake. Ezzel a **C2 iteráció mind a 9 Windowson fejleszthető lépése (C2.1–C2.9)
+kész** — hátra van C2.10a (Android natív layout, Windowson fejleszthető), C2.10b (iOS Live
+Activity, Mac kell) és C2.11a/b (deep-link + app-shortcut + kezdőképernyő-widget).
+
+**Következő:** `C2.10a` — Android tartós értesítés cardio-layout (M25) — ezt a Dart-oldali
+`_renderAndroidNotification`-t bővíti `kind == 'CARDIO'`-ágra, natív Kotlin-kód nélkül.
