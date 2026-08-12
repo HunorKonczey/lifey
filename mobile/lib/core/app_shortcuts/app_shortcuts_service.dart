@@ -37,27 +37,26 @@ class AppShortcut {
 
 /// Bridges the top-ranked quick-start entries to the platform's dynamic
 /// app-shortcuts (long-press on the launcher icon) — Android's
-/// `ShortcutManager.setDynamicShortcuts` today (C2.11a), iOS's
-/// `UIApplicationShortcutItem`s later (C2.11b), over one shared
-/// `lifey/shortcuts` MethodChannel per docs/cardio/53-cardio-mobile-plan.md
+/// `ShortcutManager.setDynamicShortcuts` (C2.11a) and iOS's
+/// `UIApplicationShortcutItem`s (C2.11b, `ShortcutsChannel.swift`), over one
+/// shared `lifey/shortcuts` MethodChannel per docs/cardio/53-cardio-mobile-plan.md
 /// D-C2.2 ("no new plugin — a few lines of native code in an existing
 /// MethodChannel pattern, the same shape as `workout_session_notifier`").
 ///
-/// No-ops off Android until C2.11b adds the iOS native side — same
-/// "unavailable is a normal outcome, not an error" posture as
-/// [WorkoutSessionNotifierService] and [WidgetSnapshotWriter], and for the
-/// same reason: shortcuts are a convenience, never something the rest of
-/// the app depends on existing.
+/// No-ops off Android/iOS — same "unavailable is a normal outcome, not an
+/// error" posture as [WorkoutSessionNotifierService] and
+/// [WidgetSnapshotWriter], and for the same reason: shortcuts are a
+/// convenience, never something the rest of the app depends on existing.
 class AppShortcutsService {
   AppShortcutsService({MethodChannel? channel, bool? isAvailable})
       : _channel = channel ?? const MethodChannel('lifey/shortcuts'),
-        isAvailable = isAvailable ?? Platform.isAndroid;
+        isAvailable = isAvailable ?? (Platform.isAndroid || Platform.isIOS);
 
   final MethodChannel _channel;
 
-  /// Defaults to [Platform.isAndroid]; overridable in the constructor so
-  /// tests can exercise [update] on a non-Android test host, and so C2.11b
-  /// can widen this to iOS once its native side exists.
+  /// Defaults to [Platform.isAndroid] || [Platform.isIOS]; overridable in
+  /// the constructor so tests can exercise [update] on a non-mobile test
+  /// host.
   final bool isAvailable;
 
   /// Replaces the current set of dynamic shortcuts. Never throws: a missing

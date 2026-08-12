@@ -52,13 +52,45 @@ final class LiveActivityChannel: NSObject {
     let setsTotal = dict["setsTotal"] as? Int
     let lastSetAtEpochMs = (dict["lastSetAtEpochMs"] as? NSNumber)?.int64Value
     let restEndsAtEpochMs = (dict["restEndsAtEpochMs"] as? NSNumber)?.int64Value
+    // Same default as the Dart `WorkoutSessionState.kind` field: absent
+    // (older payload shape) means STRENGTH.
+    let kind = (dict["kind"] as? String) ?? "STRENGTH"
+    let activityType = dict["activityType"] as? String
+    let cardio = cardioLiveMetrics(from: dict["cardio"] as? [String: Any])
     return WorkoutActivityAttributes.ContentState(
       exerciseName: exerciseName,
       setsDone: setsDone,
       setsTotal: setsTotal,
       totalSetsDone: totalSetsDone,
       lastSetAtEpochMs: lastSetAtEpochMs,
-      restEndsAtEpochMs: restEndsAtEpochMs
+      restEndsAtEpochMs: restEndsAtEpochMs,
+      kind: kind,
+      activityType: activityType,
+      cardio: cardio
+    )
+  }
+
+  /// Mirrors the Dart `CardioLiveMetrics.toJson()` shape. Returns `nil` for
+  /// a STRENGTH update (no `"cardio"` key at all) as well as for a
+  /// malformed block — either way the ContentState just carries no cardio
+  /// data, which is what routes rendering to the STRENGTH branch.
+  @available(iOS 16.2, *)
+  private func cardioLiveMetrics(from dict: [String: Any]?) -> CardioLiveMetricsState? {
+    guard let dict,
+      let primaryLabel = dict["primaryLabel"] as? String,
+      let primaryValue = dict["primaryValue"] as? String,
+      let paused = dict["paused"] as? Bool
+    else { return nil }
+    return CardioLiveMetricsState(
+      primaryLabel: primaryLabel,
+      primaryValue: primaryValue,
+      secondaryLabel: dict["secondaryLabel"] as? String,
+      secondaryValue: dict["secondaryValue"] as? String,
+      tertiaryLabel: dict["tertiaryLabel"] as? String,
+      tertiaryValue: dict["tertiaryValue"] as? String,
+      paused: paused,
+      movingSecondsBase: dict["movingSecondsBase"] as? Int,
+      movingSinceEpochMs: (dict["movingSinceEpochMs"] as? NSNumber)?.int64Value
     )
   }
 

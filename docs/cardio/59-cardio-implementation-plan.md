@@ -161,9 +161,9 @@ lépés két fele, hanem két önálló, egymástól függetlenül szállíthat�
 | **C2.8** ✅ | Összegzés-képernyő (útvonal nélküli változat) + RPE + kézi szerkesztés „szerkesztve” jelöléssel | Windows | **M15**, **M14** | A szerkesztett érték felülírja a mértet, és jelölve marad ([51 R8](51-cardio-overview-plan.md)) |
 | **C2.9** ✅ | `WorkoutSessionState` `kind`+`cardio` bővítés (előformázott stringek, epoch-alapú idő) | Windows | – | Régi natív build a `STRENGTH` ágra esik vissza, nem törik |
 | **C2.10a** ✅ | Android tartós értesítés cardio-layout | Windows | **M25** | Nem „0 szett” látszik az Android értesítésben; frissítés csak változásra |
-| **C2.10b** | iOS Live Activity + Dynamic Island cardio-layout | **Mac** | **M23**, **M24** | Nem „0 szett” látszik a zárolási képernyőn / Dynamic Islanden; frissítés ≤ 5 mp és csak változásra (ActivityKit-kvóta) |
+| **C2.10b** ✅ | iOS Live Activity + Dynamic Island cardio-layout | **Mac** | **M23**, **M24** | Nem „0 szett” látszik a zárolási képernyőn / Dynamic Islanden; frissítés ≤ 5 mp és csak változásra (ActivityKit-kvóta) |
 | **C2.11a** ✅ | Deep-link route (`go_router`) + Android dinamikus app-shortcutok (`ShortcutManager`, natív híd) + Android kezdőképernyő-widget gombok | Windows | **M29** | Android app-ikon hosszú nyomásából / widgetből **egy** gesztussal indul az edzés; a route C2.11b-nek is kész célpont |
-| **C2.11b** | iOS dinamikus app-shortcutok (`UIApplicationShortcutItem`, natív híd) + iOS kezdőképernyő-widget gombok | **Mac** | **M29** | iOS app-ikon hosszú nyomásából / widgetből **egy** gesztussal indul az edzés |
+| **C2.11b** ✅ | iOS dinamikus app-shortcutok (`UIApplicationShortcutItem`, natív híd) + iOS kezdőképernyő-widget gombok | **Mac** | **M29** | iOS app-ikon hosszú nyomásából / widgetből **egy** gesztussal indul az edzés |
 
 ---
 
@@ -1731,3 +1731,169 @@ Windows-fájlzár-flake.
 **Következő:** `C2.10b` (iOS Live Activity + Dynamic Island, Mac kell) vagy `C2.11b` (iOS
 dinamikus app-shortcutok + kezdőképernyő-widget gombok, szintén Mac kell) — a C2 iteráció
 mind a 11 Windowson fejleszthető lépése (C2.1–C2.11a) kész.
+
+---
+
+## C2.10b kész (2026-08-12) — iOS Live Activity + Dynamic Island cardio-layout
+
+**A meglévő STRENGTH-implementáció (`WorkoutActivityAttributes.swift`, `LiveActivityChannel.swift`,
+`WorkoutLiveActivity.swift`, mind Windowson már megírva a 24-es doc Phase 2 részeként, de eddig
+sosem fordítva/futtatva) kapott egy cardio-ágat — natív kód nélkül nem volt mit tesztelni ezekből
+a fájlokból, ez volt az első alkalom, hogy ez a három fájl ténylegesen lefordult.**
+
+**`ContentState` bővítés** (`ios/Shared/WorkoutActivityAttributes.swift`): a C2.9-ben lefektetett
+Dart `WorkoutSessionState`/`CardioLiveMetrics` szerződés szó szerinti Swift-tükre — `kind`,
+`activityType`, `cardio: CardioLiveMetricsState?` (új, top-level struct, a Dart `CardioLiveMetrics`
+mind a nyolc mezőjével). A `kind` alapértéke **nem** ide került (ahogy a Dart oldalon), hanem a
+dict-parszolásba — indoklás a fájl saját megjegyzésében: ActivityKit mindig egy *teljes*
+`ContentState`-et kódol/dekódol vissza, sosem részlegeset, tehát a struct saját Codable-jének
+nincs "hiányzó kulcs" esete, amit alapértékkel kellene kezelnie.
+
+**`LiveActivityChannel.swift`**: a `contentState(from:)` dict-parszoló kapott egy `kind`/`activityType`
+olvasást (ugyanaz az `?? "STRENGTH"` alapérték, mint a Dart oldalon) és egy új
+`cardioLiveMetrics(from:)` segédfüggvényt a beágyazott `"cardio"` dict-hez — `nil`-t ad vissza
+STRENGTH-frissítésnél (nincs `"cardio"` kulcs) és hibás blokknál egyaránt, ami mindkét esetben a
+STRENGTH-renderelő ágra tereli a natív UI-t.
+
+**`WorkoutLiveActivity.swift` — a tényleges UI, M23/M24 szerint:**
+
+- **Fejléc** (`CardioHeaderView`, lock screen; `CardioIslandLeading`, sziget): ikon (SF Symbol
+  `activity_type.dart` kódonként — `figure.run`/`figure.walk`/`figure.hiking`/`bicycle`/
+  `basketball.fill`/`soccerball`/`bolt.fill`, sosem lokalizált szöveg, csak kódra kapcsolt ikon) +
+  `attributes.title` (már lokalizált, a Dart oldal adja át indításkor — nem kellett új
+  aktivitás-címke logika) + a **mozgásidő natívan ketyegő megjelenítése**
+  (`CardioMovingTimeView`).
+- **A ketyegés maga, a doc kifejezett kérése szerint** ("hogy a natív felület magától ketyegjen,
+  frissítés-kvóta nélkül"): `CardioMovingTimeView` a C2.9-ben pontosan erre épített
+  `movingSecondsBase`/`movingSinceEpochMs` checkpoint-párt shifteli el (`since − base·1000`) egy
+  `Text(timerInterval:)`-be — ugyanaz a "when = since − base" trükk, mint a C2.10a Android
+  chronometeréé. Szünetben (`movingSinceEpochMs == nil`) statikus, Swift-re portolt
+  `CardioFormatter.duration`-szöveget mutat, nem próbál tovább ketyegni.
+- **Metrika-sor** (`CardioMetricsRow`, lock screen): a primary label/value nagy méretben balra
+  (a Dart `CardioLiveMetrics.primaryValue` már előformázott string, family-függően táv/mozgásidő/
+  játékidő — lásd `CardioSessionScreen._cardioLiveMetrics`), a secondary/tertiary két kisebb
+  statpár jobbra (`CardioStatPair`). Egy `"—"` placeholder-értékű slot (pl. GAME pulzusa ma) **nem
+  jelenik meg** — ugyanaz a "hiányzik, nem csúnya" döntés, mint a C2.10a Android body-szűrőjénél.
+- **Szünet-vizuál**: a primary érték és a fejléc-ketyegő elhalványul (`opacity`), a fejlécen egy
+  `pause.circle.fill` SF Symbol jelenik meg — nincs lokalizált "Szüneteltetve" felirat, mert a
+  payload nem visz ilyen stringet (a 24-es doc döntés #6-a szerint az extension sosem fordít, csak
+  előformázott stringet renderel; egy ikon nem sérti ezt).
+- **Dynamic Island**: **egy** `DynamicIsland` érték, nem kettő — a STRENGTH/CARDIO elágazás minden
+  region/compact/minimal `@ViewBuilder` closure-jén *belül* van (`if let cardio { … } else { … }`),
+  mert a `DynamicIsland<Leading, Trailing, Bottom, CompactLeading, CompactTrailing, Minimal>`
+  generikus típusa rögzül a widget-konfigurációban, és két különböző konkrét `DynamicIsland`-példány
+  visszaadása két branch-ből típushibát adott volna (ez volt az első build-hiba, ld. lentebb).
+  Kompakt: ikon + `primaryValue`; kibontott: fejléc-mintázat balra, primary+secondary jobbra,
+  tertiary lent (ha nem `"—"`); minimál: csak ikon.
+
+**Két valódi build-hiba derült ki, mindkettő javítva, csak a natív Mac-fordítás fedte fel őket
+(pontosan ezért Mac-lépés ez, nem Windowson írt-és-sose-fordított kód, mint az előző Phase 2
+Swift-fájlok voltak):**
+
+1. **`missing return in closure expected to return 'DynamicIsland'`** — a `dynamicIsland:` closure
+   nem `@ViewBuilder`, tehát a `let cardio = …` segédváltozó bevezetése után a `DynamicIsland { … }`
+   már nem implicit visszatérési érték volt (a closure-nek pontosan egy kifejezésből kell állnia
+   ehhez). Javítás: explicit `return DynamicIsland { … }.widgetURL(...)`.
+2. **Ezen a gépen a helyi Drift-kódgenerálás elavult volt** a `mobile/lib/core/local_db/tables/
+   workout_session_tables.dart`-hoz képest (`app_database.g.dart` `.gitignore`-olt, tehát
+   gépenkénti) — a `Runner` cél Flutter-build script fázisa emiatt bukott
+   (`movingSinceEpochMs` hiányzó paraméter a generált `WorkoutSessionsCompanion`-ön). Nem a
+   cardio-munka hibája, hanem első Mac-fordítás előtti hiányzó `dart run build_runner build`;
+   lefuttatva megoldódott, semmilyen forráskód nem változott emiatt.
+
+**Build-ellenőrzés** (natív kód, `flutter test`/`flutter analyze` nem fordítja le):
+`xcodebuild -workspace Runner.xcworkspace -scheme LifeyWidgets -sdk iphonesimulator build` —
+**BUILD SUCCEEDED** a fenti két hiba javítása után, a teljes `Runner` host-app-ot is felépítve (a
+`LifeyWidgets` séma függősége). `flutter analyze` a teljes projektre tiszta.
+
+**Amit ez a lépés szándékosan nem tett meg:** eszközön/szimulátoron futtatott vizuális
+végpróbát (lock screen + Dynamic Island tényleges megjelenítése egy futó cardio session-nel) — a
+felhasználó kérésére ez most kimaradt, saját eszközén nézi meg. A 24-es doc "Phase 2 checklist"
+5–6. pontja (build 16.2+ szimulátoron, manuális QA-lista) ezért **továbbra is nyitott**, ahogy már
+a Phase 2 STRENGTH-munkánál is nyitva maradt target-membership-ellenőrzésként — most már legalább
+a build maga bizonyítottan zöld.
+
+**Következő:** `C2.11b` — iOS dinamikus app-shortcutok (`UIApplicationShortcutItem`, natív híd) +
+iOS kezdőképernyő-widget gombok (M29, Mac kell) — ezzel zárulna a teljes C2 iteráció mind a 13
+
+---
+
+## C2.11b kész (2026-08-12) — iOS dinamikus app-shortcutok + kezdőképernyő-widget gombok
+
+**Ugyanaz a szerződés, a C2.11a Android-oldalán már bevált mintát követve**: a Dart oldal
+(`AppShortcutsService`, `WidgetSnapshotWriter`) platform-semleges volt már C2.11a óta — ez a lépés
+kizárólag a natív iOS felet és egy egysoros Dart-bővítést adott hozzá.
+
+**`ShortcutsChannel.swift`** (új, `ios/Runner/`) — a `lifey/shortcuts` csatorna iOS fele,
+`ShortcutsBridge.kt` szó szerinti Swift-tükre: `"update"` metódus, `{id, shortLabel,
+deepLinkUri}` lista → `UIApplication.shared.shortcutItems`. Egy eltérés az Androidtól:
+`UIApplicationShortcutIcon.IconType`-nak nincs "generic" esete (csak fix szemantikus
+glyph-készlet — compose, play, add, …), egyik sem illett volna jobban egy tetszőleges
+`kActivityTypes`-bejegyzéshez, mint a semmi, tehát `icon: nil` (csak felirat) — ugyanaz a "nem
+éri meg típusonkénti ikont karbantartani" döntés, mint a Kotlin oldalon, csak a nulla ikon lett a
+konkrét megvalósítása, nem a launcher-ikon (ami Swiftben nem ugyanúgy elérhető, mint
+`R.mipmap.ic_launcher` Kotlinban).
+
+**`AppDelegate.swift`** — a csatorna regisztrálása a meglévő `registrar(forPlugin:)` mintával,
+plusz **két hívási pont**, a shortcut-koppintást ugyanoda irányítva, ahová egy `lifey://`
+Safari-link vagy a Live Activity koppintása is megy:
+
+- `application(_:performActionFor:completionHandler:)` — meleg indítás (az app már fut).
+- `didFinishLaunchingWithOptions`, `launchOptions[.shortcutItem]` — **hideg** indítás, mert Apple
+  dokumentáltan **nem** hívja meg a fenti metódust egy nem futó appra, hanem a launchOptions-ban
+  adja át. A hívás **a `super.application(...)` UTÁN** történik — az állítja fel a Flutter
+  motort/binary messengert, amibe a deep link forward-olódik; ugyanaz a sorrend-függés, mint
+  ahogy iOS maga is kezeli egy hideg indítású Safari-linket.
+- Mindkettő egy közös `openDeepLink(from:)`-ba fut, ami a shortcut `userInfo["deepLinkUri"]`-jét
+  URL-lé alakítva **közvetlenül meghívja az örökölt `application(_:open:options:)`-öt** — azt a
+  metódust, amit a `FlutterAppDelegate` már ma is használ egy sima `lifey://` linkhez. Emiatt a
+  go_router C2.11a-ban épített `onException` deep-link-kezelése **iOS-specifikus ág nélkül**
+  kiszolgálja a shortcutot is.
+
+**Kezdőképernyő-widget gombok** (`TodaySummaryWidget.swift`) — a `TodaySnapshot` kapott egy
+`quickStart: [QuickStartWidgetEntry]?` mezőt (a `WidgetSnapshotWriter` már C2.11a óta írja ezt a
+kulcsot, csak a Swift-oldali dekódolás hagyta figyelmen kívül eddig — `Codable` szótlanul eldobja
+az ismeretlen kulcsot, tehát ez nem volt hiba, csak kihasználatlan adat). Opcionális, nem mert az
+író valaha kihagyná (mindig legalább üres tömböt küld), hanem mert egy **C2.11a előtti** app-verzió
+által írt, még App Group-ban lévő snapshot-nak nincs ilyen kulcsa, és egy hiányzó kötelező mező
+az egész dekódolást elbuktatná.
+
+Az új `QuickStartRow` (max 2 `Link`, deep-linkkel) **csak a közepes widgetben** jelenik meg — a
+kicsi widget 155pt-es négyzete már megtelt a kalória-gyűrűvel + lépés-sorral, és az 53-as doc
+§3.3-a is csak "gombsort a top-2 edzéssel" ígért, nem méretenkénti változatot; ugyanaz az
+egyszerűsítés, mint amit a C2.11a Androidon is választott (egyetlen fix elrendezés, nem
+méretenkénti). Technikailag ez a **pre-iOS-17 többcélpontos widget minta**: a `Link`-ek saját URL-je
+felülírja a teljes widgetre beállított `.widgetURL(lifey://today)`-t a saját koppintási
+területükön — nincs App Intents/interaktivitás, ami a 24-es doc scope-ján kívül esne.
+
+**Két build-akadály, mindkettő Xcode-projekt-szintű, nem kódhiba:**
+
+1. **Az új `ShortcutsChannel.swift` fájl nem volt hozzáadva a Runner cél tagságához** — ez a
+   fájlrendszerre írt, de Xcode-on kívül létrehozott Swift-fájlok ismert csapdája (lásd a 24-es
+   doc Phase 0/2 checklist-jei ugyanerre). Mivel ez a session Xcode-dal/Ruby `xcodeproj` gem-mel
+   rendelkező Mac-en fut, **szkriptelve** oldottam meg (nem manuálisan Xcode-ban): a fájl
+   hozzáadva a `Runner` csoporthoz és a `Runner` target `Sources` build-fázisához. A
+   `project.pbxproj` diffje ezen kívül csak a gem ábécérendbe rendezését tartalmazza, funkcionális
+   változás nélkül.
+2. **`UIApplicationShortcutIcon.IconType` nem ismeri a `.generic` esetet** — fordítási hiba,
+   javítva `icon: nil`-re (ld. fent).
+
+**Dart-oldali egysoros bővítés, amit a saját korábbi doc-megjegyzése előre bejelentett**:
+`AppShortcutsService.isAvailable` alapértéke `Platform.isAndroid` → `Platform.isAndroid ||
+Platform.isIOS` — a class doksija C2.11a óta szó szerint ezt írta elő ("so C2.11b can widen this
+to iOS once its native side exists").
+
+**Build-ellenőrzés:** `xcodebuild -workspace Runner.xcworkspace -scheme LifeyWidgets -sdk
+iphonesimulator build` — **BUILD SUCCEEDED** (ez a séma a `Runner` célt is felépíti függőségként,
+tehát az `AppDelegate.swift`/`ShortcutsChannel.swift` is lefordult). `flutter analyze` teljes
+projektre tiszta. A négy érintett Dart-teszt (`app_shortcuts_service_test.dart`,
+`widget_snapshot_writer_test.dart`) mind zöld — ezek nem változtak, csak megerősítik, hogy az
+`isAvailable`-bővítés nem tört el semmit (mindkét teszt explicit `isAvailable:` paramétert ad át,
+nem az alapértékre támaszkodik).
+
+**Amit ez a lépés szándékosan nem tett meg:** eszközön/szimulátoron futtatott végpróbát (app-ikon
+hosszú nyomás → shortcut lista → koppintás → edzés indul; widget-gomb koppintás) — a felhasználó
+kérésére, ugyanúgy, mint C2.10b-nél. Ezzel a **C2 iteráció mind a 13 lépése kész** (C2.1–C2.11b) —
+csak a saját eszközön futó vizuális/interakciós végpróba maradt nyitva mindkét Mac-lépésnél
+(C2.10b, C2.11b).
+lépése.
