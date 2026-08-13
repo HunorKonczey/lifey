@@ -218,7 +218,7 @@ háttér-mód, **Mac-et igényel** a tényleges kipróbáláshoz.
 | **C4a.3** ✅ | `CardioTrackPoints` drift-tábla + azonnali pontírás | Windows | – | Kilőtt app legfeljebb egy pontot veszít |
 | **C4a.4** ✅ | `track_filter.dart`: pontosság-/sebesség-/elmozdulás-kapuk, magasság-simítás, haversine-táv + gyenge jel UI | Windows | **M10** | Rögzített minta-nyomvonalakon a táv ≤ 5% hibával |
 | **C4a.5a** ✅ | Android előtér-szolgáltatás ~~a meglévő ongoing notificationnel egyesítve~~ (plugin-korlát miatt: két visszafogott notification, lásd a kész-szakaszt) + auto-pause bekötése a GPS-sebességre (platformfüggetlen Dart, a no-op `LocationService`-szel tesztelve) | Windows | M09 | ~~Nem keletkezik két Android értesítés~~; auto-pause a sebesség-küszöbön ki-/bekapcsol (teszt) ✅ *(Q-D3 eldöntve: alapból be, minden DISTANCE-fajtánál egységesen)* |
-| **C4a.5b** | iOS háttér-mód (`AppleSettings.allowBackgroundLocationUpdates` + `UIBackgroundModes: location`) | **Mac** | M09 | Háttérben (képernyő kikapcsolva) is folyik a rögzítés, a Live Activity mutatja |
+| **C4a.5b** ✅ | iOS háttér-mód (`AppleSettings.allowBackgroundLocationUpdates` + `UIBackgroundModes: location`) | **Mac** | M09 | Háttérben (képernyő kikapcsolva) is folyik a rögzítés, a Live Activity mutatja |
 | **C4a.6** | Záró feldolgozás (ritkítás → polyline → outbox-bump, splitek) + `RoutePainter` + magasságprofil + kártya-miniatűr + 90 napos pont-karbantartás | Windows | **M13**, **M16** | Az útvonal mindkét témában olvasható; a hézag szaggatott |
 
 A `G11` (akku-mérés, [54 §4.5](54-cardio-gps-route-plan.md)) nem önálló kódolási lépés — egy 60+
@@ -3188,3 +3188,47 @@ mindhárom bukás a már ismert, cardión kívüli `chat_repository_test.dart` W
 `UIBackgroundModes: location`, **Mac** kell), vagy `C4a.6` — záró feldolgozás (ritkítás → polyline
 → outbox-bump, splitek) + `RoutePainter` + magasságprofil + kártya-miniatűr + 90 napos
 pont-karbantartás (**M13**, **M16**, Windowson fejleszthető).
+
+---
+
+## C4a.5b kész (2026-08-13) — iOS háttér-mód
+
+Két fájl, bitre a [54 §4.4](54-cardio-gps-route-plan.md) szerint — ez a lépés kódban pontosan
+annyit ígért, amennyit a doc leír, nem volt benne rejtett döntési pont, mint C4a.5a-ban a két
+Android-notificationnél.
+
+**`Info.plist`**: `UIBackgroundModes` tömb `location` bejegyzéssel, a `NSSupportsLiveActivities`
+kulcs mellé. **Nem** kapott új `NSLocationAlwaysUsageDescription`-t — a §3.2 döntése (csak
+`whileInUse`) érintetlen: iOS a `whileInUse` engedéllyel is folytatja a fixek küldését háttérben,
+*ha* a tracking már folyt előtte előtérben, feltéve hogy `allowsBackgroundLocationUpdates` be van
+kapcsolva és a háttér-mód deklarálva van — nincs szükség "Always" szintre ehhez.
+
+**`location_service_geolocator.dart`**: az iOS `AppleSettings`-ben `allowBackgroundLocationUpdates:
+false` → `true`, plusz új `showBackgroundLocationIndicator: true` (az OS saját kék
+háttér-jelzője — másodlagos a már meglévő Live Activityhez képest, ami az elsődleges "még
+mérünk" jelzés). `pauseLocationUpdatesAutomatically` változatlanul `false` maradt — ezt a C4a.5a-ban
+épített `AutoPauseDetector` már lefedi a saját, finomabb sebesség-küszöbével, a geolocator saját
+automatikus szünet-heurisztikája csak duplikálná, durvább jelzéssel.
+
+**Nincs új teszt** — ugyanaz a korlát, mint minden korábbi platform-specifikus ágnál ebben a
+fájlban (`_settingsFor`'s Android branch C4a.5a-ban, a `LocationServiceStub`/`GeolocatorLocationService`
+választás C4a.1-ben): a `flutter test` binding sosem jelent `Platform.isIOS == true`-t, tehát ez az
+ág soha nem fut le a suite alatt — ez már a `location_service_geolocator_test.dart` egyetlen
+tesztjének doksijában is dokumentálva van. A kész-ha ("háttérben is folyik a rögzítés") csak valódi
+iOS-eszközön/szimulátoron ellenőrizhető, ez a §4.5 akku-méréshez hasonló, Windowson/Mac-en
+közvetlenül nem futtatható végpróba — ugyanaz az elv, mint a G11-nél.
+
+**Ellenőrzés:** `flutter analyze` teljes projekten tiszta (útközben egy környezeti okot javítva:
+a `dart run build_runner build` nem volt lefuttatva ebben a checkoutban a C4a.5a-ban bővített
+Drift-táblákra/l10n-kulcsokra, emiatt 67 hamis `undefined_getter`/`undefined_identifier` hibát adott
+az analyzer — a generált fájlak maguk a repóban már helyesek voltak, `git status` a regenerálás után
+is tiszta maradt ezekre). Teljes `flutter test`: **987 zöld / 1 bukás / 988 összesen** — az egy
+bukás (`cardio_session_screen_test.dart`, "reopening with a checkpoint...") a C4a.5b-től
+függetlenül, a módosítások nélkül is elbukik (ellenőrizve `git stash`-sel), tehát pre-existing,
+nem ebben a lépésben okozott regresszió.
+
+**Következő:** `C4a.6` — záró feldolgozás (ritkítás → polyline → outbox-bump, splitek) +
+`RoutePainter` + magasságprofil + kártya-miniatűr + 90 napos pont-karbantartás (**M13**, **M16**,
+Windowson fejleszthető). Ezzel az utolsó Mac-igényes C4a-lépés is kész — a G11 akku-mérés
+(C4a.5a/b mindkettője után, [54 §4.5](54-cardio-gps-route-plan.md)) valós eszközön külön elvégzendő
+marad.

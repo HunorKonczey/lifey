@@ -54,6 +54,13 @@
 	<!-- Live Activities (docs/24-ios-widget-live-activity-plan.md) -->
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<!-- Cardio GPS háttérfutás (docs/cardio/54-cardio-gps-route-plan.md §4.4, C4a.5b)
+	     — whileInUse mellett is engedélyezi a folyamatos rögzítést, amíg a
+	     tracking már fut a háttérbe kerüléskor; nem kér "Always" szintet. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<!-- Google Sign-In: the reversed form of the iOS OAuth client ID
 	     (Google Cloud Console → Credentials → Lifey iOS). -->
 	<key>CFBundleURLTypes</key>

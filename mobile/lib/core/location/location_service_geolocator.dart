@@ -102,11 +102,20 @@ class GeolocatorLocationService implements LocationService {
   /// tightest fix (`best`, default 5 m distance filter); walking/outdoor
   /// GAME tolerate `high` + a 10 m filter, fewer points for less battery.
   ///
-  /// `allowBackgroundLocationUpdates` is explicitly forced `false` here —
-  /// its geolocator default is `true`, but that requires
-  /// `NSLocationAlwaysUsageDescription` + `UIBackgroundModes: location` in
-  /// Info.plist, neither of which this step adds (§3.2: only `whileInUse`
-  /// is requested at all). Wiring background tracking is C4a.5b's job.
+  /// `allowBackgroundLocationUpdates: true` (C4a.5b, §4.4) keeps fixes
+  /// arriving once the app backgrounds/the screen locks, under `whileInUse`
+  /// alone — no `NSLocationAlwaysUsageDescription`/"Always" prompt needed
+  /// (§3.2's explicit choice): iOS keeps delivering updates to a
+  /// when-in-use app that was *already* tracking before backgrounding, as
+  /// long as `UIBackgroundModes: location` is declared (added to
+  /// `Info.plist` alongside this). `showBackgroundLocationIndicator: true`
+  /// surfaces the OS's own blue/pill background-location indicator; the
+  /// Live Activity (C2.10b) is the primary "we're still measuring" signal,
+  /// this is a secondary, OS-level one. `pauseLocationUpdatesAutomatically`
+  /// stays `false`, same as before this step — the app already tracks a
+  /// "no motion" state itself via C4a.5a's `AutoPauseDetector`, so
+  /// geolocator's own automatic-pause heuristic would just double up on it
+  /// with a coarser, less-tunable signal.
   ///
   /// On Android, [androidNotificationTitle]/[androidNotificationText]
   /// (C4a.5a, §4.4) enable `geolocator`'s own foreground service — required
@@ -146,8 +155,9 @@ class GeolocatorLocationService implements LocationService {
       return geo.AppleSettings(
         accuracy: accuracy,
         distanceFilter: distanceFilter,
-        allowBackgroundLocationUpdates: false,
+        allowBackgroundLocationUpdates: true,
         pauseLocationUpdatesAutomatically: false,
+        showBackgroundLocationIndicator: true,
       );
     }
     return geo.LocationSettings(accuracy: accuracy, distanceFilter: distanceFilter);
