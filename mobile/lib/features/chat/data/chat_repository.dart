@@ -526,7 +526,7 @@ class ChatRepository {
       );
 
       if (response.statusCode == 304) {
-        return file.existsSync() ? file.readAsBytes() : null;
+        return file.existsSync() ? await file.readAsBytes() : null;
       }
       if (response.statusCode == 404) {
         // The sender deleted the message — the picture is genuinely gone, so
