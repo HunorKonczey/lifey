@@ -8,9 +8,12 @@ import 'package:lifey/features/workouts/application/exercise_controller.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/application/workout_template_controller.dart';
 import 'package:lifey/features/workouts/domain/exercise.dart';
+import 'package:lifey/features/workouts/domain/route_encoder.dart';
+import 'package:lifey/features/workouts/domain/track_filter.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/domain/workout_template.dart';
 import 'package:lifey/features/workouts/presentation/sessions_tab.dart';
+import 'package:lifey/features/workouts/presentation/widgets/route_painter.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/activity_chip.dart';
 
@@ -169,6 +172,59 @@ void main() {
 
     expect(find.text('42:18'), findsOneWidget);
     expect(find.text('18.40 km'), findsNothing);
+  });
+
+  group('route thumbnail (C4a.6)', () {
+    String testPolyline() {
+      final t0 = DateTime.utc(2026, 8, 10, 7);
+      final trail = [
+        for (var i = 0; i <= 20; i++)
+          TrackFilterTrailPoint(
+            latitude: 47.5 + i * 0.0001,
+            longitude: 19.05 + i * 0.0001,
+            recordedAt: t0.add(Duration(seconds: i)),
+          ),
+      ];
+      return encodeRoute(trail).polyline;
+    }
+
+    testWidgets('a DISTANCE session with a recorded route shows the thumbnail', (tester) async {
+      await _pumpSessionsTab(tester, [
+        _cardioSession(
+          clientId: 'run',
+          activityType: 'RUNNING',
+          cardio: CardioMetrics(distanceMeters: 5000, routePolyline: testPolyline()),
+        ),
+      ]);
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(RouteThumbnail), findsOneWidget);
+    });
+
+    testWidgets('a DISTANCE session without a route shows no thumbnail', (tester) async {
+      await _pumpSessionsTab(tester, [
+        _cardioSession(
+          clientId: 'run',
+          activityType: 'RUNNING',
+          cardio: const CardioMetrics(distanceMeters: 5000),
+        ),
+      ]);
+
+      expect(find.byType(RouteThumbnail), findsNothing);
+    });
+
+    testWidgets('a MACHINE session never shows a thumbnail, route data or not', (tester) async {
+      await _pumpSessionsTab(tester, [
+        _cardioSession(
+          clientId: 'bike',
+          activityType: 'INDOOR_BIKE',
+          cardio: CardioMetrics(distanceMeters: 18400, routePolyline: testPolyline()),
+          movingSeconds: 2400,
+        ),
+      ]);
+
+      expect(find.byType(RouteThumbnail), findsNothing);
+    });
   });
 
   testWidgets('a still-running cardio session shows the in-progress pill instead', (tester) async {

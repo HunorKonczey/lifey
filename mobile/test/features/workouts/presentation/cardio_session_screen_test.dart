@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,6 +73,8 @@ class _RecordingSessionController extends WorkoutSessionController {
     required DateTime startedAt,
     required DateTime finishedAt,
     required int movingSeconds,
+    Value<CardioMetrics?> cardio = const Value.absent(),
+    Value<List<CardioSplit>> splits = const Value.absent(),
   }) async {
     if (failNext) throw Exception('boom');
     finishCalls.add({
@@ -79,6 +82,8 @@ class _RecordingSessionController extends WorkoutSessionController {
       'startedAt': startedAt,
       'finishedAt': finishedAt,
       'movingSeconds': movingSeconds,
+      'cardio': cardio,
+      'splits': splits,
     });
   }
 

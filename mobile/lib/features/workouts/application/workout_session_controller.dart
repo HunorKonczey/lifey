@@ -123,11 +123,22 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
   /// Finishes a cardio session: folds any still-running interval into the
   /// final `movingSeconds` total (same caller-computes-"now" convention as
   /// [pauseCardioSession]) and sets [finishedAt].
+  ///
+  /// [cardio]/[splits] are left absent by every caller except a DISTANCE
+  /// session that recorded a GPS trail (docs/cardio/59-cardio-implementation-plan.md
+  /// C4a.6) — `CardioSessionScreenState._finish()` is the one place that
+  /// passes them, folding the closing route/elevation/split computation into
+  /// this same outbox write rather than a second one. Every other cardio
+  /// family finishes exactly as before: its metrics were already persisted
+  /// live via [updateLiveCardioMetrics] whenever the user edited them, so
+  /// finishing has nothing left to say about `cardio`/`splits`.
   Future<void> finishCardioSession(
     String clientId, {
     required DateTime startedAt,
     required DateTime finishedAt,
     required int movingSeconds,
+    Value<CardioMetrics?> cardio = const Value.absent(),
+    Value<List<CardioSplit>> splits = const Value.absent(),
   }) {
     return _repo.update(
       clientId,
@@ -137,6 +148,8 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
       sets: const [],
       movingSeconds: Value(movingSeconds),
       movingSinceEpochMs: const Value(null),
+      cardio: cardio,
+      splits: splits,
     );
   }
 

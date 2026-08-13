@@ -3232,3 +3232,108 @@ nem ebben a lépésben okozott regresszió.
 Windowson fejleszthető). Ezzel az utolsó Mac-igényes C4a-lépés is kész — a G11 akku-mérés
 (C4a.5a/b mindkettője után, [54 §4.5](54-cardio-gps-route-plan.md)) valós eszközön külön elvégzendő
 marad.
+
+---
+
+## C4a.6 kész (2026-08-13) — záró GPS-feldolgozás, `RoutePainter`, magasságprofil, kártya-miniatűr, 90 napos karbantartás
+
+Az utolsó C4a-lépés ([54 §5](54-cardio-gps-route-plan.md) G8+G9+G10). A perzisztencia-lánc
+(`CardioDetails.routePolyline`/`routePointCount`, a `CardioSplits` tábla, az outbox-payload
+mindkettőre) már megvolt egy korábbi lépésből (C1.4) — ez a lépés a hiányzó számító/rajzoló
+logikát adta hozzá, és bekötötte a meglévő csövekbe.
+
+**Négy új domain fájl** (`lib/features/workouts/domain/`): `track_simplify.dart`
+(Douglas-Peucker, lokális egyenközepű vetítéssel méterben, nulla új dep), `polyline_codec.dart`
+(a szabványos Google encoded-polyline algoritmus, **plusz** egy saját, három-csatornás variáns —
+lat+lng+magasság — ugyanazzal az elvvel), `route_encoder.dart` (a záró csővezeték: a trailt
+> 60 s-os réseknél szegmensekre bontja [§4.3], szegmensenként egyszerűsít, kódol, `;`-vel fűz
+össze — a `;` biztonságos elválasztó, mert a polyline-ábécé kimenete sosem esik 63 alá), és
+`cardio_splits_calculator.dart` (1000 m-es határátlépések lineáris interpolációval, mindig
+legalább egy — az utolsó, rövidebb — splittel).
+
+**Döntés, amit a doc önmagában nem specifikált: a magasság tartós tárolása.** A sima Google
+encoded-polyline csak lat/lng-et hordoz; mivel a nyers `CardioTrackPoints` (ami a magasságot is
+tárolja) soha nem szinkronizálódik és 90 nap után törlődik, egy időzáras magasságprofil
+elveszne, amint a felhasználó egy másik eszközön vagy a nyers pontok törlése után nyitná meg
+újra a sessiont — ellentmondva a D-C4.2 elvnek ("a polyline az igazságforrás a
+megjelenítéshez"). Ezért a `routePolyline` mező saját, három-csatornás kódolást kapott a sima
+kettő helyett — a backend ettől függetlenül csak egy stringet lát, nem értelmezi a tartalmát.
+
+**`TrackFilterAccumulator` bővítése** (`track_filter.dart`): egy `trail` getter, ami pontosan
+azokat a fixeket gyűjti, amik ma is előreléptetik a referenciapontot (§4.2 "szűrt pontjai") — új
+`TrackFilterTrailPoint` érték-osztály (lat/lng/magasság/recordedAt), tisztán additív, egyetlen
+meglévő teszt sem változott.
+
+**Bekötés `_finish()`-be**: `WorkoutSessionController.finishCardioSession` két opcionális,
+`Value`-alapú paramétert kapott (`cardio`, `splits`), visszafelé kompatibilisen — a
+`WorkoutSessionRepository.update` már támogatta ezeket, csak eddig senki nem hívta velük a
+finish útvonalon. `CardioSessionScreenState._finish()` DISTANCE + nem-üres trail esetén
+összeállítja a záró `CardioMetrics`-et (táv/szintemelkedés a `TrackFilterAccumulator`-ból,
+`routePolyline`/`routePointCount` az `encodeRoute`-ból) és a splitlistát, majd ugyanazzal az
+objektummal perzisztál és tölti fel a `CardioSummaryScreen`-nek átadott megjelenítő példányt —
+nincs többé duplikált "csak UI-ra" `CardioMetrics`. Külön figyelni kellett arra, hogy a
+`elevationGainMeters` az akkumulátoron sosem `null` (0-ról indul) — "0 m emelkedés" és "nincs
+magasságadat" két külön tény, ezért csak akkor kerül be nem-nullaként, ha a trailben volt
+legalább egy valódi magasság-olvasás.
+
+**`RoutePainter` + `RouteThumbnail`** (`presentation/widgets/route_painter.dart`): valódi
+Web-Mercator vetítés (konzisztens egy jövőbeli C4b `flutter_map`/EPSG:3857 réteggel), arányt
+megőrző illesztés, szaggatott vonal a szegmens-határoknál (jelvesztés), a dekódolt+vetített
+geometria polyline-string szerint memoizálva egy méretkorlátos gyorsítótárban (mindkét méret
+ugyanabból olvas) + `RepaintBoundary` — ez váltja ki a doc szó szerinti "Picture-ként
+cache-elve" megfogalmazását, a nyers `dart:ui` `Picture`-kezelés érdemi többletmunka lett volna
+elhanyagolható nyereségért egy jellemzően pár tucat pontos egyszerűsített útvonalnál. **Nincs
+tempó-szerinti gradiens** — a doc maga "opcionális"-nak jelöli, tudatosan kimaradt ebből a
+lépésből.
+
+**Magasságprofil**: nem kapott új rajzoló kódot — a meglévő `TimeSeriesChart` (dátum→érték
+diagram) veszi át a szerepet, a dekódolt polyline harmadik csatornájából. A diagram X tengelye
+**szintetikus** (pont-sorszám, nem valódi időbélyeg) — a dekódolt polyline nem hordoz
+időbélyeget, és a profil célja a pálya *alakja*, nem egy pontos időtengely (azt a splitek és a
+mozgásidő már fedi).
+
+**`CardioSummaryScreen`**: a route/magasságprofil/split-lista blokk a DISTANCE ág
+`_metricSections()`-ébe került, amikor van `routePolyline`. Eközben derült ki, hogy a képernyő
+`_persistCardio`-ja **nem** hordozta tovább a `routePolyline`/`routePointCount` mezőket egy
+szerkesztésnél (pl. táv utólagos javításánál) — mivel a `CardioMetrics` írás teljes csere, ez
+némán törölte volna a frissen felvett útvonalat az első szerkesztésnél. Ezt egy
+`cardio_summary_screen_test.dart`-beli regressziós teszt fogta meg ("editing distance preserves
+the route"), a képernyő két új state-mezőt kapott (`_routePolyline`/`_routePointCount`), amiket
+minden írás átvisz.
+
+**Kártya-miniatűr**: a meglévő 44×44 `ActivityChip` jelvény marad (aktivitás-azonosítás), a
+`RouteThumbnail` egy új, kis elem a `Row`-ban, csak DISTANCE + van-`routePolyline` esetén.
+
+**90 napos karbantartás**: `CardioTrackPointRepository.deleteOlderThan` + új
+`TrackPointMaintenance` (`lib/features/workouts/application/`), ugyanaz a `shared_preferences`
+napi-gate minta, mint `AutoPausePreferences`-nél — `ConnectivitySyncController._refresh()`-be
+kötve, saját `try/catch`-csel, hogy egy hiba se a sync két felét, se a chat-flusht ne
+akassza meg.
+
+**Tesztek**: `track_simplify_test.dart`, `polyline_codec_test.dart` (kézzel levezetett
+egy-értékes esetek + kör-út tesztek), `route_encoder_test.dart`, `cardio_splits_calculator_test.dart`,
+`track_point_maintenance_test.dart`, `route_painter_test.dart` (szintetikus polyline-okon —
+Windowson GPS/eszköz nélkül ez a C4a többi lépésének is bevett korlátja), plusz bővítések:
+`track_filter_test.dart` (a `trail` getter), `cardio_track_point_repository_test.dart`
+(`deleteOlderThan`), `cardio_session_screen_gps_tracking_test.dart` (a záró outbox-írás valóban
+hordozza a route-ot/splitet, MACHINE-nél nem), `cardio_summary_screen_test.dart` (route/profil/
+split-lista megjelenés + a fenti regressziós eset), `sessions_tab_cardio_test.dart` (a
+miniatűr). A widget-tesztekben egy `flutter test`-specifikus csapdába futottam bele: a
+`CardioSummaryScreen` `ListView`-ja virtualizált, a SPLITS szakasz az alap 800×600-as
+teszt-felületen kívül esett, és a `find.text` emiatt hamis negatívot adott — a route-tesztek
+`tester.binding.setSurfaceSize`-zal magasabb felületet állítanak be.
+
+**Ellenőrzés:** `flutter analyze` a teljes projekten tiszta. (Útközben kiderült, hogy a Flutter
+SDK ebben a checkoutban időközben átköltözött `lifey\flutter`-ből `Documents\flutter`-be — ez
+elavulttá tette a `.dart_tool` csomag-feloldást, `flutter pub get` állította helyre, mielőtt az
+analyze/test futtatható volt.) Teljes `flutter test`: **1036 zöld / 3 bukás / 1039 összesen** —
+mindhárom bukás a `chat_repository_test.dart` már ismert, cardión kívüli Windows-fájlzár-flake-je
+(`git stash`-sel ellenőrizve: a módosítások nélkül, tiszta fán is ugyanez a három teszt bukik),
+tehát pre-existing, nem ebben a lépésben okozott regresszió. 0 valódi regresszió.
+
+**Következő:** ezzel a **teljes C4a iteráció kész** — GPS-rögzítés, szűrés, engedélyek,
+háttérfutás, auto-pause, záró feldolgozás és megjelenítés mind megvan. Egyetlen elvégzendő
+tétel maradt: a **G11 akku-mérés** ([54 §4.5](54-cardio-gps-route-plan.md), ≤ 8%/óra cél),
+ami valós eszközön futtatandó, nem kódolási lépés — ennek eredménye kerül az 54-es doc §8-as
+mérési naplójába. A C4b (valódi térképcsempe) opcionális, csak akkor indul, ha a `RoutePainter`
+kontextus nélküli rajza a gyakorlatban kevésnek bizonyul (leginkább túránál).

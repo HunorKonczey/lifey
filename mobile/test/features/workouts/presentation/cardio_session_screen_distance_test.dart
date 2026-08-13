@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,7 +38,9 @@ class _RecordingSessionController extends WorkoutSessionController {
   Future<void> finishCardioSession(String clientId,
           {required DateTime startedAt,
           required DateTime finishedAt,
-          required int movingSeconds}) async {}
+          required int movingSeconds,
+          Value<CardioMetrics?> cardio = const Value.absent(),
+          Value<List<CardioSplit>> splits = const Value.absent()}) async {}
 
   @override
   Future<void> updateLiveCardioMetrics(

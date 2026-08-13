@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +21,8 @@ import '../data/cardio_track_point_repository.dart';
 import '../domain/activity_type.dart';
 import '../domain/auto_pause_detector.dart';
 import '../domain/cardio_personal_record.dart';
+import '../domain/cardio_splits_calculator.dart';
+import '../domain/route_encoder.dart';
 import '../domain/track_filter.dart';
 import '../domain/workout_session.dart';
 import 'cardio_summary_screen.dart';
@@ -863,12 +866,47 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     setState(() => _busy = true);
     final total = _liveMovingSeconds;
     final finishedAt = DateTime.now();
+    // The GPS route closing pipeline (docs/cardio/54-cardio-gps-route-plan.md
+    // §5, C4a.6): simplify → encode → splits, folded into the same outbox
+    // write `finishCardioSession` already makes below — one write, not two.
+    // MACHINE/GAME and any DISTANCE session with no GPS trail (permission
+    // denied, indoor) leave `routeCardio` null and finish exactly as before;
+    // their metrics were already persisted live via `_updateCardioMetrics`.
+    final trail = _trackFilter?.trail ?? const [];
+    CardioMetrics? routeCardio;
+    List<CardioSplit> routeSplits = const [];
+    if (_family == ActivityFamily.distance && trail.isNotEmpty) {
+      final encoded = encodeRoute(trail);
+      routeSplits = computeSplits(trail);
+      final originalCardio = widget.session.cardio;
+      // elevationGainMeters is never null on the accumulator itself (it
+      // starts at 0 and only grows) — but "0 m gain" and "no altitude data
+      // at all" are different facts, and only the latter should hide the
+      // elevation-gain tile/profile downstream (CardioSummaryScreen gates on
+      // null). A trail with zero altitude readings genuinely has neither.
+      final hasAltitude = trail.any((p) => p.altitude != null);
+      routeCardio = CardioMetrics(
+        distanceMeters: _trackFilter!.distanceMeters,
+        elevationGainMeters: hasAltitude ? _trackFilter!.elevationGainMeters : null,
+        avgCadence: _avgCadence,
+        avgWatts: _avgWatts,
+        resistanceLevel: _resistanceLevel,
+        venue: originalCardio?.venue,
+        intensity: originalCardio?.intensity,
+        scorePoints: originalCardio?.scorePoints,
+        distanceSource: 'MEASURED',
+        routePolyline: encoded.polyline,
+        routePointCount: encoded.pointCount,
+      );
+    }
     try {
       await ref.read(workoutSessionControllerProvider.notifier).finishCardioSession(
             _clientId,
             startedAt: _startedAt,
             finishedAt: finishedAt,
             movingSeconds: total,
+            cardio: routeCardio == null ? const Value.absent() : Value(routeCardio),
+            splits: routeCardio == null ? const Value.absent() : Value(routeSplits),
           );
       if (!mounted) return;
       _ticker?.cancel();
@@ -885,7 +923,20 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       // `MaterialApp`) — a no-op there, never reached in the real app.
       ref.read(workoutsSessionsTabRequestProvider.notifier).request();
       if (GoRouter.maybeOf(context) != null) context.go('/workouts');
-      final originalCardio = widget.session.cardio;
+      // Reuses the exact object just persisted above when a route was
+      // recorded — this is the same CardioMetrics, not a second,
+      // display-only approximation of it (see the doc comment above).
+      final displayCardio = routeCardio ??
+          CardioMetrics(
+            distanceMeters: _distanceMeters,
+            avgCadence: _avgCadence,
+            avgWatts: _avgWatts,
+            resistanceLevel: _resistanceLevel,
+            venue: widget.session.cardio?.venue,
+            intensity: widget.session.cardio?.intensity,
+            scorePoints: widget.session.cardio?.scorePoints,
+            distanceSource: _hasGpsDistance ? 'MEASURED' : (_distanceMeters == null ? null : 'MANUAL'),
+          );
       final finishedSession = WorkoutSession(
         clientId: _clientId,
         exercises: const [],
@@ -895,16 +946,8 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         sessionKind: 'CARDIO',
         activityType: _activityType,
         movingSeconds: total,
-        cardio: CardioMetrics(
-          distanceMeters: _distanceMeters,
-          avgCadence: _avgCadence,
-          avgWatts: _avgWatts,
-          resistanceLevel: _resistanceLevel,
-          venue: originalCardio?.venue,
-          intensity: originalCardio?.intensity,
-          scorePoints: originalCardio?.scorePoints,
-          distanceSource: _hasGpsDistance ? 'MEASURED' : (_distanceMeters == null ? null : 'MANUAL'),
-        ),
+        cardio: displayCardio,
+        splits: routeSplits,
       );
       // Baseline is every other cardio session already known locally — read
       // once, here, rather than a dedicated repository query: the whole list

@@ -115,6 +115,35 @@ void main() {
     expect(await repo.pointsForSession('s2'), hasLength(1));
   });
 
+  group('deleteOlderThan (C4a.6\'s 90-day maintenance job)', () {
+    test('removes only points recorded before the cutoff, across every session', () async {
+      final cutoff = DateTime.utc(2026, 8, 1);
+      await repo.addPoint('s1', 0, _fix(lat: 1, lng: 1, recordedAt: DateTime.utc(2026, 7, 1)));
+      await repo.addPoint('s1', 1, _fix(lat: 2, lng: 2, recordedAt: DateTime.utc(2026, 8, 15)));
+      await repo.addPoint('s2', 0, _fix(lat: 3, lng: 3, recordedAt: DateTime.utc(2026, 6, 1)));
+
+      final deleted = await repo.deleteOlderThan(cutoff);
+
+      expect(deleted, 2);
+      expect(await repo.pointsForSession('s1'), hasLength(1));
+      // Drift round-trips DateTime columns as local-zone instants — same
+      // moment, different `isUtc` flag, so `==` (which also compares that
+      // flag, per DateTime's own docs) would spuriously fail here.
+      final remaining = (await repo.pointsForSession('s1')).single.recordedAt;
+      expect(remaining.isAtSameMomentAs(DateTime.utc(2026, 8, 15)), isTrue);
+      expect(await repo.pointsForSession('s2'), isEmpty);
+    });
+
+    test('a point exactly at the cutoff is kept, not deleted', () async {
+      final cutoff = DateTime.utc(2026, 8, 1);
+      await repo.addPoint('s1', 0, _fix(lat: 1, lng: 1, recordedAt: cutoff));
+
+      await repo.deleteOlderThan(cutoff);
+
+      expect(await repo.pointsForSession('s1'), hasLength(1));
+    });
+  });
+
   group('cascade delete from WorkoutSessionRepository.delete()', () {
     test('a never-synced session\'s track points are wiped immediately alongside it', () async {
       final sessionRepo =

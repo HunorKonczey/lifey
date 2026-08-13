@@ -264,4 +264,48 @@ void main() {
       expect(error, lessThanOrEqualTo(0.05));
     });
   });
+
+  group('TrackFilterAccumulator — trail (C4a.6\'s input)', () {
+    test('the first accepted fix seeds the trail', () {
+      final acc = TrackFilterAccumulator(trackFilterProfileFor('RUNNING'));
+      acc.addFix(_fix(lat: 47.5, lng: 19.05));
+      expect(acc.trail, hasLength(1));
+      expect(acc.trail.single.latitude, 47.5);
+      expect(acc.trail.single.longitude, 19.05);
+    });
+
+    test('a fix that advances the reference point is appended to the trail', () {
+      final acc = TrackFilterAccumulator(trackFilterProfileFor('RUNNING'));
+      final t0 = DateTime.utc(2026, 8, 13, 7, 0, 0);
+      acc.addFix(_fix(lat: 47.5, lng: 19.05, recordedAt: t0));
+      acc.addFix(_fix(lat: 47.5001, lng: 19.05, recordedAt: t0.add(const Duration(seconds: 3))));
+      expect(acc.trail, hasLength(2));
+    });
+
+    test('sub-displacement jitter is not appended to the trail', () {
+      final acc = TrackFilterAccumulator(trackFilterProfileFor('RUNNING'));
+      final t0 = DateTime.utc(2026, 8, 13, 7, 0, 0);
+      acc.addFix(_fix(lat: 47.5, lng: 19.05, recordedAt: t0));
+      // ~1.1 m north — under the 3 m displacement threshold.
+      acc.addFix(_fix(lat: 47.50001, lng: 19.05, recordedAt: t0.add(const Duration(seconds: 1))));
+      expect(acc.trail, hasLength(1));
+    });
+
+    test('an accuracy- or speed-rejected fix is not appended to the trail', () {
+      final acc = TrackFilterAccumulator(trackFilterProfileFor('RUNNING'));
+      final t0 = DateTime.utc(2026, 8, 13, 7, 0, 0);
+      acc.addFix(_fix(lat: 47.5, lng: 19.05, recordedAt: t0));
+      acc.addFix(_fix(lat: 47.501, lng: 19.05, accuracy: 999, recordedAt: t0.add(const Duration(seconds: 1))));
+      acc.addFix(_fix(lat: 47.6, lng: 19.05, recordedAt: t0.add(const Duration(seconds: 2)))); // speed-gate jump
+      expect(acc.trail, hasLength(1));
+    });
+
+    test('the trail carries altitude and recordedAt for every kept point', () {
+      final acc = TrackFilterAccumulator(trackFilterProfileFor('HIKING'));
+      final t0 = DateTime.utc(2026, 8, 13, 7, 0, 0);
+      acc.addFix(_fix(lat: 47.5, lng: 19.05, altitude: 200, recordedAt: t0));
+      expect(acc.trail.single.altitude, 200);
+      expect(acc.trail.single.recordedAt, t0);
+    });
+  });
 }

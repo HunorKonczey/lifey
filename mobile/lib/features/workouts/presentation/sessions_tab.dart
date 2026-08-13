@@ -27,6 +27,7 @@ import 'log_session_screen.dart';
 import 'open_workout_screens.dart';
 import 'session_row_plan.dart';
 import 'widgets/recommended_workout_card.dart';
+import 'widgets/route_painter.dart';
 import 'widgets/upcoming_sessions_section.dart';
 
 /// Whether [session] passes the sessions-tab kind/type filter
@@ -297,6 +298,14 @@ class _SessionCard extends StatelessWidget {
     final title =
         session.isCardio ? activityTypeLabel(l10n, session.activityType!) : session.templateName;
 
+    // C4a.6 — only a finished DISTANCE session with a recorded GPS trail has
+    // one of these; MACHINE/GAME never track location, and the badge slot
+    // above already carries activity identity, so no thumbnail is shown
+    // otherwise.
+    final routePolyline = session.isCardio && session.family == ActivityFamily.distance
+        ? session.cardio?.routePolyline
+        : null;
+
     return Dismissible(
       key: ValueKey(session.clientId),
       direction: DismissDirection.endToStart,
@@ -451,6 +460,13 @@ class _SessionCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (routePolyline != null && routePolyline.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: RouteThumbnail(polyline: routePolyline),
+                  ),
+                ],
                 // Delete button
                 IconButton(
                   onPressed: onDelete,

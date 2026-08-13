@@ -7,13 +7,16 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/activity_chip.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
 import '../domain/cardio_personal_record.dart';
+import '../domain/route_encoder.dart';
 import '../domain/workout_session.dart';
 import 'widgets/prompt_number_dialog.dart';
+import 'widgets/route_painter.dart';
 import 'widgets/rpe_selector.dart';
 
 /// The cardio summary screen (docs/cardio/59-cardio-implementation-plan.md
@@ -88,6 +91,15 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   int? _intensity;
   int? _scorePoints;
 
+  // C4a.6 — the closing route, also read-only carry-over here (this screen
+  // has no route re-processing UI, only `CardioSessionScreenState._finish()`
+  // ever produces these). Must still round-trip through every
+  // `_persistCardio` write below — `updateLiveCardioMetrics` replaces the
+  // whole `CardioMetrics` row, so omitting these here would silently erase
+  // the route the moment someone edits, say, the distance on this screen.
+  String? _routePolyline;
+  int? _routePointCount;
+
   int? _rpe;
   late final TextEditingController _noteController;
   late final FocusNode _noteFocusNode;
@@ -115,6 +127,8 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     _venue = cardio?.venue;
     _intensity = cardio?.intensity;
     _scorePoints = cardio?.scorePoints;
+    _routePolyline = cardio?.routePolyline;
+    _routePointCount = cardio?.routePointCount;
 
     _rpe = s.rpe;
     _noteController = TextEditingController(text: s.feedbackNote ?? '');
@@ -196,6 +210,8 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
               scorePoints: _scorePoints,
               distanceSource: newDistanceSource,
               caloriesSource: newCaloriesSource,
+              routePolyline: _routePolyline,
+              routePointCount: _routePointCount,
             ),
           );
       if (!mounted) return;
@@ -344,6 +360,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             const SizedBox(height: 10),
             Wrap(spacing: 10, runSpacing: 10, children: secondary),
           ],
+          ..._routeSections(l10n, theme, scheme, unitSystem),
         ];
       case ActivityFamily.machine:
         final secondary = <Widget>[
@@ -402,6 +419,78 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
           ],
         ];
     }
+  }
+
+  /// The route/elevation-profile/splits block (C4a.6) — DISTANCE only, and
+  /// only once a session actually finished with a GPS trail
+  /// (`CardioSessionScreenState._finish()` is the only place that ever sets
+  /// [_routePolyline]; a manually-logged or GPS-denied session has none).
+  /// This is the gap the class doc's "Route-free, deliberately" note
+  /// describes — closed here, not by removing that note (a session that
+  /// predates C4a still has no route to show, so the doc's reasoning still
+  /// holds for it).
+  List<Widget> _routeSections(
+    AppLocalizations l10n,
+    ThemeData theme,
+    ColorScheme scheme,
+    UnitSystem unitSystem,
+  ) {
+    final polyline = _routePolyline;
+    if (polyline == null || polyline.isEmpty) return const [];
+
+    final sections = <Widget>[
+      const SizedBox(height: 16),
+      RoutePainter(polyline: polyline),
+    ];
+
+    // Synthetic, index-based "dates" — the decoded polyline carries no
+    // timestamps (only lat/lng/altitude per point, see `route_encoder.dart`),
+    // and `TimeSeriesChart` needs *some* DateTime to order/label its X axis.
+    // The profile's job is showing the route's *shape* (where it climbs/
+    // descends), not a real time axis — splits and moving time already cover
+    // precise timing elsewhere on this screen.
+    if (_elevationGainMeters != null) {
+      final segments = decodeRouteSegments(polyline);
+      var index = 0;
+      final elevationPoints = <TimeSeriesPoint>[
+        for (final segment in segments)
+          for (final (_, _, alt) in segment)
+            TimeSeriesPoint(date: _startedAt.add(Duration(seconds: index++)), value: alt),
+      ];
+      if (elevationPoints.length >= 2) {
+        sections.addAll([
+          const SizedBox(height: 20),
+          Text(
+            l10n.elevationProfileSectionLabel,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 1.2, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          TimeSeriesChart(
+            points: elevationPoints,
+            dateLabelBuilder: (_) => '',
+            valueLabelBuilder: (v) => CardioFormatter.elevation(v, unitSystem),
+            height: 140,
+          ),
+        ]);
+      }
+    }
+
+    final splits = widget.session.splits;
+    if (splits.isNotEmpty) {
+      sections.addAll([
+        const SizedBox(height: 20),
+        Text(
+          l10n.splitsSectionLabel,
+          style: theme.textTheme.labelSmall
+              ?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 1.2, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        ...splits.map((s) => _SplitRow(split: s, unitSystem: unitSystem, theme: theme, scheme: scheme)),
+      ]);
+    }
+
+    return sections;
   }
 }
 
@@ -662,6 +751,61 @@ class _FeedbackCard extends StatelessWidget {
             decoration: InputDecoration(
               hintText: l10n.postWorkoutFeedbackNoteHint,
               border: const OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One row of the C4a.6 split list — "1 km · 5:12 /km · +12 m". Read-only,
+/// plain text, same visual weight as `_MetricTile` but a full-width row
+/// (a `Wrap` of many small tiles would be far less scannable than a list for
+/// something inherently sequential like splits).
+class _SplitRow extends StatelessWidget {
+  const _SplitRow({
+    required this.split,
+    required this.unitSystem,
+    required this.theme,
+    required this.scheme,
+  });
+
+  final CardioSplit split;
+  final UnitSystem unitSystem;
+  final ThemeData theme;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final duration = Duration(seconds: split.durationSeconds);
+    final pace = CardioFormatter.pace(split.distanceMeters, duration, unitSystem);
+    final elevationDelta = split.elevationDeltaM;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child: Text(
+              '${split.splitIndex + 1}',
+              style: theme.textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+          Expanded(
+            child: Text(CardioFormatter.distance(split.distanceMeters, unitSystem)),
+          ),
+          Expanded(
+            child: Text(pace ?? '—', textAlign: TextAlign.center),
+          ),
+          SizedBox(
+            width: 64,
+            child: Text(
+              elevationDelta == null
+                  ? '—'
+                  : '${elevationDelta >= 0 ? '+' : '−'}${CardioFormatter.elevation(elevationDelta.abs(), unitSystem)}',
+              textAlign: TextAlign.end,
+              style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
         ],

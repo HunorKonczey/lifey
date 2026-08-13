@@ -73,6 +73,16 @@ class CardioTrackPointRepository {
         .go();
   }
 
+  /// Deletes every raw point recorded before [cutoff], regardless of which
+  /// session it belongs to — the 90-day retention job (docs/cardio/
+  /// 54-cardio-gps-route-plan.md §5 point 5, C4a.6): by then the session's
+  /// closing polyline is already on the server, so the raw fixes have
+  /// nothing left to feed. See `TrackPointMaintenance` for the caller.
+  Future<int> deleteOlderThan(DateTime cutoff) {
+    return (_db.delete(_db.cardioTrackPoints)..where((t) => t.recordedAt.isSmallerThanValue(cutoff)))
+        .go();
+  }
+
   CardioTrackPoint _fromRow(CardioTrackPointRow row) => CardioTrackPoint(
         seq: row.seq,
         latitude: row.latitude,

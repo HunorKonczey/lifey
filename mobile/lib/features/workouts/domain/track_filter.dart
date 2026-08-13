@@ -74,6 +74,29 @@ double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
 
 double _degToRad(double deg) => deg * math.pi / 180;
 
+/// One point that survived every §4.2 gate — the "szűrt pontok" (filtered
+/// points) the doc's own §5 refers to for both the closing polyline
+/// (C4a.6, after a further Douglas-Peucker simplification) and the splits
+/// (C4a.6, used as-is, no simplification). Carries everything downstream
+/// needs: [altitude] for the elevation profile/split deltas, [recordedAt]
+/// for split durations and gap detection (§4.3's 60 s threshold, checked
+/// directly between consecutive trail entries — a real signal loss means no
+/// fix passed the gates during the gap, so the trail itself already shows
+/// the jump).
+class TrackFilterTrailPoint {
+  const TrackFilterTrailPoint({
+    required this.latitude,
+    required this.longitude,
+    required this.recordedAt,
+    this.altitude,
+  });
+
+  final double latitude;
+  final double longitude;
+  final double? altitude;
+  final DateTime recordedAt;
+}
+
 /// Feeds a raw [LocationFix] stream through §4.2's gates one point at a
 /// time, in the doc's own order (accuracy → speed → displacement), and
 /// accumulates the results — a running haversine distance sum and a
@@ -94,8 +117,14 @@ class TrackFilterAccumulator {
   double _pendingAscent = 0;
   final List<double> _altitudeWindow = [];
   double? _lastSmoothedAltitude;
+  final List<TrackFilterTrailPoint> _trail = [];
 
   double get distanceMeters => _distanceMeters;
+
+  /// The filtered point trail (§4.2's "szűrt pontok") — every fix that ever
+  /// became [_lastAccepted], in order. See [TrackFilterTrailPoint]'s own doc
+  /// for what C4a.6 builds from this.
+  List<TrackFilterTrailPoint> get trail => List.unmodifiable(_trail);
 
   /// Committed monotonic climbs plus whatever's still accumulating in the
   /// current upward run — see [_applyAltitude]'s doc for why the pending
@@ -127,6 +156,12 @@ class TrackFilterAccumulator {
     final prev = _lastAccepted;
     if (prev == null) {
       _lastAccepted = fix;
+      _trail.add(TrackFilterTrailPoint(
+        latitude: fix.latitude,
+        longitude: fix.longitude,
+        altitude: fix.altitude,
+        recordedAt: fix.recordedAt,
+      ));
       return true;
     }
 
@@ -148,6 +183,12 @@ class TrackFilterAccumulator {
     if (rawDistance >= kMinDisplacementMeters) {
       _distanceMeters += rawDistance;
       _lastAccepted = fix;
+      _trail.add(TrackFilterTrailPoint(
+        latitude: fix.latitude,
+        longitude: fix.longitude,
+        altitude: fix.altitude,
+        recordedAt: fix.recordedAt,
+      ));
     }
     // else: GPS jitter while stationary — not added, and the reference
     // point deliberately isn't advanced either, so slow, genuine movement

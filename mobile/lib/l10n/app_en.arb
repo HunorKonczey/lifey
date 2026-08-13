@@ -3702,6 +3702,14 @@
   "@gpsForegroundNotificationText": {
     "description": "Android-only: the body text of geolocator's own foreground-service notification, required to keep GPS fixes arriving while the app is backgrounded/the screen is locked (C4a.5a). Separate from and secondary to the app's own rich ongoing workout notification."
   },
+  "elevationProfileSectionLabel": "ELEVATION PROFILE",
+  "@elevationProfileSectionLabel": {
+    "description": "Section header above the elevation-over-route chart on the cardio summary screen (C4a.6, DISTANCE family only, shown when the session recorded any altitude data)"
+  },
+  "splitsSectionLabel": "SPLITS",
+  "@splitsSectionLabel": {
+    "description": "Section header above the per-km split list on the cardio summary screen (C4a.6, DISTANCE family only, shown when the session has any recorded splits)"
+  },
   "autoPauseSettingsIconTooltip": "Auto-pause settings",
   "@autoPauseSettingsIconTooltip": {
     "description": "Tooltip on the CardioSessionScreen header icon (DISTANCE only) that opens the auto-pause settings sheet"

@@ -5,8 +5,11 @@ import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/cardio_personal_record.dart';
+import 'package:lifey/features/workouts/domain/route_encoder.dart';
+import 'package:lifey/features/workouts/domain/track_filter.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
+import 'package:lifey/features/workouts/presentation/widgets/route_painter.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
 /// C1.9 → C2.8: `CardioSummaryScreen` — started read-only (C1.9), now the
@@ -97,7 +100,142 @@ WorkoutSession _session({
   );
 }
 
+/// A real encoded route (not a hand-crafted string) from a small synthetic
+/// trail — 2.2 km straight north, climbing steadily — so C4a.6's UI tests
+/// exercise the actual `route_encoder.dart` pipeline, same as production.
+({String polyline, List<CardioSplit> splits}) _testRoute() {
+  final t0 = DateTime.utc(2026, 8, 10, 7, 0, 0);
+  final trail = [
+    for (var i = 0; i <= 440; i++)
+      TrackFilterTrailPoint(
+        latitude: 47.5 + (i * 5) / 111320.0,
+        longitude: 19.05,
+        altitude: 100 + i * 0.1,
+        recordedAt: t0.add(Duration(seconds: i)),
+      ),
+  ];
+  final encoded = encodeRoute(trail);
+  return (
+    polyline: encoded.polyline,
+    splits: const [
+      CardioSplit(splitIndex: 0, distanceMeters: 1000, durationSeconds: 200, elevationDeltaM: 20),
+      CardioSplit(splitIndex: 1, distanceMeters: 1000, durationSeconds: 200, elevationDeltaM: 20),
+      CardioSplit(splitIndex: 2, distanceMeters: 200, durationSeconds: 40, elevationDeltaM: 4),
+    ],
+  );
+}
+
 void main() {
+  group('route / elevation profile / splits (C4a.6)', () {
+    testWidgets('a DISTANCE session with a route shows the route painter and split list',
+        (tester) async {
+      // The route/elevation/splits block pushes this screen's content well
+      // past the default 800x600 test surface — without a taller surface,
+      // ListView's virtualization simply never builds the SPLITS section's
+      // Elements, and find.text would report a false negative.
+      await tester.binding.setSurfaceSize(const Size(400, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final route = _testRoute();
+      await _pump(
+        tester,
+        WorkoutSession(
+          clientId: 'c1',
+          exercises: const [],
+          sets: const [],
+          startedAt: DateTime(2026, 8, 10, 7),
+          finishedAt: DateTime(2026, 8, 10, 7, 30),
+          sessionKind: 'CARDIO',
+          activityType: 'RUNNING',
+          movingSeconds: 1800,
+          cardio: CardioMetrics(
+            distanceMeters: 5000,
+            elevationGainMeters: 44,
+            routePolyline: route.polyline,
+            routePointCount: 50,
+          ),
+          splits: route.splits,
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(RoutePainter), findsOneWidget);
+      expect(find.text('ELEVATION PROFILE'), findsOneWidget);
+      expect(find.text('SPLITS'), findsOneWidget);
+      // All three splits are 5 m/s => the same "3:20 /km" pace, so three
+      // rows should render it — plain digit texts ('1', '2', '3') aren't
+      // asserted here since the RPE chip row below also renders those.
+      expect(find.text('3:20 /km'), findsNWidgets(3));
+      expect(find.text('1.00 km'), findsNWidgets(2)); // splits 0 and 1
+      expect(find.text('0.20 km'), findsOneWidget); // split 2 (the shorter remainder)
+    });
+
+    testWidgets('a DISTANCE session without a route shows none of the C4a.6 sections',
+        (tester) async {
+      await _pump(
+        tester,
+        _session(activityType: 'RUNNING', cardio: const CardioMetrics(distanceMeters: 5000)),
+      );
+
+      expect(find.byType(RoutePainter), findsNothing);
+      expect(find.text('SPLITS'), findsNothing);
+    });
+
+    testWidgets('a route with no altitude data (elevationGainMeters null) skips the profile chart',
+        (tester) async {
+      final route = _testRoute();
+      await _pump(
+        tester,
+        WorkoutSession(
+          clientId: 'c1',
+          exercises: const [],
+          sets: const [],
+          startedAt: DateTime(2026, 8, 10, 7),
+          finishedAt: DateTime(2026, 8, 10, 7, 30),
+          sessionKind: 'CARDIO',
+          activityType: 'RUNNING',
+          movingSeconds: 1800,
+          cardio: CardioMetrics(distanceMeters: 5000, routePolyline: route.polyline),
+        ),
+      );
+
+      expect(find.byType(RoutePainter), findsOneWidget); // the route itself still shows
+      expect(find.text('ELEVATION PROFILE'), findsNothing);
+    });
+
+    testWidgets('editing distance preserves the route — a full-replace write must not erase it',
+        (tester) async {
+      final route = _testRoute();
+      final controller = await _pump(
+        tester,
+        WorkoutSession(
+          clientId: 'c1',
+          exercises: const [],
+          sets: const [],
+          startedAt: DateTime(2026, 8, 10, 7),
+          finishedAt: DateTime(2026, 8, 10, 7, 30),
+          sessionKind: 'CARDIO',
+          activityType: 'RUNNING',
+          movingSeconds: 1800,
+          cardio: CardioMetrics(
+            distanceMeters: 5000,
+            routePolyline: route.polyline,
+            routePointCount: 50,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('5.00 km'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '5.2');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final cardio = controller.updateLiveCardioMetricsCalls.single['cardio'] as CardioMetrics;
+      expect(cardio.routePolyline, route.polyline);
+      expect(cardio.routePointCount, 50);
+    });
+  });
+
   group('new-record banner (C3.5)', () {
     testWidgets('shows one line per broken record type when newRecords is non-empty',
         (tester) async {

@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,8 +41,17 @@ class _RecordingSessionController extends WorkoutSessionController {
 
   @override
   Future<void> finishCardioSession(String clientId,
-      {required DateTime startedAt, required DateTime finishedAt, required int movingSeconds}) async {
-    finishCalls.add({'clientId': clientId, 'movingSeconds': movingSeconds});
+      {required DateTime startedAt,
+      required DateTime finishedAt,
+      required int movingSeconds,
+      Value<CardioMetrics?> cardio = const Value.absent(),
+      Value<List<CardioSplit>> splits = const Value.absent()}) async {
+    finishCalls.add({
+      'clientId': clientId,
+      'movingSeconds': movingSeconds,
+      'cardio': cardio.present ? cardio.value : null,
+      'splits': splits.present ? splits.value : null,
+    });
   }
 
   @override
@@ -247,6 +257,50 @@ void main() {
     final summary = tester.widget<CardioSummaryScreen>(find.byType(CardioSummaryScreen));
     expect(summary.session.cardio?.distanceSource, 'MEASURED');
     expect(summary.session.cardio?.distanceMeters, greaterThan(0));
+  });
+
+  testWidgets('finishing a GPS-tracked session persists a route polyline and splits (C4a.6)',
+      (tester) async {
+    final ctx = await _pump(tester);
+    ctx.location.emitFix(_fixAt(0));
+    await tester.pump();
+    ctx.location.emitFix(_fixAt(1));
+    await tester.pump();
+    ctx.location.emitFix(_fixAt(2));
+    await tester.pump();
+
+    final rect = tester.getRect(find.byKey(const Key('slideToFinishBar')));
+    await tester.startGesture(rect.center);
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    // The outbox write itself carried the route, not just the throwaway
+    // display object handed to CardioSummaryScreen.
+    final call = ctx.controller.finishCalls.single;
+    final persistedCardio = call['cardio'] as CardioMetrics?;
+    expect(persistedCardio?.routePolyline, isNotNull);
+    expect(persistedCardio!.routePolyline, isNotEmpty);
+    expect(persistedCardio.routePointCount, greaterThan(0));
+    final persistedSplits = call['splits'] as List<CardioSplit>?;
+    expect(persistedSplits, isNotNull);
+    expect(persistedSplits, isNotEmpty);
+
+    final summary = tester.widget<CardioSummaryScreen>(find.byType(CardioSummaryScreen));
+    expect(summary.session.cardio?.routePolyline, persistedCardio.routePolyline);
+    expect(summary.session.splits, isNotEmpty);
+  });
+
+  testWidgets('a MACHINE session finish never carries a route (no trail exists)', (tester) async {
+    final ctx = await _pump(tester, session: _runningSession(clientId: 'bike-1', activityType: 'INDOOR_BIKE'));
+
+    final rect = tester.getRect(find.byKey(const Key('slideToFinishBar')));
+    await tester.startGesture(rect.center);
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    final call = ctx.controller.finishCalls.single;
+    expect(call['cardio'], isNull);
+    expect(call['splits'], isNull);
   });
 
   testWidgets('reopening a session with existing raw points replays them into the live distance '
