@@ -6,8 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/workouts/application/watch_template_sync.dart';
 import 'watch_workout_service.dart';
 
-/// Pushes the watch's standalone-picker template cache whenever it changes
-/// (docs/watch/49-watch-f6b-template-sync-plan.md T2.2).
+/// Pushes the watch's unified quick-start picker cache whenever it changes
+/// (docs/watch/49-watch-f6b-template-sync-plan.md T2.2; unified across
+/// templates + cardio types by docs/cardio/55-cardio-watch-plan.md §3, C5.3).
 ///
 /// Holds only the debounce timer and the dedup key; *what* to push is
 /// [watchTemplateSyncPayloadProvider]'s job, and *when* is
@@ -36,14 +37,14 @@ class WatchTemplateSyncController {
   /// [payload] being null means "the sources haven't loaded yet", not "the
   /// watch should hold nothing" (see [watchTemplateSyncPayloadProvider]) —
   /// pushing then would wipe a good cache at every cold start.
-  void schedulePush(List<WatchTemplatePayload>? payload) {
+  void schedulePush(List<WatchQuickStartEntryPayload>? payload) {
     if (!_service.isAvailable || payload == null) return;
     _debounceTimer?.cancel();
     _debounceTimer = Timer(_debounce, () => unawaited(_pushNow(payload)));
   }
 
-  Future<void> _pushNow(List<WatchTemplatePayload> payload) async {
-    final encoded = jsonEncode([for (final template in payload) template.toJson()]);
+  Future<void> _pushNow(List<WatchQuickStartEntryPayload> payload) async {
+    final encoded = jsonEncode([for (final entry in payload) entry.toJson()]);
     if (encoded == _lastPushed) return;
     // Recorded before awaiting, so a second change arriving mid-flight is
     // compared against what we're sending, not the previous payload.

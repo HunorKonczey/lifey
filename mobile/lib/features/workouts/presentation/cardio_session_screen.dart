@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/format/cardio_formatter.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/location/location_service_geolocator.dart';
+import '../../../core/watch/watch_workout_service.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/activity_chip.dart';
@@ -260,6 +261,20 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   bool _startingSessionNotifier = false;
   bool _sessionNotifierStarted = false;
   bool _sessionNotifierUnavailable = false;
+
+  /// Watch-mirror bridge (C5.2, docs/cardio/55-cardio-watch-plan.md §5/W-2)
+  /// — mirrors `LogSessionScreen`'s own `_watchStartPushed`: sent once per
+  /// screen, independent of whether the Live Activity/notification above
+  /// ever actually came up (that's [_sessionNotifierStarted]'s job, not
+  /// this one's). Cardio has no watch-mastered case yet (no native watch
+  /// build can start one, C5.4+/C5.7) so — unlike `LogSessionScreen` — there
+  /// is no `_watchMastered` skip to make here.
+  bool _watchStartPushed = false;
+
+  /// "Edzés indítása az órán" Settings kapcsoló — same flag, same
+  /// call-site gating rationale as `LogSessionScreen._watchEnabled`.
+  bool get _watchEnabled =>
+      ref.read(settingsControllerProvider).value?.watchWorkoutEnabled ?? true;
 
   @override
   void initState() {
@@ -661,19 +676,38 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     );
   }
 
-  /// Brings up the Live Activity / ongoing notification. Safe to call
-  /// repeatedly — the retry entry point as well as the first attempt:
-  /// no-ops while one is in flight, once it's up, or once the platform has
-  /// refused for good. Mirrors `LogSessionScreen._startSessionNotifier`
-  /// exactly, minus the watch-mirror push: that's C5's job, not C2.9's —
-  /// docs/cardio/55-cardio-watch-plan.md's own D-C5.1 has the phone-side
-  /// cardio processor land *before* anything sends it a payload.
+  /// Brings up the Live Activity / ongoing notification, and (once) tells
+  /// the watch to start its own session. Safe to call repeatedly — the
+  /// retry entry point as well as the first attempt: no-ops while one is in
+  /// flight, once it's up, or once the platform has refused for good. Now
+  /// mirrors `LogSessionScreen._startSessionNotifier` in full, including the
+  /// watch-mirror push (C5.2, docs/cardio/55-cardio-watch-plan.md §5/W-2) —
+  /// C2.9's own doc comment here used to note that push was left out because
+  /// D-C5.1's phone-side receiver (C5.1) had to land first.
   Future<void> _startSessionNotifier() async {
     if (!mounted || _isFinished) return;
+
+    final l10n = AppLocalizations.of(context)!;
+
+    // Best-effort, alongside (not instead of) the Live Activity/ongoing
+    // notification below, gated only on its own latch — same structure as
+    // `LogSessionScreen`'s (see its doc comment for why the two starts are
+    // independent).
+    if (_watchEnabled && !_watchStartPushed) {
+      _watchStartPushed = true;
+      unawaited(ref.read(watchWorkoutServiceProvider).startWorkout(
+            sessionClientId: _clientId,
+            title: activityTypeLabel(l10n, _activityType),
+            startedAt: _startedAt,
+            state: _liveSessionState(l10n),
+            activityType: _activityType,
+            venue: widget.session.cardio?.venue,
+          ));
+    }
+
     if (_startingSessionNotifier || _sessionNotifierStarted || _sessionNotifierUnavailable) {
       return;
     }
-    final l10n = AppLocalizations.of(context)!;
     _startingSessionNotifier = true;
     try {
       final result = await ref.read(workoutSessionNotifierServiceProvider).start(
@@ -692,18 +726,28 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     }
   }
 
-  /// Pushes the current state to the native surface. No-ops there when
-  /// nothing's showing (iOS finds no activity, Android has no notification
-  /// to re-render), so this is safe to call after every state change
-  /// regardless of whether [_startSessionNotifier] ever actually succeeded.
+  /// Pushes the current state to both surfaces. The indicator update no-ops
+  /// natively when there's nothing showing (iOS finds no activity, Android
+  /// has no notification to re-render), so this is safe to call after every
+  /// state change regardless of whether [_startSessionNotifier] ever
+  /// actually succeeded — and it has to be, because the watch push below
+  /// must not be collateral damage of a Live Activity that was refused or
+  /// switched off.
   Future<void> _updateSessionNotifier() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
+    final state = _liveSessionState(l10n);
     await ref.read(workoutSessionNotifierServiceProvider).update(
           sessionClientId: _clientId,
           startedLabel: l10n.startedLabel,
-          state: _liveSessionState(l10n),
+          state: state,
         );
+    if (_watchEnabled) {
+      unawaited(ref.read(watchWorkoutServiceProvider).updateState(
+            sessionClientId: _clientId,
+            state: state,
+          ));
+    }
   }
 
   /// "Meccs szünet" — a whole-session pause, initiated by the user tapping
@@ -911,6 +955,15 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       if (!mounted) return;
       _ticker?.cancel();
       unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
+      // Keyed on the push having happened, not on whether the watch is
+      // actually available/paired — same reasoning as `LogSessionScreen`'s
+      // `_watchStartPushed` check at its own `endWorkout` call: a no-op
+      // `startWorkout` (unavailable/disabled) still deserves a matching
+      // `endWorkout` no-op, cheaper than tracking "did the watch really get
+      // it" just to skip a call that's already a safe no-op on its own.
+      if (_watchStartPushed) {
+        unawaited(ref.read(watchWorkoutServiceProvider).endWorkout(_clientId));
+      }
       // So the summary screen's back button lands on the session list
       // (docs/cardio/59-cardio-implementation-plan.md) instead of wherever
       // the shell happened to be showing when this workout was started —

@@ -12,6 +12,7 @@ import 'package:lifey/features/workouts/application/standalone_session_processor
 import 'package:lifey/features/workouts/data/exercise_repository.dart';
 import 'package:lifey/features/workouts/data/workout_session_repository.dart';
 import 'package:lifey/features/workouts/data/workout_template_repository.dart';
+import 'package:lifey/features/workouts/domain/workout_session.dart' show CardioMetrics;
 import 'package:lifey/features/workouts/domain/workout_template.dart';
 
 /// [StandaloneSessionProcessor] turns a finished watch-only session into a
@@ -989,6 +990,154 @@ void main() {
       expect(row.templateClientId, templateId);
       final sets = await db.select(db.exerciseSets).get();
       expect(sets.single.exerciseClientId, benchId);
+    });
+  });
+
+  group('cardio standalone sessions (docs/cardio/55-cardio-watch-plan.md §5, W-1)', () {
+    WatchStandaloneSession sampleCardioEvent({
+      String standaloneSessionId = 'standalone-cardio-1',
+      String activityType = 'RUNNING',
+      int? movingSeconds,
+      CardioMetrics? cardio = const CardioMetrics(distanceMeters: 5023, avgCadence: 172),
+      double? activeCalories,
+      double? averageHeartRate,
+      String? healthWorkoutId,
+      int? rpe,
+    }) =>
+        WatchStandaloneSession(
+          standaloneSessionId: standaloneSessionId,
+          startedAtEpochMs: 1783075200000,
+          endedAtEpochMs: 1783078800000,
+          sets: const [],
+          kind: 'CARDIO',
+          activityType: activityType,
+          movingSeconds: movingSeconds,
+          cardio: cardio,
+          activeCalories: activeCalories,
+          averageHeartRate: averageHeartRate,
+          healthWorkoutId: healthWorkoutId,
+          rpe: rpe,
+        );
+
+    test('creates a closed cardio session with no exercises/sets and no template', () async {
+      final processor = buildProcessor();
+
+      await processor.process(sampleCardioEvent(), language: LanguagePreference.english);
+
+      final session = await sessionRepository.findByClientId('standalone-cardio-1');
+      expect(session, isNotNull);
+      expect(session!.sessionKind, 'CARDIO');
+      expect(session.activityType, 'RUNNING');
+      expect(session.templateClientId, isNull);
+      expect(session.templateName, isNull);
+      expect(session.exercises, isEmpty);
+      expect(session.sets, isEmpty);
+      expect(session.finishedAt, isNotNull);
+      expect(session.cardio?.distanceMeters, 5023);
+      expect(session.cardio?.avgCadence, 172);
+
+      expect(await db.select(db.exercises).get(), isEmpty);
+      expect(ackCalls, hasLength(1));
+      expect(ackCalls.single.method, 'ackStandaloneSession');
+    });
+
+    test('falls back movingSeconds to the wall-clock duration when the event omits it', () async {
+      final processor = buildProcessor();
+
+      await processor.process(sampleCardioEvent(), language: LanguagePreference.english);
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      // (1783078800000 - 1783075200000) / 1000
+      expect(row.movingSeconds, 3600);
+    });
+
+    test('a GAME session\'s explicit movingSeconds (bench time excluded) is not overridden', () async {
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleCardioEvent(activityType: 'BASKETBALL', movingSeconds: 2100),
+        language: LanguagePreference.english,
+      );
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.movingSeconds, 2100);
+    });
+
+    test('never calls the strength health writer, even when healthWorkoutId is absent', () async {
+      var called = false;
+      Future<String?> fakeWrite({
+        required DateTime start,
+        required DateTime end,
+        double? activeCalories,
+        String? title,
+      }) async {
+        called = true;
+        return 'should-not-be-used';
+      }
+
+      final processor = buildProcessor(writeHealthWorkout: fakeWrite);
+
+      await processor.process(sampleCardioEvent(), language: LanguagePreference.english);
+
+      expect(called, isFalse);
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.healthWorkoutId, isNull);
+    });
+
+    test('carries through a healthWorkoutId the event already has (iOS path)', () async {
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleCardioEvent(healthWorkoutId: 'hk-uuid-cardio-1'),
+        language: LanguagePreference.english,
+      );
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.healthWorkoutId, 'hk-uuid-cardio-1');
+    });
+
+    test('idempotent: a retried delivery only acks again, no second session or overwrite', () async {
+      final processor = buildProcessor();
+      await processor.process(sampleCardioEvent(rpe: 7), language: LanguagePreference.english);
+      ackCalls.clear();
+
+      await processor.process(sampleCardioEvent(rpe: 7), language: LanguagePreference.english);
+
+      final sessions = await db.select(db.workoutSessions).get();
+      expect(sessions, hasLength(1));
+      expect(sessions.single.rpe, 7);
+      expect(ackCalls, hasLength(1));
+      expect(ackCalls.single.method, 'ackStandaloneSession');
+    });
+
+    test('a second cardio session does not create any generic exercise', () async {
+      final processor = buildProcessor();
+      await processor.process(
+        sampleCardioEvent(standaloneSessionId: 'cardio-a'),
+        language: LanguagePreference.english,
+      );
+
+      await processor.process(
+        sampleCardioEvent(standaloneSessionId: 'cardio-b', activityType: 'INDOOR_BIKE'),
+        language: LanguagePreference.english,
+      );
+
+      expect(await db.select(db.exercises).get(), isEmpty);
+      final sessions = await db.select(db.workoutSessions).get();
+      expect(sessions, hasLength(2));
+      expect(ackCalls, hasLength(2));
+    });
+
+    test('a STRENGTH event is unaffected by the CARDIO branch existing (default kind)', () async {
+      final processor = buildProcessor();
+
+      await processor.process(sampleEvent(), language: LanguagePreference.english);
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.sessionKind, 'STRENGTH');
+      expect(row.activityType, isNull);
+      final sets = await db.select(db.exerciseSets).get();
+      expect(sets, hasLength(2));
     });
   });
 }

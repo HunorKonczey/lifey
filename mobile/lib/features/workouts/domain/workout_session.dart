@@ -91,6 +91,40 @@ class CardioMetrics {
   /// Encoded, simplified polyline — raw GPS points never leave the phone.
   final String? routePolyline;
   final int? routePointCount;
+
+  /// Mirrors `WorkoutSessionRepository._cardioPayload`'s key names 1:1 — used
+  /// to decode the cardio block of a watch standalone-session wire payload
+  /// (docs/cardio/55-cardio-watch-plan.md §5, W-1), the one other place a
+  /// `CardioMetrics` needs to come from JSON rather than a Drift row.
+  factory CardioMetrics.fromJson(Map<Object?, Object?> json) => CardioMetrics(
+        distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
+        elevationGainMeters: (json['elevationGainMeters'] as num?)?.toDouble(),
+        elevationLossMeters: (json['elevationLossMeters'] as num?)?.toDouble(),
+        maxAltitudeMeters: (json['maxAltitudeMeters'] as num?)?.toDouble(),
+        steps: (json['steps'] as num?)?.toInt(),
+        avgCadence: (json['avgCadence'] as num?)?.toDouble(),
+        maxCadence: (json['maxCadence'] as num?)?.toDouble(),
+        avgWatts: (json['avgWatts'] as num?)?.toDouble(),
+        maxWatts: (json['maxWatts'] as num?)?.toDouble(),
+        resistanceLevel: (json['resistanceLevel'] as num?)?.toInt(),
+        deviceCalories: (json['deviceCalories'] as num?)?.toDouble(),
+        maxHeartRate: (json['maxHeartRate'] as num?)?.toDouble(),
+        hrZone1Seconds: (json['hrZone1Seconds'] as num?)?.toInt(),
+        hrZone2Seconds: (json['hrZone2Seconds'] as num?)?.toInt(),
+        hrZone3Seconds: (json['hrZone3Seconds'] as num?)?.toInt(),
+        hrZone4Seconds: (json['hrZone4Seconds'] as num?)?.toInt(),
+        hrZone5Seconds: (json['hrZone5Seconds'] as num?)?.toInt(),
+        intensity: (json['intensity'] as num?)?.toInt(),
+        venue: json['venue'] as String?,
+        gameFormat: json['gameFormat'] as String?,
+        scorePoints: (json['scorePoints'] as num?)?.toInt(),
+        scoreAssists: (json['scoreAssists'] as num?)?.toInt(),
+        scoreRebounds: (json['scoreRebounds'] as num?)?.toInt(),
+        distanceSource: json['distanceSource'] as String?,
+        caloriesSource: json['caloriesSource'] as String?,
+        routePolyline: json['routePolyline'] as String?,
+        routePointCount: (json['routePointCount'] as num?)?.toInt(),
+      );
 }
 
 /// One per-km/lap split for a DISTANCE-family cardio session

@@ -1,17 +1,24 @@
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
+import '../domain/activity_type.dart';
 import '../domain/exercise.dart';
 import '../domain/workout_session.dart';
 import '../domain/workout_template.dart';
+import 'activity_ranking.dart';
 import 'exercise_controller.dart';
 import 'workout_session_controller.dart';
 import 'workout_template_controller.dart';
 
-/// At most this many templates go over the wire (docs/watch/
-/// 49-watch-f6b-template-sync-plan.md D-F6b.1) — the picker's own limit, and
-/// the reason [recentlyUsedTemplateClientIds] needs a recency order at all.
+/// At most this many templates go over the wire in one [buildWatchTemplateSync]
+/// call — still the default for that function on its own (docs/watch/
+/// 49-watch-f6b-template-sync-plan.md D-F6b.1), but no longer what caps the
+/// unified quick-start payload (docs/cardio/55-cardio-watch-plan.md §3.2:
+/// "Max 8 elem... az F6b 5-ös terv-limitje helyett") — see
+/// [watchQuickStartMaxEntries].
 const watchTemplateSyncMaxTemplates = 5;
 
 /// At most this many exercises per template (D-F6b.6) — a rule-of-thumb cap
@@ -20,40 +27,6 @@ const watchTemplateSyncMaxTemplates = 5;
 /// offering, and the picker's `standalone_plan_exercises` count then reports
 /// the truncated length, which is what the watch actually holds.
 const watchTemplateSyncMaxExercisesPerTemplate = 12;
-
-/// The clientIds of the templates the user started most recently, newest
-/// first, for the watch's standalone picker (docs/watch/
-/// 49-watch-f6b-template-sync-plan.md D-F6b.1).
-///
-/// "Most recent" deliberately means *last used*, not *last created/edited*:
-/// the `workout_templates` table carries no timestamp column at all, so
-/// session history is the only ordering signal that exists. [sessionsDesc]
-/// is newest-first, as [WorkoutSessionController] returns it — the same
-/// input [predictNextTemplateClientId] reads, so this adds no new query.
-///
-/// Accepted limitation (D-F6b.1): a template the user created but has never
-/// actually started never appears here, because there is nothing to order it
-/// by. The picker's "Quick strength" card stays available regardless, so a
-/// brand-new template is never a dead end — the user starts it once from the
-/// phone and it shows up from then on.
-///
-/// Sessions still in progress are skipped, matching
-/// [predictNextTemplateClientId]'s own filter: a workout the user is running
-/// right now shouldn't reorder the list mid-session.
-List<String> recentlyUsedTemplateClientIds(
-  List<WorkoutSession> sessionsDesc, {
-  int max = 5,
-}) {
-  final ids = <String>{};
-  for (final session in sessionsDesc) {
-    if (session.inProgress) continue;
-    final templateClientId = session.templateClientId;
-    if (templateClientId == null) continue;
-    ids.add(templateClientId);
-    if (ids.length == max) break;
-  }
-  return ids.toList();
-}
 
 /// At most this many previous sets per exercise (see
 /// [WatchTemplateExercisePayload.previousSets]) — the watch pairs them
@@ -144,32 +117,33 @@ class WatchTemplatePayload {
       };
 }
 
-/// Builds the `templateSync` payload the phone pushes to the watch
-/// (docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T1.2).
+/// Resolves a set of template ids into full watch-ready payloads, in the
+/// order given (docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T1.2).
 ///
 /// Takes finished data rather than repositories — like
 /// [StandaloneSessionProcessor]'s plain-constructor injection, so the whole
 /// resolve-and-truncate step is unit-testable without a database.
-/// [templateClientIds] comes from [recentlyUsedTemplateClientIds] and defines
-/// the **output order**; [templates] is the unordered (alphabetical) set the
-/// repository watches, looked up by clientId.
+/// [templateClientIds] defines the **output order** — since C5.3
+/// ([buildWatchQuickStartEntries]) that's [rankQuickStartEntries]'s ranking,
+/// not a separate recency-only pass this function used to be paired with;
+/// [templates] is the unordered (alphabetical) set the repository watches,
+/// looked up by clientId.
 ///
 /// Three things are dropped silently, all of them normal rather than
 /// exceptional:
-/// - an id with no matching template (deleted since it was last used — its
-///   sessions still reference it, so [recentlyUsedTemplateClientIds] keeps
-///   returning it);
+/// - an id with no matching template (deleted since it was last ranked — its
+///   sessions still reference it, so [rankQuickStartEntries] keeps returning
+///   it);
 /// - an exercise missing from [exercises] (most likely a delete in flight:
 ///   `ExerciseRepository.watchAll` already filters those out);
 /// - a template left with no exercises at all — starting a plan with nothing
 ///   in it is a dead end on the watch, and the picker's "Quick strength"
 ///   card covers that case better.
-/// [sessionsDesc] is the same newest-first list [recentlyUsedTemplateClientIds]
-/// reads, reused here to resolve each exercise's
+/// [sessionsDesc] is reused here to resolve each exercise's
 /// [WatchTemplateExercisePayload.previousSets] — deliberately from data the
 /// caller already holds rather than by calling
 /// [WorkoutSessionRepository.getPreviousPerformance] per exercise, which
-/// would be up to 60 queries on every one of this payload's four reactive
+/// would be up to 60 queries on every one of this payload's reactive
 /// triggers.
 List<WatchTemplatePayload> buildWatchTemplateSync({
   required List<String> templateClientIds,
@@ -269,17 +243,160 @@ List<WatchPreviousSetPayload> previousSetsFor({
   ];
 }
 
-/// What the watch's standalone picker should currently hold (docs/watch/
-/// 49-watch-f6b-template-sync-plan.md T2.1) — derived state only, with no
-/// side effects: `WatchTemplateSyncController` is what actually pushes it.
+/// At most this many entries go over the wire in the unified quick-start
+/// payload (docs/cardio/55-cardio-watch-plan.md §3.2) — replaces
+/// [watchTemplateSyncMaxTemplates] as *this* payload's cap: "az óra natívan
+/// görgethető, tehát ez scope-döntés, nem UI-korlát" (the watch scrolls
+/// natively, so this is a scope call, not a UI limit), the same reasoning
+/// D-F6b.1 gave for the old 5.
+const watchQuickStartMaxEntries = 8;
+
+/// One row of the watch's unified quick-start picker (docs/cardio/
+/// 55-cardio-watch-plan.md §3, C5.3) — either a specific strength template,
+/// carrying the same full plan data [WatchTemplatePayload] always did (the
+/// watch still needs it to actually *run* a standalone plan-backed session),
+/// or a cardio activity type, which needs nothing beyond its label — there's
+/// no plan to carry, and W-8 (standalone cardio, C5.7+) is what teaches the
+/// watch to start one from just the type.
+///
+/// The freeform "Quick strength" bucket ([QuickStartEntry.strength] with a
+/// null id) never turns into one of these: D-C5.3 keeps it as its own
+/// permanently pinned card above this list, so [buildWatchQuickStartEntries]
+/// filters it out before this class is ever built.
+sealed class WatchQuickStartEntryPayload {
+  const WatchQuickStartEntryPayload();
+
+  Map<String, Object?> toJson();
+}
+
+class WatchQuickStartTemplateEntry extends WatchQuickStartEntryPayload {
+  const WatchQuickStartTemplateEntry(this.template);
+
+  final WatchTemplatePayload template;
+
+  /// `exerciseCount` is redundant with `exercises.length` but saves the
+  /// watch's picker row from unpacking the whole exercise list (with its
+  /// `previousSets`) just to show a count — the same reasoning
+  /// [WatchTemplateExercisePayload.restSeconds] already pre-resolves
+  /// something the watch could technically derive itself.
+  @override
+  Map<String, Object?> toJson() => {
+        'type': 'TEMPLATE',
+        'templateId': template.templateId,
+        'title': template.title,
+        'exerciseCount': template.exercises.length,
+        'exercises': [for (final exercise in template.exercises) exercise.toJson()],
+      };
+}
+
+class WatchQuickStartCardioEntry extends WatchQuickStartEntryPayload {
+  const WatchQuickStartCardioEntry({required this.activityType, required this.title});
+
+  /// One of [kActivityTypes].
+  final String activityType;
+
+  /// Pre-localized on the phone (docs/cardio/55-cardio-watch-plan.md §3.2)
+  /// — the watch needs no activity-type dictionary of its own, same as the
+  /// template title already was.
+  final String title;
+
+  @override
+  Map<String, Object?> toJson() => {
+        'type': 'CARDIO',
+        'activityType': activityType,
+        'title': title,
+      };
+}
+
+/// Builds the unified, frequency-ranked quick-start payload
+/// (docs/cardio/55-cardio-watch-plan.md §3, C5.3) — the **single** source of
+/// ranking is [rankQuickStartEntries] (D-C5.3's §3.1: "nem másol logikát, és
+/// nem talál ki saját rendezést"), the exact function the phone's own
+/// quick-start sheet and app-shortcut updater already call; this only adds
+/// the watch-specific resolve/localize/serialize step on top.
+///
+/// Ranked with `max: watchQuickStartMaxEntries + 1` headroom before the
+/// freeform-strength filter, not `watchQuickStartMaxEntries` itself — the
+/// freeform bucket ([QuickStartEntry.strength] with a null id) is at most
+/// one key in the whole ranking, so the one extra slot guarantees a full
+/// [watchQuickStartMaxEntries] real entries survive the filter whenever that
+/// many actually exist, instead of coming up one short whenever freeform
+/// happened to rank inside the original window.
+///
+/// A named template that no longer resolves (deleted since it was ranked) is
+/// dropped, not replaced with a generic placeholder — see
+/// [buildWatchTemplateSync]'s own doc for why a template-less row is a dead
+/// end on the watch specifically (unlike the phone's quick-start sheet,
+/// which can still fall back to an empty workout). The result can therefore
+/// be shorter than [watchQuickStartMaxEntries] with no backfill from lower
+/// ranks, matching [buildWatchTemplateSync]'s existing "dropped, not
+/// replaced" convention.
+List<WatchQuickStartEntryPayload> buildWatchQuickStartEntries({
+  required List<WorkoutSession> sessionsDesc,
+  required List<WorkoutTemplate> templates,
+  required List<Exercise> exercises,
+  required UserSettings settings,
+  required AppLocalizations l10n,
+  required DateTime now,
+  int maxEntries = watchQuickStartMaxEntries,
+  int maxExercisesPerTemplate = watchTemplateSyncMaxExercisesPerTemplate,
+  int maxPreviousSets = watchTemplateSyncMaxPreviousSets,
+}) {
+  final ranked = rankQuickStartEntries(sessionsDesc, now: now, max: maxEntries + 1)
+      .where((entry) => entry.isCardio || entry.templateClientId != null)
+      .take(maxEntries)
+      .toList();
+
+  final templateIds = [
+    for (final entry in ranked)
+      if (!entry.isCardio) entry.templateClientId!,
+  ];
+  final resolvedTemplates = buildWatchTemplateSync(
+    templateClientIds: templateIds,
+    templates: templates,
+    exercises: exercises,
+    settings: settings,
+    sessionsDesc: sessionsDesc,
+    maxTemplates: templateIds.length,
+    maxExercisesPerTemplate: maxExercisesPerTemplate,
+    maxPreviousSets: maxPreviousSets,
+  );
+  final resolvedById = {for (final template in resolvedTemplates) template.templateId: template};
+
+  return [
+    for (final entry in ranked)
+      if (entry.isCardio)
+        WatchQuickStartCardioEntry(
+          activityType: entry.activityType!,
+          title: activityTypeLabel(l10n, entry.activityType!),
+        )
+      else if (resolvedById[entry.templateClientId] case final template?)
+        WatchQuickStartTemplateEntry(template),
+  ];
+}
+
+// Matches the fallback in step_goal_notifier.dart / widget_snapshot_writer.dart:
+// hungarian -> hu, everything else (including "system") -> en. We don't read
+// the OS locale here, only the in-app LanguagePreference.
+Locale _localeFor(LanguagePreference preference) =>
+    preference == LanguagePreference.hungarian ? const Locale('hu') : const Locale('en');
+
+/// What the watch's unified quick-start picker should currently hold
+/// (docs/watch/49-watch-f6b-template-sync-plan.md T2.1, extended by
+/// docs/cardio/55-cardio-watch-plan.md §3 for C5.3) — derived state only,
+/// with no side effects: `WatchTemplateSyncController` is what actually
+/// pushes it. Kept under its original F6b name (mirrors
+/// `WorkoutSessionState.kind`'s own C2.9 precedent) even though the payload
+/// is no longer templates-only.
 ///
 /// Deliberately reactive rather than a set of hand-placed calls in the
-/// template mutations (§12/T2): the payload depends on four independent
-/// sources, and *every* one of them can change without a template being
-/// saved — an exercise rename moves `name`, the rest setting moves
-/// `restSeconds`, a finished workout reorders the list (D-F6b.1), and a
-/// server pull can rewrite templates outright. Watching the data beats
-/// remembering every call site that touches it.
+/// template mutations (§12/T2): the payload depends on five independent
+/// sources now (four plus the language preference for cardio titles), and
+/// *every* one of them can change without a template being saved — an
+/// exercise rename moves `name`, the rest setting moves `restSeconds`, a
+/// finished workout reorders the list, and a server pull can rewrite
+/// templates outright. Watching the data beats remembering every call site
+/// that touches it.
 ///
 /// **Null means "don't know yet, push nothing"; an empty list means "the
 /// watch should hold nothing".** The distinction matters: at cold start
@@ -288,8 +405,8 @@ List<WatchPreviousSetPayload> previousSetsFor({
 /// list arrives. Only these say "clear it", and both are real answers:
 /// - `watchWorkoutEnabled` is off — the single gate for all watch traffic,
 ///   so leaving stale plans on the watch would be wrong;
-/// - the sources loaded and there genuinely are no templates to offer.
-final watchTemplateSyncPayloadProvider = Provider<List<WatchTemplatePayload>?>((ref) {
+/// - the sources loaded and there genuinely is nothing to offer.
+final watchTemplateSyncPayloadProvider = Provider<List<WatchQuickStartEntryPayload>?>((ref) {
   final settingsState = ref.watch(settingsControllerProvider);
   if (settingsState.isLoading) return null;
   final settings = settingsState.value;
@@ -301,11 +418,12 @@ final watchTemplateSyncPayloadProvider = Provider<List<WatchTemplatePayload>?>((
   final exercises = ref.watch(exerciseControllerProvider).value;
   if (sessions == null || templates == null || exercises == null) return null;
 
-  return buildWatchTemplateSync(
-    templateClientIds: recentlyUsedTemplateClientIds(sessions),
+  return buildWatchQuickStartEntries(
+    sessionsDesc: sessions,
     templates: templates,
     exercises: exercises,
     settings: settings,
-    sessionsDesc: sessions,
+    l10n: lookupAppLocalizations(_localeFor(settings.language)),
+    now: DateTime.now(),
   );
 });

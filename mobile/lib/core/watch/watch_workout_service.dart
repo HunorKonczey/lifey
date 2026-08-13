@@ -3,7 +3,8 @@ import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/workouts/application/watch_template_sync.dart' show WatchTemplatePayload;
+import '../../features/workouts/application/watch_template_sync.dart' show WatchQuickStartEntryPayload;
+import '../../features/workouts/domain/workout_session.dart' show CardioMetrics;
 import '../workout_session_notifier/workout_session_notifier_service.dart' show WorkoutSessionState;
 
 /// Enrichment payload a watch app sends back once its side of a workout ends
@@ -242,6 +243,10 @@ class WatchStandaloneSession {
     this.activeCalories,
     this.averageHeartRate,
     this.healthWorkoutId,
+    this.kind = 'STRENGTH',
+    this.activityType,
+    this.movingSeconds,
+    this.cardio,
   });
 
   final String standaloneSessionId;
@@ -253,6 +258,29 @@ class WatchStandaloneSession {
   final double? activeCalories;
   final double? averageHeartRate;
   final String? healthWorkoutId;
+
+  /// `'STRENGTH'` or `'CARDIO'` (docs/cardio/51-cardio-overview-plan.md §3).
+  /// Added ahead of any native sender for this field (docs/cardio/
+  /// 55-cardio-watch-plan.md D-C5.4, W-1): the phone-side processor
+  /// understands a CARDIO payload before either watch platform can produce
+  /// one, the same "receiver before sender" order the REST API followed for
+  /// `sessionKind` (C1.4 landed before the mobile UI that sends it, C1.5+).
+  final String kind;
+
+  /// The `ActivityType` code (docs/cardio/52-cardio-domain-backend-plan.md
+  /// §1.5) — set exactly when [kind] is `'CARDIO'`, mirroring the invariant
+  /// the backend's CHECK constraint enforces server-side (V66).
+  final String? activityType;
+
+  /// Distinct from the wall-clock `endedAtEpochMs - startedAtEpochMs` for a
+  /// `GAME` session paused on the bench. Null (no watch build sends it yet)
+  /// falls back to the full duration in
+  /// [StandaloneSessionProcessor._createCardioSession]/`_updateCardioSession`.
+  final int? movingSeconds;
+
+  /// [sets] is always empty for a CARDIO session — there's no set to log —
+  /// so its metrics travel here instead. Null unless [kind] is `'CARDIO'`.
+  final CardioMetrics? cardio;
 
   factory WatchStandaloneSession.fromJson(Map<Object?, Object?> json) => WatchStandaloneSession(
         standaloneSessionId: json['standaloneSessionId'] as String,
@@ -266,6 +294,12 @@ class WatchStandaloneSession {
         activeCalories: (json['activeCalories'] as num?)?.toDouble(),
         averageHeartRate: (json['averageHeartRate'] as num?)?.toDouble(),
         healthWorkoutId: json['healthWorkoutId'] as String?,
+        kind: json['kind'] as String? ?? 'STRENGTH',
+        activityType: json['activityType'] as String?,
+        movingSeconds: (json['movingSeconds'] as num?)?.toInt(),
+        cardio: json['cardio'] == null
+            ? null
+            : CardioMetrics.fromJson(Map<Object?, Object?>.from(json['cardio'] as Map)),
       );
 }
 
@@ -284,6 +318,14 @@ class WatchStandaloneSession {
 /// adoption succeeded (docs/watch/44-watch-f6-standalone-plan.md's
 /// reliability guarantee is unchanged) — adoption only gives the phone a
 /// live, visible mirror of the session and the ability to end it too.
+///
+/// Deliberately **not** given [WatchStandaloneSession]'s `kind`/`activityType`/
+/// `cardio` fields yet (docs/cardio/55-cardio-watch-plan.md W-1): live-mirroring
+/// a still-running standalone cardio session is a bigger, undesigned feature
+/// (which screen shows it, how the metrics stream in) — only the *finished*
+/// standalone payload is in scope for C5.1. An adoption always precedes the
+/// terminal event for the same [standaloneSessionId], so a build that only
+/// ever sends STRENGTH adoptions can't race a CARDIO completion in practice.
 class WatchStandaloneAdoption {
   const WatchStandaloneAdoption({
     required this.standaloneSessionId,
@@ -419,14 +461,31 @@ class WatchWorkoutService {
     }
   }
 
-  /// Starts (or re-syncs) the watch's own strength-workout session — see
+  /// Starts (or re-syncs) the watch's own workout session — see
   /// docs/40-watch-app-plan.md §3 "Indítás". Call alongside, not instead of,
   /// [WorkoutSessionNotifierService.start].
+  ///
+  /// [activityType]/[venue] configure the native session itself
+  /// (`HKWorkoutConfiguration`/`ExerciseConfig` — docs/cardio/
+  /// 55-cardio-watch-plan.md §2, D-C5.1) and are set once at start, unlike
+  /// [state], which repeats every update — that's also why they're separate
+  /// params here rather than reusing [WorkoutSessionState.activityType]
+  /// (which exists for *display*, C2.9), and why [state] carries no `venue`
+  /// field at all. Both null (the default) is a STRENGTH start exactly as
+  /// before this parameter existed: the native side maps that to
+  /// `.traditionalStrengthTraining`/`.indoor` (§2's table), so every
+  /// existing STRENGTH call site needs no change. Neither is validated here
+  /// — no native watch build reads them yet (C5.4+), so there's nothing to
+  /// validate against; the CARDIO ⇒ `activityType` invariant the backend
+  /// enforces (V66) is the caller's to keep, same as any other watch payload
+  /// field before its native consumer exists (D-C5.4).
   Future<void> startWorkout({
     required String sessionClientId,
     required String title,
     required DateTime startedAt,
     required WorkoutSessionState state,
+    String? activityType,
+    String? venue,
   }) async {
     if (!isAvailable) return;
     try {
@@ -435,6 +494,8 @@ class WatchWorkoutService {
         'title': title,
         'startedAtEpochMs': startedAt.millisecondsSinceEpoch,
         'state': state.toJson(),
+        'activityType': activityType,
+        'venue': venue,
       });
     } catch (_) {
       // Best-effort: no paired/installed watch, or the native bridge doesn't
@@ -534,27 +595,34 @@ class WatchWorkoutService {
     }
   }
 
-  /// Pushes the user's most recent templates to the watch's standalone picker
-  /// (docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T1.3). Build
-  /// [templates] with `buildWatchTemplateSync` — it owns the truncation and
-  /// rest-resolution rules (D-F6b.4, D-F6b.6) this method deliberately knows
+  /// Pushes the watch's unified, frequency-ranked quick-start picker
+  /// (docs/cardio/55-cardio-watch-plan.md §3, C5.3 — templates only through
+  /// F6b, docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T1.3). Build
+  /// [entries] with `buildWatchQuickStartEntries` — it owns the
+  /// ranking/truncation/rest-resolution rules this method deliberately knows
   /// nothing about.
   ///
   /// Fire-and-forget, like every other call here: there's no ack, and a
   /// missed push simply leaves the watch on its previous cache until the next
-  /// push point (§4.3). An **empty** [templates] list is still sent rather
-  /// than skipped — that's how a watch whose last template was just deleted
-  /// gets told to clear its cache.
+  /// push point (§4.3). An **empty** [entries] list is still sent rather than
+  /// skipped — that's how a watch whose last entry was just deleted gets told
+  /// to clear its cache.
   ///
   /// [syncedAtEpochMs] is stamped from the *phone's* clock, the same choice
   /// D-F6.6 made for session times: the two devices' wall clocks can differ,
   /// and the phone is the authority on when it published this list.
-  Future<void> syncTemplates(List<WatchTemplatePayload> templates) async {
+  ///
+  /// `version: 2` (55 §3.2) is the unified-list wire shape this method has
+  /// always sent — nothing here still speaks version 1, so this isn't a
+  /// runtime branch, just the stamp a still-unbuilt native T3 handler can
+  /// check to refuse an unrecognized shape instead of misrendering it.
+  Future<void> syncTemplates(List<WatchQuickStartEntryPayload> entries) async {
     if (!isAvailable) return;
     try {
       await _channel.invokeMethod('syncTemplates', {
+        'version': 2,
         'syncedAtEpochMs': DateTime.now().millisecondsSinceEpoch,
-        'templates': [for (final template in templates) template.toJson()],
+        'entries': [for (final entry in entries) entry.toJson()],
       });
     } catch (_) {
       // Best-effort, see class doc — on iOS/Android alike the native handler

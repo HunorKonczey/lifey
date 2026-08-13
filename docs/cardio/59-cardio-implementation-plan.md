@@ -219,7 +219,7 @@ háttér-mód, **Mac-et igényel** a tényleges kipróbáláshoz.
 | **C4a.4** ✅ | `track_filter.dart`: pontosság-/sebesség-/elmozdulás-kapuk, magasság-simítás, haversine-táv + gyenge jel UI | Windows | **M10** | Rögzített minta-nyomvonalakon a táv ≤ 5% hibával |
 | **C4a.5a** ✅ | Android előtér-szolgáltatás ~~a meglévő ongoing notificationnel egyesítve~~ (plugin-korlát miatt: két visszafogott notification, lásd a kész-szakaszt) + auto-pause bekötése a GPS-sebességre (platformfüggetlen Dart, a no-op `LocationService`-szel tesztelve) | Windows | M09 | ~~Nem keletkezik két Android értesítés~~; auto-pause a sebesség-küszöbön ki-/bekapcsol (teszt) ✅ *(Q-D3 eldöntve: alapból be, minden DISTANCE-fajtánál egységesen)* |
 | **C4a.5b** ✅ | iOS háttér-mód (`AppleSettings.allowBackgroundLocationUpdates` + `UIBackgroundModes: location`) | **Mac** | M09 | Háttérben (képernyő kikapcsolva) is folyik a rögzítés, a Live Activity mutatja |
-| **C4a.6** | Záró feldolgozás (ritkítás → polyline → outbox-bump, splitek) + `RoutePainter` + magasságprofil + kártya-miniatűr + 90 napos pont-karbantartás | Windows | **M13**, **M16** | Az útvonal mindkét témában olvasható; a hézag szaggatott |
+| **C4a.6** ✅ | Záró feldolgozás (ritkítás → polyline → outbox-bump, splitek) + `RoutePainter` + magasságprofil + kártya-miniatűr + 90 napos pont-karbantartás | Windows | **M13**, **M16** | Az útvonal mindkét témában olvasható; a hézag szaggatott |
 
 A `G11` (akku-mérés, [54 §4.5](54-cardio-gps-route-plan.md)) nem önálló kódolási lépés — egy 60+
 perces, valódi eszközön futó mérés, amit C4a.5a/C4a.5b **mindegyike** után külön el kell végezni
@@ -257,9 +257,9 @@ natív munka + a platformfüggetlen Dart-fél, Windowson kész; a **C5.7b** ág 
 
 | # | Lépés | Platform | Frame | Kész-ha |
 |---|---|---|---|---|
-| **C5.1** | **Telefon-oldali fogadó előbb**: `standalone_session_processor` + `watch_session_merge` + `watch_set_log_decision` cardio-ága | Windows | – | Cardio payload feldolgozható, mielőtt bárki küldené ([55 D-C5.4](55-cardio-watch-plan.md)) |
-| **C5.2** | Indító payload `activityType`/`venue` + `WatchWorkoutService` API-bővítés + állapot-átvitel | Windows | – | A `locationType` a `venue`-ból jön, nem találgatásból |
-| **C5.3** | Egyesített picker payload (`version: 2`) a `rankQuickStartEntries()`-ből | Windows | – | Régi natív build a fallbackre esik, nem renderel ismeretlen sort |
+| **C5.1** ✅ | **Telefon-oldali fogadó előbb**: `standalone_session_processor` + `watch_session_merge` + `watch_set_log_decision` cardio-ága | Windows | – | Cardio payload feldolgozható, mielőtt bárki küldené ([55 D-C5.4](55-cardio-watch-plan.md)) |
+| **C5.2** ✅ | Indító payload `activityType`/`venue` + `WatchWorkoutService` API-bővítés + állapot-átvitel | Windows | – | A `locationType` a `venue`-ból jön, nem találgatásból |
+| **C5.3** ✅ | Egyesített picker payload (`version: 2`) a `rankQuickStartEntries()`-ből | Windows | – | Régi natív build a fallbackre esik, nem renderel ismeretlen sort |
 | **C5.4** | watchOS: aktivitástípus-térkép + egyesített indító lista | **Mac** | **AW 16** | A kiemelt „Quick strength” kártya marad legfelül |
 | **C5.5** | watchOS: aktív cardio ×3 család + gyenge jel / nincs pulzus | **Mac** | **AW 17–20**, **AW 22** | A pulzus a kiemelt másodlagos metrika |
 | **C5.6** | Wear OS: `ExerciseType`/`dataTypes` térkép + ugyanazok a képernyők | Windows | **W 15–19**, **W 21** | Nem kérünk olyan adattípust, amit a szenzorkészlet nem tud |
@@ -3337,3 +3337,208 @@ tétel maradt: a **G11 akku-mérés** ([54 §4.5](54-cardio-gps-route-plan.md), 
 ami valós eszközön futtatandó, nem kódolási lépés — ennek eredménye kerül az 54-es doc §8-as
 mérési naplójába. A C4b (valódi térképcsempe) opcionális, csak akkor indul, ha a `RoutePainter`
 kontextus nélküli rajza a gyakorlatban kevésnek bizonyul (leginkább túránál).
+
+---
+
+## C5.1 kész (2026-08-13) — telefon-oldali fogadó a standalone cardio-hoz
+
+Az első C5-ös (óra) lépés, [55 §5/W-1](55-cardio-watch-plan.md), a D-C5.4 elve szerint: a
+telefon-oldali feldolgozó a C5 első lépése, jóval azelőtt, hogy bármelyik natív watch-oldal
+(watchOS: C5.4+, Wear OS: C5.6+) egyetlen CARDIO payloadot is tudna küldeni — pontosan úgy, ahogy
+a backend a `sessionKind` mezőt C1.4-ben fogadta el, mielőtt a mobil UI (C1.5+) küldeni tudta
+volna.
+
+**Mit érint valójában, és mit nem.** A [55-ös doc](55-cardio-watch-plan.md) §5/1 pontja a
+*standalone* (telefon nélküli) `StandaloneSessionPayload`-ról beszél — ez a **befejezett**
+session eseménye (`WatchStandaloneSession`/`process()`), nem az élő-hidalásé
+(`WatchStandaloneAdoption`/`processAdoption()`). Egy még futó cardio session órai tükrözése (melyik
+képernyő nyílna meg rá a telefonon, hogyan streamelnének bele a metrikák) egyelőre tervezetlen,
+nagyobb funkció — ezért `WatchStandaloneAdoption` **szándékosan nem** kapott `kind`/`activityType`
+mezőt ebben a lépésben, csak `WatchStandaloneSession`. Az óra protokollja szerint egy adopció
+mindig megelőzi az adott `standaloneSessionId` záró eseményét, tehát egy csak-STRENGTH-adopciókat
+küldő build sosem futhat versenyhelyzetbe egy CARDIO befejezéssel.
+
+**`WatchStandaloneSession` bővítése** (`core/watch/watch_workout_service.dart`): négy új, mind
+opcionális mező — `kind` (alapértéke `'STRENGTH'`, visszafelé kompatibilis egy régi watch-builddal),
+`activityType`, `movingSeconds` (a bruttó időtől eltérő, GAME pályán/padon-tudatos mozgásidő) és
+`cardio` (`CardioMetrics?`). A `CardioMetrics` osztály (`domain/workout_session.dart`) kapott egy
+`fromJson` factoryt, ami bitre a repository `_cardioPayload()`-jának kulcsneveit tükrözi — ez az
+egyetlen másik hely, ahonnan egy `CardioMetrics`-nek JSON-ból kell születnie (a másik, a
+Drift-sorból építő út, már megvolt C1.5 óta).
+
+**`StandaloneSessionProcessor.process()` `kind`-ága**
+(`application/standalone_session_processor.dart`): a meglévő három-ágú
+create/finish-adopted/enrich elágazás helyett a CARDIO esethez **egyetlen, mindig teljes-cserés
+írás** elég — nincs mit adoptálni vagy összefésülni (nincs szett), tehát minden kézbesítés
+(beleértve egy megismételtet is, D-F6.2) a session teljes, végleges állapotát hordozza:
+
+- `_createCardioSession`: `exercises: []`, `sets: []`, `templateClientId`/`templateName`
+  kitöltetlen marad ([51 §5](51-cardio-overview-plan.md): cardio V1-ben nincs sablon),
+  `sessionKind: 'CARDIO'`.
+- `_updateCardioSession`: ugyanaz `update()`-en keresztül, egy már létező (de még nem befejezett,
+  vagy versenyhelyzetben lévő) sorra — a meglévő `_createOrElse` belt-and-suspenders mintáját
+  újrahasznosítva.
+- Egy már **befejezett** CARDIO sorra érkező esemény néma no-op (csak ack) — ez csak egy
+  megismételt kézbesítés lehet, mert más út (adopció) ma nem tud CARDIO sort lezárni.
+- **Tudatos eltérés a STRENGTH-ágtól**: nincs hívás a `_writeHealthWorkout`-ra
+  (`HealthService.writeStrengthWorkoutAndGetId`-hez kötött callback). Egy futás Android
+  Health Connectbe "hagyományos erőedzés"-ként írása néma, félrevezető adat lenne — ehelyett a
+  cardio-ág csak azt viszi tovább, amit az esemény már hoz (a watchOS-ről érkező valódi
+  `HKWorkout` uuid, D-F6.5); a cardio Health-írás jövőbeli munka marad.
+
+**`watch_session_merge.dart` és `watch_set_log_decision.dart`**: nem kaptak funkcionális
+változást — mindkettő szerkezetileg elérhetetlen cardióra (az előbbit a fenti `process()`-ág sosem
+hívja meg CARDIO esetén, az utóbbit meg csak `LogSessionScreen` hívja, ami C0.4 óta sosem nyílik
+meg cardio session-re). Mindkét fájl kapott egy dokumentáló megjegyzést erről — ugyanaz a minta,
+mint C0.3/C0.5 auditjában: a hiányzó kód rögzítve, nem csendben kihagyva.
+
+**Tesztek**: új `cardio standalone sessions` csoport a `standalone_session_processor_test.dart`-ban
+(létrehozás üres gyakorlat-/szettlistával és sablon nélkül, `movingSeconds` a bruttó időre esik
+vissza ha hiányzik, egy GAME-jellegű explicit `movingSeconds` nem íródik felül, a
+health-writer sosem hívódik cardióra, egy iOS-ről jövő `healthWorkoutId` átmegy, idempotens
+retry, két cardio session nem termel közös generic gyakorlatot, a STRENGTH út érintetlen marad) +
+két új teszt a `watch_workout_service_test.dart`-ban (a `kind`/`activityType`/`movingSeconds`/
+`cardio` mezők alapértéke egy régi payloadon, és egy teljes CARDIO payload dekódolása — ez utóbbi
+szó szerint azt igazolja, amit a [59 §9](#9-c5--óra-7-lépés-c57-a-b-re-bontva--mf5) táblázat
+kész-ha-ja kér: *„Cardio payload feldolgozható, mielőtt bárki küldené”*, hiszen ma egyetlen natív
+watch-build sem tud ilyet küldeni).
+
+**Ellenőrzés**: `flutter analyze` teljes projektre tiszta. Teljes `flutter test`: **1045 zöld / 3
+bukás / 1048 összesen** — mindhárom bukás ugyanaz a már ismert, cardión kívüli
+`chat_repository_test.dart` Windows-fájlzár-flake, amit a C4a.6-os írás is dokumentált. 0 valódi
+regresszió.
+
+**Következő:** `C5.2` — indító payload `activityType`/`venue` mezője + `WatchWorkoutService`
+API-bővítés + állapot-átvitel ([55 §2](55-cardio-watch-plan.md) D-C5.1/D-C5.2, [59 §9](#9-c5--óra-7-lépés-c57-a-b-re-bontva--mf5)).
+Windowson fejleszthető, natív kód nélkül.
+
+---
+
+## C5.2 kész (2026-08-13) — indító payload + a `CardioSessionScreen` most már tényleg beszél az órával
+
+A [55 §2/W-2](55-cardio-watch-plan.md) lépés. Amíg C5.1 a *fogadó* oldalt készítette elő (a
+telefon tudja értelmezni egy CARDIO standalone payloadot, mielőtt bárki küldené), C5.2 a
+*küldő* oldal első fele: a `CardioSessionScreen` mostantól ténylegesen hívja a
+`WatchWorkoutService`-t — eddig **egyáltalán nem** tette, a C2.9-es lépés doc-megjegyzése is
+explicit jelezte, hogy ez a watch-tükrözés-hívás szándékosan hiányzik onnan, C5-re várva.
+
+**`WatchWorkoutService.startWorkout()` bővítése**
+(`core/watch/watch_workout_service.dart`): két új, opcionális paraméter — `activityType` és
+`venue`. Tudatos döntés, hogy **nem** a már létező `WorkoutSessionState.activityType`-ot
+(C2.9) használjuk erre: az az *állapot* része, minden `updateState`-tel újraküldve, míg
+`activityType`/`venue` a natív workout-session **konfigurációjához** kell
+(`HKWorkoutConfiguration`/`ExerciseConfig`), egyszer, indításkor — és a `venue`-nek eleve nincs
+is megfelelője `WorkoutSessionState`-en. Mindkét paraméter alapból `null`, ami bitre a régi
+(erősítő) viselkedést jelenti — a `LogSessionScreen` meglévő hívási helye emiatt **nem**
+változott.
+
+**`CardioSessionScreen` bekötése** (`presentation/cardio_session_screen.dart`) — bitre a
+`LogSessionScreen._startSessionNotifier`/`_updateSessionNotifier` mintáját követve:
+- `_startSessionNotifier()`: a Live Activity/notification indítása mellett, attól függetlenül
+  (saját `_watchStartPushed` latch), egyszer meghívja `startWorkout`-ot
+  `activityType: _activityType`, `venue: widget.session.cardio?.venue` paraméterekkel.
+- `_updateSessionNotifier()`: minden hívásnál (pause/resume/metrika-szerkesztés) továbbküldi
+  ugyanazt a `WorkoutSessionState`-et `updateState`-tel is.
+- `_finish()`: a Live Activity `.end()` mellett `endWorkout`-ot is hív, ha valaha pusholt
+  `startWorkout`-ot.
+- Cardiónak (a STRENGTH-hel ellentétben) ma nincs watch-mastered ága — natív watch-oldali
+  cardio-indítás C5.4+/C5.7 munkája —, tehát a `_watchMastered`-szerű kihagyó ág itt nem
+  kellett.
+
+**Amit ez a lépés tudatosan nem csinál**: a natív oldal (Swift/Kotlin) még nem érti a
+`activityType`/`venue` mezőket — azok interpretálása (`HKWorkoutActivityType`/`locationType`/
+`ExerciseType` leképezés, [55 §2](55-cardio-watch-plan.md) táblázata) C5.4/C5.5/C5.6 dolga. A
+telefon-oldali `WatchWorkoutService` sem figyeli még a visszajövő eseményeket cardióra (nincs
+`_onWatchEvent`-szerű kezelő ezen a képernyőn) — az összegzés-visszaírás (zónák, táv,
+szintemelkedés) C5.7 munkája.
+
+**Tesztek**: `watch_workout_service_test.dart` — a meglévő `startWorkout` map-egyezés teszt
+kiegészítve az új `activityType`/`venue` kulcsokkal, plusz egy új teszt egy CARDIO indításra.
+`cardio_session_screen_test.dart` — új `watch bridge (C5.2)` csoport
+(`_RecordingWatchService` + `_pumpWithWatch`, a meglévő `_RecordingNotifierService` mintáját
+követve): indítás átviszi az `activityType`/`venue`-t (üres `venue` DISTANCE-nél), szüneteltetés
+`updateState`-et küld, befejezés `endWorkout`-ot, és a `watchWorkoutEnabled: false` beállítás
+elnyomja a (settle utáni) `updateState`-küldést — az induló `startWorkout` push saját, ismert
+timing-versenyhelyzete (a settings-stream első pump-kor még nem oldódott fel, ugyanaz a
+`?? true` alapérték-minta, mint `LogSessionScreen._watchEnabled`-nél) nem ennek a lépésnek a
+hibája, a teszt ezt dokumentáltan kikerüli, nem próbálja "megjavítani".
+
+**Ellenőrzés**: `flutter analyze` teljes projektre tiszta. Teljes `flutter test`: **1051 zöld / 3
+bukás / 1054 összesen** — ugyanaz a már ismert, cardión kívüli `chat_repository_test.dart`
+Windows-fájlzár-flake. 0 valódi regresszió.
+
+**Következő:** `C5.3` — egyesített picker payload (`version: 2`) a `rankQuickStartEntries()`-ből
+([55 §3](55-cardio-watch-plan.md), [59 §9](#9-c5--óra-7-lépés-c57-a-b-re-bontva--mf5)). Windowson
+fejleszthető, natív kód nélkül.
+
+---
+
+## C5.3 kész (2026-08-13) — egyesített, gyakoriság-rendezett picker payload
+
+A [55 §3](55-cardio-watch-plan.md) lépés. Az F6b óta a watch-picker saját, recency-only
+listát kapott (`recentlyUsedTemplateClientIds` — csak "utoljára használt sorrend", cardiót nem
+ismerve). C5.3 ezt lecseréli a telefon már meglévő, a gyorsindító lapot (C2.7) és az
+app-shortcutokat (C2.11) is kiszolgáló rangsorolójára — **§3.1 explicit követelménye**: "ugyanaz
+a Dart-függvény, mint a telefonon... nem másol logikát, és nem talál ki saját rendezést."
+
+**`recentlyUsedTemplateClientIds` törölve** (`watch_template_sync.dart`, a hozzá tartozó
+teszt-csoporttal együtt) — a `rankQuickStartEntries()` teljesen kiváltja, semmi más nem hívta.
+
+**Új típusok** (`watch_template_sync.dart`): `WatchQuickStartEntryPayload` sealed osztály, két
+leszármazottal —
+- `WatchQuickStartTemplateEntry`: egy konkrét erősítő sablon, bitre a régi `WatchTemplatePayload`
+  (teljes gyakorlat-lista, mert az órának ez kell egy standalone terv tényleges futtatásához) —
+  `type: 'TEMPLATE'` és egy kényelmi `exerciseCount` mezővel bővítve, hogy a picker-sor ne kelljen
+  kicsomagolja a teljes `exercises` listát csak a számláláshoz.
+- `WatchQuickStartCardioEntry`: egy cardio aktivitástípus — csak `activityType` + előre lokalizált
+  `title`, nincs terv, amit vinni kellene (a standalone cardio indítás a C5.7+ munkája, W-8).
+
+**`buildWatchQuickStartEntries()`**: a rangsorolást `max: watchQuickStartMaxEntries + 1`
+(9) hívja, hogy a szabad, önálló (nem sablonhoz kötött) erősítő-vödröt ki tudja szűrni **és**
+utána is teljes 8 elem maradjon — a **D-C5.3 döntés szerint** ez a vödör sosem kerül be a
+listába, mert a kiemelt "Quick strength" kártya külön, fixen a lista tetején marad. A megmaradt
+sablon-bejegyzéseket a meglévő `buildWatchTemplateSync`-en keresztül oldja fel (ugyanaz a
+"törölt sablon → néma kihagyás, nincs pótlás" szabály, mint eddig); a cardio-bejegyzések
+`activityTypeLabel`-lel kapják a címüket.
+
+**`WatchWorkoutService.syncTemplates()` drótformátuma megváltozott**: `{syncedAtEpochMs,
+templates: [...]}` helyett `{version: 2, syncedAtEpochMs, entries: [...]}` — biztonságos, éles
+váltás volt, mert **ma egyetlen natív oldal sem fogyasztja** ezt az üzenetet (a watchOS/Wear OS
+T3-as natív kezelő C5.4+/C5.6 munkája). A `watchTemplateSyncMaxTemplates` (5) mostantól csak
+`buildWatchTemplateSync` saját, önmagában hívható alapértéke — a picker felső korlátja az új
+`watchQuickStartMaxEntries` (8), a [55 §3.2](55-cardio-watch-plan.md) döntése szerint ("Max 8
+elem... az F6b 5-ös terv-limitje helyett").
+
+**Névválasztás, tudatosan**: a `watchTemplateSyncPayloadProvider`/`WatchTemplateSyncController`
+nevek megmaradtak — bár a payload már nem csak sablonokból áll —, ugyanazt a mintát követve, mint
+a `WorkoutSessionState.kind` C2.9-es bővítése: a régi név alatt bővült a jelentés, dokumentálva,
+nem egy nagy átnevezési commit. A `syncTemplates` metódusnév (és a natíve method channel neve)
+szintén megmaradt — az a jövőbeli natív kontraktus része, amit ez a lépés még nem épít.
+
+**Lokalizáció**: a provider mostantól `settings.language`-ből épít `AppLocalizations`-t
+(`lookupAppLocalizations`, ugyanaz a `_localeFor` minta, mint `widget_snapshot_writer.dart`/
+`widget_snapshot_controller.dart`/`standalone_session_processor.dart`-ban — tudatosan duplikálva,
+nem egy új megosztott helperbe kiemelve, követve e fájlok saját, meglévő konvencióját).
+
+**Váratlan, de helyes viselkedésváltozás**: egy teljesen üres előzményű fiók mostantól **nem**
+üres listát kap az órára, hanem a `rankQuickStartEntries()` hidegindítási alapértelmezett
+sorrendjét (futás, gyaloglás, ... — ugyanaz, amit a telefon gyorsindító lapja is mutatna) — ez a
+"nem talál ki saját rendezést" szabály egyenes következménye, nem hiba. A teszt ezt dokumentáltan
+rögzíti (`is empty — not null — when the user has no history at all` átnevezve, immár `isNotNull`
+elvárással).
+
+**Tesztek**: a `watch_template_sync_test.dart` `watchTemplateSyncPayloadProvider` csoportja
+teljesen újraírva — valódi rangsorolást igazol (nem beszúrási sorrendet), cardio-bejegyzést,
+a szabad-erősítő kizárását, a lokalizált címet (angol + magyar), a törölt sablon néma kihagyását,
+és a betöltés/`watchWorkoutEnabled` kapukat. `watch_workout_service_test.dart` és
+`watch_template_sync_controller_test.dart` a régi `WatchTemplatePayload`-alapú aszerciókat az új
+`WatchQuickStartEntryPayload`-formára cserélte.
+
+**Ellenőrzés**: `flutter analyze` teljes projektre tiszta. Teljes `flutter test`: **1045 zöld / 3
+bukás / 1048 összesen** — ugyanaz a már ismert, cardión kívüli `chat_repository_test.dart`
+Windows-fájlzár-flake. 0 valódi regresszió.
+
+**Következő:** `C5.4` — watchOS: aktivitástípus-térkép + egyesített indító lista (**AW 16** frame,
+[55 §7](55-cardio-watch-plan.md), [59 §9](#9-c5--óra-7-lépés-c57-a-b-re-bontva--mf5)). **Mac
+kell** — Xcode nélkül ez blind szövegszerkesztés lenne, ami a doc szerint túl kockázatos egy
+valódi UI-kódhoz.

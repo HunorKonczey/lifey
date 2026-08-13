@@ -52,6 +52,14 @@ class MergedWatchSessionContent {
 /// into, which the watch keeps resending by design (49-doc §3.5: a logged
 /// set's `exerciseIndex` is permanent).
 ///
+/// Never called for a CARDIO standalone session (docs/cardio/
+/// 55-cardio-watch-plan.md §5/3, W-1): [StandaloneSessionProcessor] branches
+/// on `event.kind` before any of its merge-calling paths
+/// (`_mergeWithStoredContent`, `_enrichFinishedSession`) run, because a
+/// cardio session has no `exercises`/`sets` to reconcile with a phone-side
+/// edit in the first place — its metrics are a single, complete snapshot
+/// per delivery, not something accumulated set by set.
+///
 /// Sets are matched on **whole seconds + exercise**, not on the exact
 /// timestamp: Drift stores a `DateTime` as unix *seconds*, so the millisecond
 /// precision the watch sends is already gone from the stored copy and the two

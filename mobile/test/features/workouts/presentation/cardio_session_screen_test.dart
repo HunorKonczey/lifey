@@ -7,6 +7,7 @@ import 'package:lifey/core/local_db/app_database.dart';
 import 'package:lifey/core/local_db/database_provider.dart';
 import 'package:lifey/core/location/location_service.dart';
 import 'package:lifey/core/location/location_service_geolocator.dart';
+import 'package:lifey/core/watch/watch_workout_service.dart';
 import 'package:lifey/core/workout_session_notifier/workout_session_notifier_service.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
@@ -194,6 +195,53 @@ class _RecordingNotifierService extends WorkoutSessionNotifierService {
   }
 }
 
+/// The C5.2 counterpart of [_RecordingNotifierService] — records what
+/// `CardioSessionScreen` sends the watch bridge, without touching the real
+/// MethodChannel.
+class _RecordingWatchService extends WatchWorkoutService {
+  _RecordingWatchService() : super(isAvailable: false);
+
+  final startCalls = <
+      ({
+        String sessionClientId,
+        String? activityType,
+        String? venue,
+        WorkoutSessionState state
+      })>[];
+  final updateCalls = <WorkoutSessionState>[];
+  int endCalls = 0;
+
+  @override
+  Future<void> startWorkout({
+    required String sessionClientId,
+    required String title,
+    required DateTime startedAt,
+    required WorkoutSessionState state,
+    String? activityType,
+    String? venue,
+  }) async {
+    startCalls.add((
+      sessionClientId: sessionClientId,
+      activityType: activityType,
+      venue: venue,
+      state: state,
+    ));
+  }
+
+  @override
+  Future<void> updateState({
+    required String sessionClientId,
+    required WorkoutSessionState state,
+  }) async {
+    updateCalls.add(state);
+  }
+
+  @override
+  Future<void> endWorkout(String sessionClientId) async {
+    endCalls++;
+  }
+}
+
 /// C4a.3: `CardioSessionScreen.initState` now unconditionally reads
 /// `cardioTrackPointRepositoryProvider` (→ `appDatabaseProvider`) for every
 /// DISTANCE-family session, to seed its GPS-point sequence counter — see
@@ -260,6 +308,36 @@ Future<(_RecordingSessionController, _RecordingNotifierService)> _pumpWithNotifi
   );
   await tester.pump();
   return (controller, notifier);
+}
+
+/// Same as [_pump], plus a [_RecordingWatchService] override (C5.2) — kept
+/// separate from [_pumpWithNotifier] for the same reason that one is kept
+/// separate from [_pump].
+Future<(_RecordingSessionController, _RecordingWatchService)> _pumpWithWatch(
+  WidgetTester tester,
+  WorkoutSession session,
+) async {
+  final controller = _RecordingSessionController();
+  final watch = _RecordingWatchService();
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        workoutSessionControllerProvider.overrideWith(() => controller),
+        settingsControllerProvider.overrideWith(_MetricSettings.new),
+        watchWorkoutServiceProvider.overrideWithValue(watch),
+        locationServiceProvider.overrideWithValue(_grantedLocationStub()),
+        appDatabaseProvider.overrideWithValue(_testDatabase()),
+      ],
+      child: MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: CardioSessionScreen(session: session),
+      ),
+    ),
+  );
+  await tester.pump();
+  return (controller, watch);
 }
 
 /// Starts a drag gesture on the slide-to-finish bar and moves it to
@@ -576,4 +654,111 @@ void main() {
       expect(notifier.endCalls, 1);
     });
   });
+
+  group('watch bridge (C5.2, docs/cardio/55-cardio-watch-plan.md §5/W-2)', () {
+    testWidgets('starting the screen calls startWorkout() with activityType, and venue when set',
+        (tester) async {
+      final (_, watch) = await _pumpWithWatch(
+        tester,
+        WorkoutSession(
+          clientId: 'live-1',
+          exercises: const [],
+          sets: const [],
+          startedAt: DateTime.now().subtract(const Duration(minutes: 30)),
+          sessionKind: 'CARDIO',
+          activityType: 'RUNNING',
+          movingSeconds: 0,
+          movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch,
+          cardio: const CardioMetrics(venue: 'OUTDOOR'),
+        ),
+      );
+
+      expect(watch.startCalls, hasLength(1));
+      final call = watch.startCalls.single;
+      expect(call.sessionClientId, 'live-1');
+      expect(call.activityType, 'RUNNING');
+      expect(call.venue, 'OUTDOOR');
+      expect(call.state.kind, 'CARDIO');
+    });
+
+    testWidgets('venue is null when the session never set one (DISTANCE has no venue concept)',
+        (tester) async {
+      final (_, watch) = await _pumpWithWatch(
+        tester,
+        _runningSession(movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch),
+      );
+
+      expect(watch.startCalls.single.venue, isNull);
+    });
+
+    testWidgets('pausing pushes an updateState() call', (tester) async {
+      final (_, watch) = await _pumpWithWatch(
+        tester,
+        _runningSession(movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch),
+      );
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+      await tester.pumpAndSettle();
+
+      expect(watch.updateCalls, isNotEmpty);
+      expect(watch.updateCalls.last.cardio!.paused, isTrue);
+    });
+
+    testWidgets('finishing calls endWorkout() exactly once', (tester) async {
+      final (_, watch) = await _pumpWithWatch(tester, _pausedSession(movingSeconds: 754));
+
+      final gesture = await _dragFinishBarTo(tester, 0.85);
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(watch.endCalls, 1);
+    });
+
+    testWidgets('watchWorkoutEnabled: false suppresses updateState pushes', (tester) async {
+      // `_watchEnabled` reads the settings stream's already-resolved value
+      // (same `?? true` fallback as `LogSessionScreen._watchEnabled`) — the
+      // very first push, from `initState`'s deferred `_startSessionNotifier`,
+      // can race ahead of that stream's first emission and default to
+      // enabled, exactly like `LogSessionScreen`'s already does. That race
+      // isn't this test's concern; `_updateSessionNotifier` re-checks the
+      // flag on every later call once settings have long since settled,
+      // which is what a pause reliably exercises.
+      final controller = _RecordingSessionController();
+      final watch = _RecordingWatchService();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            workoutSessionControllerProvider.overrideWith(() => controller),
+            settingsControllerProvider.overrideWith(
+              () => _DisabledWatchSettings(),
+            ),
+            watchWorkoutServiceProvider.overrideWithValue(watch),
+            locationServiceProvider.overrideWithValue(_grantedLocationStub()),
+            appDatabaseProvider.overrideWithValue(_testDatabase()),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CardioSessionScreen(
+              session: _runningSession(movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      watch.updateCalls.clear();
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+      await tester.pumpAndSettle();
+
+      expect(watch.updateCalls, isEmpty);
+    });
+  });
+}
+
+class _DisabledWatchSettings extends SettingsController {
+  @override
+  Stream<UserSettings> build() =>
+      Stream.value(const UserSettings.defaults().copyWith(watchWorkoutEnabled: false));
 }
