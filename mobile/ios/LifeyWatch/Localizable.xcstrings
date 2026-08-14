@@ -816,22 +816,6 @@
         }
       }
     },
-    "standalone_cardio_coming_soon" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Coming soon"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hamarosan"
-          }
-        }
-      }
-    },
     "standalone_empty_hint" : {
       "localizations" : {
         "en" : {

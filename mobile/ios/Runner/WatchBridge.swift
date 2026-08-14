@@ -396,6 +396,12 @@ extension WatchBridge: WCSessionDelegate {
         "activeCalories": userInfo["activeCalories"],
         "averageHeartRate": userInfo["averageHeartRate"],
         "healthWorkoutId": userInfo["healthWorkoutId"],
+        // `PhoneConnector.sendSummary`'s cardio addition (docs/cardio/
+        // 55-cardio-watch-plan.md §4.3, C5.7b) — nil for every STRENGTH
+        // summary and every pre-cardio watch build, decoded Dart-side by
+        // `WatchWorkoutSummary.fromJson`'s existing `cardio` handling
+        // (already in place since C5.7a).
+        "cardio": userInfo["cardio"],
       ],
     ])
   }

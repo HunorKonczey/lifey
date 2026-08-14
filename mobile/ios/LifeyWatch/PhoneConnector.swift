@@ -38,15 +38,25 @@ final class PhoneConnector: NSObject {
   /// Queued delivery via `transferUserInfo` — arrives even if the phone app
   /// isn't running right now, unlike `sendMessage` (docs/40-watch-app-plan.md
   /// §3 "Lezárás").
+  /// [cardio] is `WorkoutManager.cardioSummaryPayload()`'s output
+  /// (docs/cardio/55-cardio-watch-plan.md §4.3, C5.7b) — nil for a STRENGTH
+  /// session and for every pre-cardio call site, which is what keeps this
+  /// unchanged for them. Encoded via the same `propertyListDictionary(from:)`
+  /// helper `sendStandaloneSession`/`sendStandaloneAdoption` already use,
+  /// rather than a hand-built nested dict — one conversion path for every
+  /// `Encodable` payload this class sends.
   func sendSummary(
     sessionClientId: String, activeCalories: Double?, averageHeartRate: Double?,
-    healthWorkoutId: String?
+    healthWorkoutId: String?, cardio: CardioSummaryPayload?
   ) {
     guard WCSession.isSupported() else { return }
     var userInfo: [String: Any] = ["sessionClientId": sessionClientId]
     if let activeCalories { userInfo["activeCalories"] = activeCalories }
     if let averageHeartRate { userInfo["averageHeartRate"] = averageHeartRate }
     if let healthWorkoutId { userInfo["healthWorkoutId"] = healthWorkoutId }
+    if let cardio, let cardioDictionary = propertyListDictionary(from: cardio) {
+      userInfo["cardio"] = cardioDictionary
+    }
     WCSession.default.transferUserInfo(userInfo)
   }
 

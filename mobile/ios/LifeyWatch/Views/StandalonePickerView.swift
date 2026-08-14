@@ -26,18 +26,11 @@ import SwiftUI
 /// exposed an `onTemplateTapped` callback here as a placeholder — replaced
 /// now that the real behavior is known, rather than kept for its own sake.)
 ///
-/// A **cardio** row (`CardioRow`) is deliberately **display-only** — it
-/// renders with the ranked list (so the list's ordering and content are
-/// already real and correct), but doesn't start anything on tap.
-/// `ActiveWorkoutView` gained cardio-aware active screens in C5.5
-/// (AW 17–22's family layouts), but only for a *phone-mastered* session —
-/// wiring this row to actually start one needs a whole new watch-local
-/// standalone-cardio entry point (`WorkoutManager.startStandalone`'s own
-/// `HKWorkoutConfiguration` mapping, a `kind: 'CARDIO'` closing payload),
-/// which is `C5.7`'s "standalone cardio + óra-oldali indítás"
-/// (docs/cardio/55-cardio-watch-plan.md §7, W-8), not C5.4's or C5.5's.
-/// `standalone_cardio_coming_soon` marks that plainly rather than leaving a
-/// silently dead tap target.
+/// A **cardio** row (`CardioRow`) starts a standalone cardio session
+/// directly, the same way `templateTapped`/`startTapped` do — via
+/// `WorkoutManager.startStandalone(activityType:)`'s own
+/// `HKWorkoutConfiguration` mapping and `kind: 'CARDIO'` closing payload
+/// (docs/cardio/55-cardio-watch-plan.md §5/§7, W-8).
 struct StandalonePickerView: View {
   let onBack: () -> Void
 
@@ -114,7 +107,12 @@ struct StandalonePickerView: View {
                   templateTapped(template)
                 }
               case .cardio(let activityType, let title):
-                CardioRow(activityType: activityType, title: title, isCompact: isCompact)
+                CardioRow(
+                  activityType: activityType, title: title, isCompact: isCompact,
+                  isDisabled: isStarting
+                ) {
+                  cardioTapped(activityType)
+                }
               }
             }
           }
@@ -179,6 +177,17 @@ struct StandalonePickerView: View {
       }
     }
   }
+
+  private func cardioTapped(_ activityType: String) {
+    guard !isStarting else { return }
+    isStarting = true
+    Task {
+      await WorkoutManager.shared.startStandalone(activityType: activityType)
+      if WorkoutManager.shared.phase == .idle {
+        isStarting = false
+      }
+    }
+  }
 }
 
 /// One synced-template row (canvas AW 13) — plain `surface` background,
@@ -220,57 +229,42 @@ private struct TemplateRow: View {
 /// One ranked cardio activity-type row (canvas AW 16) — an icon circle
 /// tinted per activity type (`cardioActivityIcon`/`cardioActivityTint`,
 /// `Views/ActiveWorkoutView.swift` — shared with that file's own cardio
-/// pages, C5.5), `TemplateRow`'s plain `surface` card otherwise, plus the
-/// pre-localized title and a quiet `standalone_cardio_coming_soon` line
-/// explaining why it doesn't respond to a tap yet. Not a `Button`: there is
-/// deliberately nothing to tap.
-///
-/// **Still true after C5.5** (which built the cardio-aware active screens
-/// this row's own doc used to point to): a tap here would need
-/// `WorkoutManager.startStandalone` to gain a whole new watch-local cardio
-/// entry point — its own `HKWorkoutConfiguration` mapping, a
-/// `WatchStandaloneSession` `kind: 'CARDIO'` closing payload (no sets, no
-/// exercise plan) — which is explicitly `C5.7`'s "standalone cardio + óra-
-/// oldali indítás" (docs/cardio/55-cardio-watch-plan.md §7, W-8), not this
-/// step's. C5.5 only had to make sure a *phone-mastered* cardio session
-/// (reached via `WorkoutManager.start(configuration:)`, never through this
-/// picker at all) lands somewhere real instead of the STRENGTH-shaped
-/// screens — which is what unblocked writing this doc comment's correction.
+/// pages, C5.5), `TemplateRow`'s plain `surface` card and tap-to-start
+/// behavior otherwise (C5.7b) — a `Button`, same as `TemplateRow`, unlike
+/// the C5.4/C5.5-era version of this row.
 private struct CardioRow: View {
   let activityType: String
   let title: String
   let isCompact: Bool
+  let isDisabled: Bool
+  let onTap: () -> Void
 
   var body: some View {
-    HStack(spacing: 13) {
-      ZStack {
-        Circle()
-          .fill(cardioActivityTint(for: activityType).opacity(0.18))
-          .frame(width: 40, height: 40)
-        Image(systemName: cardioActivityIcon(for: activityType))
-          .foregroundColor(cardioActivityTint(for: activityType))
-      }
-      VStack(alignment: .leading, spacing: 1) {
+    Button(action: onTap) {
+      HStack(spacing: 13) {
+        ZStack {
+          Circle()
+            .fill(cardioActivityTint(for: activityType).opacity(0.18))
+            .frame(width: 40, height: 40)
+          Image(systemName: cardioActivityIcon(for: activityType))
+            .foregroundColor(cardioActivityTint(for: activityType))
+        }
         Text(title)
           .font(.body)
           .fontWeight(.bold)
           .foregroundColor(LifeyColors.onSurface)
           .lineLimit(1)
           .truncationMode(.tail)
-        Text("standalone_cardio_coming_soon")
-          .font(.caption2)
-          .foregroundColor(LifeyColors.onSurfaceVariant)
+        Spacer(minLength: 0)
       }
-      Spacer(minLength: 0)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 14)
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 14)
-    .frame(maxWidth: .infinity, alignment: .leading)
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
     .background(LifeyColors.surface)
     .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
-    .opacity(0.75)
   }
-
 }
 
 #Preview {

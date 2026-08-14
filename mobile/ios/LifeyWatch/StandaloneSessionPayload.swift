@@ -22,6 +22,21 @@ struct StandaloneSet: Codable, Equatable {
   var exerciseId: String?
 }
 
+/// The closing-summary cardio block (docs/cardio/55-cardio-watch-plan.md
+/// §4.3, C5.7b) — `WorkoutManager.cardioSummaryPayload()`'s wire shape,
+/// carried by both `StandaloneSessionPayload.cardio` (this file) and, via
+/// `PhoneConnector.propertyListDictionary(from:)`, `PhoneConnector
+/// .sendSummary`'s phone-mastered path. Matches Dart's `CardioMetrics
+/// .fromJson` field names (`mobile/lib/features/workouts/domain/
+/// workout_session.dart`) exactly, so both closing routes decode identically
+/// on the phone. `distanceSource` is only ever `"DEVICE"` here — a manual or
+/// phone-measured value always wins (docs/cardio/51-cardio-overview-plan.md
+/// R8), so this struct never claims otherwise.
+struct CardioSummaryPayload: Codable, Equatable {
+  let distanceMeters: Double
+  let distanceSource: String
+}
+
 /// The wire/persisted shape of a finished standalone (phone-less) workout
 /// (docs/watch/44-watch-f6-standalone-plan.md §4.1) — everything
 /// `StandaloneSessionStore` queues locally and `PhoneConnector` eventually
@@ -31,6 +46,16 @@ struct StandaloneSet: Codable, Equatable {
 ///
 /// `standaloneSessionId` becomes the resulting session's `clientId` on the
 /// phone — the idempotency key for a retried delivery (§4.2, D-F6.2).
+///
+/// `kind`/`activityType`/`cardio` are C5.7b's cardio additions — all three
+/// nil for a STRENGTH session (Dart's `WatchStandaloneSession.fromJson`
+/// already defaults a missing `kind` to `'STRENGTH'`, docs/cardio/
+/// 55-cardio-watch-plan.md §5), so the pre-cardio wire shape is unchanged
+/// for every existing call site. Unlike Android's `emitStandaloneSession`
+/// (which hand-picks fields into a fresh map and, before C5.7a's fix,
+/// silently dropped exactly this trio), this struct's `Codable` conformance
+/// is what actually reaches the wire — there's no separate hand-written
+/// forwarding step here to fall out of sync with it.
 struct StandaloneSessionPayload: Codable, Equatable {
   let standaloneSessionId: String
   let templateId: String?
@@ -41,6 +66,9 @@ struct StandaloneSessionPayload: Codable, Equatable {
   let activeCalories: Double?
   let averageHeartRate: Double?
   let healthWorkoutId: String?
+  var kind: String?
+  var activityType: String?
+  var cardio: CardioSummaryPayload?
 }
 
 /// The live-bridging counterpart of `StandaloneSessionPayload` — a snapshot
@@ -106,6 +134,13 @@ struct StandaloneActiveSessionMeta: Codable, Equatable {
   var sessionPlan: [CachedTemplateExercise]?
   let startedAtEpochMs: Int64
   var sets: [StandaloneSet]
+  /// `'STRENGTH'`/`'CARDIO'` + the activity type, so a process death mid-run
+  /// recovers into the right screen family instead of always falling back to
+  /// STRENGTH (C5.7b) — both nil for a pre-cardio snapshot, which still
+  /// decodes and still means STRENGTH, matching `WorkoutManager.sessionKind`'s
+  /// own `"STRENGTH"` default.
+  var kind: String?
+  var activityType: String?
 }
 
 /// One exercise of a synced template, exactly as the phone resolved it

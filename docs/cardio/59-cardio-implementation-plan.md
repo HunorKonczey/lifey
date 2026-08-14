@@ -263,8 +263,8 @@ natív munka + a platformfüggetlen Dart-fél, Windowson kész; a **C5.7b** ág 
 | **C5.4** ✅ | watchOS: aktivitástípus-térkép + egyesített indító lista | **Mac** | **AW 16** | A kiemelt „Quick strength” kártya marad legfelül |
 | **C5.5** ✅ | watchOS: aktív cardio ×3 család + gyenge jel / nincs pulzus | **Mac** | **AW 17–20**, **AW 22** | A pulzus a kiemelt másodlagos metrika |
 | **C5.6** ✅ | Wear OS: `ExerciseType`/`dataTypes` térkép + ugyanazok a képernyők | Windows | **W 15–19**, **W 21** | Nem kérünk olyan adattípust, amit a szenzorkészlet nem tud |
-| **C5.7a** | Zárás-összegzés bővítés + standalone cardio + pályán/padon szinkron — **Wear OS natív fele** + a platformfüggetlen Dart-fél (forrás-jelölt telefon-oldali beírás) + **Wear OS-es eszközös végpróba** | Windows | **AW 21**/**W 20** (Wear OS fele) | Az óra-mérés csak akkor ír felül, ha a telefonnak nincs sajátja; Wear OS-en végpróba lezajlik |
-| **C5.7b** | Ugyanaz — **watchOS natív fele** + **watchOS-es eszközös/szimulátoros végpróba** | **Mac** | **AW 21** (watchOS fele) | Ugyanaz watchOS-en; végpróba lezajlik |
+| **C5.7a** ✅ | Zárás-összegzés bővítés + standalone cardio + pályán/padon szinkron — **Wear OS natív fele** + a platformfüggetlen Dart-fél (forrás-jelölt telefon-oldali beírás) + **Wear OS-es eszközös végpróba** | Windows | **AW 21**/**W 20** (Wear OS fele) | Az óra-mérés csak akkor ír felül, ha a telefonnak nincs sajátja; Wear OS-en végpróba lezajlik |
+| **C5.7b** ✅ | Ugyanaz — **watchOS natív fele** + **watchOS-es eszközös/szimulátoros végpróba** | **Mac** | **AW 21** (watchOS fele) | Ugyanaz watchOS-en; végpróba lezajlik |
 
 A W-10 (eszközös végpróba mindkét platformon, [55 §7](55-cardio-watch-plan.md)) emiatt nem külön
 sor — a Wear OS-es fele már C5.7a kész-ha-jában szerepel, a watchOS-es fele C5.7b-ében, ugyanaz az
@@ -3848,7 +3848,7 @@ Mac-en.
 
 ---
 
-## C5.7a **részben kész** (2026-08-14) — zárás-összegzés bővítés + standalone cardio (Wear OS + Dart fele)
+## C5.7a **kész** (2026-08-14) — zárás-összegzés bővítés + standalone cardio (Wear OS + Dart fele)
 
 A [55 §4.3/§5/§7](55-cardio-watch-plan.md) lépés két és fél tétele közül kettő kész, egy
 **tudatosan kihagyva** — lásd lent a pontos indoklást mindegyiknél.
@@ -3959,3 +3959,93 @@ de ez **nem helyettesíti** a tényleges fordítást.
 **Következő:** a felhasználó engedélyezze a Fájlok-és-mappák hozzáférést, hogy
 `flutter analyze`/`:app:compileDebugKotlin` lefusson és megerősítse a fenti kódot; utána
 folytatható a GAME kétirányú szinkron, vagy áttérhetünk `C5.7b`-re (watchOS natív fele, Mac-en).
+
+---
+
+## C5.7b kész (2026-08-14) — zárás-összegzés bővítés + standalone cardio (watchOS natív fele)
+
+Ugyanaz a két dolog, mint `C5.7a`-ban, most watchOS-en (`mobile/ios/LifeyWatch/`,
+`mobile/ios/Runner/WatchBridge.swift`) — a GAME pályán/padon szinkron itt is tudatosan kimaradt,
+ugyanazzal az indoklással, mint `C5.7a`-ban (nagy, már éles `cardio_session_screen.dart`-ot
+érintene mindkét irányban).
+
+### 1. Zárás-összegzés bővítés (táv, forrás-jelölt) — kész, **szintemelkedés nélkül**
+
+`WorkoutManager.cardioSummaryPayload()` (új) építi a záró `cardio` blokkot
+`finishAndSendSummary()` (telefon-vezérelt) és `endStandalone(rpe:)` (óra-indított) számára is —
+mindkettő ugyanazt a metódust hívja, mielőtt lezárná a sessiont. A távot az `HKLiveWorkoutBuilder`
+már élőben méri (`distanceWalkingRunningType`/`distanceCyclingType`, a meglévő
+`HKLiveWorkoutBuilderDelegate.workoutBuilder(_:didCollectDataOf:)` callback bővítése egy új
+`case`-szel — a pulzus/kalória melletti harmadik ág), `lastDistanceMeters`-be gyűjtve.
+
+**Szintemelkedés (elevationGain/Loss) szándékosan kimaradt ebből a lépésből** — ez egy valódi
+platformkülönbség, nem csak egy elhalasztott mező, mint a HR-zónák: Wear OS-en a Health Services
+`DataType.ELEVATION_GAIN_TOTAL`/`ELEVATION_LOSS_TOTAL` közvetlen, kumulatív aggregátumot ad
+(barométerből), HealthKit-en viszont nincs ilyen élő `HKQuantityType` — a szintemelkedést csak a
+GPS-útvonalból (`HKWorkoutRouteBuilder`) tudja levezetni, amit ez az app még nem gyűjt (az
+[55 §6](55-cardio-watch-plan.md) "Watch-GPS" pontja, saját, még el nem kezdett mini-terv). A
+`CardioMetrics.mergedWithWatchMeasurement` (C5.7a) már eleve null-biztos minden mezőre, úgyhogy ez
+biztonságos, előre kompatibilis kihagyás — pontosan úgy, ahogy a HR-zónák kihagyása is az volt.
+
+A HR-zóna kihagyás indoklása változatlan (nincs zóna-határ/max-HR% fogalom sehol a kódbázisban) —
+lásd `C5.7a`-t.
+
+**Recovery-biztos**: `recoverStandaloneSessionIfNeeded()` most a felébredő `HKLiveWorkoutBuilder`
+saját, már felhalmozott statisztikájából veti vissza a `lastDistanceMeters`-t (nem 0-ról indul) —
+enélkül egy folyamathalál utáni óra-standalone cardio session summary-ja hallgatólagosan
+alulmérte volna a teljes távot (a [11. szakasz](59-cardio-implementation-plan.md) "néma hiba"
+osztálya).
+
+### 2. Standalone cardio (óra-oldali indítás, W-8) — kész, watchOS-en
+
+`WorkoutManager.startStandalone(template:activityType:)` most `activityType`-ot is elfogad
+(korábban csak `template`-et) — cardio esetén a saját `HKWorkoutConfiguration`-t építi
+(`cardioWorkoutActivityType`/`cardioLocationType`, a `Runner/WatchBridge.swift`-ben már meglévő,
+telefon-oldali párjuk **szándékosan duplikálva** — a két target nem oszt forrásfájlt, ugyanaz a
+minta, mint a `Views/ActiveWorkoutView.swift` ikon/szín-térképe). `venue` itt nincs (a picker
+cardio sora csak `activityType`-ot ismer), úgyhogy a locationType-mappelés mindig az
+aktivitástípus-alapú alapértelmezésre esik — ez watchOS-en, a `HKWorkoutSessionLocationType`
+révén, teljesebb, mint amit Wear OS-en a Health Services `ExerciseConfig`-ja engedett (ott a
+`venue` egyáltalán nem is volt mappelhető mezőre, C5.7a).
+
+`StandalonePickerView`'s `CardioRow` a C5.4/C5.5 óta **kizárólag megjelenítő** volt (halványított,
+"Hamarosan" felirattal) — most `TemplateRow` mintájára tényleges `Button`, `WorkoutManager
+.startStandalone(activityType:)`-ot hívja. A `standalone_cardio_coming_soon` string törölve
+(`Localizable.xcstrings`-ból is).
+
+**Nem talált újabb "a natív híd nem továbbítja a mezőt" hibát ezúttal** — watchOS-en a
+`sendStandaloneSession`/`sendSummary` `Codable`/`propertyListDictionary(from:)` úton megy
+(`PhoneConnector.swift`), nem kézzel válogatott mezőkkel, mint Androidon; a `standaloneSessionCompleted`
+üzenet a teljes `userInfo`-t egy az egyben továbbadja Dartnak (`Runner/WatchBridge.swift`
+`didReceiveUserInfo`), úgyhogy a `StandaloneSessionPayload`-ra felvett `kind`/`activityType`/
+`cardio` mezők (Codable, `nil` = kimarad a wire-ról, nem `null`) automatikusan eljutnak — nincs
+külön kézi forwarding lépés, ami el tudna avulni tőle, szemben Android `emitStandaloneSession`-jével
+(ami épp emiatt hibázott C5.7a-ig). Egyetlen kézi forwarding maradt: `Runner/WatchBridge.swift`
+záró-összegzés ága (`userInfo["cardio"]`), mert az maga is kézzel épített dict — ez az egyetlen hat
+sornyi, ellenőrizetlen (lásd lent) módosítás ebben a lépésben.
+
+`movingSeconds` itt is szándékosan kimaradt a záró payloadból, C5.7a mintájára — a telefon
+`endedAtEpochMs - startedAtEpochMs`-ből úgyis újraszámolja.
+
+### Ellenőrzés — valódi build, nem csak kézi átnézés
+
+**A C5.7a-t blokkoló macOS Fájlok-és-mappák (TCC) hiba ezúttal nem állította meg a fő
+ellenőrzést**: a `LifeyWatch` cél (`xcodebuild -project Runner.xcodeproj -target LifeyWatch -sdk
+watchsimulator ... build`, a workspace-scheme helyett közvetlenül a targetet építve, hogy elkerülje
+a `Runner` cél Flutter Run Script fázisát — az **abban** akadt el ugyanabba a `.git/config`
+hibába) **BUILD SUCCEEDED**-del lefordult, hiba és warning nélkül — ez lefedi mind az öt módosított
+watchOS-fájlt (`WorkoutManager.swift`, `PhoneConnector.swift`, `StandaloneSessionPayload.swift`,
+`StandalonePickerView.swift`, `Localizable.xcstrings`).
+
+Az egyetlen ki nem próbált darab: `Runner/WatchBridge.swift` hat soros módosítása (a `"cardio":
+userInfo["cardio"]` kulcs) — ez a `Runner` (telefon-oldali iOS app) targetben van, aminek a
+buildje a Flutter Run Script fázison (és emiatt a TCC-hibán) akad el, ugyanúgy, mint C5.7a-ban a
+Kotlin/Gradle lánc. Kézzel átnézve: pontosan a három szomszédos, már bizonyítottan lefordult
+dict-bejegyzés (`activeCalories`/`averageHeartRate`/`healthWorkoutId`) mintáját követi, azonos
+`Any?` típussal — szerkezetileg nincs benne semmi új.
+
+**Következő:** a felhasználó engedélyezze a Fájlok-és-mappák hozzáférést (Rendszerbeállítások →
+Adatvédelem és biztonság), hogy a `Runner` cél is ténylegesen lefordítható legyen, és a
+`flutter analyze`/`:app:compileDebugKotlin` C5.7a-ból visszamaradt ellenőrzése is lefusson; utána a
+GAME pályán/padon kétirányú szinkron (W-9, mindkét platformon) a logikus folytatás — ezzel zárulna
+le a teljes C5 (Óra) iteráció.
