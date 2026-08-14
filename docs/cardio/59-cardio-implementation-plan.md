@@ -260,8 +260,8 @@ natív munka + a platformfüggetlen Dart-fél, Windowson kész; a **C5.7b** ág 
 | **C5.1** ✅ | **Telefon-oldali fogadó előbb**: `standalone_session_processor` + `watch_session_merge` + `watch_set_log_decision` cardio-ága | Windows | – | Cardio payload feldolgozható, mielőtt bárki küldené ([55 D-C5.4](55-cardio-watch-plan.md)) |
 | **C5.2** ✅ | Indító payload `activityType`/`venue` + `WatchWorkoutService` API-bővítés + állapot-átvitel | Windows | – | A `locationType` a `venue`-ból jön, nem találgatásból |
 | **C5.3** ✅ | Egyesített picker payload (`version: 2`) a `rankQuickStartEntries()`-ből | Windows | – | Régi natív build a fallbackre esik, nem renderel ismeretlen sort |
-| **C5.4** | watchOS: aktivitástípus-térkép + egyesített indító lista | **Mac** | **AW 16** | A kiemelt „Quick strength” kártya marad legfelül |
-| **C5.5** | watchOS: aktív cardio ×3 család + gyenge jel / nincs pulzus | **Mac** | **AW 17–20**, **AW 22** | A pulzus a kiemelt másodlagos metrika |
+| **C5.4** ✅ | watchOS: aktivitástípus-térkép + egyesített indító lista | **Mac** | **AW 16** | A kiemelt „Quick strength” kártya marad legfelül |
+| **C5.5** ✅ | watchOS: aktív cardio ×3 család + gyenge jel / nincs pulzus | **Mac** | **AW 17–20**, **AW 22** | A pulzus a kiemelt másodlagos metrika |
 | **C5.6** | Wear OS: `ExerciseType`/`dataTypes` térkép + ugyanazok a képernyők | Windows | **W 15–19**, **W 21** | Nem kérünk olyan adattípust, amit a szenzorkészlet nem tud |
 | **C5.7a** | Zárás-összegzés bővítés + standalone cardio + pályán/padon szinkron — **Wear OS natív fele** + a platformfüggetlen Dart-fél (forrás-jelölt telefon-oldali beírás) + **Wear OS-es eszközös végpróba** | Windows | **AW 21**/**W 20** (Wear OS fele) | Az óra-mérés csak akkor ír felül, ha a telefonnak nincs sajátja; Wear OS-en végpróba lezajlik |
 | **C5.7b** | Ugyanaz — **watchOS natív fele** + **watchOS-es eszközös/szimulátoros végpróba** | **Mac** | **AW 21** (watchOS fele) | Ugyanaz watchOS-en; végpróba lezajlik |
@@ -3542,3 +3542,206 @@ Windows-fájlzár-flake. 0 valódi regresszió.
 [55 §7](55-cardio-watch-plan.md), [59 §9](#9-c5--óra-7-lépés-c57-a-b-re-bontva--mf5)). **Mac
 kell** — Xcode nélkül ez blind szövegszerkesztés lenne, ami a doc szerint túl kockázatos egy
 valódi UI-kódhoz.
+
+---
+
+## C5.4 kész (2026-08-13) — watchOS aktivitástípus-térkép + egyesített indító lista
+
+**Egy valódi, már élesben ható hiba derült ki és lett javítva menet közben.** A C5.3 (Dart oldal)
+már a `{version: 2, syncedAtEpochMs, entries: [...]}` drótformátumot küldte a `syncTemplates`
+natív hívásban — de a natív oldal (`Runner/WatchBridge.swift`) még a régi `args["templates"]`
+kulcsot kereste, ami C5.3 óta **sosem** érkezik meg. Emiatt **a teljes órai gyorsindító-szinkron
+némán, észrevétlenül megszakadt** a C5.3-as commit óta: sem terv, sem — most már — cardio-típus
+nem jutott volna el az órára, a `guard let templates = args["templates"]` egyszerűen korán
+visszatért. Ez pontosan a [11. szakasz](#11-kockázati-ellenőrzőpontok) "néma hiba" kategóriája —
+csak épp egy olyan útvonalon, amit a kockázati táblázat nem vett fel név szerint, mert a
+C5.1–C5.3 munka még nem ért el a natív oldalig. Javítás: `syncTemplates()` most `args["entries"]`
++ `args["version"]` kulcsokat olvassa, és `lastContext["entries"]`/`["version"]` alatt küldi
+tovább — ez volt **AW 16 megjelenésének előfeltétele**, enélkül a lista véglegesen üres maradt
+volna, függetlenül attól, mit épít a watch-oldali UI.
+
+**Aktivitástípus-térkép, két helyen, tudatosan duplikálva** (a C5.3 „tudatosan duplikálva, nem
+megosztott helperbe kiemelve" mintáját követve — a két target, `Runner` és `LifeyWatch`, nem oszt
+meg forrásfájlt egymással):
+
+- **`Runner/WatchBridge.swift`**: új `cardioWorkoutActivityType(for:)` / `cardioLocationType(for:venue:)`
+  file-scope függvények, bitre az [55 §2](55-cardio-watch-plan.md) táblázata és a **D-C5.1** döntés
+  szerint (a `locationType` a `venue`-ból jön, hiányában `DISTANCE`-családnál `.outdoor`, egyébként
+  `.indoor`, `OTHER_CARDIO`-nál `.unknown`). A `startWorkout()` mostantól ezt hívja a korábban
+  fixen `.traditionalStrengthTraining`/`.indoor`-ra állított `HKWorkoutConfiguration` helyett —
+  **ez egy valódi, éles adatminőségi hibát javít**: a C5.2 óta minden telefon-vezérelt élő cardio
+  session (`CardioSessionScreen` → `WatchWorkoutService.startWorkout(activityType:, venue:)`) az
+  órán tévesen erősítő edzésként indult volna a HealthKitben, helytelen kalóriabecsléssel és
+  mozgásgyűrű-jóváírással — ez a hiba mostantól, ezzel a lépéssel megszűnt, függetlenül attól,
+  hogy az órai *képernyő* még nem cardio-tudatos (ld. alább).
+- Ugyanez a térkép megjelenik a watch-oldali picker ikon/szín-választásában is (lásd lent) —
+  **nem** egy közös típusban, hanem a saját, kisebb "melyik ikon/szín" leképezésként, mert a két
+  hely különböző célra képez (HealthKit enum vs. SF Symbol + `Color`).
+
+**Egyesített indító lista, natívan** — a legnagyobb rész:
+
+- **`StandaloneSessionPayload.swift`**: új `WatchQuickStartEntry` enum (`.template(CachedTemplate)`
+  / `.cardio(activityType:, title:)`), kézzel írt `Codable` (nem a szintetizált enum-forma, mert a
+  drót/perzisztált alak egy lapos `type`-diszkriminátoros dict, bitre a Dart `toJson()` szerint,
+  nem Swift saját tagged-union JSON-alakja).
+- **`StandaloneSessionStore.swift`**: `templates()`/`saveTemplates(_:)` → `quickStartEntries()`/
+  `saveQuickStartEntries(_:)`, ugyanazt a fájlt újrahasznosítva (egy régi, csak-`CachedTemplate`
+  cache-fájl az új dekóderrel egyszerűen üres listát ad — a `try?` már eddig is ezt a
+  hibatűrést nyújtotta, nem kellett migrációs kód).
+- **`PhoneConnector.swift`** `applyTemplateSync`: `context["templates"]` → `context["entries"]` +
+  **`version == 2` őr** (jövőbiztosíték: egy jövőbeli, ismeretlen drótformátumot ez a build inkább
+  figyelmen kívül hagy, mint hibásan értelmez). **Elemenkénti** dekódolás (`compactMap`), nem egy
+  `[WatchQuickStartEntry]` tömbként — egy hibás/ismeretlen sor csak azt az egy sort viszi, nem az
+  egész listát, ugyanaz az elv, mint `setsDonePerExercise`-nál.
+- **`StandalonePickerView.swift`**: a `templates: [CachedTemplate]` állapot helyett
+  `entries: [WatchQuickStartEntry]`; a "Quick strength" kártya változatlanul legfelül (**D-C5.3
+  kész-ha teljesítve**), alatta a rangsorolt lista `TEMPLATE`/`CARDIO` sorokkal keverve, a telefon
+  által már eldöntött sorrendben (index-kulcsos `ForEach`, nem `id: \.templateId`, mert egy cardio
+  sornak nincs stabil saját azonosítója).
+- **`LifeyColors.swift`**: négy új accent-konstans (`cardioWalking`, `cardioIndoorBike`,
+  `cardioBasketball`, `cardioFootball`) — ugyanazok a hexek, mint a mobil `MetricColors`
+  megfelelő tokenjei (`steps`/`carbs`/`fat`/`water`), a `RUNNING` a meglévő `calories`-t, a
+  `HIKING` a meglévő `tertiary`-t hasznosítja újra, nem duplikál.
+- **`Localizable.xcstrings`**: egy új kulcs, `standalone_cardio_coming_soon` (EN "Coming soon" /
+  HU "Hamarosan") — szövegesen szerkesztve a JSON-t a meglévő formázás (2 szóköz, `"kulcs" :
+  érték`) pontos megtartásával, nem egy Python `json.dump` teljes újraszerializálásával, ami
+  első nekifutásra 1340 soros, tartalmatlan diffet adott volna (a foglalt `xcstrings`-formázás
+  space-before-colon stílusa nem egyezik a Python-alapértelmezett kimenettel).
+
+**Tudatos döntés — a cardio sorok koppintásra egyelőre nem indítanak semmit.** A C5.4 kész-ha-ja
+(§9 táblázat) csak a lista helyes megjelenítéséről szól; egy valódi `startStandalone`-hívás egy
+cardio sorra a `WorkoutManager`/`ActiveWorkoutView` STRENGTH-alakú aktív képernyőjén landolna
+(„+1 szett” gomb, gyakorlat-lista egy futó futóedzésen) — ez a **C5.5** dolga (AW 17–20, három
+cardio-elrendezés). A `CardioRow` ezért **nem** `Button`: ikon + cím + egy halvány
+`standalone_cardio_coming_soon` felirat, `opacity(0.75)`, tudatosan jelölve, nem csendben
+kihagyva — ugyanaz a minta, mint C0.4 `TODO`-ja vagy C5.1 `WatchStandaloneAdoption`
+kind-mezőjének szándékos hiánya.
+
+**Ellenőrzés — natív build, nem `flutter analyze`** (ez a lépés Dart-fájlt nem érint): a sandbox
+korábban nem futtatott `pod install`-t és a `LifeyWidgets` cél provisioning-profilt igényelt, ami
+blokkolta a teljes workspace-buildet — mindkettő javítva (`pod install` lokálisan, tényleges
+hálózati letöltéssel, a `Podfile.lock`-hoz képest hiányzó `geolocator_apple`/`package_info_plus`
+pod pótlása — ezek a C4a/korábbi lépésekből maradtak lefedetlenül ebben a checkoutban; `CODE_SIGNING_ALLOWED=NO` a szimulátor-buildhez). Ezután:
+`xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphonesimulator … build` —
+**BUILD SUCCEEDED**, a `Runner` (benne a `WatchBridge.swift` fix) és a `LifeyWatch` cél (a teljes
+egyesített picker + aktivitástípus-térkép) együtt, changes utáni inkrementális build ~20-30 mp.
+Nincs watchOS-oldali unit teszt cél ebben a projektben (a meglévő watch-lépések mindegyike
+build-sikerrel + eszközös végpróbával van ellenőrizve, sosem unit teszttel) — ez a lépés ugyanezt
+a mércét követi; **eszközös/szimulátoros vizuális ellenőrzés még hátravan**, ugyanúgy, mint minden
+korábbi Mac-es watch-lépésnél.
+
+**Következő:** `C5.5` — watchOS: aktív cardio ×3 család + gyenge jel/nincs pulzus (**AW 17–20,
+AW 22** frame-ek, [55 §4.2](55-cardio-watch-plan.md), **Mac** kell) — ez teszi funkcionálissá a
+most már helyesen megjelenő és helyesen konfigurált (HealthKit-szinten) cardio indítást.
+
+---
+
+## C5.5 kész (2026-08-14) — watchOS aktív cardio ×3 család + gyenge jel/nincs pulzus
+
+A [55 §4](55-cardio-watch-plan.md) lépés. A kész-ha (**„a pulzus a kiemelt másodlagos metrika"**)
+lefedve mind a három családra, **kizárólag telefon-vezérelt** (phone-mastered) cardio session-ön —
+az órán indított (standalone) cardio továbbra sem indítható, ld. lent.
+
+**Az élő adat már megvolt, csak natívan sosem lett kiolvasva.** A C2.9-ben a
+`WorkoutSessionState.kind`/`activityType`/`cardio` (`CardioLiveMetrics`: `primaryLabel/Value`,
+`secondaryLabel/Value`, `tertiaryLabel/Value`, `paused`, `movingSecondsBase`/`movingSinceEpochMs`)
+már azóta minden `updateState`/`startWorkout` hívással kiment a drótra — de sem `PhoneConnector`,
+sem `WorkoutManager` nem olvasta ki ezeket a mezőket, mindkettő a régi, tisztán STRENGTH-alakú
+állapotra volt kötve. Ez a lépés zárja be ezt a kört, **Dart-oldali változtatás nélkül** — a
+`primaryLabel/Value`/`secondaryLabel/Value`/`tertiaryLabel/Value` már eleve előre-formázott,
+lokalizált string, a watch-nak nincs saját `CardioFormatter`-je.
+
+**`WorkoutManager.swift`**: új `CardioActivityFamily` enum (DISTANCE/MACHINE/GAME, az
+`activityType` kódból származtatva, [55 §2](55-cardio-watch-plan.md) táblázata szerint) és
+`CardioActiveMetrics` struct (a `CardioLiveMetrics` natív tükre). Három új `@Published` mező
+(`sessionKind`, `cardioActivityType`, `cardioMetrics`) + `isCardio`/`cardioFamily` számított
+property. `applyStateUpdate` három új paramétert kapott, a telefon-vezérelt ágban feltétel nélkül
+felülírva (ugyanaz a "stale adat félrevezető" elv, mint a rest-timernél) — a `reset()` is törli
+mindet.
+
+**Óra-clock-biztos ketyegés, a rest-timer mintáját követve.** A `movingSecondsBase`/
+`movingSinceEpochMs` pár Dart-oldali célja explicit: "hogy a natív felület magától ketyegjen,
+frissítés-kvóta nélkül" — de a `movingSinceEpochMs` egy telefon-epoch, ami a `restEndsAtEpochMs`-hez
+hasonlóan **csak a telefon saját órájával összevetve** értelmezhető helyesen, és a két párosított
+eszköz órája nem garantáltan szinkron. Megoldás: `PhoneConnector.decodeCardioMetrics` a
+`movingSinceEpochMs`-t el sem olvassa — helyette a **saját** `ProcessInfo.systemUptime`-ot rögzíti
+a payload megérkezésének pillanatában (`movingAnchorUptime`), pontosan a `restDeadlineUptime`
+mintáját követve. A `movingSecondsBase` (egyszerű relatív másodperc) biztonságosan használható
+közvetlenül, órakülönbségtől függetlenül.
+
+**Melyik szám ketyeg helyben, melyik jön a telefontól változatlanul?** Csak az, amelyik ténylegesen
+egy futó időtartam: DISTANCE-nél a **másodlagos** doboz (a táv a `primaryValue`, csak GPS-fixre
+frissül, sosem ketyeg — a telefon sztringje mindig friss), MACHINE-nél és GAME-nél a **domináns**
+szám (mozgásidő, ill. játékidő). GAME bruttó ideje (`secondaryValue`, "bruttó") **nem** kap saját
+ketyegést — a Dart-oldal ehhez nincs külön epoch-checkpointot, csak egy simán újraküldött stringet
+ad —, tehát a telefon utolsó push-ának megfelelően frissül, nem pontosan másodpercre. Egyetlen,
+dokumentált, tudatos egyszerűsítés: a DISTANCE-nél M11-szerűen ritka "GPS nélküli" ág (amikor a
+domináns szám a telefonon időre vált) az órán kevésbé simán (csak push-onként) ketyeg — nem törik,
+csak nem folyamatos.
+
+**Két elrendezés, nem három** — `DistanceMachineMetricsContent` (AW 17/18, közös: fejléc, domináns
+szám, pulzus-sor, két doboz) és `GameMetricsContent` (AW 19/20, saját: pont+"JÁTÉKIDŐ" felirat, egy
+doboz, a pályán/padon nagygomb) —, mert a design-különbség pontosan a család mentén húzódik, nem
+soronként.
+
+**A pályán/padon kapcsoló szándékosan órai-helyi, nem szinkronizált.** A telefon saját
+`_onCourt`-ja (C2.4) már ma is dokumentáltan "Local-only... never synced, never read back" — az
+órai kapcsoló ugyanezt a már elfogadott korlátozást tükrözi vissza, nem egy új rést nyit: a
+`CardioActiveContent`-ben tartott `@State private var onCourt` csak azt dönti el, melyik elrendezés
+(AW19/AW20) látszik, semmilyen valódi gross-vs-playing-time számítást nem befolyásol — ehhez
+egyébként sincs külön ketyegő checkpoint a bruttó időre. A tényleges, kétirányú (óra ↔ telefon)
+szinkron **C5.7** ("GAME pályán/padon kapcsoló kétirányú szinkronja", [55 §7](55-cardio-watch-plan.md)
+W-9) dolga.
+
+**„Nincs pulzus" (AW 22, fele) lefedve, a „gyenge jel"/„BECSÜLT" fele tudatosan nem.** Az előbbi
+tisztán az óra saját `heartRateBpm` (HealthKit-szenzor, telefon-független) `nil` állapotából
+renderelhető — `CardioHeartRateRow` mindig lefoglalja a helyet (nem tűnik el a sor), "—" + "nincs
+pulzus" + szíj-tanács jelenik meg. A GPS-gyengejel/"BECSÜLT" állapot viszont **sehol** nem utazik
+natív felületre ma — a `CardioLiveMetrics` osztálynak nincs `weakSignal`-szerű mezője, és a már
+**élesben szállított** C2.10b-s iOS Live Activity kész-ha-ja sem említi ezt az állapotot. Új Dart
+mező hozzáadása túlmutatna egy "Mac"-jelölésű, natív lépésen — dokumentált, C2.10b-vel azonos
+osztályú hiányosság, nem ebben a lépésben nyitott új rés.
+
+**A `title` újrahasznosítása a fejléc-feliratra — nincs új aktivitásnév-string-tábla.** A phone már
+`activityTypeLabel(l10n, _activityType)`-et küld `title`-ként `startWorkout`-hoz
+(`cardio_session_screen.dart`), amit `WorkoutManager.activeHeaderLabel` már eddig is felolvasott —
+`HeaderChip` csak egy `.textCase(.uppercase)`-t kapott (biztonságos minden meglévő hívási helyen:
+a "STRENGTH"/"ERŐEDZÉS" már eleve nagybetűs, egy numerikus idő-string érintetlen), hogy a telefon
+"Futás" stringje a design nagybetűs fejléc-stílusát kapja, új lokalizált kulcs nélkül.
+`HeaderChip` maga is cardio-tudatos lett (ikon+szín az aktivitásból, nem mindig `"dumbbell"`/
+`primary`) — ez automatikusan javítja a cardio `ControlsPage`-et is (a 2. lapot, ld. lent), külön
+módosítás nélkül azon a fájlon.
+
+**Két lap, nem három.** `ActiveWorkoutView.body` mostantól `workoutManager.isCardio` szerint ágazik:
+cardiónak nincs `LogPage`/`AdjustPage`/`ExerciseListView`-ja (nincs mit "+1 szett"-tel logolni, nincs
+gyakorlat-lista) — `CardioActiveContent` egy 2-lapos `TabView`-t épít: `CardioMetricsPage` +
+a **változtatás nélkül újrahasznosított** `ControlsPage`. Ez utóbbi működik cardión is módosítás
+nélkül, mert `canChooseExercise` már eleve `false`-ra fut egy cardio session-ön (`activePlanExercises`
+üres, `isStandalone` false) — a "Gyakorlatok" chip magától rejtve marad.
+
+**Hat új lokalizációs kulcs** (`cardio_no_heart_rate_label`, `cardio_no_heart_rate_hint`,
+`cardio_go_to_bench_button`, `cardio_back_to_court_button`, `cardio_on_bench_header_label`,
+`cardio_game_paused_primary_label`) — szövegesen szerkesztve az `xcstrings`-be, a C5.4-ben bevált
+minta szerint (2 szóköz, `"kulcs" : érték`, alfabetikus pozíció), nem `json.dump`-pal.
+
+**A picker cardio-sorai (C5.4) változatlanul nem indítanak semmit** — a doc-kommentek frissítve,
+hogy pontosan miért: a `CardioRow` tapja **standalone** (órán indított) cardiót indítana, aminek
+saját `HKWorkoutConfiguration`-térképe és záró (`kind: 'CARDIO'`) payloadja **C5.7**-nek van
+ütemezve (W-8), nem ennek a lépésnek — a most megépült AW17–20 elrendezések kizárólag
+telefon-vezérelt session-t (a `WorkoutManager.start(configuration:)` útvonalat) szolgálnak ki, amit
+a picker sosem hív.
+
+**Ellenőrzés — natív build.** `xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk
+iphonesimulator … build` (`CODE_SIGNING_ALLOWED=NO`, tiszta `DerivedData` után) — **BUILD SUCCEEDED**,
+a `Runner`, `LifeyWidgets` és `LifeyWatch` cél mind lefordul a most módosított/bővített fájlokkal
+(`WorkoutManager.swift`, `PhoneConnector.swift`, `ActiveWorkoutView.swift`,
+`StandalonePickerView.swift`, `Localizable.xcstrings`). Élő szimulátoros/eszközös vizuális
+ellenőrzés (a három elrendezés + a gyenge-pulzus fallback + a pályán/padon kapcsoló tényleges
+kinézete valódi HealthKit-adaton) **még hátravan** — ehhez egy párosított telefon+óra
+`WatchConnectivity`-munkamenet kell, amit ez a sandbox nem tud felállítani; ugyanaz a korlát, mint
+minden korábbi natív watch-lépésnél (a "device-smoke-test következő lépés" minta).
+
+**Következő:** `C5.6` — Wear OS: `ExerciseType`/`dataTypes` térkép + ugyanazok a képernyők
+(**W 15–19**, **W 21** frame-ek, [55 §7](55-cardio-watch-plan.md), Windowson fejleszthető — ez az
+egyetlen C5-ös lépés, ami **nem** igényel Mac-et), vagy `C5.7a`/`C5.7b` — zárás-összegzés bővítés
+(zónák, táv, szintemelkedés) + standalone cardio + GAME pályán/padon kétirányú szinkron.

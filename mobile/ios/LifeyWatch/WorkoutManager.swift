@@ -47,6 +47,67 @@ struct ActiveExerciseDisplay {
   let freeFormatSets: (count: Int, totalReps: Int)?
 }
 
+/// DISTANCE/MACHINE/GAME grouping for a cardio `ActivityType` code — mirrors
+/// Dart's `ActivityFamily`/`activityFamilyFor`
+/// (mobile/lib/features/workouts/domain/activity_type.dart). The watch
+/// derives this itself from `activityType` rather than the phone sending it,
+/// the same "no activity-type dictionary of its own" choice `cardioActivityIcon`/
+/// `cardioActivityTint` (`Views/ActiveWorkoutView.swift`) already make for
+/// icons/tints — docs/cardio/55-cardio-watch-plan.md §2's table, minus the
+/// `HKWorkoutActivityType`/`locationType` columns, which only `WatchBridge`
+/// (a different target) and `startStandalone` need.
+enum CardioActivityFamily {
+  case distance
+  case machine
+  case game
+
+  init(activityType: String) {
+    switch activityType {
+    case "INDOOR_BIKE": self = .machine
+    case "BASKETBALL", "FOOTBALL", "OTHER_CARDIO": self = .game
+    default: self = .distance  // RUNNING, WALKING, HIKING — and any future/unknown code
+    }
+  }
+}
+
+/// One `WorkoutSessionState.cardio` push — `CardioLiveMetrics` in
+/// `mobile/lib/core/workout_session_notifier/workout_session_notifier_service.dart`
+/// — decoded into what the watch's own active screens need
+/// (docs/cardio/55-cardio-watch-plan.md §4.2, C5.5). `primaryLabel`/`primaryValue`/
+/// `secondaryLabel`/`secondaryValue`/`tertiaryLabel`/`tertiaryValue` are
+/// pre-formatted, pre-localized strings — exactly like the STRENGTH fields
+/// this class's siblings already carry, the watch needs no `CardioFormatter`
+/// of its own — **except** for whichever slot holds the moving/game-time
+/// duration (`ActiveWorkoutView`'s `CardioMetricsPage` decides which one by
+/// family), which is stale between phone pushes by design (`movingSecondsBase`'s
+/// own Dart doc: "hogy a natív felület magától ketyegjen, frissítés-kvóta
+/// nélkül") and is re-rendered from [movingSecondsBase]/[movingAnchorUptime]
+/// instead.
+struct CardioActiveMetrics: Equatable {
+  let primaryLabel: String
+  let primaryValue: String
+  let secondaryLabel: String?
+  let secondaryValue: String?
+  let tertiaryLabel: String?
+  let tertiaryValue: String?
+
+  /// The moving/game-time checkpoint the ticking slot counts up from — plain
+  /// relative seconds, so (unlike the Dart source's `movingSinceEpochMs`,
+  /// which this struct deliberately drops) it's safe to use regardless of
+  /// whether the watch's and phone's wall clocks agree.
+  let movingSecondsBase: Int
+
+  /// This device's own `ProcessInfo.systemUptime` at the moment this
+  /// snapshot was applied, or `nil` when paused — mirrors `restDeadlineUptime`'s
+  /// pattern exactly: converts the phone's cross-device (and therefore
+  /// clock-skew-prone) "ticking since epoch X" signal into a same-device
+  /// monotonic anchor the instant it arrives, instead of ever comparing the
+  /// phone's `movingSinceEpochMs` against this device's own wall clock (the
+  /// same reasoning `applyStateUpdate`'s doc comment already gives for the
+  /// rest timer).
+  let movingAnchorUptime: TimeInterval?
+}
+
 enum WorkoutPhase: Equatable {
   case idle
   case active
@@ -205,6 +266,34 @@ final class WorkoutManager: NSObject, ObservableObject {
   @Published private(set) var heartRateBpm: Double?
   @Published private(set) var activeCalories: Double?
   @Published private(set) var startedAt: Date?
+
+  /// `'STRENGTH'` or `'CARDIO'` — mirrors `WorkoutSessionState.kind`
+  /// (docs/cardio/55-cardio-watch-plan.md §4.1, C5.5). Only ever set by
+  /// `applyStateUpdate`'s phone-mastered path; a watch-started (standalone)
+  /// session stays `'STRENGTH'` here regardless of what `isStandalone` cardio
+  /// support C5.4 deliberately left unwired (`StandalonePickerView`'s
+  /// `CardioRow` never calls `startStandalone`).
+  @Published private(set) var sessionKind = "STRENGTH"
+  /// One of `activity_type.dart`'s `kActivityTypes` — non-nil exactly when
+  /// [sessionKind] is `'CARDIO'`, mirroring `WorkoutSessionState.activityType`.
+  @Published private(set) var cardioActivityType: String?
+  /// The session's live cardio metrics, or `nil` for a STRENGTH session (and,
+  /// briefly, for a CARDIO one before its first state sync lands). See
+  /// [CardioActiveMetrics].
+  @Published private(set) var cardioMetrics: CardioActiveMetrics?
+
+  var isCardio: Bool { sessionKind == "CARDIO" }
+  var cardioFamily: CardioActivityFamily? { cardioActivityType.map(CardioActivityFamily.init(activityType:)) }
+
+  /// The locally-ticking moving/game-time seconds for [cardioMetrics] — see
+  /// [CardioActiveMetrics.movingAnchorUptime]'s doc. Falls back to the frozen
+  /// base while paused (`movingAnchorUptime == nil`) or before any cardio
+  /// metrics have arrived.
+  func currentCardioMovingSeconds() -> Int {
+    guard let cardioMetrics else { return 0 }
+    guard let anchor = cardioMetrics.movingAnchorUptime else { return cardioMetrics.movingSecondsBase }
+    return cardioMetrics.movingSecondsBase + Int((ProcessInfo.processInfo.systemUptime - anchor).rounded(.down))
+  }
 
   /// Whether `EffortSelectorView` should be shown over `ActiveWorkoutView`
   /// right now — set by the End button, cleared once `requestEnd(rpe:)`
@@ -479,8 +568,8 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// [template] defaults to `nil` (Quick strength, F6a's original single
   /// call site unaffected); non-nil is `StandalonePickerView`'s already-read
   /// picker snapshot handed straight through — this function never itself
-  /// reads `StandaloneSessionStore.shared.templates()`, so "which template"
-  /// is decided exactly once, at the tap, not re-resolved here.
+  /// reads `StandaloneSessionStore.shared.quickStartEntries()`, so "which
+  /// template" is decided exactly once, at the tap, not re-resolved here.
   func startStandalone(template: CachedTemplate? = nil) async {
     guard phase == .idle, HKHealthStore.isHealthDataAvailable() else { return }
     guard await ensureHealthAuthorized() else { return }
@@ -977,7 +1066,10 @@ final class WorkoutManager: NSObject, ObservableObject {
     setsDoneExerciseId: String?,
     setsDonePerExercise: [Int]?,
     removedExerciseIndexes: [Int]?,
-    sessionPlan: String?
+    sessionPlan: String?,
+    kind: String?,
+    activityType: String?,
+    cardio: CardioActiveMetrics?
   ) {
     guard !isStandalone else {
       // A *different* session's state can't touch the watch's own standalone
@@ -1099,6 +1191,18 @@ final class WorkoutManager: NSObject, ObservableObject {
     // a stale one (docs/watch/48-watch-f5b-set-adjust-plan.md D-F5b.2).
     self.nextSetReps = nextSetReps
     self.nextSetWeight = nextSetWeight
+    // Always overwritten, like the rest fields above — `kind` is never
+    // actually absent on a real push (`WorkoutSessionState.toJson()` always
+    // includes it, defaulted to `'STRENGTH'` Dart-side), so `?? self.sessionKind`
+    // is purely defensive against a malformed/ancient payload, not something
+    // that fires in practice. `cardioMetrics` in particular must be able to
+    // go back to `nil` — a stale distance/heart-rate-adjacent reading left
+    // on screen after the phone stops sending it would be actively
+    // misleading (docs/cardio/59-cardio-implementation-plan.md §11's "néma
+    // hiba" class).
+    self.sessionKind = kind ?? self.sessionKind
+    self.cardioActivityType = activityType ?? self.cardioActivityType
+    self.cardioMetrics = cardio
     notifyStartedOnWatchIfNeeded()
   }
 
@@ -1625,6 +1729,9 @@ final class WorkoutManager: NSObject, ObservableObject {
     heartRateBpm = nil
     activeCalories = nil
     startedAt = nil
+    sessionKind = "STRENGTH"
+    cardioActivityType = nil
+    cardioMetrics = nil
     isStandalone = false
     isAdopted = false
     standaloneSets = []

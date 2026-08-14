@@ -1,11 +1,16 @@
 import SwiftUI
 
 /// The pre-start picker (docs/watch/44-watch-f6-standalone-plan.md §3.1,
-/// §3.3, design canvas AW 13). "Quick strength" is always first and always
-/// works with zero phone contact; below it, up to 5 synced templates from
-/// `StandaloneSessionStore` (title + exercise count, D-F6b.7) — or, with an
-/// empty/stale cache, just `standalone_empty_hint` (F6a's only variant,
-/// still the fallback here). Tapping the quick-strength card starts
+/// §3.3, design canvas AW 13; unified with cardio entries by
+/// docs/cardio/55-cardio-watch-plan.md §3, canvas AW 16 — C5.4). "Quick
+/// strength" is always first and always works with zero phone contact
+/// (D-C5.3: the pinned card stays above the ranked list, never part of it);
+/// below it, up to 8 ranked entries from `StandaloneSessionStore` — synced
+/// templates (title + exercise count, D-F6b.7) and cardio activity types
+/// (icon + title) interleaved in whatever order the phone already ranked
+/// them (§3.1: "nem talál ki saját rendezést") — or, with an empty/stale
+/// cache, just `standalone_empty_hint` (F6a's only variant, still the
+/// fallback here). Tapping the quick-strength card starts
 /// `WorkoutManager.startStandalone()` directly; this view disappears on its
 /// own once `phase` moves off `.idle` (`ContentView`'s switch re-renders),
 /// so there's no need to also flip `onBack`'s owning `showStandalonePicker`
@@ -20,6 +25,19 @@ import SwiftUI
 /// already does for Quick strength one line above it. (T4.2 originally
 /// exposed an `onTemplateTapped` callback here as a placeholder — replaced
 /// now that the real behavior is known, rather than kept for its own sake.)
+///
+/// A **cardio** row (`CardioRow`) is deliberately **display-only** — it
+/// renders with the ranked list (so the list's ordering and content are
+/// already real and correct), but doesn't start anything on tap.
+/// `ActiveWorkoutView` gained cardio-aware active screens in C5.5
+/// (AW 17–22's family layouts), but only for a *phone-mastered* session —
+/// wiring this row to actually start one needs a whole new watch-local
+/// standalone-cardio entry point (`WorkoutManager.startStandalone`'s own
+/// `HKWorkoutConfiguration` mapping, a `kind: 'CARDIO'` closing payload),
+/// which is `C5.7`'s "standalone cardio + óra-oldali indítás"
+/// (docs/cardio/55-cardio-watch-plan.md §7, W-8), not C5.4's or C5.5's.
+/// `standalone_cardio_coming_soon` marks that plainly rather than leaving a
+/// silently dead tap target.
 struct StandalonePickerView: View {
   let onBack: () -> Void
 
@@ -39,7 +57,7 @@ struct StandalonePickerView: View {
   /// screen updates on the next time it's shown, not instantly — an
   /// acceptable staleness window for a picker the user only glances at
   /// before tapping something.
-  @State private var templates: [CachedTemplate] = []
+  @State private var entries: [WatchQuickStartEntry] = []
 
   var body: some View {
     GeometryReader { geometry in
@@ -76,15 +94,27 @@ struct StandalonePickerView: View {
             Spacer(minLength: 0)
           }
           quickStrengthCard
-          if templates.isEmpty {
+          if entries.isEmpty {
             Text("standalone_empty_hint")
               .font(.caption2)
               .foregroundColor(LifeyColors.onSurfaceVariant)
               .multilineTextAlignment(.leading)
           } else {
-            ForEach(templates, id: \.templateId) { template in
-              TemplateRow(template: template, isCompact: isCompact, isDisabled: isStarting) {
-                templateTapped(template)
+            // Index-keyed, not by a natural id: a `WatchQuickStartEntry` has
+            // none of its own (a cardio row isn't even backed by a stable
+            // server id, just an activity-type code that could repeat if the
+            // phone ever ranked one twice), and the list is a point-in-time
+            // snapshot re-read on every appearance anyway (see `entries`'
+            // own doc comment) — nothing here needs SwiftUI's identity-
+            // preserving diffing across in-place updates.
+            ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
+              switch entry {
+              case .template(let template):
+                TemplateRow(template: template, isCompact: isCompact, isDisabled: isStarting) {
+                  templateTapped(template)
+                }
+              case .cardio(let activityType, let title):
+                CardioRow(activityType: activityType, title: title, isCompact: isCompact)
               }
             }
           }
@@ -95,7 +125,7 @@ struct StandalonePickerView: View {
       .frame(width: geometry.size.width, height: geometry.size.height)
       .background(LifeyColors.trueBlack)
     }
-    .onAppear { templates = StandaloneSessionStore.shared.templates() }
+    .onAppear { entries = StandaloneSessionStore.shared.quickStartEntries() }
   }
 
   private var quickStrengthCard: some View {
@@ -185,6 +215,62 @@ private struct TemplateRow: View {
     .background(LifeyColors.surface)
     .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
   }
+}
+
+/// One ranked cardio activity-type row (canvas AW 16) — an icon circle
+/// tinted per activity type (`cardioActivityIcon`/`cardioActivityTint`,
+/// `Views/ActiveWorkoutView.swift` — shared with that file's own cardio
+/// pages, C5.5), `TemplateRow`'s plain `surface` card otherwise, plus the
+/// pre-localized title and a quiet `standalone_cardio_coming_soon` line
+/// explaining why it doesn't respond to a tap yet. Not a `Button`: there is
+/// deliberately nothing to tap.
+///
+/// **Still true after C5.5** (which built the cardio-aware active screens
+/// this row's own doc used to point to): a tap here would need
+/// `WorkoutManager.startStandalone` to gain a whole new watch-local cardio
+/// entry point — its own `HKWorkoutConfiguration` mapping, a
+/// `WatchStandaloneSession` `kind: 'CARDIO'` closing payload (no sets, no
+/// exercise plan) — which is explicitly `C5.7`'s "standalone cardio + óra-
+/// oldali indítás" (docs/cardio/55-cardio-watch-plan.md §7, W-8), not this
+/// step's. C5.5 only had to make sure a *phone-mastered* cardio session
+/// (reached via `WorkoutManager.start(configuration:)`, never through this
+/// picker at all) lands somewhere real instead of the STRENGTH-shaped
+/// screens — which is what unblocked writing this doc comment's correction.
+private struct CardioRow: View {
+  let activityType: String
+  let title: String
+  let isCompact: Bool
+
+  var body: some View {
+    HStack(spacing: 13) {
+      ZStack {
+        Circle()
+          .fill(cardioActivityTint(for: activityType).opacity(0.18))
+          .frame(width: 40, height: 40)
+        Image(systemName: cardioActivityIcon(for: activityType))
+          .foregroundColor(cardioActivityTint(for: activityType))
+      }
+      VStack(alignment: .leading, spacing: 1) {
+        Text(title)
+          .font(.body)
+          .fontWeight(.bold)
+          .foregroundColor(LifeyColors.onSurface)
+          .lineLimit(1)
+          .truncationMode(.tail)
+        Text("standalone_cardio_coming_soon")
+          .font(.caption2)
+          .foregroundColor(LifeyColors.onSurfaceVariant)
+      }
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 14)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(LifeyColors.surface)
+    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
+    .opacity(0.75)
+  }
+
 }
 
 #Preview {

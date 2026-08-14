@@ -165,3 +165,73 @@ struct CachedTemplate: Codable, Equatable {
   let title: String
   let exercises: [CachedTemplateExercise]
 }
+
+/// One row of the unified, frequency-ranked quick-start list
+/// (docs/cardio/55-cardio-watch-plan.md §3.2, C5.3/C5.4) — the watch's own
+/// counterpart of Dart's `WatchQuickStartEntryPayload`
+/// (mobile/lib/features/workouts/application/watch_template_sync.dart): a
+/// synced template exactly as before (`CachedTemplate`, unchanged), or a
+/// cardio activity type with no plan behind it. Order matters and is never
+/// re-derived here — the phone already ranked the list
+/// (`rankQuickStartEntries()`, D-C5.3's "nem másol logikát, és nem talál ki
+/// saját rendezést"), so `StandaloneSessionStore`/`StandalonePickerView` both
+/// preserve whatever order they're handed.
+///
+/// Manual `Codable`, not the synthesized enum-with-associated-values form:
+/// the wire/persisted shape is a flat dict with a `type` discriminator
+/// (`"TEMPLATE"`/`"CARDIO"`), matching the Dart `toJson()` shape exactly, not
+/// Swift's own tagged-union JSON encoding.
+enum WatchQuickStartEntry: Equatable {
+  case template(CachedTemplate)
+  /// [title] is pre-localized on the phone (55-doc §3.2) — the watch needs
+  /// no activity-type dictionary of its own, same as a template's title
+  /// already was.
+  case cardio(activityType: String, title: String)
+}
+
+extension WatchQuickStartEntry: Codable {
+  private enum CodingKeys: String, CodingKey {
+    case type, templateId, title, exercises, activityType
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    switch try container.decode(String.self, forKey: .type) {
+    case "TEMPLATE":
+      let templateId = try container.decode(String.self, forKey: .templateId)
+      let title = try container.decode(String.self, forKey: .title)
+      // `exerciseCount` (a Dart-side convenience the watch never reads, since
+      // `exercises.count` is right there) is simply absent from
+      // [CodingKeys] — Codable ignores JSON keys it wasn't asked to decode.
+      let exercises =
+        try container.decodeIfPresent([CachedTemplateExercise].self, forKey: .exercises) ?? []
+      self = .template(CachedTemplate(templateId: templateId, title: title, exercises: exercises))
+    case "CARDIO":
+      let activityType = try container.decode(String.self, forKey: .activityType)
+      let title = try container.decode(String.self, forKey: .title)
+      self = .cardio(activityType: activityType, title: title)
+    default:
+      // A future entry type this build doesn't know — costs this one row,
+      // not the whole list (the caller decodes entries one at a time and
+      // `compactMap`s away failures, `PhoneConnector.applyTemplateSync`'s
+      // usual "a malformed entry costs that entry" rule).
+      throw DecodingError.dataCorruptedError(
+        forKey: .type, in: container, debugDescription: "Unknown quick-start entry type")
+    }
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    switch self {
+    case .template(let template):
+      try container.encode("TEMPLATE", forKey: .type)
+      try container.encode(template.templateId, forKey: .templateId)
+      try container.encode(template.title, forKey: .title)
+      try container.encode(template.exercises, forKey: .exercises)
+    case .cardio(let activityType, let title):
+      try container.encode("CARDIO", forKey: .type)
+      try container.encode(activityType, forKey: .activityType)
+      try container.encode(title, forKey: .title)
+    }
+  }
+}

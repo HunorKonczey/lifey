@@ -333,27 +333,71 @@ extension PhoneConnector: WCSessionDelegate {
     }
   }
 
-  /// Decodes `context["templates"]` (docs/watch/49-watch-f6b-template-sync-plan.md
-  /// §4.1, T3.2's `syncTemplates` handler) and overwrites the picker's cache.
-  /// A no-op — not an error — whenever the key is absent, which is every
-  /// context pushed before the phone's first template sync.
+  /// Decodes `context["entries"]` (docs/watch/49-watch-f6b-template-sync-plan.md
+  /// §4.1, T3.2's `syncTemplates` handler; docs/cardio/55-cardio-watch-plan.md
+  /// §3.2/C5.3 renamed the key from `templates` and added a `version` guard)
+  /// and overwrites the picker's cache. A no-op — not an error — whenever the
+  /// key is absent or `version` isn't `2`: the former is every context pushed
+  /// before the phone's first sync, the latter would be a *newer* wire shape
+  /// this build doesn't understand (the phone has only ever sent `version: 2`
+  /// since C5.3, so a mismatch means a future format, not a legacy one) —
+  /// both cases correctly leave the existing cache untouched rather than
+  /// clearing it on a payload this build can't actually parse.
   ///
   /// The array already passed through `WatchBridge`'s
   /// `sanitizedForPropertyList` before landing in `applicationContext`, so
-  /// it's guaranteed property-list-safe — round-tripping it through
-  /// `JSONSerialization` back into `Data` is the simplest way to hand it to
-  /// `JSONDecoder`, rather than hand-walking each field the way `applyState`
-  /// does for `state` (that one has no Codable type to decode into; this one
-  /// does).
+  /// each element is guaranteed property-list-safe — round-tripping it
+  /// through `JSONSerialization` back into `Data` is the simplest way to
+  /// hand it to `JSONDecoder`. Decoded **element by element**, not as one
+  /// `[WatchQuickStartEntry]` array — an unknown/malformed row (a newer
+  /// entry type, say) only costs that row, not the whole list, the same
+  /// `compactMap`-drops-the-bad-one rule `applyState`'s
+  /// `setsDonePerExercise` already follows.
   private func applyTemplateSync(_ context: [String: Any]) {
-    guard let rawTemplates = context["templates"] as? [[String: Any]] else { return }
-    guard let data = try? JSONSerialization.data(withJSONObject: rawTemplates),
-      let templates = try? JSONDecoder().decode([CachedTemplate].self, from: data)
+    guard context["version"] as? Int == 2, let rawEntries = context["entries"] as? [[String: Any]]
     else { return }
-    StandaloneSessionStore.shared.saveTemplates(templates)
+    let entries = rawEntries.compactMap { raw -> WatchQuickStartEntry? in
+      guard let data = try? JSONSerialization.data(withJSONObject: raw) else { return nil }
+      return try? JSONDecoder().decode(WatchQuickStartEntry.self, from: data)
+    }
+    StandaloneSessionStore.shared.saveQuickStartEntries(entries)
+  }
+
+  /// Decodes `state["cardio"]` into a `CardioActiveMetrics` (docs/cardio/
+  /// 55-cardio-watch-plan.md §4.1/§4.2, C5.5) — `nil` for every STRENGTH
+  /// push (the key is simply absent, `CardioLiveMetrics.toJson()`'s
+  /// `cardio?.toJson()` in `workout_session_notifier_service.dart`) and for
+  /// a malformed one (missing the required fields), never a half-built value.
+  ///
+  /// `movingAnchorUptime` is captured **here**, at decode time, from this
+  /// device's own `ProcessInfo.systemUptime` — not from the phone's
+  /// `movingSinceEpochMs`, which this function doesn't even read. See
+  /// `CardioActiveMetrics.movingAnchorUptime`'s doc for why: the phone's
+  /// epoch value is only meaningful compared against the phone's own clock,
+  /// and the two paired devices' clocks aren't guaranteed to agree.
+  private func decodeCardioMetrics(_ state: [String: Any]?) -> CardioActiveMetrics? {
+    guard let cardio = state?["cardio"] as? [String: Any],
+      let primaryLabel = cardio["primaryLabel"] as? String,
+      let primaryValue = cardio["primaryValue"] as? String,
+      let paused = cardio["paused"] as? Bool,
+      let movingSecondsBase = (cardio["movingSecondsBase"] as? NSNumber)?.intValue
+    else { return nil }
+    return CardioActiveMetrics(
+      primaryLabel: primaryLabel,
+      primaryValue: primaryValue,
+      secondaryLabel: cardio["secondaryLabel"] as? String,
+      secondaryValue: cardio["secondaryValue"] as? String,
+      tertiaryLabel: cardio["tertiaryLabel"] as? String,
+      tertiaryValue: cardio["tertiaryValue"] as? String,
+      movingSecondsBase: movingSecondsBase,
+      movingAnchorUptime: paused ? nil : ProcessInfo.processInfo.systemUptime)
   }
 
   private func applyState(sessionClientId: String, title: String?, state: [String: Any]?) {
+    // Decoded outside the `Task` below — `ProcessInfo.systemUptime` should
+    // reflect the moment this payload actually arrived, not whenever the
+    // main-actor hop happens to run.
+    let cardio = decodeCardioMetrics(state)
     Task { @MainActor in
       WorkoutManager.shared.applyStateUpdate(
         sessionClientId: sessionClientId,
@@ -385,7 +429,10 @@ extension PhoneConnector: WCSessionDelegate {
           .compactMap { ($0 as? NSNumber)?.intValue },
         // The session's own exercise list, JSON-encoded (F6c) — a string, so
         // it crosses every transport unchanged.
-        sessionPlan: state?["sessionPlan"] as? String)
+        sessionPlan: state?["sessionPlan"] as? String,
+        kind: state?["kind"] as? String,
+        activityType: state?["activityType"] as? String,
+        cardio: cardio)
     }
   }
 }
