@@ -81,26 +81,36 @@ object StandaloneSessionStore {
         prefs(context).edit().remove(KEY_ACTIVE).apply()
     }
 
-    // Template cache (docs/watch/49-watch-f6b-template-sync-plan.md §3.1, T4.3)
+    // Quick-start cache (docs/watch/49-watch-f6b-template-sync-plan.md §3.1, T4.3;
+    // docs/cardio/55-cardio-watch-plan.md §3.2, C5.3/C5.6 — templates + cardio
+    // types, unified)
 
     /** Overwrites the whole cache with the phone's latest sync — never
      * merged, since every `templateSync` already carries the complete,
      * current list (T1.3's "empty list still goes out" decision means an
      * empty array here correctly clears a stale cache too, not just skips
-     * the write). [templatesJson] is the raw `templates` JSON array as sent
-     * on the wire — stored as-is, not re-parsed into a typed model, matching
-     * this store's existing convention (unlike iOS's `CachedTemplate`,
-     * Android never introduced a typed model for watch↔phone messages). */
-    fun saveTemplates(context: Context, templatesJson: String) {
-        prefs(context).edit().putString(KEY_TEMPLATES, templatesJson).apply()
+     * the write). [entriesJson] is the raw `entries` JSON array as sent on
+     * the wire (`{type: "TEMPLATE", ...}` / `{type: "CARDIO", ...}` rows,
+     * docs/cardio/55-cardio-watch-plan.md §3.2) — stored as-is under the same
+     * key `saveTemplates`/`templates` used pre-C5.3, not re-parsed into a
+     * typed model, matching this store's existing convention (unlike iOS's
+     * `WatchQuickStartEntry`, Android never introduced a typed model for
+     * watch↔phone messages). A stale pre-C5.3 `templates`-shaped cache file
+     * simply isn't read from this key any more — [entries] starts fresh from
+     * whatever the next sync writes. */
+    fun saveEntries(context: Context, entriesJson: String) {
+        prefs(context).edit().putString(KEY_TEMPLATES, entriesJson).apply()
     }
 
     /** The picker's data source — empty if nothing was ever synced, or the
      * cached JSON failed to parse (a corrupt write, or a future app
      * version's incompatible shape). Never throws: the picker's F6a
      * fallback (just the "Quick strength" card) already handles "nothing to
-     * show" correctly. */
-    fun templates(context: Context): List<JSONObject> {
+     * show" correctly. Each row is read with `opt*` for its `"type"`
+     * discriminator (`"TEMPLATE"`/`"CARDIO"`) at the call site
+     * (`StandalonePickerScreen`), same as every other JSON row this app
+     * hands around. */
+    fun entries(context: Context): List<JSONObject> {
         val raw = prefs(context).getString(KEY_TEMPLATES, null) ?: return emptyList()
         return try {
             val array = JSONArray(raw)

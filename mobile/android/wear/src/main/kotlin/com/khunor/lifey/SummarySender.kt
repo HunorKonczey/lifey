@@ -19,16 +19,23 @@ object SummarySender {
     private const val TAG = "LifeySummarySender"
     private const val MESSAGE_PATH_PREFIX = "/lifey/watch"
 
+    /** [cardio] (docs/cardio/55-cardio-watch-plan.md §4.3, C5.7a) — the
+     * watch's own closing distance/elevation measurement for a
+     * **phone-mastered** cardio session, `null` for STRENGTH and for a
+     * cardio session Health Services reported nothing extra for (see
+     * `ExerciseService.cardioSummaryJson`'s own doc). */
     suspend fun sendSummary(
         context: Context,
         sessionClientId: String,
         activeCalories: Double?,
         averageHeartRate: Double?,
+        cardio: JSONObject? = null,
     ) {
         val payload = JSONObject().apply {
             put("sessionClientId", sessionClientId)
             putOpt("activeCalories", activeCalories)
             putOpt("averageHeartRate", averageHeartRate)
+            if (cardio != null) put("cardio", cardio)
         }
         send(context, "$MESSAGE_PATH_PREFIX/summary", payload)
     }

@@ -67,4 +67,21 @@ object LifeyColors {
      * no chip/background of its own). Mirrors iOS's `LifeyColors
      * .standaloneIndicator`, added there first (S11). */
     val standaloneIndicator = Color(0xFF777264)
+
+    // 2.6 Cardio activity-type accents (docs/cardio/55-cardio-watch-plan.md §2,
+    // picker rows + active screens — C5.6) — the same hex the mobile app's
+    // `MetricColors` uses for the matching activity, mirrors iOS's identical
+    // "Cardio activity-type accents" LifeyColors section. `RUNNING` reuses
+    // `calories` (`0xE0915A` on both), and `HIKING` reuses `tertiary`
+    // (`0x6E9A6A`) rather than duplicating the same hex under a second name —
+    // only the three colors this object didn't already have get their own
+    // constant.
+    /** `WALKING` — mirrors mobile's `MetricColors.steps`. */
+    val cardioWalking = Color(0xFFB08AC8)
+    /** `INDOOR_BIKE` — mirrors mobile's `MetricColors.carbs`. */
+    val cardioIndoorBike = Color(0xFFD8B35A)
+    /** `BASKETBALL` — mirrors mobile's `MetricColors.fat`. */
+    val cardioBasketball = Color(0xFF8E8EC4)
+    /** `FOOTBALL` — mirrors mobile's `MetricColors.water`. */
+    val cardioFootball = Color(0xFF6FA8C4)
 }

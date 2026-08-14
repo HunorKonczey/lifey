@@ -17,6 +17,7 @@ class WatchWorkoutSummary {
     this.activeCalories,
     this.averageHeartRate,
     this.healthWorkoutId,
+    this.cardio,
   });
 
   final String sessionClientId;
@@ -24,11 +25,24 @@ class WatchWorkoutSummary {
   final double? averageHeartRate;
   final String? healthWorkoutId;
 
+  /// The watch's own closing cardio measurement for a **phone-mastered**
+  /// session — distance/elevation, when the watch's exercise config
+  /// requested them (docs/cardio/55-cardio-watch-plan.md §4.3, C5.7a). Null
+  /// for a STRENGTH summary, and for a cardio one from a watch build that
+  /// predates this field. `WorkoutResumePrompt` merges this into the
+  /// already-persisted session via `CardioMetrics.mergedWithWatchMeasurement`
+  /// — never blindly replaces it, since a manual/measured value on the phone
+  /// always wins ([51 R8](../../../../docs/cardio/51-cardio-overview-plan.md)).
+  final CardioMetrics? cardio;
+
   factory WatchWorkoutSummary.fromJson(Map<Object?, Object?> json) => WatchWorkoutSummary(
         sessionClientId: json['sessionClientId'] as String,
         activeCalories: (json['activeCalories'] as num?)?.toDouble(),
         averageHeartRate: (json['averageHeartRate'] as num?)?.toDouble(),
         healthWorkoutId: json['healthWorkoutId'] as String?,
+        cardio: json['cardio'] == null
+            ? null
+            : CardioMetrics.fromJson(Map<Object?, Object?>.from(json['cardio'] as Map)),
       );
 }
 

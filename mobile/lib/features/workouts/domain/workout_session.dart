@@ -125,6 +125,61 @@ class CardioMetrics {
         routePolyline: json['routePolyline'] as String?,
         routePointCount: (json['routePointCount'] as num?)?.toInt(),
       );
+
+  /// Fills in [fromWatch]'s watch-measured fields for whichever ones this
+  /// session left null — never overwrites a value already here
+  /// (docs/cardio/51-cardio-overview-plan.md R8: "a kézi érték mindig
+  /// nyer"; docs/cardio/55-cardio-watch-plan.md §4.3: "csak akkor írják
+  /// felül, ha a telefonnak nincs saját mérése"). Used by
+  /// `WorkoutResumePrompt` to merge a `WatchWorkoutSummary.cardio` snapshot
+  /// into an already-persisted phone-mastered session's own `cardio_details`
+  /// once the watch's session closes.
+  ///
+  /// A plain `existing ?? fromWatch` per field — safe and correct even for
+  /// fields no sender populates yet (heart-rate zones: no watch build
+  /// computes these today, since the zone *boundaries* themselves aren't a
+  /// concept this app defines anywhere yet, watch-side or otherwise — a
+  /// separate, unscoped product decision, not something to invent here).
+  /// `fromWatch` simply carries `null` for those, so the merge is a no-op
+  /// for them until a real sender exists — the same "receiver ready before
+  /// sender" shape this whole cardio watch integration has followed
+  /// throughout (docs/cardio/55-cardio-watch-plan.md D-C5.4).
+  ///
+  /// [distanceSource] is the one field with real provenance semantics: it's
+  /// only ever set to `'DEVICE'` when the watch's distance is what actually
+  /// *filled* a previously-empty value — a manual/measured distance already
+  /// on this session keeps its own source tag untouched, distance and all.
+  CardioMetrics mergedWithWatchMeasurement(CardioMetrics fromWatch) => CardioMetrics(
+        distanceMeters: distanceMeters ?? fromWatch.distanceMeters,
+        distanceSource: distanceMeters != null || fromWatch.distanceMeters == null
+            ? distanceSource
+            : 'DEVICE',
+        elevationGainMeters: elevationGainMeters ?? fromWatch.elevationGainMeters,
+        elevationLossMeters: elevationLossMeters ?? fromWatch.elevationLossMeters,
+        maxAltitudeMeters: maxAltitudeMeters ?? fromWatch.maxAltitudeMeters,
+        steps: steps ?? fromWatch.steps,
+        avgCadence: avgCadence ?? fromWatch.avgCadence,
+        maxCadence: maxCadence ?? fromWatch.maxCadence,
+        avgWatts: avgWatts ?? fromWatch.avgWatts,
+        maxWatts: maxWatts ?? fromWatch.maxWatts,
+        resistanceLevel: resistanceLevel ?? fromWatch.resistanceLevel,
+        deviceCalories: deviceCalories ?? fromWatch.deviceCalories,
+        maxHeartRate: maxHeartRate ?? fromWatch.maxHeartRate,
+        hrZone1Seconds: hrZone1Seconds ?? fromWatch.hrZone1Seconds,
+        hrZone2Seconds: hrZone2Seconds ?? fromWatch.hrZone2Seconds,
+        hrZone3Seconds: hrZone3Seconds ?? fromWatch.hrZone3Seconds,
+        hrZone4Seconds: hrZone4Seconds ?? fromWatch.hrZone4Seconds,
+        hrZone5Seconds: hrZone5Seconds ?? fromWatch.hrZone5Seconds,
+        intensity: intensity ?? fromWatch.intensity,
+        venue: venue ?? fromWatch.venue,
+        gameFormat: gameFormat ?? fromWatch.gameFormat,
+        scorePoints: scorePoints ?? fromWatch.scorePoints,
+        scoreAssists: scoreAssists ?? fromWatch.scoreAssists,
+        scoreRebounds: scoreRebounds ?? fromWatch.scoreRebounds,
+        caloriesSource: caloriesSource ?? fromWatch.caloriesSource,
+        routePolyline: routePolyline ?? fromWatch.routePolyline,
+        routePointCount: routePointCount ?? fromWatch.routePointCount,
+      );
 }
 
 /// One per-km/lap split for a DISTANCE-family cardio session

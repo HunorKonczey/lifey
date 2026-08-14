@@ -493,6 +493,14 @@ class WorkoutSessionRepository {
     Value<double?> activeCalories = const Value.absent(),
     Value<double?> averageHeartRate = const Value.absent(),
     Value<String?> healthWorkoutId = const Value.absent(),
+    // docs/cardio/55-cardio-watch-plan.md §4.3, C5.7a — the caller (`WorkoutResumePrompt`)
+    // already merged this with the session's own existing `cardio` via
+    // `CardioMetrics.mergedWithWatchMeasurement`, so passing it straight
+    // through to `update()`'s wholesale-replace `cardio` param is correct
+    // here, unlike re-reading `plannedRows`/`setRows` below (which this
+    // method owns re-fetching itself, since those never need merging against
+    // watch data).
+    Value<CardioMetrics?> cardio = const Value.absent(),
   }) async {
     final row = await (_db.select(_db.workoutSessions)
           ..where((t) => t.clientId.equals(clientId)))
@@ -525,6 +533,7 @@ class WorkoutSessionRepository {
       activeCalories: activeCalories,
       averageHeartRate: averageHeartRate,
       healthWorkoutId: healthWorkoutId,
+      cardio: cardio,
     );
   }
 

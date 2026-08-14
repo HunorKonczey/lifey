@@ -1,5 +1,6 @@
 package com.khunor.lifey
 
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.google.android.gms.wearable.DataEvent
@@ -58,7 +59,27 @@ class PhoneListenerService : WearableListenerService() {
                     }
                     return
                 }
-                ContextCompat.startForegroundService(this, ExerciseService.startIntent(this, sessionClientId))
+                // [activityType] is `WatchBridge.kt`'s (phone-side) C5.2/C5.6
+                // addition, top-level in this same message JSON — unlike
+                // iOS's `HKHealthStore.startWatchApp(with:)`, there's no
+                // separate phone→watch "configure the exercise" call on Wear
+                // OS, so `ExerciseService.buildExerciseConfig` has to learn
+                // this from the very message that starts it (docs/cardio/
+                // 55-cardio-watch-plan.md §2, C5.6). Null for every
+                // pre-cardio (STRENGTH) start, which `buildExerciseConfig`
+                // already maps to the original hardcoded STRENGTH_TRAINING
+                // config. `venue` (the message's other C5.2 field) isn't read
+                // here — see `buildExerciseConfig`'s own doc for why Health
+                // Services has nothing to map it onto.
+                val activityType = try {
+                    JSONObject(String(messageEvent.data)).optString("activityType").ifEmpty { null }
+                } catch (e: Exception) {
+                    null
+                }
+                ContextCompat.startForegroundService(
+                    this,
+                    ExerciseService.startIntent(this, sessionClientId, activityType),
+                )
             }
             "$MESSAGE_PATH_PREFIX/state" -> {
                 // No explicit standalone guard needed here — onStateSynced
@@ -180,16 +201,28 @@ class PhoneListenerService : WearableListenerService() {
 
     /**
      * Decodes `WatchBridge.kt`'s `templateSyncMessagePayload()`
-     * (docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T3.3) and
-     * overwrites the picker's cache. No guard-ordering hazard here unlike
-     * iOS's `applyContext` (T4.1's fix, D-F6b.2) — this is its own message
-     * path, entirely independent of the state-sync branches above (D-F6b.3).
+     * (docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T3.3; wire shape
+     * bumped to the unified `entries` list by docs/cardio/
+     * 55-cardio-watch-plan.md §3.2/C5.3) and overwrites the picker's cache.
+     * No guard-ordering hazard here unlike iOS's `applyContext` (T4.1's fix,
+     * D-F6b.2) — this is its own message path, entirely independent of the
+     * state-sync branches above (D-F6b.3).
+     *
+     * `entries` replaces `templates` — C5.3's Dart side has sent
+     * `{version: 2, entries: [...]}` since then, never `templates`, which
+     * silently broke this handler until this fix: `optJSONArray("templates")`
+     * always returned `null` → the empty-array fallback → every sync since
+     * C5.3 quietly wrote an empty cache. `version` is read but not gated on
+     * here (unlike iOS's `context["version"] == 2` guard) — this handler
+     * already tolerates whatever shape `entries` turns out to hold, one row
+     * at a time, at the picker's own read site (`StandalonePickerScreen`),
+     * matching this app's existing "raw JSON, `opt*` everywhere" convention.
      */
     private fun applyTemplateSyncMessage(data: ByteArray) {
         try {
             val json = JSONObject(String(data))
-            val templates = json.optJSONArray("templates") ?: JSONArray()
-            StandaloneSessionStore.saveTemplates(this, templates.toString())
+            val entries = json.optJSONArray("entries") ?: JSONArray()
+            StandaloneSessionStore.saveEntries(this, entries.toString())
         } catch (e: Exception) {
             Log.w(TAG, "applyTemplateSyncMessage failed to parse payload", e)
         }
@@ -198,14 +231,14 @@ class PhoneListenerService : WearableListenerService() {
     /**
      * The reconnect-fallback counterpart of [applyTemplateSyncMessage] —
      * decodes `WatchBridge.kt`'s [pushTemplates] `DataItem` ([TEMPLATES_PATH],
-     * D-F6b.3). `templatesJson` already arrives as a JSON array string (the
+     * D-F6b.3). `entriesJson` already arrives as a JSON array string (the
      * `DataMap` has no native array-of-maps type — see `WatchBridge.kt`'s own
      * doc comment on this), so it's stored as-is, same as the message path.
      */
     private fun applyTemplateSyncDataItem(dataItem: DataItem) {
         val map = DataMapItem.fromDataItem(dataItem).dataMap
-        val templatesJson = map.getString("templatesJson") ?: return
-        StandaloneSessionStore.saveTemplates(this, templatesJson)
+        val entriesJson = map.getString("entriesJson") ?: return
+        StandaloneSessionStore.saveEntries(this, entriesJson)
     }
 
     /**
@@ -225,6 +258,9 @@ class PhoneListenerService : WearableListenerService() {
             val sessionClientId = json.optString("sessionClientId").ifEmpty { null } ?: return null
             val state = json.optJSONObject("state")
             SessionStateHolder.onStateSynced(
+                kind = state?.optString("kind")?.ifEmpty { null },
+                cardioActivityType = state?.optString("activityType")?.ifEmpty { null },
+                cardioMetrics = decodeCardioMetrics(state?.optJSONObject("cardio")),
                 sessionClientId = sessionClientId,
                 title = json.optString("title").ifEmpty { null },
                 exerciseName = state?.optString("exerciseName")?.ifEmpty { null },
@@ -269,6 +305,40 @@ class PhoneListenerService : WearableListenerService() {
         }
     }
 
+    /**
+     * Decodes `state["cardio"]` into a [CardioActiveMetrics] (docs/cardio/
+     * 55-cardio-watch-plan.md §4.1/§4.2, C5.6) — `null` for every STRENGTH
+     * push (the key is simply absent, `CardioLiveMetrics.toJson()`'s
+     * `cardio?.toJson()` in `workout_session_notifier_service.dart`) and for
+     * a malformed one (missing the required fields), never a half-built
+     * value.
+     *
+     * [CardioActiveMetrics.movingAnchorElapsedRealtimeMs] is captured
+     * **here**, at decode time, from this device's own
+     * `SystemClock.elapsedRealtime()` — not from the phone's
+     * `movingSinceEpochMs`, which this function doesn't even read. See that
+     * property's doc for why: the phone's epoch value is only meaningful
+     * compared against the phone's own clock, and the two paired devices'
+     * clocks aren't guaranteed to agree.
+     */
+    private fun decodeCardioMetrics(cardio: JSONObject?): CardioActiveMetrics? {
+        if (cardio == null || !cardio.has("primaryLabel") || !cardio.has("primaryValue")) return null
+        return CardioActiveMetrics(
+            primaryLabel = cardio.optString("primaryLabel"),
+            primaryValue = cardio.optString("primaryValue"),
+            secondaryLabel = cardio.optString("secondaryLabel").ifEmpty { null },
+            secondaryValue = cardio.optString("secondaryValue").ifEmpty { null },
+            tertiaryLabel = cardio.optString("tertiaryLabel").ifEmpty { null },
+            tertiaryValue = cardio.optString("tertiaryValue").ifEmpty { null },
+            movingSecondsBase = cardio.optInt("movingSecondsBase"),
+            movingAnchorElapsedRealtimeMs = if (cardio.optBoolean("paused")) {
+                null
+            } else {
+                SystemClock.elapsedRealtime()
+            },
+        )
+    }
+
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         Log.d(TAG, "onDataChanged: ${dataEvents.count} event(s)")
         for (event in dataEvents) {
@@ -287,9 +357,23 @@ class PhoneListenerService : WearableListenerService() {
             val map = DataMapItem.fromDataItem(event.dataItem).dataMap
             val sessionClientId = map.getString("sessionClientId") ?: continue
             val state = map.getDataMap("state")
+            // `cardio` travels as a JSON string inside `state` on this
+            // DataItem path (`WatchBridge.kt`'s `toDataMap()` — `DataMap` has
+            // no nested-map type of its own), unlike `applyStateMessage`'s
+            // plain-JSON `state.optJSONObject("cardio")`.
+            val cardioJson = state?.getString("cardio")?.let {
+                try {
+                    JSONObject(it)
+                } catch (e: Exception) {
+                    null
+                }
+            }
             SessionStateHolder.onStateSynced(
                 sessionClientId = sessionClientId,
                 title = map.getString("title"),
+                kind = state?.getString("kind"),
+                cardioActivityType = state?.getString("activityType"),
+                cardioMetrics = decodeCardioMetrics(cardioJson),
                 exerciseName = state?.getString("exerciseName"),
                 setsDone = state?.takeIf { it.containsKey("setsDone") }?.getInt("setsDone"),
                 setsTotal = state?.takeIf { it.containsKey("setsTotal") }?.getInt("setsTotal"),

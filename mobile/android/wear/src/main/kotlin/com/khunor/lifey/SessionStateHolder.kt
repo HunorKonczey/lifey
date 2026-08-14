@@ -20,6 +20,61 @@ import kotlinx.coroutines.flow.update
  */
 enum class SessionPhase { IDLE, ACTIVE, SUMMARY, ERROR }
 
+/**
+ * DISTANCE/MACHINE/GAME grouping for a cardio `ActivityType` code — mirrors
+ * Dart's `ActivityFamily`/`activityFamilyFor`
+ * (mobile/lib/features/workouts/domain/activity_type.dart). The watch
+ * derives this itself from `activityType` rather than the phone sending it,
+ * the same "no activity-type dictionary of its own" choice the cardio
+ * icon/tint maps (`ui/ActiveWorkoutScreen.kt`'s `cardioActivityIcon`/
+ * `cardioActivityTint`) already make — docs/cardio/55-cardio-watch-plan.md
+ * §2's table, minus the `ExerciseType`/`dataTypes` columns, which only
+ * `ExerciseService` needs.
+ */
+enum class CardioActivityFamily { DISTANCE, MACHINE, GAME }
+
+fun cardioActivityFamily(activityType: String): CardioActivityFamily = when (activityType) {
+    "INDOOR_BIKE" -> CardioActivityFamily.MACHINE
+    "BASKETBALL", "FOOTBALL", "OTHER_CARDIO" -> CardioActivityFamily.GAME
+    else -> CardioActivityFamily.DISTANCE // RUNNING, WALKING, HIKING — and any future/unknown code
+}
+
+/**
+ * One `WorkoutSessionState.cardio` push — `CardioLiveMetrics` in
+ * `mobile/lib/core/workout_session_notifier/workout_session_notifier_service.dart`
+ * — decoded into what the watch's own active screens need
+ * (docs/cardio/55-cardio-watch-plan.md §4.2, C5.6). `primaryLabel`/`primaryValue`/
+ * `secondaryLabel`/`secondaryValue`/`tertiaryLabel`/`tertiaryValue` are
+ * pre-formatted, pre-localized strings — the watch needs no `CardioFormatter`
+ * of its own — **except** for whichever slot holds the moving/game-time
+ * duration (`ui/ActiveWorkoutScreen.kt`'s `CardioMetricsPage` decides which
+ * one by family), which is stale between phone pushes by design
+ * (`movingSecondsBase`'s own Dart doc: "hogy a natív felület magától
+ * ketyegjen, frissítés-kvóta nélkül") and is re-rendered from
+ * [movingSecondsBase]/[movingAnchorElapsedRealtimeMs] instead.
+ */
+data class CardioActiveMetrics(
+    val primaryLabel: String,
+    val primaryValue: String,
+    val secondaryLabel: String? = null,
+    val secondaryValue: String? = null,
+    val tertiaryLabel: String? = null,
+    val tertiaryValue: String? = null,
+    /** The moving/game-time checkpoint the ticking slot counts up from —
+     * plain relative seconds, so (unlike the Dart source's `movingSinceEpochMs`,
+     * which this class deliberately drops) it's safe to use directly
+     * regardless of whether the watch's and phone's wall clocks agree. */
+    val movingSecondsBase: Int = 0,
+    /** This device's own `SystemClock.elapsedRealtime()` at the moment this
+     * snapshot was applied, or `null` when paused — mirrors
+     * [SessionMetadata.restDeadlineElapsedRealtimeMs]'s pattern exactly:
+     * converts the phone's cross-device (and therefore clock-skew-prone)
+     * "ticking since epoch X" signal into a same-device monotonic anchor the
+     * instant it arrives, instead of ever comparing the phone's
+     * `movingSinceEpochMs` against this device's own wall clock. */
+    val movingAnchorElapsedRealtimeMs: Long? = null,
+)
+
 /** D-F6.8 — no reps input on the watch yet in F6a; every locally logged
  * standalone set uses this fixed value, the user corrects it on the phone
  * later. Carried per-set on the wire already so a future watch-side stepper
@@ -357,7 +412,25 @@ data class SessionMetadata(
      * needs the session's own plan as the index space (docs/watch/
      * 50-watch-f6c-session-plan-sync-plan.md). */
     val removedExerciseIndexes: Set<Int> = emptySet(),
+    /** `"STRENGTH"` or `"CARDIO"` — mirrors `WorkoutSessionState.kind`
+     * (docs/cardio/55-cardio-watch-plan.md §4.1, C5.6). Only ever set by
+     * [SessionStateHolder.onStateSynced]'s phone-mastered path; a
+     * watch-started (standalone) session stays `"STRENGTH"` here regardless
+     * — standalone cardio support is `C5.7`'s "óra-oldali indítás"
+     * (docs/cardio/55-cardio-watch-plan.md §7, W-8), not this step's. */
+    val kind: String = "STRENGTH",
+    /** One of `activity_type.dart`'s `kActivityTypes` — non-null exactly
+     * when [kind] is `"CARDIO"`, mirroring `WorkoutSessionState.activityType`. */
+    val cardioActivityType: String? = null,
+    /** The session's live cardio metrics, or `null` for a STRENGTH session
+     * (and, briefly, for a CARDIO one before its first state sync lands).
+     * See [CardioActiveMetrics]. */
+    val cardioMetrics: CardioActiveMetrics? = null,
 ) {
+    val isCardio: Boolean get() = kind == "CARDIO"
+    val cardioFamily: CardioActivityFamily? get() = cardioActivityType?.let(::cardioActivityFamily)
+
+
     /** [sessionClientId] doubles as the standalone session's own id during
      * standalone mode — reused rather than a separate `standaloneSessionId`
      * field (mirrors iOS's `WorkoutManager.sessionClientId`), so every
@@ -682,6 +755,9 @@ object SessionStateHolder {
         removedExerciseIndexes: List<Int>? = null,
         setsDoneExerciseId: String? = null,
         sessionPlan: List<StandaloneTemplateExercise>? = null,
+        kind: String? = null,
+        cardioActivityType: String? = null,
+        cardioMetrics: CardioActiveMetrics? = null,
     ) {
         if (_metadata.value.isStandalone) {
             // A *different* session's state can't touch the watch's own
@@ -804,6 +880,19 @@ object SessionStateHolder {
                 restTotalSeconds = restTotalSeconds,
                 nextSetReps = nextSetReps,
                 nextSetWeight = nextSetWeight,
+                // Always overwritten, like the rest fields above — `kind` is
+                // never actually absent on a real push
+                // (`WorkoutSessionState.toJson()` always includes it,
+                // defaulted to `"STRENGTH"` Dart-side), so `?: current.kind`
+                // is purely defensive against a malformed/ancient payload.
+                // `cardioMetrics` in particular must be able to go back to
+                // `null` — a stale distance/heart-rate-adjacent reading left
+                // on screen after the phone stops sending it would be
+                // actively misleading (docs/cardio/
+                // 59-cardio-implementation-plan.md §11's "néma hiba" class).
+                kind = kind ?: current.kind,
+                cardioActivityType = cardioActivityType ?: current.cardioActivityType,
+                cardioMetrics = cardioMetrics,
             )
         }
     }
@@ -821,16 +910,28 @@ object SessionStateHolder {
      * sites unaffected) — non-null is `ExerciseService`'s already-decoded
      * snapshot of whatever the picker row carried (docs/watch/
      * 49-watch-f6b-template-sync-plan.md §3.3, T6); this function never
-     * itself touches `StandaloneSessionStore`.
+     * itself touches `StandaloneSessionStore`. [activityType] (docs/cardio/
+     * 55-cardio-watch-plan.md §5/§7 W-8, C5.7a) is the cardio counterpart —
+     * mutually exclusive with [template] (a cardio standalone session has no
+     * plan) — and is what makes `ActiveWorkoutScreen`'s `metadata.isCardio`
+     * dispatch route this session to `CardioActiveScreen` like any other
+     * cardio session.
      */
     fun onStandaloneStarted(
         sessionClientId: String,
         startedAtElapsedRealtimeMs: Long,
         template: StandaloneTemplate? = null,
+        activityType: String? = null,
     ) {
         _phase.value = SessionPhase.ACTIVE
         _metadata.update {
-            SessionMetadata(sessionClientId = sessionClientId, isStandalone = true, standaloneTemplate = template)
+            SessionMetadata(
+                sessionClientId = sessionClientId,
+                isStandalone = true,
+                standaloneTemplate = template,
+                kind = if (activityType != null) "CARDIO" else "STRENGTH",
+                cardioActivityType = activityType,
+            )
         }
         _liveMetrics.update { it.copy(startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs) }
     }
@@ -859,6 +960,9 @@ object SessionStateHolder {
         exerciseIndex: Int,
         sets: List<StandaloneSet>,
         sessionPlan: List<StandaloneTemplateExercise>? = null,
+        // docs/cardio/55-cardio-watch-plan.md §5/§7 W-8, C5.7a — see
+        // [onStandaloneStarted]'s identical parameter.
+        activityType: String? = null,
     ) {
         if (_phase.value != SessionPhase.IDLE) return
         _phase.value = SessionPhase.ACTIVE
@@ -870,6 +974,8 @@ object SessionStateHolder {
                 standaloneExerciseIndex = exerciseIndex,
                 standaloneSets = sets,
                 sessionPlanExercises = sessionPlan,
+                kind = if (activityType != null) "CARDIO" else "STRENGTH",
+                cardioActivityType = activityType,
             )
         }
         _liveMetrics.update { it.copy(startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs) }

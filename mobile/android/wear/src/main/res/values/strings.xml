@@ -77,4 +77,12 @@
     <string name="standalone_exercise_list_title">Gyakorlatok</string>
     <string name="standalone_exercise_sets_done">%1$d szett</string>
     <string name="standalone_sync_retry_a11y">Edzés szinkronizálása a telefonra</string>
+
+    <!-- Cardio (docs/cardio/55-cardio-watch-plan.md §3/§4, C5.6) -->
+    <string name="cardio_no_heart_rate_label">nincs pulzus</string>
+    <string name="cardio_no_heart_rate_hint">Lazább a szíj? A mérés fut tovább, az idő pontos.</string>
+    <string name="cardio_go_to_bench_button">Padra</string>
+    <string name="cardio_back_to_court_button">Vissza a pályára</string>
+    <string name="cardio_on_bench_header_label">PADON</string>
+    <string name="cardio_game_paused_primary_label">JÁTÉKIDŐ — ÁLL</string>
 </resources>

@@ -210,17 +210,25 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
   /// Applies a watch-workout summary (docs/40-watch-app-plan.md §6.3) to
   /// [clientId] without disturbing rpe/feedbackNote or the session's
   /// exercises/sets — see [WorkoutSessionRepository.enrichHealthMetrics].
+  ///
+  /// [cardio], when present (docs/cardio/55-cardio-watch-plan.md §4.3,
+  /// C5.7a), must already be the caller's fully **merged** result
+  /// (`CardioMetrics.mergedWithWatchMeasurement`) — this method (like
+  /// `enrichHealthMetrics`/`update` underneath it) writes whatever `cardio`
+  /// it's given as a wholesale replace, it does no merging of its own.
   Future<void> enrichFromWatch(
     String clientId, {
     required double? activeCalories,
     required double? averageHeartRate,
     required String? healthWorkoutId,
+    CardioMetrics? cardio,
   }) {
     return _repo.enrichHealthMetrics(
       clientId,
       activeCalories: Value(activeCalories),
       averageHeartRate: Value(averageHeartRate),
       healthWorkoutId: Value(healthWorkoutId),
+      cardio: cardio == null ? const Value.absent() : Value(cardio),
     );
   }
 

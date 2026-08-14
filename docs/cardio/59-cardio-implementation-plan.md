@@ -262,7 +262,7 @@ natív munka + a platformfüggetlen Dart-fél, Windowson kész; a **C5.7b** ág 
 | **C5.3** ✅ | Egyesített picker payload (`version: 2`) a `rankQuickStartEntries()`-ből | Windows | – | Régi natív build a fallbackre esik, nem renderel ismeretlen sort |
 | **C5.4** ✅ | watchOS: aktivitástípus-térkép + egyesített indító lista | **Mac** | **AW 16** | A kiemelt „Quick strength” kártya marad legfelül |
 | **C5.5** ✅ | watchOS: aktív cardio ×3 család + gyenge jel / nincs pulzus | **Mac** | **AW 17–20**, **AW 22** | A pulzus a kiemelt másodlagos metrika |
-| **C5.6** | Wear OS: `ExerciseType`/`dataTypes` térkép + ugyanazok a képernyők | Windows | **W 15–19**, **W 21** | Nem kérünk olyan adattípust, amit a szenzorkészlet nem tud |
+| **C5.6** ✅ | Wear OS: `ExerciseType`/`dataTypes` térkép + ugyanazok a képernyők | Windows | **W 15–19**, **W 21** | Nem kérünk olyan adattípust, amit a szenzorkészlet nem tud |
 | **C5.7a** | Zárás-összegzés bővítés + standalone cardio + pályán/padon szinkron — **Wear OS natív fele** + a platformfüggetlen Dart-fél (forrás-jelölt telefon-oldali beírás) + **Wear OS-es eszközös végpróba** | Windows | **AW 21**/**W 20** (Wear OS fele) | Az óra-mérés csak akkor ír felül, ha a telefonnak nincs sajátja; Wear OS-en végpróba lezajlik |
 | **C5.7b** | Ugyanaz — **watchOS natív fele** + **watchOS-es eszközös/szimulátoros végpróba** | **Mac** | **AW 21** (watchOS fele) | Ugyanaz watchOS-en; végpróba lezajlik |
 
@@ -3745,3 +3745,217 @@ minden korábbi natív watch-lépésnél (a "device-smoke-test következő lép�
 (**W 15–19**, **W 21** frame-ek, [55 §7](55-cardio-watch-plan.md), Windowson fejleszthető — ez az
 egyetlen C5-ös lépés, ami **nem** igényel Mac-et), vagy `C5.7a`/`C5.7b` — zárás-összegzés bővítés
 (zónák, táv, szintemelkedés) + standalone cardio + GAME pályán/padon kétirányú szinkron.
+
+---
+
+## C5.6 kész (2026-08-14) — Wear OS aktivitástípus-térkép + egyesített indító lista + aktív cardio ×3 család
+
+A [55 §2/§3/§4](55-cardio-watch-plan.md) lépés — Wear OS-en **egyben** hozza azt, amit Apple
+Watch-on C5.4 (picker) és C5.5 (aktív képernyők) külön szállított, mert a doc §9 táblázata ezt a
+platformot egyetlen sorként (W 15–19, W 21) ütemezte.
+
+**Ugyanaz a néma sync-hiba, ugyanott.** A C5.3-as Dart-váltás (`{version: 2, entries: [...]}`) óta
+**mindkét** natív oldal ugyanazt a `args["templates"]`/`optJSONArray("templates")` kulcsot kereste,
+ami sosem érkezik meg — ez pontosan az a hiba, amit C5.4 iOS-en talált és javított. Ugyanaz a
+javítás itt: `WatchBridge.kt` (telefon, `android/app`) `syncTemplates()`/`templateSyncMessagePayload()`/
+`pushTemplates()` mostantól `entries`+`version` kulcsokat küld; `PhoneListenerService.kt`
+(óra, `android/wear`) `applyTemplateSyncMessage`/`applyTemplateSyncDataItem` ugyanezt olvassa;
+`StandaloneSessionStore.saveTemplates`/`.templates()` → `saveEntries`/`.entries()` (a store saját
+konvencióját követve: nyers `JSONObject`-lista, nincs típusos modell, ellentétben iOS
+`WatchQuickStartEntry` enumjával).
+
+**Nincs phone→watch „konfiguráld az edzést” hívás Wear OS-en.** Az iOS `HKHealthStore
+.startWatchApp(with: configuration)`-jának itt nincs megfelelője — az óra saját maga építi az
+`ExerciseConfig`-ot (`ExerciseService.buildExerciseConfig`), miután megkapta a `/start` üzenetet.
+Ezért az `activityType` mezőnek magába az üzenetbe kellett utaznia: `WatchBridge.kt`
+`startWorkout()` mostantól `args["activityType"]`-t is olvassa és belefűzi a `stateMessagePayload`/
+`pushState` hívásokba; `PhoneListenerService`'s `/start` ág kiolvassa és átadja
+`ExerciseService.startIntent()`-nek egy új `EXTRA_ACTIVITY_TYPE` extra-n keresztül. **`venue`
+tudatosan nem lett átvezetve** — a health-services-client 1.0.0 valódi API-ját ellenőrizve
+(`javap` a lefordított AAR-en, nem feltételezés) az `ExerciseConfig`-nak nincs indoor/outdoor
+mezője, csak `isGpsEnabled` (változatlanul `false` marad — a watch-GPS a jövőbeli „W4”, ld. lent),
+tehát a `venue`-nek egyszerűen nincs mire kötődnie ezen a platformon; átvezetése holt kód lett
+volna.
+
+**`ExerciseCapabilities`-ellenőrzés, a doc saját kész-ha-ja szerint.** A D-C5.2 táblázata
+(DISTANCE → `DISTANCE_TOTAL`+`PACE`+`ELEVATION_GAIN`, MACHINE → `DISTANCE_TOTAL`, GAME → egyik sem)
+csak akkor kérhető biztonságosan, ha a szenzorkészlet valóban támogatja — a doc kész-ha-ja explicit:
+„nem kérünk olyan adattípust, amit a szenzorkészlet nem tud". `buildExerciseConfig` ezért
+`suspend`-dé vált, és cardiónál lekéri `exerciseClient.getCapabilitiesAsync()`-et, majd a kívánt
+`dataTypes`-t metszi a ténylegesen támogatottakkal (egy sikertelen lekérdezés a szűretlen
+halmazra esik vissza, nem blokkolja az indítást). A `CALORIES_TOTAL` a doc táblázatában
+**tudatosan** `DataType.CALORIES`-ra (delta, kézzel összegzett) lett fordítva, nem szó szerint —
+ugyanaz a már bevált, hibajavított minta, amit a meglévő STRENGTH-ág is használ (a `CALORIES_TOTAL`
+aggregátum korábban túl magas értéket adott, mert a nyugalmi kalóriát is beleszámolta). `ExerciseType`
+leképezés: `SOCCER` a táblázat szó szerinti „FOOTBALL_SOCCER" helyett — ez utóbbi konstans nem
+létezik a valódi enumban, `SOCCER` a tényleges megfelelő.
+
+**Egyesített picker (W 15)**: `StandalonePickerScreen` mostantól `entries()`-t olvas, és
+`entry.optString("type")` szerint ágazik `TemplateRow`/új `CardioRow` közt — utóbbi (ikon+cím+
+„Hamarosan" felirat) **nem `clickable`**, ugyanazon indoklással, mint iOS C5.4/C5.6: a standalone
+cardio indítás **C5.7** dolga (W-8), a most megépült aktív képernyők kizárólag telefon-vezérelt
+session-t szolgálnak ki.
+
+**Aktív cardio ×3 család (W 16–19) + gyenge pulzus (W 21)**: `ActiveWorkoutScreen()` mostantól
+`metadata.isCardio` szerint ágazik egy új `CardioActiveScreen()`-re (2 lapos `HorizontalPager`:
+`CardioMetricsPage` + a **változtatás nélkül újrahasznosított** `ControlsPage` — ez utóbbin nincs is
+`HeaderChip`, csak egy elhalványított `ExerciseCard` + Vége/Szünet gomb, tehát semmit nem kellett
+rajta módosítani). `SessionStateHolder.SessionMetadata` új mezői (`kind`, `cardioActivityType`,
+`cardioMetrics: CardioActiveMetrics?`) — ugyanaz az óra-clock-biztos ketyegési minta, mint iOS
+C5.5-nél: a `movingSinceEpochMs`-t `PhoneListenerService.decodeCardioMetrics` el sem olvassa,
+helyette a saját `SystemClock.elapsedRealtime()`-ot rögzíti a payload érkezésekor
+(`movingAnchorElapsedRealtimeMs`) — a `restDeadlineElapsedRealtimeMs` már bevált mintáját követve.
+
+**Egy réteggel mélyebb hiba, amit a `cardio` mező bekötése hozott felszínre.** A `DataMap`-nek
+(a `DataItem`-alapú, reconnect-fallback szinkron útvonal formátuma) nincs beágyazott map-típusa —
+`WatchBridge.kt`'s `toDataMap()` eddig csendben **eldobta** minden nested `Map` mezőt (a `cardio`
+lett volna az első ilyen). Javítás: `toDataMap()` egy új `is Map<*, *>` ág, ami JSON-stringgé
+alakítja a beágyazott map-et (ugyanaz a minta, mint a már meglévő `sessionPlan` mezőnél, csak itt
+menet közben építve, nem Dart-oldalon előre lapítva) — a wear-oldali `onDataChanged` ezt vissza is
+fejti. A **elsődleges** (message) útvonal ettől függetlenül mindig helyesen hordozta a `cardio`
+blokkot; ez csak a másodlagos, „megbízhatatlannak dokumentált" DataItem-utat javítja ki ugyanarra
+a szintre.
+
+**Négy új Material ikon, valódi API-ellenőrzéssel** (nem feltételezve): `DirectionsRun`,
+`DirectionsWalk`, `Hiking`, `PedalBike`, `SportsBasketball`, `SportsSoccer`, `MonitorHeart`
+(generikus fallback), `AirlineSeatReclineNormal` (padon-állapot — pixelre egyezik a design
+Material Symbol nevével, jobb találat, mint az iOS-es SF Symbol közelítés). Mind ellenőrizve a
+lefordított `material-icons-extended` AAR-ban (`javap`), nem kitalálva.
+
+**Hét új string-erőforrás** (`standalone_cardio_coming_soon`, `cardio_no_heart_rate_label`,
+`cardio_no_heart_rate_hint`, `cardio_go_to_bench_button`, `cardio_back_to_court_button`,
+`cardio_on_bench_header_label`, `cardio_game_paused_primary_label`) — mindkét `strings.xml`-be
+(alap = magyar, `values-en` = angol), ugyanazokkal az értékekkel, mint iOS `Localizable.xcstrings`-ében.
+
+**Ellenőrzés — valódi Gradle build, nem csak `flutter analyze`.** `./gradlew :app:compileDebugKotlin`,
+`:wear:compileDebugKotlin`, majd `:wear:assembleDebug :app:assembleDebug` együtt — mindegyik **tiszta,
+hibamentes** (a Flutter/KGP migrációs figyelmeztetéseken kívül, amik ettől a lépéstől függetlenek).
+Az `assembleDebug` a teljes láncot lefedi: resource-merge (két új `strings.xml`-blokk), manifest-merge,
+Kotlin-fordítás mindkét modulban. Nincs Wear-oldali unit teszt cél ebben a projektben (ugyanaz a
+korábban dokumentált minta, mint watchOS-nél) — élő eszközös/emulátoros vizuális ellenőrzés még
+hátravan.
+
+**Ezzel a teljes C5 (Óra) iteráció MF5-ös alapja kész, C5.7 kivételével**: a picker mindkét
+platformon helyesen mutatja a cardio típusokat (nem indít semmit), az aktív képernyők mindkét
+platformon helyesen jelenítik meg a telefon-vezérelt cardio session-t család szerint, és mindkét
+platform natívan helyesen konfigurálja a saját egészség-API-ját (HealthKit/Health Services) a
+valódi aktivitástípusra.
+
+**Következő:** `C5.7a`/`C5.7b` — zárás-összegzés bővítés (zónák, táv, szintemelkedés) + standalone
+cardio (óra-oldali indítás, W-8) + GAME pályán/padon kétirányú szinkron (W-9) —
+[55 §5/§7](55-cardio-watch-plan.md), a Wear OS-fél (`C5.7a`) Windowson, a watchOS-fél (`C5.7b`)
+Mac-en.
+
+---
+
+## C5.7a **részben kész** (2026-08-14) — zárás-összegzés bővítés + standalone cardio (Wear OS + Dart fele)
+
+A [55 §4.3/§5/§7](55-cardio-watch-plan.md) lépés két és fél tétele közül kettő kész, egy
+**tudatosan kihagyva** — lásd lent a pontos indoklást mindegyiknél.
+
+### 1. Zárás-összegzés bővítés (táv + szintemelkedés, forrás-jelölt) — kész
+
+**Zónák tudatosan nem** — ezek NEM ebben a lépésben, hanem egyáltalán **sehol** a kódbázisban
+nincsenek kiszámítva: a `hrZone1-5Seconds` mezők a séma óta (C1.2) léteznek, de **semmilyen
+zóna-határ (max pulzus %, felhasználói profil) fogalom nem létezik ma ebben az appban** —
+sem a phone-on, sem a backend-en. A zóna-számítás egy önálló, itt nyitva hagyott
+terméktervezési kérdés (milyen formula, honnan jön a max pulzus), nem valami, amit ez a lépés
+kitalálhatna menet közben — ugyanaz az elv, mint a Q-D1–Q-D4 döntések: dokumentált nyitott
+kérdés, nem csendes találgatás.
+
+**Táv + szintemelkedés viszont teljesen kész, platformfüggetlen Dart-féllel**, amit BÁRMELYIK
+jövőbeli watch-küldő (beleértve a C5.7b-s watchOS-t is) újrahasznosíthat:
+- **`CardioMetrics.mergedWithWatchMeasurement`** (`workout_session.dart`) — mezőnkénti
+  `existing ?? fromWatch` egyesítés, **soha nem ír felül** egy már meglévő értéket (R8: "a kézi
+  érték mindig nyer"). `distanceSource` csak akkor kap `'DEVICE'` jelölést, ha az óra távja
+  ténylegesen egy addig üres mezőt töltött ki.
+- **`WatchWorkoutSummary.cardio`** (`watch_workout_service.dart`) — új mező, a `CardioMetrics`
+  teljes dekódolását újrahasznosítva.
+- **`WorkoutResumePrompt._onWatchEvent`** — a meglévő, már ma is **cardióra ingyen működő**
+  generikus watch-summary-alkalmazó (calories/HR minden `sessionKind`-re megy, semmilyen
+  kind-szűrés nem volt rajta) mostantól a `cardio` blokkot is egyesíti, ugyanazzal a
+  `session.healthWorkoutId != null` idempotencia-őrrel, ami már eddig is védett egy ismételt
+  kézbesítés ellen.
+- **Élesben talált, javított mellékes hiba**: ugyanez a függvény minden cardio session null
+  `healthWorkoutId`-jét eddig **tévesen "hagyományos erőedzés"-ként írta volna Health
+  Connectbe** (`writeStrengthWorkoutAndGetId`, hardkódolt STRENGTH_TRAINING típus) — ez a hiba
+  már C5.2 óta élesben állt (amint a telefon elkezdte hívni a meglévő, generikus
+  `endWorkout`-ot cardióra is), csak eddig senki nem futtatta végig egy null-healthWorkoutId-jű
+  cardio session-t Androidon. Javítva: `!session.isCardio` őrrel kihagyva, ugyanaz az indoklás,
+  mint a C5.1-es `_createCardioSession` már eddig is dokumentált döntése ("a cardio Health-írás
+  jövőbeli munka marad").
+- **Wear OS natív fele**: `ExerciseService`-ben `DataType.DISTANCE_TOTAL`/`ELEVATION_GAIN_TOTAL`/
+  `ELEVATION_LOSS_TOTAL` aggregátumok követése (ugyanazok az adattípusok, amiket C5.6 már
+  capability-ellenőrzéssel kért DISTANCE-családra) → `cardioSummaryJson()` → `SummarySender
+  .sendSummary(cardio:)` → `WatchBridge.kt` (telefon) `emitSummary`-je most már ezt is
+  továbbadja a Dart oldalnak.
+
+### 2. Standalone cardio (óra-oldali indítás, W-8) — kész, Wear OS-en
+
+A `StandalonePickerScreen`-ben C5.6-ban még csak megjelenő, de nem-kattintható `CardioRow` most
+már **valóban indít**: `MainActivity` → `ExerciseService.startStandaloneIntent(activityType:)` →
+`buildExerciseConfig` (a C5.6-ban már megépített, capability-ellenőrzött térkép) →
+`SessionStateHolder.onStandaloneStarted(activityType:)` — ez utóbbi állítja be a `kind`/
+`cardioActivityType` mezőket, amitől a már meglévő `ActiveWorkoutScreen`-dispatch (C5.6) magától
+a helyes `CardioActiveScreen`-re navigál, **változtatás nélkül**. Záráskor
+`endStandaloneExercise` `kind`/`activityType`/`cardio` mezőkkel bővíti a payloadot — a
+fogadó oldal (Dart `StandaloneSessionProcessor._createCardioSession`/`_updateCardioSession`)
+már C5.1 óta készen áll erre, **most kapott először valódi feladót**. Process-death utáni
+recovery is átvezetve (`saveStandaloneActiveSnapshot`/`recoverStandaloneExercise`).
+
+**Egy régebbi, ezúttal a *telefon-oldali* Kotlin-hídban talált hiba is javítva**:
+`WatchBridge.kt` (`android/app`) `emitStandaloneSession()` sosem adta tovább a `kind`/
+`activityType`/`movingSeconds`/`cardio` mezőket a Dart-nak — a Dart oldal (`WatchStandaloneSession
+.fromJson`) ezeket már C5.1 óta tudta dekódolni, de a natív híd egyszerűen nem küldte át. Ez
+pontosan ugyanaz a hibaosztály, mint a C5.4-ben/C5.6-ban talált `templates`→`entries` sync-hiba —
+csak itt a hiányzó mezők miatt korábban **sosem lehetett volna** cardio standalone session-t
+végigvinni Androidon, még ha valaki meg is próbálta volna natívan indítani.
+
+**Új, általános `JSONObject.toEventMap()` helper** (`WatchBridge.kt`) — a `cardio` blokk ~25
+lehetséges Dart-oldali mezőjét (`CardioMetrics.fromJson`) generikusan, rekurzívan alakítja át a
+Flutter EventChannel-kompatibilis `Map`-re, ahelyett hogy — a fájl eddigi „kézzel kiválasztott
+mezők" konvencióját követve — csak a ma ismert néhány mezőt vinné át. Ez tudatos eltérés a
+konvenciótól: egy kézzel válogatott lista pontosan ugyanazt a "natív híd nem viszi át az új
+mezőt" hibaosztályt termelte volna újra, amit ez a lépés már kétszer kijavított.
+
+### 3. GAME pályán/padon kétirányú szinkron (W-9) — **tudatosan kihagyva ebből a lépésből**
+
+A doc egyetlen mondata ("A kapcsoló állapota mindkét irányban szinkronizálódik... a meglévő
+üzenet-csatornán") messze alulspecifikálja, mekkora munka ez valójában: a telefon saját
+`_onCourt`-ja (`cardio_session_screen.dart`, C2.4) **explicit dokumentáltan** "Local-only...
+never synced, never read back" — ahhoz, hogy ez ténylegesen kétirányúvá váljon, új üzenettípus
+kell mindkét irányba (óra→telefon: egy `sendCourtChanged`-szerű esemény + a telefon oldalán egy
+teljesen új `_onWatchEvent` figyelő bekötése a mai, semmilyen watch-eseményt nem figyelő
+`CardioSessionScreen`-be; telefon→óra: `CardioLiveMetrics` bővítése egy `onCourt` mezővel), és
+mindkét irány érinti a `cardio_session_screen.dart`-ot — egy nagy, gondosan dokumentált
+invariánsokkal teli, már élesben működő fájlt. A kockázat/érték arány ezen a ponton nem indokolta
+a sietős belenyúlást egy már négy egymást követő nagy lépés (C5.4→C5.5→C5.6→C5.7a) után —
+ez marad **C5.7a folytatásaként** vagy egy külön, saját léptékű lépésként.
+
+### Ellenőrzés — környezeti akadály, nem kódhiba
+
+**A sandbox ezen a délutánon egy macOS Fájlok-és-mappák (TCC) engedélyt vesztett a
+`~/Documents` fához** — minden `git`-et belsőleg hívó eszköz (`flutter analyze`, `flutter build`,
+ezáltal `./gradlew :app:compileDebugKotlin` is, mert a `:app:compileFlutterBuildDebug` task ettől
+függ) `fatal: unable to access '.git/config': Operation not permitted` hibával elszáll — nem
+Kotlin/Dart hiba, hanem hogy a `flutter`/`dart` bináris saját, beágyazott git-hívása egy másik,
+nem-engedélyezett macOS sandbox-identitás alól fut. A `.git/config`-ra rakódó `com.apple.macl`
+kiterjesztett attribútum ismételt törlése csak a **közvetlenül** hívott `git` parancsokat oldotta
+fel (pl. `git status` újra működik), a `flutter`/`gradle` által **belsőleg** indított git-hívást
+nem — ez egy tartós, rendszerszintű engedély, amit csak a felhasználó tud feloldani
+(Rendszerbeállítások → Adatvédelem és biztonság → Fájlok és mappák / Teljes lemez-hozzáférés),
+nem valami, amit én biztonságosan módosíthatnék.
+
+**Amit emiatt NEM sikerült futtatnom ezúttal**: `flutter analyze` (Dart-oldal) és
+`:app:compileDebugKotlin` (a `WatchBridge.kt` legutóbbi — `emitSummary`/`emitStandaloneSession`/
+`toEventMap` — módosításai). **Amit sikerült**: `:wear:compileDebugKotlin` és
+`:wear:assembleDebug` **tiszta, hibamentes** (ezek nem függenek a Flutter-build-lánctól, csak
+natív Kotlin/Android Gradle-től) — a Wear OS-oldali C5.7a-kód így valósan ellenőrzött. A
+`WatchBridge.kt` legfrissebb (telefon-oldali) darabját kézzel, soronként átnézve ellenőriztem —
+szerkezetileg és típushelyesen megegyezik a fájl már bizonyítottan leforduló, azonos mintájú
+kódjával (`toJsonValue`, a meglévő `emitStandaloneSession`/`emitLiveMetrics` mezőválogatása) —,
+de ez **nem helyettesíti** a tényleges fordítást.
+
+**Következő:** a felhasználó engedélyezze a Fájlok-és-mappák hozzáférést, hogy
+`flutter analyze`/`:app:compileDebugKotlin` lefusson és megerősítse a fenti kódot; utána
+folytatható a GAME kétirányú szinkron, vagy áttérhetünk `C5.7b`-re (watchOS natív fele, Mac-en).

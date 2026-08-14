@@ -229,9 +229,16 @@ class WorkoutResumePrompt {
 
     // iOS summaries already carry a real HKWorkout uuid; Android summaries
     // don't — the watch never touches Health Connect, the phone does
-    // (docs/40-watch-app-plan.md §5.2 "Döntés: a telefon ír HC-be").
+    // (docs/40-watch-app-plan.md §5.2 "Döntés: a telefon ír HC-be"). **Not**
+    // for a cardio session, though (docs/cardio/59-cardio-implementation-plan.md
+    // C5.1's own `_createCardioSession` reasoning, unearthed here because
+    // this is the *other* place the same fallback fires): writing a run into
+    // Health Connect as `HealthWorkoutActivityType.STRENGTH_TRAINING` would
+    // be a silently misleading record, not a helpful backfill. Cardio's own
+    // Health-write is still future work — `healthWorkoutId` simply stays
+    // null for it here, same as C5.1's standalone path already does.
     var healthWorkoutId = event.healthWorkoutId;
-    if (healthWorkoutId == null && session.startedAt != null) {
+    if (healthWorkoutId == null && session.startedAt != null && !session.isCardio) {
       healthWorkoutId = await _ref.read(healthServiceProvider).writeStrengthWorkoutAndGetId(
             start: session.startedAt!,
             end: session.finishedAt ?? DateTime.now(),
@@ -240,11 +247,21 @@ class WorkoutResumePrompt {
           );
     }
 
+    // docs/cardio/55-cardio-watch-plan.md §4.3, C5.7a — merged, never a
+    // blind replace: a manual/measured value already on this session always
+    // wins (R8). `event.cardio` is null for every STRENGTH summary and for
+    // a cardio one from a watch build that predates this field, in which
+    // case the merge is exactly `session.cardio` unchanged.
+    final mergedCardio = session.isCardio && event.cardio != null
+        ? (session.cardio ?? const CardioMetrics()).mergedWithWatchMeasurement(event.cardio!)
+        : null;
+
     await _ref.read(workoutSessionControllerProvider.notifier).enrichFromWatch(
           event.sessionClientId,
           activeCalories: event.activeCalories,
           averageHeartRate: event.averageHeartRate,
           healthWorkoutId: healthWorkoutId,
+          cardio: mergedCardio,
         );
   }
 

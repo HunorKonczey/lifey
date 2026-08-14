@@ -28,15 +28,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AirlineSeatReclineNormal
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.HeartBroken
+import androidx.compose.material.icons.filled.Hiking
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PedalBike
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.SignalWifiOff
+import androidx.compose.material.icons.filled.SportsBasketball
+import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
@@ -89,6 +97,8 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.google.android.gms.wearable.Wearable
 import com.khunor.lifey.ActiveExerciseDisplay
+import com.khunor.lifey.CardioActiveMetrics
+import com.khunor.lifey.CardioActivityFamily
 import com.khunor.lifey.ExerciseService
 import com.khunor.lifey.LiveMetrics
 import com.khunor.lifey.LogAdjustField
@@ -246,8 +256,463 @@ private fun activeExerciseDisplay(metadata: SessionMetadata): ActiveExerciseDisp
     )
 }
 
+// MARK: - Cardio (docs/cardio/55-cardio-watch-plan.md §4, C5.6)
+
+/**
+ * SF-Symbol-equivalent per `ActivityType` — the watchOS side's
+ * `cardioActivityIcon` uses `figure.run`/`figure.walk`/etc.; here it's
+ * whatever `material-icons-extended` actually ships (verified against the
+ * 1.7.8 AAR, not guessed): `DirectionsRun`/`DirectionsWalk`/`Hiking`/
+ * `PedalBike`/`SportsBasketball`/`SportsSoccer`. An unrecognized code (a
+ * future activity type this build predates) falls back to `MonitorHeart`,
+ * the same generic glyph `OTHER_CARDIO` itself uses. Shared with
+ * `StandalonePickerScreen`'s `CardioRow` — both live in this module, so this
+ * is `internal` (the package default), not duplicated the way the
+ * `Runner`/`WatchBridge.kt` (iOS) copy has to be across targets.
+ */
+fun cardioActivityIcon(activityType: String): ImageVector = when (activityType) {
+    "RUNNING" -> Icons.Filled.DirectionsRun
+    "WALKING" -> Icons.Filled.DirectionsWalk
+    "HIKING" -> Icons.Filled.Hiking
+    "INDOOR_BIKE" -> Icons.Filled.PedalBike
+    "BASKETBALL" -> Icons.Filled.SportsBasketball
+    "FOOTBALL" -> Icons.Filled.SportsSoccer
+    else -> Icons.Filled.MonitorHeart
+}
+
+/** Mirrors the mobile app's `activityTypeColor` (`activity_type.dart`) — see
+ * `LifeyColors`'s "Cardio activity-type accents" section for which mobile
+ * `MetricColors` token each hex reuses. */
+fun cardioActivityTint(activityType: String): Color = when (activityType) {
+    "RUNNING" -> LifeyColors.calories
+    "WALKING" -> LifeyColors.cardioWalking
+    "HIKING" -> LifeyColors.tertiary
+    "INDOOR_BIKE" -> LifeyColors.cardioIndoorBike
+    "BASKETBALL" -> LifeyColors.cardioBasketball
+    "FOOTBALL" -> LifeyColors.cardioFootball
+    else -> LifeyColors.onSurfaceVariant
+}
+
+/**
+ * The cardio counterpart of [StrengthActiveWorkoutScreen] — two swipeable
+ * pages ([CardioMetricsPage], then the reused [ControlsPage]), no log-set/
+ * adjust/exercise-list overlays. Duplicates [StrengthActiveWorkoutScreen]'s
+ * small effort-selector wiring rather than sharing it — the two active
+ * screens otherwise share almost nothing (no pager pages, no rest timer, no
+ * log-set state), so splitting this one slice out on its own would cost more
+ * indirection than the ~20 duplicated lines are worth.
+ *
+ * [ControlsPage] is reused **unmodified** — `hasStandaloneTemplate = false`
+ * here always (a cardio session has no exercise plan), which already hides
+ * its "Gyakorlatok" chip on its own; nothing about that composable is
+ * STRENGTH-specific beyond that one already-conditional chip.
+ */
+@Composable
+private fun CardioActiveScreen() {
+    val metadata by SessionStateHolder.metadata.collectAsState()
+    val liveMetrics by SessionStateHolder.liveMetrics.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var showEffortSelector by remember { mutableStateOf(false) }
+    var effortRpe by remember { mutableIntStateOf(5) }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isCompact = isCompactScreen(maxWidth)
+
+        if (showEffortSelector) {
+            val sessionClientId = metadata.sessionClientId
+            EffortSelectorScreen(
+                rpe = effortRpe,
+                onRpeChange = { effortRpe = it },
+                onConfirm = {
+                    if (sessionClientId != null) {
+                        scope.launch { SummarySender.sendEndRequested(context, sessionClientId, effortRpe) }
+                    }
+                    showEffortSelector = false
+                },
+                onSkip = {
+                    if (sessionClientId != null) {
+                        scope.launch { SummarySender.sendEndRequested(context, sessionClientId, rpe = null) }
+                    }
+                    showEffortSelector = false
+                },
+                onBack = { showEffortSelector = false },
+            )
+        } else {
+            val pagerState = rememberPagerState(initialPage = 0, pageCount = { 2 })
+            val display = activeExerciseDisplay(metadata)
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                rotaryScrollableBehavior = RotaryScrollableDefaults.snapBehavior(pagerState),
+            ) { page ->
+                when (page) {
+                    0 -> CardioMetricsPage(
+                        metadata = metadata, liveMetrics = liveMetrics, isCompact = isCompact, maxWidth = maxWidth,
+                    )
+                    else -> ControlsPage(
+                        exerciseName = display.name,
+                        setsDone = display.setsDone,
+                        setsTotal = display.setsTotal,
+                        isPaused = liveMetrics.isPaused,
+                        freeFormatSets = display.freeFormatSets,
+                        hasStandaloneTemplate = false,
+                        isCompact = isCompact,
+                        onEnd = { showEffortSelector = true },
+                        onTogglePause = {
+                            val paused = liveMetrics.isPaused
+                            scope.launch {
+                                if (paused) ExerciseService.resume(context) else ExerciseService.pause(context)
+                            }
+                        },
+                        onOpenExerciseList = {},
+                    )
+                }
+            }
+            PageDots(
+                pageCount = 2, selectedPage = pagerState.currentPage,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+            )
+        }
+    }
+}
+
+/**
+ * The family-dispatching cardio metrics page (canvas W 16–19) — `GAME` gets
+ * its own layout ([GameMetricsContent], the pályán/padon toggle and its
+ * single "bruttó" box), everything else shares [DistanceMachineMetricsContent]
+ * (two boxes, no toggle). [movingSeconds] ticks once a second from
+ * [CardioActiveMetrics.movingSecondsBase]/[CardioActiveMetrics
+ * .movingAnchorElapsedRealtimeMs] — see that class's doc for why this can't
+ * just display whatever string the phone last pushed for the moving/game-time
+ * slot.
+ */
+@Composable
+private fun CardioMetricsPage(metadata: SessionMetadata, liveMetrics: LiveMetrics, isCompact: Boolean, maxWidth: Dp) {
+    val activityType = metadata.cardioActivityType ?: "OTHER_CARDIO"
+    val family = metadata.cardioFamily ?: CardioActivityFamily.DISTANCE
+    val cardioMetrics = metadata.cardioMetrics
+
+    var movingSeconds by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(cardioMetrics) {
+        while (true) {
+            movingSeconds = when {
+                cardioMetrics == null -> 0L
+                cardioMetrics.movingAnchorElapsedRealtimeMs == null -> cardioMetrics.movingSecondsBase.toLong()
+                else -> cardioMetrics.movingSecondsBase +
+                    (SystemClock.elapsedRealtime() - cardioMetrics.movingAnchorElapsedRealtimeMs) / 1000
+            }
+            delay(1000)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = maxWidth * SCREEN_PADDING_FRACTION),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        if (family == CardioActivityFamily.GAME) {
+            GameMetricsContent(
+                metadata = metadata, cardioMetrics = cardioMetrics, liveMetrics = liveMetrics,
+                activityType = activityType, movingSeconds = movingSeconds, isCompact = isCompact,
+            )
+        } else {
+            DistanceMachineMetricsContent(
+                metadata = metadata, cardioMetrics = cardioMetrics, liveMetrics = liveMetrics, family = family,
+                activityType = activityType, movingSeconds = movingSeconds, isCompact = isCompact,
+            )
+        }
+    }
+}
+
+/** The `activeHeaderLabel` computation `StrengthActiveWorkoutScreen` does
+ * inline, minus the `standaloneTemplate` branch (always null for a
+ * phone-mastered cardio session) — the phone's own `title`
+ * (`activityTypeLabel(l10n, _activityType)`, `cardio_session_screen.dart`)
+ * is already the right localized activity name, just sentence-case; this
+ * uppercases it to match the design's header treatment the same way
+ * STRENGTH's `active_header_label` string is *authored* uppercase (there's
+ * no Compose `Text` case-transform to lean on the way SwiftUI's
+ * `.textCase(.uppercase)` does). */
+@Composable
+private fun cardioHeaderLabel(metadata: SessionMetadata): String =
+    metadata.title?.takeIf { it.isNotBlank() }?.uppercase()
+        ?: stringResource(R.string.active_header_label)
+
+/** AW/W 17–18 (DISTANCE/MACHINE) — header, primary label+value (tinted, the
+ * ticking moving-time slot per family), the heart-rate row
+ * ([CardioHeartRateRow]), and up to two supporting boxes. */
+@Composable
+private fun DistanceMachineMetricsContent(
+    metadata: SessionMetadata,
+    cardioMetrics: CardioActiveMetrics?,
+    liveMetrics: LiveMetrics,
+    family: CardioActivityFamily,
+    activityType: String,
+    movingSeconds: Long,
+    isCompact: Boolean,
+) {
+    val tint = cardioActivityTint(activityType)
+    val heroStyle = if (isCompact) MaterialTheme.typography.display3 else MaterialTheme.typography.display2
+    HeaderChip(
+        icon = cardioActivityIcon(activityType),
+        label = cardioHeaderLabel(metadata),
+        isStandalone = false,
+        isCompact = isCompact,
+        tint = tint,
+    )
+    if (cardioMetrics == null) {
+        // No `cardio` push has landed yet — right after the exercise starts,
+        // the watch's own Health Services session can begin before the
+        // first state sync arrives. Degrades to just the header + heart
+        // rate, never a blank/zero-valued distance.
+        CardioHeartRateRow(liveMetrics = liveMetrics, isCompact = isCompact)
+        return
+    }
+    Text(
+        // DISTANCE shows the phone's own `primaryLabel` (distance doesn't
+        // tick locally — it only changes on a fresh GPS fix, so the last
+        // string the phone pushed is always current); MACHINE ticks the
+        // primary itself (moving time), so its label is fixed regardless —
+        // only the value below switches to the local ticking one.
+        text = cardioMetrics.primaryLabel,
+        style = if (isCompact) MaterialTheme.typography.caption3 else MaterialTheme.typography.caption2,
+        color = LifeyColors.onSurfaceVariant,
+        letterSpacing = 0.5.sp,
+        maxLines = 1,
+    )
+    Text(
+        text = if (family == CardioActivityFamily.DISTANCE) {
+            cardioMetrics.primaryValue
+        } else {
+            formatElapsed(movingSeconds * 1000)
+        },
+        style = heroStyle,
+        color = tint,
+    )
+    CardioHeartRateRow(liveMetrics = liveMetrics, isCompact = isCompact)
+    Row(
+        modifier = Modifier.padding(top = if (isCompact) 6.dp else 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 10.dp),
+    ) {
+        // MACHINE/GAME's own primary/secondary swap (`family !=
+        // CardioActivityFamily.DISTANCE` above) means the secondary box
+        // shown here is `secondaryLabel`/`Value` as-is for every family
+        // except the one already spent on ticking it above.
+        if (family != CardioActivityFamily.DISTANCE && cardioMetrics.secondaryLabel != null) {
+            CardioMetricBox(
+                label = cardioMetrics.secondaryLabel, value = cardioMetrics.secondaryValue ?: "—",
+                isCompact = isCompact,
+            )
+        }
+        if (cardioMetrics.tertiaryLabel != null) {
+            CardioMetricBox(
+                label = cardioMetrics.tertiaryLabel, value = cardioMetrics.tertiaryValue ?: "—",
+                isCompact = isCompact,
+            )
+        }
+    }
+}
+
+/**
+ * AW/W 19–20 (on court / on bench) — a dot+label primary caption instead of
+ * the plain grey one [DistanceMachineMetricsContent] uses (GAME's primary is
+ * *always* the ticking moving/game time, unlike DISTANCE, so there's no swap
+ * to reason about here), a single "bruttó" box (GAME's `tertiaryValue` is a
+ * placeholder the phone never fills — see [CardioActiveMetrics]'s Dart-side
+ * counterpart's doc — so only `secondaryLabel`/`Value` renders), and the
+ * pályán/padon toggle.
+ *
+ * [onCourt] is **watch-local only** — not sent to the phone, not read from
+ * it. This mirrors `CardioSessionScreen._onCourt`'s *own*, already-shipped
+ * design on the phone side (C2.4): "Local-only... never synced, never read
+ * back" — a benched *phone*-mastered session doesn't actually change
+ * anything about what [metadata]'s `cardioMetrics` receives, so toggling this
+ * only switches which layout is on screen, not any real gross-vs-playing-time
+ * accounting (there is no separate ticking checkpoint for gross time to
+ * switch between). Making the toggle **actually** pause this watch's
+ * contribution to the session's playing time — and telling the phone about
+ * it — is `C5.7`'s "GAME pályán/padon kapcsoló kétirányú szinkronja"
+ * (docs/cardio/55-cardio-watch-plan.md §7, W-9). Mirrors iOS's identical
+ * `CardioActiveContent`/`onCourt` choice.
+ */
+@Composable
+private fun GameMetricsContent(
+    metadata: SessionMetadata,
+    cardioMetrics: CardioActiveMetrics?,
+    liveMetrics: LiveMetrics,
+    activityType: String,
+    movingSeconds: Long,
+    isCompact: Boolean,
+) {
+    var onCourt by remember { mutableStateOf(true) }
+    val activityTint = cardioActivityTint(activityType)
+    val tint = if (onCourt) activityTint else LifeyColors.secondary
+    val heroStyle = if (isCompact) MaterialTheme.typography.display3 else MaterialTheme.typography.display2
+
+    HeaderChip(
+        icon = if (onCourt) cardioActivityIcon(activityType) else Icons.Filled.AirlineSeatReclineNormal,
+        label = if (onCourt) cardioHeaderLabel(metadata) else stringResource(R.string.cardio_on_bench_header_label),
+        isStandalone = false,
+        isCompact = isCompact,
+        tint = tint,
+    )
+    if (cardioMetrics == null) {
+        CardioHeartRateRow(liveMetrics = liveMetrics, isCompact = isCompact)
+        return
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        if (onCourt) {
+            Box(modifier = Modifier.size(8.dp).background(LifeyColors.primary, CircleShape))
+        }
+        Text(
+            text = if (onCourt) cardioMetrics.primaryLabel else stringResource(R.string.cardio_game_paused_primary_label),
+            style = if (isCompact) MaterialTheme.typography.caption3 else MaterialTheme.typography.caption2,
+            color = tint,
+            letterSpacing = 0.5.sp,
+            maxLines = 1,
+        )
+    }
+    Text(text = formatElapsed(movingSeconds * 1000), style = heroStyle, color = if (onCourt) tint else LifeyColors.onSurfaceVariant)
+    CardioHeartRateRow(liveMetrics = liveMetrics, isCompact = isCompact)
+    if (cardioMetrics.secondaryLabel != null) {
+        Box(modifier = Modifier.padding(top = if (isCompact) 6.dp else 10.dp)) {
+            CardioMetricBox(
+                label = cardioMetrics.secondaryLabel, value = cardioMetrics.secondaryValue ?: "—",
+                isCompact = isCompact, valueTint = if (onCourt) null else LifeyColors.secondary,
+            )
+        }
+    }
+    Chip(
+        onClick = { onCourt = !onCourt },
+        modifier = Modifier.fillMaxWidth().padding(top = if (isCompact) 8.dp else 12.dp),
+        icon = {
+            Icon(
+                imageVector = if (onCourt) Icons.Filled.AirlineSeatReclineNormal else cardioActivityIcon(activityType),
+                contentDescription = null,
+                tint = if (onCourt) LifeyColors.onPrimary else LifeyColors.onSurface,
+            )
+        },
+        label = {
+            Text(
+                text = stringResource(
+                    if (onCourt) R.string.cardio_go_to_bench_button else R.string.cardio_back_to_court_button,
+                ),
+                color = if (onCourt) LifeyColors.onPrimary else LifeyColors.onSurface,
+                maxLines = 1,
+            )
+        },
+        colors = ChipDefaults.chipColors(
+            backgroundColor = if (onCourt) LifeyColors.primary else LifeyColors.secondary,
+            contentColor = if (onCourt) LifeyColors.onPrimary else LifeyColors.onSurface,
+        ),
+    )
+}
+
+/**
+ * The heart-rate row every cardio layout shares — a real reading when
+ * [LiveMetrics.heartRateBpm] has one (this watch's own Health Services
+ * session, same sensor the STRENGTH pages already read), or the degraded
+ * "—" / `cardio_no_heart_rate_label` / strap hint (canvas W 21) when it
+ * doesn't. Unlike the STRENGTH pages' [HeartRateReading] (simply omitted
+ * when there's nothing to show), this row's **space is always reserved** —
+ * the design's own reasoning for M10's GPS chip applies here too: "a hely
+ * megmarad, hogy az elrendezés ne ugráljon, és látszódjon, hogy hiányzik."
+ * Deliberately doesn't reuse [HeartRateReading]'s permission-denied branch
+ * either — cardio's "—" fallback covers *both* "denied" and "no sample yet"
+ * the same way, where STRENGTH's only ever covers the former.
+ */
+@Composable
+private fun CardioHeartRateRow(liveMetrics: LiveMetrics, isCompact: Boolean) {
+    val valueStyle = if (isCompact) MaterialTheme.typography.title2 else MaterialTheme.typography.title1
+    val hasReading = liveMetrics.hasHeartRatePermission && liveMetrics.heartRateBpm != null
+    Column(
+        modifier = Modifier.padding(top = if (isCompact) 6.dp else 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp)) {
+            Icon(
+                imageVector = Icons.Filled.Favorite,
+                contentDescription = null,
+                tint = if (hasReading) LifeyColors.heart else LifeyColors.ghostedOnSurface,
+                modifier = Modifier.size(if (isCompact) 24.dp else 28.dp),
+            )
+            if (hasReading) {
+                Text(
+                    text = liveMetrics.heartRateBpm!!.roundToInt().toString(),
+                    style = valueStyle,
+                    color = LifeyColors.onSurface,
+                )
+            } else {
+                Text(text = "—", style = valueStyle, color = LifeyColors.ghostedOnSurface)
+                Text(
+                    text = stringResource(R.string.cardio_no_heart_rate_label),
+                    style = MaterialTheme.typography.caption2,
+                    color = LifeyColors.onSurfaceVariant,
+                )
+            }
+        }
+        if (!hasReading) {
+            Text(
+                text = stringResource(R.string.cardio_no_heart_rate_hint),
+                style = MaterialTheme.typography.caption2,
+                color = LifeyColors.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+    }
+}
+
+/**
+ * One of [DistanceMachineMetricsContent]/[GameMetricsContent]'s supporting
+ * boxes (canvas W 17/18's two-box row, W 19/20's single "bruttó" one) —
+ * [valueTint] overrides the value's color for GAME's on-bench state (muted
+ * `secondary` instead of the default `onSurface`), `null` everywhere else.
+ */
+@Composable
+private fun CardioMetricBox(label: String, value: String, isCompact: Boolean, valueTint: Color? = null) {
+    Column(
+        modifier = Modifier
+            .background(LifeyColors.surface, LifeyShapes.card)
+            .padding(horizontal = if (isCompact) 10.dp else 14.dp, vertical = if (isCompact) 8.dp else 12.dp),
+    ) {
+        Text(
+            text = value,
+            style = if (isCompact) MaterialTheme.typography.body2 else MaterialTheme.typography.title3,
+            color = valueTint ?: LifeyColors.onSurface,
+            maxLines = 1,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.caption2,
+            color = LifeyColors.onSurfaceVariant,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * Top-level dispatcher (docs/cardio/55-cardio-watch-plan.md §4, C5.6) — a
+ * cardio session gets its own, much simpler screen ([CardioActiveScreen]):
+ * no log-set/adjust/exercise-list overlays, none of which mean anything
+ * without sets to log or a plan to pick from.
+ */
 @Composable
 fun ActiveWorkoutScreen() {
+    val metadata by SessionStateHolder.metadata.collectAsState()
+    if (metadata.isCardio) {
+        CardioActiveScreen()
+    } else {
+        StrengthActiveWorkoutScreen()
+    }
+}
+
+@Composable
+private fun StrengthActiveWorkoutScreen() {
     val metadata by SessionStateHolder.metadata.collectAsState()
     val liveMetrics by SessionStateHolder.liveMetrics.collectAsState()
     val logSetState by SessionStateHolder.logSetState.collectAsState()
@@ -1581,6 +2046,15 @@ private fun HeaderChip(
     label: String,
     isStandalone: Boolean,
     isCompact: Boolean,
+    /** `CardioMetricsPage` (docs/cardio/55-cardio-watch-plan.md §4.2, C5.6)
+     * tints this per activity type instead of the STRENGTH default — "a
+     * domináns szám az aktivitás akcentjét viseli... nem a primaryt" applies
+     * to the header row too, not just the big number below it. Defaults to
+     * the original `LifeyColors.primary` — every pre-cardio call site is
+     * unaffected. (Unlike iOS, `ControlsPage` here has no `HeaderChip` of its
+     * own to fix — it shows a dimmed `ExerciseCard` and the End/Pause chips
+     * only, see [ControlsPage]'s own composition.) */
+    tint: Color = LifeyColors.primary,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -1589,13 +2063,13 @@ private fun HeaderChip(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = LifeyColors.primary,
+            tint = tint,
             modifier = Modifier.size(if (isCompact) 16.dp else 18.dp),
         )
         Text(
             text = label,
             style = if (isCompact) MaterialTheme.typography.caption3 else MaterialTheme.typography.caption2,
-            color = LifeyColors.primary,
+            color = tint,
             letterSpacing = 0.5.sp,
             maxLines = 1,
             // A template name can run long, unlike the fixed "STRENGTH"/"REST"

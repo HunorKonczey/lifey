@@ -77,4 +77,12 @@
     <string name="standalone_exercise_list_title">Exercises</string>
     <string name="standalone_exercise_sets_done">%1$d sets</string>
     <string name="standalone_sync_retry_a11y">Sync this workout to the phone</string>
+
+    <!-- Cardio (docs/cardio/55-cardio-watch-plan.md §3/§4, C5.6) -->
+    <string name="cardio_no_heart_rate_label">no pulse</string>
+    <string name="cardio_no_heart_rate_hint">Loose strap? Recording continues, the time is accurate.</string>
+    <string name="cardio_go_to_bench_button">To bench</string>
+    <string name="cardio_back_to_court_button">Back to court</string>
+    <string name="cardio_on_bench_header_label">ON BENCH</string>
+    <string name="cardio_game_paused_primary_label">PLAYING TIME — PAUSED</string>
 </resources>
