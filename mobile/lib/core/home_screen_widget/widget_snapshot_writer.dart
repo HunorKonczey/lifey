@@ -6,6 +6,8 @@ import 'package:home_widget/home_widget.dart' as home_widget;
 
 import '../../features/dashboard/domain/daily_stats.dart';
 import '../../features/settings/domain/user_settings.dart';
+import '../../features/workouts/application/activity_ranking.dart';
+import '../../features/workouts/application/quick_start_options_provider.dart';
 import '../../l10n/app_localizations.dart';
 
 /// App Group shared with the LifeyWidgets extension (see
@@ -53,12 +55,21 @@ class WidgetSnapshotWriter {
 
   /// Writes the current snapshot. Callers pass already-loaded state
   /// ([WidgetSnapshotController] derives these from the dashboard/steps/
-  /// settings providers) rather than this class reaching into Riverpod
-  /// itself, so it stays a plain, easily-testable class.
+  /// settings/quick-start-ranking providers) rather than this class reaching
+  /// into Riverpod itself, so it stays a plain, easily-testable class.
+  ///
+  /// [quickStartEntries] is the top of [rankQuickStartEntries] (as resolved
+  /// by `quickStartEntriesProvider`) — only its top 2 are ever used
+  /// (docs/cardio/53-cardio-mobile-plan.md §3.3: "gyorsindítás gombsort a
+  /// top-2 edzéssel"), so callers may pass more without over-thinking it;
+  /// defaults to empty for callers (tests, a settings-only rewrite) that
+  /// don't have a ranking to hand yet — the widget then just shows no
+  /// quick-start row, not a crash.
   Future<void> write({
     required DailyStats stats,
     required int? steps,
     required UserSettings settings,
+    List<ResolvedQuickStartEntry> quickStartEntries = const [],
   }) async {
     if (!isAvailable) return;
 
@@ -79,6 +90,13 @@ class WidgetSnapshotWriter {
         'steps': l10n.stepsLabel,
         'noData': l10n.widgetNoDataLabel,
       },
+      'quickStart': [
+        for (final resolved in quickStartEntries.take(2))
+          {
+            'label': quickStartEntryTitle(l10n, resolved),
+            'deepLinkUri': quickStartDeepLinkUri(resolved.entry).toString(),
+          },
+      ],
     };
 
     await _saveWidgetData(_snapshotKey, jsonEncode(snapshot));

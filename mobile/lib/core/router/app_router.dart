@@ -18,6 +18,7 @@ import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/statistics/presentation/statistics_screen.dart';
 import '../../features/streaks/presentation/weekly_recap_screen.dart';
 import '../../features/weight/presentation/weight_screen.dart';
+import '../../features/workouts/application/activity_ranking.dart';
 import '../../features/workouts/application/workout_resume_prompt.dart';
 import '../../features/workouts/presentation/workouts_screen.dart';
 import '../../shared/widgets/main_shell.dart';
@@ -45,19 +46,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/dashboard',
     refreshListenable: authRefresh,
     // The iOS widget/Live Activity deep links are `lifey://today` and
-    // `lifey://workout`. When the app is warm in the background, iOS
-    // delivers that raw URL to Flutter as-is (scheme included) instead of
-    // just its path, so it never matches a GoRoute — fall back to the
-    // dashboard rather than showing the "Page Not Found" error screen, and
-    // for `workout` additionally jump to the running session if one exists
-    // (mirrors the Android ongoing-notification tap in workout_resume_prompt.dart).
-    // Only falls back to the dashboard once `openActiveWorkoutSession`
-    // confirms there's nothing to reopen — it must not run unconditionally,
-    // since a live LogSessionScreen may already be showing the correct state.
+    // `lifey://workout` (plus, since C2.11a, `lifey://workout/start?...` —
+    // the Android dynamic app-shortcuts / home-screen widget quick-start
+    // buttons, and C2.11b's iOS shortcuts). When the app is warm in the
+    // background, iOS delivers that raw URL to Flutter as-is (scheme
+    // included) instead of just its path, so it never matches a GoRoute —
+    // fall back to the dashboard rather than showing the "Page Not Found"
+    // error screen, and for `workout` additionally jump to the running
+    // session (or start the one a `start` link named) if one exists (mirrors
+    // the Android ongoing-notification tap in workout_resume_prompt.dart).
+    // Only falls back to the dashboard once `openActiveWorkoutSession` /
+    // `startQuickStartEntryFromDeepLink` confirms there's nothing to reopen
+    // or start — it must not run unconditionally, since a live
+    // LogSessionScreen may already be showing the correct state.
     onException: (context, state, router) {
       if (state.uri.scheme == 'lifey' && state.uri.host == 'workout') {
+        final entry = quickStartEntryFromDeepLinkUri(state.uri);
         unawaited(() async {
-          final opened = await openActiveWorkoutSession(ref);
+          final opened = entry != null
+              ? await startQuickStartEntryFromDeepLink(ref, entry)
+              : await openActiveWorkoutSession(ref);
           if (!opened) router.go('/dashboard');
         }());
         return;

@@ -9,38 +9,40 @@ import 'package:lifey/features/workouts/application/watch_template_sync.dart';
 class _FakeWatchService extends WatchWorkoutService {
   _FakeWatchService({super.isAvailable = true});
 
-  final pushes = <List<WatchTemplatePayload>>[];
+  final pushes = <List<WatchQuickStartEntryPayload>>[];
 
   @override
-  Future<void> syncTemplates(List<WatchTemplatePayload> templates) async {
-    pushes.add(templates);
+  Future<void> syncTemplates(List<WatchQuickStartEntryPayload> entries) async {
+    pushes.add(entries);
   }
 }
 
 /// A mutable stand-in for [watchTemplateSyncPayloadProvider]. Riverpod 3 has
 /// no `StateProvider`, so a plain [Notifier] plays the "source the test
 /// drives" role.
-class _PayloadSource extends Notifier<List<WatchTemplatePayload>?> {
+class _PayloadSource extends Notifier<List<WatchQuickStartEntryPayload>?> {
   _PayloadSource(this._initial);
-  final List<WatchTemplatePayload>? _initial;
+  final List<WatchQuickStartEntryPayload>? _initial;
 
   @override
-  List<WatchTemplatePayload>? build() => _initial;
+  List<WatchQuickStartEntryPayload>? build() => _initial;
 
-  void emit(List<WatchTemplatePayload>? value) => state = value;
+  void emit(List<WatchQuickStartEntryPayload>? value) => state = value;
 }
 
-WatchTemplatePayload _template(String id, {String? title, int restSeconds = 90}) {
-  return WatchTemplatePayload(
-    templateId: id,
-    title: title ?? id,
-    exercises: [
-      WatchTemplateExercisePayload(
-        exerciseId: 'bench',
-        name: 'Bench Press',
-        restSeconds: restSeconds,
-      ),
-    ],
+WatchQuickStartTemplateEntry _template(String id, {String? title, int restSeconds = 90}) {
+  return WatchQuickStartTemplateEntry(
+    WatchTemplatePayload(
+      templateId: id,
+      title: title ?? id,
+      exercises: [
+        WatchTemplateExercisePayload(
+          exerciseId: 'bench',
+          name: 'Bench Press',
+          restSeconds: restSeconds,
+        ),
+      ],
+    ),
   );
 }
 
@@ -56,10 +58,10 @@ void main() {
   /// underlying controllers) keeps these tests about the *pushing*; what the
   /// payload should contain is watch_template_sync_test.dart's job.
   ({ProviderContainer container, _PayloadSource payload, _FakeWatchService service}) buildHarness({
-    List<WatchTemplatePayload>? initial,
+    List<WatchQuickStartEntryPayload>? initial,
     bool isAvailable = true,
   }) {
-    final source = NotifierProvider<_PayloadSource, List<WatchTemplatePayload>?>(
+    final source = NotifierProvider<_PayloadSource, List<WatchQuickStartEntryPayload>?>(
       () => _PayloadSource(initial),
     );
     final service = _FakeWatchService(isAvailable: isAvailable);
@@ -83,7 +85,8 @@ void main() {
     harness.container.listen(watchTemplateSyncControllerProvider, (_, __) {});
     await tester.pump(pastDebounce);
 
-    expect(harness.service.pushes.single.single.templateId, 'push');
+    final entry = harness.service.pushes.single.single as WatchQuickStartTemplateEntry;
+    expect(entry.template.templateId, 'push');
   });
 
   testWidgets('does not push before the debounce elapses', (tester) async {
@@ -107,7 +110,10 @@ void main() {
     await tester.pump(pastDebounce);
 
     expect(harness.service.pushes, hasLength(2));
-    expect(harness.service.pushes.last.map((t) => t.templateId), ['push', 'legs']);
+    expect(
+      harness.service.pushes.last.map((e) => (e as WatchQuickStartTemplateEntry).template.templateId),
+      ['push', 'legs'],
+    );
   });
 
   testWidgets('skips a re-emission that carries an identical payload', (tester) async {
@@ -135,7 +141,8 @@ void main() {
     await tester.pump(pastDebounce);
 
     expect(harness.service.pushes, hasLength(2));
-    expect(harness.service.pushes.last.single.exercises.single.restSeconds, 150);
+    final entry = harness.service.pushes.last.single as WatchQuickStartTemplateEntry;
+    expect(entry.template.exercises.single.restSeconds, 150);
   });
 
   testWidgets('never pushes while the payload is null (sources still loading)', (tester) async {
@@ -173,7 +180,8 @@ void main() {
     harness.payload.emit([_template('d')]);
     await tester.pump(pastDebounce);
 
-    expect(harness.service.pushes.single.single.templateId, 'd');
+    final entry = harness.service.pushes.single.single as WatchQuickStartTemplateEntry;
+    expect(entry.template.templateId, 'd');
   });
 
   testWidgets('does nothing at all on a platform with no watch support', (tester) async {

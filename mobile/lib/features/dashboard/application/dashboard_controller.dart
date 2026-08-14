@@ -66,7 +66,9 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
   final water = ref.watch(todayWaterTotalProvider).value ?? 0;
 
   final todaysMeals = meals.where((m) => _isToday(m.dateTime)).toList();
-  final todaysSessionCount = sessions.where((s) => _isToday(s.startedAt!)).length;
+  final todaysSessions = sessions.where((s) => _isToday(s.startedAt!)).toList();
+  final todaysSessionCount = todaysSessions.length;
+  final todaysCardioCount = todaysSessions.where((s) => s.isCardio).length;
 
   final stats = DailyStats(
     calories: todaysMeals.fold(0.0, (sum, m) => sum + m.totalCalories),
@@ -76,6 +78,8 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
     workoutCount: todaysSessionCount,
     water: water,
     latestWeight: weights.isEmpty ? null : weights.first.weight,
+    strengthWorkoutCount: todaysSessionCount - todaysCardioCount,
+    cardioWorkoutCount: todaysCardioCount,
   );
 
   final todaysMealGroups = _mealTypeOrder
@@ -105,6 +109,8 @@ final dashboardControllerProvider = Provider<DashboardData>((ref) {
       ),
       templateName: session.templateName,
       rpe: session.rpe,
+      sessionKind: session.sessionKind,
+      activityType: session.activityType,
     );
   }).toList();
 

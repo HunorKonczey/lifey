@@ -18,6 +18,15 @@ struct WidgetLabels: Codable {
   let noData: String
 }
 
+/// One home screen quick-start button (docs/cardio/59-cardio-implementation-plan.md
+/// C2.11b, M29) — mirrors the Android `widget_quickstart_1/2` slots and the
+/// `{label, deepLinkUri}` shape `WidgetSnapshotWriter.write` already sends
+/// (added for C2.11a; this file just hadn't read it back yet).
+struct QuickStartWidgetEntry: Codable {
+  let label: String
+  let deepLinkUri: String
+}
+
 struct TodaySnapshot: Codable {
   let date: String
   let updatedAtEpochMs: Int64
@@ -27,6 +36,12 @@ struct TodaySnapshot: Codable {
   let stepGoal: Int?
   let locale: String
   let labels: WidgetLabels
+  // Optional, not because the writer ever omits the key (it always sends an
+  // array, possibly empty), but because a snapshot written by a pre-C2.11a
+  // app version — still sitting in App Group storage until the next write —
+  // has no such key at all, and JSONDecoder would otherwise fail the whole
+  // decode over one missing field.
+  let quickStart: [QuickStartWidgetEntry]?
 }
 
 private func loadSnapshot() -> TodaySnapshot? {
@@ -203,23 +218,66 @@ private struct MediumSummaryView: View {
   private var steps: Int? { isRolledOver ? nil : snapshot.steps }
 
   var body: some View {
-    HStack(spacing: 12) {
-      StatTile(
-        label: snapshot.labels.calories,
-        value: "\(calories)",
-        goal: snapshot.calorieGoal.map { "/ \($0)" },
-        accent: palette.calories,
-        palette: palette
-      )
-      StatTile(
-        label: snapshot.labels.steps,
-        value: steps.map { "\($0)" } ?? "—",
-        goal: snapshot.stepGoal.map { "/ \($0)" },
-        accent: palette.steps,
-        palette: palette
-      )
+    VStack(spacing: 10) {
+      HStack(spacing: 12) {
+        StatTile(
+          label: snapshot.labels.calories,
+          value: "\(calories)",
+          goal: snapshot.calorieGoal.map { "/ \($0)" },
+          accent: palette.calories,
+          palette: palette
+        )
+        StatTile(
+          label: snapshot.labels.steps,
+          value: steps.map { "\($0)" } ?? "—",
+          goal: snapshot.stepGoal.map { "/ \($0)" },
+          accent: palette.steps,
+          palette: palette
+        )
+      }
+      // Medium only — Small's 155pt square is already full with the
+      // calorie ring + steps line, and 53-cardio-mobile-plan.md §3.3 only
+      // ever asked for "a quick-start row with the top 2", not a variant
+      // for every widget size (same simplification C2.11a already made on
+      // Android, which also shipped this as one fixed layout, not per-size).
+      QuickStartRow(entries: snapshot.quickStart ?? [], palette: palette)
     }
     .padding()
+  }
+}
+
+/// Up to two deep-link buttons (docs/cardio/59-cardio-implementation-plan.md
+/// C2.11b, M29) — plain `Link`s, not an interactive widget (out of scope per
+/// docs/24-ios-widget-live-activity-plan.md's Scope section; iOS 17+ only).
+/// Each `Link`'s own URL overrides the whole-widget `.widgetURL(lifey://today)`
+/// set in `TodaySummaryWidgetView` for exactly its own tap region — the
+/// standard pre-iOS-17 multi-target widget pattern, no extra capability
+/// needed. Renders nothing when the ranking hasn't produced any entries yet
+/// (fresh install, before the first `WidgetSnapshotController` refresh).
+private struct QuickStartRow: View {
+  let entries: [QuickStartWidgetEntry]
+  let palette: Palette
+
+  var body: some View {
+    if !entries.isEmpty {
+      HStack(spacing: 8) {
+        ForEach(entries.prefix(2), id: \.deepLinkUri) { entry in
+          if let url = URL(string: entry.deepLinkUri) {
+            Link(destination: url) {
+              Text(entry.label)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(palette.onSurface)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(palette.container)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+          }
+        }
+      }
+    }
   }
 }
 

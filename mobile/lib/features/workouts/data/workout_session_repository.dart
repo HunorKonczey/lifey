@@ -99,11 +99,27 @@ class WorkoutSessionRepository {
         sets.sort((a, b) => a.performedAt.compareTo(b.performedAt));
       }
 
+      final cardioBySession = {
+        for (final row in await _db.select(_db.cardioDetails).get())
+          row.sessionClientId: _cardioMetricsFromRow(row),
+      };
+      final splitsBySession = <String, List<CardioSplit>>{};
+      for (final row in await _db.select(_db.cardioSplits).get()) {
+        splitsBySession
+            .putIfAbsent(row.sessionClientId, () => [])
+            .add(_cardioSplitFromRow(row));
+      }
+      for (final splits in splitsBySession.values) {
+        splits.sort((a, b) => a.splitIndex.compareTo(b.splitIndex));
+      }
+
       final sessions = sessionRows
           .map((row) => _toDomain(
                 row,
                 exercisesBySession[row.clientId] ?? const [],
                 setsBySession[row.clientId] ?? const [],
+                cardio: cardioBySession[row.clientId],
+                splits: splitsBySession[row.clientId] ?? const [],
               ))
           .toList()
         // Upcoming (not-yet-started) sessions have no startedAt — fall back
@@ -115,6 +131,16 @@ class WorkoutSessionRepository {
         });
       return sessions;
     });
+  }
+
+  /// Same as [watchAll], narrowed to one [SessionKind] code (`'STRENGTH'` or
+  /// `'CARDIO'`) — the fajta-szűrő (docs/cardio/53-cardio-mobile-plan.md §6,
+  /// C1.7). `null` means every kind, same as [watchAll] itself; implemented
+  /// as a filter over [watchAll] rather than a second Drift query so there is
+  /// exactly one place that assembles a session's exercises/sets/cardio.
+  Stream<List<WorkoutSession>> watchByKind(String? kind) {
+    if (kind == null) return watchAll();
+    return watchAll().map((sessions) => sessions.where((s) => s.sessionKind == kind).toList());
   }
 
   /// Looks up a single session by its backend id — used by the trainer-comment
@@ -173,7 +199,10 @@ class WorkoutSessionRepository {
         ),
     ]..sort((a, b) => a.performedAt.compareTo(b.performedAt));
 
-    return _toDomain(row, exercises, sets);
+    final cardio = await _loadCardioMetrics(row.clientId);
+    final splits = await _loadCardioSplits(row.clientId);
+
+    return _toDomain(row, exercises, sets, cardio: cardio, splits: splits);
   }
 
   /// Returns the newly generated [WorkoutSession.clientId] so callers can keep
@@ -198,6 +227,14 @@ class WorkoutSessionRepository {
     String? templateName,
     int? rpe,
     String? feedbackNote,
+    String sessionKind = 'STRENGTH',
+    String? activityType,
+    int? movingSeconds,
+    // Client-only live-session checkpoint (docs/cardio/59-cardio-implementation-plan.md
+    // C2.1) — never part of [_payload], see the Drift column doc for why.
+    int? movingSinceEpochMs,
+    CardioMetrics? cardio,
+    List<CardioSplit> splits = const [],
   }) async {
     final resolvedClientId = clientId ?? newClientId();
     await _db.transaction(() async {
@@ -213,9 +250,14 @@ class WorkoutSessionRepository {
               templateName: Value(templateName),
               rpe: Value(rpe),
               feedbackNote: Value(feedbackNote),
+              sessionKind: Value(sessionKind),
+              activityType: Value(activityType),
+              movingSeconds: Value(movingSeconds),
+              movingSinceEpochMs: Value(movingSinceEpochMs),
             ),
           );
       await _insertChildren(resolvedClientId, exercises, sets);
+      await _replaceCardio(resolvedClientId, cardio, splits);
     });
     await _outbox.enqueueCreate(
       clientId: resolvedClientId,
@@ -231,6 +273,11 @@ class WorkoutSessionRepository {
         templateClientId: templateClientId,
         rpe: rpe,
         feedbackNote: feedbackNote,
+        sessionKind: sessionKind,
+        activityType: activityType,
+        movingSeconds: movingSeconds,
+        cardio: cardio,
+        splits: splits,
       ),
     );
     return resolvedClientId;
@@ -273,6 +320,18 @@ class WorkoutSessionRepository {
   /// update are full replaces, so a caller-supplied null would otherwise wipe
   /// the other flow's data (rating a session used to disconnect its Apple
   /// Health workout, and vice versa).
+  /// [sessionKind]/[activityType]/[movingSeconds]/[cardio]/[splits] follow
+  /// the same absent-preserving [Value] convention as the health/rating
+  /// fields above, for the same reason: `rate()` and [enrichHealthMetrics]
+  /// call through here without knowing anything about cardio, and must not
+  /// wipe a cardio session's data just by rating it or pairing its Apple
+  /// Health workout. Only the session editor (the one flow that actually
+  /// owns this data) passes them explicitly.
+  ///
+  /// A present-but-null [cardio] genuinely clears the session's cardio row
+  /// (full-replace, matching [exercises]/[sets]) — the editor always sends
+  /// its complete current cardio state, never "no opinion" via null (that's
+  /// what leaving the parameter absent is for).
   Future<void> update(
     String clientId, {
     required DateTime startedAt,
@@ -284,6 +343,15 @@ class WorkoutSessionRepository {
     Value<String?> healthWorkoutId = const Value.absent(),
     Value<int?> rpe = const Value.absent(),
     Value<String?> feedbackNote = const Value.absent(),
+    Value<String> sessionKind = const Value.absent(),
+    Value<String?> activityType = const Value.absent(),
+    Value<int?> movingSeconds = const Value.absent(),
+    // Client-only live-session checkpoint, same absent-preserving convention
+    // as the rest — never part of [_payload] (docs/cardio/
+    // 59-cardio-implementation-plan.md C2.1).
+    Value<int?> movingSinceEpochMs = const Value.absent(),
+    Value<CardioMetrics?> cardio = const Value.absent(),
+    Value<List<CardioSplit>> splits = const Value.absent(),
   }) async {
     // Merged (caller-supplied or preserved) values, resolved inside the
     // transaction but also needed for the outbox payload below.
@@ -292,6 +360,12 @@ class WorkoutSessionRepository {
     String? mergedHealthWorkoutId;
     int? mergedRpe;
     String? mergedFeedbackNote;
+    String mergedSessionKind = 'STRENGTH';
+    String? mergedActivityType;
+    int? mergedMovingSeconds;
+    int? mergedMovingSinceEpochMs;
+    CardioMetrics? mergedCardio;
+    List<CardioSplit> mergedSplits = const [];
     await _db.transaction(() async {
       final row = await (_db.select(_db.workoutSessions)
             ..where((t) => t.clientId.equals(clientId)))
@@ -306,6 +380,15 @@ class WorkoutSessionRepository {
       mergedRpe = rpe.present ? rpe.value : row.rpe;
       mergedFeedbackNote =
           feedbackNote.present ? feedbackNote.value : row.feedbackNote;
+      mergedSessionKind = sessionKind.present ? sessionKind.value : row.sessionKind;
+      mergedActivityType = activityType.present ? activityType.value : row.activityType;
+      mergedMovingSeconds =
+          movingSeconds.present ? movingSeconds.value : row.movingSeconds;
+      mergedMovingSinceEpochMs = movingSinceEpochMs.present
+          ? movingSinceEpochMs.value
+          : row.movingSinceEpochMs;
+      mergedCardio = cardio.present ? cardio.value : await _loadCardioMetrics(clientId);
+      mergedSplits = splits.present ? splits.value : await _loadCardioSplits(clientId);
       await (_db.update(_db.workoutSessions)
             ..where((t) => t.clientId.equals(clientId)))
           .write(
@@ -317,6 +400,10 @@ class WorkoutSessionRepository {
           healthWorkoutId: Value(mergedHealthWorkoutId),
           rpe: Value(mergedRpe),
           feedbackNote: Value(mergedFeedbackNote),
+          sessionKind: Value(mergedSessionKind),
+          activityType: Value(mergedActivityType),
+          movingSeconds: Value(mergedMovingSeconds),
+          movingSinceEpochMs: Value(mergedMovingSinceEpochMs),
         ),
       );
       await (_db.delete(_db.workoutSessionExercises)
@@ -326,6 +413,7 @@ class WorkoutSessionRepository {
             ..where((t) => t.sessionClientId.equals(clientId)))
           .go();
       await _insertChildren(clientId, exercises, sets);
+      await _replaceCardio(clientId, mergedCardio, mergedSplits);
     });
     await _outbox.enqueueUpdate(
       clientId: clientId,
@@ -340,6 +428,11 @@ class WorkoutSessionRepository {
         healthWorkoutId: mergedHealthWorkoutId,
         rpe: mergedRpe,
         feedbackNote: mergedFeedbackNote,
+        sessionKind: mergedSessionKind,
+        activityType: mergedActivityType,
+        movingSeconds: mergedMovingSeconds,
+        cardio: mergedCardio,
+        splits: mergedSplits,
       ),
     );
   }
@@ -400,6 +493,14 @@ class WorkoutSessionRepository {
     Value<double?> activeCalories = const Value.absent(),
     Value<double?> averageHeartRate = const Value.absent(),
     Value<String?> healthWorkoutId = const Value.absent(),
+    // docs/cardio/55-cardio-watch-plan.md §4.3, C5.7a — the caller (`WorkoutResumePrompt`)
+    // already merged this with the session's own existing `cardio` via
+    // `CardioMetrics.mergedWithWatchMeasurement`, so passing it straight
+    // through to `update()`'s wholesale-replace `cardio` param is correct
+    // here, unlike re-reading `plannedRows`/`setRows` below (which this
+    // method owns re-fetching itself, since those never need merging against
+    // watch data).
+    Value<CardioMetrics?> cardio = const Value.absent(),
   }) async {
     final row = await (_db.select(_db.workoutSessions)
           ..where((t) => t.clientId.equals(clientId)))
@@ -432,6 +533,7 @@ class WorkoutSessionRepository {
       activeCalories: activeCalories,
       averageHeartRate: averageHeartRate,
       healthWorkoutId: healthWorkoutId,
+      cardio: cardio,
     );
   }
 
@@ -449,6 +551,15 @@ class WorkoutSessionRepository {
               ..where((t) => t.sessionClientId.equals(clientId)))
             .go();
         await (_db.delete(_db.exerciseSets)
+              ..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
+        await (_db.delete(_db.cardioDetails)
+              ..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
+        await (_db.delete(_db.cardioSplits)
+              ..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
+        await (_db.delete(_db.cardioTrackPoints)
               ..where((t) => t.sessionClientId.equals(clientId)))
             .go();
         await (_db.delete(_db.workoutSessions)
@@ -487,6 +598,131 @@ class WorkoutSessionRepository {
     }
   }
 
+  /// Rebuilds a session's cardio-metrics row and split list from scratch —
+  /// the same full-replace model as [_insertChildren], and (like it) always
+  /// called from inside the caller's transaction. A null [cardio] simply
+  /// leaves no row, same as a session that never had cardio data.
+  Future<void> _replaceCardio(
+    String sessionClientId,
+    CardioMetrics? cardio,
+    List<CardioSplit> splits,
+  ) async {
+    await (_db.delete(_db.cardioDetails)
+          ..where((t) => t.sessionClientId.equals(sessionClientId)))
+        .go();
+    if (cardio != null) {
+      await _db.into(_db.cardioDetails).insert(
+            CardioDetailsCompanion.insert(
+              sessionClientId: sessionClientId,
+              distanceMeters: Value(cardio.distanceMeters),
+              elevationGainMeters: Value(cardio.elevationGainMeters),
+              elevationLossMeters: Value(cardio.elevationLossMeters),
+              maxAltitudeMeters: Value(cardio.maxAltitudeMeters),
+              steps: Value(cardio.steps),
+              avgCadence: Value(cardio.avgCadence),
+              maxCadence: Value(cardio.maxCadence),
+              avgWatts: Value(cardio.avgWatts),
+              maxWatts: Value(cardio.maxWatts),
+              resistanceLevel: Value(cardio.resistanceLevel),
+              deviceCalories: Value(cardio.deviceCalories),
+              maxHeartRate: Value(cardio.maxHeartRate),
+              hrZone1Seconds: Value(cardio.hrZone1Seconds),
+              hrZone2Seconds: Value(cardio.hrZone2Seconds),
+              hrZone3Seconds: Value(cardio.hrZone3Seconds),
+              hrZone4Seconds: Value(cardio.hrZone4Seconds),
+              hrZone5Seconds: Value(cardio.hrZone5Seconds),
+              intensity: Value(cardio.intensity),
+              venue: Value(cardio.venue),
+              gameFormat: Value(cardio.gameFormat),
+              scorePoints: Value(cardio.scorePoints),
+              scoreAssists: Value(cardio.scoreAssists),
+              scoreRebounds: Value(cardio.scoreRebounds),
+              distanceSource: Value(cardio.distanceSource),
+              caloriesSource: Value(cardio.caloriesSource),
+              routePolyline: Value(cardio.routePolyline),
+              routePointCount: Value(cardio.routePointCount),
+            ),
+          );
+    }
+
+    await (_db.delete(_db.cardioSplits)
+          ..where((t) => t.sessionClientId.equals(sessionClientId)))
+        .go();
+    for (final split in splits) {
+      await _db.into(_db.cardioSplits).insert(
+            CardioSplitsCompanion.insert(
+              clientId: newClientId(),
+              sessionClientId: sessionClientId,
+              splitIndex: split.splitIndex,
+              distanceMeters: split.distanceMeters,
+              durationSeconds: split.durationSeconds,
+              elevationDeltaM: Value(split.elevationDeltaM),
+              avgHeartRate: Value(split.avgHeartRate),
+            ),
+          );
+    }
+  }
+
+  /// The [update]-merge counterpart of [_replaceCardio]'s write side — reads
+  /// what's currently stored, for a caller (e.g. [rate]) that didn't pass a
+  /// [Value] for `cardio` and therefore isn't asking to change it.
+  Future<CardioMetrics?> _loadCardioMetrics(String sessionClientId) async {
+    final row = await (_db.select(_db.cardioDetails)
+          ..where((t) => t.sessionClientId.equals(sessionClientId)))
+        .getSingleOrNull();
+    return row == null ? null : _cardioMetricsFromRow(row);
+  }
+
+  Future<List<CardioSplit>> _loadCardioSplits(String sessionClientId) async {
+    final rows = await (_db.select(_db.cardioSplits)
+          ..where((t) => t.sessionClientId.equals(sessionClientId))
+          ..orderBy([(t) => OrderingTerm.asc(t.splitIndex)]))
+        .get();
+    return [for (final row in rows) _cardioSplitFromRow(row)];
+  }
+
+  CardioMetrics _cardioMetricsFromRow(CardioDetailsRow row) {
+    return CardioMetrics(
+      distanceMeters: row.distanceMeters,
+      elevationGainMeters: row.elevationGainMeters,
+      elevationLossMeters: row.elevationLossMeters,
+      maxAltitudeMeters: row.maxAltitudeMeters,
+      steps: row.steps,
+      avgCadence: row.avgCadence,
+      maxCadence: row.maxCadence,
+      avgWatts: row.avgWatts,
+      maxWatts: row.maxWatts,
+      resistanceLevel: row.resistanceLevel,
+      deviceCalories: row.deviceCalories,
+      maxHeartRate: row.maxHeartRate,
+      hrZone1Seconds: row.hrZone1Seconds,
+      hrZone2Seconds: row.hrZone2Seconds,
+      hrZone3Seconds: row.hrZone3Seconds,
+      hrZone4Seconds: row.hrZone4Seconds,
+      hrZone5Seconds: row.hrZone5Seconds,
+      intensity: row.intensity,
+      venue: row.venue,
+      gameFormat: row.gameFormat,
+      scorePoints: row.scorePoints,
+      scoreAssists: row.scoreAssists,
+      scoreRebounds: row.scoreRebounds,
+      distanceSource: row.distanceSource,
+      caloriesSource: row.caloriesSource,
+      routePolyline: row.routePolyline,
+      routePointCount: row.routePointCount,
+    );
+  }
+
+  CardioSplit _cardioSplitFromRow(CardioSplitRow row) {
+    return CardioSplit(
+      splitIndex: row.splitIndex,
+      distanceMeters: row.distanceMeters,
+      durationSeconds: row.durationSeconds,
+      elevationDeltaM: row.elevationDeltaM,
+      avgHeartRate: row.avgHeartRate,
+    );
+  }
+
   Map<String, dynamic> _payload({
     required DateTime startedAt,
     DateTime? finishedAt,
@@ -498,6 +734,11 @@ class WorkoutSessionRepository {
     String? templateClientId,
     int? rpe,
     String? feedbackNote,
+    String sessionKind = 'STRENGTH',
+    String? activityType,
+    int? movingSeconds,
+    CardioMetrics? cardio,
+    List<CardioSplit> splits = const [],
   }) {
     return {
       'startedAt': startedAt.toUtc().toIso8601String(),
@@ -534,14 +775,73 @@ class WorkoutSessionRepository {
       if (templateClientId != null) 'templateId': clientRef(templateClientId),
       if (rpe != null) 'rpe': rpe,
       if (feedbackNote != null) 'feedbackNote': feedbackNote,
+      // Omitted entirely for a STRENGTH session (the default) — a client
+      // that predates cardio never sent these keys, and this payload must
+      // stay byte-identical for it (docs/cardio/59-cardio-implementation-plan.md
+      // C1.5's regression requirement).
+      if (sessionKind != 'STRENGTH') 'sessionKind': sessionKind,
+      if (activityType != null) 'activityType': activityType,
+      if (movingSeconds != null) 'movingSeconds': movingSeconds,
+      if (cardio != null) 'cardio': _cardioPayload(cardio),
+      if (splits.isNotEmpty)
+        'splits': splits.map(_splitPayload).toList(),
+    };
+  }
+
+  /// Field order mirrors the backend's `CardioDetailsRequest` exactly
+  /// (docs/cardio/52-cardio-domain-backend-plan.md §3.2). Nulls are sent
+  /// explicitly rather than omitted — simpler than 27 individual `if`s, and
+  /// Jackson binds a JSON `null` to a nullable record component the same way
+  /// it binds an absent key.
+  Map<String, dynamic> _cardioPayload(CardioMetrics cardio) {
+    return {
+      'distanceMeters': cardio.distanceMeters,
+      'elevationGainMeters': cardio.elevationGainMeters,
+      'elevationLossMeters': cardio.elevationLossMeters,
+      'maxAltitudeMeters': cardio.maxAltitudeMeters,
+      'steps': cardio.steps,
+      'avgCadence': cardio.avgCadence,
+      'maxCadence': cardio.maxCadence,
+      'avgWatts': cardio.avgWatts,
+      'maxWatts': cardio.maxWatts,
+      'resistanceLevel': cardio.resistanceLevel,
+      'deviceCalories': cardio.deviceCalories,
+      'maxHeartRate': cardio.maxHeartRate,
+      'hrZone1Seconds': cardio.hrZone1Seconds,
+      'hrZone2Seconds': cardio.hrZone2Seconds,
+      'hrZone3Seconds': cardio.hrZone3Seconds,
+      'hrZone4Seconds': cardio.hrZone4Seconds,
+      'hrZone5Seconds': cardio.hrZone5Seconds,
+      'intensity': cardio.intensity,
+      'venue': cardio.venue,
+      'gameFormat': cardio.gameFormat,
+      'scorePoints': cardio.scorePoints,
+      'scoreAssists': cardio.scoreAssists,
+      'scoreRebounds': cardio.scoreRebounds,
+      'distanceSource': cardio.distanceSource,
+      'caloriesSource': cardio.caloriesSource,
+      'routePolyline': cardio.routePolyline,
+      'routePointCount': cardio.routePointCount,
+    };
+  }
+
+  Map<String, dynamic> _splitPayload(CardioSplit split) {
+    return {
+      'splitIndex': split.splitIndex,
+      'distanceMeters': split.distanceMeters,
+      'durationSeconds': split.durationSeconds,
+      'elevationDeltaM': split.elevationDeltaM,
+      'avgHeartRate': split.avgHeartRate,
     };
   }
 
   WorkoutSession _toDomain(
     WorkoutSessionRow row,
     List<SessionExercise> exercises,
-    List<ExerciseSet> sets,
-  ) {
+    List<ExerciseSet> sets, {
+    CardioMetrics? cardio,
+    List<CardioSplit> splits = const [],
+  }) {
     return WorkoutSession(
       clientId: row.clientId,
       id: row.serverId,
@@ -561,6 +861,12 @@ class WorkoutSessionRepository {
       feedbackNote: row.feedbackNote,
       trainerComment: row.trainerComment,
       trainerCommentAt: row.trainerCommentAt,
+      sessionKind: row.sessionKind,
+      activityType: row.activityType,
+      movingSeconds: row.movingSeconds,
+      movingSinceEpochMs: row.movingSinceEpochMs,
+      cardio: cardio,
+      splits: splits,
     );
   }
 

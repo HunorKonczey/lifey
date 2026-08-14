@@ -1,5 +1,7 @@
 package com.lifey.workout.session.dto;
 
+import com.lifey.workout.session.SessionKind;
+import com.lifey.workout.session.cardio.ActivityType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -70,6 +72,34 @@ public record WorkoutSessionRequest(
          * local cache: the session came back from the server without it, and the
          * planned-but-not-yet-logged set rows vanished on every pull.
          */
-        List<@Valid PlannedExerciseRequest> plannedExercises
+        List<@Valid PlannedExerciseRequest> plannedExercises,
+
+        /*
+         * Null or STRENGTH from any client that predates cardio (docs/cardio/52
+         * §3.2) — the server defaults it to STRENGTH, so an old client's
+         * behaviour is unchanged.
+         */
+        SessionKind sessionKind,
+
+        /*
+         * Required exactly when sessionKind is CARDIO, rejected otherwise — a
+         * cross-field rule the service checks (Bean Validation can't express
+         * it), not this annotation set. See InvalidCardioRequestException.
+         */
+        ActivityType activityType,
+
+        @PositiveOrZero
+        Integer movingSeconds,
+
+        /* Cardio metrics; must be null unless sessionKind is CARDIO. */
+        @Valid
+        CardioDetailsRequest cardio,
+
+        /*
+         * Per-km/lap splits, computed client-side (docs/cardio/54). Replaces
+         * the whole list on update, same model as sets/plannedExercises. Must
+         * be null or empty unless sessionKind is CARDIO.
+         */
+        List<@Valid CardioSplitRequest> splits
 ) {
 }

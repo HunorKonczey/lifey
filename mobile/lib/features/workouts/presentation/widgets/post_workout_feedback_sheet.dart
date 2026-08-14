@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import 'rpe_selector.dart';
 
 /// Result of the post-workout feedback sheet: a difficulty rating (1-10,
 /// RPE-style) and an optional note. Returned via [Navigator.pop]; a null
@@ -55,28 +56,11 @@ class _PostWorkoutFeedbackSheetState extends State<PostWorkoutFeedbackSheet> {
         children: [
           Text(l10n.postWorkoutFeedbackTitle, style: theme.textTheme.titleLarge),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              for (var value = 1; value <= 10; value++)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: _RpeChip(
-                      value: value,
-                      selected: _rpe == value,
-                      onTap: () => setState(() => _rpe = value),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(l10n.postWorkoutFeedbackAnchorEasy, style: theme.textTheme.bodySmall),
-              Text(l10n.postWorkoutFeedbackAnchorMax, style: theme.textTheme.bodySmall),
-            ],
+          RpeSelector(
+            value: _rpe,
+            onChanged: (v) => setState(() => _rpe = v),
+            lowAnchorLabel: l10n.postWorkoutFeedbackAnchorEasy,
+            highAnchorLabel: l10n.postWorkoutFeedbackAnchorMax,
           ),
           const SizedBox(height: 16),
           TextField(
@@ -107,38 +91,6 @@ class _PostWorkoutFeedbackSheetState extends State<PostWorkoutFeedbackSheet> {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _RpeChip extends StatelessWidget {
-  const _RpeChip({required this.value, required this.selected, required this.onTap});
-
-  final int value;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final bg = selected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest;
-    final fg = selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
-        child: Text(
-          '$value',
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: fg,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-          ),
-        ),
       ),
     );
   }

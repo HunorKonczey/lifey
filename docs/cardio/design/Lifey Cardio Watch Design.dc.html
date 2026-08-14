@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#e7e5df;}
+  a{color:#586E38;} a:hover{color:#3f5226;}
+  .mi{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+  .fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+</style>
+</helmet>
+<div style="min-width:100%;min-height:100vh;width:max-content;padding:48px 56px 96px;background:#e7e5df;font-family:'Plus Jakarta Sans',sans-serif;">
+
+  <div style="max-width:1100px;margin-bottom:44px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+      <div style="width:46px;height:46px;border-radius:14px;background:#9DAE6B;display:flex;align-items:center;justify-content:center;color:#161611;">
+        <span class="mi fill" style="font-size:28px;">watch</span>
+      </div>
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#1c1d18;letter-spacing:-0.5px;">Lifey Cardio — óra (AW 16+ / W 15+)</div>
+        <div style="font-size:14px;font-weight:500;color:#6a6a60;">A meglévő <span style="font-family:monospace;">Lifey Watch Design</span> canvas folytatása · doc 57 §5 · magyar felirat (HU), a string-kulcsok a meglévő készletet bővítik</div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:500;color:#76766c;line-height:1.65;max-width:940px;">A telefontól egy dologban tér el: <b style="color:#46463e;">az órán a pulzus a kiemelt másodlagos metrika</b> — ez az egyetlen adat, amit csak az óra tud, és a felhasználó ezért néz oda. A domináns szám ugyanaz marad, mint a telefonon (DISTANCE → táv, MACHINE → idő, GAME → játékidő), de az akcentszínt az aktivitás adja, nem a primary olive: így egy pillantásból kiderül, melyik edzés fut.</div>
+  </div>
+
+  <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8a8a7e;margin-bottom:18px;">Apple Watch · 45 mm (SwiftUI, watchOS 10+)</div>
+  <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;margin-bottom:64px;" data-screen-label="Apple Watch cardio">
+
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">AW 16 · Egyesített indító lista</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:26px;left:46px;font-size:19px;font-weight:700;letter-spacing:1px;color:#A8A899;">INDÍTÁS</div>
+            <div style="position:absolute;top:70px;left:34px;right:34px;">
+              <div style="background:#9DAE6B;border-radius:28px;padding:16px 20px;display:flex;align-items:center;gap:13px;margin-bottom:12px;">
+                <span class="mi fill" style="font-size:30px;color:#161611;">fitness_center</span>
+                <div style="flex:1;">
+                  <div style="font-size:24px;font-weight:800;color:#161611;letter-spacing:-0.3px;">Push nap</div>
+                  <div style="font-size:17px;font-weight:600;color:#2b2f1c;">Erősítő · 6 gyakorlat</div>
+                </div>
+              </div>
+              <div style="background:#1C1E16;border-radius:26px;padding:14px 18px;display:flex;align-items:center;gap:13px;margin-bottom:10px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(224,145,90,.18);display:flex;align-items:center;justify-content:center;color:#E0915A;flex:none;"><span class="mi fill" style="font-size:26px;">directions_run</span></div>
+                <div style="flex:1;"><div style="font-size:23px;font-weight:700;color:#F1F0E4;">Futás</div><div style="font-size:16px;font-weight:600;color:#777264;">heti 3×</div></div>
+              </div>
+              <div style="background:#1C1E16;border-radius:26px;padding:14px 18px;display:flex;align-items:center;gap:13px;margin-bottom:10px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(176,138,200,.18);display:flex;align-items:center;justify-content:center;color:#B08AC8;flex:none;"><span class="mi fill" style="font-size:26px;">directions_walk</span></div>
+                <div style="flex:1;"><div style="font-size:23px;font-weight:700;color:#F1F0E4;">Séta</div><div style="font-size:16px;font-weight:600;color:#777264;">heti 5×</div></div>
+              </div>
+              <div style="background:#1C1E16;border-radius:26px;padding:14px 18px;display:flex;align-items:center;gap:13px;opacity:.65;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(216,179,90,.18);display:flex;align-items:center;justify-content:center;color:#D8B35A;flex:none;"><span class="mi fill" style="font-size:26px;">pedal_bike</span></div>
+                <div style="flex:1;"><div style="font-size:23px;font-weight:700;color:#F1F0E4;">Szobabicikli</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">A meglévő kiemelt „Quick strength” kártya <b style="color:#46463e;">marad legfelül</b>, a rangsorolt lista alatta kezdődik — a cardio típusok ugyanabból a gyakoriság-rangsorból jönnek, mint a telefon gyorsindítója. Új kulcsok: <span style="font-family:monospace;">start_title, freq_weekly_format</span>.</div>
+    </div>
+
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">AW 17 · Aktív — DISTANCE (futás)</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:26px;left:46px;display:flex;align-items:center;gap:8px;color:#E0915A;"><span class="mi fill" style="font-size:22px;">directions_run</span><span style="font-size:19px;font-weight:700;letter-spacing:1px;">FUTÁS</span></div>
+            <div style="position:absolute;top:70px;left:46px;right:44px;bottom:26px;display:flex;flex-direction:column;">
+              <div style="font-size:17px;font-weight:700;letter-spacing:1.2px;color:#777264;">TÁVOLSÁG</div>
+              <div style="display:flex;align-items:baseline;gap:8px;">
+                <span style="font-size:66px;font-weight:800;color:#E0915A;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.05;">5,24</span>
+                <span style="font-size:24px;font-weight:700;color:#A8A899;">km</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;margin-top:8px;">
+                <span class="mi fill" style="font-size:36px;color:#C46A6A;">favorite</span>
+                <span style="font-size:52px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">148</span>
+                <span style="font-size:22px;font-weight:600;color:#A8A899;">BPM</span>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:12px;">
+                <div style="flex:1;background:#1C1E16;border-radius:22px;padding:12px 14px;"><div style="font-size:26px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">28:14</div><div style="font-size:14px;font-weight:600;color:#777264;">idő</div></div>
+                <div style="flex:1;background:#1C1E16;border-radius:22px;padding:12px 14px;"><div style="font-size:26px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">5:23</div><div style="font-size:14px;font-weight:600;color:#777264;">tempó</div></div>
+              </div>
+              <div style="display:flex;justify-content:center;gap:8px;margin-top:auto;">
+                <span style="width:8px;height:8px;border-radius:50%;background:#F1F0E4;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#46463e;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#46463e;"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">A domináns szám az <b style="color:#46463e;">aktivitás akcentjét</b> viseli (itt <span style="font-family:monospace;">E0915A</span>), nem a primaryt — az erősítő edzésen a szám marad olive, így a két üzemmód összetéveszthetetlen. A pulzus a második sorban, 52 px-en: az órán ez a kiemelt másodlagos metrika. Adat: <span style="font-family:monospace;">HKWorkoutSession</span> + <span style="font-family:monospace;">CLLocationManager</span>.</div>
+    </div>
+
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">AW 18 · Aktív — MACHINE (szobabicikli)</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:26px;left:46px;display:flex;align-items:center;gap:8px;color:#D8B35A;"><span class="mi fill" style="font-size:22px;">pedal_bike</span><span style="font-size:19px;font-weight:700;letter-spacing:1px;">BICIKLI</span></div>
+            <div style="position:absolute;top:70px;left:46px;right:44px;bottom:26px;display:flex;flex-direction:column;">
+              <div style="font-size:17px;font-weight:700;letter-spacing:1.2px;color:#777264;">MOZGÁSIDŐ</div>
+              <div style="font-size:66px;font-weight:800;color:#D8B35A;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.05;">42:18</div>
+              <div style="display:flex;align-items:center;gap:14px;margin-top:8px;">
+                <span class="mi fill" style="font-size:36px;color:#C46A6A;">favorite</span>
+                <span style="font-size:52px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">132</span>
+                <span style="font-size:22px;font-weight:600;color:#A8A899;">BPM</span>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:12px;">
+                <div style="flex:1;background:#1C1E16;border-radius:22px;padding:12px 14px;"><div style="font-size:26px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">84</div><div style="font-size:14px;font-weight:600;color:#777264;">rpm</div></div>
+                <div style="flex:1;background:#1C1E16;border-radius:22px;padding:12px 14px;"><div style="font-size:26px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">172</div><div style="font-size:14px;font-weight:600;color:#777264;">watt</div></div>
+              </div>
+              <div style="display:flex;justify-content:center;gap:8px;margin-top:auto;">
+                <span style="width:8px;height:8px;border-radius:50%;background:#F1F0E4;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#46463e;"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">Kadencia és teljesítmény csak akkor jelenik meg, ha van párosított szenzor; enélkül a két doboz helyére a <b style="color:#46463e;">kalória és a becsült táv</b> kerül. A távot az órán sosem tesszük a nagy helyre gép nélkül — ugyanaz a szabály, mint a telefonon.</div>
+    </div>
+
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">AW 19 · Aktív — GAME, pályán</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:26px;left:46px;display:flex;align-items:center;gap:8px;color:#8E8EC4;"><span class="mi fill" style="font-size:22px;">sports_basketball</span><span style="font-size:19px;font-weight:700;letter-spacing:1px;">KOSÁR</span></div>
+            <div style="position:absolute;top:70px;left:46px;right:44px;bottom:24px;display:flex;flex-direction:column;">
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:9px;height:9px;border-radius:50%;background:#9DAE6B;"></span><span style="font-size:17px;font-weight:700;letter-spacing:1.2px;color:#9DAE6B;">JÁTÉKIDŐ</span></div>
+              <div style="font-size:66px;font-weight:800;color:#8E8EC4;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.05;">34:12</div>
+              <div style="display:flex;align-items:center;gap:14px;margin-top:6px;">
+                <span class="mi fill" style="font-size:36px;color:#C46A6A;">favorite</span>
+                <span style="font-size:52px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">162</span>
+                <span style="font-size:20px;font-weight:700;color:#D8B35A;background:rgba(216,179,90,.18);border-radius:10px;padding:4px 9px;">Z4</span>
+              </div>
+              <div style="background:#1C1E16;border-radius:22px;padding:11px 16px;margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:17px;font-weight:600;color:#777264;">bruttó</span>
+                <span style="font-size:24px;font-weight:800;color:#A8A899;font-variant-numeric:tabular-nums;">58:40</span>
+              </div>
+              <div style="margin-top:auto;background:#9DAE6B;border-radius:26px;height:74px;display:flex;align-items:center;justify-content:center;gap:11px;color:#161611;">
+                <span class="mi fill" style="font-size:30px;">airline_seat_recline_normal</span>
+                <span style="font-size:24px;font-weight:800;letter-spacing:-0.3px;">Padra</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">Az órán a kapcsoló <b style="color:#46463e;">egyetlen nagy gomb</b>, nem kétállású segmented: a képernyő túl kicsi ahhoz, hogy két félből kelljen a jót eltalálni. A gomb mindig a <b style="color:#46463e;">következő állapotot</b> mondja („Padra”), és az egész alsó sávot elfoglalja (74 px ≈ a képernyő 15%-a).</div>
+    </div>
+
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">AW 20 · GAME — padon (a mérés pihen)</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;inset:0;border-radius:108px;border:5px solid #C49A6C;"></div>
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:26px;left:46px;display:flex;align-items:center;gap:8px;color:#C49A6C;"><span class="mi fill" style="font-size:22px;">airline_seat_recline_normal</span><span style="font-size:19px;font-weight:700;letter-spacing:1px;">PADON</span></div>
+            <div style="position:absolute;top:70px;left:46px;right:44px;bottom:24px;display:flex;flex-direction:column;">
+              <div style="font-size:17px;font-weight:700;letter-spacing:1.2px;color:#C49A6C;">JÁTÉKIDŐ — ÁLL</div>
+              <div style="font-size:66px;font-weight:800;color:#6f7060;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.05;">34:12</div>
+              <div style="display:flex;align-items:center;gap:14px;margin-top:6px;">
+                <span class="mi fill" style="font-size:36px;color:#C46A6A;">favorite</span>
+                <span style="font-size:52px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">118</span>
+                <span style="font-size:22px;font-weight:600;color:#A8A899;">BPM</span>
+              </div>
+              <div style="background:rgba(196,154,108,.16);border-radius:22px;padding:11px 16px;margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:17px;font-weight:600;color:#C49A6C;">bruttó — fut</span>
+                <span style="font-size:24px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">61:04</span>
+              </div>
+              <div style="margin-top:auto;background:#C49A6C;border-radius:26px;height:74px;display:flex;align-items:center;justify-content:center;gap:11px;color:#231C12;">
+                <span class="mi fill" style="font-size:30px;">sports</span>
+                <span style="font-size:24px;font-weight:800;letter-spacing:-0.3px;">Vissza a pályára</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">A <b style="color:#46463e;">barna keret a képernyő szélén</b> az órai megfelelője a telefon felső sávjának: csuklóemeléskor, fél másodperc alatt is látszik, hogy a mérés pihen. A pulzus tovább mér, a bruttó tovább fut — ezt a kártya ki is mondja.</div>
+    </div>
+
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">AW 21 · Összegzés</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:64px;left:44px;right:44px;">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                <div style="width:52px;height:52px;border-radius:50%;background:rgba(224,145,90,.18);display:flex;align-items:center;justify-content:center;color:#E0915A;"><span class="mi fill" style="font-size:30px;">directions_run</span></div>
+                <div><div style="font-size:24px;font-weight:800;color:#F1F0E4;letter-spacing:-0.3px;">Futás mentve</div><div style="font-size:16px;font-weight:600;color:#777264;">45:16</div></div>
+              </div>
+              <div style="background:#1C1E16;border-radius:24px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:18px;font-weight:600;color:#A8A899;">Távolság</span>
+                <span style="font-size:28px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">8,42 km</span>
+              </div>
+              <div style="background:#1C1E16;border-radius:24px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:18px;font-weight:600;color:#A8A899;">Átl. pulzus</span>
+                <span style="font-size:28px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">152 bpm</span>
+              </div>
+              <div style="background:#1C1E16;border-radius:24px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:18px;font-weight:600;color:#A8A899;">Kalória</span>
+                <span style="font-size:28px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">612</span>
+              </div>
+            </div>
+            <div style="position:absolute;bottom:30px;left:44px;right:44px;display:flex;align-items:center;justify-content:center;gap:9px;background:rgba(157,174,107,.14);border-radius:999px;padding:11px 0;">
+              <span class="mi fill" style="font-size:20px;color:#9DAE6B;">sync</span>
+              <span style="font-size:17px;font-weight:700;color:#9DAE6B;">Szinkronizálva a telefonra</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">Az órai összegzés <b style="color:#46463e;">három sor</b>, nem több: a splitek, zónák és az útvonal a telefonra tartoznak. A szinkron-pirula a meglévő AW 15 mintáját követi (<span style="font-family:monospace;">transferUserInfo</span>), sikertelen küldésnél barna „Vár a telefonra” állapotra vált.</div>
+    </div>
+
+    <div style="flex:none;width:436px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">AW 22 · Gyenge jel · nincs pulzus</div>
+      <div style="position:relative;width:416px;">
+        <div style="position:absolute;right:-9px;top:118px;width:13px;height:76px;border-radius:7px;background:#26271f;box-shadow:inset -2px 0 3px rgba(0,0,0,.5);"></div>
+        <div style="position:absolute;right:-7px;top:218px;width:9px;height:92px;border-radius:5px;background:#1d1e17;"></div>
+        <div style="position:relative;width:416px;height:504px;background:#0c0d09;border-radius:118px;padding:10px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:396px;height:484px;background:#000;border-radius:108px;overflow:hidden;">
+            <div style="position:absolute;top:24px;right:44px;font-size:26px;font-weight:600;color:#F1F0E4;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:26px;left:46px;display:flex;align-items:center;gap:8px;color:#C49A6C;"><span class="mi fill" style="font-size:22px;">gps_not_fixed</span><span style="font-size:19px;font-weight:700;letter-spacing:1px;">GYENGE JEL</span></div>
+            <div style="position:absolute;top:70px;left:46px;right:44px;bottom:26px;display:flex;flex-direction:column;">
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="font-size:17px;font-weight:700;letter-spacing:1.2px;color:#777264;">TÁVOLSÁG</span>
+                <span style="background:rgba(196,154,108,.2);border-radius:8px;padding:2px 7px;font-size:13px;font-weight:700;color:#C49A6C;">BECSÜLT</span>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:8px;">
+                <span style="font-size:66px;font-weight:800;color:#E0915A;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.05;">3,08</span>
+                <span style="font-size:24px;font-weight:700;color:#A8A899;">km</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;margin-top:8px;">
+                <span class="mi" style="font-size:36px;color:#5c4a4a;">favorite</span>
+                <span style="font-size:52px;font-weight:800;color:#6f7060;font-variant-numeric:tabular-nums;letter-spacing:-1px;">—</span>
+                <span style="font-size:19px;font-weight:600;color:#777264;line-height:1.3;">nincs<br>pulzus</span>
+              </div>
+              <div style="background:#1C1E16;border-radius:22px;padding:12px 16px;margin-top:12px;">
+                <div style="font-size:16px;font-weight:600;color:#A8A899;line-height:1.4;">Lazább a szíj? A mérés fut tovább, az idő pontos.</div>
+              </div>
+              <div style="display:flex;justify-content:center;gap:8px;margin-top:auto;">
+                <span style="width:8px;height:8px;border-radius:50%;background:#F1F0E4;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#46463e;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:#46463e;"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:400px;">A hiányzó pulzus <b style="color:#46463e;">„—”, nem 0 és nem eltűnt sor</b>: a hely megmarad, hogy az elrendezés ne ugráljon, és látszódjon, hogy hiányzik. Az egyetlen tanács (szíj) ott van, ahol a felhasználó javítani tudja.</div>
+    </div>
+  </div>
+  <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8a8a7e;margin-bottom:18px;">Wear OS · 1.4″ round (Compose, Wear OS 3+)</div>
+  <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;margin-bottom:64px;" data-screen-label="Wear OS cardio">
+
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">W 15 · Egyesített indító lista</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:20px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;right:20px;top:150px;width:6px;height:120px;border-radius:3px;background:#22241B;"><div style="width:6px;height:52px;border-radius:3px;background:#A8A899;"></div></div>
+            <div style="position:absolute;top:58px;left:52px;right:52px;">
+              <div style="background:#9DAE6B;border-radius:26px;padding:14px 18px;display:flex;align-items:center;gap:11px;margin-bottom:11px;">
+                <span class="mi fill" style="font-size:26px;color:#161611;">fitness_center</span>
+                <div style="flex:1;"><div style="font-size:21px;font-weight:800;color:#161611;">Push nap</div><div style="font-size:15px;font-weight:600;color:#2b2f1c;">Erősítő</div></div>
+              </div>
+              <div style="background:#1C1E16;border-radius:24px;padding:12px 16px;display:flex;align-items:center;gap:11px;margin-bottom:10px;">
+                <div style="width:40px;height:40px;border-radius:50%;background:rgba(224,145,90,.18);display:flex;align-items:center;justify-content:center;color:#E0915A;flex:none;"><span class="mi fill" style="font-size:23px;">directions_run</span></div>
+                <div style="flex:1;"><div style="font-size:20px;font-weight:700;color:#F1F0E4;">Futás</div><div style="font-size:14px;font-weight:600;color:#777264;">heti 3×</div></div>
+              </div>
+              <div style="background:#1C1E16;border-radius:24px;padding:12px 16px;display:flex;align-items:center;gap:11px;margin-bottom:10px;">
+                <div style="width:40px;height:40px;border-radius:50%;background:rgba(176,138,200,.18);display:flex;align-items:center;justify-content:center;color:#B08AC8;flex:none;"><span class="mi fill" style="font-size:23px;">directions_walk</span></div>
+                <div style="flex:1;"><div style="font-size:20px;font-weight:700;color:#F1F0E4;">Séta</div><div style="font-size:14px;font-weight:600;color:#777264;">heti 5×</div></div>
+              </div>
+              <div style="background:#1C1E16;border-radius:24px;padding:12px 16px;display:flex;align-items:center;gap:11px;opacity:.55;transform:scale(.94);transform-origin:center;">
+                <div style="width:40px;height:40px;border-radius:50%;background:rgba(216,179,90,.18);display:flex;align-items:center;justify-content:center;color:#D8B35A;flex:none;"><span class="mi fill" style="font-size:23px;">pedal_bike</span></div>
+                <div style="flex:1;"><div style="font-size:20px;font-weight:700;color:#F1F0E4;">Szobabicikli</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;"><span style="font-family:monospace;">ScalingLazyColumn</span> — a lista alja a kerek kijelző pereme felé zsugorodik és halványul, ahogy a Wear OS elvárja. A kiemelt erősítő kártya a lista első eleme, nem külön régió, hogy a görgetés egyenletes maradjon.</div>
+    </div>
+
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">W 16 · Aktív — DISTANCE (futás)</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:20px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 62px;">
+              <div style="display:flex;align-items:center;gap:8px;color:#E0915A;"><span class="mi fill" style="font-size:20px;">directions_run</span><span style="font-size:17px;font-weight:700;letter-spacing:1px;">FUTÁS</span></div>
+              <div style="display:flex;align-items:baseline;gap:7px;">
+                <span style="font-size:58px;font-weight:800;color:#E0915A;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1;">5,24</span>
+                <span style="font-size:21px;font-weight:700;color:#A8A899;">km</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+                <span class="mi fill" style="font-size:30px;color:#C46A6A;">favorite</span>
+                <span style="font-size:44px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">148</span>
+              </div>
+              <div style="display:flex;gap:9px;margin-top:6px;width:100%;">
+                <div style="flex:1;background:#1C1E16;border-radius:20px;padding:9px 0;text-align:center;"><div style="font-size:21px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">28:14</div><div style="font-size:12.5px;font-weight:600;color:#777264;">idő</div></div>
+                <div style="flex:1;background:#1C1E16;border-radius:20px;padding:9px 0;text-align:center;"><div style="font-size:21px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">5:23</div><div style="font-size:12.5px;font-weight:600;color:#777264;">tempó</div></div>
+              </div>
+            </div>
+            <div style="position:absolute;bottom:16px;left:0;right:0;display:flex;justify-content:center;"><span class="mi fill" style="font-size:20px;color:#E0915A;">directions_run</span></div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;">Kerek kijelzőn a tartalom függőlegesen középre húzva, 62 px oldalinsettel — a két alsó doboz így nem lóg ki az ívből. Az alsó ongoing-activity glyph az aktivitás ikonjára vált (eddig <span style="font-family:monospace;">fitness_center</span> volt). Adat: <span style="font-family:monospace;">ExerciseClient</span> (HEART_RATE_BPM, DISTANCE_TOTAL, PACE).</div>
+    </div>
+
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">W 17 · Aktív — MACHINE (szobabicikli)</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:20px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 62px;">
+              <div style="display:flex;align-items:center;gap:8px;color:#D8B35A;"><span class="mi fill" style="font-size:20px;">pedal_bike</span><span style="font-size:17px;font-weight:700;letter-spacing:1px;">BICIKLI</span></div>
+              <div style="font-size:58px;font-weight:800;color:#D8B35A;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1;">42:18</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+                <span class="mi fill" style="font-size:30px;color:#C46A6A;">favorite</span>
+                <span style="font-size:44px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">132</span>
+              </div>
+              <div style="display:flex;gap:9px;margin-top:6px;width:100%;">
+                <div style="flex:1;background:#1C1E16;border-radius:20px;padding:9px 0;text-align:center;"><div style="font-size:21px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">84</div><div style="font-size:12.5px;font-weight:600;color:#777264;">rpm</div></div>
+                <div style="flex:1;background:#1C1E16;border-radius:20px;padding:9px 0;text-align:center;"><div style="font-size:21px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">172</div><div style="font-size:12.5px;font-weight:600;color:#777264;">watt</div></div>
+              </div>
+            </div>
+            <div style="position:absolute;bottom:16px;left:0;right:0;display:flex;justify-content:center;"><span class="mi fill" style="font-size:20px;color:#D8B35A;">pedal_bike</span></div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;">Szenzor nélkül a két alsó doboz kalóriára és becsült távra vált — ugyanaz a szabály, mint Apple Watch-on. A domináns idő a típus akcentjén, hogy görgetés nélkül is látszódjon, melyik edzés fut.</div>
+    </div>
+
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">W 18 · Aktív — GAME, pályán</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:20px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:66px;left:60px;right:60px;bottom:26px;display:flex;flex-direction:column;align-items:center;">
+              <div style="display:flex;align-items:center;gap:8px;color:#8E8EC4;"><span class="mi fill" style="font-size:20px;">sports_basketball</span><span style="font-size:17px;font-weight:700;letter-spacing:1px;">KOSÁR · PÁLYÁN</span></div>
+              <div style="font-size:56px;font-weight:800;color:#8E8EC4;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.05;">34:12</div>
+              <div style="display:flex;align-items:center;gap:11px;margin-top:2px;">
+                <span class="mi fill" style="font-size:28px;color:#C46A6A;">favorite</span>
+                <span style="font-size:40px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">162</span>
+                <span style="font-size:17px;font-weight:700;color:#D8B35A;background:rgba(216,179,90,.18);border-radius:9px;padding:3px 8px;">Z4</span>
+              </div>
+              <div style="font-size:15px;font-weight:600;color:#777264;font-variant-numeric:tabular-nums;margin-top:6px;">bruttó 58:40</div>
+              <div style="margin-top:auto;width:100%;background:#9DAE6B;border-radius:24px;height:66px;display:flex;align-items:center;justify-content:center;gap:10px;color:#161611;">
+                <span class="mi fill" style="font-size:26px;">airline_seat_recline_normal</span>
+                <span style="font-size:21px;font-weight:800;">Padra</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;">Kerek kijelzőn a teljes szélességű alsó gomb ívesen levágódna, ezért 60 px oldalinsettel ül és <b style="color:#46463e;">66 px magas</b> — a Wear OS 48 dp minimumának bőven felette. A gomb a következő állapotot nevezi meg, nem az aktuálisat.</div>
+    </div>
+
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">W 19 · GAME — padon</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;inset:0;border-radius:50%;border:6px solid #C49A6C;"></div>
+            <div style="position:absolute;top:20px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:66px;left:60px;right:60px;bottom:26px;display:flex;flex-direction:column;align-items:center;">
+              <div style="display:flex;align-items:center;gap:8px;color:#C49A6C;"><span class="mi fill" style="font-size:20px;">airline_seat_recline_normal</span><span style="font-size:17px;font-weight:700;letter-spacing:1px;">PADON — ÁLL</span></div>
+              <div style="font-size:56px;font-weight:800;color:#6f7060;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1.05;">34:12</div>
+              <div style="display:flex;align-items:center;gap:11px;margin-top:2px;">
+                <span class="mi fill" style="font-size:28px;color:#C46A6A;">favorite</span>
+                <span style="font-size:40px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;letter-spacing:-1px;">118</span>
+              </div>
+              <div style="font-size:15px;font-weight:700;color:#C49A6C;font-variant-numeric:tabular-nums;margin-top:6px;">bruttó 61:04 — fut</div>
+              <div style="margin-top:auto;width:100%;background:#C49A6C;border-radius:24px;height:66px;display:flex;align-items:center;justify-content:center;gap:10px;color:#231C12;">
+                <span class="mi fill" style="font-size:26px;">sports</span>
+                <span style="font-size:21px;font-weight:800;">Pályára</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;">A kerek kijelzőn a barna gyűrű <b style="color:#46463e;">a teljes peremet</b> körbeéri — ez a legerősebb állapotjelzés, ami órán rendelkezésre áll, és csuklóemeléskor a periferikus látás is elkapja.</div>
+    </div>
+
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">W 20 · Összegzés + szinkron</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:20px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;top:58px;left:56px;right:56px;">
+              <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;">
+                <div style="width:46px;height:46px;border-radius:50%;background:rgba(224,145,90,.18);display:flex;align-items:center;justify-content:center;color:#E0915A;flex:none;"><span class="mi fill" style="font-size:26px;">directions_run</span></div>
+                <div><div style="font-size:21px;font-weight:800;color:#F1F0E4;">Futás mentve</div><div style="font-size:14px;font-weight:600;color:#777264;">45:16</div></div>
+              </div>
+              <div style="background:#1C1E16;border-radius:22px;padding:11px 16px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:16px;font-weight:600;color:#A8A899;">Táv</span><span style="font-size:24px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">8,42 km</span>
+              </div>
+              <div style="background:#1C1E16;border-radius:22px;padding:11px 16px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:16px;font-weight:600;color:#A8A899;">Átl. pulzus</span><span style="font-size:24px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">152</span>
+              </div>
+              <div style="background:#1C1E16;border-radius:22px;padding:11px 16px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:16px;font-weight:600;color:#A8A899;">Kalória</span><span style="font-size:24px;font-weight:800;color:#F1F0E4;font-variant-numeric:tabular-nums;">612</span>
+              </div>
+            </div>
+            <div style="position:absolute;bottom:32px;left:64px;right:64px;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(196,154,108,.16);border-radius:999px;padding:10px 0;">
+              <span class="mi" style="font-size:18px;color:#C49A6C;">sync_problem</span>
+              <span style="font-size:15px;font-weight:700;color:#C49A6C;">Vár a telefonra</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;">A W 14 mintáját folytatja: a szinkron-pirula három állapotot vesz fel (küldés · szinkronizálva · vár a telefonra), és a „vár” <b style="color:#46463e;">nem hiba</b>, ezért barna és nem piros — az adat az órán biztonságban van.</div>
+    </div>
+
+    <div style="flex:none;width:480px;">
+      <div style="font-size:13px;font-weight:700;color:#46463e;margin-bottom:11px;">W 21 · Gyenge jel · nincs pulzus</div>
+      <div style="position:relative;width:480px;height:480px;">
+        <div style="position:absolute;right:2px;top:150px;width:16px;height:60px;border-radius:8px;background:#26271f;"></div>
+        <div style="position:absolute;right:2px;top:270px;width:16px;height:60px;border-radius:8px;background:#1d1e17;"></div>
+        <div style="position:absolute;inset:0;width:480px;height:480px;border-radius:50%;background:#0c0d09;padding:14px;box-shadow:0 20px 48px rgba(0,0,0,.28);">
+          <div style="position:relative;width:452px;height:452px;border-radius:50%;background:#000;overflow:hidden;">
+            <div style="position:absolute;top:20px;left:0;right:0;text-align:center;font-size:23px;font-weight:600;color:#A8A899;font-variant-numeric:tabular-nums;">9:41</div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0 62px;">
+              <div style="display:flex;align-items:center;gap:8px;color:#C49A6C;"><span class="mi fill" style="font-size:19px;">gps_not_fixed</span><span style="font-size:16px;font-weight:700;letter-spacing:1px;">GYENGE JEL</span></div>
+              <div style="display:flex;align-items:baseline;gap:7px;">
+                <span style="font-size:56px;font-weight:800;color:#E0915A;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1;">3,08</span>
+                <span style="font-size:20px;font-weight:700;color:#A8A899;">km</span>
+              </div>
+              <div style="font-size:14px;font-weight:700;color:#C49A6C;">becsült</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+                <span class="mi" style="font-size:28px;color:#5c4a4a;">favorite</span>
+                <span style="font-size:40px;font-weight:800;color:#6f7060;font-variant-numeric:tabular-nums;">—</span>
+              </div>
+              <div style="background:#1C1E16;border-radius:20px;padding:10px 16px;margin-top:6px;text-align:center;">
+                <div style="font-size:14.5px;font-weight:600;color:#A8A899;line-height:1.4;">Lazább a szíj?<br>A mérés fut tovább.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-note="1" style="font-size:11.5px;font-weight:500;color:#8a8a7e;line-height:1.6;margin-top:12px;max-width:440px;">A meglévő W 06 („heart-rate permission off”) degradált mintáját követi: kikapcsolt szívikon, „—” érték, egy mondat magyarázat. Itt a jelgyengeség és a pulzushiány <b style="color:#46463e;">egy képernyőn</b> jelenik meg, mert edzés közben mindkettő ugyanaz a kérdés: mi az, ami most nem pontos.</div>
+    </div>
+  </div>
+
+  <div style="font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8a8a7e;margin:0 0 16px;">Haptika az órán</div>
+  <div style="background:#fff;border-radius:20px;padding:22px 26px;box-shadow:0 1px 3px rgba(0,0,0,.09);max-width:1000px;margin-bottom:40px;display:grid;grid-template-columns:1fr 1fr;gap:14px 40px;">
+    <div style="font-size:12.5px;font-weight:500;color:#76766c;line-height:1.6;"><b style="color:#1c1d18;">Indítás</b> — <span style="font-family:monospace;">.notification</span> / <span style="font-family:monospace;">CONFIRM</span>, egyszerre a telefonnal.</div>
+    <div style="font-size:12.5px;font-weight:500;color:#76766c;line-height:1.6;"><b style="color:#1c1d18;">Km-mérföldkő</b> — egy éles ütés, majd 2 mp-re a split-érték a domináns szám helyén.</div>
+    <div style="font-size:12.5px;font-weight:500;color:#76766c;line-height:1.6;"><b style="color:#1c1d18;">Auto-pause</b> — két lágy koppintás (<span style="font-family:monospace;">.click ×2</span>), a kézi szünet egy ütésétől megkülönböztethetően.</div>
+    <div style="font-size:12.5px;font-weight:500;color:#76766c;line-height:1.6;"><b style="color:#1c1d18;">Pályán/padon</b> — egy közepes ütés mindkét irányban; ez az egyetlen gomb, amit meccs közben ránézés nélkül nyomnak.</div>
+    <div style="font-size:12.5px;font-weight:500;color:#76766c;line-height:1.6;"><b style="color:#1c1d18;">Befejezés</b> — hosszú nyomás (600 ms) közben növekvő intenzitás, a végén siker-minta.</div>
+    <div style="font-size:12.5px;font-weight:500;color:#76766c;line-height:1.6;"><b style="color:#1c1d18;">Pulzus elveszett</b> — nincs haptika. Nem a felhasználó hibája, és futás közben zavaró lenne.</div>
+  </div>
+<!--APPEND-->
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showNotes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Canvas&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { this.apply(); }
+  componentDidUpdate() { this.apply(); }
+  apply() {
+    const root = this.el || document;
+    const show = this.props.showNotes ?? true;
+    root.querySelectorAll('[data-note]').forEach(n => { n.style.display = show ? '' : 'none'; });
+  }
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { workoutSessionApi, templateApi } from "../api";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -11,8 +11,11 @@ import { Skeleton } from "@/components/status/Skeleton";
 import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { SessionLogger } from "./SessionLogger";
+import { CardioSessionDetail } from "./CardioSessionDetail";
 import { RecommendedWorkoutCard } from "./RecommendedWorkoutCard";
+import { ActivityChip } from "./ActivityChip";
 import { recommendedTemplate } from "../recommendation";
+import { buildCardioSummaryLine } from "../cardioSummaryLine";
 import type { WorkoutSessionResponse } from "../types";
 
 export function SessionsView({
@@ -25,8 +28,10 @@ export function SessionsView({
   onAutoStartHandled?: () => void;
 } = {}) {
   const t = useTranslations("workouts");
+  const ta = useTranslations("workouts.activityTypes");
   const d = useTranslations("dashboard");
   const common = useTranslations("common");
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const { show } = useToast();
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -91,7 +96,13 @@ export function SessionsView({
           className="flex items-center gap-1 mb-4 text-sm font-semibold" style={{ color: "var(--on-surface-variant)" }}>
           <span className="material-symbols-rounded text-lg">arrow_back</span> {t("backToHistory")}
         </button>
-        <SessionLogger session={active} history={sessions} onFinished={() => setActiveId(null)} />
+        {/* Cardio never opens the set-logger — the web reads/filters/statisticizes
+            cardio but never edits it (docs/cardio/58-cardio-web-plan.md D-W.2). */}
+        {active.sessionKind === "CARDIO" ? (
+          <CardioSessionDetail session={active} />
+        ) : (
+          <SessionLogger session={active} history={sessions} onFinished={() => setActiveId(null)} />
+        )}
       </div>
     );
   }
@@ -174,7 +185,12 @@ export function SessionsView({
   );
 
   function SessionRow({ session, onOpen }: { session: WorkoutSessionResponse; onOpen: () => void }) {
+    const isCardio = session.sessionKind === "CARDIO";
     const exNames = session.exercises.map((e) => e.exerciseName).join(", ");
+    const title = isCardio
+      ? ta(session.activityType ?? "OTHER_CARDIO")
+      : session.templateName ?? (exNames || d("workoutFallback"));
+    const summaryLine = isCardio ? buildCardioSummaryLine(session, t, locale) : null;
     const duration = session.finishedAt
       ? Math.round((new Date(session.finishedAt).getTime() - new Date(session.startedAt).getTime()) / 60000)
       : null;
@@ -188,28 +204,38 @@ export function SessionsView({
 
     return (
       <div className="flex items-center gap-3 px-4 py-3 rounded-[var(--r-card)] group" style={{ background: "var(--surface)" }}>
-        <button onClick={onOpen} className="flex-1 min-w-0 text-left">
-          <div className="flex items-center gap-2">
-            <p className="font-semibold text-sm truncate">{session.templateName ?? (exNames || d("workoutFallback"))}</p>
-            {ongoing && (
-              <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold"
-                style={{ background: "color-mix(in srgb, var(--primary) 18%, transparent)", color: "var(--primary)" }}>
-                {t("inProgress")}
-              </span>
-            )}
-            {session.rpe != null && (
-              <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold"
-                style={{ background: "color-mix(in srgb, var(--secondary) 18%, transparent)", color: "var(--secondary)" }}>
-                {t("sessionRpe", { rpe: session.rpe })}
-              </span>
+        <button onClick={onOpen} className="flex-1 min-w-0 flex items-center gap-3 text-left">
+          {isCardio && <ActivityChip activityType={session.activityType} />}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-sm truncate">{title}</p>
+              {ongoing && (
+                <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold"
+                  style={{ background: "color-mix(in srgb, var(--primary) 18%, transparent)", color: "var(--primary)" }}>
+                  {t("inProgress")}
+                </span>
+              )}
+              {session.rpe != null && (
+                <span className="px-2 py-0.5 rounded-[var(--r-pill)] text-xs font-bold"
+                  style={{ background: "color-mix(in srgb, var(--secondary) 18%, transparent)", color: "var(--secondary)" }}>
+                  {t("sessionRpe", { rpe: session.rpe })}
+                </span>
+              )}
+            </div>
+            {isCardio ? (
+              <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
+                {format(new Date(session.startedAt), "MMM d, HH:mm")}
+                {summaryLine && ` · ${summaryLine}`}
+              </p>
+            ) : (
+              <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
+                {format(new Date(session.startedAt), "MMM d, HH:mm")}
+                {duration != null && ` · ${duration} ${d("minutes")}`}
+                {session.sets.length > 0 && ` · ${session.sets.length} ${t("sets").toLowerCase()}`}
+                {session.averageHeartRate != null && ` · ${t("bpmAvg", { value: Math.round(session.averageHeartRate) })}`}
+              </p>
             )}
           </div>
-          <p className="text-xs tabular" style={{ color: "var(--muted)" }}>
-            {format(new Date(session.startedAt), "MMM d, HH:mm")}
-            {duration != null && ` · ${duration} ${d("minutes")}`}
-            {session.sets.length > 0 && ` · ${session.sets.length} ${t("sets").toLowerCase()}`}
-            {session.averageHeartRate != null && ` · ${t("bpmAvg", { value: Math.round(session.averageHeartRate) })}`}
-          </p>
         </button>
         <button onClick={() => deleteMutation.mutate()}
           className="opacity-0 group-hover:opacity-100 transition-opacity p-1" style={{ color: "var(--muted)" }}

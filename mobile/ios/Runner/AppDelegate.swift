@@ -13,6 +13,10 @@ import UserNotifications
   // Stored so its MPMusicPlayerController notification observers stay alive
   // for the app's lifetime — see docs/music/46-workout-music-controls-plan.md §2.2.
   private var appleMusicBridge: AppleMusicBridge?
+  // Stored purely so ARC doesn't deallocate it — ShortcutsChannel has no
+  // callbacks that need to reach back into AppDelegate later (unlike
+  // watchBridge/appleMusicBridge above), see docs/cardio/59-cardio-implementation-plan.md C2.11b.
+  private var shortcutsChannel: ShortcutsChannel?
 
   override func application(
     _ application: UIApplication,
@@ -33,6 +37,9 @@ import UserNotifications
     if let registrar = self.registrar(forPlugin: "AppleMusicBridge") {
       appleMusicBridge = AppleMusicBridge.register(with: registrar)
     }
+    if let registrar = self.registrar(forPlugin: "ShortcutsChannel") {
+      shortcutsChannel = ShortcutsChannel.register(with: registrar)
+    }
     // Makes this AppDelegate the app's single UNUserNotificationCenterDelegate
     // (FlutterAppDelegate formally conforms via FlutterAppLifeCycleProvider,
     // which inherits from UNUserNotificationCenterDelegate — see
@@ -40,7 +47,42 @@ import UserNotifications
     // and flutter_local_notifications' foreground display / tap handling
     // (which otherwise silently never fires — see its iOS setup docs).
     UNUserNotificationCenter.current().delegate = self
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    let launched = super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    // Cold launch from a home-screen dynamic shortcut (app icon long-press)
+    // — iOS hands this through launchOptions rather than
+    // application(_:performActionFor:completionHandler:) below, which Apple
+    // only calls for an app that's already running. Must run after
+    // super.application(...) above: that's what stands up the Flutter
+    // engine/binary messenger that openDeepLink(_:) forwards into.
+    if let shortcutItem = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
+      openDeepLink(from: shortcutItem)
+    }
+    return launched
+  }
+
+  // Warm launch (app already running, in foreground or background) from a
+  // home-screen dynamic shortcut — the counterpart to the launchOptions
+  // branch above.
+  override func application(
+    _ application: UIApplication,
+    performActionFor shortcutItem: UIApplicationShortcutItem,
+    completionHandler: @escaping (Bool) -> Void
+  ) {
+    openDeepLink(from: shortcutItem)
+    completionHandler(true)
+  }
+
+  /// Routes a shortcut's `lifey://workout/start?...` URI through the exact
+  /// same `application(_:open:options:)` path `FlutterAppDelegate` already
+  /// uses for a plain `lifey://` tap (Live Activity, Safari-typed URL) — so
+  /// go_router's existing `onException` deep-link handling
+  /// (docs/cardio/59-cardio-implementation-plan.md C2.11a) needs no
+  /// iOS-specific branch to also handle shortcuts.
+  private func openDeepLink(from shortcutItem: UIApplicationShortcutItem) {
+    guard let uriString = shortcutItem.userInfo?["deepLinkUri"] as? String,
+      let url = URL(string: uriString)
+    else { return }
+    _ = self.application(UIApplication.shared, open: url, options: [:])
   }
 
   // APNs delivers the device token (or a failure) here after

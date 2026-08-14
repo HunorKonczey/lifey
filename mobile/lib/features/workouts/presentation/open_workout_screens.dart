@@ -1,4 +1,9 @@
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/material.dart';
+
+import '../domain/workout_session.dart';
+import 'cardio_session_screen.dart';
+import 'cardio_summary_screen.dart';
+import 'log_session_screen.dart';
 
 /// One mounted [LogSessionScreen] that is showing a **running** (unfinished)
 /// session. Opened by the screen itself in `initState` and closed in
@@ -66,3 +71,62 @@ bool isWorkoutScreenOpenFor(String sessionClientId) {
 /// closing it would leak into the next one.
 @visibleForTesting
 void resetOpenWorkoutScreens() => _openScreens.clear();
+
+// ---------------------------------------------------------------------------
+// The single kind-branch point
+// ---------------------------------------------------------------------------
+
+/// The single place that decides which screen to open for an existing
+/// [session] the app already knows about — a resume, "tap to continue/edit",
+/// or notification/Live-Activity-tap flow. Every such call site
+/// (`sessions_tab.dart`, `dashboard_screen.dart`, `upcoming_workout_card.dart`,
+/// `workout_resume_prompt.dart`, `push_tap_handler.dart`) goes through this
+/// function instead of constructing a screen widget itself, so there is
+/// exactly one place that has to know which screen a [session] opens into.
+///
+/// Deliberately **not** used for starting a fresh session from a template
+/// (`LogSessionScreen(template: ...)`): templates are strength-only in V1
+/// (docs/cardio/51-cardio-overview-plan.md §5 — no cardio templates yet), so
+/// that path has nothing to branch on and stays a direct push at each
+/// call site.
+///
+/// [watchMastered] and [watchCurrentExerciseIndex] are
+/// [LogSessionScreen]-specific (docs/watch/44-watch-f6-standalone-plan.md) —
+/// harmless no-ops for a caller that doesn't have them, kept here rather than
+/// on a bespoke strength-only variant so this stays the one call site.
+///
+/// `CARDIO` branches again on [WorkoutSession.inProgress]: a still-running
+/// session (started via `startCardioSession`, C2.1 — today only reachable
+/// from tests, since the quick-start entry point is C2.7) pushes the live
+/// [CardioSessionScreen], which picks up exactly where it left off (see
+/// `WorkoutSession.liveMovingSeconds`); a finished one pushes the read-only
+/// [CardioSummaryScreen] (C1.9) — every cardio session logged via
+/// `LogCardioSheet` is already finished and lands there, unchanged.
+/// `STRENGTH` (the only other value) keeps the [LogSessionScreen] push below,
+/// unchanged.
+Future<void> openSessionScreen(
+  NavigatorState navigator,
+  WorkoutSession session, {
+  bool watchMastered = false,
+  int? watchCurrentExerciseIndex,
+}) {
+  if (session.isCardio) {
+    if (session.inProgress) {
+      return navigator.push(
+        MaterialPageRoute(builder: (_) => CardioSessionScreen(session: session)),
+      );
+    }
+    return navigator.push(
+      MaterialPageRoute(builder: (_) => CardioSummaryScreen(session: session)),
+    );
+  }
+  return navigator.push(
+    MaterialPageRoute(
+      builder: (_) => LogSessionScreen(
+        session: session,
+        watchMastered: watchMastered,
+        watchCurrentExerciseIndex: watchCurrentExerciseIndex,
+      ),
+    ),
+  );
+}

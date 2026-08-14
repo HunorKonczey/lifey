@@ -103,6 +103,9 @@ void main() {
           'removedExerciseIndexes': null,
           'sessionPlan': null,
           'setsDoneExerciseId': null,
+          'kind': 'STRENGTH',
+          'activityType': null,
+          'cardio': null,
         },
       });
     });
@@ -219,6 +222,9 @@ void main() {
           'removedExerciseIndexes': null,
           'sessionPlan': null,
           'setsDoneExerciseId': null,
+          'kind': 'STRENGTH',
+          'activityType': null,
+          'cardio': null,
         },
       });
     });
@@ -275,6 +281,9 @@ void main() {
           'removedExerciseIndexes': null,
           'sessionPlan': null,
           'setsDoneExerciseId': null,
+          'kind': 'STRENGTH',
+          'activityType': null,
+          'cardio': null,
         },
       });
     });
@@ -327,6 +336,7 @@ void main() {
           required subText,
           required whenEpochMs,
           bool chronometerCountDown = false,
+          bool usesChronometer = true,
         }) async {
           showCalls++;
         },
@@ -357,6 +367,7 @@ void main() {
           required subText,
           required whenEpochMs,
           bool chronometerCountDown = false,
+          bool usesChronometer = true,
         }) async {},
       );
 
@@ -386,6 +397,7 @@ void main() {
           required subText,
           required whenEpochMs,
           bool chronometerCountDown = false,
+          bool usesChronometer = true,
         }) async {
           showCalls++;
         },
@@ -417,6 +429,7 @@ void main() {
           required subText,
           required whenEpochMs,
           bool chronometerCountDown = false,
+          bool usesChronometer = true,
         }) async {
           capturedTitle = title;
           capturedBody = body;
@@ -453,6 +466,7 @@ void main() {
           required subText,
           required whenEpochMs,
           bool chronometerCountDown = false,
+          bool usesChronometer = true,
         }) async {
           capturedBody = body;
           capturedWhenEpochMs = whenEpochMs;
@@ -499,6 +513,7 @@ void main() {
           required subText,
           required whenEpochMs,
           bool chronometerCountDown = false,
+          bool usesChronometer = true,
         }) async {
           capturedWhenEpochMs = whenEpochMs;
           capturedCountDown = chronometerCountDown;
@@ -551,6 +566,7 @@ void main() {
           required subText,
           required whenEpochMs,
           bool chronometerCountDown = false,
+          bool usesChronometer = true,
         }) async {
           capturedWhenEpochMs = whenEpochMs;
           capturedCountDown = chronometerCountDown;
@@ -585,6 +601,269 @@ void main() {
       expect(capturedCountDown, isFalse);
     });
 
+    test('a CARDIO state renders a metrics body, dropping "—" placeholders (no "0 sets")', () async {
+      String? capturedBody;
+      final service = WorkoutSessionNotifierService(
+        isAvailable: true,
+        useAndroidBranch: true,
+        requestAndroidPermission: () async => true,
+        showAndroidNotification: ({
+          required title,
+          required body,
+          required subText,
+          required whenEpochMs,
+          bool chronometerCountDown = false,
+          bool usesChronometer = true,
+        }) async {
+          capturedBody = body;
+        },
+      );
+
+      await service.start(
+        sessionClientId: 'cardio-1',
+        title: 'Futás',
+        startedAt: DateTime(2026, 8, 12, 7),
+        startedLabel: 'Elkezdve',
+        state: const WorkoutSessionState(
+          exerciseName: 'Futás — 5,24 km',
+          setsDone: 0,
+          setsTotal: null,
+          totalSetsDone: 0,
+          kind: 'CARDIO',
+          activityType: 'RUNNING',
+          cardio: CardioLiveMetrics(
+            primaryLabel: 'DISTANCE',
+            primaryValue: '5,24 km',
+            secondaryLabel: 'MOVING TIME',
+            secondaryValue: '28:14',
+            tertiaryLabel: 'PACE',
+            tertiaryValue: '5:23 /km',
+            paused: false,
+            movingSecondsBase: 1694,
+            movingSinceEpochMs: 1783075260000,
+          ),
+        ),
+      );
+
+      expect(capturedBody, '5,24 km · 28:14 · 5:23 /km');
+      expect(capturedBody, isNot(contains('—')));
+    });
+
+    test('a running CARDIO session ticks the chronometer from the moving-time checkpoint', () async {
+      int? capturedWhenEpochMs;
+      bool? capturedUsesChronometer;
+      final service = WorkoutSessionNotifierService(
+        isAvailable: true,
+        useAndroidBranch: true,
+        requestAndroidPermission: () async => true,
+        showAndroidNotification: ({
+          required title,
+          required body,
+          required subText,
+          required whenEpochMs,
+          bool chronometerCountDown = false,
+          bool usesChronometer = true,
+        }) async {
+          capturedWhenEpochMs = whenEpochMs;
+          capturedUsesChronometer = usesChronometer;
+        },
+      );
+
+      // movingSecondsBase=100 accrued before this checkpoint, ticking live
+      // since movingSinceEpochMs — `when` shifts back by the base so
+      // Android's single "now - when" chronometer renders base + live.
+      await service.start(
+        sessionClientId: 'cardio-1',
+        title: 'Futás',
+        startedAt: DateTime(2026, 8, 12, 7),
+        startedLabel: 'Elkezdve',
+        state: const WorkoutSessionState(
+          exerciseName: 'Futás — 5,24 km',
+          setsDone: 0,
+          totalSetsDone: 0,
+          kind: 'CARDIO',
+          activityType: 'RUNNING',
+          cardio: CardioLiveMetrics(
+            primaryLabel: 'DISTANCE',
+            primaryValue: '5,24 km',
+            paused: false,
+            movingSecondsBase: 100,
+            movingSinceEpochMs: 1783075260000,
+          ),
+        ),
+      );
+
+      expect(capturedWhenEpochMs, 1783075260000 - 100000);
+      expect(capturedUsesChronometer, isTrue);
+    });
+
+    test('a paused CARDIO session turns the chronometer off — it must not keep ticking', () async {
+      bool? capturedUsesChronometer;
+      String? capturedBody;
+      final service = WorkoutSessionNotifierService(
+        isAvailable: true,
+        useAndroidBranch: true,
+        requestAndroidPermission: () async => true,
+        showAndroidNotification: ({
+          required title,
+          required body,
+          required subText,
+          required whenEpochMs,
+          bool chronometerCountDown = false,
+          bool usesChronometer = true,
+        }) async {
+          capturedUsesChronometer = usesChronometer;
+          capturedBody = body;
+        },
+      );
+
+      await service.start(
+        sessionClientId: 'cardio-1',
+        title: 'Futás',
+        startedAt: DateTime(2026, 8, 12, 7),
+        startedLabel: 'Elkezdve',
+        state: const WorkoutSessionState(
+          exerciseName: 'Futás — 42:18',
+          setsDone: 0,
+          totalSetsDone: 0,
+          kind: 'CARDIO',
+          activityType: 'RUNNING',
+          cardio: CardioLiveMetrics(
+            primaryLabel: 'MOVING TIME',
+            primaryValue: '42:18',
+            paused: true,
+            movingSecondsBase: 2538,
+          ),
+        ),
+      );
+
+      expect(capturedUsesChronometer, isFalse);
+      expect(capturedBody, '42:18');
+    });
+
+    test('two updates with identical content only render once ("frissítés csak változásra")', () async {
+      var showCalls = 0;
+      final service = WorkoutSessionNotifierService(
+        isAvailable: true,
+        useAndroidBranch: true,
+        requestAndroidPermission: () async => true,
+        showAndroidNotification: ({
+          required title,
+          required body,
+          required subText,
+          required whenEpochMs,
+          bool chronometerCountDown = false,
+          bool usesChronometer = true,
+        }) async {
+          showCalls++;
+        },
+      );
+      const state = WorkoutSessionState(
+        exerciseName: 'Bench Press',
+        setsDone: 2,
+        setsTotal: 4,
+        totalSetsDone: 2,
+        lastSetAtEpochMs: 1783075260000,
+      );
+
+      await service.start(
+        sessionClientId: 'session-1',
+        title: 'Push Day',
+        startedAt: DateTime(2026, 7, 10, 18, 5),
+        startedLabel: 'Started',
+        state: state,
+      );
+      showCalls = 0; // isolate the repeated update() below
+      await service.update(sessionClientId: 'session-1', startedLabel: 'Started', state: state);
+      await service.update(sessionClientId: 'session-1', startedLabel: 'Started', state: state);
+
+      expect(showCalls, 0);
+    });
+
+    test('a changed update after a run of identical ones renders again', () async {
+      final bodies = <String>[];
+      final service = WorkoutSessionNotifierService(
+        isAvailable: true,
+        useAndroidBranch: true,
+        requestAndroidPermission: () async => true,
+        showAndroidNotification: ({
+          required title,
+          required body,
+          required subText,
+          required whenEpochMs,
+          bool chronometerCountDown = false,
+          bool usesChronometer = true,
+        }) async {
+          bodies.add(body);
+        },
+      );
+      const state = WorkoutSessionState(
+        exerciseName: 'Bench Press',
+        setsDone: 2,
+        setsTotal: 4,
+        totalSetsDone: 2,
+      );
+
+      await service.start(
+        sessionClientId: 'session-1',
+        title: 'Push Day',
+        startedAt: DateTime(2026, 7, 10, 18, 5),
+        startedLabel: 'Started',
+        state: state,
+      );
+      await service.update(sessionClientId: 'session-1', startedLabel: 'Started', state: state);
+      await service.update(
+        sessionClientId: 'session-1',
+        startedLabel: 'Started',
+        state: const WorkoutSessionState(
+          exerciseName: 'Bench Press',
+          setsDone: 3,
+          setsTotal: 4,
+          totalSetsDone: 3,
+        ),
+      );
+
+      expect(bodies, ['Bench Press · 2/4', 'Bench Press · 3/4']);
+    });
+
+    test('a new session starting with content identical to the last one still renders', () async {
+      var showCalls = 0;
+      final service = WorkoutSessionNotifierService(
+        isAvailable: true,
+        useAndroidBranch: true,
+        requestAndroidPermission: () async => true,
+        showAndroidNotification: ({
+          required title,
+          required body,
+          required subText,
+          required whenEpochMs,
+          bool chronometerCountDown = false,
+          bool usesChronometer = true,
+        }) async {
+          showCalls++;
+        },
+      );
+      const state = WorkoutSessionState(exerciseName: 'Bench Press', setsDone: 0, totalSetsDone: 0);
+
+      await service.start(
+        sessionClientId: 'session-1',
+        title: 'Push Day',
+        startedAt: DateTime(2026, 7, 10, 18, 5),
+        startedLabel: 'Started',
+        state: state,
+      );
+      await service.end();
+      await service.start(
+        sessionClientId: 'session-2',
+        title: 'Push Day',
+        startedAt: DateTime(2026, 7, 10, 18, 5),
+        startedLabel: 'Started',
+        state: state,
+      );
+
+      expect(showCalls, 2);
+    });
+
     test('end and endAll cancel the notification', () async {
       var cancelCalls = 0;
       final service = WorkoutSessionNotifierService(
@@ -597,6 +876,7 @@ void main() {
           required subText,
           required whenEpochMs,
           bool chronometerCountDown = false,
+          bool usesChronometer = true,
         }) async {},
         cancelAndroidNotification: () async {
           cancelCalls++;
@@ -622,6 +902,124 @@ void main() {
       await service.endAll();
 
       expect(cancelCalls, 1);
+    });
+  });
+
+  group('WorkoutSessionState / CardioLiveMetrics — cardio payload shape (C2.9)', () {
+    test('kind defaults to STRENGTH — every pre-C2.9 construction keeps meaning what it did', () {
+      const state = WorkoutSessionState(exerciseName: 'Fekvenyomás', setsDone: 1, totalSetsDone: 1);
+
+      expect(state.kind, 'STRENGTH');
+      expect(state.activityType, isNull);
+      expect(state.cardio, isNull);
+      expect(state.toJson()['kind'], 'STRENGTH');
+    });
+
+    test('a CARDIO state carries activityType + a full CardioLiveMetrics block', () {
+      const cardio = CardioLiveMetrics(
+        primaryLabel: 'DISTANCE',
+        primaryValue: '5.24 km',
+        secondaryLabel: 'MOVING TIME',
+        secondaryValue: '28:14',
+        tertiaryLabel: 'PACE',
+        tertiaryValue: '5:23 /km',
+        paused: false,
+        movingSecondsBase: 1694,
+        movingSinceEpochMs: 1783075260000,
+      );
+      const state = WorkoutSessionState(
+        exerciseName: 'Futás — 5.24 km',
+        setsDone: 0,
+        totalSetsDone: 0,
+        kind: 'CARDIO',
+        activityType: 'RUNNING',
+        cardio: cardio,
+      );
+
+      expect(state.toJson(), {
+        'exerciseName': 'Futás — 5.24 km',
+        'setsDone': 0,
+        'setsTotal': null,
+        'totalSetsDone': 0,
+        'lastSetAtEpochMs': null,
+        'restEndsAtEpochMs': null,
+        'restTotalSeconds': null,
+        'restRemainingSeconds': null,
+        'nextSetWeight': null,
+        'nextSetReps': null,
+        'setsDoneExerciseIndex': null,
+        'setsDonePerExercise': null,
+        'removedExerciseIndexes': null,
+        'sessionPlan': null,
+        'setsDoneExerciseId': null,
+        'kind': 'CARDIO',
+        'activityType': 'RUNNING',
+        'cardio': {
+          'primaryLabel': 'DISTANCE',
+          'primaryValue': '5.24 km',
+          'secondaryLabel': 'MOVING TIME',
+          'secondaryValue': '28:14',
+          'tertiaryLabel': 'PACE',
+          'tertiaryValue': '5:23 /km',
+          'paused': false,
+          'movingSecondsBase': 1694,
+          'movingSinceEpochMs': 1783075260000,
+        },
+      });
+    });
+
+    test('a paused CardioLiveMetrics has no movingSinceEpochMs', () {
+      const cardio = CardioLiveMetrics(
+        primaryLabel: 'MOVING TIME',
+        primaryValue: '42:18',
+        paused: true,
+        movingSecondsBase: 2538,
+      );
+
+      expect(cardio.toJson()['paused'], isTrue);
+      expect(cardio.toJson()['movingSinceEpochMs'], isNull);
+    });
+
+    test('a CARDIO start() call over the iOS channel sends the cardio block', () async {
+      const channel = MethodChannel('lifey/live_activity');
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        return 'activity-1';
+      });
+      addTearDown(() => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null));
+      final service = WorkoutSessionNotifierService(isAvailable: true, useAndroidBranch: false);
+
+      await service.start(
+        sessionClientId: 'cardio-1',
+        title: 'Futás',
+        startedAt: DateTime(2026, 8, 12, 7),
+        startedLabel: 'Elkezdve',
+        state: const WorkoutSessionState(
+          exerciseName: 'Futás — 5.24 km',
+          setsDone: 0,
+          setsTotal: null,
+          totalSetsDone: 0,
+          kind: 'CARDIO',
+          activityType: 'RUNNING',
+          cardio: CardioLiveMetrics(
+            primaryLabel: 'DISTANCE',
+            primaryValue: '5.24 km',
+            paused: false,
+            movingSinceEpochMs: 1783075260000,
+          ),
+        ),
+      );
+
+      final sentState = calls.single.arguments['state'] as Map;
+      // The legacy fields an old build (that has never heard of `kind`)
+      // reads: a real name, and no "0/0" fraction — the C2.9 kész-ha.
+      expect(sentState['exerciseName'], 'Futás — 5.24 km');
+      expect(sentState['setsTotal'], isNull);
+      expect(sentState['kind'], 'CARDIO');
+      expect((sentState['cardio'] as Map)['primaryValue'], '5.24 km');
     });
   });
 }

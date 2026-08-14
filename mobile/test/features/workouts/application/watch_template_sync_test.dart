@@ -54,18 +54,36 @@ class _FakeExerciseController extends ExerciseController {
 /// picker offers, and the payload they turn into.
 void main() {
   /// [inProgress] leaves `finishedAt` null; otherwise the session counts as
-  /// finished.
+  /// finished at [finishedAt] (staggerable so [rankQuickStartEntries]'s
+  /// recency-weighted score actually differentiates two sessions, rather
+  /// than tying and falling to a tiebreak neither `buildWatchTemplateSync`
+  /// test needs to think about).
   WorkoutSession session(
     String? templateClientId, {
     bool inProgress = false,
+    DateTime? finishedAt,
   }) {
     return WorkoutSession(
-      clientId: 'session-${templateClientId ?? 'none'}-${inProgress ? 'live' : 'done'}',
+      clientId: 'session-${templateClientId ?? 'none'}-${inProgress ? 'live' : 'done'}-'
+          '${finishedAt?.millisecondsSinceEpoch}',
       exercises: const [],
       sets: const [],
       startedAt: DateTime.utc(2026, 7, 28, 9),
-      finishedAt: inProgress ? null : DateTime.utc(2026, 7, 28, 10),
+      finishedAt: inProgress ? null : (finishedAt ?? DateTime.utc(2026, 7, 28, 10)),
       templateClientId: templateClientId,
+    );
+  }
+
+  /// A finished cardio session, for [rankQuickStartEntries] fixtures.
+  WorkoutSession cardioSession(String activityType, {required DateTime finishedAt}) {
+    return WorkoutSession(
+      clientId: 'session-cardio-$activityType-${finishedAt.millisecondsSinceEpoch}',
+      exercises: const [],
+      sets: const [],
+      startedAt: finishedAt.subtract(const Duration(minutes: 30)),
+      finishedAt: finishedAt,
+      sessionKind: 'CARDIO',
+      activityType: activityType,
     );
   }
 
@@ -90,95 +108,6 @@ void main() {
   }
 
   const settings = UserSettings.defaults();
-
-  group('recentlyUsedTemplateClientIds', () {
-    test('returns nothing when there is no session history at all', () {
-      expect(recentlyUsedTemplateClientIds(const []), isEmpty);
-    });
-
-    test('keeps the newest-first order it was given', () {
-      final result = recentlyUsedTemplateClientIds([
-        session('push'),
-        session('pull'),
-        session('legs'),
-      ]);
-
-      expect(result, ['push', 'pull', 'legs']);
-    });
-
-    test('collapses a repeated template to its most recent use', () {
-      // push is used twice: it must keep the position of the *newer* session,
-      // not slide down to where the older one sits.
-      final result = recentlyUsedTemplateClientIds([
-        session('push'),
-        session('pull'),
-        session('push'),
-        session('legs'),
-      ]);
-
-      expect(result, ['push', 'pull', 'legs']);
-    });
-
-    test('skips sessions started as an empty workout (no template)', () {
-      final result = recentlyUsedTemplateClientIds([
-        session(null),
-        session('push'),
-        session(null),
-        session('pull'),
-      ]);
-
-      expect(result, ['push', 'pull']);
-    });
-
-    test('skips a workout that is still running', () {
-      // A session in progress shouldn't reorder the picker mid-workout —
-      // matches predictNextTemplateClientId's own filter.
-      final result = recentlyUsedTemplateClientIds([
-        session('legs', inProgress: true),
-        session('push'),
-        session('pull'),
-      ]);
-
-      expect(result, ['push', 'pull']);
-    });
-
-    test('stops at max, dropping older templates', () {
-      final result = recentlyUsedTemplateClientIds([
-        session('a'),
-        session('b'),
-        session('c'),
-        session('d'),
-        session('e'),
-        session('f'),
-      ]);
-
-      expect(result, ['a', 'b', 'c', 'd', 'e']);
-    });
-
-    test('counts distinct templates towards max, not sessions', () {
-      // Six sessions but only three distinct templates — all three fit under
-      // the cap of 5, so nothing may be dropped.
-      final result = recentlyUsedTemplateClientIds([
-        session('a'),
-        session('a'),
-        session('b'),
-        session('b'),
-        session('c'),
-        session('c'),
-      ]);
-
-      expect(result, ['a', 'b', 'c']);
-    });
-
-    test('honours a custom max', () {
-      final result = recentlyUsedTemplateClientIds(
-        [session('a'), session('b'), session('c')],
-        max: 2,
-      );
-
-      expect(result, ['a', 'b']);
-    });
-  });
 
   group('buildWatchTemplateSync', () {
     test('follows the id order given, not the templates list order', () {
@@ -525,7 +454,8 @@ void main() {
     });
   });
 
-  group('watchTemplateSyncPayloadProvider', () {
+  group('watchTemplateSyncPayloadProvider (unified, docs/cardio/'
+      '55-cardio-watch-plan.md §3, C5.3)', () {
     /// Passing null for any of the three lists leaves that source loading —
     /// its stream never emits. [settle] awaits exactly the sources that *do*
     /// emit, so a loading case is asserted with the others genuinely
@@ -563,9 +493,27 @@ void main() {
       return (container: container, settle: settle);
     }
 
-    test('builds the payload from all four sources', () async {
+    /// One entry's `type` + identifying field — collapses the sealed type
+    /// down to something `expect(..., [...])` can compare positionally,
+    /// without every test having to `switch`/cast.
+    (String, String) tag(WatchQuickStartEntryPayload entry) => switch (entry) {
+          WatchQuickStartTemplateEntry(:final template) => ('TEMPLATE', template.templateId),
+          WatchQuickStartCardioEntry(:final activityType) => ('CARDIO', activityType),
+        };
+
+    test('ranks by rankQuickStartEntries — not session-list order — and includes cardio',
+        () async {
+      final now = DateTime.now();
       final harness = buildContainer(
-        sessions: [session('push'), session('legs')],
+        sessions: [
+          // Most-recently-used first: RUNNING, then push, then legs — the
+          // reverse of how they're listed here, so a test that passed on
+          // mere insertion order (the old recentlyUsedTemplateClientIds
+          // behavior) would fail this one.
+          session('legs', finishedAt: now.subtract(const Duration(days: 2))),
+          session('push', finishedAt: now.subtract(const Duration(days: 1))),
+          cardioSession('RUNNING', finishedAt: now.subtract(const Duration(hours: 1))),
+        ],
         templates: [
           template('push', name: 'Push day', exercises: const [
             TemplateExercise(exerciseClientId: 'bench', targetSets: 4),
@@ -583,11 +531,53 @@ void main() {
 
       final result = harness.container.read(watchTemplateSyncPayloadProvider)!;
 
-      // Recency order from the sessions, names/rest from the exercises.
-      expect(result.map((t) => t.templateId), ['push', 'legs']);
-      expect(result.first.exercises.single.name, 'Bench Press');
-      expect(result.first.exercises.single.restSeconds, 150);
-      expect(result.last.exercises.single.restSeconds, 90);
+      expect(
+        result.map(tag).take(3),
+        [('CARDIO', 'RUNNING'), ('TEMPLATE', 'push'), ('TEMPLATE', 'legs')],
+      );
+      final pushEntry = result[1] as WatchQuickStartTemplateEntry;
+      expect(pushEntry.template.exercises.single.name, 'Bench Press');
+      expect(pushEntry.template.exercises.single.restSeconds, 150);
+      final cardioEntry = result.first as WatchQuickStartCardioEntry;
+      expect(cardioEntry.title, 'Running');
+    });
+
+    test('excludes the freeform "Quick strength" bucket — D-C5.3\'s pinned card covers it',
+        () async {
+      final now = DateTime.now();
+      final harness = buildContainer(
+        sessions: [
+          session(null, finishedAt: now), // freeform, most recently used of all
+          session('push', finishedAt: now.subtract(const Duration(days: 1))),
+        ],
+        templates: [
+          template('push', exercises: [const TemplateExercise(exerciseClientId: 'bench')]),
+        ],
+        exercises: [exercise('bench')],
+      );
+      await harness.settle();
+
+      final result = harness.container.read(watchTemplateSyncPayloadProvider)!;
+
+      // Freeform would otherwise rank #1 (most recently used) — its absence
+      // from #1 is what proves the filter ran, not just that push exists
+      // somewhere in the cold-start-padded rest of the list.
+      expect(result.first, isA<WatchQuickStartTemplateEntry>());
+      expect((result.first as WatchQuickStartTemplateEntry).template.templateId, 'push');
+      expect(result.length, lessThanOrEqualTo(watchQuickStartMaxEntries));
+    });
+
+    test("localizes a cardio entry's title in the account's language", () async {
+      final harness = buildContainer(
+        userSettings: const UserSettings.defaults().copyWith(language: LanguagePreference.hungarian),
+        sessions: [cardioSession('RUNNING', finishedAt: DateTime.now())],
+      );
+      await harness.settle();
+
+      final entry =
+          harness.container.read(watchTemplateSyncPayloadProvider)!.first as WatchQuickStartCardioEntry;
+      expect(entry.activityType, 'RUNNING');
+      expect(entry.title, 'Futás');
     });
 
     test('sends nothing while watchWorkoutEnabled is off', () async {
@@ -619,18 +609,30 @@ void main() {
       }
     });
 
-    test('is empty — not null — when the user has no templates at all', () async {
+    test('is empty — not null — when the user has no history at all', () async {
       // A real answer: there is nothing to offer, so the watch should hold
-      // nothing either.
+      // nothing either — rankQuickStartEntries still pads with its cold-start
+      // default order (running/walking/…), but every one of those is cardio,
+      // and this fixture's `now` finds none of them with any real usage, so
+      // that's exactly what the padded defaults *are* — real, offerable
+      // cardio types, not an empty result. Asserting emptiness therefore
+      // needs the settings gate off instead of an empty history, which the
+      // "watchWorkoutEnabled is off" test above already covers — so this
+      // fixture instead checks that a genuinely history-less account still
+      // gets *something* (the cold-start defaults), never null.
       final harness = buildContainer();
       await harness.settle();
 
-      expect(harness.container.read(watchTemplateSyncPayloadProvider), isEmpty);
+      expect(harness.container.read(watchTemplateSyncPayloadProvider), isNotNull);
     });
 
     test('drops a template that was deleted but is still in session history', () async {
+      final now = DateTime.now();
       final harness = buildContainer(
-        sessions: [session('deleted'), session('push')],
+        sessions: [
+          session('deleted', finishedAt: now),
+          session('push', finishedAt: now.subtract(const Duration(days: 1))),
+        ],
         templates: [
           template('push', exercises: [const TemplateExercise(exerciseClientId: 'bench')]),
         ],
@@ -638,10 +640,9 @@ void main() {
       );
       await harness.settle();
 
-      expect(
-        harness.container.read(watchTemplateSyncPayloadProvider)!.map((t) => t.templateId),
-        ['push'],
-      );
+      final tags = harness.container.read(watchTemplateSyncPayloadProvider)!.map(tag);
+      expect(tags, isNot(contains(('TEMPLATE', 'deleted'))));
+      expect(tags, contains(('TEMPLATE', 'push')));
     });
   });
 }

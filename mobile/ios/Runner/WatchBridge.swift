@@ -72,6 +72,10 @@ final class WatchBridge: NSObject {
 
   // MARK: - Commands (docs/40-watch-app-plan.md §4.5)
 
+  /// [activityType]/[venue] are `CardioSessionScreen`'s C5.2 additions to
+  /// `WatchWorkoutService.startWorkout()` — both nil for every pre-cardio
+  /// (STRENGTH) call site, which is exactly what falls through to the
+  /// original hardcoded `.traditionalStrengthTraining`/`.indoor` pair below.
   private func startWorkout(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let args = call.arguments as? [String: Any],
       let sessionClientId = args["sessionClientId"] as? String,
@@ -91,9 +95,11 @@ final class WatchBridge: NSObject {
       sessionClientId: sessionClientId, title: title, startedAtEpochMs: startedAtEpochMs,
       state: state, desiredPhase: "running")
 
+    let activityType = args["activityType"] as? String
+    let venue = args["venue"] as? String
     let configuration = HKWorkoutConfiguration()
-    configuration.activityType = .traditionalStrengthTraining
-    configuration.locationType = .indoor
+    configuration.activityType = cardioWorkoutActivityType(for: activityType)
+    configuration.locationType = cardioLocationType(for: activityType, venue: venue)
     // Best-effort — docs/40-watch-app-plan.md §8.1: startWatchApp can be flaky
     // if the watch is asleep/charging. The applicationContext pushed above is
     // the fallback: the watch starts from it once woken regardless.
@@ -207,19 +213,25 @@ final class WatchBridge: NSObject {
   }
 
   /// Answers `syncTemplates` (docs/watch/49-watch-f6b-template-sync-plan.md
-  /// §4.1, T3.2) — folds `templates`/`syncedAtEpochMs` into [lastContext]
-  /// (D-F6b.2) alongside whatever session-state keys already live there,
-  /// then resends the whole thing. No `sendMessage` counterpart, unlike the
-  /// session-state pushes above: template sync has no latency-sensitive live
-  /// half, so the queued `updateApplicationContext` delivery — arriving
-  /// whenever the watch next connects — is enough on its own (§4.3).
+  /// §4.1, T3.2; wire shape bumped to the unified `entries` list by
+  /// docs/cardio/55-cardio-watch-plan.md §3.2/C5.3) — folds
+  /// `version`/`entries`/`syncedAtEpochMs` into [lastContext] (D-F6b.2)
+  /// alongside whatever session-state keys already live there, then resends
+  /// the whole thing. No `sendMessage` counterpart, unlike the session-state
+  /// pushes above: template sync has no latency-sensitive live half, so the
+  /// queued `updateApplicationContext` delivery — arriving whenever the
+  /// watch next connects — is enough on its own (§4.3).
   ///
-  /// An empty `templates` array still writes and sends (never skipped) —
-  /// that's how a watch whose last template just got deleted is told to
-  /// clear its cache (T1.3's phone-side decision, enforced here too).
+  /// `entries` replaces the old `templates` key entirely (C5.3's Dart side
+  /// already made this switch — `WatchWorkoutService.syncTemplates()` has
+  /// sent `{version: 2, entries: [...]}` since then, never `templates`) — an
+  /// empty array still writes and sends (never skipped), the same "watch
+  /// whose last plan just got deleted is told to clear its cache" contract
+  /// `templates` had (T1.3's phone-side decision).
   private func syncTemplates(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let args = call.arguments as? [String: Any],
-      let templates = args["templates"] as? [[String: Any]],
+      let entries = args["entries"] as? [[String: Any]],
+      let version = (args["version"] as? NSNumber)?.intValue,
       let syncedAtEpochMs = (args["syncedAtEpochMs"] as? NSNumber)?.int64Value
     else {
       result(nil)
@@ -229,7 +241,8 @@ final class WatchBridge: NSObject {
       result(nil)
       return
     }
-    lastContext["templates"] = (sanitizedForPropertyList(templates) as? [Any]) ?? []
+    lastContext["version"] = version
+    lastContext["entries"] = (sanitizedForPropertyList(entries) as? [Any]) ?? []
     lastContext["syncedAtEpochMs"] = syncedAtEpochMs
     try? WCSession.default.updateApplicationContext(lastContext)
     result(nil)
@@ -289,6 +302,54 @@ private func sanitizedForPropertyList(_ value: Any) -> Any? {
   return value
 }
 
+/// Maps a cardio `ActivityType` code (docs/cardio/55-cardio-watch-plan.md §2's
+/// table; `mobile/lib/features/workouts/domain/activity_type.dart`'s
+/// `kActivityTypes`) to the `HKWorkoutConfiguration.activityType` the watch's
+/// own `HKWorkoutSession` should record under. `nil` — every pre-cardio
+/// (STRENGTH) call — keeps the original hardcoded behavior; an activity type
+/// this build doesn't recognize (a future phone build talking to an
+/// unrebuilt watch companion) falls back the same way, rather than crashing
+/// on a force-unwrap.
+///
+/// Duplicated in `LifeyWatch/Views/StandalonePickerView.swift`'s icon/tint
+/// map rather than shared — the two targets don't share a source file today,
+/// and this table is small enough that C5.3's "tudatosan duplikálva"
+/// precedent (docs/cardio/59-cardio-implementation-plan.md) applies here too.
+private func cardioWorkoutActivityType(for activityType: String?) -> HKWorkoutActivityType {
+  switch activityType {
+  case "INDOOR_BIKE": return .cycling
+  case "RUNNING": return .running
+  case "WALKING": return .walking
+  case "HIKING": return .hiking
+  case "BASKETBALL": return .basketball
+  case "FOOTBALL": return .soccer
+  case "OTHER_CARDIO": return .other
+  default: return .traditionalStrengthTraining
+  }
+}
+
+/// The `HKWorkoutSessionLocationType` paired with [cardioWorkoutActivityType]
+/// — D-C5.1 (docs/cardio/55-cardio-watch-plan.md §2): an explicit [venue]
+/// ("INDOOR"/"OUTDOOR", the `GAME` family's own field) always wins; absent
+/// that, `DISTANCE`-family types (running/walking/hiking) default `.outdoor`
+/// and everything else (the stationary `INDOOR_BIKE`, a venue-less `GAME`,
+/// `OTHER_CARDIO`, and STRENGTH) defaults `.indoor` — `OTHER_CARDIO` uses
+/// `.unknown` instead, matching §2's table exactly, since neither indoor nor
+/// outdoor is a safe guess for it.
+private func cardioLocationType(for activityType: String?, venue: String?) -> HKWorkoutSessionLocationType
+{
+  switch venue {
+  case "INDOOR": return .indoor
+  case "OUTDOOR": return .outdoor
+  default: break
+  }
+  switch activityType {
+  case "RUNNING", "WALKING", "HIKING": return .outdoor
+  case "OTHER_CARDIO": return .unknown
+  default: return .indoor
+  }
+}
+
 // MARK: - WCSessionDelegate
 
 extension WatchBridge: WCSessionDelegate {
@@ -335,6 +396,12 @@ extension WatchBridge: WCSessionDelegate {
         "activeCalories": userInfo["activeCalories"],
         "averageHeartRate": userInfo["averageHeartRate"],
         "healthWorkoutId": userInfo["healthWorkoutId"],
+        // `PhoneConnector.sendSummary`'s cardio addition (docs/cardio/
+        // 55-cardio-watch-plan.md §4.3, C5.7b) — nil for every STRENGTH
+        // summary and every pre-cardio watch build, decoded Dart-side by
+        // `WatchWorkoutSummary.fromJson`'s existing `cardio` handling
+        // (already in place since C5.7a).
+        "cardio": userInfo["cardio"],
       ],
     ])
   }

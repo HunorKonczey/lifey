@@ -14,6 +14,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -32,9 +34,29 @@ class WorkoutSessionControllerTest {
     @MockitoBean
     WorkoutSessionService workoutSessionService;
 
+    /**
+     * Same shape as the pre-cardio {@code WorkoutSessionResponse} constructor
+     * — every existing (STRENGTH) test in this file builds a response this
+     * way, leaving the cardio fields at their "not a cardio session" values
+     * (docs/cardio/52-cardio-domain-backend-plan.md §3.2): sessionKind isn't
+     * a parameter here at all since a STRENGTH response's [WorkoutSessionResponse.sessionKind]
+     * is never null in real API responses — see {@link WorkoutSessionMapper}.
+     */
+    private static WorkoutSessionResponse strengthResponse(
+            Long id, Instant startedAt, Instant finishedAt, List<ExerciseSummary> exercises,
+            List<ExerciseSetResponse> sets, Double activeCalories, Double averageHeartRate,
+            String healthWorkoutId, Long templateId, String templateName, LocalDate scheduledFor,
+            LocalTime scheduledTime, Long scheduleId, Integer rpe, String feedbackNote,
+            String trainerComment, Instant trainerCommentAt, Instant updatedAt, Instant deletedAt) {
+        return new WorkoutSessionResponse(id, startedAt, finishedAt, exercises, sets, activeCalories,
+                averageHeartRate, healthWorkoutId, templateId, templateName, scheduledFor, scheduledTime,
+                scheduleId, rpe, feedbackNote, trainerComment, trainerCommentAt, updatedAt, deletedAt,
+                SessionKind.STRENGTH, null, null, null, List.of());
+    }
+
     @Test
     void create_returnsCreatedWithPlannedExercisesAndSets() throws Exception {
-        when(workoutSessionService.create(any())).thenReturn(new WorkoutSessionResponse(2L,
+        when(workoutSessionService.create(any())).thenReturn(strengthResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"), null,
                 List.of(new ExerciseSummary(1L, "Bench Press", 3)),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 10, 60.0,
@@ -62,7 +84,7 @@ class WorkoutSessionControllerTest {
         // client sends a key this build has never heard of (plannedExercises was
         // exactly that before it existed here) and must still get a 201, not a
         // 400. That's what lets a mobile release ship ahead of a backend deploy.
-        when(workoutSessionService.create(any())).thenReturn(new WorkoutSessionResponse(2L,
+        when(workoutSessionService.create(any())).thenReturn(strengthResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null, null, null,
                 Instant.parse("2026-06-01T05:00:00Z"), null));
@@ -76,7 +98,7 @@ class WorkoutSessionControllerTest {
 
     @Test
     void create_withHealthFieldsRoundTrips() throws Exception {
-        when(workoutSessionService.create(any())).thenReturn(new WorkoutSessionResponse(2L,
+        when(workoutSessionService.create(any())).thenReturn(strengthResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"), Instant.parse("2026-06-01T06:00:00Z"),
                 List.of(new ExerciseSummary(1L, "Bench Press", 3)),
                 List.of(new ExerciseSetResponse(1L, "Bench Press", 10, 60.0,
@@ -100,7 +122,7 @@ class WorkoutSessionControllerTest {
 
     @Test
     void create_emptyExercisesAndSetsReturnsCreated() throws Exception {
-        when(workoutSessionService.create(any())).thenReturn(new WorkoutSessionResponse(5L,
+        when(workoutSessionService.create(any())).thenReturn(strengthResponse(5L,
                 Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null, null, null,
                 Instant.parse("2026-06-01T05:00:00Z"), null));
@@ -129,7 +151,7 @@ class WorkoutSessionControllerTest {
         // request, and WorkoutSessionServiceImpl is responsible for dropping
         // such incomplete sets rather than persisting them. See
         // WorkoutSessionServiceImplTest for that behavior.
-        when(workoutSessionService.create(any())).thenReturn(new WorkoutSessionResponse(6L,
+        when(workoutSessionService.create(any())).thenReturn(strengthResponse(6L,
                 Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null, null, null,
                 Instant.parse("2026-06-01T05:00:00Z"), null));
@@ -145,7 +167,7 @@ class WorkoutSessionControllerTest {
 
     @Test
     void update_returnsOk() throws Exception {
-        when(workoutSessionService.update(eq(2L), any())).thenReturn(new WorkoutSessionResponse(2L,
+        when(workoutSessionService.update(eq(2L), any())).thenReturn(strengthResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"),
                 Instant.parse("2026-06-01T06:00:00Z"),
                 List.of(new ExerciseSummary(1L, "Bench Press", 3)),
@@ -167,11 +189,11 @@ class WorkoutSessionControllerTest {
 
     @Test
     void findPage_returnsPagedSessions() throws Exception {
-        WorkoutSessionResponse session = new WorkoutSessionResponse(2L,
+        WorkoutSessionResponse session = strengthResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null, null, null,
                 Instant.parse("2026-06-01T05:00:00Z"), null);
-        when(workoutSessionService.findPage(any())).thenReturn(new PageImpl<>(List.of(session)));
+        when(workoutSessionService.findPage(any(), any())).thenReturn(new PageImpl<>(List.of(session)));
 
         mockMvc.perform(get("/api/v1/workout-sessions").param("page", "0"))
                 .andExpect(status().isOk())
@@ -181,7 +203,7 @@ class WorkoutSessionControllerTest {
     @Test
     void delta_returnsPageIncludingTombstones() throws Exception {
         Instant since = Instant.parse("2026-06-17T00:00:00Z");
-        WorkoutSessionResponse tombstoned = new WorkoutSessionResponse(2L,
+        WorkoutSessionResponse tombstoned = strengthResponse(2L,
                 Instant.parse("2026-06-01T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null, null, null,
                 Instant.parse("2026-06-19T00:00:00Z"), Instant.parse("2026-06-19T00:00:00Z"));

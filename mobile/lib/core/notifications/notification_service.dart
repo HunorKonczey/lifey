@@ -213,13 +213,17 @@ class NotificationService {
   /// the chronometer from counting up from `when` to counting down to it —
   /// used for the rest-timer countdown (docs/39-rest-timer-plan.md, Prompt 5)
   /// when a target end time is known, same as the elapsed/rest count-up
-  /// otherwise.
+  /// otherwise. [usesChronometer] turns the ticking indicator off entirely —
+  /// used for a paused cardio session (docs/cardio/59-cardio-implementation-plan.md
+  /// C2.10a), where a live-ticking number would keep counting through the
+  /// pause and lie about elapsed moving time.
   static Future<void> showWorkoutSession({
     required String title,
     required String body,
     required String subText,
     required int whenEpochMs,
     bool chronometerCountDown = false,
+    bool usesChronometer = true,
   }) async {
     if (!Platform.isAndroid) return;
     await _plugin.show(
@@ -240,7 +244,7 @@ class NotificationService {
           autoCancel: false,
           showWhen: true,
           when: whenEpochMs,
-          usesChronometer: true,
+          usesChronometer: usesChronometer,
           chronometerCountDown: chronometerCountDown,
           subText: subText,
           category: AndroidNotificationCategory.workout,

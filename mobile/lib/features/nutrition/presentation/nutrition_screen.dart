@@ -126,6 +126,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
       label: fab.label,
       onPressed: fab.onPressed,
       extended: true,
+      onLongPress: null,
     ));
   }
 

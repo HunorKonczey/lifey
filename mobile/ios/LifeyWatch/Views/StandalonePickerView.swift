@@ -1,11 +1,16 @@
 import SwiftUI
 
 /// The pre-start picker (docs/watch/44-watch-f6-standalone-plan.md §3.1,
-/// §3.3, design canvas AW 13). "Quick strength" is always first and always
-/// works with zero phone contact; below it, up to 5 synced templates from
-/// `StandaloneSessionStore` (title + exercise count, D-F6b.7) — or, with an
-/// empty/stale cache, just `standalone_empty_hint` (F6a's only variant,
-/// still the fallback here). Tapping the quick-strength card starts
+/// §3.3, design canvas AW 13; unified with cardio entries by
+/// docs/cardio/55-cardio-watch-plan.md §3, canvas AW 16 — C5.4). "Quick
+/// strength" is always first and always works with zero phone contact
+/// (D-C5.3: the pinned card stays above the ranked list, never part of it);
+/// below it, up to 8 ranked entries from `StandaloneSessionStore` — synced
+/// templates (title + exercise count, D-F6b.7) and cardio activity types
+/// (icon + title) interleaved in whatever order the phone already ranked
+/// them (§3.1: "nem talál ki saját rendezést") — or, with an empty/stale
+/// cache, just `standalone_empty_hint` (F6a's only variant, still the
+/// fallback here). Tapping the quick-strength card starts
 /// `WorkoutManager.startStandalone()` directly; this view disappears on its
 /// own once `phase` moves off `.idle` (`ContentView`'s switch re-renders),
 /// so there's no need to also flip `onBack`'s owning `showStandalonePicker`
@@ -20,6 +25,12 @@ import SwiftUI
 /// already does for Quick strength one line above it. (T4.2 originally
 /// exposed an `onTemplateTapped` callback here as a placeholder — replaced
 /// now that the real behavior is known, rather than kept for its own sake.)
+///
+/// A **cardio** row (`CardioRow`) starts a standalone cardio session
+/// directly, the same way `templateTapped`/`startTapped` do — via
+/// `WorkoutManager.startStandalone(activityType:)`'s own
+/// `HKWorkoutConfiguration` mapping and `kind: 'CARDIO'` closing payload
+/// (docs/cardio/55-cardio-watch-plan.md §5/§7, W-8).
 struct StandalonePickerView: View {
   let onBack: () -> Void
 
@@ -39,7 +50,7 @@ struct StandalonePickerView: View {
   /// screen updates on the next time it's shown, not instantly — an
   /// acceptable staleness window for a picker the user only glances at
   /// before tapping something.
-  @State private var templates: [CachedTemplate] = []
+  @State private var entries: [WatchQuickStartEntry] = []
 
   var body: some View {
     GeometryReader { geometry in
@@ -76,15 +87,32 @@ struct StandalonePickerView: View {
             Spacer(minLength: 0)
           }
           quickStrengthCard
-          if templates.isEmpty {
+          if entries.isEmpty {
             Text("standalone_empty_hint")
               .font(.caption2)
               .foregroundColor(LifeyColors.onSurfaceVariant)
               .multilineTextAlignment(.leading)
           } else {
-            ForEach(templates, id: \.templateId) { template in
-              TemplateRow(template: template, isCompact: isCompact, isDisabled: isStarting) {
-                templateTapped(template)
+            // Index-keyed, not by a natural id: a `WatchQuickStartEntry` has
+            // none of its own (a cardio row isn't even backed by a stable
+            // server id, just an activity-type code that could repeat if the
+            // phone ever ranked one twice), and the list is a point-in-time
+            // snapshot re-read on every appearance anyway (see `entries`'
+            // own doc comment) — nothing here needs SwiftUI's identity-
+            // preserving diffing across in-place updates.
+            ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
+              switch entry {
+              case .template(let template):
+                TemplateRow(template: template, isCompact: isCompact, isDisabled: isStarting) {
+                  templateTapped(template)
+                }
+              case .cardio(let activityType, let title):
+                CardioRow(
+                  activityType: activityType, title: title, isCompact: isCompact,
+                  isDisabled: isStarting
+                ) {
+                  cardioTapped(activityType)
+                }
               }
             }
           }
@@ -95,7 +123,7 @@ struct StandalonePickerView: View {
       .frame(width: geometry.size.width, height: geometry.size.height)
       .background(LifeyColors.trueBlack)
     }
-    .onAppear { templates = StandaloneSessionStore.shared.templates() }
+    .onAppear { entries = StandaloneSessionStore.shared.quickStartEntries() }
   }
 
   private var quickStrengthCard: some View {
@@ -149,6 +177,17 @@ struct StandalonePickerView: View {
       }
     }
   }
+
+  private func cardioTapped(_ activityType: String) {
+    guard !isStarting else { return }
+    isStarting = true
+    Task {
+      await WorkoutManager.shared.startStandalone(activityType: activityType)
+      if WorkoutManager.shared.phase == .idle {
+        isStarting = false
+      }
+    }
+  }
 }
 
 /// One synced-template row (canvas AW 13) — plain `surface` background,
@@ -177,6 +216,47 @@ private struct TemplateRow: View {
           .foregroundColor(LifeyColors.onSurfaceVariant)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 14)
+    }
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
+    .background(LifeyColors.surface)
+    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
+  }
+}
+
+/// One ranked cardio activity-type row (canvas AW 16) — an icon circle
+/// tinted per activity type (`cardioActivityIcon`/`cardioActivityTint`,
+/// `Views/ActiveWorkoutView.swift` — shared with that file's own cardio
+/// pages, C5.5), `TemplateRow`'s plain `surface` card and tap-to-start
+/// behavior otherwise (C5.7b) — a `Button`, same as `TemplateRow`, unlike
+/// the C5.4/C5.5-era version of this row.
+private struct CardioRow: View {
+  let activityType: String
+  let title: String
+  let isCompact: Bool
+  let isDisabled: Bool
+  let onTap: () -> Void
+
+  var body: some View {
+    Button(action: onTap) {
+      HStack(spacing: 13) {
+        ZStack {
+          Circle()
+            .fill(cardioActivityTint(for: activityType).opacity(0.18))
+            .frame(width: 40, height: 40)
+          Image(systemName: cardioActivityIcon(for: activityType))
+            .foregroundColor(cardioActivityTint(for: activityType))
+        }
+        Text(title)
+          .font(.body)
+          .fontWeight(.bold)
+          .foregroundColor(LifeyColors.onSurface)
+          .lineLimit(1)
+          .truncationMode(.tail)
+        Spacer(minLength: 0)
+      }
       .padding(.horizontal, 16)
       .padding(.vertical, 14)
     }

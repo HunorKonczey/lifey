@@ -73,4 +73,21 @@ enum LifeyColors {
   /// Wear's own active-screen delta ships later (S17) — add the identical
   /// hex there when it does.
   static let standaloneIndicator = Color(hex: 0x77_72_64)
+
+  // 2.6 Cardio activity-type accents (docs/cardio/55-cardio-watch-plan.md §2,
+  // picker rows — C5.4) — the same hex the mobile app's `MetricColors` uses
+  // for the matching activity (`activity_type.dart`'s `activityTypeColor`),
+  // kept identical across platforms like every other token in this file.
+  // `RUNNING` reuses `calories` (`0xE0915A` on both), and `HIKING` reuses
+  // `tertiary` (`0x6E9A6A`) rather than duplicating the same hex under a
+  // second name — only the three colors this file didn't already have get
+  // their own constant.
+  /// `WALKING` — mirrors mobile's `MetricColors.steps`.
+  static let cardioWalking = Color(hex: 0xB0_8A_C8)
+  /// `INDOOR_BIKE` — mirrors mobile's `MetricColors.carbs`.
+  static let cardioIndoorBike = Color(hex: 0xD8_B3_5A)
+  /// `BASKETBALL` — mirrors mobile's `MetricColors.fat`.
+  static let cardioBasketball = Color(hex: 0x8E_8E_C4)
+  /// `FOOTBALL` — mirrors mobile's `MetricColors.water`.
+  static let cardioFootball = Color(hex: 0x6F_A8_C4)
 }

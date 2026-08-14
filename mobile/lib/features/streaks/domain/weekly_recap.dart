@@ -2,6 +2,7 @@ import '../../nutrition/domain/daily_macros.dart';
 import '../../settings/domain/user_settings.dart';
 import '../../steps/domain/daily_step_count.dart';
 import '../../weight/domain/weight_entry.dart';
+import '../../workouts/domain/activity_type.dart';
 import '../../workouts/domain/workout_session.dart';
 import 'streak.dart';
 
@@ -27,6 +28,7 @@ class WeeklyRecap {
     required this.streaks,
     required this.dailyCalories,
     required this.workoutDays,
+    this.weeklyCardioDistanceMeters,
   });
 
   /// Local-midnight Monday this recap covers (through the following Sunday,
@@ -37,9 +39,13 @@ class WeeklyRecap {
   /// matches `StatMetric.workoutCount`'s counting rule.
   final int workoutsDone;
 
-  /// Sum of finished sessions' durations this week; an in-progress session
-  /// contributes nothing (there's no duration yet) — matches
-  /// `StatMetric.workoutMinutes`'s rule.
+  /// Sum of finished sessions' *effective* durations this week — moving
+  /// time for cardio, wall-clock for strength (docs/cardio/56-cardio-statistics-plan.md
+  /// D-C3.3, via `WorkoutSession.effectiveDuration`); an in-progress session
+  /// contributes nothing (there's no duration yet). Matches
+  /// `StatMetric.workoutMinutes`'s rule exactly — bit-identical to the old
+  /// gross-duration sum for a strength-only history, since `movingSeconds`
+  /// is never set on a STRENGTH session.
   final int workoutMinutes;
 
   /// Mean calories over days that actually had a meal logged this week —
@@ -94,6 +100,15 @@ class WeeklyRecap {
   /// started that day. Backs the recap screen's per-day workout dot strip.
   final List<bool> workoutDays;
 
+  /// Σ distance across this week's DISTANCE/MACHINE-family cardio sessions
+  /// (docs/cardio/56-cardio-statistics-plan.md §4: "új sor a heti távról, ha
+  /// volt cardio") — same family gating and unit as `stat_chart_data.dart`'s
+  /// `cardioDistance` `StatMetric` branch (D-C3.7: one shared definition).
+  /// Null, not 0, when no qualifying session recorded a distance this week
+  /// — the row this backs is hidden entirely rather than shown as "0 km",
+  /// same "missing, not zero" principle as [avgCalories].
+  final double? weeklyCardioDistanceMeters;
+
   DateTime get weekEndInclusive => _addDays(weekStart, 6);
 
   /// Whether anything at all actually happened *in* this week — used by the
@@ -144,6 +159,7 @@ class WeeklyRecap {
 
     var workoutsDone = 0;
     var workoutMinutes = 0;
+    double? weeklyCardioDistanceMeters;
     final workoutDays = List<bool>.filled(7, false);
     for (final session in sessions) {
       if (session.isUpcoming || session.startedAt == null) continue;
@@ -151,9 +167,19 @@ class WeeklyRecap {
       if (!inWeek(day)) continue;
       workoutsDone++;
       workoutDays[dayIndex(day)] = true;
-      final finishedAt = session.finishedAt;
-      if (finishedAt != null) {
-        workoutMinutes += finishedAt.difference(session.startedAt!).inMinutes;
+      final duration = session.effectiveDuration;
+      if (duration != null) {
+        workoutMinutes += duration.inMinutes;
+      }
+      // Matches stat_chart_data.dart's cardioDistance StatMetric branch
+      // exactly (D-C3.7) — DISTANCE + MACHINE families only (an indoor
+      // bike's odometer counts, GAME-family sessions don't).
+      final distanceMeters = session.cardio?.distanceMeters;
+      if (session.isCardio &&
+          (session.family == ActivityFamily.distance ||
+              session.family == ActivityFamily.machine) &&
+          distanceMeters != null) {
+        weeklyCardioDistanceMeters = (weeklyCardioDistanceMeters ?? 0) + distanceMeters;
       }
     }
 
@@ -201,6 +227,7 @@ class WeeklyRecap {
       streaks: streaks,
       dailyCalories: dailyCalories,
       workoutDays: workoutDays,
+      weeklyCardioDistanceMeters: weeklyCardioDistanceMeters,
     );
   }
 }

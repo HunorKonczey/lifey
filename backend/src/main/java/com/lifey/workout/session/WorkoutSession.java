@@ -2,6 +2,9 @@ package com.lifey.workout.session;
 
 import com.lifey.common.domain.SyncableEntity;
 import com.lifey.user.User;
+import com.lifey.workout.session.cardio.ActivityType;
+import com.lifey.workout.session.cardio.CardioDetails;
+import com.lifey.workout.session.cardio.CardioSplit;
 import com.lifey.workout.template.WorkoutTemplate;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -68,6 +71,56 @@ public class WorkoutSession extends SyncableEntity {
      */
     @Column(name = "program_assignment_id")
     private Long programAssignmentId;
+
+    /**
+     * STRENGTH (the original, set-based workout) or CARDIO — see
+     * docs/cardio/51-cardio-overview-plan.md D-C.1. Defaults to STRENGTH so a
+     * client that predates cardio (and a freshly-{@code new}'d instance
+     * before the mapper touches it) behaves exactly as before; existing rows
+     * got the same default via the V66 migration.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "session_kind", nullable = false)
+    private SessionKind sessionKind = SessionKind.STRENGTH;
+
+    /**
+     * Non-null exactly when {@link #sessionKind} is CARDIO — enforced by the
+     * {@code workout_sessions_kind_activity_ck} DB constraint (V66), not just
+     * application code.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "activity_type")
+    private ActivityType activityType;
+
+    /**
+     * Time actually spent moving, in seconds — the wall-clock span minus
+     * pauses and auto-pause gaps. This, not ({@link #finishedAt} -
+     * {@link #startedAt}), is what statistics count for a cardio session
+     * (docs/cardio/56-cardio-statistics-plan.md D-C3.3): a 3-hour hike with a
+     * 40-minute lunch stop is not a 3-hour workout. Null for a STRENGTH
+     * session, where the wall-clock span already is the workout.
+     */
+    @Column(name = "moving_seconds")
+    private Integer movingSeconds;
+
+    /**
+     * Cardio metrics — non-null exactly when {@link #sessionKind} is CARDIO
+     * and the client has sent at least one of them (docs/cardio/52 §2.2).
+     * Never independently delta-synced: a write here must bump
+     * {@link #getUpdatedAt()} on this session, same as {@link #sets}/
+     * {@link #plannedExercises} already require (see class doc).
+     */
+    @OneToOne(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
+    private CardioDetails cardioDetails;
+
+    /**
+     * Per-km/lap splits for a DISTANCE-family cardio session, computed
+     * client-side and synced as a whole (docs/cardio/52 §2.3) — same
+     * never-independently-synced caveat as {@link #cardioDetails}.
+     */
+    @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("splitIndex ASC")
+    private List<CardioSplit> splits = new ArrayList<>();
 
     @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("performedAt ASC")

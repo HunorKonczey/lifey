@@ -3,9 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/nutrition/application/meal_controller.dart';
 import 'package:lifey/features/nutrition/domain/meal.dart';
 import 'package:lifey/features/statistics/application/stat_chart_data.dart';
+import 'package:lifey/features/statistics/application/stat_kind_filter_controller.dart';
 import 'package:lifey/features/statistics/application/stat_metric_controller.dart';
 import 'package:lifey/features/statistics/application/stat_summary_data.dart';
 import 'package:lifey/features/statistics/application/stats_range_controller.dart';
+import 'package:lifey/features/statistics/domain/stat_kind_filter.dart';
 import 'package:lifey/features/statistics/domain/stat_metric.dart';
 import 'package:lifey/features/steps/data/step_count_repository.dart';
 import 'package:lifey/features/steps/domain/daily_step_count.dart';
@@ -66,6 +68,38 @@ WorkoutSession _session({
     exercises: const [],
     sets: const [],
     activeCalories: activeCalories,
+  );
+}
+
+/// A CARDIO-kind session — [activityType] defaults to `'RUNNING'` (DISTANCE
+/// family) since most cardio-metric tests care about that family;
+/// [distanceMeters]/[elevationGainMeters]/[maxHeartRate] land on
+/// [WorkoutSession.cardio] the same way the real repository nests them.
+WorkoutSession _cardioSession({
+  required DateTime startedAt,
+  DateTime? finishedAt,
+  String activityType = 'RUNNING',
+  int? movingSeconds,
+  double? distanceMeters,
+  double? elevationGainMeters,
+  double? maxHeartRate,
+}) {
+  return WorkoutSession(
+    clientId: 'cardio-session-${startedAt.microsecondsSinceEpoch}',
+    startedAt: startedAt,
+    finishedAt: finishedAt,
+    exercises: const [],
+    sets: const [],
+    sessionKind: 'CARDIO',
+    activityType: activityType,
+    movingSeconds: movingSeconds,
+    cardio: (distanceMeters != null || elevationGainMeters != null || maxHeartRate != null)
+        ? CardioMetrics(
+            distanceMeters: distanceMeters,
+            elevationGainMeters: elevationGainMeters,
+            maxHeartRate: maxHeartRate,
+          )
+        : null,
   );
 }
 
@@ -241,6 +275,273 @@ void main() {
 
       final points = container.read(statChartDataProvider).value!;
       expect(_asPairs(points), [(_day(2), 300.0), (_day(1), 150.0)]);
+    });
+
+    test(
+      'workoutMinutes: D-C3.3 — a cardio session reports moving time, not wall-clock',
+      () async {
+        final container = _buildContainer(sessions: [
+          // 90 min wall-clock, but only 42 min actually moving (rest stops).
+          _cardioSession(
+            startedAt: _day(0).add(const Duration(hours: 8)),
+            finishedAt: _day(0).add(const Duration(hours: 9, minutes: 30)),
+            movingSeconds: 42 * 60,
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutMinutes);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        final points = container.read(statChartDataProvider).value!;
+        expect(_asPairs(points), [(_day(0), 42.0)]);
+      },
+    );
+
+    test('cardioSessions: counts only cardio sessions per day, strength excluded', () async {
+      final container = _buildContainer(sessions: [
+        _cardioSession(startedAt: _day(1).add(const Duration(hours: 7))),
+        _cardioSession(startedAt: _day(1).add(const Duration(hours: 18))),
+        _session(startedAt: _day(1).add(const Duration(hours: 12)), finishedAt: _day(1)), // strength
+        _cardioSession(startedAt: _day(0).add(const Duration(hours: 7))),
+      ]);
+      addTearDown(container.dispose);
+
+      container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioSessions);
+      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+      final points = container.read(statChartDataProvider).value!;
+      expect(_asPairs(points), [(_day(1), 2.0), (_day(0), 1.0)]);
+    });
+
+    test('cardioMovingMinutes: sums moving seconds (not gross duration) per day, cardio only',
+        () async {
+      final container = _buildContainer(sessions: [
+        _cardioSession(startedAt: _day(0).add(const Duration(hours: 7)), movingSeconds: 1800),
+        _cardioSession(startedAt: _day(0).add(const Duration(hours: 18)), movingSeconds: 600),
+        // Strength session in the same day must not contribute.
+        _session(startedAt: _day(0).add(const Duration(hours: 12)), finishedAt: _day(0)),
+      ]);
+      addTearDown(container.dispose);
+
+      container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioMovingMinutes);
+      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+      final points = container.read(statChartDataProvider).value!;
+      expect(_asPairs(points), [(_day(0), 40.0)]); // (1800+600)/60
+    });
+
+    test('cardioDistance: sums km for DISTANCE and MACHINE families, skips GAME', () async {
+      final container = _buildContainer(sessions: [
+        _cardioSession(
+          startedAt: _day(0).add(const Duration(hours: 7)),
+          distanceMeters: 5000,
+        ),
+        _cardioSession(
+          startedAt: _day(0).add(const Duration(hours: 12)),
+          activityType: 'INDOOR_BIKE',
+          distanceMeters: 15000,
+        ),
+        // GAME family — basketball has no meaningful "distance" metric here.
+        _cardioSession(
+          startedAt: _day(0).add(const Duration(hours: 18)),
+          activityType: 'BASKETBALL',
+          distanceMeters: 2000,
+        ),
+      ]);
+      addTearDown(container.dispose);
+
+      container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioDistance);
+      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+      final points = container.read(statChartDataProvider).value!;
+      expect(_asPairs(points), [(_day(0), 20.0)]); // (5000+15000)/1000, basketball excluded
+    });
+
+    test('cardioElevationGain: sums meters for DISTANCE only, MACHINE excluded', () async {
+      final container = _buildContainer(sessions: [
+        _cardioSession(
+          startedAt: _day(0).add(const Duration(hours: 7)),
+          activityType: 'HIKING',
+          elevationGainMeters: 320,
+        ),
+        // Indoor bike: schema allows the column, but it's not real elevation.
+        _cardioSession(
+          startedAt: _day(0).add(const Duration(hours: 12)),
+          activityType: 'INDOOR_BIKE',
+          elevationGainMeters: 999,
+        ),
+      ]);
+      addTearDown(container.dispose);
+
+      container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioElevationGain);
+      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+      final points = container.read(statChartDataProvider).value!;
+      expect(_asPairs(points), [(_day(0), 320.0)]);
+    });
+
+    group('cardioAvgPace (D-C3.6)', () {
+      test('is distance-weighted per day, not the arithmetic mean of each session\'s pace',
+          () async {
+        final container = _buildContainer(sessions: [
+          // 1 km in 4 min (4 min/km) and 20 km in 100 min (5 min/km) — the
+          // naive arithmetic mean of the two paces would be 4.5 min/km; the
+          // correct Σtime/Σdistance weighted pace is 104/21 ≈ 4.952 min/km.
+          _cardioSession(
+            startedAt: _day(0).add(const Duration(hours: 7)),
+            movingSeconds: 4 * 60,
+            distanceMeters: 1000,
+          ),
+          _cardioSession(
+            startedAt: _day(0).add(const Duration(hours: 12)),
+            movingSeconds: 100 * 60,
+            distanceMeters: 20000,
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioAvgPace);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        final points = container.read(statChartDataProvider).value!;
+        expect(points, hasLength(1));
+        expect(points.single.date, _day(0));
+        expect(points.single.value, closeTo(104 / 21, 0.0001));
+      });
+
+      test('excludes hiking even though it is a DISTANCE-family activity', () async {
+        final container = _buildContainer(sessions: [
+          _cardioSession(
+            startedAt: _day(0),
+            activityType: 'HIKING',
+            movingSeconds: 3600,
+            distanceMeters: 5000,
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioAvgPace);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        expect(container.read(statChartDataProvider).value, isEmpty);
+      });
+
+      test('a day with only zero/missing distance is absent, not a divide-by-zero point',
+          () async {
+        final container = _buildContainer(sessions: [
+          _cardioSession(startedAt: _day(0), movingSeconds: 600, distanceMeters: 0),
+          _cardioSession(startedAt: _day(1), movingSeconds: 600), // no distance recorded at all
+        ]);
+        addTearDown(container.dispose);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioAvgPace);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        expect(container.read(statChartDataProvider).value, isEmpty);
+      });
+    });
+
+    test('maxHeartRate: each day\'s point is that day\'s highest reading, not a sum/average',
+        () async {
+      final container = _buildContainer(sessions: [
+        _cardioSession(startedAt: _day(0).add(const Duration(hours: 7)), maxHeartRate: 152),
+        _cardioSession(startedAt: _day(0).add(const Duration(hours: 18)), maxHeartRate: 171),
+        _cardioSession(startedAt: _day(1).add(const Duration(hours: 7)), maxHeartRate: 160),
+      ]);
+      addTearDown(container.dispose);
+
+      container.read(statMetricControllerProvider.notifier).select(StatMetric.maxHeartRate);
+      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+      final points = container.read(statChartDataProvider).value!;
+      expect(_asPairs(points), [(_day(1), 160.0), (_day(0), 171.0)]);
+    });
+
+    group('StatKindFilter (D-C3.4)', () {
+      final mixedSessions = [
+        _session(
+          startedAt: _day(0).add(const Duration(hours: 8)),
+          finishedAt: _day(0).add(const Duration(hours: 9)),
+        ), // strength, 60 min
+        _cardioSession(
+          startedAt: _day(0).add(const Duration(hours: 18)),
+          finishedAt: _day(0).add(const Duration(hours: 18, minutes: 30)),
+          movingSeconds: 25 * 60,
+        ), // cardio, 25 min moving
+      ];
+
+      test('all: workoutCount includes both kinds (unchanged default behaviour)', () async {
+        final container = _buildContainer(sessions: mixedSessions);
+        addTearDown(container.dispose);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutCount);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(0), 2.0)]);
+      });
+
+      test('strength: workoutCount/workoutMinutes only count the strength session', () async {
+        final container = _buildContainer(sessions: mixedSessions);
+        addTearDown(container.dispose);
+        container.read(statKindFilterControllerProvider.notifier).select(StatKindFilter.strength);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutCount);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(0), 1.0)]);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutMinutes);
+        expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(0), 60.0)]);
+      });
+
+      test('cardio: workoutCount/workoutMinutes only count the cardio session', () async {
+        final container = _buildContainer(sessions: mixedSessions);
+        addTearDown(container.dispose);
+        container.read(statKindFilterControllerProvider.notifier).select(StatKindFilter.cardio);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutCount);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(0), 1.0)]);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.workoutMinutes);
+        expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(0), 25.0)]);
+      });
+
+      test('strength: a cardio-only metric shows nothing at all, even with cardio data present',
+          () async {
+        final container = _buildContainer(sessions: mixedSessions);
+        addTearDown(container.dispose);
+        container.read(statKindFilterControllerProvider.notifier).select(StatKindFilter.strength);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioMovingMinutes);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        expect(container.read(statChartDataProvider).value, isEmpty);
+      });
+
+      test('availableStatMetricsProvider: strength filter hides every cardio-only metric',
+          () async {
+        final container = _buildContainer(
+          meals: [],
+          sessions: mixedSessions,
+          water: [],
+          weights: [],
+          steps: [],
+        );
+        addTearDown(container.dispose);
+        container.read(statKindFilterControllerProvider.notifier).select(StatKindFilter.strength);
+
+        await container.listen(mealControllerProvider.future, (previous, next) {}).read();
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+        await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
+        await container.listen(weightControllerProvider.future, (previous, next) {}).read();
+        await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
+
+        expect(container.read(availableStatMetricsProvider), {
+          StatMetric.workoutCount,
+          StatMetric.workoutMinutes,
+        });
+      });
     });
 
     test('water: sums volume per day across entries/sources', () async {
@@ -444,6 +745,43 @@ void main() {
         StatMetric.activeCalories,
         StatMetric.water,
         StatMetric.weight,
+      });
+    });
+
+    test('cardio metrics only appear once a session actually has the value each one needs',
+        () async {
+      final container = _buildContainer(
+        meals: [],
+        sessions: [
+          // Distance + moving time + heart rate, but no elevation.
+          _cardioSession(
+            startedAt: _day(0),
+            movingSeconds: 1800,
+            distanceMeters: 5000,
+            maxHeartRate: 150,
+          ),
+        ],
+        water: [],
+        weights: [],
+        steps: [],
+      );
+      addTearDown(container.dispose);
+
+      await container.listen(mealControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
+      await container.listen(weightControllerProvider.future, (previous, next) {}).read();
+      await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
+
+      expect(container.read(availableStatMetricsProvider), {
+        StatMetric.workoutCount,
+        StatMetric.cardioSessions,
+        StatMetric.cardioMovingMinutes,
+        StatMetric.cardioDistance,
+        StatMetric.cardioAvgPace,
+        StatMetric.maxHeartRate,
+        // Not workoutMinutes: the session never finished. Not
+        // cardioElevationGain: no elevationGainMeters was set.
       });
     });
   });

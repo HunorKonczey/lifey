@@ -73,15 +73,40 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
 
     // MARK: - Commands (docs/40-watch-app-plan.md §5.1)
 
+    /**
+     * [activityType] is `CardioSessionScreen`'s C5.2 addition to
+     * `WatchWorkoutService.startWorkout()` — null for every pre-cardio
+     * (STRENGTH) call site. Unlike iOS (`HKHealthStore.startWatchApp(with:)`
+     * hands the watch a whole `HKWorkoutConfiguration` object), Wear OS has
+     * no phone→watch "configure the exercise" call at all: the watch itself
+     * builds its `ExerciseConfig` locally (`ExerciseService.buildExerciseConfig`)
+     * once it receives the `/start` message — so this field has to travel
+     * *inside* that message (docs/cardio/55-cardio-watch-plan.md §2, C5.6),
+     * not through a separate channel the way iOS's config is.
+     *
+     * [venue] (the other C5.2 addition, `args["venue"]`) is deliberately
+     * **not** forwarded here — it drives `HKWorkoutSessionLocationType` on
+     * iOS, and Health Services' `ExerciseConfig` has no indoor/outdoor
+     * equivalent field to map it onto (`ExerciseService.buildExerciseConfig`'s
+     * own doc comment). Forwarding a value nothing on this platform can use
+     * would just be dead plumbing.
+     */
     private fun startWorkout(call: MethodCall, result: MethodChannel.Result) {
         val args = call.arguments as? Map<*, *> ?: return result.success(null)
         val sessionClientId = args["sessionClientId"] as? String ?: return result.success(null)
         val title = args["title"] as? String
         val startedAtEpochMs = (args["startedAtEpochMs"] as? Number)?.toLong()
         @Suppress("UNCHECKED_CAST") val state = args["state"] as? Map<String, Any?>
+        val activityType = args["activityType"] as? String
 
-        pushState(sessionClientId, title, startedAtEpochMs, state, desiredPhase = "running")
-        sendMessage(COMMAND_START, stateMessagePayload(sessionClientId, title, state))
+        pushState(
+            sessionClientId, title, startedAtEpochMs, state, desiredPhase = "running",
+            activityType = activityType,
+        )
+        sendMessage(
+            COMMAND_START,
+            stateMessagePayload(sessionClientId, title, state, activityType = activityType),
+        )
         result.success(null)
     }
 
@@ -164,25 +189,32 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
 
     /**
      * Answers `syncTemplates` (docs/watch/49-watch-f6b-template-sync-plan.md
-     * §4.1, T3.3) — unlike the session-state pushes above, no context-merge
-     * hazard exists here (D-F6b.3): [pushTemplates] writes its own
-     * independent [TEMPLATES_PATH] `DataItem`, which the Data Layer never
-     * conflates with [pushState]'s `STATE_PATH` one. Message first
-     * (primary), `DataItem` as the reconnect fallback — the same D-F6.9
-     * split every other command here already follows.
+     * §4.1, T3.3; wire shape bumped to the unified `entries` list by
+     * docs/cardio/55-cardio-watch-plan.md §3.2/C5.3) — unlike the
+     * session-state pushes above, no context-merge hazard exists here
+     * (D-F6b.3): [pushTemplates] writes its own independent [TEMPLATES_PATH]
+     * `DataItem`, which the Data Layer never conflates with [pushState]'s
+     * `STATE_PATH` one. Message first (primary), `DataItem` as the reconnect
+     * fallback — the same D-F6.9 split every other command here already
+     * follows.
      *
-     * An empty `templates` list still goes out (T1.3's phone-side decision,
-     * enforced here too) — that's how a watch whose last template was just
-     * deleted is told to clear its cache.
+     * `entries` replaces the old `templates` key entirely (C5.3's Dart side
+     * already made this switch — `WatchWorkoutService.syncTemplates()` has
+     * sent `{version: 2, entries: [...]}` since then, never `templates` —
+     * which silently broke this handler's `?: return` guard until this fix:
+     * every sync since C5.3 simply no-opped). An empty `entries` list still
+     * goes out (T1.3's phone-side decision, enforced here too) — that's how
+     * a watch whose last plan was just deleted is told to clear its cache.
      */
     private fun syncTemplates(call: MethodCall, result: MethodChannel.Result) {
         val args = call.arguments as? Map<*, *> ?: return result.success(null)
         @Suppress("UNCHECKED_CAST")
-        val templates = args["templates"] as? List<Map<*, *>> ?: return result.success(null)
+        val entries = args["entries"] as? List<Map<*, *>> ?: return result.success(null)
+        val version = (args["version"] as? Number)?.toInt() ?: return result.success(null)
         val syncedAtEpochMs = (args["syncedAtEpochMs"] as? Number)?.toLong() ?: return result.success(null)
 
-        pushTemplates(syncedAtEpochMs, templates)
-        sendMessage(COMMAND_TEMPLATE_SYNC, templateSyncMessagePayload(syncedAtEpochMs, templates))
+        pushTemplates(version, syncedAtEpochMs, entries)
+        sendMessage(COMMAND_TEMPLATE_SYNC, templateSyncMessagePayload(version, syncedAtEpochMs, entries))
         result.success(null)
     }
 
@@ -196,10 +228,16 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
      * reliable path; `pushState`'s DataItem remains a best-effort backup for
      * the watch reconnecting later while genuinely unreachable.
      */
-    private fun stateMessagePayload(sessionClientId: String, title: String?, state: Map<String, Any?>?): ByteArray {
+    private fun stateMessagePayload(
+        sessionClientId: String,
+        title: String?,
+        state: Map<String, Any?>?,
+        activityType: String? = null,
+    ): ByteArray {
         val json = JSONObject().apply {
             put("sessionClientId", sessionClientId)
             title?.let { put("title", it) }
+            activityType?.let { put("activityType", it) }
             state?.let { s ->
                 val stateJson = JSONObject()
                 // `toJsonValue()` rather than the raw value: a state field can
@@ -214,15 +252,23 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
     }
 
     /**
-     * [templates] arrives from Flutter as a `List<Map<*, *>>` with a nested
-     * `exercises` list per entry (docs/watch/49-watch-f6b-template-sync-plan.md
-     * §4.1) — unlike [stateMessagePayload]'s flat field-by-field build, this
-     * needs a genuinely recursive JSON conversion ([toJsonValue]).
+     * [entries] arrives from Flutter as a `List<Map<*, *>>` — a `TEMPLATE`
+     * entry has a nested `exercises` list (docs/watch/
+     * 49-watch-f6b-template-sync-plan.md §4.1), a `CARDIO` one is flat
+     * (`type`/`activityType`/`title` only, docs/cardio/55-cardio-watch-plan.md
+     * §3.2) — unlike [stateMessagePayload]'s flat field-by-field build, this
+     * needs a genuinely recursive JSON conversion ([toJsonValue]) that
+     * doesn't care which shape a given entry is.
      */
-    private fun templateSyncMessagePayload(syncedAtEpochMs: Long, templates: List<Map<*, *>>): ByteArray {
+    private fun templateSyncMessagePayload(
+        version: Int,
+        syncedAtEpochMs: Long,
+        entries: List<Map<*, *>>,
+    ): ByteArray {
         val json = JSONObject().apply {
+            put("version", version)
             put("syncedAtEpochMs", syncedAtEpochMs)
-            put("templates", templates.toJsonValue())
+            put("entries", entries.toJsonValue())
         }
         return json.toString().toByteArray()
     }
@@ -238,6 +284,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         startedAtEpochMs: Long?,
         state: Map<String, Any?>?,
         desiredPhase: String,
+        activityType: String? = null,
     ) {
         executor.execute {
             val putDataMapRequest =
@@ -246,6 +293,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                     dataMap.putString("desiredPhase", desiredPhase)
                     title?.let { dataMap.putString("title", it) }
                     startedAtEpochMs?.let { dataMap.putLong("startedAtEpochMs", it) }
+                    activityType?.let { dataMap.putString("activityType", it) }
                     state?.let { dataMap.putDataMap("state", it.toDataMap()) }
                 }
             val putDataRequest = putDataMapRequest.asPutDataRequest().setUrgent()
@@ -265,21 +313,23 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
      * Layer's per-path `DataItem`s never collide, so no merge step is needed
      * here — this can freely overwrite its own path on every call.
      */
-    private fun pushTemplates(syncedAtEpochMs: Long, templates: List<Map<*, *>>) {
+    private fun pushTemplates(version: Int, syncedAtEpochMs: Long, entries: List<Map<*, *>>) {
         executor.execute {
             val putDataMapRequest =
                 PutDataMapRequest.create(TEMPLATES_PATH).apply {
+                    dataMap.putInt("version", version)
                     dataMap.putLong("syncedAtEpochMs", syncedAtEpochMs)
                     // DataMap has no array-of-maps type, so the nested
-                    // exercises-per-template shape travels as a JSON string
+                    // exercises-per-template shape (and the mixed TEMPLATE/
+                    // CARDIO entry list itself) travels as a JSON string
                     // rather than a native structure (D-F6b.3's one open
                     // implementation choice, now resolved).
-                    dataMap.putString("templatesJson", (templates.toJsonValue() as JSONArray).toString())
+                    dataMap.putString("entriesJson", (entries.toJsonValue() as JSONArray).toString())
                 }
             val putDataRequest = putDataMapRequest.asPutDataRequest().setUrgent()
             try {
                 Tasks.await(dataClient.putDataItem(putDataRequest))
-                Log.d(TAG, "pushTemplates OK (${templates.size} template(s))")
+                Log.d(TAG, "pushTemplates OK (${entries.size} entry/entries)")
             } catch (e: Exception) {
                 Log.w(TAG, "pushTemplates FAILED", e)
             }
@@ -396,6 +446,12 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                         // (docs/40-watch-app-plan.md §5.2, decided in
                         // workout_resume_prompt.dart's Android branch).
                         "healthWorkoutId" to null,
+                        // docs/cardio/55-cardio-watch-plan.md §4.3, C5.7a —
+                        // the watch's own closing distance/elevation for a
+                        // phone-mastered cardio session; absent for STRENGTH
+                        // and for a cardio one Health Services had nothing
+                        // extra to report (`ExerciseService.cardioSummaryJson`).
+                        "cardio" to payload.optJSONObject("cardio")?.toEventMap(),
                     ),
             )
         )
@@ -504,6 +560,23 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                             if (payload.has("averageHeartRate")) payload.optDouble("averageHeartRate")
                             else null,
                         "healthWorkoutId" to null,
+                        // docs/cardio/55-cardio-watch-plan.md §5/§7 W-8,
+                        // C5.7a — a standalone CARDIO session (mutually
+                        // exclusive with `templateId`/non-empty `sets`
+                        // above). All three absent for every STRENGTH
+                        // standalone session, which is every session this
+                        // path has ever carried before this step —
+                        // `WatchStandaloneSession.fromJson`
+                        // (`watch_workout_service.dart`) already defaults
+                        // `kind` to `'STRENGTH'` and `activityType`/`cardio`
+                        // to null, so an absent key here is exactly the
+                        // pre-cardio behavior, not a new default to invent.
+                        "kind" to if (payload.has("kind")) payload.optString("kind") else null,
+                        "activityType" to
+                            if (payload.has("activityType")) payload.optString("activityType") else null,
+                        "movingSeconds" to
+                            if (payload.has("movingSeconds")) payload.optInt("movingSeconds") else null,
+                        "cardio" to payload.optJSONObject("cardio")?.toEventMap(),
                     ),
             ),
         )
@@ -641,6 +714,20 @@ private fun Map<String, Any?>.toDataMap(): DataMap {
                 key,
                 ArrayList(value.filterIsInstance<Int>()),
             )
+            // `DataMap` has no nested-map type of its own — `state.cardio`
+            // (docs/cardio/55-cardio-watch-plan.md §4.1/§4.2, C5.6's
+            // `CardioLiveMetrics.toJson()`) is the one field this reaches for
+            // that isn't already flat, so it travels the same "nested
+            // structure → JSON string" way `sessionPlan` already does
+            // (`stateMessagePayload`'s doc comment) — just built here instead
+            // of pre-flattened Dart-side, since `cardio` is a genuine nested
+            // map, not already a JSON string like `sessionPlan` is. Without
+            // this, `pushState`'s `DataItem` (the reconnect-fallback sync
+            // path, `PhoneListenerService.onDataChanged`) would silently drop
+            // cardio metrics entirely — the primary message path
+            // ([sendMessage]/`toJsonValue()`) already handles it correctly,
+            // this only closes the same gap on the backup path.
+            is Map<*, *> -> map.putString(key, JSONObject(value).toString())
         }
     }
     return map
@@ -665,4 +752,34 @@ private fun Any?.toJsonValue(): Any = when (this) {
     }
     is List<*> -> JSONArray().apply { this@toJsonValue.forEach { put(it.toJsonValue()) } }
     else -> this
+}
+
+/**
+ * [toJsonValue]'s reverse — an `org.json` tree back into the plain
+ * `Map`/`List`/primitives the Flutter EventChannel codec understands
+ * (docs/cardio/55-cardio-watch-plan.md §4.3/§5, C5.7a's `cardio` block).
+ * Generic, unlike [emitStandaloneSession]'s hand-picked `sets` field list —
+ * `cardio`'s shape already has ~25 possible keys on the Dart side
+ * (`CardioMetrics.fromJson`, `mobile/lib/features/workouts/domain/
+ * workout_session.dart`) and is expected to grow (no watch build sends
+ * heart-rate zones yet) — hand-picking specific keys here would silently
+ * drop any future one this file wasn't updated for, the exact "native
+ * bridge doesn't forward a field the Dart side already knows how to decode"
+ * bug class this step already fixed twice elsewhere (`syncTemplates`'s
+ * `entries`, [emitStandaloneSession]'s `kind`/`activityType`/`movingSeconds`).
+ */
+private fun JSONObject.toEventMap(): Map<String, Any?> {
+    val map = mutableMapOf<String, Any?>()
+    keys().forEach { key ->
+        map[key] = when (val value = get(key)) {
+            is JSONObject -> value.toEventMap()
+            is JSONArray -> (0 until value.length()).map { i ->
+                val item = value.get(i)
+                if (item is JSONObject) item.toEventMap() else item
+            }
+            JSONObject.NULL -> null
+            else -> value
+        }
+    }
+    return map
 }

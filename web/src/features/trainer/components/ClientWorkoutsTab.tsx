@@ -13,6 +13,9 @@ import { EmptyState } from "@/components/status/EmptyState";
 import { ErrorState } from "@/components/status/ErrorState";
 import { useLocale } from "@/lib/hooks/useLocale";
 import { useToast } from "@/lib/hooks/useToast";
+import { activityTypeColor, activityTypeIcon } from "@/features/workouts/activityType";
+import { buildCardioSummaryLine } from "@/features/workouts/cardioSummaryLine";
+import { buildCardioTiles } from "@/features/workouts/cardioTiles";
 import type { WorkoutSessionResponse } from "@/features/workouts/types";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
@@ -26,8 +29,11 @@ interface ClientWorkoutsTabProps {
 
 export function ClientWorkoutsTab({ clientId, focusSessionId, onFocusHandled }: ClientWorkoutsTabProps) {
   const t = useTranslations("admin.clientDetail");
+  const tw = useTranslations("workouts");
+  const ta = useTranslations("workouts.activityTypes");
   const common = useTranslations("common");
-  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
+  const locale = useLocale((s) => s.locale);
+  const dateLocale = DATE_LOCALES[locale];
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const rowRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -65,6 +71,7 @@ export function ClientWorkoutsTab({ clientId, focusSessionId, onFocusHandled }: 
       <div className="flex flex-col gap-2">
         {data.content.map((s) => {
           const expanded = expandedId === s.id;
+          const isCardio = s.sessionKind === "CARDIO";
           const volume = s.sets.reduce((sum, set) => sum + set.reps * set.weight, 0);
           const durationMin = s.finishedAt
             ? Math.round((new Date(s.finishedAt).getTime() - new Date(s.startedAt).getTime()) / 60000)
@@ -88,11 +95,13 @@ export function ClientWorkoutsTab({ clientId, focusSessionId, onFocusHandled }: 
                     {format(new Date(s.startedAt), "yyyy. MMM d. HH:mm", { locale: dateLocale })}
                   </p>
                   <p className="text-[11.5px] mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
-                    {t("sessionMeta", {
-                      duration: durationMin ?? "—",
-                      count: s.exercises.length,
-                      volume: Math.round(volume).toLocaleString(),
-                    })}
+                    {isCardio
+                      ? buildCardioSummaryLine(s, tw, locale)
+                      : t("sessionMeta", {
+                          duration: durationMin ?? "—",
+                          count: s.exercises.length,
+                          volume: Math.round(volume).toLocaleString(),
+                        })}
                   </p>
                 </div>
                 {s.rpe != null && (
@@ -107,7 +116,18 @@ export function ClientWorkoutsTab({ clientId, focusSessionId, onFocusHandled }: 
                     {t("sessionRpe", { rpe: s.rpe })}
                   </span>
                 )}
-                {s.templateName && (
+                {isCardio ? (
+                  <span
+                    className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[11px] font-extrabold px-2.5 py-1.5 shrink-0"
+                    style={{
+                      background: `color-mix(in srgb, ${activityTypeColor(s.activityType)} 18%, transparent)`,
+                      color: activityTypeColor(s.activityType),
+                    }}
+                  >
+                    <span className="material-symbols-rounded text-sm">{activityTypeIcon(s.activityType)}</span>
+                    {ta(s.activityType ?? "OTHER_CARDIO")}
+                  </span>
+                ) : s.templateName && (
                   <span
                     className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[11px] font-extrabold px-2.5 py-1.5 shrink-0"
                     style={{ background: "var(--tertiary-container)", color: "var(--on-tertiary-container)" }}
@@ -128,7 +148,19 @@ export function ClientWorkoutsTab({ clientId, focusSessionId, onFocusHandled }: 
                     </p>
                   )}
                   <SessionCommentBlock clientId={clientId} session={s} dateLocale={dateLocale} />
-                  {s.exercises.map((ex) => {
+                  {isCardio ? (
+                    <div className="flex flex-wrap gap-2">
+                      {buildCardioTiles(s, tw, locale).map((tile) => (
+                        <span
+                          key={tile.label}
+                          className="text-xs tabular font-semibold px-2.5 py-1 rounded-lg"
+                          style={{ background: "var(--surface-high)", color: "var(--on-surface-variant)" }}
+                        >
+                          {tile.label}: {tile.value}
+                        </span>
+                      ))}
+                    </div>
+                  ) : s.exercises.map((ex) => {
                     const exerciseSets = s.sets.filter((set) => set.exerciseId === ex.exerciseId);
                     return (
                       <div key={ex.exerciseId} className="rounded-2xl p-3" style={{ background: "var(--surface-container)" }}>

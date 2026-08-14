@@ -12,6 +12,7 @@ import com.lifey.user.User;
 import com.lifey.user.UserRepository;
 import com.lifey.weight.WeightEntry;
 import com.lifey.weight.WeightEntryRepository;
+import com.lifey.workout.session.SessionKind;
 import com.lifey.workout.session.WorkoutSessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -78,11 +79,24 @@ public class WeeklyReportServiceImpl implements WeeklyReportService {
         Long clientId = client.getId();
         ZoneOffset zone = ZoneOffset.ofTotalSeconds(client.getUtcOffsetMinutes() * 60);
 
+        Instant weekStartInstant = weekStart.atStartOfDay(zone).toInstant();
+        Instant weekEndExclusiveInstant = weekEndExclusive.atStartOfDay(zone).toInstant();
+
         int completedWorkouts = (int) workoutSessionRepository
                 .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNull(
-                        clientId, weekStart.atStartOfDay(zone).toInstant(), weekEndExclusive.atStartOfDay(zone).toInstant());
+                        clientId, weekStartInstant, weekEndExclusiveInstant);
         int missedWorkouts = (int) workoutSessionRepository.countMissedOccurrences(
                 trainerId, clientId, weekStart, weekEndExclusive);
+
+        // Strength/cardio breakdown (docs/cardio/56-cardio-statistics-plan.md
+        // §6 ST9) — strengthWorkouts is derived, not separately queried, same
+        // as StatisticsServiceImpl's workoutCount split.
+        int cardioWorkouts = (int) workoutSessionRepository
+                .countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNullAndSessionKind(
+                        clientId, weekStartInstant, weekEndExclusiveInstant, SessionKind.CARDIO);
+        int strengthWorkouts = completedWorkouts - cardioWorkouts;
+        double cardioDistanceMeters = workoutSessionRepository
+                .sumDistanceMetersBetweenForCompleted(clientId, weekStartInstant, weekEndExclusiveInstant);
 
         Integer calorieGoal = userSettingsRepository.findByUserId(clientId)
                 .map(UserSettings::getDailyCalorieGoal)
@@ -124,6 +138,7 @@ public class WeeklyReportServiceImpl implements WeeklyReportService {
 
         return new WeeklyTrainerReport.ClientWeekSummary(
                 displayName(client), completedWorkouts, missedWorkouts,
+                strengthWorkouts, cardioWorkouts, cardioDistanceMeters,
                 daysLogged, daysWithinGoalResult, avgCalories, weightKg, weightChangeKg);
     }
 

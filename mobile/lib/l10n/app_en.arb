@@ -1075,6 +1075,14 @@
   "@emptyWorkoutSubtitle": {
     "description": "Subtitle for the empty workout option on the template picker"
   },
+  "cardioWorkoutTileLabel": "Cardio",
+  "@cardioWorkoutTileLabel": {
+    "description": "Option on the template picker that opens the cardio activity picker"
+  },
+  "cardioWorkoutTileSubtitle": "Running, cycling, hiking & more",
+  "@cardioWorkoutTileSubtitle": {
+    "description": "Subtitle for the cardio option on the template picker"
+  },
   "recommendedWorkoutLabel": "Recommended workout",
   "@recommendedWorkoutLabel": {
     "description": "Label on the recommended-workout card, above the suggested template's name"
@@ -1276,6 +1284,30 @@
   "@statMetricActiveCaloriesLabel": {
     "description": "Statistics metric label: calories burned during workouts (Health)"
   },
+  "statMetricCardioDistanceLabel": "Cardio distance",
+  "@statMetricCardioDistanceLabel": {
+    "description": "Statistics metric label: total distance covered in cardio sessions per day"
+  },
+  "statMetricCardioMovingMinutesLabel": "Cardio moving time",
+  "@statMetricCardioMovingMinutesLabel": {
+    "description": "Statistics metric label: total moving time (excluding pauses) in cardio sessions per day"
+  },
+  "statMetricCardioElevationGainLabel": "Elevation gain",
+  "@statMetricCardioElevationGainLabel": {
+    "description": "Statistics metric label: total elevation gained in cardio sessions per day"
+  },
+  "statMetricCardioAvgPaceLabel": "Average pace",
+  "@statMetricCardioAvgPaceLabel": {
+    "description": "Statistics metric label: distance-weighted average running/walking pace per day"
+  },
+  "statMetricMaxHeartRateLabel": "Max heart rate",
+  "@statMetricMaxHeartRateLabel": {
+    "description": "Statistics metric label: highest heart rate recorded in a cardio session per day"
+  },
+  "statMetricCardioSessionsLabel": "Cardio sessions",
+  "@statMetricCardioSessionsLabel": {
+    "description": "Statistics metric label: number of cardio sessions per day"
+  },
   "statisticsTitle": "Statistics",
   "@statisticsTitle": {
     "description": "Title of the statistics screen"
@@ -1335,6 +1367,22 @@
   "statUnitLiters": "L",
   "@statUnitLiters": {
     "description": "Unit suffix for the water statistics metric"
+  },
+  "statUnitKm": "km",
+  "@statUnitKm": {
+    "description": "Unit suffix for the cardio-distance statistics metric"
+  },
+  "statUnitMeters": "m",
+  "@statUnitMeters": {
+    "description": "Unit suffix for the cardio elevation-gain statistics metric"
+  },
+  "statUnitPaceMinPerKm": "/km",
+  "@statUnitPaceMinPerKm": {
+    "description": "Unit suffix for the cardio average-pace statistics metric — appended after an M:SS-formatted value, e.g. '5:23 /km', matching CardioFormatter.pace's convention elsewhere in the app"
+  },
+  "statUnitBpm": "bpm",
+  "@statUnitBpm": {
+    "description": "Unit suffix for the max-heart-rate statistics metric"
   },
   "comingSoonMessage": "{title} — coming soon",
   "@comingSoonMessage": {
@@ -1896,6 +1944,10 @@
   "allFilterLabel": "All",
   "@allFilterLabel": {
     "description": "Filter chip label meaning no filter / show everything"
+  },
+  "sessionKindCardioLabel": "Cardio",
+  "@sessionKindCardioLabel": {
+    "description": "Sessions-tab kind filter: any cardio activity type (docs/cardio 59 C1.7)"
   },
   "muscleGroupChest": "Chest",
   "@muscleGroupChest": {
@@ -2702,6 +2754,10 @@
   "@streakMetricWater": {
     "description": "Lowercase noun for the water goal, used inside the streak chip tooltip sentence"
   },
+  "streakMetricWorkout": "workouts",
+  "@streakMetricWorkout": {
+    "description": "Lowercase noun for the workout streak, used inside the streak chip tooltip sentence"
+  },
   "streakActiveTooltip": "{count}-day {metric} streak",
   "@streakActiveTooltip": {
     "description": "Tooltip for a dashboard streak chip that has at least one day logged",
@@ -2756,6 +2812,15 @@
     "placeholders": {
       "count": {
         "type": "int"
+      }
+    }
+  },
+  "recapWorkoutsDistance": "{km} km",
+  "@recapWorkoutsDistance": {
+    "description": "Total cardio distance during the recap week, only shown when there was any (docs/cardio/56-cardio-statistics-plan.md §4) — km already formatted to one decimal, e.g. '24.3'",
+    "placeholders": {
+      "km": {
+        "type": "String"
       }
     }
   },
@@ -3241,5 +3306,424 @@
   "chatPushToggleSubtitle": "Get notified when a new message arrives",
   "@chatPushToggleSubtitle": {
     "description": "Subtitle for the chat push notification toggle"
+  },
+
+  "activityTypeRunning": "Running",
+  "@activityTypeRunning": {
+    "description": "Cardio activity type: running (DISTANCE family)"
+  },
+  "activityTypeWalking": "Walking",
+  "@activityTypeWalking": {
+    "description": "Cardio activity type: walking (DISTANCE family)"
+  },
+  "activityTypeHiking": "Hiking",
+  "@activityTypeHiking": {
+    "description": "Cardio activity type: hiking (DISTANCE family)"
+  },
+  "activityTypeIndoorBike": "Indoor bike",
+  "@activityTypeIndoorBike": {
+    "description": "Cardio activity type: stationary/indoor bike (MACHINE family)"
+  },
+  "activityTypeBasketball": "Basketball",
+  "@activityTypeBasketball": {
+    "description": "Cardio activity type: basketball (GAME family)"
+  },
+  "activityTypeFootball": "Football",
+  "@activityTypeFootball": {
+    "description": "Cardio activity type: football/soccer (GAME family)"
+  },
+  "activityTypeOtherCardio": "Other",
+  "@activityTypeOtherCardio": {
+    "description": "Cardio activity type escape hatch for a type without a dedicated entry yet (GAME family)"
+  },
+  "activityTypeStrength": "Strength",
+  "@activityTypeStrength": {
+    "description": "Label for the existing set-based workout when it appears alongside cardio activity types in a mixed list (e.g. the quick-start picker)"
+  },
+  "logCardioSheetTitle": "Log workout",
+  "@logCardioSheetTitle": {
+    "description": "Title of the manual cardio-logging bottom sheet (docs/cardio 59 C1.8)"
+  },
+  "activityTypeSectionLabel": "TYPE",
+  "@activityTypeSectionLabel": {
+    "description": "Section heading above the activity-type chip row in LogCardioSheet"
+  },
+  "durationSectionLabel": "DURATION",
+  "@durationSectionLabel": {
+    "description": "Section heading above the hour/minute/second duration fields in LogCardioSheet"
+  },
+  "durationHoursAbbrev": "h",
+  "@durationHoursAbbrev": {
+    "description": "Abbreviated unit suffix for the hours field of a duration entry"
+  },
+  "durationMinutesAbbrev": "m",
+  "@durationMinutesAbbrev": {
+    "description": "Abbreviated unit suffix for the minutes field of a duration entry"
+  },
+  "durationSecondsAbbrev": "s",
+  "@durationSecondsAbbrev": {
+    "description": "Abbreviated unit suffix for the seconds field of a duration entry"
+  },
+  "distanceFieldLabel": "DISTANCE",
+  "@distanceFieldLabel": {
+    "description": "Label for the manual distance entry field (DISTANCE/MACHINE families)"
+  },
+  "elevationGainFieldLabel": "ELEVATION GAIN",
+  "@elevationGainFieldLabel": {
+    "description": "Label for the optional elevation-gain entry field (DISTANCE family)"
+  },
+  "avgWattsFieldLabel": "AVG POWER",
+  "@avgWattsFieldLabel": {
+    "description": "Label for the optional average power entry field, in watts (MACHINE family)"
+  },
+  "avgCadenceFieldLabel": "CADENCE",
+  "@avgCadenceFieldLabel": {
+    "description": "Label for the optional cadence entry field, in rpm (MACHINE family)"
+  },
+  "resistanceLevelFieldLabel": "RESISTANCE",
+  "@resistanceLevelFieldLabel": {
+    "description": "Label for the optional resistance-level entry field (MACHINE family)"
+  },
+  "deviceCaloriesFieldLabel": "MACHINE CALORIES",
+  "@deviceCaloriesFieldLabel": {
+    "description": "Label for the optional machine-displayed calorie entry field (MACHINE family)"
+  },
+  "cardioWorkoutLoggedMessage": "Workout logged",
+  "@cardioWorkoutLoggedMessage": {
+    "description": "Snackbar confirming a manually-logged cardio workout was saved"
+  },
+  "couldNotLogWorkoutMessage": "Couldn't log the workout. Please try again.",
+  "@couldNotLogWorkoutMessage": {
+    "description": "Snackbar shown when saving a manually-logged cardio workout fails"
+  },
+  "intensitySectionLabel": "INTENSITY",
+  "@intensitySectionLabel": {
+    "description": "Section heading for the 1-5 subjective intensity chip row (GAME family, CardioMetrics.intensity)"
+  },
+  "venueSectionLabel": "VENUE",
+  "@venueSectionLabel": {
+    "description": "Section heading for the indoor/outdoor toggle (GAME family)"
+  },
+  "venueIndoorLabel": "Indoor",
+  "@venueIndoorLabel": {
+    "description": "Indoor option of the GAME-family venue toggle"
+  },
+  "venueOutdoorLabel": "Outdoor",
+  "@venueOutdoorLabel": {
+    "description": "Outdoor option of the GAME-family venue toggle"
+  },
+  "scorePointsFieldLabel": "SCORE",
+  "@scorePointsFieldLabel": {
+    "description": "Label for the optional points stepper (GAME family box score)"
+  },
+  "movingTimeLabel": "MOVING TIME",
+  "@movingTimeLabel": {
+    "description": "Primary-metric label for a MACHINE-family cardio session"
+  },
+  "playingTimeLabel": "PLAYING TIME",
+  "@playingTimeLabel": {
+    "description": "Primary-metric label for a GAME-family cardio session — time spent actually on court/pitch"
+  },
+  "grossTimeLabel": "GROSS TIME",
+  "@grossTimeLabel": {
+    "description": "Secondary-metric label for a GAME-family cardio session — total wall-clock time including bench time"
+  },
+  "paceLabel": "PACE",
+  "@paceLabel": {
+    "description": "Secondary-metric label for a DISTANCE-family cardio session"
+  },
+  "pauseButtonLabel": "Pause",
+  "@pauseButtonLabel": {
+    "description": "Button that pauses a running cardio session"
+  },
+  "resumeButtonLabel": "Resume",
+  "@resumeButtonLabel": {
+    "description": "Button that resumes a paused cardio session"
+  },
+  "finishButtonLabel": "Finish",
+  "@finishButtonLabel": {
+    "description": "Button that ends a live cardio session"
+  },
+  "finishCardioConfirmTitle": "Finish workout?",
+  "@finishCardioConfirmTitle": {
+    "description": "Title shown on the slide-to-finish confirmation overlay while dragging (C2.5) — the last moment to notice before ending a live cardio session"
+  },
+  "finishCardioConfirmMessage": "This ends the session and saves your moving time.",
+  "@finishCardioConfirmMessage": {
+    "description": "Body text shown on the slide-to-finish confirmation overlay while dragging (C2.5)"
+  },
+  "manualPauseCardTitle": "Paused",
+  "@manualPauseCardTitle": {
+    "description": "Title of the pause-status card shown when the user manually paused a live cardio session (C2.5, M08)"
+  },
+  "manualPauseCardSubtitle": "You stopped it · {duration} ago",
+  "@manualPauseCardSubtitle": {
+    "description": "Subtitle of the manual-pause card, showing how long ago the pause started",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "autoPauseCardTitle": "Automatic pause",
+  "@autoPauseCardTitle": {
+    "description": "Title of the pause-status card shown when the system auto-paused a live DISTANCE-family cardio session (C2.5, M09) — visually distinct from a manual pause"
+  },
+  "autoPauseCardMessage": "You stopped moving, so we paused tracking. It'll resume automatically once you start moving again.",
+  "@autoPauseCardMessage": {
+    "description": "Explanatory body text of the auto-pause card"
+  },
+  "autoPauseResumeHintTitle": "Move to resume",
+  "@autoPauseResumeHintTitle": {
+    "description": "Primary line of the auto-pause dashed resume button"
+  },
+  "autoPauseResumeHintSubtitle": "or tap here to resume manually",
+  "@autoPauseResumeHintSubtitle": {
+    "description": "Secondary line of the auto-pause dashed resume button"
+  },
+  "slideToFinishLabel": "Slide to finish",
+  "@slideToFinishLabel": {
+    "description": "Label on the slide-to-finish bar before it's been dragged (C2.5, M08/M09) — finishing a live cardio session never reacts to a plain tap, only a drag past the threshold or a long press"
+  },
+  "slideToFinishReleaseLabel": "Release",
+  "@slideToFinishReleaseLabel": {
+    "description": "Label on the slide-to-finish bar once the drag has passed the completion threshold"
+  },
+  "slideToFinishProgressHint": "{percent}% more — release to finish",
+  "@slideToFinishProgressHint": {
+    "description": "Helper text below the slide-to-finish bar while dragging, showing the remaining percent before it completes",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "slideToFinishCancelLabel": "Cancel — back to the workout",
+  "@slideToFinishCancelLabel": {
+    "description": "Cancel row shown alongside the slide-to-finish confirmation overlay while dragging"
+  },
+  "couldNotUpdateWorkoutMessage": "Couldn't update the workout. Please try again.",
+  "@couldNotUpdateWorkoutMessage": {
+    "description": "Snackbar shown when a live cardio session's pause/resume/finish write fails"
+  },
+  "heartRateFieldLabel": "HEART RATE",
+  "@heartRateFieldLabel": {
+    "description": "Secondary-metric label for a live cardio session's heart rate tile (no sensor source yet — always shows the empty placeholder)"
+  },
+  "editDistanceDialogTitle": "Update distance",
+  "@editDistanceDialogTitle": {
+    "description": "Title of the dialog that manually updates a live DISTANCE-family session's distance-so-far"
+  },
+  "editCadenceDialogTitle": "Update cadence",
+  "@editCadenceDialogTitle": {
+    "description": "Title of the dialog that manually updates a live MACHINE-family session's cadence"
+  },
+  "editPowerDialogTitle": "Update power",
+  "@editPowerDialogTitle": {
+    "description": "Title of the dialog that manually updates a live MACHINE-family session's average power"
+  },
+  "zoneFieldLabel": "ZONE",
+  "@zoneFieldLabel": {
+    "description": "Secondary-metric label for a live cardio session's heart-rate-zone tile (no sensor source yet — always shows the empty placeholder)"
+  },
+  "onCourtLabel": "On court",
+  "@onCourtLabel": {
+    "description": "GAME-family live-session toggle: currently playing (movingSeconds accrues)"
+  },
+  "onBenchLabel": "Bench",
+  "@onBenchLabel": {
+    "description": "GAME-family live-session toggle: currently on the bench (movingSeconds paused, gross time keeps running)"
+  },
+  "quickStartSheetTitle": "Quick start",
+  "@quickStartSheetTitle": {
+    "description": "Title of the bottom sheet opened by long-pressing the Workouts FAB (C2.7, M01/M02)"
+  },
+  "quickStartSheetSubtitle": "One tap — the workout starts right away.",
+  "@quickStartSheetSubtitle": {
+    "description": "Subtitle under the quick-start sheet's title"
+  },
+  "quickStartColdStartBanner": "You don't have any workout history yet. These are the most common starting points — the order adjusts itself after your first week.",
+  "@quickStartColdStartBanner": {
+    "description": "Explanatory banner shown on the quick-start sheet while there's too little completed-session history for the ranking to be personalized yet (M02)"
+  },
+  "allActivityTypesLabel": "All workout types",
+  "@allActivityTypesLabel": {
+    "description": "Row at the bottom of the quick-start sheet that opens the full activity/template picker (M01/M02 \"Összes edzéstípus\")"
+  },
+  "activityPickerTitle": "What are you starting?",
+  "@activityPickerTitle": {
+    "description": "Title of the full activity-type + template picker opened from the quick-start sheet's \"All workout types\" row (M03)"
+  },
+  "cardioSectionLabel": "CARDIO",
+  "@cardioSectionLabel": {
+    "description": "Section header above the seven cardio activity types in the full activity picker (M03)"
+  },
+  "strengthTemplatesSectionLabel": "STRENGTH TEMPLATES",
+  "@strengthTemplatesSectionLabel": {
+    "description": "Section header above the user's saved templates in the full activity picker (M03)"
+  },
+  "distanceModalitySubtitle": "Distance · pace · GPS",
+  "@distanceModalitySubtitle": {
+    "description": "Modality hint subtitle for a DISTANCE-family entry in the quick-start sheet and full activity picker — deliberately family-generic, not per-type (docs/cardio/59-cardio-implementation-plan.md C2.7 simplification), so running/walking/hiking share it"
+  },
+  "machineModalitySubtitle": "Cadence · power",
+  "@machineModalitySubtitle": {
+    "description": "Modality hint subtitle for a MACHINE-family entry in the quick-start sheet and full activity picker"
+  },
+  "gameModalitySubtitle": "Playing time · heart-rate zones",
+  "@gameModalitySubtitle": {
+    "description": "Modality hint subtitle for a GAME-family entry in the quick-start sheet and full activity picker"
+  },
+  "manuallyEditedBadgeLabel": "Edited",
+  "@manuallyEditedBadgeLabel": {
+    "description": "Badge shown on a cardio summary metric tile whose value came from a manual entry rather than a measured source (docs/cardio/51-cardio-overview-plan.md R8, C2.8) — today that's every value with source == 'MANUAL', since no automatic source (GPS/device) exists yet"
+  },
+  "editDeviceCaloriesDialogTitle": "Update machine calories",
+  "@editDeviceCaloriesDialogTitle": {
+    "description": "Title of the dialog that manually sets a MACHINE-family session's device-displayed calorie count on the summary screen (C2.8)"
+  },
+  "cardioNewRecordBannerTitle": "New personal record!",
+  "@cardioNewRecordBannerTitle": {
+    "description": "Title of the banner shown on the cardio summary screen when the just-finished session beat a prior cardio record (C3.5)"
+  },
+  "cardioRecordLongestDistance": "Longest distance",
+  "@cardioRecordLongestDistance": {
+    "description": "Cardio record type label: this session covered a longer distance than any prior running/walking/hiking/indoor-bike session"
+  },
+  "cardioRecordLongestMovingTime": "Longest moving time",
+  "@cardioRecordLongestMovingTime": {
+    "description": "Cardio record type label: this session's moving time is longer than any prior cardio session's"
+  },
+  "cardioRecordGreatestElevationGain": "Greatest elevation gain",
+  "@cardioRecordGreatestElevationGain": {
+    "description": "Cardio record type label: this session gained more elevation than any prior running/walking/hiking session"
+  },
+  "gpsExplainerTitle": "So we can see where you ran",
+  "@gpsExplainerTitle": {
+    "description": "Title of the one-time GPS explainer sheet shown before the system location-permission dialog, the first time ever a DISTANCE-family session is started (docs/cardio/54-cardio-gps-route-plan.md §3.1, C4a.2, M26)"
+  },
+  "gpsExplainerBody": "We use your location to calculate distance, pace, and your route. It stays on your phone and works offline.",
+  "@gpsExplainerBody": {
+    "description": "Body text of the GPS explainer sheet, below the title"
+  },
+  "gpsExplainerBulletRoute": "Route and km splits",
+  "@gpsExplainerBulletRoute": {
+    "description": "First feature bullet on the GPS explainer sheet"
+  },
+  "gpsExplainerBulletPace": "Live pace while you run",
+  "@gpsExplainerBulletPace": {
+    "description": "Second feature bullet on the GPS explainer sheet"
+  },
+  "gpsExplainerBulletPrivacy": "We never upload anything",
+  "@gpsExplainerBulletPrivacy": {
+    "description": "Third feature bullet on the GPS explainer sheet — location data stays device-local (docs/cardio/52 D-C1.2)"
+  },
+  "gpsExplainerGrantButton": "Allow location",
+  "@gpsExplainerGrantButton": {
+    "description": "Primary button on the GPS explainer sheet — shows the system permission dialog"
+  },
+  "gpsExplainerSkipButton": "Start without GPS",
+  "@gpsExplainerSkipButton": {
+    "description": "Secondary button on the GPS explainer sheet — an equally prominent real button, not a subtle link (M26's own design note): starts the session without ever showing the system dialog"
+  },
+  "gpsExplainerFootnote": "You can enter the distance manually afterward.",
+  "@gpsExplainerFootnote": {
+    "description": "Small reassuring footnote under both buttons on the GPS explainer sheet"
+  },
+  "locationOffTitle": "Location is off",
+  "@locationOffTitle": {
+    "description": "Title of the in-session card shown on a DISTANCE-family CardioSessionScreen when location can't be tracked because permission isn't granted or the device-wide Location Services toggle is off (M27)"
+  },
+  "locationOffBody": "The workout keeps running — we're tracking time and heart rate. No distance or route.",
+  "@locationOffBody": {
+    "description": "Body of the locationOffTitle card — leads with what still works, not what's missing (M27's own design note)"
+  },
+  "locationRequestButton": "Allow",
+  "@locationRequestButton": {
+    "description": "Button on the locationOffTitle card when permission is still askable (notDetermined/denied, not deniedForever) — re-shows the system permission dialog"
+  },
+  "locationEnableServiceButton": "Turn on Location Services",
+  "@locationEnableServiceButton": {
+    "description": "Button on the locationOffTitle card when the device-wide Location Services toggle (not this app's permission) is off — opens the device's location settings"
+  },
+  "locationDeniedForeverTitle": "You permanently denied location",
+  "@locationDeniedForeverTitle": {
+    "description": "Title of the in-session card shown when location permission was permanently denied — the app can no longer show the system dialog at all (M28 card 1)"
+  },
+  "locationDeniedForeverBody": "We can no longer ask from inside the app. You can turn it back on in system Settings → Lifey → Location.",
+  "@locationDeniedForeverBody": {
+    "description": "Body of the locationDeniedForeverTitle card, naming the exact Settings path"
+  },
+  "locationOpenAppSettingsButton": "Open Settings",
+  "@locationOpenAppSettingsButton": {
+    "description": "Button on the locationDeniedForeverTitle card — opens this app's own OS Settings page"
+  },
+  "locationImpreciseTitle": "Precise location is off",
+  "@locationImpreciseTitle": {
+    "description": "Title of the in-session card shown on iOS when the user granted only approximate location (M28 card 2) — Android has no equivalent state, see LocationAvailability.precise"
+  },
+  "locationImpreciseBody": "We only get an approximate location, so no route can be drawn, and the distance could be off by hundreds of meters. The workout still starts — the time is accurate.",
+  "@locationImpreciseBody": {
+    "description": "Body of the locationImpreciseTitle card"
+  },
+  "locationEnablePreciseButton": "Turn on precise location",
+  "@locationEnablePreciseButton": {
+    "description": "Button on the locationImpreciseTitle card — opens this app's own OS Settings page, where iOS keeps the Precise Location toggle"
+  },
+  "locationDismissButton": "Not now",
+  "@locationDismissButton": {
+    "description": "Dismisses the in-session location-status card for the rest of this session — the header's GPS-off indicator stays regardless (M27's own design note: measurement quality is always visible)"
+  },
+  "locationOffChipLabel": "No GPS",
+  "@locationOffChipLabel": {
+    "description": "Small persistent header chip on a DISTANCE-family CardioSessionScreen whenever location can't be tracked, for any reason — stays visible even after the in-session card is dismissed"
+  },
+  "gpsHealthyChipLabel": "GPS",
+  "@gpsHealthyChipLabel": {
+    "description": "Header chip (M04) shown while GPS tracking is active and producing fixes normally — the positive counterpart of locationOffChipLabel/gpsWeakChipLabel"
+  },
+  "gpsWeakChipLabel": "Weak GPS",
+  "@gpsWeakChipLabel": {
+    "description": "Header chip (M10) shown while GPS tracking is active but no fix has arrived in a while — distinct from locationOffChipLabel, which means tracking isn't possible at all"
+  },
+  "gpsWeakSignalBannerBody": "Signal is weak — distance and pace may be off. Tracking keeps running, and we'll mark the gap afterward.",
+  "@gpsWeakSignalBannerBody": {
+    "description": "In-session banner (M10) shown while the GPS signal is weak — informational only, not dismissible, appears/disappears automatically with the signal"
+  },
+  "distanceEstimatedBadgeLabel": "ESTIMATED",
+  "@distanceEstimatedBadgeLabel": {
+    "description": "Small badge next to the dominant distance number (M10) while the GPS signal is weak, signalling the number may be off"
+  },
+  "noSignalLabel": "no signal",
+  "@noSignalLabel": {
+    "description": "Replaces the PACE tile's label while the GPS signal is weak (M10) — the value itself also blanks to —:— rather than showing a stale pace"
+  },
+  "gpsForegroundNotificationText": "Recording your route",
+  "@gpsForegroundNotificationText": {
+    "description": "Android-only: the body text of geolocator's own foreground-service notification, required to keep GPS fixes arriving while the app is backgrounded/the screen is locked (C4a.5a). Separate from and secondary to the app's own rich ongoing workout notification."
+  },
+  "elevationProfileSectionLabel": "ELEVATION PROFILE",
+  "@elevationProfileSectionLabel": {
+    "description": "Section header above the elevation-over-route chart on the cardio summary screen (C4a.6, DISTANCE family only, shown when the session recorded any altitude data)"
+  },
+  "splitsSectionLabel": "SPLITS",
+  "@splitsSectionLabel": {
+    "description": "Section header above the per-km split list on the cardio summary screen (C4a.6, DISTANCE family only, shown when the session has any recorded splits)"
+  },
+  "autoPauseSettingsIconTooltip": "Auto-pause settings",
+  "@autoPauseSettingsIconTooltip": {
+    "description": "Tooltip on the CardioSessionScreen header icon (DISTANCE only) that opens the auto-pause settings sheet"
+  },
+  "autoPauseSettingsTitle": "Auto-pause",
+  "@autoPauseSettingsTitle": {
+    "description": "Title of the auto-pause settings sheet"
+  },
+  "autoPauseSettingsDescription": "Pauses automatically after 15 seconds of no movement, and resumes as soon as you start moving again. Only works while GPS is tracking.",
+  "@autoPauseSettingsDescription": {
+    "description": "Explanatory body text on the auto-pause settings sheet"
+  },
+  "autoPauseSettingsSwitchLabel": "Enable auto-pause",
+  "@autoPauseSettingsSwitchLabel": {
+    "description": "Label on the auto-pause settings sheet's on/off switch"
   }
 }

@@ -4,11 +4,36 @@ import '../../nutrition/application/daily_macros_controller.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../steps/data/step_count_repository.dart';
 import '../../water/application/daily_water_totals_provider.dart';
+import '../../workouts/application/workout_session_controller.dart';
+import '../../workouts/domain/workout_session.dart';
 import '../domain/streak.dart';
+
+/// A day meets the workout streak once it has a STRENGTH session (any
+/// length) *or* a cardio session with at least this many moving seconds —
+/// docs/cardio/51-cardio-overview-plan.md §8 Q1, decided: "≥ 15 perc
+/// mozgásidőtől (`moving_seconds ≥ 900`)... **Nem beállítás**." A single
+/// named constant, not a `UserSettings` field — there is deliberately no way
+/// to configure this from the app.
+const workoutStreakMovingSecondsThreshold = 900;
 
 DateTime _localToday() {
   final now = DateTime.now();
   return DateTime(now.year, now.month, now.day);
+}
+
+DateTime _localDay(DateTime dateTime) {
+  final local = dateTime.toLocal();
+  return DateTime(local.year, local.month, local.day);
+}
+
+/// Whether [session] alone is enough to meet the workout streak for the day
+/// it happened on (see [workoutStreakMovingSecondsThreshold]'s doc) — a
+/// STRENGTH session always counts, a cardio session only once its *moving*
+/// time (not gross wall-clock duration, matching D-C3.3 everywhere else)
+/// clears the threshold.
+bool _meetsWorkoutStreak(WorkoutSession session) {
+  if (!session.isCardio) return true;
+  return (session.movingSeconds ?? 0) >= workoutStreakMovingSecondsThreshold;
 }
 
 /// One [Streak] per daily goal that's actually set (calories/steps/water),
@@ -70,6 +95,28 @@ final streaksProvider = Provider<List<Streak>>((ref) {
       source: totals.entries,
     ));
   }
+
+  // Unconditional — unlike the three above, there's no goal to gate this on
+  // (Q1: "Nem beállítás"). Pre-aggregated into one met/unmet bool per day
+  // first (mirroring the water branch's already-per-day `totals` map)
+  // because, unlike the sources above, a day can have *multiple* sessions —
+  // `_computeStreak`'s per-item loop assumes at most one relevant reading
+  // per day and would let a later unmet session silently overwrite an
+  // earlier met one for `todayMet` if fed raw sessions directly.
+  final sessions = ref.watch(workoutSessionControllerProvider).value ?? const [];
+  final workoutMetByDay = <DateTime, bool>{};
+  for (final session in sessions) {
+    if (session.isUpcoming || session.startedAt == null) continue;
+    final day = _localDay(session.startedAt!);
+    workoutMetByDay[day] = (workoutMetByDay[day] ?? false) || _meetsWorkoutStreak(session);
+  }
+  streaks.add(_computeStreak(
+    metric: StreakMetric.workout,
+    today: today,
+    isMet: (entry) => entry.value,
+    dayOf: (entry) => entry.key,
+    source: workoutMetByDay.entries,
+  ));
 
   return streaks;
 });

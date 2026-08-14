@@ -173,6 +173,102 @@
         }
       }
     },
+    "cardio_back_to_court_button" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to court"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vissza a pályára"
+          }
+        }
+      }
+    },
+    "cardio_game_paused_primary_label" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PLAYING TIME — PAUSED"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JÁTÉKIDŐ — ÁLL"
+          }
+        }
+      }
+    },
+    "cardio_go_to_bench_button" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To bench"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Padra"
+          }
+        }
+      }
+    },
+    "cardio_no_heart_rate_hint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loose strap? Recording continues, the time is accurate."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lazább a szíj? A mérés fut tovább, az idő pontos."
+          }
+        }
+      }
+    },
+    "cardio_no_heart_rate_label" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "no pulse"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nincs pulzus"
+          }
+        }
+      }
+    },
+    "cardio_on_bench_header_label" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ON BENCH"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PADON"
+          }
+        }
+      }
+    },
     "effort_selector_back" : {
       "localizations" : {
         "en" : {

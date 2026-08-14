@@ -11,6 +11,7 @@
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		15C0D50A4AAE4258A9903997 /* IdleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 216887D75EC840DFA5F1098B /* IdleView.swift */; };
 		1B0DA9772E564056B0723B13 /* WorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3EC32BB8CB246A8BE328032 /* WorkoutManager.swift */; };
+		1B6FA8BE1FA74A4E1481F78A /* ShortcutsChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09C188311B803C0C0E14467 /* ShortcutsChannel.swift */; };
 		211362E920CA478773747268 /* LifeyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 23A1073CDB2DBB6581FCF4F6 /* LifeyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2675BFA5059C5368D62BED3C /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7CEB793DBA0FFA1057643E5 /* WorkoutActivityAttributes.swift */; };
 		2DC0C7362BA1403C3BA2FECB /* LifeyColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97874626E4BBCC64426D69CE /* LifeyColors.swift */; };
@@ -29,26 +30,26 @@
 		7750AD4460BE463E1B6B760A /* TodaySummaryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABDF281739DB260B7315FE49 /* TodaySummaryWidget.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
+		7D40DF07B89147C7A24BE080 /* WatchEventBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ECFE8A4C5AD411A9E96D4AE /* WatchEventBuffer.swift */; };
 		80085E511765919A329035F2 /* LifeyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 6E1295B694424A02BE7B0F83 /* LifeyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		8F5C79780C88D2D334880F4E /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9579E90AC7DE881411D162D8 /* SummaryView.swift */; };
 		88ED2662CC0E4020525BB1DD /* StandalonePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A28464D6E07EF14CEF283772 /* StandalonePickerView.swift */; };
-		FD1BEC0458A6625490415513 /* StandaloneSessionPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE875E9CE92E980591E3ADF7 /* StandaloneSessionPayload.swift */; };
-		B93497364237CFA11B59135C /* StandaloneSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C787B5203B6EC2585FB7EB69 /* StandaloneSessionStore.swift */; };
+		8F5C79780C88D2D334880F4E /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9579E90AC7DE881411D162D8 /* SummaryView.swift */; };
 		92D6C4D89BCE9885B1286ACA /* DynamicSizing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F328E47DE6754604F801D76F /* DynamicSizing.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		A1B2C3D4E5F60718293A4B5C /* PushChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5B4A3928170F6E5D4C3B2A1 /* PushChannel.swift */; };
 		A8A974CAA75743428DE0CAAD /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D6938B0E06EA4E5FB6C769C8 /* Localizable.xcstrings */; };
+		B93497364237CFA11B59135C /* StandaloneSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C787B5203B6EC2585FB7EB69 /* StandaloneSessionStore.swift */; };
 		BC23DE45FA6789012345678 /* AppleMusicBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB12CD34EF5678901234567 /* AppleMusicBridge.swift */; };
 		C4CBB17F6045BBECC9D48179 /* EffortSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3DF1BAA0E811718B4315813 /* EffortSelectorView.swift */; };
 		C8A78426AFA51BB4732CF623 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FC6BDA7ED6930FFA22BC04D /* WatchBridge.swift */; };
-		7D40DF07B89147C7A24BE080 /* WatchEventBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ECFE8A4C5AD411A9E96D4AE /* WatchEventBuffer.swift */; };
 		D97F898928CF63CA3FE80A18 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 47901D32BBEDE3C033E2A26B /* Pods_Runner.framework */; };
 		E2C15FF9F2D08196F7D9430B /* LifeyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B869FA4F27F4942A50F51F6 /* LifeyWatchApp.swift */; };
 		E4E728B9F8538B015C8F9150 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CA01381F208E459209B7674 /* ContentView.swift */; };
 		F4608790FA1570EE9F3CE57B /* EndingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15894AC08BE110C70266202E /* EndingView.swift */; };
 		F6BF3582FE4D9C352AFA2F05 /* LifeyWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4611017037CF0707C0EB5D /* LifeyWidgetsBundle.swift */; };
+		FD1BEC0458A6625490415513 /* StandaloneSessionPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE875E9CE92E980591E3ADF7 /* StandaloneSessionPayload.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -126,6 +127,7 @@
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		3ECFE8A4C5AD411A9E96D4AE /* WatchEventBuffer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchEventBuffer.swift; sourceTree = "<group>"; };
 		43AB4664221E9AB4947CC695 /* LifeyWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = LifeyWidgets.entitlements; sourceTree = "<group>"; };
 		47901D32BBEDE3C033E2A26B /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4FBAC8928C47BE228C8BD2B7 /* LifeyShapes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyShapes.swift; sourceTree = "<group>"; };
@@ -142,7 +144,6 @@
 		7B869FA4F27F4942A50F51F6 /* LifeyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeyWatchApp.swift; sourceTree = "<group>"; };
 		7E57CFB32E5D75AEE74B5ACB /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		8FC6BDA7ED6930FFA22BC04D /* WatchBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
-		3ECFE8A4C5AD411A9E96D4AE /* WatchEventBuffer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchEventBuffer.swift; sourceTree = "<group>"; };
 		9579E90AC7DE881411D162D8 /* SummaryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SummaryView.swift; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
@@ -161,9 +162,10 @@
 		B3EC32BB8CB246A8BE328032 /* WorkoutManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
 		BE875E9CE92E980591E3ADF7 /* StandaloneSessionPayload.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StandaloneSessionPayload.swift; sourceTree = "<group>"; };
 		C172D655068797390A33BC32 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		C787B5203B6EC2585FB7EB69 /* StandaloneSessionStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StandaloneSessionStore.swift; sourceTree = "<group>"; };
 		C5B4A3928170F6E5D4C3B2A1 /* PushChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PushChannel.swift; sourceTree = "<group>"; };
+		C787B5203B6EC2585FB7EB69 /* StandaloneSessionStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StandaloneSessionStore.swift; sourceTree = "<group>"; };
 		CFF035215C8B3D9E96C6BB53 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D09C188311B803C0C0E14467 /* ShortcutsChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShortcutsChannel.swift; sourceTree = "<group>"; };
 		D6938B0E06EA4E5FB6C769C8 /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		D7B6D3E9C246452BD2D969C9 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		E42293D98E4942DCB04B165E /* ActiveWorkoutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutView.swift; sourceTree = "<group>"; };
@@ -318,6 +320,7 @@
 				8FC6BDA7ED6930FFA22BC04D /* WatchBridge.swift */,
 				3ECFE8A4C5AD411A9E96D4AE /* WatchEventBuffer.swift */,
 				AB12CD34EF5678901234567 /* AppleMusicBridge.swift */,
+				D09C188311B803C0C0E14467 /* ShortcutsChannel.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -708,6 +711,7 @@
 				C8A78426AFA51BB4732CF623 /* WatchBridge.swift in Sources */,
 				7D40DF07B89147C7A24BE080 /* WatchEventBuffer.swift in Sources */,
 				BC23DE45FA6789012345678 /* AppleMusicBridge.swift in Sources */,
+				1B6FA8BE1FA74A4E1481F78A /* ShortcutsChannel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -58,29 +58,40 @@ class _MainShellState extends ConsumerState<MainShell> {
                   return const SizedBox.shrink();
                 }
                 final scheme = Theme.of(context).colorScheme;
+                final fab = config.extended
+                    ? FloatingActionButton.extended(
+                        heroTag: null,
+                        onPressed: config.onPressed,
+                        icon: Icon(config.icon),
+                        label: Text(config.label),
+                        backgroundColor: scheme.primary,
+                        foregroundColor: scheme.onPrimary,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.all(Radius.circular(18)),
+                        ),
+                      )
+                    : FloatingActionButton(
+                        heroTag: null,
+                        onPressed: config.onPressed,
+                        backgroundColor: scheme.primary,
+                        foregroundColor: scheme.onPrimary,
+                        child: Icon(config.icon),
+                      );
                 return Positioned(
                   right: 16,
                   bottom: fabBottom,
-                  child: config.extended
-                      ? FloatingActionButton.extended(
-                          heroTag: null,
-                          onPressed: config.onPressed,
-                          icon: Icon(config.icon),
-                          label: Text(config.label),
-                          backgroundColor: scheme.primary,
-                          foregroundColor: scheme.onPrimary,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(18)),
-                          ),
-                        )
-                      : FloatingActionButton(
-                          heroTag: null,
-                          onPressed: config.onPressed,
-                          backgroundColor: scheme.primary,
-                          foregroundColor: scheme.onPrimary,
-                          child: Icon(config.icon),
-                        ),
+                  // GestureDetector sits *above* the FAB's own InkWell in the
+                  // gesture arena — a plain tap still reaches
+                  // `config.onPressed` untouched, a long-press (when the
+                  // screen sets one, e.g. Workouts' quick-start sheet,
+                  // docs/cardio/59-cardio-implementation-plan.md C2.7) is
+                  // claimed here instead. `FloatingActionButton` has no
+                  // `onLongPress` of its own, so wrapping is the only way to
+                  // add one without forking the widget.
+                  child: config.onLongPress == null
+                      ? fab
+                      : GestureDetector(onLongPress: config.onLongPress, child: fab),
                 );
               },
             ),

@@ -14,15 +14,17 @@ import '../../dashboard/presentation/widgets/stat_card.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/stat_chart_data.dart';
+import '../application/stat_kind_filter_controller.dart';
 import '../application/stat_metric_controller.dart';
 import '../application/stat_summary_data.dart';
 import '../application/stats_range_controller.dart';
+import '../domain/stat_kind_filter.dart';
 import '../domain/stat_metric.dart';
 import '../domain/stat_summary.dart';
 
-/// Statistics: metric + range popup pickers in a filter strip below the
-/// AppBar, KPI summary cards, and a chart. The header collapses on scroll
-/// like every other screen in the app.
+/// Statistics: kind filter (Mind/Erősítő/Cardio), metric + range popup
+/// pickers in a filter strip below the AppBar, KPI summary cards, and a
+/// chart. The header collapses on scroll like every other screen in the app.
 class StatisticsScreen extends ConsumerWidget {
   const StatisticsScreen({super.key});
 
@@ -32,8 +34,9 @@ class StatisticsScreen extends ConsumerWidget {
 
     final statusTop = MediaQuery.paddingOf(context).top;
     final barTop = statusTop + 8.0;
-    // AppBar (58) + filter strip (button ~40 + vertical padding 8×2 = 56)
-    final contentTop = barTop + 58.0 + 56.0;
+    // AppBar (58) + kind-filter row (~40 + vertical padding 8×2 = 56) +
+    // metric/range filter strip (button ~40 + vertical padding 8×2 = 56)
+    final contentTop = barTop + 58.0 + 56.0 + 56.0;
 
     return Scaffold(
       body: ScrollCollapseListener(
@@ -53,12 +56,51 @@ class StatisticsScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: AdaptiveAppBar(title: l10n.statisticsTitle),
                   ),
+                  const _StatsKindFilterRow(),
                   const _StatsFilterStrip(),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Kind filter — Mind / Erősítő / Cardio (docs/cardio/56-cardio-statistics-plan.md
+// D-C3.4) — a `SegmentedButton`, exactly as D-C3.4 specifies, not a fourth
+// popup chip matching the other two: this one is a real 3-way toggle, always
+// visible, so a user stuck on an empty "no cardio this range" chart
+// (M22) can tap straight back to another kind without hunting for it.
+// ---------------------------------------------------------------------------
+
+class _StatsKindFilterRow extends ConsumerWidget {
+  const _StatsKindFilterRow();
+
+  String _label(AppLocalizations l10n, StatKindFilter filter) => switch (filter) {
+        StatKindFilter.all => l10n.allFilterLabel,
+        StatKindFilter.strength => l10n.activityTypeStrength,
+        StatKindFilter.cardio => l10n.sessionKindCardioLabel,
+      };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final selected = ref.watch(statKindFilterControllerProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: SegmentedButton<StatKindFilter>(
+        showSelectedIcon: false,
+        segments: [
+          for (final filter in StatKindFilter.values)
+            ButtonSegment(value: filter, label: Text(_label(l10n, filter))),
+        ],
+        selected: {selected},
+        onSelectionChanged: (selection) =>
+            ref.read(statKindFilterControllerProvider.notifier).select(selection.first),
       ),
     );
   }
@@ -331,18 +373,42 @@ class _StatisticsChart extends StatelessWidget {
       StatMetric.workoutMinutes => scheme.primary,
       StatMetric.workoutCount => scheme.primary,
       StatMetric.steps => mc.steps,
+      // Same accent `activityTypeColor` already gives cardio elsewhere
+      // (mc.calories doubles as the app's "cardio = orange" color there).
+      StatMetric.cardioDistance => mc.calories,
+      StatMetric.cardioMovingMinutes => mc.calories,
+      StatMetric.cardioElevationGain => mc.calories,
+      StatMetric.cardioAvgPace => mc.calories,
+      StatMetric.cardioSessions => mc.calories,
+      StatMetric.maxHeartRate => mc.heart,
     };
   }
 
   bool get _isIntegerMetric =>
-      metric == StatMetric.workoutCount || metric == StatMetric.steps;
+      metric == StatMetric.workoutCount ||
+      metric == StatMetric.steps ||
+      metric == StatMetric.cardioSessions ||
+      metric == StatMetric.maxHeartRate;
 
   String _formatValue(double value, AppLocalizations l10n) {
+    if (metric == StatMetric.cardioAvgPace) return _formatPace(value, l10n);
     final formatted = _isIntegerMetric
         ? value.round().toString()
         : value.toStringAsFixed(1);
     final unit = metric.unitLabel(l10n);
     return unit.isEmpty ? formatted : '$formatted $unit';
+  }
+
+  /// "5:23 /km" — matches `CardioFormatter.pace`'s M:SS convention
+  /// elsewhere in the app instead of the generic decimal formatting every
+  /// other metric here uses. [value] is already decimal minutes/km (see
+  /// `_cardioAvgPacePoints`, stat_chart_data.dart).
+  String _formatPace(double value, AppLocalizations l10n) {
+    if (!value.isFinite) return '—';
+    final totalSeconds = (value * 60).round();
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')} ${metric.unitLabel(l10n)}';
   }
 
   @override

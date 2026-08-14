@@ -2,13 +2,17 @@ package com.khunor.lifey.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
@@ -37,11 +41,14 @@ import org.json.JSONObject
 /**
  * The pre-start picker (docs/watch/44-watch-f6-standalone-plan.md §3.1,
  * §3.3; docs/watch/49-watch-f6b-template-sync-plan.md D-F6b.7, design canvas
- * W 12). "Quick strength" is always first and always works with zero phone
- * contact; below it, up to 5 synced templates from
- * [com.khunor.lifey.StandaloneSessionStore] (title + exercise count) — or,
- * with an empty/stale cache, just `standalone_empty_hint` (F6a's only
- * variant, still the fallback here).
+ * W 12; unified with cardio entries by docs/cardio/55-cardio-watch-plan.md
+ * §3, canvas W 15 — C5.6). "Quick strength" is always first and always
+ * works with zero phone contact; below it, up to 8 ranked entries from
+ * [com.khunor.lifey.StandaloneSessionStore] — synced templates (title +
+ * exercise count) and cardio activity types (icon + title) interleaved in
+ * whatever order the phone already ranked them (§3.1: "nem talál ki saját
+ * rendezést") — or, with an empty/stale cache, just `standalone_empty_hint`
+ * (F6a's only variant, still the fallback here).
  *
  * [onQuickStrengthTapped] starts the standalone exercise directly —
  * debouncing a double-tap is `ExerciseService.startStandaloneExercise`'s
@@ -52,7 +59,7 @@ import org.json.JSONObject
  * so without it a user who opened the picker by mistake would be stuck.
  *
  * [onTemplateTapped] receives the tapped row's raw template `JSONObject` —
- * the same shape [StandaloneSessionStore.templates] returned it in — so
+ * the same shape a `"TEMPLATE"` entry arrives in — so
  * `MainActivity` can pass it straight through to
  * `ExerciseService.startStandaloneIntent`'s `templateJson` extra without
  * this screen needing to know anything about that wire shape itself
@@ -61,12 +68,20 @@ import org.json.JSONObject
  * happen in `MainActivity`, not here — starting the service also needs
  * `requestSensorPermissionsIfNeeded()`, which needs the `ComponentActivity`
  * this screen doesn't have.
+ *
+ * A **cardio** row ([CardioRow]) starts a standalone cardio exercise
+ * (docs/cardio/55-cardio-watch-plan.md §5/§7 W-8, C5.7a) — [onCardioTapped]
+ * receives the tapped row's `activityType` code, which `MainActivity` passes
+ * straight through to `ExerciseService.startStandaloneIntent`'s
+ * `activityType` extra, the same "this screen doesn't own the
+ * `startForegroundService` call" split [onTemplateTapped] already follows.
  */
 @Composable
 fun StandalonePickerScreen(
     onQuickStrengthTapped: () -> Unit,
     onBack: () -> Unit,
     onTemplateTapped: (JSONObject) -> Unit,
+    onCardioTapped: (String) -> Unit,
 ) {
     val context = LocalContext.current
     // Read once per composition, not observed live — matches
@@ -76,7 +91,7 @@ fun StandalonePickerScreen(
     // screen is already showing updates on the next time it's opened, not
     // instantly — an acceptable staleness window for a picker the user only
     // glances at before tapping something.
-    val templates = remember { StandaloneSessionStore.templates(context) }
+    val entries = remember { StandaloneSessionStore.entries(context) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = isCompactScreen(maxWidth)
@@ -120,7 +135,7 @@ fun StandalonePickerScreen(
                     ),
                 )
             }
-            if (templates.isEmpty()) {
+            if (entries.isEmpty()) {
                 item {
                     Text(
                         text = stringResource(R.string.standalone_empty_hint),
@@ -131,13 +146,29 @@ fun StandalonePickerScreen(
                     )
                 }
             } else {
-                templates.forEach { template ->
-                    item {
-                        TemplateRow(
-                            template = template,
-                            isCompact = isCompact,
-                            onTap = { onTemplateTapped(template) },
-                        )
+                entries.forEach { entry ->
+                    when (entry.optString("type")) {
+                        "CARDIO" -> item {
+                            val activityType = entry.optString("activityType")
+                            CardioRow(
+                                activityType = activityType,
+                                title = entry.optString("title"),
+                                isCompact = isCompact,
+                                onTap = { onCardioTapped(activityType) },
+                            )
+                        }
+                        // "TEMPLATE", and any future/unknown type this build
+                        // doesn't recognize falls back to a template read —
+                        // `TemplateRow`'s own `opt*` calls degrade to blank
+                        // fields rather than throwing, and costs only this
+                        // one row, not the rest of the list.
+                        else -> item {
+                            TemplateRow(
+                                template = entry,
+                                isCompact = isCompact,
+                                onTap = { onTemplateTapped(entry) },
+                            )
+                        }
                     }
                 }
             }
@@ -164,11 +195,11 @@ fun StandalonePickerScreen(
  * (D-F6b.7: quick-strength is the one always-works option, these are
  * secondary). No icon, matching the canvas exactly — just title + the
  * existing `standalone_plan_exercises` count string (added in F6a's S1,
- * unused until now). [template] is the raw `JSONObject` `StandaloneSessionStore
- * .templates()` returns (this store's convention, unlike iOS's typed
- * `CachedTemplate`) — read here with `opt*`, matching every other
- * JSON-decode site in this app rather than introducing a data class for a
- * single call site.
+ * unused until now). [template] is a `"TEMPLATE"`-typed row from
+ * `StandaloneSessionStore.entries()` (this store's raw-JSON convention,
+ * unlike iOS's typed `WatchQuickStartEntry`) — read here with `opt*`,
+ * matching every other JSON-decode site in this app rather than introducing
+ * a data class for a single call site.
  */
 @Composable
 private fun TemplateRow(template: JSONObject, isCompact: Boolean, onTap: () -> Unit) {
@@ -192,6 +223,49 @@ private fun TemplateRow(template: JSONObject, isCompact: Boolean, onTap: () -> U
             style = MaterialTheme.typography.caption2,
             color = LifeyColors.onSurfaceVariant,
             maxLines = 1,
+        )
+    }
+}
+
+/**
+ * One ranked cardio activity-type row (canvas W 15) — an icon circle tinted
+ * per activity type ([cardioActivityIcon]/[cardioActivityTint],
+ * `ActiveWorkoutScreen.kt` — shared with that file's own cardio pages,
+ * C5.6), [TemplateRow]'s plain `surface` card otherwise, plus the
+ * pre-localized [title]. Tapping starts a standalone cardio exercise
+ * (docs/cardio/55-cardio-watch-plan.md §5/§7 W-8, C5.7a) — see
+ * [StandalonePickerScreen]'s doc comment.
+ */
+@Composable
+private fun CardioRow(activityType: String, title: String, isCompact: Boolean, onTap: () -> Unit) {
+    val tint = cardioActivityTint(activityType)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onTap)
+            .background(LifeyColors.surface, LifeyShapes.card)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(13.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(tint.copy(alpha = 0.18f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = cardioActivityIcon(activityType),
+                contentDescription = null,
+                tint = tint,
+            )
+        }
+        Text(
+            text = title,
+            style = if (isCompact) MaterialTheme.typography.body2 else MaterialTheme.typography.body1,
+            color = LifeyColors.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

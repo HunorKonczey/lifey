@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/features/settings/domain/user_settings.dart';
+import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/session_row_plan.dart';
 
 void main() {
@@ -114,5 +116,97 @@ void main() {
       sessionFinished: false,
     );
     expect(plan.blankRows, 1);
+  });
+
+  group('cardioCardPrimaryMetric', () {
+    WorkoutSession session({
+      required String activityType,
+      CardioMetrics? cardio,
+      int? movingSeconds,
+      DateTime? finishedAt,
+    }) {
+      final startedAt = DateTime(2026, 8, 10, 7);
+      return WorkoutSession(
+        clientId: 'c1',
+        exercises: const [],
+        sets: const [],
+        startedAt: startedAt,
+        finishedAt: finishedAt,
+        sessionKind: 'CARDIO',
+        activityType: activityType,
+        movingSeconds: movingSeconds,
+        cardio: cardio,
+      );
+    }
+
+    test('DISTANCE shows the distance, the "cél alakú" number', () {
+      final metric = cardioCardPrimaryMetric(
+        session(
+          activityType: 'RUNNING',
+          cardio: const CardioMetrics(distanceMeters: 5000),
+          movingSeconds: 1512,
+        ),
+        UnitSystem.metric,
+      );
+      expect(metric, '5.00 km');
+    });
+
+    test('DISTANCE without a distance falls back to the duration', () {
+      final metric = cardioCardPrimaryMetric(
+        session(activityType: 'WALKING', movingSeconds: 1830),
+        UnitSystem.metric,
+      );
+      expect(metric, '30:30');
+    });
+
+    test('MACHINE always shows the moving duration, never the distance', () {
+      final metric = cardioCardPrimaryMetric(
+        session(
+          activityType: 'INDOOR_BIKE',
+          cardio: const CardioMetrics(distanceMeters: 18400),
+          movingSeconds: 2538,
+        ),
+        UnitSystem.metric,
+      );
+      expect(metric, '42:18');
+    });
+
+    test('GAME shows the playing time', () {
+      final metric = cardioCardPrimaryMetric(
+        session(activityType: 'BASKETBALL', movingSeconds: 3120),
+        UnitSystem.metric,
+      );
+      expect(metric, '52:00');
+    });
+
+    test('respects the imperial unit system for distance', () {
+      final metric = cardioCardPrimaryMetric(
+        session(
+          activityType: 'RUNNING',
+          cardio: const CardioMetrics(distanceMeters: 1609.344),
+          movingSeconds: 600,
+        ),
+        UnitSystem.imperial,
+      );
+      expect(metric, '1.00 mi');
+    });
+
+    test('null for a STRENGTH session', () {
+      final strength = WorkoutSession(
+        clientId: 'c2',
+        exercises: const [],
+        sets: const [],
+        startedAt: DateTime(2026, 8, 10, 7),
+      );
+      expect(cardioCardPrimaryMetric(strength, UnitSystem.metric), isNull);
+    });
+
+    test('null while a cardio session has neither distance nor duration yet', () {
+      final metric = cardioCardPrimaryMetric(
+        session(activityType: 'RUNNING'),
+        UnitSystem.metric,
+      );
+      expect(metric, isNull);
+    });
   });
 }

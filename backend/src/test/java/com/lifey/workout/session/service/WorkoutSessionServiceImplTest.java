@@ -8,9 +8,16 @@ import com.lifey.user.UserRepository;
 import com.lifey.workout.exercise.Exercise;
 import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.session.ExerciseSet;
+import com.lifey.workout.session.SessionKind;
 import com.lifey.workout.session.WorkoutSession;
 import com.lifey.workout.session.WorkoutSessionExercise;
 import com.lifey.workout.session.WorkoutSessionRepository;
+import com.lifey.workout.session.cardio.ActivityType;
+import com.lifey.workout.session.cardio.CardioDetails;
+import com.lifey.workout.session.cardio.CardioSplit;
+import com.lifey.workout.session.cardio.InvalidCardioRequestException;
+import com.lifey.workout.session.dto.CardioDetailsRequest;
+import com.lifey.workout.session.dto.CardioSplitRequest;
 import com.lifey.workout.session.dto.ExerciseSetRequest;
 import com.lifey.workout.session.dto.PlannedExerciseRequest;
 import com.lifey.workout.session.dto.ExerciseSummary;
@@ -70,6 +77,24 @@ class WorkoutSessionServiceImplTest {
         lenient().when(userRepository.getReferenceById(USER_ID)).thenReturn(new User());
     }
 
+    /**
+     * Same shape as the pre-cardio {@code WorkoutSessionRequest} constructor —
+     * every existing (STRENGTH) test in this file builds a request this way,
+     * leaving the cardio fields (sessionKind, activityType, movingSeconds,
+     * cardio, splits) at their "predates cardio" defaults (all null), which
+     * is exactly the regression the server must keep handling identically
+     * (docs/cardio/52-cardio-domain-backend-plan.md §3.2).
+     */
+    private static WorkoutSessionRequest strengthRequest(
+            Instant startedAt, Instant finishedAt, List<Long> exerciseIds,
+            List<ExerciseSetRequest> sets, Double activeCalories, Double averageHeartRate,
+            String healthWorkoutId, Long templateId, Integer rpe, String feedbackNote,
+            List<PlannedExerciseRequest> plannedExercises) {
+        return new WorkoutSessionRequest(startedAt, finishedAt, exerciseIds, sets, activeCalories,
+                averageHeartRate, healthWorkoutId, templateId, rpe, feedbackNote, plannedExercises,
+                null, null, null, null, null);
+    }
+
     @Test
     void findPage_delegatesToCurrentUser() {
         Pageable requested = PageRequest.of(0, 20);
@@ -79,7 +104,7 @@ class WorkoutSessionServiceImplTest {
         when(sessionRepository.findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNull(USER_ID, requested))
                 .thenReturn(new PageImpl<>(List.of(session)));
 
-        Page<WorkoutSessionResponse> result = service.findPage(requested);
+        Page<WorkoutSessionResponse> result = service.findPage(requested, null);
 
         assertThat(result.getContent()).singleElement().satisfies(r -> assertThat(r.id()).isEqualTo(9L));
     }
@@ -105,7 +130,7 @@ class WorkoutSessionServiceImplTest {
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 2L));
         Instant started = Instant.parse("2026-06-18T05:00:00Z");
         Instant performedAt = Instant.parse("2026-06-18T05:05:00Z");
-        WorkoutSessionRequest request = new WorkoutSessionRequest(started, null,
+        WorkoutSessionRequest request = strengthRequest(started, null,
                 List.of(1L, 4L), List.of(new ExerciseSetRequest(1L, 10, 60.0, performedAt)),
                 450.0, 132.0, "HK-UUID-1", null, null, null, null);
 
@@ -131,7 +156,7 @@ class WorkoutSessionServiceImplTest {
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
         when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 2L));
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(1L, 4L), List.of(),
                 null, null, null, null, null, null,
@@ -152,7 +177,7 @@ class WorkoutSessionServiceImplTest {
         // accepted, with "no plan recorded" rather than a rejected request.
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 2L));
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(1L), List.of(),
                 null, null, null, null, null, null, null);
@@ -170,7 +195,7 @@ class WorkoutSessionServiceImplTest {
         // servers), so the structured list has to be the one that wins.
         when(exerciseRepository.findByIdAndUserId(4L, USER_ID)).thenReturn(Optional.of(exercise(4L, "Overhead Press")));
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 2L));
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(1L), List.of(),
                 null, null, null, null, null, null,
@@ -194,7 +219,7 @@ class WorkoutSessionServiceImplTest {
         existing.getPlannedExercises().add(link);
         when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(1L), List.of(),
                 null, null, null, null, null, null,
@@ -223,7 +248,7 @@ class WorkoutSessionServiceImplTest {
         existing.getPlannedExercises().add(link);
         when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(1L), List.of(),
                 null, null, null, null, null, null, null);
@@ -238,7 +263,7 @@ class WorkoutSessionServiceImplTest {
     @Test
     void create_allowsAnEmptySessionWithNoPlannedExercisesOrSets() {
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 5L));
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null);
 
@@ -257,7 +282,7 @@ class WorkoutSessionServiceImplTest {
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
         Instant performedAt = Instant.parse("2026-06-18T05:05:00Z");
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(),
                 List.of(
                         new ExerciseSetRequest(1L, null, 60.0, performedAt), // reps not filled in yet
@@ -279,7 +304,7 @@ class WorkoutSessionServiceImplTest {
     @Test
     void create_throwsWhenPlannedExerciseMissing() {
         when(exerciseRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(99L), List.of(),
                 null, null, null, null, null, null, null);
 
@@ -291,7 +316,7 @@ class WorkoutSessionServiceImplTest {
     @Test
     void create_throwsWhenSetExerciseMissing() {
         when(exerciseRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(), List.of(new ExerciseSetRequest(99L, 5, 100.0,
                 Instant.parse("2026-06-18T05:05:00Z"))),
@@ -307,7 +332,7 @@ class WorkoutSessionServiceImplTest {
         when(templateRepository.findByIdAndUserId(7L, USER_ID))
                 .thenReturn(Optional.of(template(7L, "Push Day")));
         when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 6L));
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, 7L, null, null, null);
 
@@ -320,7 +345,7 @@ class WorkoutSessionServiceImplTest {
     @Test
     void create_throwsWhenTemplateMissing() {
         when(templateRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, 99L, null, null, null);
 
@@ -349,7 +374,7 @@ class WorkoutSessionServiceImplTest {
         when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
         Instant finished = Instant.parse("2026-06-18T06:00:00Z");
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), finished,
                 List.of(1L), List.of(new ExerciseSetRequest(1L, 8, 70.0,
                 Instant.parse("2026-06-18T05:30:00Z"))),
@@ -370,7 +395,7 @@ class WorkoutSessionServiceImplTest {
     @Test
     void update_throwsWhenMissing() {
         when(sessionRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(), List.of(new ExerciseSetRequest(1L, 5, 50.0,
                 Instant.parse("2026-06-18T05:05:00Z"))),
@@ -409,7 +434,7 @@ class WorkoutSessionServiceImplTest {
         when(exerciseRepository.findByIdAndUserId(1L, USER_ID)).thenReturn(Optional.of(exercise(1L, "Bench Press")));
 
         // Same startedAt/finishedAt/etc as before — only the sets differ.
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null,
                 List.of(), List.of(new ExerciseSetRequest(1L, 8, 70.0,
                 Instant.parse("2026-06-18T05:30:00Z"))),
@@ -434,7 +459,7 @@ class WorkoutSessionServiceImplTest {
         existing.setTrainerCommentBy(42L);
         when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
 
-        WorkoutSessionRequest request = new WorkoutSessionRequest(
+        WorkoutSessionRequest request = strengthRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), Instant.parse("2026-06-18T06:00:00Z"),
                 List.of(), List.of(), null, null, null, null, 8, "felt strong", null);
 
@@ -445,6 +470,220 @@ class WorkoutSessionServiceImplTest {
         assertThat(existing.getTrainerCommentBy()).isEqualTo(42L);
         assertThat(result.trainerComment()).isEqualTo("Nice pace, add weight next time");
         assertThat(result.trainerCommentAt()).isEqualTo(Instant.parse("2026-06-18T07:00:00Z"));
+    }
+
+    // -- Cardio (docs/cardio/52-cardio-domain-backend-plan.md §3.2, C1.4) ----
+
+    /**
+     * Field order mirrors {@link CardioDetailsRequest} exactly — see its
+     * doc for the grouping (DISTANCE+MACHINE / MACHINE / physiological /
+     * GAME / provenance / route). Only distanceMeters and intensity are
+     * parameterized; everything else is null.
+     */
+    private static CardioDetailsRequest cardioDetails(Double distanceMeters, Integer intensity) {
+        return new CardioDetailsRequest(
+                distanceMeters,
+                null, null, null, null, null, null,   // elevationGain..maxCadence
+                null, null, null, null,                // avgWatts..deviceCalories
+                null, null, null, null, null, null,    // maxHeartRate..hrZone5Seconds
+                intensity,
+                null, null, null, null, null, null, null, null, null); // venue..routePointCount
+    }
+
+    @Test
+    void create_cardioSession_persistsActivityTypeMovingSecondsCardioDetailsAndSplits() {
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 7L));
+        Instant started = Instant.parse("2026-06-18T05:00:00Z");
+        WorkoutSessionRequest request = new WorkoutSessionRequest(started, null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.RUNNING, 1800,
+                cardioDetails(5230.0, 4),
+                List.of(new CardioSplitRequest(0, 1000.0, 320, -2.5, 151.0)));
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.sessionKind()).isEqualTo(SessionKind.CARDIO);
+        assertThat(result.activityType()).isEqualTo(ActivityType.RUNNING);
+        assertThat(result.movingSeconds()).isEqualTo(1800);
+        assertThat(result.cardio()).isNotNull();
+        assertThat(result.cardio().distanceMeters()).isEqualTo(5230.0);
+        assertThat(result.cardio().intensity()).isEqualTo(4);
+        assertThat(result.splits()).singleElement().satisfies(s -> {
+            assertThat(s.splitIndex()).isEqualTo(0);
+            assertThat(s.distanceMeters()).isEqualTo(1000.0);
+            assertThat(s.durationSeconds()).isEqualTo(320);
+        });
+        // Empty, never null — a cardio session has no exercises/sets (docs/cardio/52 §3.3).
+        assertThat(result.exercises()).isEmpty();
+        assertThat(result.sets()).isEmpty();
+    }
+
+    @Test
+    void create_omittedSessionKind_defaultsToStrengthInResponse() {
+        // The regression the whole discriminator design exists to avoid: a
+        // client that predates cardio sends no sessionKind at all.
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 8L));
+        WorkoutSessionRequest request = strengthRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null);
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.sessionKind()).isEqualTo(SessionKind.STRENGTH);
+        assertThat(result.activityType()).isNull();
+        assertThat(result.cardio()).isNull();
+        assertThat(result.splits()).isEmpty();
+    }
+
+    @Test
+    void create_cardioWithoutActivityType_throwsInvalidCardioRequestException() {
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, null, null, null, null);
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(InvalidCardioRequestException.class);
+    }
+
+    @Test
+    void create_strengthWithActivityType_throwsInvalidCardioRequestException() {
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                null, ActivityType.RUNNING, null, null, null);
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(InvalidCardioRequestException.class);
+    }
+
+    @Test
+    void create_strengthWithCardioBlock_throwsInvalidCardioRequestException() {
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                null, null, null, cardioDetails(1000.0, null), null);
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(InvalidCardioRequestException.class);
+    }
+
+    @Test
+    void create_strengthWithNonEmptySplits_throwsInvalidCardioRequestException() {
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                null, null, null, null, List.of(new CardioSplitRequest(0, 1000.0, 300, null, null)));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(InvalidCardioRequestException.class);
+    }
+
+    @Test
+    void update_cardioOnlyEditBumpsParentUpdatedAt() {
+        // The exact cardio counterpart of update_childOnlyEditBumpsParentUpdatedAt
+        // — the highest-risk regression in the whole cardio rollout
+        // (docs/cardio/52 §4): a cardio-only edit must still bump updatedAt,
+        // or the change never reaches the delta-sync feed.
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        existing.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        existing.setUpdatedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        existing.setSessionKind(SessionKind.CARDIO);
+        existing.setActivityType(ActivityType.RUNNING);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+
+        // Same startedAt/finishedAt/activityType as before — only cardio.distanceMeters differs.
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.RUNNING, null,
+                cardioDetails(6100.0, null), null);
+
+        service.update(3L, request);
+
+        assertThat(existing.getUpdatedAt()).isAfter(Instant.parse("2026-06-18T05:00:00Z"));
+        assertThat(existing.getCardioDetails().getDistanceMeters()).isEqualTo(6100.0);
+    }
+
+    @Test
+    void update_reusesTheExistingCardioDetailsRowRatherThanADuplicate() {
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        existing.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        existing.setSessionKind(SessionKind.CARDIO);
+        existing.setActivityType(ActivityType.RUNNING);
+        CardioDetails priorDetails = new CardioDetails();
+        priorDetails.setWorkoutSession(existing);
+        priorDetails.setDistanceMeters(4000.0);
+        existing.setCardioDetails(priorDetails);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.RUNNING, null,
+                cardioDetails(4200.0, null), null);
+
+        service.update(3L, request);
+
+        assertThat(existing.getCardioDetails()).isSameAs(priorDetails);
+        assertThat(existing.getCardioDetails().getDistanceMeters()).isEqualTo(4200.0);
+    }
+
+    @Test
+    void update_nullCardioBlockClearsAnExistingCardioDetailsRow() {
+        // Full-replace semantics, same model as sets/plannedExercises: the
+        // client always sends its complete current cardio state, so a null
+        // cardio block means "no cardio data", not "leave it as-is".
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        existing.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        existing.setSessionKind(SessionKind.CARDIO);
+        existing.setActivityType(ActivityType.RUNNING);
+        CardioDetails priorDetails = new CardioDetails();
+        priorDetails.setWorkoutSession(existing);
+        priorDetails.setDistanceMeters(4000.0);
+        existing.setCardioDetails(priorDetails);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.RUNNING, null, null, null);
+
+        service.update(3L, request);
+
+        assertThat(existing.getCardioDetails()).isNull();
+    }
+
+    @Test
+    void update_splitsListIsFullyReplaced() {
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        existing.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        existing.setSessionKind(SessionKind.CARDIO);
+        existing.setActivityType(ActivityType.RUNNING);
+        CardioSplit oldSplit = new CardioSplit();
+        oldSplit.setWorkoutSession(existing);
+        oldSplit.setSplitIndex(0);
+        oldSplit.setDistanceMeters(999.0);
+        oldSplit.setDurationSeconds(300);
+        existing.getSplits().add(oldSplit);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.RUNNING, null, null,
+                List.of(new CardioSplitRequest(0, 1000.0, 310, null, null),
+                        new CardioSplitRequest(1, 1000.0, 315, null, null)));
+
+        service.update(3L, request);
+
+        assertThat(existing.getSplits()).hasSize(2);
+        assertThat(existing.getSplits()).extracting(CardioSplit::getDistanceMeters)
+                .containsExactly(1000.0, 1000.0);
     }
 
     @Test

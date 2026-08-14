@@ -72,22 +72,98 @@ class StandaloneSessionProcessor {
   ///   branch can't simply ack and walk away any more; see that method.
   Future<void> process(WatchStandaloneSession event, {required LanguagePreference language}) {
     return _serialized(() async {
-      final alreadyFinished =
-          await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
-      if (alreadyFinished == null) {
-        // A create that loses to a row appearing underneath it finishes that
-        // row instead — see [_createOrElse].
-        await _createOrElse(
-          () => _createSession(event, language: language),
-          () => _finishAdoptedSession(event, language: language),
-        );
-      } else if (alreadyFinished == false) {
-        await _finishAdoptedSession(event, language: language);
+      if (event.kind == 'CARDIO') {
+        // No exercises/sets to resolve, adopt or merge for this branch
+        // (docs/cardio/55-cardio-watch-plan.md §5/2-3) — see [_processCardio].
+        await _processCardio(event);
       } else {
-        await _enrichFinishedSession(event, language: language);
+        final alreadyFinished =
+            await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
+        if (alreadyFinished == null) {
+          // A create that loses to a row appearing underneath it finishes that
+          // row instead — see [_createOrElse].
+          await _createOrElse(
+            () => _createSession(event, language: language),
+            () => _finishAdoptedSession(event, language: language),
+          );
+        } else if (alreadyFinished == false) {
+          await _finishAdoptedSession(event, language: language);
+        } else {
+          await _enrichFinishedSession(event, language: language);
+        }
       }
       await _watchService.ackStandaloneSession(event.standaloneSessionId);
     });
+  }
+
+  /// The CARDIO counterpart of the three-way STRENGTH branch above
+  /// (docs/cardio/55-cardio-watch-plan.md §5, W-1; D-C5.4 — this branch
+  /// exists before any native watch build can send a CARDIO payload). There
+  /// is no create-vs-finish-vs-enrich distinction to make here: a cardio
+  /// session has no set list to adopt mid-workout or merge with phone-side
+  /// edits ([watch_session_merge.dart] never runs for it), so every
+  /// delivery — including a retried one, D-F6.2 — carries the session's
+  /// complete, final state. Writing it is always a plain, idempotent full
+  /// replace; an already-finished row means this exact delivery was already
+  /// applied, so there's nothing left to write.
+  Future<void> _processCardio(WatchStandaloneSession event) async {
+    final alreadyFinished =
+        await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
+    if (alreadyFinished == true) return;
+    await _createOrElse(
+      () => _createCardioSession(event),
+      () => _updateCardioSession(event),
+    );
+  }
+
+  Future<void> _createCardioSession(WatchStandaloneSession event) {
+    final startedAt = DateTime.fromMillisecondsSinceEpoch(event.startedAtEpochMs, isUtc: true);
+    final endedAt = DateTime.fromMillisecondsSinceEpoch(event.endedAtEpochMs, isUtc: true);
+    return _sessionRepository.create(
+      clientId: event.standaloneSessionId,
+      startedAt: startedAt,
+      finishedAt: endedAt,
+      // No template for a cardio session (docs/cardio/
+      // 51-cardio-overview-plan.md §5) — templateClientId/templateName stay
+      // null, same as [_resolveExercisesAndSets]'s template-less path.
+      exercises: const [],
+      sets: const [],
+      activeCalories: event.activeCalories,
+      averageHeartRate: event.averageHeartRate,
+      // Unlike the STRENGTH branch, this never falls back to
+      // [_writeHealthWorkout] — that callback is typed for
+      // [HealthService.writeStrengthWorkoutAndGetId] specifically, and there
+      // is no cardio equivalent yet. Writing a "traditional strength
+      // training" record for a run would be a wrong, silent mislabel, so
+      // this only ever carries through what the event already has (watchOS's
+      // real HKWorkout uuid, D-F6.5) and otherwise leaves it null.
+      healthWorkoutId: event.healthWorkoutId,
+      rpe: event.rpe,
+      sessionKind: 'CARDIO',
+      activityType: event.activityType,
+      movingSeconds: event.movingSeconds ?? endedAt.difference(startedAt).inSeconds,
+      cardio: event.cardio,
+    );
+  }
+
+  Future<void> _updateCardioSession(WatchStandaloneSession event) {
+    final startedAt = DateTime.fromMillisecondsSinceEpoch(event.startedAtEpochMs, isUtc: true);
+    final endedAt = DateTime.fromMillisecondsSinceEpoch(event.endedAtEpochMs, isUtc: true);
+    return _sessionRepository.update(
+      event.standaloneSessionId,
+      startedAt: startedAt,
+      finishedAt: endedAt,
+      exercises: const [],
+      sets: const [],
+      activeCalories: Value(event.activeCalories),
+      averageHeartRate: Value(event.averageHeartRate),
+      healthWorkoutId: Value(event.healthWorkoutId),
+      rpe: Value(event.rpe),
+      sessionKind: const Value('CARDIO'),
+      activityType: Value(event.activityType),
+      movingSeconds: Value(event.movingSeconds ?? endedAt.difference(startedAt).inSeconds),
+      cardio: Value(event.cardio),
+    );
   }
 
   /// The live-bridging counterpart of [process]: a watch-started session

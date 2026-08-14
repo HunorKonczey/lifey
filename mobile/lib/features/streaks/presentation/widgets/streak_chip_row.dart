@@ -48,12 +48,17 @@ class _StreakChip extends StatelessWidget {
         StreakMetric.calories => l10n.streakMetricCalories,
         StreakMetric.steps => l10n.streakMetricSteps,
         StreakMetric.water => l10n.streakMetricWater,
+        StreakMetric.workout => l10n.streakMetricWorkout,
       };
 
-  Color _metricColor(AppMetricColors mc) => switch (streak.metric) {
+  Color _metricColor(BuildContext context, AppMetricColors mc) => switch (streak.metric) {
         StreakMetric.calories => mc.calories,
         StreakMetric.steps => mc.steps,
         StreakMetric.water => mc.water,
+        // No single existing metric color represents "a workout" (strength
+        // and cardio sessions each have their own accent) — the app's
+        // general brand color is the neutral choice here.
+        StreakMetric.workout => Theme.of(context).colorScheme.primary,
       };
 
   @override
@@ -61,7 +66,7 @@ class _StreakChip extends StatelessWidget {
     final theme = Theme.of(context);
     final mc = context.metricColors;
     final l10n = AppLocalizations.of(context)!;
-    final metricColor = _metricColor(mc);
+    final metricColor = _metricColor(context, mc);
 
     // Three visual states: no streak yet (muted), a streak alive but today
     // not yet met (subdued metric color — "still alive, act today"), and

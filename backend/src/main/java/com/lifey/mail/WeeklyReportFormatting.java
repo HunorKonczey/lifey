@@ -34,6 +34,16 @@ public class WeeklyReportFormatting {
         String workoutsLine = messages.get("mail.weekly-report.workouts-line", language,
                 String.valueOf(c.completedWorkouts()), String.valueOf(c.missedWorkouts()));
 
+        // Strength/cardio breakdown (docs/cardio/56-cardio-statistics-plan.md
+        // §6 ST9) — only shown once there's actually cardio to break out;
+        // a purely-strength client's split is already fully implied by
+        // workoutsLine, so an all-zero cardio row would just be noise.
+        if (c.cardioWorkouts() > 0) {
+            workoutsLine += separator + messages.get("mail.weekly-report.cardio-breakdown-line", language,
+                    String.valueOf(c.strengthWorkouts()), String.valueOf(c.cardioWorkouts()),
+                    String.format(Locale.ROOT, "%.1f", c.cardioDistanceMeters() / 1000.0));
+        }
+
         String nutritionLine;
         if (c.daysLogged() == 0) {
             nutritionLine = messages.get("mail.weekly-report.no-meals", language);

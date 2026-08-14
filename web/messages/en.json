@@ -572,7 +572,8 @@
     "goal": "Goal: {value}",
     "workoutFallback": "Workout",
     "minutes": "min",
-    "setGoalsHint": "Set your daily goals to track progress"
+    "setGoalsHint": "Set your daily goals to track progress",
+    "workoutsBreakdown": "{strength} strength · {cardio} cardio"
   },
   "nutrition": {
     "meals": "Meals",
@@ -743,6 +744,24 @@
     "exercisesCount": "{count} exercises",
     "inProgress": "In progress",
     "bpmAvg": "{value} bpm avg",
+    "movingTime": "moving time",
+    "totalTime": "total time",
+    "readOnly": "Read only",
+    "cardioDurationLabel": "Duration",
+    "cardioDistanceLabel": "Distance",
+    "cardioPaceLabel": "Pace",
+    "cardioElevationGainLabel": "Elevation gain",
+    "cardioMovingTimeLabel": "Moving time",
+    "cardioPlayingTimeLabel": "Playing time",
+    "cardioAvgWattsLabel": "Avg power",
+    "cardioAvgCadenceLabel": "Cadence",
+    "cardioResistanceLabel": "Resistance",
+    "cardioDeviceCaloriesLabel": "Machine calories",
+    "cardioVenueLabel": "Venue",
+    "cardioVenueIndoor": "Indoor",
+    "cardioVenueOutdoor": "Outdoor",
+    "cardioIntensityLabel": "Intensity",
+    "cardioScoreLabel": "Score",
     "deleteSessionAria": "Delete session",
     "activeWorkout": "Active workout",
     "started": "Started {time}",
@@ -831,6 +850,16 @@
       "BODYWEIGHT": "Bodyweight",
       "SMITH_MACHINE": "Smith machine",
       "OTHER": "Other"
+    },
+    "activityTypes": {
+      "RUNNING": "Running",
+      "WALKING": "Walking",
+      "HIKING": "Hiking",
+      "INDOOR_BIKE": "Indoor bike",
+      "BASKETBALL": "Basketball",
+      "FOOTBALL": "Football",
+      "OTHER_CARDIO": "Other",
+      "STRENGTH": "Strength"
     }
   },
   "weight": {
@@ -895,7 +924,13 @@
     "noWeightEntries": "No weight entries in this period",
     "noSetsLogged": "No sets logged in this period",
     "noDataYet": "No data yet",
-    "logToSeeStats": "Log meals, workouts, weight, water or steps to see your statistics."
+    "logToSeeStats": "Log meals, workouts, weight, water or steps to see your statistics.",
+    "kindAll": "All",
+    "kindStrength": "Strength",
+    "kindCardio": "Cardio",
+    "workoutsBreakdown": "{strength} strength · {cardio} cardio",
+    "cardioDistance": "Cardio distance",
+    "noCardioDistance": "No cardio distance logged in this period"
   },
   "settings": {
     "profile": "Profile",

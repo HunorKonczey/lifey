@@ -109,8 +109,8 @@ class ResendMailServiceTest {
 
     private static WeeklyTrainerReport sampleReport() {
         return new WeeklyTrainerReport(LocalDate.of(2026, Month.JUNE, 1), LocalDate.of(2026, Month.JUNE, 7), List.of(
-                new WeeklyTrainerReport.ClientWeekSummary("jane", 3, 1, 5, 4, 2150, 82.4, -0.4),
-                new WeeklyTrainerReport.ClientWeekSummary("<script>john", 0, 0, 0, null, null, null, null)));
+                new WeeklyTrainerReport.ClientWeekSummary("jane", 3, 1, 2, 1, 3200.0, 5, 4, 2150, 82.4, -0.4),
+                new WeeklyTrainerReport.ClientWeekSummary("<script>john", 0, 0, 0, 0, 0.0, 0, null, null, null, null)));
     }
 
     private static User user(Long id, String email) {

@@ -13,6 +13,8 @@ import { KpiCard } from "@/components/data/KpiCard";
 import { Skeleton } from "@/components/status/Skeleton";
 import { ErrorState } from "@/components/status/ErrorState";
 import { useLocale } from "@/lib/hooks/useLocale";
+import { activityTypeColor, activityTypeIcon } from "@/features/workouts/activityType";
+import { buildCardioSummaryLine } from "@/features/workouts/cardioSummaryLine";
 import { UnassignButton } from "./UnassignButton";
 import type { ContentType } from "../types";
 
@@ -25,7 +27,10 @@ interface ClientOverviewTabProps {
 
 export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
   const t = useTranslations("admin.clientDetail");
-  const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
+  const tw = useTranslations("workouts");
+  const ta = useTranslations("workouts.activityTypes");
+  const locale = useLocale((s) => s.locale);
+  const dateLocale = DATE_LOCALES[locale];
 
   const statsQ = useQuery({
     queryKey: queryKeys.trainerClientData.statistics(clientId, "weekly"),
@@ -182,6 +187,7 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
           ) : (
             <div className="flex flex-col gap-2">
               {sessionsQ.data.content.map((s) => {
+                const isCardio = s.sessionKind === "CARDIO";
                 const volume = s.sets.reduce((sum, set) => sum + set.reps * set.weight, 0);
                 return (
                   <div key={s.id} className="rounded-[15px] px-3.5 py-3 flex items-center gap-3.5" style={{ background: "var(--surface-container)" }}>
@@ -190,13 +196,25 @@ export function ClientOverviewTab({ clientId }: ClientOverviewTabProps) {
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[13.5px] font-bold truncate" style={{ color: "var(--on-surface)" }}>
-                        {s.exercises[0]?.exerciseName ?? t("freeWorkout")}
+                        {isCardio ? ta(s.activityType ?? "OTHER_CARDIO") : s.exercises[0]?.exerciseName ?? t("freeWorkout")}
                       </p>
                       <p className="text-[11px] mt-0.5" style={{ color: "var(--on-surface-variant)" }}>
-                        {t("sessionSummary", { count: s.exercises.length, volume: Math.round(volume).toLocaleString() })}
+                        {isCardio
+                          ? buildCardioSummaryLine(s, tw, locale)
+                          : t("sessionSummary", { count: s.exercises.length, volume: Math.round(volume).toLocaleString() })}
                       </p>
                     </div>
-                    {s.templateName && (
+                    {isCardio ? (
+                      <span
+                        className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[11px] font-extrabold px-2.5 py-1.5 shrink-0"
+                        style={{
+                          background: `color-mix(in srgb, ${activityTypeColor(s.activityType)} 18%, transparent)`,
+                          color: activityTypeColor(s.activityType),
+                        }}
+                      >
+                        <span className="material-symbols-rounded text-sm">{activityTypeIcon(s.activityType)}</span>
+                      </span>
+                    ) : s.templateName && (
                       <span
                         className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[11px] font-extrabold px-2.5 py-1.5 shrink-0"
                         style={{ background: "var(--tertiary-container)", color: "var(--on-tertiary-container)" }}

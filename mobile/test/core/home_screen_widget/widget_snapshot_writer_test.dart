@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/home_screen_widget/widget_snapshot_writer.dart';
 import 'package:lifey/features/dashboard/domain/daily_stats.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
+import 'package:lifey/features/workouts/application/activity_ranking.dart';
 
 const _stats = DailyStats(
   calories: 1430.4,
@@ -89,6 +90,38 @@ void main() {
         'steps': 'Lépés',
         'noData': 'Nyisd meg az appot',
       });
+      expect(snapshot['quickStart'], isEmpty); // no ranking passed
+    });
+
+    test('quickStart carries up to 2 resolved entries, label + deep link', () async {
+      String? savedValue;
+      final writer = WidgetSnapshotWriter(
+        isAvailable: true,
+        saveWidgetData: (key, value) async {
+          savedValue = value;
+          return true;
+        },
+        updateWidget: () async => true,
+      );
+
+      await writer.write(
+        stats: _stats,
+        steps: 6412,
+        settings: const UserSettings.defaults(), // language: system -> en
+        quickStartEntries: const [
+          (entry: QuickStartEntry.cardio('RUNNING'), template: null),
+          (entry: QuickStartEntry.strength(), template: null),
+          // A 3rd entry — must not appear, only the top 2 are used
+          // (docs/cardio/53-cardio-mobile-plan.md §3.3).
+          (entry: QuickStartEntry.cardio('WALKING'), template: null),
+        ],
+      );
+
+      final snapshot = jsonDecode(savedValue!) as Map<String, dynamic>;
+      expect(snapshot['quickStart'], [
+        {'label': 'Running', 'deepLinkUri': 'lifey://workout/start?activity=RUNNING'},
+        {'label': 'Empty workout', 'deepLinkUri': 'lifey://workout/start?activity=STRENGTH'},
+      ]);
     });
 
     test('goal fields are null when no goal is set', () async {

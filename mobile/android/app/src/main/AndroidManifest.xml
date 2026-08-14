@@ -28,6 +28,22 @@
          requestRestTimerExactAlarmPermission) when the user enables the rest
          timer, with an inexact-alarm fallback if denied. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Cardio GPS route recording (docs/cardio/54-cardio-gps-route-plan.md
+         §3.2) — requested lazily, only the first time a DISTANCE-family
+         session starts (LocationService). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- C4a.5a — lets the `geolocator` plugin run its own foreground service
+         while a DISTANCE-family session is active, so GPS tracking survives
+         the screen turning off/app backgrounding without needing the
+         "always" location permission (docs/cardio/54 §4.4). The service
+         itself (`GeolocatorLocationService`, with its own
+         `foregroundServiceType="location"`) comes from the plugin's own
+         merged manifest — nothing to declare here beyond the two
+         permissions. FOREGROUND_SERVICE_LOCATION is required from Android 14
+         (API 34) onward. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
     <application
         android:label="lifey"
         android:name="${applicationName}"
@@ -59,6 +75,19 @@
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
             </intent-filter>
+            <!-- `lifey://workout/start?...` — the C2.11a dynamic app-shortcuts
+                 and home-screen widget quick-start buttons, plus the existing
+                 `lifey://workout` / `lifey://today` links iOS already used
+                 (docs/cardio/59-cardio-implementation-plan.md C2.11a,
+                 docs/24-ios-widget-live-activity-plan.md). go_router's
+                 `onException` in app_router.dart parses the URI Flutter hands
+                 it via this filter — no native routing code needed. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="lifey"/>
+            </intent-filter>
         </activity>
         <!-- Health Connect's "view permission usage" entry point — links back
              to this app from Health Connect's own settings UI. Required to
@@ -78,6 +107,12 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Lets the Flutter engine forward the `lifey://` intent-filter
+             above to go_router as a real route instead of only reading it
+             once from the cold-start intent (C2.11a). -->
+        <meta-data
+            android:name="flutter_deeplinking_enabled"
+            android:value="true" />
         <!-- Today's calories home screen widget (docs/25-android-widget-ongoing-notification-plan.md). -->
         <receiver
             android:name=".TodaySummaryWidgetProvider"

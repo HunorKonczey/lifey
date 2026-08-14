@@ -22,6 +22,21 @@ struct StandaloneSet: Codable, Equatable {
   var exerciseId: String?
 }
 
+/// The closing-summary cardio block (docs/cardio/55-cardio-watch-plan.md
+/// §4.3, C5.7b) — `WorkoutManager.cardioSummaryPayload()`'s wire shape,
+/// carried by both `StandaloneSessionPayload.cardio` (this file) and, via
+/// `PhoneConnector.propertyListDictionary(from:)`, `PhoneConnector
+/// .sendSummary`'s phone-mastered path. Matches Dart's `CardioMetrics
+/// .fromJson` field names (`mobile/lib/features/workouts/domain/
+/// workout_session.dart`) exactly, so both closing routes decode identically
+/// on the phone. `distanceSource` is only ever `"DEVICE"` here — a manual or
+/// phone-measured value always wins (docs/cardio/51-cardio-overview-plan.md
+/// R8), so this struct never claims otherwise.
+struct CardioSummaryPayload: Codable, Equatable {
+  let distanceMeters: Double
+  let distanceSource: String
+}
+
 /// The wire/persisted shape of a finished standalone (phone-less) workout
 /// (docs/watch/44-watch-f6-standalone-plan.md §4.1) — everything
 /// `StandaloneSessionStore` queues locally and `PhoneConnector` eventually
@@ -31,6 +46,16 @@ struct StandaloneSet: Codable, Equatable {
 ///
 /// `standaloneSessionId` becomes the resulting session's `clientId` on the
 /// phone — the idempotency key for a retried delivery (§4.2, D-F6.2).
+///
+/// `kind`/`activityType`/`cardio` are C5.7b's cardio additions — all three
+/// nil for a STRENGTH session (Dart's `WatchStandaloneSession.fromJson`
+/// already defaults a missing `kind` to `'STRENGTH'`, docs/cardio/
+/// 55-cardio-watch-plan.md §5), so the pre-cardio wire shape is unchanged
+/// for every existing call site. Unlike Android's `emitStandaloneSession`
+/// (which hand-picks fields into a fresh map and, before C5.7a's fix,
+/// silently dropped exactly this trio), this struct's `Codable` conformance
+/// is what actually reaches the wire — there's no separate hand-written
+/// forwarding step here to fall out of sync with it.
 struct StandaloneSessionPayload: Codable, Equatable {
   let standaloneSessionId: String
   let templateId: String?
@@ -41,6 +66,9 @@ struct StandaloneSessionPayload: Codable, Equatable {
   let activeCalories: Double?
   let averageHeartRate: Double?
   let healthWorkoutId: String?
+  var kind: String?
+  var activityType: String?
+  var cardio: CardioSummaryPayload?
 }
 
 /// The live-bridging counterpart of `StandaloneSessionPayload` — a snapshot
@@ -106,6 +134,13 @@ struct StandaloneActiveSessionMeta: Codable, Equatable {
   var sessionPlan: [CachedTemplateExercise]?
   let startedAtEpochMs: Int64
   var sets: [StandaloneSet]
+  /// `'STRENGTH'`/`'CARDIO'` + the activity type, so a process death mid-run
+  /// recovers into the right screen family instead of always falling back to
+  /// STRENGTH (C5.7b) — both nil for a pre-cardio snapshot, which still
+  /// decodes and still means STRENGTH, matching `WorkoutManager.sessionKind`'s
+  /// own `"STRENGTH"` default.
+  var kind: String?
+  var activityType: String?
 }
 
 /// One exercise of a synced template, exactly as the phone resolved it
@@ -164,4 +199,74 @@ struct CachedTemplate: Codable, Equatable {
   let templateId: String
   let title: String
   let exercises: [CachedTemplateExercise]
+}
+
+/// One row of the unified, frequency-ranked quick-start list
+/// (docs/cardio/55-cardio-watch-plan.md §3.2, C5.3/C5.4) — the watch's own
+/// counterpart of Dart's `WatchQuickStartEntryPayload`
+/// (mobile/lib/features/workouts/application/watch_template_sync.dart): a
+/// synced template exactly as before (`CachedTemplate`, unchanged), or a
+/// cardio activity type with no plan behind it. Order matters and is never
+/// re-derived here — the phone already ranked the list
+/// (`rankQuickStartEntries()`, D-C5.3's "nem másol logikát, és nem talál ki
+/// saját rendezést"), so `StandaloneSessionStore`/`StandalonePickerView` both
+/// preserve whatever order they're handed.
+///
+/// Manual `Codable`, not the synthesized enum-with-associated-values form:
+/// the wire/persisted shape is a flat dict with a `type` discriminator
+/// (`"TEMPLATE"`/`"CARDIO"`), matching the Dart `toJson()` shape exactly, not
+/// Swift's own tagged-union JSON encoding.
+enum WatchQuickStartEntry: Equatable {
+  case template(CachedTemplate)
+  /// [title] is pre-localized on the phone (55-doc §3.2) — the watch needs
+  /// no activity-type dictionary of its own, same as a template's title
+  /// already was.
+  case cardio(activityType: String, title: String)
+}
+
+extension WatchQuickStartEntry: Codable {
+  private enum CodingKeys: String, CodingKey {
+    case type, templateId, title, exercises, activityType
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    switch try container.decode(String.self, forKey: .type) {
+    case "TEMPLATE":
+      let templateId = try container.decode(String.self, forKey: .templateId)
+      let title = try container.decode(String.self, forKey: .title)
+      // `exerciseCount` (a Dart-side convenience the watch never reads, since
+      // `exercises.count` is right there) is simply absent from
+      // [CodingKeys] — Codable ignores JSON keys it wasn't asked to decode.
+      let exercises =
+        try container.decodeIfPresent([CachedTemplateExercise].self, forKey: .exercises) ?? []
+      self = .template(CachedTemplate(templateId: templateId, title: title, exercises: exercises))
+    case "CARDIO":
+      let activityType = try container.decode(String.self, forKey: .activityType)
+      let title = try container.decode(String.self, forKey: .title)
+      self = .cardio(activityType: activityType, title: title)
+    default:
+      // A future entry type this build doesn't know — costs this one row,
+      // not the whole list (the caller decodes entries one at a time and
+      // `compactMap`s away failures, `PhoneConnector.applyTemplateSync`'s
+      // usual "a malformed entry costs that entry" rule).
+      throw DecodingError.dataCorruptedError(
+        forKey: .type, in: container, debugDescription: "Unknown quick-start entry type")
+    }
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    switch self {
+    case .template(let template):
+      try container.encode("TEMPLATE", forKey: .type)
+      try container.encode(template.templateId, forKey: .templateId)
+      try container.encode(template.title, forKey: .title)
+      try container.encode(template.exercises, forKey: .exercises)
+    case .cardio(let activityType, let title):
+      try container.encode("CARDIO", forKey: .type)
+      try container.encode(activityType, forKey: .activityType)
+      try container.encode(title, forKey: .title)
+    }
+  }
 }

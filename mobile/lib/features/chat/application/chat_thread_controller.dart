@@ -23,7 +23,7 @@ class ChatThreadController extends StreamNotifier<List<ChatMessage>> {
   bool _hasMoreHistory = true;
   bool _loadingHistory = false;
 
-    /// How many of the newest messages are on screen. Grows one page at a time
+  /// How many of the newest messages are on screen. Grows one page at a time
   /// as the reader walks back; the thread opens on a single page no matter how
   /// much of the conversation this device has cached.
   int _window = ChatRepository.pageSize;

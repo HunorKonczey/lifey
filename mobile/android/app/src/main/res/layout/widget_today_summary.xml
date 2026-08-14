@@ -103,5 +103,68 @@
                 android:textStyle="bold"
                 tools:text="6412"/>
         </LinearLayout>
+
+        <!-- Quick-start row (docs/cardio/59-cardio-implementation-plan.md
+             C2.11a, docs/cardio/53-cardio-mobile-plan.md §3.3): top-2 ranked
+             workouts, one tap each starts it immediately via the
+             `lifey://workout/start` deep link. Two fixed slots (RemoteViews
+             can't repeat a template for a dynamic count) — an entry with
+             nothing to show for it stays gone rather than an empty chip. -->
+        <LinearLayout
+            android:id="@+id/widget_quickstart_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/widget_quickstart_1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/widget_quickstart_chip"
+                android:gravity="center"
+                android:paddingVertical="9dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/widget_quickstart_1_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/widget_on_surface"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold"
+                    tools:text="Futás"/>
+            </LinearLayout>
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="1dp"/>
+
+            <LinearLayout
+                android:id="@+id/widget_quickstart_2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/widget_quickstart_chip"
+                android:gravity="center"
+                android:paddingVertical="9dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/widget_quickstart_2_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="@color/widget_on_surface"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold"
+                    tools:text="Push nap"/>
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

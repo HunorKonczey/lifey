@@ -28,6 +28,9 @@ class WorkoutSessionState {
     this.removedExerciseIndexes,
     this.sessionPlan,
     this.setsDoneExerciseId,
+    this.kind = 'STRENGTH',
+    this.activityType,
+    this.cardio,
   });
 
   /// Current (last touched) exercise name; pass a pre-localized fallback
@@ -147,6 +150,32 @@ class WorkoutSessionState {
   /// to the index.
   final String? setsDoneExerciseId;
 
+  /// `'STRENGTH'` or `'CARDIO'` (docs/cardio/51-cardio-overview-plan.md
+  /// D-C.1, mirroring `WorkoutSession.sessionKind`) — defaults to
+  /// `'STRENGTH'` so every call site that predates cardio (this whole class,
+  /// until C2.9) keeps compiling and keeps meaning exactly what it always
+  /// meant, without touching them.
+  ///
+  /// This is also *why* an old native build that has never heard of `kind`
+  /// still renders something sane for a cardio session
+  /// (docs/cardio/59-cardio-implementation-plan.md C2.9 kész-ha, "régi
+  /// natív build a STRENGTH ágra esik vissza, nem törik"): it just reads
+  /// [exerciseName]/[setsDone]/[setsTotal] as always, and
+  /// `CardioSessionScreen`'s state builder deliberately fills those with
+  /// cardio-appropriate values (the activity + primary metric as
+  /// [exerciseName], `setsTotal: null` so no "0/0" ever renders) — not
+  /// because the old build understands cardio, but because the *fallback*
+  /// fields were chosen to degrade gracefully on their own.
+  final String kind;
+
+  /// One of `activity_type.dart`'s `kActivityTypes` — icon/title lookup for
+  /// a native layout that knows about `kind == 'CARDIO'` (C2.10a/C2.10b).
+  /// Null for `'STRENGTH'`, mirroring `WorkoutSession.activityType`.
+  final String? activityType;
+
+  /// Non-null exactly when [kind] is `'CARDIO'`. See [CardioLiveMetrics].
+  final CardioLiveMetrics? cardio;
+
   Map<String, dynamic> toJson() => {
         'exerciseName': exerciseName,
         'setsDone': setsDone,
@@ -163,6 +192,69 @@ class WorkoutSessionState {
         'removedExerciseIndexes': removedExerciseIndexes,
         'sessionPlan': sessionPlan,
         'setsDoneExerciseId': setsDoneExerciseId,
+        'kind': kind,
+        'activityType': activityType,
+        'cardio': cardio?.toJson(),
+      };
+}
+
+/// Pre-formatted cardio metrics for the Live Activity / ongoing notification
+/// (docs/cardio/53-cardio-mobile-plan.md §5, D-C2.3) — up to three
+/// label+value pairs, already localized and unit-converted (metric/imperial
+/// per Settings), because neither the Swift nor the Kotlin side should have
+/// to reimplement `CardioFormatter`. [primaryLabel]/[primaryValue] is the
+/// dominant number (matches whatever `CardioSessionScreen` shows as
+/// dominant for the session's family); [secondary]/[tertiary] are the up-to-
+/// two supporting values (e.g. DISTANCE: duration + pace; MACHINE: cadence +
+/// power; GAME: gross time + heart rate).
+class CardioLiveMetrics {
+  const CardioLiveMetrics({
+    required this.primaryLabel,
+    required this.primaryValue,
+    this.secondaryLabel,
+    this.secondaryValue,
+    this.tertiaryLabel,
+    this.tertiaryValue,
+    required this.paused,
+    this.movingSecondsBase,
+    this.movingSinceEpochMs,
+  });
+
+  final String primaryLabel;
+  final String primaryValue;
+  final String? secondaryLabel;
+  final String? secondaryValue;
+  final String? tertiaryLabel;
+  final String? tertiaryValue;
+
+  /// Whole-session pause, mirroring `CardioSessionScreen._manuallyPaused`
+  /// (C2.5) — manual vs. auto-pause isn't distinguished here yet; that's
+  /// C4a.5's addition once GPS can actually detect one, at which point this
+  /// class gains a reason field the same way it gained this one.
+  final bool paused;
+
+  /// Epoch-checkpoint pair mirroring `CardioSessionScreen`'s own
+  /// `movingSeconds`/`movingSinceEpochMs` (C2.1) — lets the native Live
+  /// Activity / notification tick a live chronometer itself
+  /// (docs/cardio/53-cardio-mobile-plan.md §5: "az idő továbbra is
+  /// epoch-alapú... hogy a natív felület magától ketyegjen, frissítés-kvóta
+  /// nélkül"), instead of this app pushing a JSON update every second.
+  /// [movingSinceEpochMs] is null exactly when [paused] is true — the
+  /// native side then renders the static [movingSecondsBase] instead of
+  /// ticking.
+  final int? movingSecondsBase;
+  final int? movingSinceEpochMs;
+
+  Map<String, dynamic> toJson() => {
+        'primaryLabel': primaryLabel,
+        'primaryValue': primaryValue,
+        'secondaryLabel': secondaryLabel,
+        'secondaryValue': secondaryValue,
+        'tertiaryLabel': tertiaryLabel,
+        'tertiaryValue': tertiaryValue,
+        'paused': paused,
+        'movingSecondsBase': movingSecondsBase,
+        'movingSinceEpochMs': movingSinceEpochMs,
       };
 }
 
@@ -230,6 +322,7 @@ class WorkoutSessionNotifierService {
       required String subText,
       required int whenEpochMs,
       bool chronometerCountDown,
+      bool usesChronometer,
     })? showAndroidNotification,
     Future<void> Function()? cancelAndroidNotification,
   })  : _channel = channel ?? const MethodChannel('lifey/live_activity'),
@@ -263,6 +356,7 @@ class WorkoutSessionNotifierService {
     required String subText,
     required int whenEpochMs,
     bool chronometerCountDown,
+    bool usesChronometer,
   }) _showAndroidNotificationCall;
   final Future<void> Function() _cancelAndroidNotification;
 
@@ -271,6 +365,14 @@ class WorkoutSessionNotifierService {
   // here so update() can rebuild the "when" anchor and subText.
   String? _androidTitle;
   DateTime? _androidStartedAt;
+
+  // The last content actually pushed to the native notification — lets
+  // [_renderAndroidNotification] skip a re-render when nothing displayed
+  // would change (C2.10a kész-ha: "frissítés csak változásra"). Reset
+  // whenever the notification itself is torn down (end/endAll) or a new one
+  // starts, so a fresh session never skips its first render just because it
+  // happens to match a previous session's last content.
+  (String, String, String, int, bool, bool)? _lastAndroidRender;
 
   /// Starts tracking [sessionClientId] — see [WorkoutSessionNotifierStart]
   /// for what the result means and why a bare activity id wasn't enough.
@@ -298,6 +400,9 @@ class WorkoutSessionNotifierService {
       if (!granted) {
         return const WorkoutSessionNotifierStart(WorkoutSessionNotifierStatus.unavailable);
       }
+      // A new notification instance — a matching [_lastAndroidRender] from a
+      // prior session must not suppress this first render.
+      _lastAndroidRender = null;
       await _renderAndroidNotification(state, startedLabel);
       return const WorkoutSessionNotifierStart(WorkoutSessionNotifierStatus.started);
     }
@@ -357,6 +462,7 @@ class WorkoutSessionNotifierService {
     if (_useAndroid) {
       _androidTitle = null;
       _androidStartedAt = null;
+      _lastAndroidRender = null;
       await _cancelAndroidNotification();
       return;
     }
@@ -368,6 +474,7 @@ class WorkoutSessionNotifierService {
   Future<void> endAll() async {
     if (!isAvailable) return;
     if (_useAndroid) {
+      _lastAndroidRender = null;
       await _cancelAndroidNotification();
       return;
     }
@@ -379,28 +486,73 @@ class WorkoutSessionNotifierService {
     final startedAt = _androidStartedAt;
     if (title == null || startedAt == null) return;
 
-    // A known, still-future rest-timer target renders as a countdown
-    // (docs/39-rest-timer-plan.md, Prompt 5); otherwise decision #3
-    // (docs/25-android-widget-ongoing-notification-plan.md) applies: before
-    // the first logged set the chronometer shows elapsed time from
-    // startedAt, after each set a rest count-up from the last set.
-    final restEndsAt = state.restEndsAtEpochMs;
-    final useRestCountdown =
-        restEndsAt != null && restEndsAt > DateTime.now().millisecondsSinceEpoch;
-    final whenEpochMs = useRestCountdown
-        ? restEndsAt
-        : (state.lastSetAtEpochMs ?? startedAt.millisecondsSinceEpoch);
-    final body = state.setsTotal != null
-        ? '${state.exerciseName} · ${state.setsDone}/${state.setsTotal}'
-        : state.exerciseName;
+    final int whenEpochMs;
+    final bool chronometerCountDown;
+    final bool usesChronometer;
+    final String body;
+
+    final cardio = state.cardio;
+    if (state.kind == 'CARDIO' && cardio != null) {
+      // The chronometer ticks the session's own moving-time checkpoint
+      // (docs/cardio/59-cardio-implementation-plan.md C2.9's
+      // movingSecondsBase/movingSinceEpochMs pair, built for exactly this):
+      // shifting `when` back by the already-accrued base lets Android's
+      // single "now - when" chronometer render base + live-elapsed without
+      // this app resending text every second. While paused
+      // (movingSinceEpochMs null) there is nothing to tick — a live
+      // chronometer would keep counting through the pause and lie about
+      // elapsed moving time, so it's turned off and the pre-formatted
+      // (static, correct-as-of-the-pause) metric values carry the number
+      // instead.
+      final movingSince = cardio.movingSinceEpochMs;
+      if (movingSince != null) {
+        whenEpochMs = movingSince - (cardio.movingSecondsBase ?? 0) * 1000;
+        usesChronometer = true;
+      } else {
+        whenEpochMs = startedAt.millisecondsSinceEpoch;
+        usesChronometer = false;
+      }
+      chronometerCountDown = false;
+      // Up to three pre-formatted metric values (D-C2.3) — '—' placeholders
+      // (an unmeasured value, e.g. GAME's heart rate today) are dropped
+      // rather than shown, same spirit as never showing "0 sets".
+      body = [cardio.primaryValue, cardio.secondaryValue, cardio.tertiaryValue]
+          .whereType<String>()
+          .where((value) => value != '—')
+          .join(' · ');
+    } else {
+      // A known, still-future rest-timer target renders as a countdown
+      // (docs/39-rest-timer-plan.md, Prompt 5); otherwise decision #3
+      // (docs/25-android-widget-ongoing-notification-plan.md) applies:
+      // before the first logged set the chronometer shows elapsed time from
+      // startedAt, after each set a rest count-up from the last set.
+      final restEndsAt = state.restEndsAtEpochMs;
+      final useRestCountdown =
+          restEndsAt != null && restEndsAt > DateTime.now().millisecondsSinceEpoch;
+      whenEpochMs = useRestCountdown
+          ? restEndsAt
+          : (state.lastSetAtEpochMs ?? startedAt.millisecondsSinceEpoch);
+      chronometerCountDown = useRestCountdown;
+      usesChronometer = true;
+      body = state.setsTotal != null
+          ? '${state.exerciseName} · ${state.setsDone}/${state.setsTotal}'
+          : state.exerciseName;
+    }
     final subText = '$startedLabel ${DateFormat('HH:mm').format(startedAt.toLocal())}';
+
+    // "frissítés csak változásra" (C2.10a kész-ha) — skip the native call
+    // when nothing displayed would actually change.
+    final render = (title, body, subText, whenEpochMs, chronometerCountDown, usesChronometer);
+    if (render == _lastAndroidRender) return;
+    _lastAndroidRender = render;
 
     await _showAndroidNotificationCall(
       title: title,
       body: body,
       subText: subText,
       whenEpochMs: whenEpochMs,
-      chronometerCountDown: useRestCountdown,
+      chronometerCountDown: chronometerCountDown,
+      usesChronometer: usesChronometer,
     );
   }
 }

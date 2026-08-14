@@ -63,6 +63,14 @@ dependencies:
   # `timezone` package itself has no way to determine.
   timezone: ^0.11.1
   flutter_timezone: ^5.1.0
+  # Cardio GPS route recording (docs/cardio/54-cardio-gps-route-plan.md D-C4.1)
+  # — see lib/core/location/. Chosen over a hand-rolled MethodChannel (~600
+  # lines of native permission/background-mode code on two platforms for
+  # something a maintained package already solves) and over `location`
+  # (weaker "always" vs. "while in use" permission-state and background
+  # config handling). No `permission_handler` alongside it — geolocator's own
+  # permission API is enough.
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:

@@ -25,7 +25,8 @@ class StatisticsControllerTest {
     @Test
     void daily_returnsOk() throws Exception {
         when(statisticsService.daily())
-                .thenReturn(new StatisticsResponse(200.0, 20.0, 30.0, 10.0, 1, 78.4, 1.5));
+                .thenReturn(new StatisticsResponse(200.0, 20.0, 30.0, 10.0, 2, 78.4, 1.5,
+                        1, 1, 42, 5230.0, 120.0));
 
         mockMvc.perform(get("/api/v1/statistics/daily"))
                 .andExpect(status().isOk())
@@ -33,15 +34,21 @@ class StatisticsControllerTest {
                 .andExpect(jsonPath("$.totalProtein").value(20.0))
                 .andExpect(jsonPath("$.totalCarbs").value(30.0))
                 .andExpect(jsonPath("$.totalFat").value(10.0))
-                .andExpect(jsonPath("$.workoutCount").value(1))
+                .andExpect(jsonPath("$.workoutCount").value(2))
                 .andExpect(jsonPath("$.latestWeight").value(78.4))
-                .andExpect(jsonPath("$.totalWater").value(1.5));
+                .andExpect(jsonPath("$.totalWater").value(1.5))
+                .andExpect(jsonPath("$.strengthWorkoutCount").value(1))
+                .andExpect(jsonPath("$.cardioWorkoutCount").value(1))
+                .andExpect(jsonPath("$.movingMinutes").value(42))
+                .andExpect(jsonPath("$.totalDistanceMeters").value(5230.0))
+                .andExpect(jsonPath("$.totalElevationGainMeters").value(120.0));
     }
 
     @Test
     void weekly_returnsOk() throws Exception {
         when(statisticsService.weekly())
-                .thenReturn(new StatisticsResponse(400.0, 40.0, 60.0, 20.0, 3, null, 0.0));
+                .thenReturn(new StatisticsResponse(400.0, 40.0, 60.0, 20.0, 3, null, 0.0,
+                        3, 0, 0, 0.0, 0.0));
 
         mockMvc.perform(get("/api/v1/statistics/weekly"))
                 .andExpect(status().isOk())
@@ -52,7 +59,8 @@ class StatisticsControllerTest {
     @Test
     void monthly_returnsOk() throws Exception {
         when(statisticsService.monthly())
-                .thenReturn(new StatisticsResponse(1000.0, 100.0, 150.0, 50.0, 12, 77.0, 5.0));
+                .thenReturn(new StatisticsResponse(1000.0, 100.0, 150.0, 50.0, 12, 77.0, 5.0,
+                        12, 0, 0, 0.0, 0.0));
 
         mockMvc.perform(get("/api/v1/statistics/monthly"))
                 .andExpect(status().isOk())

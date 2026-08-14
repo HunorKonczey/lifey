@@ -38,10 +38,25 @@ class _MusicStickyButtonState extends ConsumerState<MusicStickyButton>
     Duration(milliseconds: 1000),
   ];
 
-  late final List<AnimationController> _barControllers = [
-    for (final duration in _barDurations) AnimationController(vsync: this, duration: duration),
-  ];
+  late final List<AnimationController> _barControllers;
   bool _animating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Eager, not a lazy `late final` initializer: this must run in
+    // initState so it's guaranteed to happen before dispose() ever could.
+    // A lazy initializer's first access can otherwise end up being from
+    // dispose() itself — if this widget is torn down before its first
+    // build() (a real race with sheets/navigators removing a subtree before
+    // its first frame) — which would construct a fresh AnimationController
+    // (and its ticker, needing a live TickerMode ancestor) on an element
+    // that's already inactive, crashing on the exact "safely refer to a
+    // widget's ancestor in its dispose()" error this fix is for.
+    _barControllers = [
+      for (final duration in _barDurations) AnimationController(vsync: this, duration: duration),
+    ];
+  }
 
   @override
   void dispose() {

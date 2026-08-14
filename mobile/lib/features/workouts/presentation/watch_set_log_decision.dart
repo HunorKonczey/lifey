@@ -245,6 +245,15 @@ WatchSetPrefill? watchSetPrefillAt(ExerciseBlock block, int rowIndex) {
 /// 4. No block at all to log against (empty [blocks]) → [WatchSetLogAction.reject]
 ///    as a defensive fallback; this shouldn't happen in practice since a
 ///    session always has at least one exercise block.
+///
+/// Never reached for a cardio session (docs/cardio/55-cardio-watch-plan.md
+/// §5/3, W-1): [LogSessionScreen] only ever mounts for a `STRENGTH` session
+/// (`openSessionScreen` in `presentation/open_workout_screens.dart`, C0.4,
+/// is the one place that decides which screen opens; cardio always gets
+/// `CardioSessionScreen`), and the watch's own "+1 set" control only exists
+/// on its STRENGTH layout — there is no [WatchSetLogged] a cardio watch
+/// session could send. No `kind` guard is threaded through [blocks] here for
+/// that reason: it would be unreachable code with no way to exercise it.
 WatchSetLogDecision decideWatchSetLog({
   required String eventSessionClientId,
   required String? currentSessionClientId,

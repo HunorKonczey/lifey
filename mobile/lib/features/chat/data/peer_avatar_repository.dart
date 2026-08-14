@@ -58,7 +58,7 @@ class PeerAvatarRepository {
       );
 
       if (response.statusCode == 304) {
-        return file.existsSync() ? file.readAsBytes() : null;
+        return file.existsSync() ? await file.readAsBytes() : null;
       }
       if (response.statusCode == 404) {
         await _clearLocal(prefs, userId, file);

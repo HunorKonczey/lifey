@@ -1,5 +1,9 @@
 package com.lifey.workout.session;
 
+import com.lifey.workout.session.cardio.CardioDetails;
+import com.lifey.workout.session.cardio.CardioSplit;
+import com.lifey.workout.session.dto.CardioDetailsResponse;
+import com.lifey.workout.session.dto.CardioSplitResponse;
 import com.lifey.workout.session.dto.ExerciseSetResponse;
 import com.lifey.workout.session.dto.ExerciseSummary;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
@@ -32,6 +36,10 @@ public final class WorkoutSessionMapper {
                         set.getPerformedAt()))
                 .toList();
 
+        List<CardioSplitResponse> splits = session.getSplits().stream()
+                .map(WorkoutSessionMapper::toSplitResponse)
+                .toList();
+
         return new WorkoutSessionResponse(
                 session.getId(),
                 session.getStartedAt(),
@@ -51,7 +59,55 @@ public final class WorkoutSessionMapper {
                 session.getTrainerComment(),
                 session.getTrainerCommentAt(),
                 session.getUpdatedAt(),
-                session.getDeletedAt()
+                session.getDeletedAt(),
+                session.getSessionKind(),
+                session.getActivityType(),
+                session.getMovingSeconds(),
+                toCardioResponse(session.getCardioDetails()),
+                splits
+        );
+    }
+
+    private static CardioDetailsResponse toCardioResponse(CardioDetails details) {
+        if (details == null) return null;
+        return new CardioDetailsResponse(
+                details.getDistanceMeters(),
+                details.getElevationGainMeters(),
+                details.getElevationLossMeters(),
+                details.getMaxAltitudeMeters(),
+                details.getSteps(),
+                details.getAvgCadence(),
+                details.getMaxCadence(),
+                details.getAvgWatts(),
+                details.getMaxWatts(),
+                details.getResistanceLevel(),
+                details.getDeviceCalories(),
+                details.getMaxHeartRate(),
+                details.getHrZone1Seconds(),
+                details.getHrZone2Seconds(),
+                details.getHrZone3Seconds(),
+                details.getHrZone4Seconds(),
+                details.getHrZone5Seconds(),
+                details.getIntensity(),
+                details.getVenue(),
+                details.getGameFormat(),
+                details.getScorePoints(),
+                details.getScoreAssists(),
+                details.getScoreRebounds(),
+                details.getDistanceSource(),
+                details.getCaloriesSource(),
+                details.getRoutePolyline(),
+                details.getRoutePointCount()
+        );
+    }
+
+    private static CardioSplitResponse toSplitResponse(CardioSplit split) {
+        return new CardioSplitResponse(
+                split.getSplitIndex(),
+                split.getDistanceMeters(),
+                split.getDurationSeconds(),
+                split.getElevationDeltaM(),
+                split.getAvgHeartRate()
         );
     }
 }

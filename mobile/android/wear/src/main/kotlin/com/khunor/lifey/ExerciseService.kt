@@ -67,6 +67,27 @@ class ExerciseService : Service() {
     private var activeCaloriesTotal: Double? = null
     private var currentSessionClientId: String? = null
 
+    /**
+     * The activity type this exercise was started with (docs/cardio/
+     * 55-cardio-watch-plan.md §2, C5.6/C5.7a) — `null` for STRENGTH (every
+     * pre-cardio session). Drives both [buildExerciseConfig]'s
+     * `dataTypes`/`ExerciseType` choice at start and, at end, whether
+     * [endExercise]/[endStandaloneExercise] have any distance/elevation to
+     * report back at all.
+     */
+    private var currentActivityType: String? = null
+
+    // Latest cumulative reading per aggregate data type (docs/cardio/
+    // 55-cardio-watch-plan.md §4.3, C5.7a) — unlike [activeCaloriesTotal]'s
+    // hand-summed delta, these are already running totals Health Services
+    // computes itself, so the *last* value read is the final one; no summing
+    // needed. Only ever non-null when [buildExerciseConfig] actually
+    // requested (and the device's capabilities actually granted) the
+    // matching data type — see [cardioSummaryJson].
+    private var lastDistanceMeters: Double? = null
+    private var lastElevationGainMeters: Double? = null
+    private var lastElevationLossMeters: Double? = null
+
     // Pihenő-visszaszámláló haptika (docs/40-watch-app-plan.md §5.4/F4):
     // scheduled independently of start/end commands, for the service's whole
     // lifetime, since restEndsAtEpochMs can change many times per session.
@@ -103,6 +124,13 @@ class ExerciseService : Service() {
                 activeCaloriesTotal = (activeCaloriesTotal ?: 0.0) + newActiveCalories.sumOf { it.value }
                 SessionStateHolder.onCalories(activeCaloriesTotal!!)
             }
+            // Cumulative aggregates — the latest reading already *is* the
+            // running total, unlike CALORIES above (see [lastDistanceMeters]'s
+            // own doc). A no-op when the data type wasn't requested at all
+            // (`getData` simply returns null then).
+            update.latestMetrics.getData(DataType.DISTANCE_TOTAL)?.total?.let { lastDistanceMeters = it }
+            update.latestMetrics.getData(DataType.ELEVATION_GAIN_TOTAL)?.total?.let { lastElevationGainMeters = it }
+            update.latestMetrics.getData(DataType.ELEVATION_LOSS_TOTAL)?.total?.let { lastElevationLossMeters = it }
             SessionStateHolder.onPausedChanged(update.exerciseStateInfo.state.isPaused)
             sendLiveMetrics()
         }
@@ -310,7 +338,8 @@ class ExerciseService : Service() {
                     return START_NOT_STICKY
                 }
                 promoteToForeground()
-                scope.launch { startExercise(sessionClientId) }
+                val activityType = intent.getStringExtra(EXTRA_ACTIVITY_TYPE)
+                scope.launch { startExercise(sessionClientId, activityType) }
             }
             ACTION_END -> {
                 // Re-promoting is a safe no-op if already foreground, and
@@ -322,8 +351,9 @@ class ExerciseService : Service() {
             }
             ACTION_START_STANDALONE -> {
                 val templateJson = intent.getStringExtra(EXTRA_TEMPLATE_JSON)
+                val activityType = intent.getStringExtra(EXTRA_ACTIVITY_TYPE)
                 promoteToForeground()
-                scope.launch { startStandaloneExercise(templateJson) }
+                scope.launch { startStandaloneExercise(templateJson, activityType) }
             }
             ACTION_END_STANDALONE -> {
                 val rpe = if (intent.hasExtra(EXTRA_RPE)) intent.getIntExtra(EXTRA_RPE, 0) else null
@@ -362,9 +392,32 @@ class ExerciseService : Service() {
     /**
      * Shared by [startExercise] and [startStandaloneExercise] — checks the
      * heart-rate permission, publishes it (§12.1 B13), and builds the
-     * `ExerciseConfig` both start paths use identically.
+     * `ExerciseConfig` both start paths use, keyed off [activityType]
+     * (docs/cardio/55-cardio-watch-plan.md §2, C5.6). `null` — every
+     * pre-cardio (STRENGTH) call site — reproduces the original hardcoded
+     * `STRENGTH_TRAINING`/no-extra-`dataTypes` config exactly. `venue` (the
+     * other C5.2 field the phone sends) has nothing to bind to here: it
+     * drives `HKWorkoutSessionLocationType` on iOS, and `ExerciseConfig` —
+     * confirmed via the health-services-client 1.0.0 API surface — has no
+     * indoor/outdoor field at all, only `isGpsEnabled` (unconditionally
+     * `false` below, unchanged: watch-GPS is future "W4" work,
+     * docs/cardio/55-cardio-watch-plan.md §6, out of C5.6's scope same as
+     * it was out of iOS's C5.4/C5.5).
+     *
+     * `suspend`, unlike before C5.6: cardio's extra `dataTypes`
+     * (`DISTANCE_TOTAL`/`PACE`/`ELEVATION_GAIN_TOTAL`) aren't safe to request
+     * unconditionally — D-C5.2 ([55 §2](docs/cardio/55-cardio-watch-plan.md))
+     * is explicit that requesting one the device's sensor set can't back
+     * throws `ExerciseCapabilities` — so this queries
+     * [androidx.health.services.client.ExerciseClient.getCapabilitiesAsync]
+     * for the chosen [ExerciseType] first and intersects the desired set
+     * against what it actually reports supported, rather than requesting the
+     * D-C5.2 table blindly. STRENGTH_TRAINING's own two data types
+     * (CALORIES/HEART_RATE_BPM) skip this check, unchanged from before this
+     * step — they were never observed to be a problem, and this is a
+     * cardio-specific caution, not a blanket new requirement.
      */
-    private fun buildExerciseConfig(): ExerciseConfig {
+    private suspend fun buildExerciseConfig(activityType: String?): ExerciseConfig {
         // Either satisfies it depending on OS version — BODY_SENSORS pre-36,
         // the granular health permission on 36+ (see MainActivity, which
         // requests both). Health Services itself enforces the latter with a
@@ -380,25 +433,82 @@ class ExerciseService : Service() {
         // state accordingly.
         SessionStateHolder.onHeartRatePermissionChecked(hasHeartRatePermission)
 
+        val exerciseType = cardioExerciseType(activityType)
+
         // Always requestable — CALORIES (like CALORIES_TOTAL) doesn't need
         // BODY_SENSORS, it's derived from motion/user profile, not the heart
         // rate sensor.
-        val dataTypes = buildSet {
+        val desiredDataTypes = buildSet {
             add(DataType.CALORIES)
             if (hasHeartRatePermission) add(DataType.HEART_RATE_BPM)
+            if (activityType != null) {
+                val family = cardioActivityFamily(activityType)
+                if (family == CardioActivityFamily.DISTANCE || family == CardioActivityFamily.MACHINE) {
+                    add(DataType.DISTANCE_TOTAL)
+                }
+                if (family == CardioActivityFamily.DISTANCE) {
+                    add(DataType.PACE)
+                    add(DataType.ELEVATION_GAIN_TOTAL)
+                }
+            }
+        }
+        // D-C5.2's own warning: "nem kérünk olyan adattípust, amit a
+        // szenzorkészlet nem tud" — only the cardio-only additions above need
+        // this (CALORIES/HEART_RATE_BPM are the pre-cardio baseline, never
+        // gated). A capabilities lookup failure (an old watch, or the OS
+        // genuinely has nothing to say) falls back to the ungated set rather
+        // than blocking the start on it — same "degrade, don't fail" spirit
+        // as every other capability check in this codebase.
+        val dataTypes = if (activityType == null) {
+            desiredDataTypes
+        } else {
+            try {
+                val supported = exerciseClient.getCapabilitiesAsync().await()
+                    .getExerciseTypeCapabilities(exerciseType)?.supportedDataTypes
+                supported?.let { desiredDataTypes.intersect(it) } ?: desiredDataTypes
+            } catch (e: Exception) {
+                Log.w(TAG, "getCapabilitiesAsync failed, requesting the ungated data type set", e)
+                desiredDataTypes
+            }
         }
 
         return ExerciseConfig(
-            exerciseType = ExerciseType.STRENGTH_TRAINING,
+            exerciseType = exerciseType,
             dataTypes = dataTypes,
             isAutoPauseAndResumeEnabled = false,
             isGpsEnabled = false,
         )
     }
 
-    private suspend fun startExercise(sessionClientId: String) {
+    /**
+     * ExerciseType per `ActivityType` (docs/cardio/55-cardio-watch-plan.md
+     * §2's table) — `null` (every pre-cardio call) keeps the original
+     * `STRENGTH_TRAINING`. `SOCCER`, not the table's literal
+     * "FOOTBALL_SOCCER" — the real `androidx.health.services.client.data
+     * .ExerciseType` enum (health-services-client 1.0.0) has no constant by
+     * that exact name; `SOCCER` is what actually exists and is football's
+     * closest match. An unrecognized code (a future activity type this build
+     * predates) falls back to `WORKOUT`, the same generic type `OTHER_CARDIO`
+     * itself uses.
+     */
+    private fun cardioExerciseType(activityType: String?): ExerciseType = when (activityType) {
+        null -> ExerciseType.STRENGTH_TRAINING
+        "RUNNING" -> ExerciseType.RUNNING
+        "WALKING" -> ExerciseType.WALKING
+        "HIKING" -> ExerciseType.HIKING
+        "INDOOR_BIKE" -> ExerciseType.BIKING_STATIONARY
+        "BASKETBALL" -> ExerciseType.BASKETBALL
+        "FOOTBALL" -> ExerciseType.SOCCER
+        else -> ExerciseType.WORKOUT // OTHER_CARDIO, and any future/unknown code
+    }
+
+    private suspend fun startExercise(sessionClientId: String, activityType: String? = null) {
         currentSessionClientId = sessionClientId
-        val config = buildExerciseConfig()
+        currentActivityType = activityType
+        lastDistanceMeters = null
+        lastElevationGainMeters = null
+        lastElevationLossMeters = null
+        val config = buildExerciseConfig(activityType)
         try {
             exerciseClient.setUpdateCallback(updateCallback)
             exerciseClient.startExerciseAsync(config).await()
@@ -430,21 +540,31 @@ class ExerciseService : Service() {
      * protection actually has to live — can't launch two overlapping
      * exercises.
      *
-     * [templateJson] is the exact JSON `StandaloneSessionStore.templates()`
+     * [templateJson] is the exact JSON `StandaloneSessionStore.entries()`
      * returned for the tapped row (`MainActivity`'s `onTemplateTapped`), or
      * `null` for Quick strength — decoded exactly once, here, into the typed
-     * [StandaloneTemplate] the session state holds from then on.
+     * [StandaloneTemplate] the session state holds from then on. [activityType]
+     * (docs/cardio/55-cardio-watch-plan.md §5, §7 W-8, C5.7a) is the *other*
+     * kind of standalone start — a `CARDIO` row from the same picker, no
+     * template, mutually exclusive with [templateJson] (`MainActivity` never
+     * passes both).
      */
-    private suspend fun startStandaloneExercise(templateJson: String?) {
+    private suspend fun startStandaloneExercise(templateJson: String?, activityType: String? = null) {
         if (SessionStateHolder.phase.value != SessionPhase.IDLE) return
         val sessionClientId = UUID.randomUUID().toString()
         currentSessionClientId = sessionClientId
+        currentActivityType = activityType
+        lastDistanceMeters = null
+        lastElevationGainMeters = null
+        lastElevationLossMeters = null
         val template = templateJson?.let { parseStandaloneTemplate(it) }
-        val config = buildExerciseConfig()
+        val config = buildExerciseConfig(activityType)
         try {
             exerciseClient.setUpdateCallback(updateCallback)
             exerciseClient.startExerciseAsync(config).await()
-            SessionStateHolder.onStandaloneStarted(sessionClientId, SystemClock.elapsedRealtime(), template)
+            SessionStateHolder.onStandaloneStarted(
+                sessionClientId, SystemClock.elapsedRealtime(), template, activityType,
+            )
             saveStandaloneActiveSnapshot()
             // Live bridging: if a phone is already connected at the exact
             // moment the session starts, ask it to join in right away. If
@@ -478,6 +598,7 @@ class ExerciseService : Service() {
                 sessionClientId = sessionClientId,
                 activeCalories = activeCaloriesTotal,
                 averageHeartRate = averageHeartRate,
+                cardio = cardioSummaryJson(),
             )
         }
         SessionStateHolder.reset()
@@ -550,6 +671,21 @@ class ExerciseService : Service() {
                 // phone does (D-F6.5) — so healthWorkoutId is simply absent
                 // rather than an explicit null (matches how the rest of
                 // this payload omits absent optionals).
+                // docs/cardio/55-cardio-watch-plan.md §5/§7 W-8, C5.7a — a
+                // standalone CARDIO session, mutually exclusive with the
+                // `sets`/`templateId` above (always empty/absent for one).
+                // `movingSeconds` is deliberately omitted: standalone has no
+                // pause-aware moving-time tracking of its own (the GAME
+                // pályán/padon distinction is C5.7's phone-mastered-only
+                // territory so far), so the phone's own
+                // `_createCardioSession` fallback — the full wall-clock
+                // duration — is exactly right here, not something this
+                // needs to compute and possibly get wrong.
+                currentActivityType?.let { activityType ->
+                    put("kind", "CARDIO")
+                    put("activityType", activityType)
+                    cardioSummaryJson()?.let { put("cardio", it) }
+                }
             }
             StandaloneSessionStore.add(this, payload.toString())
             StandaloneSessionStore.clearActive(this)
@@ -573,6 +709,36 @@ class ExerciseService : Service() {
             SessionStateHolder.reset()
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             stopSelf()
+        }
+    }
+
+    /**
+     * The distance/elevation half of a cardio closing summary (docs/cardio/
+     * 55-cardio-watch-plan.md §4.3, C5.7a) — `null` whenever this wasn't a
+     * cardio session ([currentActivityType] null), or Health Services never
+     * actually reported any of these (an indoor/no-GPS device, or
+     * [buildExerciseConfig]'s capability check dropped the data type — a
+     * MACHINE/GAME session, which never requests them at all). Matches
+     * `CardioMetrics.fromJson`'s key names (`mobile/lib/features/workouts/
+     * domain/workout_session.dart`) so the phone decodes this exactly like
+     * every other cardio JSON block already does.
+     *
+     * `distanceSource: "DEVICE"` is sent whenever this watch measured a
+     * distance, unconditionally — the phone side
+     * (`CardioMetrics.mergedWithWatchMeasurement`) is what actually decides
+     * whether that tag sticks (only when the phone's own distance was null),
+     * so there's nothing to gate here.
+     */
+    private fun cardioSummaryJson(): JSONObject? {
+        if (currentActivityType == null) return null
+        if (lastDistanceMeters == null && lastElevationGainMeters == null && lastElevationLossMeters == null) {
+            return null
+        }
+        return JSONObject().apply {
+            putOpt("distanceMeters", lastDistanceMeters)
+            if (lastDistanceMeters != null) put("distanceSource", "DEVICE")
+            putOpt("elevationGainMeters", lastElevationGainMeters)
+            putOpt("elevationLossMeters", lastElevationLossMeters)
         }
     }
 
@@ -605,6 +771,14 @@ class ExerciseService : Service() {
             put("standaloneSessionId", sessionClientId)
             put("startedAtEpochMs", startedAtEpochMs)
             put("exerciseIndex", metadata.standaloneExerciseIndex)
+            // docs/cardio/55-cardio-watch-plan.md §5/§7 W-8, C5.7a — restores
+            // the right active screen (`ActiveWorkoutScreen`'s
+            // `metadata.isCardio` dispatch) after a process death mid-standalone-
+            // cardio-session, same as every other recovered field here.
+            if (metadata.isCardio) {
+                put("kind", metadata.kind)
+                metadata.cardioActivityType?.let { put("activityType", it) }
+            }
             metadata.standaloneTemplate?.let { put("template", it.toJson()) }
             // The phone's live plan as it stood at this save (F6c) — restored
             // with the session so `exerciseIndex` still means a position in
@@ -674,6 +848,8 @@ class ExerciseService : Service() {
             return
         }
         currentSessionClientId = sessionClientId
+        val activityType = snapshot.optString("activityType").ifEmpty { null }
+        currentActivityType = activityType
         exerciseClient.setUpdateCallback(updateCallback)
 
         val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
@@ -689,6 +865,7 @@ class ExerciseService : Service() {
         SessionStateHolder.onStandaloneRecovered(
             sessionClientId = sessionClientId,
             startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs,
+            activityType = activityType,
             template = template,
             exerciseIndex = exerciseIndex,
             sets = sets,
@@ -723,9 +900,10 @@ class ExerciseService : Service() {
 
     /**
      * Decodes the picker row's tapped JSON (docs/watch/
-     * 49-watch-f6b-template-sync-plan.md §4.1, T6) — exactly the shape
-     * `StandaloneSessionStore.templates()` hands back (this app's convention
-     * of keeping the store itself untyped) — into the typed
+     * 49-watch-f6b-template-sync-plan.md §4.1, T6) — exactly the shape a
+     * `"TEMPLATE"` row from `StandaloneSessionStore.entries()` hands back
+     * (this app's convention of keeping the store itself untyped) — into the
+     * typed
      * [StandaloneTemplate] the session state holds from start to end.
      * Malformed JSON falls back to `null` — a Quick-strength-equivalent
      * session, not a crash.
@@ -759,6 +937,12 @@ class ExerciseService : Service() {
         const val ACTION_START = "com.khunor.lifey.action.START_EXERCISE"
         const val ACTION_END = "com.khunor.lifey.action.END_EXERCISE"
         const val EXTRA_SESSION_CLIENT_ID = "sessionClientId"
+        /** `WatchBridge.kt`'s (phone-side) C5.2/C5.6 activity-type field, read
+         * from the `/start` message by [PhoneListenerService] and carried
+         * here as an ordinary intent extra — see [buildExerciseConfig]'s doc
+         * comment for why `venue`, the message's other C5.2 field, has no
+         * equivalent extra. */
+        const val EXTRA_ACTIVITY_TYPE = "activityType"
 
         const val ACTION_START_STANDALONE = "com.khunor.lifey.action.START_STANDALONE_EXERCISE"
         const val ACTION_END_STANDALONE = "com.khunor.lifey.action.END_STANDALONE_EXERCISE"
@@ -766,10 +950,11 @@ class ExerciseService : Service() {
         const val EXTRA_RPE = "rpe"
         const val EXTRA_TEMPLATE_JSON = "templateJson"
 
-        fun startIntent(context: Context, sessionClientId: String) =
+        fun startIntent(context: Context, sessionClientId: String, activityType: String? = null) =
             Intent(context, ExerciseService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_SESSION_CLIENT_ID, sessionClientId)
+                activityType?.let { putExtra(EXTRA_ACTIVITY_TYPE, it) }
             }
 
         fun endIntent(context: Context) =
@@ -777,17 +962,21 @@ class ExerciseService : Service() {
                 action = ACTION_END
             }
 
-        /** Entry point for the launcher/picker "Quick strength" tap (S16)
-         * and, since T6, a synced-template row — no `sessionClientId` extra,
-         * `startStandaloneExercise` generates its own (docs/watch/
+        /** Entry point for the launcher/picker "Quick strength" tap (S16),
+         * a synced-template row (T6), **and** a `CARDIO` row (docs/cardio/
+         * 55-cardio-watch-plan.md §5/§7 W-8, C5.7a) — no `sessionClientId`
+         * extra, `startStandaloneExercise` generates its own (docs/watch/
          * 44-watch-f6-standalone-plan.md §3.1). [templateJson] is the exact
-         * `StandaloneSessionStore.templates()` JSON for the tapped row,
-         * omitted entirely for Quick strength (docs/watch/
-         * 49-watch-f6b-template-sync-plan.md §3.3, T6). */
-        fun startStandaloneIntent(context: Context, templateJson: String? = null) =
+         * `StandaloneSessionStore.entries()` JSON for the tapped row, omitted
+         * entirely for Quick strength (docs/watch/
+         * 49-watch-f6b-template-sync-plan.md §3.3, T6). [activityType] is the
+         * cardio counterpart — `MainActivity`'s `CardioRow` tap passes this
+         * instead of [templateJson], never both. */
+        fun startStandaloneIntent(context: Context, templateJson: String? = null, activityType: String? = null) =
             Intent(context, ExerciseService::class.java).apply {
                 action = ACTION_START_STANDALONE
                 templateJson?.let { putExtra(EXTRA_TEMPLATE_JSON, it) }
+                activityType?.let { putExtra(EXTRA_ACTIVITY_TYPE, it) }
             }
 
         /** Entry point for the End button in standalone mode (S17). [rpe] is

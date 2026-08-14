@@ -15,6 +15,7 @@ backend/target/
 backend/build/
 chat/target/
 chat/build/
+out/
 
 # Git internals
 .git/

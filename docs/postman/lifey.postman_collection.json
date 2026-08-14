@@ -867,7 +867,24 @@
         },
         {
           "name": "List workout sessions",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] }, "description": "Returns all sessions (newest first) with their planned exercises and logged sets." },
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] }, "description": "Returns all sessions (newest first) with their planned exercises and logged sets. Optional `?kind=STRENGTH|CARDIO` narrows the list to one session kind (docs/cardio/52-cardio-domain-backend-plan.md §3.2) — see 'List cardio workout sessions (kind filter, example)'." },
+          "response": []
+        },
+        {
+          "name": "List cardio workout sessions (kind filter, example)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/workout-sessions?kind=CARDIO",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "workout-sessions"],
+              "query": [
+                { "key": "kind", "value": "CARDIO", "description": "STRENGTH or CARDIO — omit for every kind" }
+              ]
+            },
+            "description": "Same list, narrowed to one session kind (docs/cardio/52-cardio-domain-backend-plan.md §3.2 D-C1.3). Also supported on 'List workout sessions (paged)'; not supported on the delta-sync feed, which must always return every kind."
+          },
           "response": []
         },
         {
@@ -948,6 +965,17 @@
             "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"exerciseIds\": [],\n  \"sets\": []\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] },
             "description": "Demonstrates starting a session with nothing planned (no template, no sets yet). Returns 201; both `exercises` and `sets` are empty in the response."
+          },
+          "response": []
+        },
+        {
+          "name": "Log a cardio session (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-06-18T05:00:00Z\",\n  \"finishedAt\": \"2026-06-18T05:32:00Z\",\n  \"exerciseIds\": [],\n  \"sets\": [],\n  \"sessionKind\": \"CARDIO\",\n  \"activityType\": \"RUNNING\",\n  \"movingSeconds\": 1860,\n  \"cardio\": {\n    \"distanceMeters\": 5230,\n    \"elevationGainMeters\": 42,\n    \"avgCadence\": 172,\n    \"maxHeartRate\": 178,\n    \"distanceSource\": \"MEASURED\"\n  },\n  \"splits\": [\n    { \"splitIndex\": 0, \"distanceMeters\": 1000, \"durationSeconds\": 342, \"avgHeartRate\": 151 },\n    { \"splitIndex\": 1, \"distanceMeters\": 1000, \"durationSeconds\": 358, \"avgHeartRate\": 158 }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] },
+            "description": "Logs a cardio session (docs/cardio/51 §1, docs/cardio/52 §3.2). `exerciseIds`/`sets` stay empty — a cardio session never has exercises. `sessionKind: \"CARDIO\"` requires `activityType` (one of RUNNING, WALKING, HIKING, INDOOR_BIKE, BASKETBALL, FOOTBALL, OTHER_CARDIO) or the request is rejected with 400; omitting `sessionKind` entirely (the pre-cardio client shape) defaults to STRENGTH. The `cardio` block and `splits` are both optional — fill in only the fields that apply to the activity's family (see docs/cardio/51 §3); every field not sent stays null. Returns 201 and stores the id in `sessionId`, same as Create workout session."
           },
           "response": []
         },

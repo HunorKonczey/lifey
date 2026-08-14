@@ -26,6 +26,7 @@ import com.lifey.user.UserAvatar;
 import com.lifey.user.UserAvatarRepository;
 import com.lifey.weight.dto.WeightResponse;
 import com.lifey.weight.service.WeightService;
+import com.lifey.workout.session.SessionKind;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
 import com.lifey.workout.session.service.WorkoutSessionService;
 import org.junit.jupiter.api.BeforeEach;
@@ -106,7 +107,7 @@ class TrainerClientDataControllerTest {
     @Test
     void dailyStatistics_returnsStatsForTheClient() throws Exception {
         when(statisticsService.dailyForUser(eq(CLIENT_ID), any())).thenReturn(
-                new StatisticsResponse(2000.0, 150.0, 200.0, 60.0, 1, 80.0, 2.0));
+                new StatisticsResponse(2000.0, 150.0, 200.0, 60.0, 1, 80.0, 2.0, 1, 0, 0, 0.0, 0.0));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/statistics/daily", CLIENT_ID))
                 .andExpect(status().isOk())
@@ -116,7 +117,7 @@ class TrainerClientDataControllerTest {
     @Test
     void dailyStatistics_passesExplicitDateThrough() throws Exception {
         when(statisticsService.dailyForUser(CLIENT_ID, LocalDate.of(2026, Month.JUNE, 1)))
-                .thenReturn(new StatisticsResponse(1.0, 1.0, 1.0, 1.0, 0, null, 0.0));
+                .thenReturn(new StatisticsResponse(1.0, 1.0, 1.0, 1.0, 0, null, 0.0, 0, 0, 0, 0.0, 0.0));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/statistics/daily", CLIENT_ID)
                         .param("date", "2026-06-01"))
@@ -126,7 +127,7 @@ class TrainerClientDataControllerTest {
     @Test
     void weeklyStatistics_returnsStatsForTheClient() throws Exception {
         when(statisticsService.weeklyForUser(eq(CLIENT_ID), any())).thenReturn(
-                new StatisticsResponse(10000.0, 500.0, 900.0, 300.0, 3, 80.0, 10.0));
+                new StatisticsResponse(10000.0, 500.0, 900.0, 300.0, 3, 80.0, 10.0, 3, 0, 0, 0.0, 0.0));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/statistics/weekly", CLIENT_ID))
                 .andExpect(status().isOk())
@@ -136,7 +137,7 @@ class TrainerClientDataControllerTest {
     @Test
     void monthlyStatistics_returnsStatsForTheClient() throws Exception {
         when(statisticsService.monthlyForUser(eq(CLIENT_ID), any())).thenReturn(
-                new StatisticsResponse(40000.0, 2000.0, 3600.0, 1200.0, 12, 80.0, 40.0));
+                new StatisticsResponse(40000.0, 2000.0, 3600.0, 1200.0, 12, 80.0, 40.0, 12, 0, 0, 0.0, 0.0));
 
         mockMvc.perform(get("/api/v1/trainer/clients/{clientId}/statistics/monthly", CLIENT_ID))
                 .andExpect(status().isOk())
@@ -187,7 +188,8 @@ class TrainerClientDataControllerTest {
     void workoutSessions_returnsClientsSessionHistory() throws Exception {
         WorkoutSessionResponse session = new WorkoutSessionResponse(1L, Instant.parse("2026-06-01T08:00:00Z"),
                 Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
-                null, null, null, null, null, null, null, null, null, null, null, null, Instant.now(), null);
+                null, null, null, null, null, null, null, null, null, null, null, null, Instant.now(), null,
+                SessionKind.STRENGTH, null, null, null, List.of());
         Page<WorkoutSessionResponse> page = new PageImpl<>(List.of(session), PageRequest.of(0, 20), 1);
         when(workoutSessionService.findPageForUser(eq(CLIENT_ID), any())).thenReturn(page);
 
@@ -202,7 +204,8 @@ class TrainerClientDataControllerTest {
         WorkoutSessionResponse updated = new WorkoutSessionResponse(sessionId, Instant.parse("2026-06-01T08:00:00Z"),
                 Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null,
-                "Nice pace, add weight next time", Instant.parse("2026-06-18T07:00:00Z"), Instant.now(), null);
+                "Nice pace, add weight next time", Instant.parse("2026-06-18T07:00:00Z"), Instant.now(), null,
+                SessionKind.STRENGTH, null, null, null, List.of());
         when(sessionCommentService.upsertComment(TRAINER_ID, CLIENT_ID, sessionId, "Nice pace, add weight next time"))
                 .thenReturn(updated);
 
@@ -268,7 +271,8 @@ class TrainerClientDataControllerTest {
         WorkoutSessionResponse cleared = new WorkoutSessionResponse(sessionId, Instant.parse("2026-06-01T08:00:00Z"),
                 Instant.parse("2026-06-01T09:00:00Z"), List.of(), List.of(),
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, Instant.now(), null);
+                null, null, Instant.now(), null,
+                SessionKind.STRENGTH, null, null, null, List.of());
         when(sessionCommentService.deleteComment(TRAINER_ID, CLIENT_ID, sessionId)).thenReturn(cleared);
 
         mockMvc.perform(delete("/api/v1/trainer/clients/{clientId}/workout-sessions/{sessionId}/comment", CLIENT_ID, sessionId))

@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/chat/data/chat_repository.dart';
+import '../../features/workouts/application/track_point_maintenance.dart';
 import '../storage/token_storage.dart';
 import 'pull_engine.dart';
 import 'sync_engine.dart';
@@ -41,7 +42,8 @@ class ConnectivitySyncController with WidgetsBindingObserver {
     this._syncEngine,
     this._pullEngine,
     this._tokenStorage,
-    this._chatRepository, [
+    this._chatRepository,
+    this._trackPointMaintenance, [
     Connectivity? connectivity,
   ]) : _connectivity = connectivity ?? Connectivity() {
     WidgetsBinding.instance.addObserver(this);
@@ -56,6 +58,7 @@ class ConnectivitySyncController with WidgetsBindingObserver {
   final PullEngine _pullEngine;
   final TokenStorage _tokenStorage;
   final ChatRepository _chatRepository;
+  final TrackPointMaintenance _trackPointMaintenance;
   final Connectivity _connectivity;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   Timer? _timer;
@@ -86,6 +89,16 @@ class ConnectivitySyncController with WidgetsBindingObserver {
     try {
       await _chatRepository.flushPending();
       await _chatRepository.refreshConversations();
+    } catch (_) {
+      // Same best-effort contract as above.
+    }
+    // Separate try, same reason again — the 90-day track-point prune
+    // (C4a.6) is unrelated maintenance; a failure here must not be mistaken
+    // for (or block) either sync half above. `runIfDue` itself is what
+    // keeps this from actually scanning the table on every one of these
+    // triggers — see its own doc.
+    try {
+      await _trackPointMaintenance.runIfDue();
     } catch (_) {
       // Same best-effort contract as above.
     }
@@ -126,6 +139,7 @@ final connectivitySyncControllerProvider = Provider<ConnectivitySyncController>(
     ref.watch(pullEngineProvider),
     ref.watch(tokenStorageProvider),
     ref.watch(chatRepositoryProvider),
+    ref.watch(trackPointMaintenanceProvider),
   );
   ref.onDispose(controller.dispose);
   return controller;

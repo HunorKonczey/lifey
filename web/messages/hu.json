@@ -572,7 +572,8 @@
     "goal": "Cél: {value}",
     "workoutFallback": "Edzés",
     "minutes": "perc",
-    "setGoalsHint": "Állítsd be a napi céljaidat a haladás követéséhez"
+    "setGoalsHint": "Állítsd be a napi céljaidat a haladás követéséhez",
+    "workoutsBreakdown": "{strength} erősítő · {cardio} cardio"
   },
   "nutrition": {
     "meals": "Étkezések",
@@ -743,6 +744,24 @@
     "exercisesCount": "{count} gyakorlat",
     "inProgress": "Folyamatban",
     "bpmAvg": "{value} bpm átlag",
+    "movingTime": "mozgásidő",
+    "totalTime": "bruttó idő",
+    "readOnly": "Csak olvasható",
+    "cardioDurationLabel": "Időtartam",
+    "cardioDistanceLabel": "Távolság",
+    "cardioPaceLabel": "Tempó",
+    "cardioElevationGainLabel": "Szintemelkedés",
+    "cardioMovingTimeLabel": "Mozgásidő",
+    "cardioPlayingTimeLabel": "Játékidő",
+    "cardioAvgWattsLabel": "Átlag teljesítmény",
+    "cardioAvgCadenceLabel": "Kadencia",
+    "cardioResistanceLabel": "Ellenállás",
+    "cardioDeviceCaloriesLabel": "Gép kalória",
+    "cardioVenueLabel": "Helyszín",
+    "cardioVenueIndoor": "Terem",
+    "cardioVenueOutdoor": "Szabadtér",
+    "cardioIntensityLabel": "Intenzitás",
+    "cardioScoreLabel": "Pont",
     "deleteSessionAria": "Edzés törlése",
     "activeWorkout": "Aktív edzés",
     "started": "Kezdés: {time}",
@@ -831,6 +850,16 @@
       "BODYWEIGHT": "Testsúly",
       "SMITH_MACHINE": "Smith gép",
       "OTHER": "Egyéb"
+    },
+    "activityTypes": {
+      "RUNNING": "Futás",
+      "WALKING": "Séta",
+      "HIKING": "Túrázás",
+      "INDOOR_BIKE": "Szobabicikli",
+      "BASKETBALL": "Kosárlabda",
+      "FOOTBALL": "Foci",
+      "OTHER_CARDIO": "Egyéb",
+      "STRENGTH": "Erősítő"
     }
   },
   "weight": {
@@ -895,7 +924,13 @@
     "noWeightEntries": "Nincs testsúly bejegyzés ebben az időszakban",
     "noSetsLogged": "Nincs rögzített szett ebben az időszakban",
     "noDataYet": "Még nincs adat",
-    "logToSeeStats": "Rögzíts étkezéseket, edzéseket, testsúlyt, vizet vagy lépéseket a statisztikák megtekintéséhez."
+    "logToSeeStats": "Rögzíts étkezéseket, edzéseket, testsúlyt, vizet vagy lépéseket a statisztikák megtekintéséhez.",
+    "kindAll": "Mind",
+    "kindStrength": "Erősítő",
+    "kindCardio": "Cardio",
+    "workoutsBreakdown": "{strength} erősítő · {cardio} cardio",
+    "cardioDistance": "Cardio táv",
+    "noCardioDistance": "Nincs rögzített cardio táv ebben az időszakban"
   },
   "settings": {
     "profile": "Profil",

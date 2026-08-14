@@ -110,8 +110,42 @@ void main() {
           'removedExerciseIndexes': null,
           'sessionPlan': null,
           'setsDoneExerciseId': null,
+          'kind': 'STRENGTH',
+          'activityType': null,
+          'cardio': null,
         },
+        'activityType': null,
+        'venue': null,
       });
+    });
+
+    test('startWorkout sends activityType/venue for a cardio session '
+        '(docs/cardio/55-cardio-watch-plan.md §2, D-C5.1, C5.2)', () async {
+      setHandler((call) async {
+        calls.add(call);
+        return null;
+      });
+      final service = WatchWorkoutService(isAvailable: true);
+
+      await service.startWorkout(
+        sessionClientId: 'session-cardio-1',
+        title: 'Futás',
+        startedAt: DateTime.fromMillisecondsSinceEpoch(1783075200000),
+        state: const WorkoutSessionState(
+          exerciseName: 'Futás — 0:00',
+          setsDone: 0,
+          totalSetsDone: 0,
+          kind: 'CARDIO',
+          activityType: 'RUNNING',
+        ),
+        activityType: 'RUNNING',
+        venue: 'OUTDOOR',
+      );
+
+      expect(calls, hasLength(1));
+      final arguments = calls.single.arguments as Map;
+      expect(arguments['activityType'], 'RUNNING');
+      expect(arguments['venue'], 'OUTDOOR');
     });
 
     test('updateState sends sessionClientId + state', () async {
@@ -152,6 +186,9 @@ void main() {
           'removedExerciseIndexes': null,
           'sessionPlan': null,
           'setsDoneExerciseId': null,
+          'kind': 'STRENGTH',
+          'activityType': null,
+          'cardio': null,
         },
       });
     });
@@ -302,7 +339,8 @@ void main() {
       expect(calls.single.arguments, {'standaloneSessionId': 'standalone-1'});
     });
 
-    test('syncTemplates sends the serialized templates + a phone-clock stamp', () async {
+    test('syncTemplates sends version: 2 + the serialized entries + a phone-clock stamp '
+        '(docs/cardio/55-cardio-watch-plan.md §3.2, C5.3)', () async {
       setHandler((call) async {
         calls.add(call);
         return null;
@@ -311,30 +349,37 @@ void main() {
       final before = DateTime.now().millisecondsSinceEpoch;
 
       await service.syncTemplates(const [
-        WatchTemplatePayload(
-          templateId: 'push',
-          title: 'Push day',
-          exercises: [
-            WatchTemplateExercisePayload(
-              exerciseId: 'bench',
-              name: 'Bench Press',
-              restSeconds: 90,
-              targetSets: 4,
-            ),
-          ],
+        WatchQuickStartTemplateEntry(
+          WatchTemplatePayload(
+            templateId: 'push',
+            title: 'Push day',
+            exercises: [
+              WatchTemplateExercisePayload(
+                exerciseId: 'bench',
+                name: 'Bench Press',
+                restSeconds: 90,
+                targetSets: 4,
+              ),
+            ],
+          ),
         ),
+        WatchQuickStartCardioEntry(activityType: 'RUNNING', title: 'Futás'),
       ]);
 
       expect(calls.single.method, 'syncTemplates');
       final arguments = calls.single.arguments as Map;
-      expect(arguments['templates'], [
+      expect(arguments['version'], 2);
+      expect(arguments['entries'], [
         {
+          'type': 'TEMPLATE',
           'templateId': 'push',
           'title': 'Push day',
+          'exerciseCount': 1,
           'exercises': [
             {'exerciseId': 'bench', 'name': 'Bench Press', 'restSeconds': 90, 'targetSets': 4},
           ],
         },
+        {'type': 'CARDIO', 'activityType': 'RUNNING', 'title': 'Futás'},
       ]);
       expect(
         arguments['syncedAtEpochMs'],
@@ -343,7 +388,7 @@ void main() {
     });
 
     test('syncTemplates sends an empty list rather than skipping the call', () async {
-      // That's how a watch whose last template was just deleted is told to
+      // That's how a watch whose last entry was just deleted is told to
       // clear its cache (§4.3).
       setHandler((call) async {
         calls.add(call);
@@ -354,7 +399,7 @@ void main() {
       await service.syncTemplates(const []);
 
       expect(calls.single.method, 'syncTemplates');
-      expect((calls.single.arguments as Map)['templates'], isEmpty);
+      expect((calls.single.arguments as Map)['entries'], isEmpty);
     });
 
     test('syncTemplates no-ops when unavailable', () async {
@@ -365,7 +410,9 @@ void main() {
       final service = WatchWorkoutService(isAvailable: false);
 
       await service.syncTemplates(const [
-        WatchTemplatePayload(templateId: 'push', title: 'Push day', exercises: []),
+        WatchQuickStartTemplateEntry(
+          WatchTemplatePayload(templateId: 'push', title: 'Push day', exercises: []),
+        ),
       ]);
 
       expect(calls, isEmpty);
@@ -645,6 +692,60 @@ void main() {
       expect(session.activeCalories, isNull);
       expect(session.averageHeartRate, isNull);
       expect(session.healthWorkoutId, isNull);
+      // Defaults to STRENGTH for every watch build that predates the
+      // `kind` field (docs/cardio/55-cardio-watch-plan.md D-C5.4).
+      expect(session.kind, 'STRENGTH');
+      expect(session.activityType, isNull);
+      expect(session.movingSeconds, isNull);
+      expect(session.cardio, isNull);
+    });
+
+    test('decodes a CARDIO standaloneSession event\'s kind/activityType/movingSeconds/cardio block '
+        '(docs/cardio/55-cardio-watch-plan.md W-1 — no native sender exists for this yet)', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'standaloneSession',
+              'payload': {
+                'standaloneSessionId': 'standalone-cardio-1',
+                'startedAtEpochMs': 1783075200000,
+                'endedAtEpochMs': 1783078800000,
+                'sets': <Object?>[],
+                'kind': 'CARDIO',
+                'activityType': 'RUNNING',
+                'movingSeconds': 3400,
+                'cardio': {
+                  'distanceMeters': 5023.0,
+                  'elevationGainMeters': 42.0,
+                  'avgCadence': 172.0,
+                  'maxHeartRate': 168.0,
+                  'hrZone3Seconds': 1200,
+                },
+              },
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final event = await service.events.first;
+
+      expect(event, isA<WatchStandaloneSession>());
+      final session = event as WatchStandaloneSession;
+      expect(session.kind, 'CARDIO');
+      expect(session.activityType, 'RUNNING');
+      expect(session.movingSeconds, 3400);
+      expect(session.cardio, isNotNull);
+      expect(session.cardio!.distanceMeters, 5023.0);
+      expect(session.cardio!.elevationGainMeters, 42.0);
+      expect(session.cardio!.avgCadence, 172.0);
+      expect(session.cardio!.maxHeartRate, 168.0);
+      expect(session.cardio!.hrZone3Seconds, 1200);
+      // Fields the payload didn't include stay null, not defaulted to 0.
+      expect(session.cardio!.steps, isNull);
+      expect(session.cardio!.venue, isNull);
     });
 
     test('decodes a standaloneSessionAdopted event, including the watch\'s current exercise',

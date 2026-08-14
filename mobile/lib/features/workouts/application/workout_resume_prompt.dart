@@ -11,12 +11,16 @@ import '../../../core/router/app_router.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
+import 'activity_ranking.dart';
 import 'standalone_session_processor.dart';
 import 'workout_session_controller.dart';
+import 'workout_template_controller.dart';
 import '../data/workout_session_repository.dart';
 import '../domain/workout_session.dart';
+import '../domain/workout_template.dart';
 import '../presentation/log_session_screen.dart';
 import '../presentation/open_workout_screens.dart';
+import '../presentation/quick_start_sheet.dart';
 
 /// [clientId] narrows the search to one specific session — used right after
 /// adopting a watch-started session, where the caller already knows which
@@ -47,14 +51,11 @@ Future<void> _pushSessionScreen(
   int? watchCurrentExerciseIndex,
 }) async {
   if (isWorkoutScreenOpenFor(active.clientId)) return;
-  await navigator.push(
-    MaterialPageRoute(
-      builder: (_) => LogSessionScreen(
-        session: active,
-        watchMastered: watchMastered,
-        watchCurrentExerciseIndex: watchCurrentExerciseIndex,
-      ),
-    ),
+  await openSessionScreen(
+    navigator,
+    active,
+    watchMastered: watchMastered,
+    watchCurrentExerciseIndex: watchCurrentExerciseIndex,
   );
 }
 
@@ -78,6 +79,59 @@ Future<bool> openActiveWorkoutSession(Ref ref) async {
   final active = await _findActiveSession(ref);
   if (active == null) return false;
   await _pushSessionScreen(navigator, active);
+  return true;
+}
+
+/// Starts [entry] immediately and pushes straight into its live screen — the
+/// `lifey://workout/start` deep link's handler (see the `onException`
+/// branch in `app_router.dart`), reached from the Android dynamic
+/// app-shortcuts / home-screen widget quick-start buttons (C2.11a) and,
+/// later, iOS's own shortcuts (C2.11b). Same "one gesture" contract as the
+/// C2.7 quick-start sheet tiles ([startCardioQuickly]/[startStrengthQuickly])
+/// — this is deliberately not a call to either of those, since both assume a
+/// [BuildContext] and a bottom sheet to pop that a cold app-launch from a
+/// shortcut simply doesn't have.
+///
+/// If a workout is already running, that session is reopened instead of
+/// starting a second one on top of it — the same rule
+/// [openActiveWorkoutSession] enforces for the Live Activity / ongoing
+/// notification tap; a shortcut tapped mid-workout should return to it, not
+/// silently create an orphaned duplicate.
+///
+/// Returns whether a screen was actually pushed, so the router can fall back
+/// to the dashboard otherwise (no navigator yet, or a deleted template with
+/// nothing sane left to start — see [quickStartEntryFromDeepLinkUri]'s doc
+/// for why a stale/malformed URI never reaches this far already, but a
+/// *valid* URI naming a template deleted since the shortcut was created
+/// still can).
+Future<bool> startQuickStartEntryFromDeepLink(Ref ref, QuickStartEntry entry) async {
+  final navigator = rootNavigatorKey.currentState;
+  if (navigator == null) return false;
+
+  final active = await _findActiveSession(ref);
+  if (active != null) {
+    await _pushSessionScreen(navigator, active);
+    return true;
+  }
+
+  if (entry.isCardio) {
+    final session = await createCardioSession(
+      ref.read(workoutSessionControllerProvider.notifier),
+      entry.activityType!,
+    );
+    await openSessionScreen(navigator, session);
+    return true;
+  }
+
+  final templateClientId = entry.templateClientId;
+  WorkoutTemplate? template;
+  if (templateClientId != null) {
+    final templates = ref.read(workoutTemplateControllerProvider).value ?? const [];
+    template = templates.where((t) => t.clientId == templateClientId).firstOrNull;
+  }
+  await navigator.push(
+    MaterialPageRoute(builder: (_) => LogSessionScreen(template: template)),
+  );
   return true;
 }
 
@@ -175,9 +229,16 @@ class WorkoutResumePrompt {
 
     // iOS summaries already carry a real HKWorkout uuid; Android summaries
     // don't — the watch never touches Health Connect, the phone does
-    // (docs/40-watch-app-plan.md §5.2 "Döntés: a telefon ír HC-be").
+    // (docs/40-watch-app-plan.md §5.2 "Döntés: a telefon ír HC-be"). **Not**
+    // for a cardio session, though (docs/cardio/59-cardio-implementation-plan.md
+    // C5.1's own `_createCardioSession` reasoning, unearthed here because
+    // this is the *other* place the same fallback fires): writing a run into
+    // Health Connect as `HealthWorkoutActivityType.STRENGTH_TRAINING` would
+    // be a silently misleading record, not a helpful backfill. Cardio's own
+    // Health-write is still future work — `healthWorkoutId` simply stays
+    // null for it here, same as C5.1's standalone path already does.
     var healthWorkoutId = event.healthWorkoutId;
-    if (healthWorkoutId == null && session.startedAt != null) {
+    if (healthWorkoutId == null && session.startedAt != null && !session.isCardio) {
       healthWorkoutId = await _ref.read(healthServiceProvider).writeStrengthWorkoutAndGetId(
             start: session.startedAt!,
             end: session.finishedAt ?? DateTime.now(),
@@ -186,11 +247,21 @@ class WorkoutResumePrompt {
           );
     }
 
+    // docs/cardio/55-cardio-watch-plan.md §4.3, C5.7a — merged, never a
+    // blind replace: a manual/measured value already on this session always
+    // wins (R8). `event.cardio` is null for every STRENGTH summary and for
+    // a cardio one from a watch build that predates this field, in which
+    // case the merge is exactly `session.cardio` unchanged.
+    final mergedCardio = session.isCardio && event.cardio != null
+        ? (session.cardio ?? const CardioMetrics()).mergedWithWatchMeasurement(event.cardio!)
+        : null;
+
     await _ref.read(workoutSessionControllerProvider.notifier).enrichFromWatch(
           event.sessionClientId,
           activeCalories: event.activeCalories,
           averageHeartRate: event.averageHeartRate,
           healthWorkoutId: healthWorkoutId,
+          cardio: mergedCardio,
         );
   }
 

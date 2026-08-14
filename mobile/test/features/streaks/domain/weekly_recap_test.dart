@@ -7,6 +7,25 @@ import 'package:lifey/features/streaks/domain/weekly_recap.dart';
 import 'package:lifey/features/weight/domain/weight_entry.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 
+WorkoutSession _cardioSession({
+  required DateTime startedAt,
+  String activityType = 'RUNNING',
+  int? movingSeconds,
+  double? distanceMeters,
+}) {
+  return WorkoutSession(
+    clientId: 'cardio-session-${startedAt.microsecondsSinceEpoch}',
+    startedAt: startedAt,
+    finishedAt: startedAt.add(const Duration(hours: 1)),
+    exercises: const [],
+    sets: const [],
+    sessionKind: 'CARDIO',
+    activityType: activityType,
+    movingSeconds: movingSeconds,
+    cardio: distanceMeters == null ? null : CardioMetrics(distanceMeters: distanceMeters),
+  );
+}
+
 // A fixed Monday, well clear of any DST transition, so the suite never goes
 // stale and every boundary is unambiguous.
 final _monday = DateTime(2026, 6, 1);
@@ -19,6 +38,7 @@ WorkoutSession _session({
   required DateTime startedAt,
   DateTime? finishedAt,
   bool upcoming = false,
+  int? movingSeconds,
 }) {
   return WorkoutSession(
     clientId: 'session-${startedAt.microsecondsSinceEpoch}',
@@ -27,6 +47,8 @@ WorkoutSession _session({
     scheduledFor: upcoming ? startedAt : null,
     exercises: const [],
     sets: const [],
+    sessionKind: movingSeconds == null ? 'STRENGTH' : 'CARDIO',
+    movingSeconds: movingSeconds,
   );
 }
 
@@ -108,6 +130,77 @@ void main() {
       ]);
 
       expect(recap.workoutMinutes, 105); // 60 + 45
+    });
+
+    test(
+      'D-C3.3: a cardio session counts moving time, not wall-clock — matches '
+      "StatMetric.workoutMinutes's rule",
+      () {
+        final recap = _compute(sessions: [
+          // 90 min wall-clock, but only 42 min actually moving.
+          _session(
+            startedAt: _weekDay(0).add(const Duration(hours: 8)),
+            finishedAt: _weekDay(0).add(const Duration(hours: 9, minutes: 30)),
+            movingSeconds: 42 * 60,
+          ),
+          // Plain strength session — bit-identical wall-clock rule still applies.
+          _session(
+            startedAt: _weekDay(1).add(const Duration(hours: 8)),
+            finishedAt: _weekDay(1).add(const Duration(hours: 8, minutes: 45)),
+          ),
+        ]);
+
+        expect(recap.workoutMinutes, 87); // 42 + 45
+      },
+    );
+  });
+
+  group('WeeklyRecap.compute — weekly cardio distance (docs/cardio/56-cardio-statistics-plan.md §4)',
+      () {
+    test('sums DISTANCE + MACHINE family sessions across the week', () {
+      final recap = _compute(sessions: [
+        _cardioSession(startedAt: _weekDay(0), distanceMeters: 5000), // RUNNING
+        _cardioSession(
+          startedAt: _weekDay(2),
+          activityType: 'INDOOR_BIKE',
+          distanceMeters: 15000,
+        ),
+      ]);
+
+      expect(recap.weeklyCardioDistanceMeters, 20000); // 5000 + 15000
+    });
+
+    test('GAME-family sessions do not contribute even if they somehow carry a distance', () {
+      final recap = _compute(sessions: [
+        _cardioSession(startedAt: _weekDay(0), activityType: 'BASKETBALL', distanceMeters: 2000),
+      ]);
+
+      expect(recap.weeklyCardioDistanceMeters, isNull);
+    });
+
+    test('a strength-only week is null, not zero', () {
+      final recap = _compute(sessions: [
+        _session(startedAt: _weekDay(0), finishedAt: _weekDay(0).add(const Duration(hours: 1))),
+      ]);
+
+      expect(recap.weeklyCardioDistanceMeters, isNull);
+    });
+
+    test('a cardio session with no distance recorded does not contribute', () {
+      final recap = _compute(sessions: [
+        _cardioSession(startedAt: _weekDay(0)), // no distanceMeters
+      ]);
+
+      expect(recap.weeklyCardioDistanceMeters, isNull);
+    });
+
+    test('excludes sessions outside the week', () {
+      final recap = _compute(sessions: [
+        _cardioSession(startedAt: _weekDay(-1), distanceMeters: 9999), // previous week
+        _cardioSession(startedAt: _weekDay(3), distanceMeters: 3000),
+      ]);
+
+      expect(recap.weeklyCardioDistanceMeters, 3000);
     });
   });
 

@@ -100,15 +100,22 @@ final class StandaloneSessionStore {
     }
   }
 
-  // MARK: - Template cache (docs/watch/49-watch-f6b-template-sync-plan.md §3.1, T4.1)
+  // MARK: - Quick-start cache (docs/watch/49-watch-f6b-template-sync-plan.md §3.1, T4.1;
+  // docs/cardio/55-cardio-watch-plan.md §3.2, C5.3/C5.4 — templates + cardio
+  // types, unified)
 
   /// Overwrites the whole cache with the phone's latest sync — never merged,
-  /// since every `templateSync` already carries the complete, current list
-  /// (T1.3's phone-side "empty list still goes out" decision means an empty
-  /// array here correctly clears a stale cache too, not just skips the write).
-  func saveTemplates(_ templates: [CachedTemplate]) {
+  /// since every `syncTemplates` push already carries the complete, current
+  /// list (T1.3's phone-side "empty list still goes out" decision means an
+  /// empty array here correctly clears a stale cache too, not just skips the
+  /// write). Same file `saveTemplates`/`templates()` used
+  /// pre-C5.3 — the new `[WatchQuickStartEntry]` shape decodes a stale
+  /// `[CachedTemplate]`-only file as an empty list (each entry's `type` key
+  /// is missing, not malformed silently), which is exactly the safe "nothing
+  /// synced yet" fallback the picker already handles.
+  func saveQuickStartEntries(_ entries: [WatchQuickStartEntry]) {
     queue.sync {
-      guard let data = try? JSONEncoder().encode(templates) else { return }
+      guard let data = try? JSONEncoder().encode(entries) else { return }
       try? data.write(to: templatesURL, options: .atomic)
     }
   }
@@ -117,10 +124,10 @@ final class StandaloneSessionStore {
   /// cache file failed to decode (a corrupt write, or a future app version's
   /// incompatible shape). Never throws: the picker's F6a fallback (just the
   /// "Quick strength" card) already handles "nothing to show" correctly.
-  func templates() -> [CachedTemplate] {
+  func quickStartEntries() -> [WatchQuickStartEntry] {
     queue.sync {
       guard let data = try? Data(contentsOf: templatesURL) else { return [] }
-      return (try? JSONDecoder().decode([CachedTemplate].self, from: data)) ?? []
+      return (try? JSONDecoder().decode([WatchQuickStartEntry].self, from: data)) ?? []
     }
   }
 }

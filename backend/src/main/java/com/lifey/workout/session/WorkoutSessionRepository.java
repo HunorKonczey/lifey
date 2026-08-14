@@ -21,11 +21,25 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     List<WorkoutSession> findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullOrderByStartedAtDesc(Long userId);
 
     /**
+     * Same as {@link #findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullOrderByStartedAtDesc},
+     * additionally scoped to one {@link SessionKind} — backs the `?kind=`
+     * list filter (docs/cardio/52-cardio-domain-backend-plan.md §3.2 D-C1.3).
+     * A separate method rather than a nullable-parameter query so the
+     * unfiltered path (and its existing callers/tests) stays untouched.
+     */
+    List<WorkoutSession> findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullAndSessionKindOrderByStartedAtDesc(
+            Long userId, SessionKind kind);
+
+    /**
      * Paged history view — backs `GET /workout-sessions?page=` and the trainer
      * client-workout-sessions endpoint. Excludes upcoming/missed rows, same as
      * {@link #findAllByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullOrderByStartedAtDesc}.
      */
     Page<WorkoutSession> findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNull(Long userId, Pageable pageable);
+
+    /** Same as above, additionally scoped to one {@link SessionKind} — see the unpaged variant's doc. */
+    Page<WorkoutSession> findByUserIdAndDeletedAtIsNullAndStartedAtIsNotNullAndSessionKind(
+            Long userId, SessionKind kind, Pageable pageable);
 
     Optional<WorkoutSession> findByIdAndUserId(Long id, Long userId);
 
@@ -42,12 +56,92 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
     long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual(Long userId, Instant from);
 
     /**
+     * Same as {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual},
+     * scoped to one {@link SessionKind} — the statistics fajta-bontás
+     * (docs/cardio/56-cardio-statistics-plan.md §2, D-C3.2). Only the CARDIO
+     * count is queried; strengthWorkoutCount is derived as
+     * {@code workoutCount - cardioWorkoutCount} in the service, since every
+     * session has exactly one of the two {@link SessionKind} values.
+     */
+    long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind(
+            Long userId, Instant from, SessionKind kind);
+
+    /**
+     * Σ moving_seconds over the same "since" window — the mozgásidő the
+     * statistics `movingMinutes` field uses for cardio
+     * (docs/cardio/56-cardio-statistics-plan.md D-C3.3), not the wall-clock
+     * startedAt/finishedAt span. {@link WorkoutSession#movingSeconds} is
+     * null for every STRENGTH session (see its own doc comment), so summing
+     * across all kinds already yields the cardio-only total — SQL/JPQL
+     * {@code sum} ignores nulls — without an extra kind filter.
+     */
+    @Query("""
+            select coalesce(sum(w.movingSeconds), 0) from WorkoutSession w
+            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+            """)
+    long sumMovingSecondsSince(@Param("userId") Long userId, @Param("from") Instant from);
+
+    /**
+     * Σ distance_meters over the same window, joined through
+     * {@link WorkoutSession#cardioDetails} — those fields live on
+     * {@code CardioDetails}, not {@code WorkoutSession} itself
+     * (docs/cardio/52-cardio-domain-backend-plan.md §2.2). The join alone
+     * excludes every STRENGTH session (no {@code CardioDetails} row to join
+     * to); {@code coalesce} still guards the "no cardio sessions in range at
+     * all" case, where the join yields no rows and a plain {@code sum}
+     * would otherwise be {@code null}.
+     */
+    @Query("""
+            select coalesce(sum(c.distanceMeters), 0) from WorkoutSession w join w.cardioDetails c
+            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+            """)
+    double sumDistanceMetersSince(@Param("userId") Long userId, @Param("from") Instant from);
+
+    /** Same as {@link #sumDistanceMetersSince}, for elevation gain. */
+    @Query("""
+            select coalesce(sum(c.elevationGainMeters), 0) from WorkoutSession w join w.cardioDetails c
+            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+            """)
+    double sumElevationGainMetersSince(@Param("userId") Long userId, @Param("from") Instant from);
+
+    /**
      * Completed (not just started) sessions in a range — weekly trainer report
      * (docs/33): an achievement metric, unlike {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqual}
      * which counts starts for a pace metric. {@code from} inclusive, {@code toExclusive} exclusive.
      */
     long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNull(
             Long userId, Instant from, Instant toExclusive);
+
+    /**
+     * Same as {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNull},
+     * scoped to one {@link SessionKind} — the weekly trainer report's
+     * strength/cardio breakdown line (docs/cardio/56-cardio-statistics-plan.md
+     * §6 ST9). Only the CARDIO count is queried; the strength count is derived
+     * as {@code completedWorkouts - cardioWorkouts} in the service, mirroring
+     * {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndSessionKind}.
+     */
+    long countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNullAndSessionKind(
+            Long userId, Instant from, Instant toExclusive, SessionKind kind);
+
+    /**
+     * Σ distance_meters over a bounded range, restricted to completed
+     * sessions — the weekly trainer report's cardio distance line. Unlike
+     * {@link #sumDistanceMetersSince} (open-ended, used by the statistics
+     * screen's "since X" totals, which deliberately include an
+     * still-in-progress session's accrued distance), this report only ever
+     * covers a week that has already fully elapsed by the time the job runs,
+     * so an unfinished session here is an abandoned one — excluded the same
+     * way {@link #countByUserIdAndDeletedAtIsNullAndStartedAtGreaterThanEqualAndStartedAtLessThanAndFinishedAtIsNotNullAndSessionKind}
+     * excludes it from the breakdown count, keeping the two numbers
+     * consistent with each other.
+     */
+    @Query("""
+            select coalesce(sum(c.distanceMeters), 0) from WorkoutSession w join w.cardioDetails c
+            where w.user.id = :userId and w.deletedAt is null and w.startedAt >= :from
+              and w.startedAt < :toExclusive and w.finishedAt is not null
+            """)
+    double sumDistanceMetersBetweenForCompleted(
+            @Param("userId") Long userId, @Param("from") Instant from, @Param("toExclusive") Instant toExclusive);
 
     /** Every trainer-scheduled occurrence for a client in a date range — upcoming, missed, done and cancelled alike. */
     List<WorkoutSession> findByUserIdAndScheduledForIsNotNullAndScheduledForBetweenOrderByScheduledForAscScheduledTimeAsc(
