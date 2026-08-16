@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "—" : {
+
+    },
     "%@" : {
 
     },
@@ -174,6 +177,7 @@
       }
     },
     "cardio_back_to_court_button" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -190,6 +194,7 @@
       }
     },
     "cardio_game_paused_primary_label" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -206,6 +211,7 @@
       }
     },
     "cardio_go_to_bench_button" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -254,6 +260,7 @@
       }
     },
     "cardio_on_bench_header_label" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

@@ -718,7 +718,6 @@
   "chatMutedLabel": "Némítva",
   "chatPushToggleLabel": "Chat üzenetek",
   "chatPushToggleSubtitle": "Értesítés, ha új üzenetet kapsz",
-
   "activityTypeRunning": "Futás",
   "activityTypeWalking": "Séta",
   "activityTypeHiking": "Túrázás",
@@ -755,6 +754,7 @@
   "finishButtonLabel": "Befejezés",
   "finishCardioConfirmTitle": "Befejezed az edzést?",
   "finishCardioConfirmMessage": "Ez lezárja az edzést, és elmenti a mozgásidőt.",
+  "cardioSummaryDoneButton": "Kész",
   "manualPauseCardTitle": "Szüneteltetve",
   "manualPauseCardSubtitle": "Te állítottad meg · {duration} óta",
   "autoPauseCardTitle": "Automatikus szünet",
@@ -820,5 +820,20 @@
   "autoPauseSettingsIconTooltip": "Automatikus szünet beállításai",
   "autoPauseSettingsTitle": "Automatikus szünet",
   "autoPauseSettingsDescription": "15 másodperc mozdulatlanság után automatikusan szünetel, és amint elindulsz, automatikusan folytatja. Csak akkor működik, ha fut a GPS-nyomkövetés.",
-  "autoPauseSettingsSwitchLabel": "Automatikus szünet engedélyezése"
+  "autoPauseSettingsSwitchLabel": "Automatikus szünet engedélyezése",
+  "indoorVenueChipLabel": "Beltéri",
+  "gameMatchPauseLabel": "Meccs szünet",
+  "courtSwitchHint": "A játékidő csak „pályán” állásban nő",
+  "benchSwitchHint": "Koppints a „Pályán”-ra, ha visszaállsz",
+  "autoPauseCircleLabel": "Auto",
+  "distanceCircleLabel": "Táv",
+  "playingTimeRunningLabel": "JÁTÉKIDŐ — PÁLYÁN",
+  "playingTimeStoppedLabel": "JÁTÉKIDŐ — ÁLL",
+  "grossTimeRunningLabel": "bruttó — fut",
+  "benchedNoticeTitle": "A mérés pihen",
+  "benchedNoticeBody": "A pulzust és a kalóriát tovább rögzítjük, de a játékidőd nem nő.",
+  "watchChipLabel": "Óra",
+  "noRouteCardTitle": "Nincs útvonal",
+  "noRouteCardBody": "Beltéri edzésnél nem rögzítünk nyomvonalat.",
+  "quickStartOrderHint": "gyakoriság szerint"
 }

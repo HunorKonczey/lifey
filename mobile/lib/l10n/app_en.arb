@@ -3145,7 +3145,7 @@
   "@chatImageAlt": {
     "description": "Screen-reader name for a picture in a message"
   },
-  "chatImagePreview": "\ud83d\udcf7 Photo",
+  "chatImagePreview": "📷 Photo",
   "@chatImagePreview": {
     "description": "Conversation-list preview of a message that is a picture"
   },
@@ -3153,7 +3153,7 @@
   "@chatCloseImageAction": {
     "description": "Closes the full-screen image view"
   },
-  "chatImageTooLarge": "That image is too large \u2014 8 MB is the limit.",
+  "chatImageTooLarge": "That image is too large — 8 MB is the limit.",
   "@chatImageTooLarge": {
     "description": "Shown when a picked image exceeds the server's attachment limit"
   },
@@ -3307,7 +3307,6 @@
   "@chatPushToggleSubtitle": {
     "description": "Subtitle for the chat push notification toggle"
   },
-
   "activityTypeRunning": "Running",
   "@activityTypeRunning": {
     "description": "Cardio activity type: running (DISTANCE family)"
@@ -3451,6 +3450,10 @@
   "finishCardioConfirmMessage": "This ends the session and saves your moving time.",
   "@finishCardioConfirmMessage": {
     "description": "Body text shown on the slide-to-finish confirmation overlay while dragging (C2.5)"
+  },
+  "cardioSummaryDoneButton": "Done",
+  "@cardioSummaryDoneButton": {
+    "description": "Button at the bottom of the cardio summary screen, below the RPE rating, that navigates back to the Workouts screen's Sessions tab"
   },
   "manualPauseCardTitle": "Paused",
   "@manualPauseCardTitle": {
@@ -3725,5 +3728,65 @@
   "autoPauseSettingsSwitchLabel": "Enable auto-pause",
   "@autoPauseSettingsSwitchLabel": {
     "description": "Label on the auto-pause settings sheet's on/off switch"
+  },
+  "indoorVenueChipLabel": "Indoor",
+  "@indoorVenueChipLabel": {
+    "description": "Header pill on the live cardio screen for a family that never uses GPS (M05/M06)"
+  },
+  "gameMatchPauseLabel": "Match pause",
+  "@gameMatchPauseLabel": {
+    "description": "Full-width pause action on the live GAME screen (M06/M07)"
+  },
+  "courtSwitchHint": "Playing time only grows while \"On court\"",
+  "@courtSwitchHint": {
+    "description": "Hint under the court/bench switch (M06)"
+  },
+  "benchSwitchHint": "Tap \"On court\" when you go back in",
+  "@benchSwitchHint": {
+    "description": "Hint under the court/bench switch while benched (M07)"
+  },
+  "autoPauseCircleLabel": "Auto",
+  "@autoPauseCircleLabel": {
+    "description": "Label of the small auto-pause settings circle on the live screen (M04)"
+  },
+  "distanceCircleLabel": "Dist.",
+  "@distanceCircleLabel": {
+    "description": "Label of the small distance-entry circle on the live screen (M11)"
+  },
+  "playingTimeRunningLabel": "PLAYING TIME — ON COURT",
+  "@playingTimeRunningLabel": {
+    "description": "Dominant metric label while on court (M06)"
+  },
+  "playingTimeStoppedLabel": "PLAYING TIME — STOPPED",
+  "@playingTimeStoppedLabel": {
+    "description": "Dominant metric label while benched (M07)"
+  },
+  "grossTimeRunningLabel": "gross — running",
+  "@grossTimeRunningLabel": {
+    "description": "Gross-time tile label while benched, where it is the only clock still moving (M07)"
+  },
+  "benchedNoticeTitle": "Measurement is resting",
+  "@benchedNoticeTitle": {
+    "description": "Title of the benched notice card (M07)"
+  },
+  "benchedNoticeBody": "Heart rate and calories keep recording, but your playing time is not growing.",
+  "@benchedNoticeBody": {
+    "description": "Body of the benched notice card (M07)"
+  },
+  "watchChipLabel": "Watch",
+  "@watchChipLabel": {
+    "description": "Small pill on the cardio summary marking a session whose numbers came from the watch (M13)"
+  },
+  "noRouteCardTitle": "No route",
+  "@noRouteCardTitle": {
+    "description": "Title of the summary card explaining why an indoor session has no GPS trail (M15)"
+  },
+  "noRouteCardBody": "Indoor workouts do not record a trail.",
+  "@noRouteCardBody": {
+    "description": "Body of the no-route card (M15)"
+  },
+  "quickStartOrderHint": "by frequency",
+  "@quickStartOrderHint": {
+    "description": "Right-hand hint next to the quick-start title explaining the tile order (M01)"
   }
 }

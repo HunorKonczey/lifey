@@ -182,6 +182,10 @@ void main() {
     final controller =
         await _pump(tester, _machineSession(avgWatts: 150, resistanceLevel: 4, movingSeconds: 60));
 
+    // The M05 layout puts the resistance card below the metric strip, so on
+    // the 800x600 test surface it can sit under the fold.
+    await tester.ensureVisible(find.widgetWithIcon(IconButton, Icons.add));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithIcon(IconButton, Icons.add));
     await tester.pumpAndSettle();
 

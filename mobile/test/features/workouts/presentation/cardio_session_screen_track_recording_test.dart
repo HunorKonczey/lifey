@@ -153,7 +153,7 @@ void main() {
     location.emitFix(_fixAt(0));
     await tester.pump();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+    await tester.tap(find.text('Pause'));
     await tester.pumpAndSettle();
 
     // Emitted while paused — must not be recorded.
@@ -163,7 +163,7 @@ void main() {
     var points = await CardioTrackPointRepository(db).pointsForSession('live-1');
     expect(points, hasLength(1)); // only the pre-pause fix
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Resume'));
+    await tester.tap(find.text('Resume'));
     await tester.pumpAndSettle();
 
     location.emitFix(_fixAt(2));

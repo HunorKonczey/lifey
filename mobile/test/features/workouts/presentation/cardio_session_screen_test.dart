@@ -364,7 +364,10 @@ void main() {
     await _pump(tester, _runningSession(movingSeconds: 60, movingSinceEpochMs: since.millisecondsSinceEpoch));
 
     expect(tester.takeException(), isNull);
-    expect(find.text('13:00'), findsOneWidget);
+    // ~13 minutes, not 1:00 — the point is that the pre-kill checkpoint is
+    // already folded in on the first frame, not the exact second it lands on
+    // (which drifts with how long the frame took under a parallel run).
+    expect(find.textContaining('13:'), findsOneWidget);
   });
 
   testWidgets('a running session shows Pause and the slide-to-finish bar, not Resume', (tester) async {
@@ -373,7 +376,7 @@ void main() {
     expect(find.text('Pause'), findsOneWidget);
     expect(find.text('Resume'), findsNothing);
     expect(find.text('Slide to finish'), findsOneWidget);
-    expect(find.text('In progress'), findsOneWidget);
+    expect(find.text('Paused'), findsNothing);
   });
 
   testWidgets(
@@ -395,14 +398,18 @@ void main() {
     final controller =
         await _pump(tester, _runningSession(movingSeconds: 60, movingSinceEpochMs: since.millisecondsSinceEpoch));
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+    await tester.tap(find.text('Pause'));
     await tester.pumpAndSettle();
 
     expect(controller.pauseCalls, hasLength(1));
     expect(controller.pauseCalls.single['clientId'], 'live-1');
     // 60 (base) + 120 (2 minutes) + however many ms the test took to reach
     // the tap — real wall-clock, so a tolerance rather than exact equality.
-    expect(controller.pauseCalls.single['movingSeconds'], inInclusiveRange(180, 182));
+    // The upper bound is generous on purpose: under a full-suite parallel
+    // run this widget builds behind several other test isolates, and the
+    // bug this guards against (sending the base 60 instead of the live
+    // total) is nowhere near the boundary.
+    expect(controller.pauseCalls.single['movingSeconds'], inInclusiveRange(180, 190));
     expect(find.text('Resume'), findsOneWidget);
     expect(find.text('Paused'), findsOneWidget); // manual pause card, not auto
   });
@@ -411,7 +418,7 @@ void main() {
     final controller = await _pump(tester, _pausedSession(movingSeconds: 400));
 
     final before = DateTime.now();
-    await tester.tap(find.widgetWithText(FilledButton, 'Resume'));
+    await tester.tap(find.text('Resume'));
     await tester.pumpAndSettle();
 
     expect(controller.resumeCalls, hasLength(1));
@@ -428,11 +435,11 @@ void main() {
     );
     controller.failNext = true;
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+    await tester.tap(find.text('Pause'));
     await tester.pumpAndSettle();
 
     expect(find.text('Pause'), findsOneWidget); // still running, button unchanged
-    expect(find.text('In progress'), findsOneWidget);
+    expect(find.text('Paused'), findsNothing);
   });
 
   group('slide-to-finish (C2.5)', () {
@@ -581,7 +588,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controller.pauseCalls, isEmpty);
-      expect(find.text('In progress'), findsOneWidget);
+      expect(find.text('Paused'), findsNothing);
       expect(find.text('Automatic pause'), findsNothing);
     });
   });
@@ -612,7 +619,7 @@ void main() {
         _runningSession(movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch),
       );
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+      await tester.tap(find.text('Pause'));
       await tester.pumpAndSettle();
 
       expect(notifier.updateCalls, isNotEmpty);
@@ -622,7 +629,7 @@ void main() {
     testWidgets('resuming pushes an update() with paused: false', (tester) async {
       final (_, notifier) = await _pumpWithNotifier(tester, _pausedSession(movingSeconds: 400));
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Resume'));
+      await tester.tap(find.text('Resume'));
       await tester.pumpAndSettle();
 
       expect(notifier.updateCalls, isNotEmpty);
@@ -697,7 +704,7 @@ void main() {
         _runningSession(movingSinceEpochMs: DateTime.now().millisecondsSinceEpoch),
       );
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+      await tester.tap(find.text('Pause'));
       await tester.pumpAndSettle();
 
       expect(watch.updateCalls, isNotEmpty);
@@ -749,7 +756,7 @@ void main() {
       await tester.pumpAndSettle();
       watch.updateCalls.clear();
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+      await tester.tap(find.text('Pause'));
       await tester.pumpAndSettle();
 
       expect(watch.updateCalls, isEmpty);

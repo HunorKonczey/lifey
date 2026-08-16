@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/format/cardio_formatter.dart';
@@ -18,6 +21,7 @@ import '../domain/workout_session.dart';
 import 'widgets/prompt_number_dialog.dart';
 import 'widgets/route_painter.dart';
 import 'widgets/rpe_selector.dart';
+import 'workouts_screen.dart';
 
 /// The cardio summary screen (docs/cardio/59-cardio-implementation-plan.md
 /// C2.8, M14/M15) — reached two ways, always the same widget:
@@ -233,8 +237,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     if (_busy) return;
     final l10n = AppLocalizations.of(context)!;
     final unitSystem =
-        (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults())
-            .unitSystem;
+        (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults()).unitSystem;
     final imperial = unitSystem == UnitSystem.imperial;
     final unitMeters = imperial ? 1609.344 : 1000.0;
     final current = _distanceMeters;
@@ -263,61 +266,130 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     await _persistCardio(deviceCalories: result, caloriesSource: 'MANUAL');
   }
 
+  /// The bottom "Done" button — reached whether this screen just replaced a
+  /// live [CardioSessionScreen] (`_finish()` pushed it via `pushReplacement`
+  /// onto an imperative `Navigator`, layered on top of the go_router shell —
+  /// its own `context.go('/workouts')` call primes the Sessions tab *behind*
+  /// this screen, but leaves this screen itself on top until it's dismissed)
+  /// or a reopened already-finished session (`open_workout_screens.dart`).
+  /// Either way, `context.go('/workouts')` is the reliable way back: go_router
+  /// replaces its whole stack on `go()`, so it tears down this imperatively-
+  /// pushed screen too, rather than depending on exactly how many routes
+  /// happen to be underneath it right now (a plain `Navigator.pop()` would).
+  void _done() {
+    ref.read(workoutsSessionsTabRequestProvider.notifier).request();
+    if (GoRouter.maybeOf(context) != null) {
+      context.go('/workouts');
+    } else if (Navigator.of(context).canPop()) {
+      // Test/host harnesses without a GoRouter ancestor — falls back to a
+      // plain pop rather than doing nothing.
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final unitSystem =
-        (ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults())
-            .unitSystem;
+        (ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults()).unitSystem;
+
+    final polyline = _routePolyline;
+    final hasRoute = polyline != null && polyline.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: Text(activityTypeLabel(l10n, _activityType))),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.paddingOf(context).bottom + 24),
-        children: [
-          Row(
-            children: [
-              ActivityChip(activityType: _activityType, size: 52),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      activityTypeLabel(l10n, _activityType),
-                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+      backgroundColor: scheme.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // M13's floating header capsule instead of an AppBar — the route
+            // card below it is the hero, and a docked app bar would put a
+            // hard edge above it.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              child: _SummaryHeaderBar(
+                title: activityTypeLabel(l10n, _activityType),
+                onBack: () => Navigator.of(context).maybePop(),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(14, 12, 14, MediaQuery.paddingOf(context).bottom + 12),
+                children: [
+                  // The route leads (M13) — inset card, not full-bleed.
+                  if (hasRoute) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(26),
+                      child: Container(
+                        color: scheme.surfaceContainerLow,
+                        child: RoutePainter(polyline: polyline, height: 262),
+                      ),
                     ),
-                    Text(
-                      _dateLabel.format(_startedAt.toLocal()),
-                      style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
+                    const SizedBox(height: 16),
                   ],
+                  _IdentityRow(
+                    activityType: _activityType,
+                    title: activityTypeLabel(l10n, _activityType),
+                    subtitle: _subtitleLine(l10n),
+                    // M13's ⌚ pill: this session carries a Health/watch id,
+                    // so its numbers came from the wrist, not the phone.
+                    watchLabel: widget.session.healthWorkoutId != null ? l10n.watchChipLabel : null,
+                  ),
+                  if (widget.newRecords.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _NewRecordBanner(
+                        types: widget.newRecords, l10n: l10n, theme: theme, scheme: scheme),
+                  ],
+                  const SizedBox(height: 16),
+                  ..._metricSections(l10n, theme, scheme, unitSystem),
+                  const SizedBox(height: 14),
+                  _FeedbackCard(
+                    l10n: l10n,
+                    scheme: scheme,
+                    theme: theme,
+                    rpe: _rpe,
+                    noteController: _noteController,
+                    noteFocusNode: _noteFocusNode,
+                    busy: _busy,
+                    onRpeChanged: _busy ? (_) {} : _setRpe,
+                  ),
+                ],
+              ),
+            ),
+            // M13–M16 all end the same way: one primary block, pinned, never
+            // scrolled away.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
+              child: SizedBox(
+                height: 56,
+                child: FilledButton.icon(
+                  onPressed: _done,
+                  icon: const Icon(Icons.check, size: 22),
+                  label: Text(l10n.cardioSummaryDoneButton),
+                  style: FilledButton.styleFrom(
+                    textStyle: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
                 ),
               ),
-            ],
-          ),
-          if (widget.newRecords.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            _NewRecordBanner(types: widget.newRecords, l10n: l10n, theme: theme, scheme: scheme),
+            ),
           ],
-          const SizedBox(height: 20),
-          ..._metricSections(l10n, theme, scheme, unitSystem),
-          const SizedBox(height: 10),
-          _FeedbackCard(
-            l10n: l10n,
-            scheme: scheme,
-            theme: theme,
-            rpe: _rpe,
-            noteController: _noteController,
-            noteFocusNode: _noteFocusNode,
-            busy: _busy,
-            onRpeChanged: _busy ? (_) {} : _setRpe,
-          ),
-        ],
+        ),
       ),
     );
+  }
+
+  /// M13/M15's second header line: when it happened, plus the venue when the
+  /// session has one ("Tegnap 19:24 · beltéri").
+  String _subtitleLine(AppLocalizations l10n) {
+    final date = _dateLabel.format(_startedAt.toLocal());
+    final venue = switch (_venue) {
+      'INDOOR' => l10n.venueIndoorLabel,
+      'OUTDOOR' => l10n.venueOutdoorLabel,
+      _ => null,
+    };
+    return venue == null ? date : '$date · ${venue.toLowerCase()}';
   }
 
   List<Widget> _metricSections(
@@ -329,83 +401,126 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     final durationValue = _duration == null ? '—' : CardioFormatter.duration(_duration);
     final hasDistance = (_distanceMeters ?? 0) > 0;
 
+    final metrics = theme.extension<AppMetricColors>();
+    final accent = activityTypeColor(_activityType, context);
+    final heartRate = widget.session.averageHeartRate;
+    final activeCalories = widget.session.activeCalories;
+
     switch (_family) {
+      // M13: no single hero number here — the route is the hero, and the
+      // numbers below it form one even six-cell grid.
       case ActivityFamily.distance:
-        final primaryLabel = hasDistance ? l10n.distanceFieldLabel : l10n.durationSectionLabel;
-        final primaryValue =
-            hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : durationValue;
-        final secondary = <Widget>[];
-        if (hasDistance && _duration != null) {
-          secondary.add(_MetricTile(label: l10n.durationSectionLabel, value: durationValue));
-          final pace = CardioFormatter.pace(_distanceMeters!, _duration, unitSystem);
-          if (pace != null) secondary.add(_MetricTile(label: l10n.paceLabel, value: pace));
-        }
-        if (_elevationGainMeters != null) {
-          secondary.add(_MetricTile(
-            label: l10n.elevationGainFieldLabel,
-            value: CardioFormatter.elevation(_elevationGainMeters!, unitSystem),
-          ));
-        }
+        final pace = hasDistance && _duration != null
+            ? CardioFormatter.pace(_distanceMeters!, _duration, unitSystem)
+            : null;
         return [
-          _PrimaryMetricCard(
-            label: primaryLabel,
-            value: primaryValue,
-            edited: hasDistance && _distanceSource == 'MANUAL',
-            editedLabel: l10n.manuallyEditedBadgeLabel,
-            scheme: scheme,
-            theme: theme,
-            onTap: _busy ? null : _editDistance,
+          _MetricGrid(
+            children: [
+              _MetricTile(
+                icon: Icons.straighten,
+                iconColor: accent,
+                label: l10n.distanceFieldLabel,
+                value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
+                edited: hasDistance && _distanceSource == 'MANUAL',
+                editedLabel: l10n.manuallyEditedBadgeLabel,
+                onTap: _busy ? null : _editDistance,
+              ),
+              _MetricTile(
+                icon: Icons.schedule,
+                iconColor: metrics?.protein,
+                label: l10n.durationSectionLabel,
+                value: durationValue,
+              ),
+              if (pace != null)
+                _MetricTile(
+                  icon: Icons.speed,
+                  iconColor: metrics?.calories,
+                  label: l10n.paceLabel,
+                  value: pace,
+                ),
+              if (_elevationGainMeters != null)
+                _MetricTile(
+                  icon: Icons.terrain,
+                  iconColor: metrics?.weight,
+                  label: l10n.elevationGainFieldLabel,
+                  value: CardioFormatter.elevation(_elevationGainMeters!, unitSystem),
+                ),
+              if (heartRate != null)
+                _MetricTile(
+                  icon: Icons.favorite,
+                  iconColor: metrics?.heart,
+                  label: l10n.heartRateFieldLabel,
+                  value: '${heartRate.round()} bpm',
+                ),
+              if (activeCalories != null)
+                _MetricTile(
+                  icon: Icons.local_fire_department,
+                  iconColor: metrics?.calories,
+                  label: l10n.caloriesLabel,
+                  value: '${activeCalories.round()} kcal',
+                ),
+            ],
           ),
-          if (secondary.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(spacing: 10, runSpacing: 10, children: secondary),
-          ],
           ..._routeSections(l10n, theme, scheme, unitSystem),
         ];
+      // M15: indoor sessions keep the big moving-time card, with the three
+      // machine numbers nested inside it.
       case ActivityFamily.machine:
-        final secondary = <Widget>[
-          _MetricTile(
-            label: l10n.distanceFieldLabel,
-            value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
-            edited: _distanceSource == 'MANUAL',
-            editedLabel: l10n.manuallyEditedBadgeLabel,
-            onTap: _busy ? null : _editDistance,
-          ),
-          if (_avgWatts != null)
-            _MetricTile(label: l10n.avgWattsFieldLabel, value: '${_avgWatts!.round()} W'),
-          if (_avgCadence != null)
-            _MetricTile(label: l10n.avgCadenceFieldLabel, value: '${_avgCadence!.round()} rpm'),
-          if (_resistanceLevel != null)
-            _MetricTile(label: l10n.resistanceLevelFieldLabel, value: '$_resistanceLevel'),
-          _MetricTile(
-            label: l10n.deviceCaloriesFieldLabel,
-            value: _deviceCalories == null ? '—' : '${_deviceCalories!.round()} kcal',
-            edited: _caloriesSource == 'MANUAL',
-            editedLabel: l10n.manuallyEditedBadgeLabel,
-            onTap: _busy ? null : _editDeviceCalories,
-          ),
-        ];
         return [
           _PrimaryMetricCard(
             label: l10n.movingTimeLabel,
             value: durationValue,
             scheme: scheme,
             theme: theme,
+            inner: [
+              _InnerMetric(
+                label: l10n.distanceFieldLabel,
+                value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
+                edited: _distanceSource == 'MANUAL',
+                onTap: _busy ? null : _editDistance,
+              ),
+              if (_avgCadence != null)
+                _InnerMetric(
+                    label: l10n.avgCadenceFieldLabel, value: '${_avgCadence!.round()} rpm'),
+              if (_avgWatts != null)
+                _InnerMetric(label: l10n.avgWattsFieldLabel, value: '${_avgWatts!.round()} W'),
+            ],
           ),
-          const SizedBox(height: 10),
-          Wrap(spacing: 10, runSpacing: 10, children: secondary),
+          const SizedBox(height: 12),
+          _MetricGrid(
+            children: [
+              if (_resistanceLevel != null)
+                _MetricTile(
+                  icon: Icons.tune,
+                  iconColor: accent,
+                  label: l10n.resistanceLevelFieldLabel,
+                  value: '$_resistanceLevel',
+                ),
+              if (heartRate != null)
+                _MetricTile(
+                  icon: Icons.favorite,
+                  iconColor: metrics?.heart,
+                  label: l10n.heartRateFieldLabel,
+                  value: '${heartRate.round()} bpm',
+                ),
+              _MetricTile(
+                icon: Icons.local_fire_department,
+                iconColor: metrics?.calories,
+                label: l10n.deviceCaloriesFieldLabel,
+                value: _deviceCalories == null ? '—' : '${_deviceCalories!.round()} kcal',
+                edited: _caloriesSource == 'MANUAL',
+                editedLabel: l10n.manuallyEditedBadgeLabel,
+                onTap: _busy ? null : _editDeviceCalories,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // "Az »útvonal nélkül« nem üres hely, hanem kimondott állapot" —
+          // for an indoor session this is the normal case, so it reads as an
+          // explanation in a neutral tone, never as an error.
+          _NoRouteCard(title: l10n.noRouteCardTitle, body: l10n.noRouteCardBody),
         ];
       case ActivityFamily.game:
-        final secondary = <Widget>[
-          if (_venue != null)
-            _MetricTile(
-              label: l10n.venueSectionLabel,
-              value: _venue == 'INDOOR' ? l10n.venueIndoorLabel : l10n.venueOutdoorLabel,
-            ),
-          if (_intensity != null) _MetricTile(label: l10n.intensitySectionLabel, value: '$_intensity/5'),
-          if (_scorePoints != null)
-            _MetricTile(label: l10n.scorePointsFieldLabel, value: '$_scorePoints'),
-        ];
         return [
           _PrimaryMetricCard(
             label: l10n.playingTimeLabel,
@@ -413,10 +528,39 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             scheme: scheme,
             theme: theme,
           ),
-          if (secondary.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(spacing: 10, runSpacing: 10, children: secondary),
-          ],
+          const SizedBox(height: 12),
+          _MetricGrid(
+            children: [
+              if (_venue != null)
+                _MetricTile(
+                  icon: _venue == 'INDOOR' ? Icons.home : Icons.park,
+                  iconColor: accent,
+                  label: l10n.venueSectionLabel,
+                  value: _venue == 'INDOOR' ? l10n.venueIndoorLabel : l10n.venueOutdoorLabel,
+                ),
+              if (_intensity != null)
+                _MetricTile(
+                  icon: Icons.local_fire_department,
+                  iconColor: metrics?.calories,
+                  label: l10n.intensitySectionLabel,
+                  value: '$_intensity/5',
+                ),
+              if (heartRate != null)
+                _MetricTile(
+                  icon: Icons.favorite,
+                  iconColor: metrics?.heart,
+                  label: l10n.heartRateFieldLabel,
+                  value: '${heartRate.round()} bpm',
+                ),
+              if (_scorePoints != null)
+                _MetricTile(
+                  icon: Icons.scoreboard,
+                  iconColor: accent,
+                  label: l10n.scorePointsFieldLabel,
+                  value: '$_scorePoints',
+                ),
+            ],
+          ),
         ];
     }
   }
@@ -436,12 +580,11 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     UnitSystem unitSystem,
   ) {
     final polyline = _routePolyline;
+    // The route card itself is drawn at the very top of the screen now
+    // (M13's hero) — what's left here is what sits *under* the metric grid.
     if (polyline == null || polyline.isEmpty) return const [];
 
-    final sections = <Widget>[
-      const SizedBox(height: 16),
-      RoutePainter(polyline: polyline),
-    ];
+    final sections = <Widget>[];
 
     // Synthetic, index-based "dates" — the decoded polyline carries no
     // timestamps (only lat/lng/altitude per point, see `route_encoder.dart`),
@@ -459,18 +602,18 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
       ];
       if (elevationPoints.length >= 2) {
         sections.addAll([
-          const SizedBox(height: 20),
-          Text(
-            l10n.elevationProfileSectionLabel,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 1.2, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          TimeSeriesChart(
-            points: elevationPoints,
-            dateLabelBuilder: (_) => '',
-            valueLabelBuilder: (v) => CardioFormatter.elevation(v, unitSystem),
-            height: 140,
+          const SizedBox(height: 12),
+          // M16 — the profile lives in its own card with the gain/loss
+          // summary on the same line as the section label.
+          _SectionCard(
+            label: l10n.elevationProfileSectionLabel,
+            trailing: '+${CardioFormatter.elevation(_elevationGainMeters!, unitSystem)}',
+            child: TimeSeriesChart(
+              points: elevationPoints,
+              dateLabelBuilder: (_) => '',
+              valueLabelBuilder: (v) => CardioFormatter.elevation(v, unitSystem),
+              height: 120,
+            ),
           ),
         ]);
       }
@@ -478,20 +621,318 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
 
     final splits = widget.session.splits;
     if (splits.isNotEmpty) {
+      // M14's split bars are scaled against the slowest full split, so the
+      // fastest km fills the track and the rest are read against it.
+      final fullSplits = splits.where((s) => s.distanceMeters >= 999).toList();
+      final slowest =
+          fullSplits.isEmpty ? 1 : fullSplits.map((s) => s.durationSeconds).reduce(math.max);
+      final fastest =
+          fullSplits.isEmpty ? 1 : fullSplits.map((s) => s.durationSeconds).reduce(math.min);
       sections.addAll([
-        const SizedBox(height: 20),
-        Text(
-          l10n.splitsSectionLabel,
-          style: theme.textTheme.labelSmall
-              ?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 1.2, fontWeight: FontWeight.w700),
+        const SizedBox(height: 12),
+        _SectionCard(
+          label: l10n.splitsSectionLabel,
+          child: Column(
+            children: [
+              for (final s in splits)
+                _SplitRow(
+                  split: s,
+                  unitSystem: unitSystem,
+                  theme: theme,
+                  scheme: scheme,
+                  accent: activityTypeColor(_activityType, context),
+                  slowestSeconds: slowest,
+                  fastestSeconds: fastest,
+                ),
+            ],
+          ),
         ),
-        const SizedBox(height: 8),
-        ...splits.map((s) => _SplitRow(split: s, unitSystem: unitSystem, theme: theme, scheme: scheme)),
       ]);
     }
 
     return sections;
   }
+}
+
+/// M13/M15/M16's header capsule — back button, title, and nothing else the
+/// app can't actually do (the frames also draw share/edit buttons; sharing
+/// isn't built, and every metric here is edited by tapping it directly).
+class _SummaryHeaderBar extends StatelessWidget {
+  const _SummaryHeaderBar({required this.title, required this.onBack});
+
+  final String title;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 54,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Material(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              onTap: onBack,
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                width: 42,
+                height: 42,
+                child: Icon(Icons.arrow_back, size: 22, color: scheme.onSurfaceVariant),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// M13's identity row under the route: chip, activity, when/where, and the
+/// watch pill when the numbers came from the wrist.
+class _IdentityRow extends StatelessWidget {
+  const _IdentityRow({
+    required this.activityType,
+    required this.title,
+    required this.subtitle,
+    this.watchLabel,
+  });
+
+  final String activityType;
+  final String title;
+  final String subtitle;
+  final String? watchLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        ActivityChip(activityType: activityType, size: 44),
+        const SizedBox(width: 11),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (watchLabel != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.watch, size: 14, color: scheme.primary),
+                const SizedBox(width: 5),
+                Text(
+                  watchLabel!,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// The three-across metric grid (M13/M16) — fixed columns, so the numbers
+/// line up in a grid instead of reflowing like a `Wrap`.
+class _MetricGrid extends StatelessWidget {
+  const _MetricGrid({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i += 3) {
+      final row = children.skip(i).take(3).toList();
+      rows.add(IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var c = 0; c < 3; c++) ...[
+              if (c > 0) const SizedBox(width: 9),
+              // The last row can be short — empty cells keep the columns
+              // aligned rather than stretching two tiles across the width.
+              Expanded(child: c < row.length ? row[c] : const SizedBox.shrink()),
+            ],
+          ],
+        ),
+      ));
+      if (i + 3 < children.length) rows.add(const SizedBox(height: 9));
+    }
+    return Column(children: rows);
+  }
+}
+
+/// A titled card wrapping one block of content (splits, elevation profile) —
+/// M14/M16's `SECTION LABEL` + optional right-hand summary value.
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({required this.label, required this.child, this.trailing});
+
+  final String label;
+  final Widget child;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              if (trailing != null)
+                Text(
+                  trailing!,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// M15's "Nincs útvonal" explanation — an indoor session never had a trail
+/// to lose, so this is a statement, not an error.
+class _NoRouteCard extends StatelessWidget {
+  const _NoRouteCard({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(Icons.route, size: 28, color: scheme.outlineVariant),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  body,
+                  style: TextStyle(fontSize: 11.5, height: 1.5, color: scheme.outline),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One of the small metrics nested inside [_PrimaryMetricCard] (M15).
+class _InnerMetric {
+  const _InnerMetric({
+    required this.label,
+    required this.value,
+    this.edited = false,
+    this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final bool edited;
+  final VoidCallback? onTap;
 }
 
 class _PrimaryMetricCard extends StatelessWidget {
@@ -500,50 +941,124 @@ class _PrimaryMetricCard extends StatelessWidget {
     required this.value,
     required this.scheme,
     required this.theme,
-    this.edited = false,
-    this.editedLabel,
-    this.onTap,
+    this.inner = const [],
   });
 
   final String label;
   final String value;
   final ColorScheme scheme;
   final ThemeData theme;
-  final bool edited;
-  final String? editedLabel;
-  final VoidCallback? onTap;
+  final List<_InnerMetric> inner;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(AppRadius.card),
+      borderRadius: BorderRadius.circular(26),
       clipBehavior: Clip.antiAlias,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.6,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 56,
+                  height: 1.1,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -2,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+            if (inner.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < inner.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 9),
+                      Expanded(child: _InnerMetricTile(metric: inner[i])),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InnerMetricTile extends StatelessWidget {
+  const _InnerMetricTile({required this.metric});
+
+  final _InnerMetric metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
+        onTap: metric.onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  metric.value,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
               Row(
                 children: [
-                  Expanded(
+                  Flexible(
                     child: Text(
-                      label,
-                      style: theme.textTheme.labelSmall?.copyWith(
+                      metric.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
                         color: scheme.onSurfaceVariant,
-                        letterSpacing: 1.2,
-                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                  if (edited) _EditedBadge(label: editedLabel!, scheme: scheme),
+                  if (metric.edited) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.edit, size: 11, color: Color(0xFFC49A6C)),
+                  ],
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(value, style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800)),
             ],
           ),
         ),
@@ -620,6 +1135,8 @@ class _MetricTile extends StatelessWidget {
   const _MetricTile({
     required this.label,
     required this.value,
+    this.icon,
+    this.iconColor,
     this.edited = false,
     this.editedLabel,
     this.onTap,
@@ -627,33 +1144,60 @@ class _MetricTile extends StatelessWidget {
 
   final String label;
   final String value;
+  final IconData? icon;
+  final Color? iconColor;
   final bool edited;
   final String? editedLabel;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(AppRadius.input),
+      borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minWidth: 100),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-              Text(label, style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
-              if (edited) ...[
-                const SizedBox(height: 4),
-                _EditedBadge(label: editedLabel!, scheme: scheme),
-              ],
+              Row(
+                children: [
+                  if (icon != null)
+                    Icon(icon, size: 17, color: iconColor ?? scheme.onSurfaceVariant),
+                  const Spacer(),
+                  if (edited && editedLabel != null)
+                    _EditedBadge(label: editedLabel!, scheme: scheme),
+                ],
+              ),
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
         ),
@@ -679,13 +1223,15 @@ class _EditedBadge extends StatelessWidget {
     const accent = Color(0xFFC49A6C);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.edit, size: 12, color: accent),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accent)),
+          Text(label,
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accent)),
         ],
       ),
     );
@@ -769,43 +1315,80 @@ class _SplitRow extends StatelessWidget {
     required this.unitSystem,
     required this.theme,
     required this.scheme,
+    required this.accent,
+    required this.slowestSeconds,
+    required this.fastestSeconds,
   });
 
   final CardioSplit split;
   final UnitSystem unitSystem;
   final ThemeData theme;
   final ColorScheme scheme;
+  final Color accent;
+
+  /// The full splits' extremes, used to scale the bar and its color.
+  final int slowestSeconds;
+  final int fastestSeconds;
 
   @override
   Widget build(BuildContext context) {
     final duration = Duration(seconds: split.durationSeconds);
-    final pace = CardioFormatter.pace(split.distanceMeters, duration, unitSystem);
-    final elevationDelta = split.elevationDeltaM;
+    // "Az utolsó split részleges, ezért nem tempót mutat, hanem a megtett
+    // távot — így nem tűnik hirtelen belassulásnak" (M14).
+    final partial = split.distanceMeters < 999;
+
+    // Faster split = longer, lighter bar. One hue, two lightness steps —
+    // never a second color family (M13's note).
+    final span = (slowestSeconds - fastestSeconds).clamp(1, 1 << 30);
+    final speed = partial ? 0.0 : ((slowestSeconds - split.durationSeconds) / span).clamp(0.0, 1.0);
+    final barColor = partial
+        ? scheme.outlineVariant
+        : Color.lerp(accent.withValues(alpha: 0.55), accent, speed)!;
+    final fraction = partial ? (split.distanceMeters / 1000).clamp(0.1, 1.0) : 0.55 + 0.45 * speed;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.only(bottom: 9),
       child: Row(
         children: [
           SizedBox(
-            width: 28,
+            width: 16,
             child: Text(
               '${split.splitIndex + 1}',
-              style: theme.textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: partial ? scheme.outline : scheme.onSurfaceVariant,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ),
+          const SizedBox(width: 11),
           Expanded(
-            child: Text(CardioFormatter.distance(split.distanceMeters, unitSystem)),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                height: 12,
+                color: scheme.surfaceContainer,
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: fraction,
+                  child: Container(color: barColor),
+                ),
+              ),
+            ),
           ),
-          Expanded(
-            child: Text(pace ?? '—', textAlign: TextAlign.center),
-          ),
-          SizedBox(
-            width: 64,
-            child: Text(
-              elevationDelta == null
-                  ? '—'
-                  : '${elevationDelta >= 0 ? '+' : '−'}${CardioFormatter.elevation(elevationDelta.abs(), unitSystem)}',
-              textAlign: TextAlign.end,
-              style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+          const SizedBox(width: 11),
+          Text(
+            // A full km split's duration *is* its pace, so one number does
+            // both jobs; a partial split shows how far it actually got.
+            partial
+                ? CardioFormatter.distance(split.distanceMeters, unitSystem)
+                : CardioFormatter.duration(duration),
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: partial ? scheme.outline : scheme.onSurface,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ],
