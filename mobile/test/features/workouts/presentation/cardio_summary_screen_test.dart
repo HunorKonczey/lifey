@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -532,6 +534,47 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(container.read(workoutsSessionsTabRequestProvider), 1);
+    });
+
+    testWidgets('dismisses the screen it was pushed onto', (tester) async {
+      // The real shape of both entry points: this screen is pushed straight
+      // onto the navigator (by `CardioSessionScreen._finish`'s
+      // `pushReplacement`, or by `open_workout_screens.dart`), so it is a
+      // *pageless* route sitting above go_router's own pages. Done used to
+      // only call `context.go('/workouts')`, which rebuilds those pages but
+      // never pops a route on top of them — and after finishing, the location
+      // already *was* `/workouts`, so the button did nothing whatsoever.
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            settingsControllerProvider.overrideWith(_MetricSettings.new),
+            workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
+          ],
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: Text('behind')),
+          ),
+        ),
+      );
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      unawaited(navigator.push(MaterialPageRoute<void>(
+        builder: (_) => CardioSummaryScreen(
+          session: _session(
+            activityType: 'WALKING',
+            cardio: const CardioMetrics(distanceMeters: 5000),
+          ),
+        ),
+      )));
+      await tester.pumpAndSettle();
+      expect(find.byType(CardioSummaryScreen), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CardioSummaryScreen), findsNothing);
+      expect(find.text('behind'), findsOneWidget);
     });
   });
 }

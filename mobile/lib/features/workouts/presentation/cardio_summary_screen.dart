@@ -272,19 +272,27 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   /// its own `context.go('/workouts')` call primes the Sessions tab *behind*
   /// this screen, but leaves this screen itself on top until it's dismissed)
   /// or a reopened already-finished session (`open_workout_screens.dart`).
-  /// Either way, `context.go('/workouts')` is the reliable way back: go_router
-  /// replaces its whole stack on `go()`, so it tears down this imperatively-
-  /// pushed screen too, rather than depending on exactly how many routes
-  /// happen to be underneath it right now (a plain `Navigator.pop()` would).
+  ///
+  /// Both steps below are needed, and `go()` alone was the bug: this screen is
+  /// a **pageless** route — pushed straight onto the root `Navigator`, not
+  /// through go_router — so it sits *above* go_router's own page stack.
+  /// Changing the location rebuilds those pages, but the shell page directly
+  /// underneath this route stays exactly where it is, so nothing ever pops
+  /// this screen. After `_finish()` the location is already `/workouts` on top
+  /// of that, making the call a plain no-op: tapping Done did nothing at all.
+  /// So `go()` for the destination *behind* us, and a pop to actually leave.
   void _done() {
     ref.read(workoutsSessionsTabRequestProvider.notifier).request();
+    // Captured before `go()`: this widget stays mounted through it (exactly
+    // the point above), but reading the navigator first keeps the two steps
+    // independent of that.
+    final navigator = Navigator.of(context);
     if (GoRouter.maybeOf(context) != null) {
       context.go('/workouts');
-    } else if (Navigator.of(context).canPop()) {
-      // Test/host harnesses without a GoRouter ancestor — falls back to a
-      // plain pop rather than doing nothing.
-      Navigator.of(context).pop();
     }
+    // False only in a test/host harness that pumped this screen as `home` —
+    // there `go()` (or nothing) is all there is to do.
+    if (navigator.canPop()) navigator.pop();
   }
 
   @override
