@@ -212,7 +212,7 @@ void main() {
     await tester.pump();
     expect(find.text('GPS'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+    await tester.tap(find.text('Pause'));
     await tester.pumpAndSettle();
 
     expect(find.text('GPS'), findsNothing);

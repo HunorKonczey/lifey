@@ -73,10 +73,31 @@ class QuickStartSheet extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                l10n.quickStartSheetTitle,
-                style:
-                    const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+              // M01's title line carries the *why* of the order on its
+              // right — without it the four tiles look arbitrary.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.quickStartSheetTitle,
+                      style: const TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    l10n.quickStartOrderHint,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -88,17 +109,18 @@ class QuickStartSheet extends ConsumerWidget {
                 _ColdStartBanner(text: l10n.quickStartColdStartBanner),
               ],
               const SizedBox(height: AppSpacing.s16),
+              // M01's grid is 2×2 of fixed-height (142) tiles, not
+              // aspect-ratio driven: the chip, title and subtitle have to
+              // land in the same place on every tile regardless of how wide
+              // the phone is.
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
                 crossAxisSpacing: AppSpacing.s12,
                 mainAxisSpacing: AppSpacing.s12,
-                childAspectRatio: 1.05,
-                children: [
-                  for (final resolved in entries)
-                    _QuickStartTile(resolved: resolved)
-                ],
+                mainAxisExtent: 142,
+                children: [for (final resolved in entries) _QuickStartTile(resolved: resolved)],
               ),
               const SizedBox(height: AppSpacing.s12),
               _AllActivityTypesRow(label: l10n.allActivityTypesLabel),
@@ -132,10 +154,7 @@ class _ColdStartBanner extends StatelessWidget {
           const SizedBox(width: 9),
           Expanded(
             child: Text(text,
-                style: TextStyle(
-                    fontSize: 11.5,
-                    color: scheme.onSurfaceVariant,
-                    height: 1.4)),
+                style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant, height: 1.4)),
           ),
         ],
       ),
@@ -152,8 +171,8 @@ class _AllActivityTypesRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(AppRadius.md),
+      color: scheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(AppRadius.input),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
@@ -163,18 +182,15 @@ class _AllActivityTypesRow extends StatelessWidget {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.s16, vertical: 15),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: 15),
           child: Row(
             children: [
               Icon(Icons.apps, size: 22, color: scheme.primary),
               const SizedBox(width: AppSpacing.s12),
               Expanded(
                   child: Text(label,
-                      style: const TextStyle(
-                          fontSize: 14.5, fontWeight: FontWeight.w700))),
-              Icon(Icons.chevron_right,
-                  size: 20, color: scheme.onSurfaceVariant),
+                      style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700))),
+              Icon(Icons.chevron_right, size: 20, color: scheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -217,7 +233,7 @@ class _QuickStartTile extends ConsumerWidget {
     }
 
     return Material(
-      color: scheme.surfaceContainerLow,
+      color: scheme.surfaceContainer,
       borderRadius: BorderRadius.circular(AppRadius.card),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -225,18 +241,19 @@ class _QuickStartTile extends ConsumerWidget {
             ? startCardioQuickly(context, ref, entry.activityType!)
             : startStrengthQuickly(context, template: resolved.template),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.s12),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // M01 sizes the chip at 56 here — the tile is a thumb target
+              // first and a label second.
               Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: color.withValues(alpha: 0.16)),
-                child: Icon(icon, size: 24, color: color),
+                width: 56,
+                height: 56,
+                decoration:
+                    BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.16)),
+                child: Icon(icon, size: 30, color: color),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,7 +263,10 @@ class _QuickStartTile extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 15.5, fontWeight: FontWeight.w800),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -254,9 +274,7 @@ class _QuickStartTile extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurfaceVariant),
+                        fontSize: 11, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -331,8 +349,7 @@ Future<WorkoutSession> createCardioSession(
 /// starts without GPS, exactly like the "Indítás GPS nélkül" choice would —
 /// the in-session status card (`CardioSessionScreen`, M27/M28) still offers
 /// "Allow" from there.
-Future<void> startCardioQuickly(
-    BuildContext context, WidgetRef ref, String activityType) async {
+Future<void> startCardioQuickly(BuildContext context, WidgetRef ref, String activityType) async {
   HapticFeedback.mediumImpact();
   final sheetNavigator = Navigator.of(context);
   final rootNavigator = Navigator.of(context, rootNavigator: true);
@@ -375,12 +392,10 @@ Future<void> startCardioQuickly(
 /// `TemplatePickerScreen._start`, deliberately **not** routed through
 /// `openSessionScreen` (its own doc comment excludes fresh template starts
 /// on purpose: there's no existing session to branch on yet).
-void startStrengthQuickly(BuildContext context,
-    {required WorkoutTemplate? template}) {
+void startStrengthQuickly(BuildContext context, {required WorkoutTemplate? template}) {
   HapticFeedback.mediumImpact();
   final sheetNavigator = Navigator.of(context);
   final rootNavigator = Navigator.of(context, rootNavigator: true);
   sheetNavigator.pop();
-  rootNavigator.push(
-      MaterialPageRoute(builder: (_) => LogSessionScreen(template: template)));
+  rootNavigator.push(MaterialPageRoute(builder: (_) => LogSessionScreen(template: template)));
 }

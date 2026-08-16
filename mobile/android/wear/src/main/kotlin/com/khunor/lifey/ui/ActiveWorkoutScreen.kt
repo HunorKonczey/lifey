@@ -316,6 +316,10 @@ private fun CardioActiveScreen() {
 
     var showEffortSelector by remember { mutableStateOf(false) }
     var effortRpe by remember { mutableIntStateOf(5) }
+    // Hoisted out of GameMetricsContent so W 19's edge border — the watch's
+    // answer to the phone's top rail (M07) — can be drawn around the whole
+    // screen, not just around the metrics column.
+    var onCourt by remember { mutableStateOf(true) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = isCompactScreen(maxWidth)
@@ -350,6 +354,7 @@ private fun CardioActiveScreen() {
                 when (page) {
                     0 -> CardioMetricsPage(
                         metadata = metadata, liveMetrics = liveMetrics, isCompact = isCompact, maxWidth = maxWidth,
+                        onCourt = onCourt, onToggleCourt = { onCourt = !onCourt },
                     )
                     else -> ControlsPage(
                         exerciseName = display.name,
@@ -374,6 +379,15 @@ private fun CardioActiveScreen() {
                 pageCount = 2, selectedPage = pagerState.currentPage,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
             )
+            // "A barna keret a képernyő szélén ... csuklóemeléskor, fél
+            // másodperc alatt is látszik, hogy a mérés pihen" (W 19).
+            if (metadata.cardioFamily == CardioActivityFamily.GAME && !onCourt) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .border(5.dp, LifeyColors.secondary, CircleShape),
+                )
+            }
         }
     }
 }
@@ -389,7 +403,14 @@ private fun CardioActiveScreen() {
  * slot.
  */
 @Composable
-private fun CardioMetricsPage(metadata: SessionMetadata, liveMetrics: LiveMetrics, isCompact: Boolean, maxWidth: Dp) {
+private fun CardioMetricsPage(
+    metadata: SessionMetadata,
+    liveMetrics: LiveMetrics,
+    isCompact: Boolean,
+    maxWidth: Dp,
+    onCourt: Boolean,
+    onToggleCourt: () -> Unit,
+) {
     val activityType = metadata.cardioActivityType ?: "OTHER_CARDIO"
     val family = metadata.cardioFamily ?: CardioActivityFamily.DISTANCE
     val cardioMetrics = metadata.cardioMetrics
@@ -418,6 +439,7 @@ private fun CardioMetricsPage(metadata: SessionMetadata, liveMetrics: LiveMetric
             GameMetricsContent(
                 metadata = metadata, cardioMetrics = cardioMetrics, liveMetrics = liveMetrics,
                 activityType = activityType, movingSeconds = movingSeconds, isCompact = isCompact,
+                onCourt = onCourt, onToggleCourt = onToggleCourt,
             )
         } else {
             DistanceMachineMetricsContent(
@@ -547,8 +569,9 @@ private fun GameMetricsContent(
     activityType: String,
     movingSeconds: Long,
     isCompact: Boolean,
+    onCourt: Boolean,
+    onToggleCourt: () -> Unit,
 ) {
-    var onCourt by remember { mutableStateOf(true) }
     val activityTint = cardioActivityTint(activityType)
     val tint = if (onCourt) activityTint else LifeyColors.secondary
     val heroStyle = if (isCompact) MaterialTheme.typography.display3 else MaterialTheme.typography.display2
@@ -587,7 +610,7 @@ private fun GameMetricsContent(
         }
     }
     Chip(
-        onClick = { onCourt = !onCourt },
+        onClick = onToggleCourt,
         modifier = Modifier.fillMaxWidth().padding(top = if (isCompact) 8.dp else 12.dp),
         icon = {
             Icon(
@@ -677,19 +700,22 @@ private fun CardioHeartRateRow(liveMetrics: LiveMetrics, isCompact: Boolean) {
 private fun CardioMetricBox(label: String, value: String, isCompact: Boolean, valueTint: Color? = null) {
     Column(
         modifier = Modifier
-            .background(LifeyColors.surface, LifeyShapes.card)
+            .background(
+                valueTint?.copy(alpha = 0.16f) ?: LifeyColors.surface,
+                LifeyShapes.card,
+            )
             .padding(horizontal = if (isCompact) 10.dp else 14.dp, vertical = if (isCompact) 8.dp else 12.dp),
     ) {
         Text(
             text = value,
             style = if (isCompact) MaterialTheme.typography.body2 else MaterialTheme.typography.title3,
-            color = valueTint ?: LifeyColors.onSurface,
+            color = LifeyColors.onSurface,
             maxLines = 1,
         )
         Text(
             text = label,
             style = MaterialTheme.typography.caption2,
-            color = LifeyColors.onSurfaceVariant,
+            color = valueTint ?: LifeyColors.onSurfaceVariant,
             maxLines = 1,
         )
     }

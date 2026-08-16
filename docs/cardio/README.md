@@ -15,7 +15,9 @@ támogatásának tervét tartalmazza. Státusz: **teljes egészében terv, nem i
 | [56-cardio-statistics-plan.md](56-cardio-statistics-plan.md) | Ütközési leltár, metrika-definíciók, PR-ok, edzői riportok — **„mi romolhat el”** | Backend + Flutter + Web |
 | [57-cardio-design-prompt.md](57-cardio-design-prompt.md) | **Önhordó design prompt a Claude Designnak** (§0 blokk másolható) + döntés-napló | Design |
 | [58-cardio-web-plan.md](58-cardio-web-plan.md) | A 11 érintett web-fájl, olvasó cardio-nézet — és **miért nem indítható webről** | Web (Next.js) |
-| [59-cardio-implementation-plan.md](59-cardio-implementation-plan.md) | **Fejlesztési terv: ~48 prompt-méretű lépés**, frame-leképezéssel, mérföldkövekkel | **Fejlesztés — innen dolgozz** |
+| [59-cardio-implementation-plan.md](59-cardio-implementation-plan.md) | **Fejlesztési terv C0–C5-ig: ~50 prompt-méretű lépés**, frame-leképezéssel, mérföldkövekkel | **Fejlesztés — innen dolgozz** |
+| [60-cardio-sport-specifics-plan.md](60-cardio-sport-specifics-plan.md) | **Fejlesztési terv C6–C9-re: 30 lépés** (futás · játék · bicikli · túra), hiányzó design-frame-ek, 6 nyitott döntés | Fejlesztés — a C5 után |
+| [61-cardio-sport-specifics-design-prompts.md](61-cardio-sport-specifics-design-prompts.md) | **A C6–C9 négy design promptja** (M33–M45), közös §0 blokkal — átadható a Claude Designnak | Design |
 | [`design/`](design) | A két kész design-canvas (mobil + web · óra) | Mind |
 
 ## Iterációk egy pillantásra
@@ -30,7 +32,7 @@ támogatásának tervét tartalmazza. Státusz: **teljes egészében terv, nem i
 | C3w | Web: statisztika-paritás (a C3-mal együtt) | 58 |
 | C4a / C4b | GPS-nyomvonal / *(opcionális)* valódi térkép | 54 |
 | C5 | Óra-integráció | 55 |
-| C6–C9 | Sport-specifikumok: futás · szobabicikli · túra · játék | 51 §4 |
+| C6–C9 | Sport-specifikumok: futás · szobabicikli · túra · játék | 51 §4, **60** |
 
 **Felületi lefedettség:** mobil (teljes: indítás, élő mérés, összegzés) · óra (teljes: indítás,
 élő mérés, standalone) · **web: csak megjelenítés** — onnan cardio nem indítható

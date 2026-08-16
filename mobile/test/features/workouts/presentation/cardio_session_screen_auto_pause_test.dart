@@ -192,7 +192,7 @@ void main() {
       'auto-resume', (tester) async {
     final ctx = await _pump(tester);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+    await tester.tap(find.text('Pause'));
     await tester.pumpAndSettle();
 
     ctx.location.emitFix(_fix(lat: 47.5, speed: 3.0));

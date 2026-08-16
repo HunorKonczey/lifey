@@ -277,6 +277,11 @@ elv, mint a C4a.5a/b utáni G11 akku-mérésnél: egyik platform végpróbája s
 
 Ezek egymástól függetlenek, tetszőleges sorrendben és ütemben csúsztathatók.
 
+> **A lépésekre bontott terv külön docban van:**
+> [60-cardio-sport-specifics-plan.md](60-cardio-sport-specifics-plan.md) — 30 lépés, iterációnként
+> külön szállítható mérföldkővel (MF6a–MF6d), a **hiányzó design-frame-ekkel** (M33–M45) és a
+> lezárandó döntésekkel. Az alábbi táblázat csak az áttekintés.
+
 | # | Iteráció | Lépések | Függés |
 |---|---|---|---|
 | **C6** | Futás | km-splitek + tempó-diagram · kadencia · **legjobb 1/5/10 km csúszóablakkal** · futás-PR-ok · hangos/haptikus km-visszajelzés | C4a · *(Q-D1 döntés kell)* |
@@ -309,7 +314,7 @@ külön teszt tartozik, nem csak kézi ellenőrzés:
 | C2 | 13 (11 Windowson, 2 Mac-en: C2.10b, C2.11b) | MF3 |
 | C3 · C1w · C3w | 5 + 4 + 1 | MF4 |
 | C4a · C5 | 7 (6 Windowson, 1 Mac-en: C4a.5b) + 7 | MF5 |
-| C6–C9 | iterációnként 4–6 | MF6 |
+| C6–C9 | 30 (C6: 8 · C9: 6 · C7: 8 · C8: 8), ld. [60](60-cardio-sport-specifics-plan.md) | MF6a–MF6d |
 
 **Összesen ~50 lépés az MF5-ig**, plusz a sport-specifikumok. A javasolt vágási pont, ha
 részletekben szállítanál: **MF2** (kézi rögzítés) már önmagában hasznos funkció, **MF3** az,

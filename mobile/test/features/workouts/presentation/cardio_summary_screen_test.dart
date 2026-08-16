@@ -10,6 +10,7 @@ import 'package:lifey/features/workouts/domain/track_filter.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
 import 'package:lifey/features/workouts/presentation/widgets/route_painter.dart';
+import 'package:lifey/features/workouts/presentation/workouts_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
 /// C1.9 → C2.8: `CardioSummaryScreen` — started read-only (C1.9), now the
@@ -161,11 +162,13 @@ void main() {
       expect(find.byType(RoutePainter), findsOneWidget);
       expect(find.text('ELEVATION PROFILE'), findsOneWidget);
       expect(find.text('SPLITS'), findsOneWidget);
-      // All three splits are 5 m/s => the same "3:20 /km" pace, so three
-      // rows should render it — plain digit texts ('1', '2', '3') aren't
+      // M14's split row is index + bar + one number: a full kilometre shows
+      // its time (which, over 1 km, *is* its pace), and the short remainder
+      // shows the distance it actually covered instead — "így nem tűnik
+      // hirtelen belassulásnak". Plain digit texts ('1', '2', '3') aren't
       // asserted here since the RPE chip row below also renders those.
-      expect(find.text('3:20 /km'), findsNWidgets(3));
-      expect(find.text('1.00 km'), findsNWidgets(2)); // splits 0 and 1
+      expect(find.text('3:20'), findsNWidgets(2)); // splits 0 and 1
+      expect(find.text('1.00 km'), findsNothing); // the bar carries the length now
       expect(find.text('0.20 km'), findsOneWidget); // split 2 (the shorter remainder)
     });
 
@@ -498,6 +501,37 @@ void main() {
 
       expect(find.text('5.00 km'), findsOneWidget);
       expect(find.text('9.00 km'), findsNothing);
+    });
+  });
+
+  group('Done button', () {
+    testWidgets('requests the Sessions tab (no GoRouter ancestor: falls back to a no-op pop)',
+        (tester) async {
+      final container = ProviderContainer(overrides: [
+        settingsControllerProvider.overrideWith(_MetricSettings.new),
+        workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
+      ]);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CardioSummaryScreen(
+              session: _session(activityType: 'RUNNING', cardio: const CardioMetrics(distanceMeters: 5000)),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(container.read(workoutsSessionsTabRequestProvider), 0);
+      await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(workoutsSessionsTabRequestProvider), 1);
     });
   });
 }

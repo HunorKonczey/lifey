@@ -30,6 +30,10 @@
 > - [`design/Lifey Cardio Watch Design.dc.html`](design/Lifey%20Cardio%20Watch%20Design.dc.html) —
 >   **AW 16–22** és **W 15–21**, a meglévő watch-canvas számozásának folytatásaként
 >
+> **A sport-specifikumok (C6–C9) frame-jei nincsenek benne ebben a körben** — azok négy külön,
+> szűkített promptot kaptak: [61-cardio-sport-specifics-design-prompts.md](61-cardio-sport-specifics-design-prompts.md)
+> (M33–M45), a lépésekhez kötve a [60-as tervben](60-cardio-sport-specifics-plan.md).
+>
 > A frame → fejlesztési lépés leképezés és a kódolás sorrendje:
 > [59-cardio-implementation-plan.md §1](59-cardio-implementation-plan.md).
 > A canvas 15. szekciójának **négy nyitott termékkérdése** ott van szétosztva aszerint, melyik
