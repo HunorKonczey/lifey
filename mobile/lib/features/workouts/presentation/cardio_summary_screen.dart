@@ -10,6 +10,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/activity_chip.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/charts/pace_bar_chart.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
@@ -103,6 +104,12 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   // the route the moment someone edits, say, the distance on this screen.
   String? _routePolyline;
   int? _routePointCount;
+
+  /// Which split the reader has tapped, if any (C6.4, M33). Lives here rather
+  /// than inside either widget because it drives *both* the list row and the
+  /// chart bar — that simultaneity is the whole point: nobody has to learn
+  /// that the two are connected.
+  int? _selectedSplitIndex;
 
   int? _rpe;
   late final TextEditingController _noteController;
@@ -453,6 +460,18 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   label: l10n.elevationGainFieldLabel,
                   value: CardioFormatter.elevation(_elevationGainMeters!, unitSystem),
                 ),
+              // Cadence is running's metric only (C6.5): a walk or a hike
+              // never shows it, even when a watch happened to measure steps —
+              // the tile appears solely when a sensor genuinely reported it
+              // for a run. Steps per minute here, not the indoor bike's rpm
+              // (the MACHINE branch below keeps that one).
+              if (_activityType == 'RUNNING' && _avgCadence != null)
+                _MetricTile(
+                  icon: Icons.directions_run,
+                  iconColor: accent,
+                  label: l10n.avgCadenceFieldLabel,
+                  value: '${_avgCadence!.round()} spm',
+                ),
               if (heartRate != null)
                 _MetricTile(
                   icon: Icons.favorite,
@@ -636,22 +655,76 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
           fullSplits.isEmpty ? 1 : fullSplits.map((s) => s.durationSeconds).reduce(math.max);
       final fastest =
           fullSplits.isEmpty ? 1 : fullSplits.map((s) => s.durationSeconds).reduce(math.min);
+      final accent = activityTypeColor(_activityType, context);
+      // The chart and the list are fed from this one list — "egy adat két
+      // nézete" (M33) is a structural claim here, not just a caption.
+      final hasElevation = splits.any((s) => s.elevationDeltaM != null);
+
+      // One split is a list, not a chart: a single bar has nothing to be
+      // compared against, and the average line would run through its middle.
+      if (splits.length >= 2) {
+        sections.addAll([
+          const SizedBox(height: 12),
+          _SectionCard(
+            label: l10n.paceSectionLabel,
+            trailingWidget: _FasterPill(label: l10n.paceChartFasterLabel),
+            child: Column(
+              children: [
+                PaceBarChart(
+                  bars: [
+                    for (final s in splits)
+                      PaceBar(
+                        durationSeconds: s.durationSeconds,
+                        partial: s.distanceMeters < 999,
+                        label: CardioFormatter.duration(Duration(seconds: s.durationSeconds)),
+                      ),
+                  ],
+                  accent: accent,
+                  selectedIndex: _selectedSplitIndex,
+                  onBarTap: (index) => setState(
+                    () => _selectedSplitIndex = _selectedSplitIndex == index ? null : index,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _PaceChartAxis(
+                  averageLabel: _averagePaceLabel(l10n, fullSplits, unitSystem),
+                  totalLabel: CardioFormatter.distance(
+                    splits.fold<double>(0, (sum, s) => sum + s.distanceMeters),
+                    unitSystem,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ]);
+      }
+
       sections.addAll([
         const SizedBox(height: 12),
         _SectionCard(
           label: l10n.splitsSectionLabel,
+          trailing: hasElevation ? null : l10n.splitsNoElevationDataLabel,
           child: Column(
             children: [
-              for (final s in splits)
+              for (final (index, s) in splits.indexed)
                 _SplitRow(
                   split: s,
                   unitSystem: unitSystem,
                   theme: theme,
                   scheme: scheme,
-                  accent: activityTypeColor(_activityType, context),
+                  accent: accent,
                   slowestSeconds: slowest,
                   fastestSeconds: fastest,
+                  showElevation: hasElevation,
+                  selected: _selectedSplitIndex == index,
+                  onTap: () => setState(
+                    () => _selectedSplitIndex = _selectedSplitIndex == index ? null : index,
+                  ),
                 ),
+              if (splits.length >= 2) ...[
+                const SizedBox(height: 4),
+                _SplitSelectionHint(text: l10n.splitSelectionHint),
+              ],
             ],
           ),
         ),
@@ -659,6 +732,21 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     }
 
     return sections;
+  }
+
+  /// The dashed average line's value, in pace terms — computed over the full
+  /// splits only, for the same reason the chart excludes the partial tail
+  /// from its scale.
+  String? _averagePaceLabel(
+    AppLocalizations l10n,
+    List<CardioSplit> fullSplits,
+    UnitSystem unitSystem,
+  ) {
+    if (fullSplits.isEmpty) return null;
+    final meters = fullSplits.fold<double>(0, (sum, s) => sum + s.distanceMeters);
+    final seconds = fullSplits.fold<int>(0, (sum, s) => sum + s.durationSeconds);
+    final pace = CardioFormatter.pace(meters, Duration(seconds: seconds), unitSystem);
+    return pace == null ? null : l10n.paceChartAverageLabel(pace);
   }
 }
 
@@ -821,11 +909,20 @@ class _MetricGrid extends StatelessWidget {
 /// A titled card wrapping one block of content (splits, elevation profile) —
 /// M14/M16's `SECTION LABEL` + optional right-hand summary value.
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.label, required this.child, this.trailing});
+  const _SectionCard({
+    required this.label,
+    required this.child,
+    this.trailing,
+    this.trailingWidget,
+  });
 
   final String label;
   final Widget child;
   final String? trailing;
+
+  /// Takes the same slot as [trailing] for a header that needs more than a
+  /// number (M33's "↑ faster" pill).
+  final Widget? trailingWidget;
 
   @override
   Widget build(BuildContext context) {
@@ -853,7 +950,9 @@ class _SectionCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (trailing != null)
+              if (trailingWidget != null)
+                trailingWidget!
+              else if (trailing != null)
                 Text(
                   trailing!,
                   style: TextStyle(
@@ -1313,10 +1412,15 @@ class _FeedbackCard extends StatelessWidget {
   }
 }
 
-/// One row of the C4a.6 split list — "1 km · 5:12 /km · +12 m". Read-only,
-/// plain text, same visual weight as `_MetricTile` but a full-width row
-/// (a `Wrap` of many small tiles would be far less scannable than a list for
-/// something inherently sequential like splits).
+/// One row of the split list — index · bar · time · elevation delta. Its
+/// depth is the answer to docs/cardio/60 Q-D1: distance, pace and elevation,
+/// **no heart rate** — a fourth number would force 10.5 px type into a 390 px
+/// row. Splits are never hand-editable; the session's distance is, and the
+/// splits recompute from it.
+///
+/// Tapping selects, which lights up this row *and* its bar in the chart above
+/// (M33). A `Wrap` of small tiles would be far less scannable than a list for
+/// something inherently sequential.
 class _SplitRow extends StatelessWidget {
   const _SplitRow({
     required this.split,
@@ -1326,6 +1430,9 @@ class _SplitRow extends StatelessWidget {
     required this.accent,
     required this.slowestSeconds,
     required this.fastestSeconds,
+    required this.showElevation,
+    required this.selected,
+    required this.onTap,
   });
 
   final CardioSplit split;
@@ -1337,6 +1444,13 @@ class _SplitRow extends StatelessWidget {
   /// The full splits' extremes, used to scale the bar and its color.
   final int slowestSeconds;
   final int fastestSeconds;
+
+  /// False when *no* split in the run recorded an altitude change — the card
+  /// says so once instead of every row ending in an unexplained blank.
+  final bool showElevation;
+
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1354,53 +1468,186 @@ class _SplitRow extends StatelessWidget {
         : Color.lerp(accent.withValues(alpha: 0.55), accent, speed)!;
     final fraction = partial ? (split.distanceMeters / 1000).clamp(0.1, 1.0) : 0.55 + 0.45 * speed;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 16,
-            child: Text(
-              '${split.splitIndex + 1}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: partial ? scheme.outline : scheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                height: 12,
+    final elevation = split.elevationDeltaM;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        // The selected row widens past the card's padding rather than just
+        // changing color — M33's negative-margin treatment.
+        margin: const EdgeInsets.only(bottom: 9),
+        padding: selected
+            ? const EdgeInsets.symmetric(horizontal: 8, vertical: 6)
+            : const EdgeInsets.symmetric(vertical: 6),
+        transform: selected ? Matrix4.translationValues(-8, 0, 0) : null,
+        width: selected ? double.infinity : null,
+        decoration: selected
+            ? BoxDecoration(
                 color: scheme.surfaceContainer,
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: fraction,
-                  child: Container(color: barColor),
+                borderRadius: BorderRadius.circular(12),
+              )
+            : null,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              child: Text(
+                '${split.splitIndex + 1}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: selected
+                      ? accent
+                      : (partial ? scheme.outline : scheme.onSurfaceVariant),
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 11),
+            const SizedBox(width: 11),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 12,
+                  color: scheme.surfaceContainer,
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: fraction,
+                    child: Container(color: barColor),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 11),
+            Text(
+              // A full km split's duration *is* its pace, so one number does
+              // both jobs; a partial split shows how far it actually got.
+              partial
+                  ? CardioFormatter.distance(split.distanceMeters, unitSystem)
+                  : CardioFormatter.duration(duration),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: selected ? accent : (partial ? scheme.outline : scheme.onSurface),
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            if (showElevation) ...[
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 38,
+                child: Text(
+                  // Signed, and rounded to whole units — a split's net climb
+                  // is never precise enough for decimals, and the sign is the
+                  // information ("+12" reads instantly as a hill).
+                  elevation == null
+                      ? ''
+                      : (elevation >= 0 ? '+' : '−') +
+                          CardioFormatter.elevation(elevation.abs(), unitSystem),
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// M33's header pill on the pace card: an upward arrow plus "faster", which
+/// is the one thing a reader must know before the chart makes sense — the
+/// scale is inverted, so a taller bar is a quicker split.
+class _FasterPill extends StatelessWidget {
+  const _FasterPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.arrow_upward, size: 11, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 3),
           Text(
-            // A full km split's duration *is* its pace, so one number does
-            // both jobs; a partial split shows how far it actually got.
-            partial
-                ? CardioFormatter.distance(split.distanceMeters, unitSystem)
-                : CardioFormatter.duration(duration),
+            label,
             style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-              color: partial ? scheme.outline : scheme.onSurface,
-              fontFeatures: const [FontFeature.tabularFigures()],
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurfaceVariant,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The line under the pace chart: what the dashed average line is worth, and
+/// how far the run went in total.
+class _PaceChartAxis extends StatelessWidget {
+  const _PaceChartAxis({required this.averageLabel, required this.totalLabel});
+
+  final String? averageLabel;
+  final String totalLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final style = TextStyle(
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+      color: scheme.onSurfaceVariant,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(averageLabel ?? '', style: style),
+        Text(totalLabel, style: style),
+      ],
+    );
+  }
+}
+
+/// M33's closing line under the split list, stating outright that the list
+/// and the chart are the same data — cheaper than expecting the reader to
+/// discover it by tapping.
+class _SplitSelectionHint extends StatelessWidget {
+  const _SplitSelectionHint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.touch_app_outlined, size: 13, color: scheme.outline),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(fontSize: 10.5, height: 1.35, color: scheme.outline),
+          ),
+        ),
+      ],
     );
   }
 }

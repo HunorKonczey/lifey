@@ -481,9 +481,16 @@ class WorkoutSessionServiceImplTest {
      * parameterized; everything else is null.
      */
     private static CardioDetailsRequest cardioDetails(Double distanceMeters, Integer intensity) {
+        return cardioDetails(distanceMeters, intensity, null, null, null);
+    }
+
+    /** As above, plus the C6.1 best-effort trio (docs/cardio/60 C6.1). */
+    private static CardioDetailsRequest cardioDetails(Double distanceMeters, Integer intensity,
+                                                      Integer best1k, Integer best5k, Integer best10k) {
         return new CardioDetailsRequest(
                 distanceMeters,
                 null, null, null, null, null, null,   // elevationGain..maxCadence
+                best1k, best5k, best10k,
                 null, null, null, null,                // avgWatts..deviceCalories
                 null, null, null, null, null, null,    // maxHeartRate..hrZone5Seconds
                 intensity,
@@ -509,7 +516,7 @@ class WorkoutSessionServiceImplTest {
         assertThat(result.cardio().distanceMeters()).isEqualTo(5230.0);
         assertThat(result.cardio().intensity()).isEqualTo(4);
         assertThat(result.splits()).singleElement().satisfies(s -> {
-            assertThat(s.splitIndex()).isEqualTo(0);
+            assertThat(s.splitIndex()).isZero();
             assertThat(s.distanceMeters()).isEqualTo(1000.0);
             assertThat(s.durationSeconds()).isEqualTo(320);
         });
@@ -577,6 +584,83 @@ class WorkoutSessionServiceImplTest {
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(InvalidCardioRequestException.class);
+    }
+
+    // -- Best efforts (docs/cardio/60 C6.1) ---------------------------------
+
+    private static WorkoutSessionRequest runningRequest(CardioDetailsRequest cardio) {
+        return new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.RUNNING, 1800, cardio, null);
+    }
+
+    @Test
+    void create_cardioWithBestEfforts_persistsAndReturnsThem() {
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
+
+        WorkoutSessionResponse result = service.create(
+                runningRequest(cardioDetails(12000.0, null, 250, 1400, 2980)));
+
+        assertThat(result.cardio().best1kSeconds()).isEqualTo(250);
+        assertThat(result.cardio().best5kSeconds()).isEqualTo(1400);
+        assertThat(result.cardio().best10kSeconds()).isEqualTo(2980);
+    }
+
+    @Test
+    void create_cardioWithoutBestEfforts_leavesThemNullNotZero() {
+        // A treadmill run, a walk, or a run shorter than the window: the
+        // client omits the fields entirely, and the old (pre-C6.1) client
+        // can't send them at all. Zero would read as an impossibly fast
+        // record and poison the PR list (docs/cardio/60 §9).
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 10L));
+
+        WorkoutSessionResponse result = service.create(runningRequest(cardioDetails(5230.0, 4)));
+
+        assertThat(result.cardio().best1kSeconds()).isNull();
+        assertThat(result.cardio().best5kSeconds()).isNull();
+        assertThat(result.cardio().best10kSeconds()).isNull();
+    }
+
+    @Test
+    void create_best1kSlowerThan5k_throwsInvalidCardioRequestException() {
+        WorkoutSessionRequest request = runningRequest(cardioDetails(12000.0, null, 1500, 1400, 2980));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(InvalidCardioRequestException.class)
+                .hasMessageContaining("best1kSeconds");
+    }
+
+    @Test
+    void create_best5kSlowerThan10k_throwsInvalidCardioRequestException() {
+        WorkoutSessionRequest request = runningRequest(cardioDetails(12000.0, null, 250, 3000, 2980));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(InvalidCardioRequestException.class)
+                .hasMessageContaining("best5kSeconds");
+    }
+
+    @Test
+    void create_best1kSlowerThan10kWithMissing5k_throwsInvalidCardioRequestException() {
+        // The gap the pairwise check exists for: with 5k absent, comparing
+        // only adjacent pairs would let an impossible 1k through.
+        WorkoutSessionRequest request = runningRequest(cardioDetails(12000.0, null, 3200, null, 2980));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(InvalidCardioRequestException.class)
+                .hasMessageContaining("best10kSeconds");
+    }
+
+    @Test
+    void create_bestEffortsEqual_isAccepted() {
+        // Not realistic, but the constraint is <=, not <: a boundary value
+        // must not be rejected.
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 11L));
+
+        WorkoutSessionResponse result = service.create(
+                runningRequest(cardioDetails(12000.0, null, 1400, 1400, 1400)));
+
+        assertThat(result.cardio().best5kSeconds()).isEqualTo(1400);
     }
 
     @Test

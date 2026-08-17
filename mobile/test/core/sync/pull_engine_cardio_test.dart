@@ -198,6 +198,54 @@ void main() {
     expect(splitRows[1].elevationDeltaM, isNull);
   });
 
+  test('best efforts pulled from the server land in the local row (C6.3)', () async {
+    adapter.sessions = [
+      {
+        ..._baseSession(5),
+        'sessionKind': 'CARDIO',
+        'activityType': 'RUNNING',
+        'movingSeconds': 3600,
+        'cardio': {
+          'distanceMeters': 12000.0,
+          'best1kSeconds': 250,
+          'best5kSeconds': 1400,
+          'best10kSeconds': 2980,
+        },
+        'splits': const [],
+      },
+    ];
+
+    await pullEngine.pullAll();
+
+    final cardioRow = await db.select(db.cardioDetails).getSingle();
+    expect(cardioRow.best1kSeconds, 250);
+    expect(cardioRow.best5kSeconds, 1400);
+    expect(cardioRow.best10kSeconds, 2980);
+  });
+
+  test('a cardio response without best-effort keys leaves them null, not zero', () async {
+    // What every session recorded before C6.1 looks like coming back from the
+    // server: the keys simply aren't there. Zero would read as an impossibly
+    // fast record (docs/cardio/60 §9).
+    adapter.sessions = [
+      {
+        ..._baseSession(6),
+        'sessionKind': 'CARDIO',
+        'activityType': 'RUNNING',
+        'movingSeconds': 1860,
+        'cardio': {'distanceMeters': 5230.5},
+        'splits': const [],
+      },
+    ];
+
+    await pullEngine.pullAll();
+
+    final cardioRow = await db.select(db.cardioDetails).getSingle();
+    expect(cardioRow.best1kSeconds, isNull);
+    expect(cardioRow.best5kSeconds, isNull);
+    expect(cardioRow.best10kSeconds, isNull);
+  });
+
   test('re-pulling the same session replaces cardio metrics rather than duplicating', () async {
     adapter.sessions = [
       {

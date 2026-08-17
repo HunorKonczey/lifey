@@ -51,6 +51,25 @@ public class CardioDetails extends BaseEntity {
     @Column(name = "max_cadence")
     private Double maxCadence;
 
+    // -- Best efforts (docs/cardio/60 C6.1) ---------------------------------
+
+    /**
+     * The fastest continuous 1 km inside the session, in seconds — not the
+     * average pace extrapolated to 1 km (docs/cardio/56 D-C3.8). Computed
+     * client-side from the filtered track; null when the session has no track
+     * or is shorter than the window (null, never 0).
+     */
+    @Column(name = "best_1k_seconds")
+    private Integer best1kSeconds;
+
+    /** The fastest continuous 5 km — see {@link #best1kSeconds}. */
+    @Column(name = "best_5k_seconds")
+    private Integer best5kSeconds;
+
+    /** The fastest continuous 10 km — see {@link #best1kSeconds}. */
+    @Column(name = "best_10k_seconds")
+    private Integer best10kSeconds;
+
     // -- MACHINE ----------------------------------------------------------
 
     @Column(name = "avg_watts")

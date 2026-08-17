@@ -290,6 +290,53 @@ void main() {
     expect(summary.session.splits, isNotEmpty);
   });
 
+  testWidgets('finishing a run over a km persists the best 1 km alongside the splits (C6.3)',
+      (tester) async {
+    final ctx = await _pump(tester);
+    // ~11 m every 3 s => 100 fixes is ~1.1 km at ~3.7 m/s, so exactly one of
+    // the three windows exists. Emitting them without a pump between each
+    // would be faster, but the screen's own fix handling is what has to run.
+    for (var n = 0; n <= 100; n++) {
+      ctx.location.emitFix(_fixAt(n));
+      await tester.pump();
+    }
+
+    final rect = tester.getRect(find.byKey(const Key('slideToFinishBar')));
+    await tester.startGesture(rect.center);
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    final persistedCardio = ctx.controller.finishCalls.single['cardio'] as CardioMetrics?;
+    // 1000 m at ~3.7 m/s is ~270 s — a range, not an exact number: this test
+    // is about the wiring, `best_effort_calculator_test.dart` owns the maths.
+    expect(persistedCardio?.best1kSeconds, isNotNull);
+    expect(persistedCardio!.best1kSeconds, inInclusiveRange(240, 300));
+    // The run never reached these, so they must be absent rather than 0.
+    expect(persistedCardio.best5kSeconds, isNull);
+    expect(persistedCardio.best10kSeconds, isNull);
+  });
+
+  testWidgets('a run shorter than a km finishes with null best efforts, not zeroes',
+      (tester) async {
+    final ctx = await _pump(tester);
+    ctx.location.emitFix(_fixAt(0));
+    await tester.pump();
+    ctx.location.emitFix(_fixAt(1));
+    await tester.pump();
+
+    final rect = tester.getRect(find.byKey(const Key('slideToFinishBar')));
+    await tester.startGesture(rect.center);
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    final persistedCardio = ctx.controller.finishCalls.single['cardio'] as CardioMetrics?;
+    // The route itself was still recorded — only the best efforts are absent.
+    expect(persistedCardio?.routePolyline, isNotNull);
+    expect(persistedCardio!.best1kSeconds, isNull);
+    expect(persistedCardio.best5kSeconds, isNull);
+    expect(persistedCardio.best10kSeconds, isNull);
+  });
+
   testWidgets('a MACHINE session finish never carries a route (no trail exists)', (tester) async {
     final ctx = await _pump(tester, session: _runningSession(clientId: 'bike-1', activityType: 'INDOOR_BIKE'));
 

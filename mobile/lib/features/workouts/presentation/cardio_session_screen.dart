@@ -25,6 +25,7 @@ import '../application/workout_session_controller.dart';
 import '../data/cardio_track_point_repository.dart';
 import '../domain/activity_type.dart';
 import '../domain/auto_pause_detector.dart';
+import '../domain/best_effort_calculator.dart';
 import '../domain/cardio_personal_record.dart';
 import '../domain/cardio_splits_calculator.dart';
 import '../domain/route_encoder.dart';
@@ -1031,6 +1032,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     if (_family == ActivityFamily.distance && trail.isNotEmpty) {
       final encoded = encodeRoute(trail);
       routeSplits = computeSplits(trail);
+      // Same trail, same moment, same write (docs/cardio/60 C6.3) — the
+      // best efforts have exactly the splits' inputs and lifetime, and
+      // deriving them here rather than later is what makes them survive the
+      // raw track points being pruned.
+      final bestEfforts = computeBestEfforts(trail);
       final originalCardio = widget.session.cardio;
       // elevationGainMeters is never null on the accumulator itself (it
       // starts at 0 and only grows) — but "0 m gain" and "no altitude data
@@ -1041,6 +1047,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       routeCardio = CardioMetrics(
         distanceMeters: _trackFilter!.distanceMeters,
         elevationGainMeters: hasAltitude ? _trackFilter!.elevationGainMeters : null,
+        best1kSeconds: bestEfforts.best1kSeconds,
+        best5kSeconds: bestEfforts.best5kSeconds,
+        best10kSeconds: bestEfforts.best10kSeconds,
         avgCadence: _avgCadence,
         avgWatts: _avgWatts,
         resistanceLevel: _resistanceLevel,

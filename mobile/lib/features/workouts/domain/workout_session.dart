@@ -17,6 +17,9 @@ class CardioMetrics {
     this.steps,
     this.avgCadence,
     this.maxCadence,
+    this.best1kSeconds,
+    this.best5kSeconds,
+    this.best10kSeconds,
     this.avgWatts,
     this.maxWatts,
     this.resistanceLevel,
@@ -49,6 +52,15 @@ class CardioMetrics {
   /// Steps/min for running, rpm for the indoor bike.
   final double? avgCadence;
   final double? maxCadence;
+
+  // Best efforts (docs/cardio/60 C6.1–C6.3) — the fastest *continuous*
+  // 1/5/10 km inside the session, computed from the filtered trail at close
+  // time by `best_effort_calculator.dart`, never the average pace scaled up
+  // (docs/cardio/56 D-C3.8). Null means the distance doesn't exist in this
+  // session (no trail, or shorter than the window) — never 0.
+  final int? best1kSeconds;
+  final int? best5kSeconds;
+  final int? best10kSeconds;
 
   // MACHINE
   final double? avgWatts;
@@ -104,6 +116,9 @@ class CardioMetrics {
         steps: (json['steps'] as num?)?.toInt(),
         avgCadence: (json['avgCadence'] as num?)?.toDouble(),
         maxCadence: (json['maxCadence'] as num?)?.toDouble(),
+        best1kSeconds: (json['best1kSeconds'] as num?)?.toInt(),
+        best5kSeconds: (json['best5kSeconds'] as num?)?.toInt(),
+        best10kSeconds: (json['best10kSeconds'] as num?)?.toInt(),
         avgWatts: (json['avgWatts'] as num?)?.toDouble(),
         maxWatts: (json['maxWatts'] as num?)?.toDouble(),
         resistanceLevel: (json['resistanceLevel'] as num?)?.toInt(),
@@ -160,6 +175,9 @@ class CardioMetrics {
         steps: steps ?? fromWatch.steps,
         avgCadence: avgCadence ?? fromWatch.avgCadence,
         maxCadence: maxCadence ?? fromWatch.maxCadence,
+        best1kSeconds: best1kSeconds ?? fromWatch.best1kSeconds,
+        best5kSeconds: best5kSeconds ?? fromWatch.best5kSeconds,
+        best10kSeconds: best10kSeconds ?? fromWatch.best10kSeconds,
         avgWatts: avgWatts ?? fromWatch.avgWatts,
         maxWatts: maxWatts ?? fromWatch.maxWatts,
         resistanceLevel: resistanceLevel ?? fromWatch.resistanceLevel,

@@ -835,5 +835,10 @@
   "watchChipLabel": "Óra",
   "noRouteCardTitle": "Nincs útvonal",
   "noRouteCardBody": "Beltéri edzésnél nem rögzítünk nyomvonalat.",
-  "quickStartOrderHint": "gyakoriság szerint"
+  "quickStartOrderHint": "gyakoriság szerint",
+  "paceSectionLabel": "TEMPÓ SZAKASZONKÉNT",
+  "paceChartFasterLabel": "gyorsabb",
+  "paceChartAverageLabel": "átlag {pace}",
+  "splitSelectionHint": "A kiválasztott szakasz kiemeli a saját oszlopát — a lista és a diagram egy adat két nézete.",
+  "splitsNoElevationDataLabel": "Nincs szintadat"
 }

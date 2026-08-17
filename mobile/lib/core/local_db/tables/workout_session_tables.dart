@@ -128,6 +128,13 @@ class CardioDetails extends Table {
   RealColumn get avgCadence => real().nullable()();
   RealColumn get maxCadence => real().nullable()();
 
+  // Best efforts (docs/cardio/60 C6.1–C6.3) — the fastest continuous 1/5/10
+  // km inside the session, in seconds. Null (never 0) when the session has no
+  // trail or is shorter than the window.
+  IntColumn get best1kSeconds => integer().nullable()();
+  IntColumn get best5kSeconds => integer().nullable()();
+  IntColumn get best10kSeconds => integer().nullable()();
+
   // MACHINE
   RealColumn get avgWatts => real().nullable()();
   RealColumn get maxWatts => real().nullable()();

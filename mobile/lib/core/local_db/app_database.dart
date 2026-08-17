@@ -61,7 +61,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 36;
+  int get schemaVersion => 37;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -311,6 +311,16 @@ class AppDatabase extends _$AppDatabase {
           // recorded a point (GPS didn't exist before this).
           if (from < 36) {
             await m.createTable(cardioTrackPoints);
+          }
+          // V37: running best efforts (docs/cardio/60 C6.1–C6.3) — three
+          // nullable columns, no backfill. A session that closed before this
+          // existed keeps null, which is the honest answer: its raw track
+          // points may already have been pruned, and null means "this
+          // distance doesn't exist in this session" rather than "zero".
+          if (from < 37) {
+            await _addColumnIfMissing(m, cardioDetails, cardioDetails.best1kSeconds);
+            await _addColumnIfMissing(m, cardioDetails, cardioDetails.best5kSeconds);
+            await _addColumnIfMissing(m, cardioDetails, cardioDetails.best10kSeconds);
           }
         },
       );

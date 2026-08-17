@@ -88,6 +88,16 @@ class ExerciseService : Service() {
     private var lastElevationGainMeters: Double? = null
     private var lastElevationLossMeters: Double? = null
 
+    // Running cadence (docs/cardio/60-cardio-sport-specifics-plan.md C6.5).
+    // STEPS_PER_MINUTE_STATS is a *statistical* aggregate, so Health Services
+    // hands over the average and the max already computed — no summing by
+    // hand, unlike [activeCaloriesTotal]. Only ever non-null for a RUNNING
+    // session whose device actually backs the data type: walking and hiking
+    // never request it (see [buildExerciseConfig]), so their summary carries
+    // no cadence at all rather than a number nobody asked for.
+    private var lastAvgCadence: Double? = null
+    private var lastMaxCadence: Double? = null
+
     // Pihenő-visszaszámláló haptika (docs/40-watch-app-plan.md §5.4/F4):
     // scheduled independently of start/end commands, for the service's whole
     // lifetime, since restEndsAtEpochMs can change many times per session.
@@ -131,6 +141,10 @@ class ExerciseService : Service() {
             update.latestMetrics.getData(DataType.DISTANCE_TOTAL)?.total?.let { lastDistanceMeters = it }
             update.latestMetrics.getData(DataType.ELEVATION_GAIN_TOTAL)?.total?.let { lastElevationGainMeters = it }
             update.latestMetrics.getData(DataType.ELEVATION_LOSS_TOTAL)?.total?.let { lastElevationLossMeters = it }
+            update.latestMetrics.getData(DataType.STEPS_PER_MINUTE_STATS)?.let { stats ->
+                lastAvgCadence = stats.average.toDouble()
+                lastMaxCadence = stats.max.toDouble()
+            }
             SessionStateHolder.onPausedChanged(update.exerciseStateInfo.state.isPaused)
             sendLiveMetrics()
         }
@@ -450,6 +464,14 @@ class ExerciseService : Service() {
                     add(DataType.PACE)
                     add(DataType.ELEVATION_GAIN_TOTAL)
                 }
+                // Cadence is running's metric, not the whole DISTANCE
+                // family's (C6.5): a walker's or hiker's steps-per-minute is
+                // a number nobody trains on, and the summary deliberately
+                // has no place to show it. Requesting it anyway would put it
+                // on the wire for the phone to then ignore.
+                if (activityType == "RUNNING") {
+                    add(DataType.STEPS_PER_MINUTE_STATS)
+                }
             }
         }
         // D-C5.2's own warning: "nem kérünk olyan adattípust, amit a
@@ -508,6 +530,8 @@ class ExerciseService : Service() {
         lastDistanceMeters = null
         lastElevationGainMeters = null
         lastElevationLossMeters = null
+        lastAvgCadence = null
+        lastMaxCadence = null
         val config = buildExerciseConfig(activityType)
         try {
             exerciseClient.setUpdateCallback(updateCallback)
@@ -557,6 +581,8 @@ class ExerciseService : Service() {
         lastDistanceMeters = null
         lastElevationGainMeters = null
         lastElevationLossMeters = null
+        lastAvgCadence = null
+        lastMaxCadence = null
         val template = templateJson?.let { parseStandaloneTemplate(it) }
         val config = buildExerciseConfig(activityType)
         try {
@@ -731,7 +757,9 @@ class ExerciseService : Service() {
      */
     private fun cardioSummaryJson(): JSONObject? {
         if (currentActivityType == null) return null
-        if (lastDistanceMeters == null && lastElevationGainMeters == null && lastElevationLossMeters == null) {
+        if (lastDistanceMeters == null && lastElevationGainMeters == null &&
+            lastElevationLossMeters == null && lastAvgCadence == null
+        ) {
             return null
         }
         return JSONObject().apply {
@@ -739,6 +767,11 @@ class ExerciseService : Service() {
             if (lastDistanceMeters != null) put("distanceSource", "DEVICE")
             putOpt("elevationGainMeters", lastElevationGainMeters)
             putOpt("elevationLossMeters", lastElevationLossMeters)
+            // Absent unless the sensor genuinely reported it (C6.5's kész-ha)
+            // — putOpt drops a null key entirely, so the phone sees "no
+            // cadence", not "cadence: 0".
+            putOpt("avgCadence", lastAvgCadence)
+            putOpt("maxCadence", lastMaxCadence)
         }
     }
 

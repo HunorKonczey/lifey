@@ -1,6 +1,7 @@
 # 60 – Cardio sport-specifikumok: fejlesztési terv (C6–C9)
 
-Státusz: **TERV, a fejlesztés nem indult el — a design viszont elkészült (2026-08-16).**
+Státusz: **A fejlesztés elindult — a design kész (2026-08-16), a C6.1–C6.4 leszállt, a C6.5
+telefon- és Wear OS-fele kész, a watchOS-fele elmaradt (Mac kell hozzá — ld. [§4](#4-c6--futás-specifikum-8-lépés--mf6a)).**
 A frame-ek: [`design/Lifey Cardio Sport-specifikumok.dc.html`](design/Lifey%20Cardio%20Sport-specifikumok.dc.html),
 részletes leírásuk a [61-es docban](61-cardio-sport-specifics-design-prompts.md) — **minden UI-lépés onnan dolgozik.**
 Előzmény: az [59](59-cardio-implementation-plan.md)
@@ -128,7 +129,7 @@ natív oldala (Kotlin/Compose) is.
 
 | Lépés | Platform | Miért |
 |---|---|---|
-| **C6.5** | **megosztott** | A kadencia megjelenítése az órán natív munka mindkét platformon: a **Wear OS fele Windowson** megy, a **watchOS fele Mac-et igényel** (SwiftUI, `mobile/ios/LifeyWatch/`) — ugyanaz a vágás, mint a C5.7a/b-nél |
+| **C6.5** | **megosztott** | A kadencia megjelenítése az órán natív munka mindkét platformon: a **Wear OS fele Windowson** megy, a **watchOS fele Mac-et igényel** (SwiftUI, `mobile/ios/LifeyWatch/`) — ugyanaz a vágás, mint a C5.7a/b-nél. **Állapot (2026-08-17): a Wear OS-fél kész, a watchOS-fél elmaradt** |
 | **C9.1** | Windows | A zóna-panel **tiszta Dart**: a zóna-adatot az óra a C5.7 óta már küldi, itt csak megjelenítés van *(korábban tévesen Mac-esként szerepelt)* |
 | minden más C6–C9 lépés | Windows | Backend-migrációk, Drift/repository, Flutter UI, saját festésű diagramok |
 
@@ -147,13 +148,47 @@ A teljes, C0–C9-re kiterjedő platform-mátrix és a besorolás szabálya:
 | # | Lépés | Fájlok | Frame | Kész-ha |
 |---|---|---|---|---|
 | **C6.0** ✅ | Design: futás-frame-ek | [61 §2](61-cardio-sport-specifics-design-prompts.md#2-c6--futás--m33m36) | **M33–M36** | **Kész (2026-08-16)** — a canvasban M33–M36 + állapot-kivágatok + M33 light/EN minta |
-| **C6.1** | Backend: **V69** — `cardio_details` + `best_1k_seconds`, `best_5k_seconds`, `best_10k_seconds`; DTO + mapper + validáció (nem-negatív, `best_1k ≤ best_5k ≤ best_10k`) | `db/migration/V69__*.sql`, `session/cardio/CardioDetails.java`, `session/dto/CardioDetailsRequest.java`, `CardioDetailsResponse.java`, `WorkoutSessionMapper.java`, `session/service/WorkoutSessionServiceImpl.java` | – | Régi kliens payloadja változatlanul átmegy (a mezők nullable-ok); a monotonitás-sértés 400-at ad (teszt) |
-| **C6.2** | Mobil domain: `best_effort_calculator.dart` — **csúszóablak** a szűrt nyomvonalon 1/5/10 km-re, interpolált ablakhatárral (a `cardio_splits_calculator.dart` mintájára) | `features/workouts/domain/best_effort_calculator.dart` (új) | – | Unit-tesztek: ritka nyomvonal · szünet a nyomvonalban · a session rövidebb az ablaknál → `null` · **GPS-hézag → az azon átnyúló ablak érvénytelen** · a 10 km-es sosem gyorsabb tempójú, mint az 1 km-es azonos adaton |
-| **C6.3** | Zárás-bekötés: a best-effort ugyanott számolódik, ahol a splitek; drift-oszlopok + repository + payload + `pull_engine` | `core/local_db/tables/workout_session_tables.dart`, `data/workout_session_repository.dart`, `application/workout_session_controller.dart`, `core/sync/pull_engine.dart` | – | Egy lezárt futás után a három érték eltárolódik és **átszinkronizál**; nyomvonal nélküli futásnál mindhárom `null`, nem 0 |
-| **C6.4** | Összegzés: **tempó-oszlopdiagram** (nem terület — ld. [61 §2](61-cardio-sport-specifics-design-prompts.md)) + split-sor **táv + tempó + szint** mélységgel | `presentation/cardio_summary_screen.dart`, `shared/widgets/charts/`, `l10n/` | **M33** | A diagram és a lista **ugyanabból a split-listából** dolgozik; a kiválasztott split **a sorát és az oszlopát is** kiemeli; 1 splitnél nincs diagram; a részleges utolsó split nem kap oszlopot |
-| **C6.5** | **Kadencia** bekötése: óráról érkező `avgCadence`/`maxCadence` megjelenítése (csak futásnál), Wear OS + watchOS oldal | `application/watch_session_merge.dart`, `presentation/cardio_summary_screen.dart`, natív óra-oldal | **M33** | A kadencia csak akkor jelenik meg, ha a szenzor tényleg küldte; a séta/túra nem mutatja. **watchOS-fele Mac-et igényel** |
+| **C6.1** ✅ | Backend: **V69** — `cardio_details` + `best_1k_seconds`, `best_5k_seconds`, `best_10k_seconds`; DTO + mapper + validáció (nem-negatív, `best_1k ≤ best_5k ≤ best_10k`) | `db/migration/V69__cardio_best_efforts.sql`, `session/cardio/CardioDetails.java`, `session/dto/CardioDetailsRequest.java`, `CardioDetailsResponse.java`, `WorkoutSessionMapper.java`, `session/service/WorkoutSessionServiceImpl.java` | – | **Kész (2026-08-16)** — a mezők nullable-ok, a régi kliens payloadja változatlanul átmegy és a hiányzó érték `null`, nem 0; a monotonitást a service **páronként** ellenőrzi (a hiányzó 5 km-es sem enged át lehetetlen 1k/10k párost) → 400, a `cardio_details_best_efforts_monotonic_ck` pedig DB-szintű háló |
+| **C6.2** ✅ | Mobil domain: `best_effort_calculator.dart` — **csúszóablak** a szűrt nyomvonalon 1/5/10 km-re, interpolált ablakhatárral (a `cardio_splits_calculator.dart` mintájára) | `features/workouts/domain/best_effort_calculator.dart` (új) | – | **Kész (2026-08-16)** — 10 unit-teszt: ritka nyomvonal · szünet a nyomvonalban (60 s alatt nem hézag, és az idejét az ablak megfizeti) · a session rövidebb az ablaknál → `null` · GPS-hézag → a nyomvonal ott **kettévágódik** (a §4.3-as 60 s-os küszöbbel, ugyanaz a szabály, mint a `route_encoder`-ben), így az ablak nem nyúlhat át rajta · a 10 km-es sosem gyorsabb tempójú, mint az 1 km-es |
+| **C6.3** ✅ | Zárás-bekötés: a best-effort ugyanott számolódik, ahol a splitek; drift-oszlopok + repository + payload + `pull_engine` | `core/local_db/tables/workout_session_tables.dart` (+ **drift séma 37**), `data/workout_session_repository.dart`, `domain/workout_session.dart`, `presentation/cardio_session_screen.dart`, `core/sync/pull_engine.dart` | – | **Kész (2026-08-16)** — a `_finish()` ugyanabból a `trail`-ből és ugyanabban az outbox-írásban számolja, mint a spliteket; a három érték a drift-soron, a payloadon és a pullon is átmegy; 1 km alatti futásnál mindhárom `null`, nem 0 (widget-teszt). A `workout_session_controller` nem igényelt változást — a `CardioMetrics` már végig-vezette a mezőket |
+| **C6.4** ✅ | Összegzés: **tempó-oszlopdiagram** (nem terület — ld. [61 §2](61-cardio-sport-specifics-design-prompts.md)) + split-sor **táv + tempó + szint** mélységgel | `presentation/cardio_summary_screen.dart`, `shared/widgets/charts/pace_bar_chart.dart` (új), `l10n/` | **M33** | **Kész (2026-08-16)** — a diagram és a lista ugyanazt a `session.splits`-et kapja (teszt hasonlítja a kettőt); a kiválasztás **egy állapot a képernyőn**, ezért a sor és az oszlop együtt világít; 1 splitnél nincs diagram; a részleges utolsó split **szürkén megjelenik, de kimarad az értékelésből** (skála, átlagvonal, „leggyorsabb" felirat) — ld. a lenti megjegyzést. Szintadat nélkül a kártya **egyszer** mondja ki, nem soronként üres oszlop |
+| **C6.5** 🟡 | **Kadencia** bekötése: óráról érkező `avgCadence`/`maxCadence` megjelenítése (csak futásnál), Wear OS + watchOS oldal | `presentation/cardio_summary_screen.dart`, `android/wear/.../ExerciseService.kt`, ~~`mobile/ios/LifeyWatch/`~~ | **M33** | **Részben kész (2026-08-17)** — a **Wear OS-fél és a telefon-fél kész**: a futás-összegzés `spm`-ben mutatja a kadenciát, és csak akkor, ha a szenzor tényleg küldte; séta/túra sosem, a szobabicikli `rpm`-je változatlan. **A watchOS-fél elmaradt — Mac-et igényel**, ld. a lenti megjegyzést |
 | **C6.6** | **Km-visszajelzés** futás közben: rezgés + rövid csengő külön kapcsolóval; a beszélt sor **szaggatott, „hamarosan”** állapotban | `presentation/cardio_session_screen.dart`, `application/km_cue_controller.dart` (új), `presentation/widgets/auto_pause_settings_sheet.dart` (a lap mintája), beállítás-tár | **M35** | Háttérben/zárolt képernyőn is megszólal; **auto-pause alatt nem üt** (teszt); a lap a mértékegységet **magyarázza, nem állítja** |
 | **C6.7** | **Futás-PR-ok**: `CardioPrType` bővítés `fastest1k` / `fastest5k` / `fastest10k` + baseline + **egy** ünneplő dialógus + statisztika-lista | `domain/cardio_personal_record.dart`, `presentation/cardio_summary_screen.dart`, `features/statistics/application/stat_summary_data.dart` | **M34**, **M36** | Csak futás termel ilyen PR-t; **séta/túra nem** ([56 §5.2](56-cardio-statistics-plan.md)); **négy rekord = egy dialógus, egy haptika, egy lista**, soronként az előző értékkel; a nem létező résztávok **szürkén sem** jelennek meg |
+
+> ### ⏳ C6.5 — a watchOS-fél ELMARADT (Mac hiányában)
+>
+> **Ami kész:** a **telefon-oldal** (`cardio_summary_screen.dart` — a futás metrika-rácsa mutatja a
+> kadenciát `spm`-ben, kizárólag `RUNNING`-nál és kizárólag ha érkezett érték) és a **Wear OS-oldal**
+> (`ExerciseService.kt` — `DataType.STEPS_PER_MINUTE_STATS`, **csak `RUNNING`-ra kérve**, az átlag és
+> a max a záró `cardio` JSON-be `avgCadence`/`maxCadence` kulcsokkal). A Wear-modul lefordítva
+> (`./gradlew :wear:compileDebugKotlin`). A merge-út nem igényelt változtatást: a
+> `CardioMetrics.fromJson` + `mergedWithWatchMeasurement` már végig-vezette a két mezőt — ezt most
+> teszt is rögzíti (`cardio_metrics_watch_merge_test.dart`), és ezzel a Kotlin által írt kulcsnevek
+> is le vannak szegezve.
+>
+> *(A terv `application/watch_session_merge.dart`-ot sorolt fel; az a fájl a STRENGTH gyakorlat/
+> szett-egyeztetésé, a cardio-metrikák nem érintik.)*
+>
+> **Ami elmaradt:** a **watchOS-fél** — `mobile/ios/LifeyWatch/`, `HKQuantityType(.runningCadence)`
+> ill. a `HKLiveWorkoutBuilder` statisztikája, majd ugyanezen két kulcs beírása a záró
+> summary-payloadba. SwiftUI/Xcode kell hozzá, tehát **Mac** — ez a 30 lépésből az az egy, amit a
+> [§3.2](#32-platform) is Mac-esként jelöl. Amíg ez nincs meg, egy **Apple Watch-csal futott edzés
+> nem küld kadenciát**, és a telefon helyesen nem mutat semmit (nem nullát) — a hiány tehát nem
+> ront el semmit, csak nincs adat. A telefon-oldal **készen áll a fogadására**: amikor a watchOS-fél
+> elkészül, Dart-változtatás nem kell hozzá.
+>
+> **C6.4 — a részleges split kezelése.** A fenti kész-ha „nem kap oszlopot"-ot mond, a
+> [61 §2 M33](61-cardio-sport-specifics-design-prompts.md) viszont „**szürke** (`3C3E32`) és nem kap
+> saját oszlopot **az értékelésben**". A megvalósítás a 61-est követi (a §1 szerint a UI-lépések
+> onnan dolgoznak, és a design színt is ad neki — amit csak kirajzolt oszlopnak lehet adni): a
+> részleges sáv **látszik**, de nem kerül be a skálába, az átlagvonalba és a „leggyorsabb" feliratba.
+> Ez a lényegi védelem: a 200 m-es maradék a *legrövidebb idő* a listában, tehát pontozva ő lenne a
+> futás „leggyorsabb szakasza", és minden valódi kilométert összenyomna.
+>
+> **A `PACE` fejléc helyett `PACE PER SPLIT`:** ugyanezen a képernyőn a metrika-rács már címkéz egy
+> „PACE" értéket (a session átlagtempóját), és két azonos fejléc ugyanazt a számot ígérné kétszer.
+> A mértékegység az alatta lévő átlag-soron látszik.
 
 **Elfogadás (MF6a)**
 

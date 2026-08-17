@@ -14,6 +14,7 @@ import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart'
 import 'package:lifey/features/workouts/presentation/widgets/route_painter.dart';
 import 'package:lifey/features/workouts/presentation/workouts_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
+import 'package:lifey/shared/widgets/charts/pace_bar_chart.dart';
 
 /// C1.9 → C2.8: `CardioSummaryScreen` — started read-only (C1.9), now the
 /// full editable summary (C2.8, M14/M15). docs/cardio/59-cardio-implementation-plan.md
@@ -128,6 +129,32 @@ WorkoutSession _session({
   );
 }
 
+/// A finished RUNNING session carrying [route]'s polyline, with its split
+/// list overridable — the C6.4 cases differ only in what the splits look
+/// like (one split, no altitude, a signed delta).
+WorkoutSession _routedSession(
+  ({String polyline, List<CardioSplit> splits}) route, {
+  List<CardioSplit>? splits,
+}) {
+  return WorkoutSession(
+    clientId: 'c1',
+    exercises: const [],
+    sets: const [],
+    startedAt: DateTime(2026, 8, 10, 7),
+    finishedAt: DateTime(2026, 8, 10, 7, 30),
+    sessionKind: 'CARDIO',
+    activityType: 'RUNNING',
+    movingSeconds: 1800,
+    cardio: CardioMetrics(
+      distanceMeters: 5000,
+      elevationGainMeters: 44,
+      routePolyline: route.polyline,
+      routePointCount: 50,
+    ),
+    splits: splits ?? route.splits,
+  );
+}
+
 void main() {
   group('route / elevation profile / splits (C4a.6)', () {
     testWidgets('a DISTANCE session with a route shows the route painter and split list',
@@ -172,6 +199,101 @@ void main() {
       expect(find.text('3:20'), findsNWidgets(2)); // splits 0 and 1
       expect(find.text('1.00 km'), findsNothing); // the bar carries the length now
       expect(find.text('0.20 km'), findsOneWidget); // split 2 (the shorter remainder)
+    });
+
+    testWidgets('the pace chart and the split list are driven by one selection (C6.4, M33)',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final route = _testRoute();
+      await _pump(tester, _routedSession(route));
+
+      expect(find.text('PACE PER SPLIT'), findsOneWidget);
+      expect(find.byType(PaceBarChart), findsOneWidget);
+      expect(tester.widget<PaceBarChart>(find.byType(PaceBarChart)).selectedIndex, isNull);
+
+      // Tapping the *list* row moves the *chart's* selection — that shared
+      // index is the "egy adat két nézete" claim, made structurally.
+      await tester.tap(find.text('3:20').first);
+      await tester.pumpAndSettle();
+      expect(tester.widget<PaceBarChart>(find.byType(PaceBarChart)).selectedIndex, 0);
+
+      // Tapping the same row again clears it rather than sticking.
+      await tester.tap(find.text('3:20').first);
+      await tester.pumpAndSettle();
+      expect(tester.widget<PaceBarChart>(find.byType(PaceBarChart)).selectedIndex, isNull);
+    });
+
+    testWidgets('the chart feeds on the same split list the rows do', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final route = _testRoute();
+      await _pump(tester, _routedSession(route));
+
+      final bars = tester.widget<PaceBarChart>(find.byType(PaceBarChart)).bars;
+      expect(bars, hasLength(route.splits.length));
+      expect([for (final b in bars) b.durationSeconds],
+          [for (final s in route.splits) s.durationSeconds]);
+      // The 200 m remainder is the only one marked partial — it must not be
+      // scored as the fastest split of the run.
+      expect([for (final b in bars) b.partial], [false, false, true]);
+    });
+
+    testWidgets('a single split gets a list but no chart', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final route = _testRoute();
+      await _pump(
+        tester,
+        _routedSession(route, splits: const [
+          CardioSplit(
+              splitIndex: 0, distanceMeters: 1000, durationSeconds: 200, elevationDeltaM: 20),
+        ]),
+      );
+
+      // Nothing to compare one bar against, and the average line would run
+      // straight through it.
+      expect(find.byType(PaceBarChart), findsNothing);
+      expect(find.text('PACE PER SPLIT'), findsNothing);
+      expect(find.text('SPLITS'), findsOneWidget);
+    });
+
+    testWidgets('split rows carry the elevation delta, signed', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final route = _testRoute();
+      await _pump(
+        tester,
+        _routedSession(route, splits: const [
+          CardioSplit(
+              splitIndex: 0, distanceMeters: 1000, durationSeconds: 200, elevationDeltaM: 20),
+          CardioSplit(
+              splitIndex: 1, distanceMeters: 1000, durationSeconds: 210, elevationDeltaM: -4),
+        ]),
+      );
+
+      expect(find.text('+20 m'), findsOneWidget);
+      expect(find.text('−4 m'), findsOneWidget);
+      expect(find.text('No elevation data'), findsNothing);
+    });
+
+    testWidgets('a run with no altitude data says so once, instead of blanking every row',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final route = _testRoute();
+      await _pump(
+        tester,
+        _routedSession(route, splits: const [
+          CardioSplit(splitIndex: 0, distanceMeters: 1000, durationSeconds: 200),
+          CardioSplit(splitIndex: 1, distanceMeters: 1000, durationSeconds: 210),
+        ]),
+      );
+
+      expect(find.text('No elevation data'), findsOneWidget);
+      // The list itself still works — only the elevation column is absent.
+      expect(find.text('3:20'), findsOneWidget);
+      expect(find.text('3:30'), findsOneWidget);
     });
 
     testWidgets('a DISTANCE session without a route shows none of the C4a.6 sections',
@@ -285,6 +407,83 @@ void main() {
     expect(find.text('42 m'), findsOneWidget);
     // Never entered by hand, no badge.
     expect(find.text('Edited'), findsNothing);
+  });
+
+  group('running cadence (C6.5)', () {
+    testWidgets('a run shows the cadence the watch measured, in steps per minute',
+        (tester) async {
+      await _pump(
+        tester,
+        _session(
+          activityType: 'RUNNING',
+          movingSeconds: 1800,
+          cardio: const CardioMetrics(distanceMeters: 5000, avgCadence: 172),
+        ),
+      );
+
+      expect(find.text('172 spm'), findsOneWidget);
+      // The indoor bike's unit must not leak onto a run.
+      expect(find.text('172 rpm'), findsNothing);
+    });
+
+    testWidgets('a run with no cadence data shows no cadence tile at all', (tester) async {
+      // The kész-ha: it appears only when a sensor genuinely sent it — no
+      // placeholder dash, no empty tile.
+      await _pump(
+        tester,
+        _session(
+          activityType: 'RUNNING',
+          movingSeconds: 1800,
+          cardio: const CardioMetrics(distanceMeters: 5000),
+        ),
+      );
+
+      expect(find.text('CADENCE'), findsNothing);
+      expect(find.textContaining('spm'), findsNothing);
+    });
+
+    testWidgets('a walk never shows cadence, even when one was measured', (tester) async {
+      // Steps per minute is a number a walker doesn't train on — the metric
+      // belongs to running, so the tile doesn't exist here.
+      await _pump(
+        tester,
+        _session(
+          activityType: 'WALKING',
+          movingSeconds: 2400,
+          cardio: const CardioMetrics(distanceMeters: 3000, avgCadence: 118),
+        ),
+      );
+
+      expect(find.textContaining('spm'), findsNothing);
+      expect(find.text('118 spm'), findsNothing);
+    });
+
+    testWidgets('a hike never shows cadence either', (tester) async {
+      await _pump(
+        tester,
+        _session(
+          activityType: 'HIKING',
+          movingSeconds: 5400,
+          cardio: const CardioMetrics(distanceMeters: 8000, avgCadence: 110),
+        ),
+      );
+
+      expect(find.textContaining('spm'), findsNothing);
+    });
+
+    testWidgets('the indoor bike keeps its own rpm cadence, untouched', (tester) async {
+      await _pump(
+        tester,
+        _session(
+          activityType: 'INDOOR_BIKE',
+          movingSeconds: 2700,
+          cardio: const CardioMetrics(avgCadence: 88, avgWatts: 160),
+        ),
+      );
+
+      expect(find.text('88 rpm'), findsOneWidget);
+      expect(find.textContaining('spm'), findsNothing);
+    });
   });
 
   testWidgets('DISTANCE without a recorded distance falls back to duration as primary',
