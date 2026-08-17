@@ -185,7 +185,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
                 .collect(Collectors.toMap(
                         link -> link.getExercise().getId(),
                         WorkoutSessionExercise::getTargetSets,
-                        (first, duplicate) -> first));
+                        (first, _) -> first));
 
         List<PlannedExerciseRequest> planned = request.plannedExercises() != null
                 ? request.plannedExercises()
@@ -258,6 +258,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             if (request.activityType() == null) {
                 throw new InvalidCardioRequestException("activityType is required when sessionKind is CARDIO");
             }
+            validateBestEfforts(request.cardio());
         } else {
             if (request.activityType() != null) {
                 throw new InvalidCardioRequestException("activityType must be null unless sessionKind is CARDIO");
@@ -268,6 +269,32 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             if (request.splits() != null && !request.splits().isEmpty()) {
                 throw new InvalidCardioRequestException("splits must be empty unless sessionKind is CARDIO");
             }
+        }
+    }
+
+    /**
+     * The best-effort ordering invariant, mirroring
+     * {@code cardio_details_best_efforts_monotonic_ck} (V69): the fastest 1 km
+     * can't take longer than the fastest 5 km that contains it, and so on.
+     * Cross-field, so Bean Validation can't express it (the per-field
+     * non-negativity is {@code @PositiveOrZero} on the DTO).
+     *
+     * <p>Worth rejecting rather than storing: a wrong best-effort value is
+     * silent — it lands in the PR list and stays there (docs/cardio/60 §9).
+     * Each pair is compared on its own, so a null middle value still
+     * constrains the outer two.
+     */
+    private void validateBestEfforts(CardioDetailsRequest request) {
+        if (request == null) return;
+        requireNonDecreasing(request.best1kSeconds(), request.best5kSeconds(), "best1kSeconds", "best5kSeconds");
+        requireNonDecreasing(request.best5kSeconds(), request.best10kSeconds(), "best5kSeconds", "best10kSeconds");
+        requireNonDecreasing(request.best1kSeconds(), request.best10kSeconds(), "best1kSeconds", "best10kSeconds");
+    }
+
+    private void requireNonDecreasing(Integer shorter, Integer longer, String shorterName, String longerName) {
+        if (shorter != null && longer != null && shorter > longer) {
+            throw new InvalidCardioRequestException(
+                    shorterName + " must not be greater than " + longerName);
         }
     }
 
@@ -296,6 +323,9 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         details.setSteps(request.steps());
         details.setAvgCadence(request.avgCadence());
         details.setMaxCadence(request.maxCadence());
+        details.setBest1kSeconds(request.best1kSeconds());
+        details.setBest5kSeconds(request.best5kSeconds());
+        details.setBest10kSeconds(request.best10kSeconds());
         details.setAvgWatts(request.avgWatts());
         details.setMaxWatts(request.maxWatts());
         details.setResistanceLevel(request.resistanceLevel());

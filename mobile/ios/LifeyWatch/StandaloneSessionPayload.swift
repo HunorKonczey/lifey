@@ -32,9 +32,20 @@ struct StandaloneSet: Codable, Equatable {
 /// on the phone. `distanceSource` is only ever `"DEVICE"` here — a manual or
 /// phone-measured value always wins (docs/cardio/51-cardio-overview-plan.md
 /// R8), so this struct never claims otherwise.
+///
+/// `avgCadence`/`maxCadence` are C6.5's running-cadence pair, spm — the same
+/// two keys Wear OS's `emitStandaloneSession` writes (`ExerciseService.kt`,
+/// `putOpt("avgCadence", …)`), so a run recorded on either watch decodes
+/// through the identical `CardioMetrics.fromJson` branch. Both nil for every
+/// non-RUNNING session (and for a run too short to produce a full cadence
+/// window) — `JSONEncoder` omits a nil optional entirely, which is what keeps
+/// the phone's "no cadence sensor said anything" case a missing key rather
+/// than a zero.
 struct CardioSummaryPayload: Codable, Equatable {
   let distanceMeters: Double
   let distanceSource: String
+  let avgCadence: Double?
+  let maxCadence: Double?
 }
 
 /// The wire/persisted shape of a finished standalone (phone-less) workout

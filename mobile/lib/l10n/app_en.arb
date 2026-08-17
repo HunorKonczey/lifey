@@ -3145,7 +3145,7 @@
   "@chatImageAlt": {
     "description": "Screen-reader name for a picture in a message"
   },
-  "chatImagePreview": "\ud83d\udcf7 Photo",
+  "chatImagePreview": "📷 Photo",
   "@chatImagePreview": {
     "description": "Conversation-list preview of a message that is a picture"
   },
@@ -3153,7 +3153,7 @@
   "@chatCloseImageAction": {
     "description": "Closes the full-screen image view"
   },
-  "chatImageTooLarge": "That image is too large \u2014 8 MB is the limit.",
+  "chatImageTooLarge": "That image is too large — 8 MB is the limit.",
   "@chatImageTooLarge": {
     "description": "Shown when a picked image exceeds the server's attachment limit"
   },
@@ -3307,7 +3307,6 @@
   "@chatPushToggleSubtitle": {
     "description": "Subtitle for the chat push notification toggle"
   },
-
   "activityTypeRunning": "Running",
   "@activityTypeRunning": {
     "description": "Cardio activity type: running (DISTANCE family)"
@@ -3452,6 +3451,10 @@
   "@finishCardioConfirmMessage": {
     "description": "Body text shown on the slide-to-finish confirmation overlay while dragging (C2.5)"
   },
+  "cardioSummaryDoneButton": "Done",
+  "@cardioSummaryDoneButton": {
+    "description": "Button at the bottom of the cardio summary screen, below the RPE rating, that navigates back to the Workouts screen's Sessions tab"
+  },
   "manualPauseCardTitle": "Paused",
   "@manualPauseCardTitle": {
     "description": "Title of the pause-status card shown when the user manually paused a live cardio session (C2.5, M08)"
@@ -3594,6 +3597,58 @@
   "@cardioRecordLongestMovingTime": {
     "description": "Cardio record type label: this session's moving time is longer than any prior cardio session's"
   },
+  "cardioRecordFastest1k": "Fastest 1 km",
+  "@cardioRecordFastest1k": {
+    "description": "Name of the fastest-1km cardio record (C6.7). The distance stays metric even on an imperial profile — the record is defined as a 1 km window (C6.1's best_1k_seconds column), so calling it anything else would name a different record."
+  },
+  "cardioRecordFastest5k": "Fastest 5 km",
+  "@cardioRecordFastest5k": {
+    "description": "Name of the fastest-5km cardio record (C6.7) — see cardioRecordFastest1k on why the distance stays metric"
+  },
+  "cardioRecordFastest10k": "Fastest 10 km",
+  "@cardioRecordFastest10k": {
+    "description": "Name of the fastest-10km cardio record (C6.7)"
+  },
+  "bestEffortsSectionLabel": "BEST EFFORTS",
+  "@bestEffortsSectionLabel": {
+    "description": "Header of the card listing the fastest 1/5/10 km inside a run, on the cardio summary screen (C6.7, M34)"
+  },
+  "bestEffortOnRouteSubtitle": "computed on the route",
+  "@bestEffortOnRouteSubtitle": {
+    "description": "Subtitle under a best-effort time (C6.7, M34/M36) — says the number comes from the recorded GPS track rather than from the session's average pace"
+  },
+  "cardioRecordBadge": "record",
+  "@cardioRecordBadge": {
+    "description": "Small trophy pill marking the best-effort row that was set this session (C6.7, M34)"
+  },
+  "cardioRecordCelebrationTitle": "{count, plural, =1{New record} other{{count} records in one run}}",
+  "@cardioRecordCelebrationTitle": {
+    "description": "Title of the single celebration dialog shown after a run that broke records (C6.7, M36). One dialog, one haptic, one list — never one celebration per record.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "cardioRecordPrevious": "previous: {value} · {date}",
+  "@cardioRecordPrevious": {
+    "description": "Per-row line in the celebration dialog naming the record that was just replaced, with the date it was set (C6.7, M36)",
+    "placeholders": {
+      "value": {
+        "type": "String",
+        "example": "24:36"
+      },
+      "date": {
+        "type": "String",
+        "example": "12 October"
+      }
+    }
+  },
+  "cardioRecordCelebrationClose": "Close",
+  "@cardioRecordCelebrationClose": {
+    "description": "The celebration dialog's only button. M36 also draws an 'Open summary' primary button, but this dialog already opens on top of the summary, so there is nowhere for it to go."
+  },
   "cardioRecordGreatestElevationGain": "Greatest elevation gain",
   "@cardioRecordGreatestElevationGain": {
     "description": "Cardio record type label: this session gained more elevation than any prior running/walking/hiking session"
@@ -3710,6 +3765,76 @@
   "@splitsSectionLabel": {
     "description": "Section header above the per-km split list on the cardio summary screen (C4a.6, DISTANCE family only, shown when the session has any recorded splits)"
   },
+  "kmCueSectionLabel": "DISTANCE FEEDBACK",
+  "@kmCueSectionLabel": {
+    "description": "Section header inside the in-session settings sheet (C6.6, M35), above the per-kilometre cue switches. Unit-neutral on purpose — the profile decides whether the cue fires per kilometre or per mile, and the explanation row at the bottom of the sheet spells out which is in effect."
+  },
+  "kmCueVibrationLabel": "Vibration",
+  "@kmCueVibrationLabel": {
+    "description": "Switch label: buzz the phone at each completed kilometre/mile"
+  },
+  "kmCueVibrationDescription": "Two short taps",
+  "@kmCueVibrationDescription": {
+    "description": "Subtitle under the vibration switch, describing what the cue feels like"
+  },
+  "kmCueSoundLabel": "Sound",
+  "@kmCueSoundLabel": {
+    "description": "Switch label: play a short sound at each completed kilometre/mile"
+  },
+  "kmCueSoundDescription": "A short chime, over your music",
+  "@kmCueSoundDescription": {
+    "description": "Subtitle under the sound switch"
+  },
+  "kmCueSpokenLabel": "Spoken feedback",
+  "@kmCueSpokenLabel": {
+    "description": "Label of the not-yet-built spoken-cue row (C6.6, M35). Shown with a dashed border and a 'soon' badge rather than as a working switch — the row keeps its place visible without looking like a broken toggle."
+  },
+  "kmCueSpokenExample": "\"Kilometer 3, pace 5:12\"",
+  "@kmCueSpokenExample": {
+    "description": "Example of what the spoken cue would say, shown under the disabled spoken-feedback row"
+  },
+  "kmCueComingSoonBadge": "soon",
+  "@kmCueComingSoonBadge": {
+    "description": "Small badge marking a feature whose place is reserved but which isn't built yet"
+  },
+  "kmCueUnitExplanationMetric": "The unit comes from your profile: kilometers right now. Switch to miles and the cue fires every mile, and the splits switch too.",
+  "@kmCueUnitExplanationMetric": {
+    "description": "Closing row of the in-session settings sheet (C6.6, M35). Explains where the unit comes from — it is deliberately NOT a second place to set it, since a unit settable in two places is a guaranteed bug report."
+  },
+  "kmCueUnitExplanationImperial": "The unit comes from your profile: miles right now. Switch to kilometers and the cue fires every kilometer, and the splits switch too.",
+  "@kmCueUnitExplanationImperial": {
+    "description": "The imperial-profile variant of kmCueUnitExplanationMetric"
+  },
+  "cardioSessionSettingsTitle": "During the workout",
+  "@cardioSessionSettingsTitle": {
+    "description": "Title of the in-session settings sheet reachable from the DISTANCE-family header (C6.6, M35) — it now holds both auto-pause and the distance cue, so it is no longer named after auto-pause alone"
+  },
+  "paceSectionLabel": "PACE PER SPLIT",
+  "@paceSectionLabel": {
+    "description": "Section header above the per-split pace bar chart on the cardio summary screen (C6.4, M33). Deliberately not just 'PACE' — the metric grid higher up the same screen already labels the session's average pace that way, and two identical headers on one screen would read as the same number twice. The unit (min/km vs min/mi) shows in the average label directly under the chart."
+  },
+  "paceChartFasterLabel": "faster",
+  "@paceChartFasterLabel": {
+    "description": "Pill next to the pace chart's header, with an upward arrow: explains that a taller bar means a faster split (the pace scale is inverted)"
+  },
+  "paceChartAverageLabel": "avg {pace}",
+  "@paceChartAverageLabel": {
+    "description": "Axis line under the pace bar chart, naming the value of the dashed average line",
+    "placeholders": {
+      "pace": {
+        "type": "String",
+        "example": "5:22 /km"
+      }
+    }
+  },
+  "splitSelectionHint": "Tapping a split lights up its bar — the list and the chart are one datum in two views.",
+  "@splitSelectionHint": {
+    "description": "Explanatory line at the bottom of the splits card (C6.4, M33), stating that the split list and the pace chart are linked"
+  },
+  "splitsNoElevationDataLabel": "No elevation data",
+  "@splitsNoElevationDataLabel": {
+    "description": "Shown once in the splits card when no split recorded an altitude change, instead of leaving an unexplained empty column in every row (C6.4, M33)"
+  },
   "autoPauseSettingsIconTooltip": "Auto-pause settings",
   "@autoPauseSettingsIconTooltip": {
     "description": "Tooltip on the CardioSessionScreen header icon (DISTANCE only) that opens the auto-pause settings sheet"
@@ -3725,5 +3850,65 @@
   "autoPauseSettingsSwitchLabel": "Enable auto-pause",
   "@autoPauseSettingsSwitchLabel": {
     "description": "Label on the auto-pause settings sheet's on/off switch"
+  },
+  "indoorVenueChipLabel": "Indoor",
+  "@indoorVenueChipLabel": {
+    "description": "Header pill on the live cardio screen for a family that never uses GPS (M05/M06)"
+  },
+  "gameMatchPauseLabel": "Match pause",
+  "@gameMatchPauseLabel": {
+    "description": "Full-width pause action on the live GAME screen (M06/M07)"
+  },
+  "courtSwitchHint": "Playing time only grows while \"On court\"",
+  "@courtSwitchHint": {
+    "description": "Hint under the court/bench switch (M06)"
+  },
+  "benchSwitchHint": "Tap \"On court\" when you go back in",
+  "@benchSwitchHint": {
+    "description": "Hint under the court/bench switch while benched (M07)"
+  },
+  "autoPauseCircleLabel": "Auto",
+  "@autoPauseCircleLabel": {
+    "description": "Label of the small auto-pause settings circle on the live screen (M04)"
+  },
+  "distanceCircleLabel": "Dist.",
+  "@distanceCircleLabel": {
+    "description": "Label of the small distance-entry circle on the live screen (M11)"
+  },
+  "playingTimeRunningLabel": "PLAYING TIME — ON COURT",
+  "@playingTimeRunningLabel": {
+    "description": "Dominant metric label while on court (M06)"
+  },
+  "playingTimeStoppedLabel": "PLAYING TIME — STOPPED",
+  "@playingTimeStoppedLabel": {
+    "description": "Dominant metric label while benched (M07)"
+  },
+  "grossTimeRunningLabel": "gross — running",
+  "@grossTimeRunningLabel": {
+    "description": "Gross-time tile label while benched, where it is the only clock still moving (M07)"
+  },
+  "benchedNoticeTitle": "Measurement is resting",
+  "@benchedNoticeTitle": {
+    "description": "Title of the benched notice card (M07)"
+  },
+  "benchedNoticeBody": "Heart rate and calories keep recording, but your playing time is not growing.",
+  "@benchedNoticeBody": {
+    "description": "Body of the benched notice card (M07)"
+  },
+  "watchChipLabel": "Watch",
+  "@watchChipLabel": {
+    "description": "Small pill on the cardio summary marking a session whose numbers came from the watch (M13)"
+  },
+  "noRouteCardTitle": "No route",
+  "@noRouteCardTitle": {
+    "description": "Title of the summary card explaining why an indoor session has no GPS trail (M15)"
+  },
+  "noRouteCardBody": "Indoor workouts do not record a trail.",
+  "@noRouteCardBody": {
+    "description": "Body of the no-route card (M15)"
+  },
+  "quickStartOrderHint": "by frequency",
+  "@quickStartOrderHint": {
+    "description": "Right-hand hint next to the quick-start title explaining the tile order (M01)"
   }
 }

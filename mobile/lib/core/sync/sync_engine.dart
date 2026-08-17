@@ -34,6 +34,7 @@ class SyncEngine {
       // otherwise the stale GET response would silently overwrite the field
       // the push just synced.
       await _lock.synchronized(() async {
+        await _reclaimStaleSyncing();
         // Keep draining until a full pass makes no progress: a row blocked
         // on a dependency earlier in the same pass can become processable
         // once that dependency succeeds later in the same pass.
@@ -45,6 +46,29 @@ class SyncEngine {
     } finally {
       _running = false;
     }
+  }
+
+  /// Requeues rows a *previous* process left mid-flight. [_process] flips a
+  /// row to `syncing` for exactly as long as its request is in the air, and
+  /// [sync] is single-flighted (`_running`) and serialized against the pull —
+  /// so anything still `syncing` when a fresh drain begins belongs to a run
+  /// that never came back: the app was killed while the request was open.
+  ///
+  /// Nothing else ever moved that status, and [_runOnePass] only ever picks up
+  /// `pending`/network-`failed` rows, so such an operation was stranded for
+  /// good — and it took its whole entity with it, since every later update for
+  /// the same clientId stays blocked behind an unsynced create
+  /// ([OutboxWriter.enqueueUpdate]). Silently, too: `syncing` renders as
+  /// [SyncStatusIndicator]'s neutral "syncing…" marker, not a failure, so
+  /// there was no error shown and nothing to retry from the UI either.
+  ///
+  /// A long cardio session is the likeliest way to hit it at all (30+ minutes
+  /// backgrounded with GPS running is exactly when the OS reclaims the app),
+  /// but nothing here is cardio-specific — any entity could be stranded the
+  /// same way.
+  Future<void> _reclaimStaleSyncing() async {
+    await (_db.update(_db.pendingOperations)..where((t) => t.status.equals('syncing')))
+        .write(const PendingOperationsCompanion(status: Value('pending')));
   }
 
   Future<bool> _runOnePass() async {

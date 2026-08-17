@@ -24,6 +24,17 @@ public record CardioDetailsRequest(
         @PositiveOrZero Double avgCadence,
         @PositiveOrZero Double maxCadence,
 
+        // Best efforts (docs/cardio/60 C6.1)
+        /*
+         * The fastest continuous 1/5/10 km inside the session, in seconds —
+         * not the average pace extrapolated (docs/cardio/56 D-C3.8). Their
+         * ordering (1k <= 5k <= 10k) is cross-field, so the service checks it,
+         * not these annotations — see InvalidCardioRequestException.
+         */
+        @PositiveOrZero Integer best1kSeconds,
+        @PositiveOrZero Integer best5kSeconds,
+        @PositiveOrZero Integer best10kSeconds,
+
         // MACHINE
         @PositiveOrZero Double avgWatts,
         @PositiveOrZero Double maxWatts,

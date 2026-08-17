@@ -96,6 +96,50 @@ Négy szabály döntötte el a lépések sorrendjét — ha valamit előre akars
 | **MF5** | Kültéren nyomvonalat rögzít, és az órájáról is indíthat | C4a, C5 |
 | **MF6** | Sport-specifikus finomságok | C6–C9 |
 
+### 2.2 Platform-mátrix — mi fejleszthető Windowson, mi igényel Mac-et
+
+**A besorolás szabálya.** Egy lépés akkor **Mac**, ha a *leszállítandó munka maga* iOS/watchOS-natív
+(Swift/SwiftUI, Xcode-target), **vagy** ha a kész-ha kizárólag egy iOS-buildel igazolható. Minden
+más **Windows** — beleértve a teljes backendet (Java/Maven), a Flutter/Dart réteget, a webet
+(Next.js) és a **natív Androidot/Wear OS-t** (Kotlin), mert az Android-eszközlánc Windowson teljes.
+
+> **Ami nem lépés-szintű megkötés:** a Flutter-kód **iOS-buildje** mindig Mac-et igényel,
+> függetlenül attól, melyik lépésben született. Ez a release-folyamat tulajdonsága, nem az egyes
+> lépéseké — a Windowson írt Dart-lépések unit- és widget-teszttel ott helyben igazolhatók, és a
+> következő Mac-es körben fordulnak iOS-re. A táblázat ezért **nem** jelöl Mac-et minden Dart-os
+> sorra, csak ott, ahol a *tartalom* iOS-specifikus.
+
+| Iteráció | Windowson | **Mac kell** | Miért |
+|---|---|---|---|
+| **C0** (5) | C0.1–C0.5 | – | Backend Java + Dart taxonómia/audit |
+| **C1** (9) | C1.1–C1.9 | – | Backend + Drift/repository + Flutter UI |
+| **C2** (13) | C2.1–C2.9, **C2.10a**, **C2.11a** | **C2.10b**, **C2.11b** | Live Activity / Dynamic Island és az iOS app-shortcut + widget: Swift a `LifeyWidgets` targetben |
+| **C3** (5) | C3.1–C3.5 | – | Backend lekérdezések + Dart statisztika |
+| **C1w / C3w** (5) | mind | – | Next.js/TypeScript |
+| **C4a** (7) | C4a.1–C4a.4, **C4a.5a**, C4a.6 | **C4a.5b** | Az iOS háttér-helymeghatározás (`UIBackgroundModes: location`) tényleges működése csak iOS-buildel igazolható |
+| **C5** (7) | C5.1–C5.3, **C5.6**, **C5.7a** | **C5.4**, **C5.5**, **C5.7b** | watchOS SwiftUI (`mobile/ios/LifeyWatch/`). A Wear OS fele (Kotlin/Compose) Windowson megy |
+| **C6** (8) | C6.0–C6.4, C6.6, C6.7, **C6.5 Wear OS-fele** | **C6.5 watchOS-fele** | A kadencia megjelenítése az órán mindkét platform natív oldalát érinti |
+| **C7** (8) | C7.0–C7.7 | – | Backend + Flutter; az intervallum-lejátszó tiszta Dart |
+| **C8** (8) | C8.0–C8.7 | – | Backend + Flutter; a GAP és a profil saját festésű |
+| **C9** (6) | C9.0–C9.5 | – | Tiszta Flutter — a zóna-adatot az óra **már küldi** (C5.7), itt csak megjelenítés van |
+| *(opcionális)* web C6w–C9w | mind | – | Next.js/TypeScript |
+
+**Összesítés:** a 81 lépésből (51 a C0–C5-ben, 30 a C6–C9-ben) **hét érinti a Mac-et**:
+**C2.10b · C2.11b · C4a.5b · C5.4 · C5.5 · C5.7b** — ezek mind ✅ **leszállítva** —, plusz a
+**C6.5 watchOS-fele**, ami az egyetlen **hátralévő** Mac-es tétel az egész tervben. Az a/b vágás
+mindenhol úgy készült, hogy a Windowson végezhető ág önállóan szállítható legyen.
+
+### 2.3 Amit egyik desktop sem vált ki: eszközös próbák
+
+Ezek **valódi (vagy emulált) készüléket** igényelnek, nem fejlesztői gépet — és a készülék
+platformja dönt, nem a fejlesztőgépé:
+
+| Próba | Hol tartozik | Eszköz |
+|---|---|---|
+| **G11 akku-mérés** (60+ perc GPS) | C4a.5a után **és** C4a.5b után külön | Android telefon (Windowsról telepíthető) · iPhone (**Mac kell a telepítéshez**) |
+| **Watch végpróba** | C5.7a (Wear OS) · C5.7b (watchOS) | Wear OS óra/emulátor (Windows) · Apple Watch/szimulátor (**Mac**) |
+| **Intervallum-lejátszó drift-próba** (30+ perc, háttérben) | C7.5 | Android telefonon Windowsról elvégezhető; iOS-en **Mac** |
+
 ---
 
 ## 3. C0 — Fundamentum (5 lépés) · MF1
@@ -277,6 +321,11 @@ elv, mint a C4a.5a/b utáni G11 akku-mérésnél: egyik platform végpróbája s
 
 Ezek egymástól függetlenek, tetszőleges sorrendben és ütemben csúsztathatók.
 
+> **A lépésekre bontott terv külön docban van:**
+> [60-cardio-sport-specifics-plan.md](60-cardio-sport-specifics-plan.md) — 30 lépés, iterációnként
+> külön szállítható mérföldkővel (MF6a–MF6d), a **hiányzó design-frame-ekkel** (M33–M45) és a
+> lezárandó döntésekkel. Az alábbi táblázat csak az áttekintés.
+
 | # | Iteráció | Lépések | Függés |
 |---|---|---|---|
 | **C6** | Futás | km-splitek + tempó-diagram · kadencia · **legjobb 1/5/10 km csúszóablakkal** · futás-PR-ok · hangos/haptikus km-visszajelzés | C4a · *(Q-D1 döntés kell)* |
@@ -309,7 +358,7 @@ külön teszt tartozik, nem csak kézi ellenőrzés:
 | C2 | 13 (11 Windowson, 2 Mac-en: C2.10b, C2.11b) | MF3 |
 | C3 · C1w · C3w | 5 + 4 + 1 | MF4 |
 | C4a · C5 | 7 (6 Windowson, 1 Mac-en: C4a.5b) + 7 | MF5 |
-| C6–C9 | iterációnként 4–6 | MF6 |
+| C6–C9 | 30 (C6: 8 · C9: 6 · C7: 8 · C8: 8), ld. [60](60-cardio-sport-specifics-plan.md) | MF6a–MF6d |
 
 **Összesen ~50 lépés az MF5-ig**, plusz a sport-specifikumok. A javasolt vágási pont, ha
 részletekben szállítanál: **MF2** (kézi rögzítés) már önmagában hasznos funkció, **MF3** az,

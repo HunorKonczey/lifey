@@ -15,8 +15,10 @@ támogatásának tervét tartalmazza. Státusz: **teljes egészében terv, nem i
 | [56-cardio-statistics-plan.md](56-cardio-statistics-plan.md) | Ütközési leltár, metrika-definíciók, PR-ok, edzői riportok — **„mi romolhat el”** | Backend + Flutter + Web |
 | [57-cardio-design-prompt.md](57-cardio-design-prompt.md) | **Önhordó design prompt a Claude Designnak** (§0 blokk másolható) + döntés-napló | Design |
 | [58-cardio-web-plan.md](58-cardio-web-plan.md) | A 11 érintett web-fájl, olvasó cardio-nézet — és **miért nem indítható webről** | Web (Next.js) |
-| [59-cardio-implementation-plan.md](59-cardio-implementation-plan.md) | **Fejlesztési terv: ~48 prompt-méretű lépés**, frame-leképezéssel, mérföldkövekkel | **Fejlesztés — innen dolgozz** |
-| [`design/`](design) | A két kész design-canvas (mobil + web · óra) | Mind |
+| [59-cardio-implementation-plan.md](59-cardio-implementation-plan.md) | **Fejlesztési terv C0–C5-ig: ~50 prompt-méretű lépés**, frame-leképezéssel, mérföldkövekkel | **Fejlesztés — innen dolgozz** |
+| [60-cardio-sport-specifics-plan.md](60-cardio-sport-specifics-plan.md) | **Fejlesztési terv C6–C9-re: 30 lépés** (futás · játék · bicikli · túra), iterációnkénti mérföldkövekkel és a nyitott döntésekkel | Fejlesztés — a C5 után |
+| [61-cardio-sport-specifics-design-prompts.md](61-cardio-sport-specifics-design-prompts.md) | **A C6–C9 kész designja frame-enként** (M33–M45): elrendezés, tokenek, állapotok, indoklás + a 8 visszaadott termékdöntés · a lefuttatott promptok a végén | **Design + fejlesztés — a C6–C9 UI innen dolgozik** |
+| [`design/`](design) | A három kész design-canvas: mobil + web · óra · **sport-specifikumok (M33–M45)** | Mind |
 
 ## Iterációk egy pillantásra
 
@@ -30,16 +32,23 @@ támogatásának tervét tartalmazza. Státusz: **teljes egészében terv, nem i
 | C3w | Web: statisztika-paritás (a C3-mal együtt) | 58 |
 | C4a / C4b | GPS-nyomvonal / *(opcionális)* valódi térkép | 54 |
 | C5 | Óra-integráció | 55 |
-| C6–C9 | Sport-specifikumok: futás · szobabicikli · túra · játék | 51 §4 |
+| C6–C9 | Sport-specifikumok: futás · szobabicikli · túra · játék | 51 §4, **60** |
 
 **Felületi lefedettség:** mobil (teljes: indítás, élő mérés, összegzés) · óra (teljes: indítás,
 élő mérés, standalone) · **web: csak megjelenítés** — onnan cardio nem indítható
 ([58 D-W.1](58-cardio-web-plan.md)).
 
-**A design elkészült (2026-08-10)** — `design/Lifey Cardio Design.dc.html` (mobil M01–M32,
-web W01–W02) és `design/Lifey Cardio Watch Design.dc.html` (AW 16–22 / W 15–21). A korábbi
-design-blokkolás ezzel feloldva: **minden iteráció indítható.** A lépésre bontott végrehajtási
-sorrend: [59-cardio-implementation-plan.md](59-cardio-implementation-plan.md).
+**Fejlesztőgép:** a 81 lépésből **hét érinti a Mac-et** (C2.10b · C2.11b · C4a.5b · C5.4 · C5.5 ·
+C5.7b — mind kész —, plusz a **C6.5 watchOS-fele**, az egyetlen hátralévő); minden más Windowson
+megy, a natív Androidot és a Wear OS-t is beleértve. Teljes mátrix + eszközös próbák:
+[59 §2.2–2.3](59-cardio-implementation-plan.md).
+
+**A design teljes (M01–M45 + óra)** — `design/Lifey Cardio Design.dc.html` (mobil M01–M32,
+web W01–W02, **2026-08-10**), `design/Lifey Cardio Watch Design.dc.html` (AW 16–22 / W 15–21) és
+`design/Lifey Cardio Sport-specifikumok.dc.html` (**M33–M45, 2026-08-16**). Minden iteráció
+indítható. A végrehajtási sorrend: [59](59-cardio-implementation-plan.md) (C0–C5) és
+[60](60-cardio-sport-specifics-plan.md) (C6–C9); a C6–C9 frame-leírások:
+[61](61-cardio-sport-specifics-design-prompts.md).
 
 ## A három termékdöntés — eldöntve (2026-08-09)
 

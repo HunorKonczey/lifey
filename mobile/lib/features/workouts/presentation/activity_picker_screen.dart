@@ -26,54 +26,91 @@ class ActivityPickerScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final templates = ref.watch(workoutTemplateControllerProvider).value ?? const [];
 
+    final scheme = Theme.of(context).colorScheme;
+
+    // M03 reads as a sheet that grew to full height, not as a page: the
+    // whole surface sits one step up from the app background, and the title
+    // row carries its own close button instead of an app bar.
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.activityPickerTitle),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.s16,
-          AppSpacing.s8,
-          AppSpacing.s16,
-          MediaQuery.paddingOf(context).bottom + AppSpacing.s16,
-        ),
-        children: [
-          _SectionLabel(l10n.cardioSectionLabel),
-          _RowGroup(
-            children: [
-              for (final type in kActivityTypes)
-                _PickerRow(
-                  icon: activityTypeIcon(type),
-                  color: activityTypeColor(type, context),
-                  title: activityTypeLabel(l10n, type),
-                  subtitle: activityModalitySubtitle(l10n, activityFamilyOf(type)),
-                  onTap: () => startCardioQuickly(context, ref, type),
-                ),
-            ],
-          ),
-          if (templates.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.s24),
-            _SectionLabel(l10n.strengthTemplatesSectionLabel),
-            _RowGroup(
-              children: [
-                for (final template in templates)
-                  _PickerRow(
-                    icon: activityTypeIcon('STRENGTH'),
-                    color: activityTypeColor('STRENGTH', context),
-                    title: template.name,
-                    subtitle: l10n.exercisesCountLabel(template.exercises.length),
-                    onTap: () => startStrengthQuickly(context, template: template),
+      backgroundColor: scheme.surfaceContainerLow,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.activityPickerTitle,
+                      style: const TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
                   ),
-              ],
+                  Material(
+                    color: scheme.surfaceContainer,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).pop(),
+                      customBorder: const CircleBorder(),
+                      child: SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Icon(Icons.close, size: 20, color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.s16,
+                  0,
+                  AppSpacing.s16,
+                  MediaQuery.paddingOf(context).bottom + AppSpacing.s16,
+                ),
+                children: [
+                  // "A cardio blokk van felül: aki idáig eljutott, jó
+                  // eséllyel olyat keres, ami nincs a négy csempén" (M03).
+                  _SectionLabel(l10n.cardioSectionLabel),
+                  _RowGroup(
+                    children: [
+                      for (final type in kActivityTypes)
+                        _PickerRow(
+                          icon: activityTypeIcon(type),
+                          color: activityTypeColor(type, context),
+                          title: activityTypeLabel(l10n, type),
+                          subtitle: activityModalitySubtitle(l10n, activityFamilyOf(type)),
+                          onTap: () => startCardioQuickly(context, ref, type),
+                        ),
+                    ],
+                  ),
+                  if (templates.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.s24),
+                    _SectionLabel(l10n.strengthTemplatesSectionLabel),
+                    _RowGroup(
+                      children: [
+                        for (final template in templates)
+                          _PickerRow(
+                            icon: activityTypeIcon('STRENGTH'),
+                            color: activityTypeColor('STRENGTH', context),
+                            title: template.name,
+                            subtitle: l10n.exercisesCountLabel(template.exercises.length),
+                            onTap: () => startStrengthQuickly(context, template: template),
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -112,14 +149,14 @@ class _RowGroup extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
+        color: scheme.surfaceContainer,
         borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) Divider(height: 1, indent: 66, color: scheme.outlineVariant.withValues(alpha: 0.4)),
+            if (i > 0) Divider(height: 1, indent: 62, color: scheme.surfaceContainerHigh),
             children[i],
           ],
         ],
@@ -155,7 +192,8 @@ class _PickerRow extends StatelessWidget {
             Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.16)),
+              decoration:
+                  BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.16)),
               child: Icon(icon, size: 22, color: color),
             ),
             const SizedBox(width: AppSpacing.s12),
@@ -164,7 +202,11 @@ class _PickerRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                  Text(subtitle, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurfaceVariant)),
                 ],
               ),
             ),

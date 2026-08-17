@@ -28,6 +28,7 @@ spring:
       minimum-idle: 0
       idle-timeout: 60000
       max-lifetime: 240000
+      keepalive-time: 0
   jpa:
     hibernate:
       ddl-auto: validate
@@ -195,4 +196,4 @@ lifey:
       cron: ${JOB_TRAINER_CLIENT_CLEANUP_CRON:0 30 3 * * *}
     workout-reminder:
       # Per-user-local-time workout reminder tick, every 15 minutes (WorkoutReminderJob).
-      cron: ${JOB_WORKOUT_REMINDER_CRON:0 */15 * * * *}
+      cron: ${JOB_WORKOUT_REMINDER_CRON:0 0 * * * *}

@@ -115,7 +115,7 @@ void main() {
     await _pump(tester, _liveOnCourtSession());
 
     expect(tester.takeException(), isNull);
-    expect(find.text('PLAYING TIME'), findsOneWidget);
+    expect(find.text('PLAYING TIME — ON COURT'), findsOneWidget);
     expect(find.text('GROSS TIME'), findsOneWidget);
     expect(find.text('HEART RATE'), findsOneWidget);
     expect(find.text('ZONE'), findsOneWidget);
@@ -170,7 +170,7 @@ void main() {
   testWidgets('Meccs szünet (Pause) disables both toggle buttons', (tester) async {
     await _pump(tester, _liveOnCourtSession(movingSeconds: 60));
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+    await tester.tap(find.text('Match pause'));
     await tester.pumpAndSettle();
 
     final onCourtButton = tester.widget<InkWell>(
@@ -187,9 +187,9 @@ void main() {
       (tester) async {
     final controller = await _pump(tester, _liveOnCourtSession(movingSeconds: 60));
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+    await tester.tap(find.text('Match pause'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Resume'));
+    await tester.tap(find.text('Resume'));
     await tester.pumpAndSettle();
 
     // One resume from pausing, one more from resuming = two total; the
@@ -197,7 +197,7 @@ void main() {
     // "resumeCardioSession got called", which is what matters: playing
     // time picks back up automatically since the player never benched.
     expect(controller.resumeCalls, hasLength(1));
-    expect(find.text('Pause'), findsOneWidget); // back to the running state
+    expect(find.text('Match pause'), findsOneWidget); // back to the running state
   });
 
   testWidgets('resuming from Meccs szünet while benched does NOT resume playing time',
@@ -206,11 +206,11 @@ void main() {
 
     await tester.tap(find.text('Bench')); // benches first
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Pause')); // then a whole-session pause
+    await tester.tap(find.text('Match pause')); // then a whole-session pause
     await tester.pumpAndSettle();
     controller.resumeCalls.clear(); // drop the (absent) bench-related noise, isolate what follows
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Resume'));
+    await tester.tap(find.text('Resume'));
     await tester.pumpAndSettle();
 
     // Manual resume alone must not restart movingSeconds — the player is

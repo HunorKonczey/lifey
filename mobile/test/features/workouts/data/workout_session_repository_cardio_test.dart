@@ -202,6 +202,75 @@ void main() {
       expect(session.sets, isEmpty);
     });
 
+    test('best efforts round-trip through the local row, the payload, and watchAll (C6.3)',
+        () async {
+      const withBestEfforts = CardioMetrics(
+        distanceMeters: 12000,
+        best1kSeconds: 250,
+        best5kSeconds: 1400,
+        best10kSeconds: 2980,
+        distanceSource: 'MEASURED',
+      );
+
+      final clientId = await repo.create(
+        startedAt: DateTime.utc(2026, 8, 16, 6),
+        finishedAt: DateTime.utc(2026, 8, 16, 7),
+        exercises: const [],
+        sets: const [],
+        sessionKind: 'CARDIO',
+        activityType: 'RUNNING',
+        movingSeconds: 3600,
+        cardio: withBestEfforts,
+        splits: const [],
+      );
+
+      final cardioRow = await (db.select(db.cardioDetails)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .getSingle();
+      expect(cardioRow.best1kSeconds, 250);
+      expect(cardioRow.best5kSeconds, 1400);
+      expect(cardioRow.best10kSeconds, 2980);
+
+      // The half that makes them reach the server at all.
+      final cardioJson = (await lastPayload('create'))['cardio'] as Map<String, dynamic>;
+      expect(cardioJson['best1kSeconds'], 250);
+      expect(cardioJson['best5kSeconds'], 1400);
+      expect(cardioJson['best10kSeconds'], 2980);
+
+      final session = (await repo.watchAll().first).single;
+      expect(session.cardio!.best1kSeconds, 250);
+      expect(session.cardio!.best5kSeconds, 1400);
+      expect(session.cardio!.best10kSeconds, 2980);
+    });
+
+    test('a run with no best efforts stores and sends null, not zero', () async {
+      // A treadmill run, or one shorter than a km: the three columns stay
+      // empty rather than claiming an impossibly fast record
+      // (docs/cardio/60 §9).
+      final clientId = await repo.create(
+        startedAt: DateTime.utc(2026, 8, 16, 6),
+        exercises: const [],
+        sets: const [],
+        sessionKind: 'CARDIO',
+        activityType: 'RUNNING',
+        movingSeconds: 600,
+        cardio: metrics,
+        splits: const [],
+      );
+
+      final cardioRow = await (db.select(db.cardioDetails)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .getSingle();
+      expect(cardioRow.best1kSeconds, isNull);
+      expect(cardioRow.best5kSeconds, isNull);
+      expect(cardioRow.best10kSeconds, isNull);
+
+      // Present-but-null, the same shape every other unset cardio field has.
+      final cardioJson = (await lastPayload('create'))['cardio'] as Map<String, dynamic>;
+      expect(cardioJson.containsKey('best1kSeconds'), isTrue);
+      expect(cardioJson['best1kSeconds'], isNull);
+    });
+
     test('a repeat save (update) replaces cardio metrics and splits, not appends', () async {
       final startedAt = DateTime.utc(2026, 7, 10, 17);
       final clientId = await repo.create(

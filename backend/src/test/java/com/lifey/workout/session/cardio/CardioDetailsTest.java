@@ -93,12 +93,12 @@ class CardioDetailsTest {
 
     /** Runs a write in its own, immediately-committing transaction — see class doc. */
     private void inTransaction(Runnable action) {
-        txTemplate.executeWithoutResult(status -> action.run());
+        txTemplate.executeWithoutResult(_ -> action.run());
     }
 
     /** Same as {@link #inTransaction(Runnable)}, for reads that return a value. */
     private <T> T inTransaction(Supplier<T> action) {
-        return txTemplate.execute(status -> action.get());
+        return txTemplate.execute(_ -> action.get());
     }
 
     @Test
@@ -181,6 +181,62 @@ class CardioDetailsTest {
         assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(details)))
                 .isInstanceOf(PersistenceException.class)
                 .hasStackTraceContaining("cardio_details_venue_ck");
+    }
+
+    // -- Best efforts, V69__cardio_best_efforts.sql (docs/cardio/60 C6.1) ----
+
+    @Test
+    void persistsAndReadsBackTheBestEffortTrio() {
+        CardioDetails details = new CardioDetails();
+        details.setWorkoutSession(cardioSession);
+        details.setBest1kSeconds(250);
+        details.setBest5kSeconds(1400);
+        details.setBest10kSeconds(2980);
+
+        inTransaction(() -> entityManager.persist(details));
+        entityManager.clear();
+
+        CardioDetails reloaded = inTransaction(() -> entityManager.find(CardioDetails.class, details.getId()));
+        assertThat(reloaded.getBest1kSeconds()).isEqualTo(250);
+        assertThat(reloaded.getBest5kSeconds()).isEqualTo(1400);
+        assertThat(reloaded.getBest10kSeconds()).isEqualTo(2980);
+    }
+
+    @Test
+    void aNegativeBestEffortViolatesTheCheckConstraint() {
+        CardioDetails details = new CardioDetails();
+        details.setWorkoutSession(cardioSession);
+        details.setBest1kSeconds(-1);
+
+        assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(details)))
+                .isInstanceOf(PersistenceException.class)
+                .hasStackTraceContaining("cardio_details_best_efforts_nonneg_ck");
+    }
+
+    @Test
+    void aFaster5kThan1kViolatesTheMonotonicityConstraint() {
+        // The DB backstop under the service's 400 — a bad best-effort value
+        // is silent, it just sits in the PR list forever (docs/cardio/60 §9).
+        CardioDetails details = new CardioDetails();
+        details.setWorkoutSession(cardioSession);
+        details.setBest1kSeconds(1500);
+        details.setBest5kSeconds(1400);
+
+        assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(details)))
+                .isInstanceOf(PersistenceException.class)
+                .hasStackTraceContaining("cardio_details_best_efforts_monotonic_ck");
+    }
+
+    @Test
+    void aMissingMiddleValueStillConstrainsTheOuterTwo() {
+        CardioDetails details = new CardioDetails();
+        details.setWorkoutSession(cardioSession);
+        details.setBest1kSeconds(3200);
+        details.setBest10kSeconds(2980);
+
+        assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(details)))
+                .isInstanceOf(PersistenceException.class)
+                .hasStackTraceContaining("cardio_details_best_efforts_monotonic_ck");
     }
 
     @Test

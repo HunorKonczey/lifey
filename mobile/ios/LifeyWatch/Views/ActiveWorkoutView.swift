@@ -211,6 +211,13 @@ struct CardioActiveContent: View {
   @State private var selectedPage = 0
   @State private var onCourt = true
 
+  /// AW 20's edge border: the watch equivalent of the phone's top rail
+  /// (M07/M09) — "csuklóemeléskor, fél másodperc alatt is látszik, hogy a
+  /// mérés pihen". Only GAME has a benched state to signal.
+  private var isBenched: Bool {
+    workoutManager.cardioFamily == .game && !onCourt
+  }
+
   var body: some View {
     GeometryReader { geometry in
       let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
@@ -220,6 +227,17 @@ struct CardioActiveContent: View {
         ControlsPage(isCompact: isCompact, padding: padding, onOpenExerciseList: {}).tag(1)
       }
       .tabViewStyle(.page)
+      // Drawn over the pager, ignoring its own safe area, so the stroke hugs
+      // the physical screen edge on every case size instead of insetting
+      // with the content.
+      .overlay {
+        if isBenched {
+          RoundedRectangle(cornerRadius: geometry.size.width * 0.28)
+            .strokeBorder(LifeyColors.secondary, lineWidth: 5)
+            .allowsHitTesting(false)
+            .ignoresSafeArea()
+        }
+      }
     }
     .background(LifeyColors.trueBlack)
   }
@@ -479,19 +497,21 @@ private struct CardioMetricBox: View {
       Text(value)
         .font(isCompact ? .callout : .title3)
         .fontWeight(.heavy)
-        .foregroundColor(tint ?? LifeyColors.onSurface)
+        .foregroundColor(LifeyColors.onSurface)
         .monospacedDigit()
         .lineLimit(1)
         .minimumScaleFactor(0.7)
       Text(label)
         .font(.caption2)
-        .foregroundColor(LifeyColors.onSurfaceVariant)
+        .foregroundColor(tint ?? LifeyColors.onSurfaceVariant)
         .lineLimit(1)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, isCompact ? 10 : 14)
     .padding(.vertical, isCompact ? 8 : 12)
-    .background(LifeyColors.surface)
+    // AW 20 tints the whole box, not just its text: benched, this is the one
+    // clock still running, and it has to read that way at a glance.
+    .background(tint == nil ? LifeyColors.surface : tint!.opacity(0.16))
     .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
   }
 }
