@@ -26,6 +26,7 @@ spring:
       minimum-idle: 0
       idle-timeout: 60000
       max-lifetime: 240000
+      keepalive-time: 0
   jpa:
     hibernate:
       ddl-auto: validate
@@ -191,7 +192,7 @@ lifey:
       # instances would each fire it, and duplicate reminders are the one
       # scaling hazard users actually see. See plan §6.4 before changing the
       # instance count.
-      cron: ${JOB_CHAT_UNREAD_REMINDER_CRON:0 */5 * * * *}
+      cron: ${JOB_CHAT_UNREAD_REMINDER_CRON:0 0 * * * *}
     chat-relationship-reconciliation:
       # Nightly safety net for a lost revoke webhook (§5.4 layer 3). Nightly and
       # not more often on purpose: layer 1 (the guard on every send) already

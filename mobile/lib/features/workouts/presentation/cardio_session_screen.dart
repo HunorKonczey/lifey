@@ -21,6 +21,8 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/auto_pause_preferences.dart';
+import '../application/km_cue_controller.dart';
+import '../application/km_cue_preferences.dart';
 import '../application/workout_session_controller.dart';
 import '../data/cardio_track_point_repository.dart';
 import '../domain/activity_type.dart';
@@ -32,7 +34,7 @@ import '../domain/route_encoder.dart';
 import '../domain/track_filter.dart';
 import '../domain/workout_session.dart';
 import 'cardio_summary_screen.dart';
-import 'widgets/auto_pause_settings_sheet.dart';
+import 'widgets/cardio_session_settings_sheet.dart';
 import 'widgets/prompt_number_dialog.dart';
 import 'widgets/route_painter.dart';
 import 'workouts_screen.dart';
@@ -251,11 +253,21 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   AutoPauseDetector? _autoPauseDetector;
 
   /// Seeded once from [AutoPausePreferences] in `initState` (Q-D3: on by
-  /// default) and refreshed once after [showAutoPauseSettingsSheet] closes
-  /// — cached rather than re-read from `shared_preferences` on every fix,
-  /// since [_onPositionFix] fires far more often than the setting could
+  /// default) and refreshed once after [showCardioSessionSettingsSheet]
+  /// closes — cached rather than re-read from `shared_preferences` on every
+  /// fix, since [_onPositionFix] fires far more often than the setting could
   /// plausibly change.
   bool _autoPauseEnabled = true;
+
+  /// The per-kilometre cue (C6.6, M35). Created alongside [_autoPauseDetector]
+  /// and fed from the same place the live distance is updated, which is what
+  /// makes "auto-pause alatt nem üt" true by construction rather than by an
+  /// extra check: [_onPositionFix] only advances the distance while genuinely
+  /// running, so a paused session never reaches [KmCueController.onDistance].
+  KmCueController? _kmCueController;
+
+  /// Cached like [_autoPauseEnabled], and for the same reason.
+  KmCueSettings _kmCueSettings = KmCueSettings.defaults;
 
   Timer? _ticker;
   bool _busy = false;
@@ -409,6 +421,47 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         },
       );
       unawaited(_seedAutoPauseEnabled());
+
+      // The unit is read once, here, from the profile — never chosen in the
+      // settings sheet (M35's closing line: two places to set a unit is a
+      // guaranteed bug report).
+      final unitSystem =
+          (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults()).unitSystem;
+      _kmCueController = KmCueController(
+        unitMeters: unitSystem == UnitSystem.imperial ? 1609.344 : 1000,
+        onCue: (_, __) => _playKmCue(),
+      );
+      unawaited(_seedKmCueSettings());
+    }
+  }
+
+  Future<void> _seedKmCueSettings() async {
+    final settings = await ref.read(kmCuePreferencesProvider).load();
+    if (mounted) _kmCueSettings = settings;
+  }
+
+  /// Fires the cue itself. Runs off the GPS fix stream, which keeps
+  /// delivering with the app backgrounded and the screen locked (the Android
+  /// foreground service / iOS background location mode C4a.5 already set up
+  /// for the recording itself), so the cue arrives on a locked phone in a
+  /// pocket — the only place it's any use.
+  ///
+  /// Both switches off means silence, not a fallback: turning everything off
+  /// is a state M35 lists in its own right.
+  void _playKmCue() {
+    if (_kmCueSettings.vibration) {
+      // "Két rövid koppintás" (M35) — two impacts, not one long buzz, so it
+      // reads as a deliberate signal rather than a notification.
+      HapticFeedback.mediumImpact();
+      Future.delayed(const Duration(milliseconds: 140), HapticFeedback.mediumImpact);
+    }
+    if (_kmCueSettings.sound) {
+      // The platform's own alert sound, deliberately not a bundled audio
+      // asset: playing a custom chime *over* music needs an audio-session
+      // category and a player package, which is a dependency decision this
+      // step doesn't get to make on its own (see the C6.6 note in
+      // docs/cardio/60).
+      unawaited(SystemSound.play(SystemSoundType.alert));
     }
   }
 
@@ -435,6 +488,10 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     }
     _trackFilter = filter;
     if (filter.distanceMeters > 0) _distanceMeters = filter.distanceMeters;
+    // Adopt the replayed distance as already-announced ground — without this,
+    // reopening a 7 km run after an app kill would buzz seven times in one
+    // frame (see [KmCueController.seed]).
+    _kmCueController?.seed(filter.distanceMeters);
     _trackPointSeqSeeded = true;
     _syncPositionTracking();
   }
@@ -447,13 +504,16 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     if (mounted) _autoPauseEnabled = enabled;
   }
 
-  /// Opens [AutoPauseSettingsSheet] and refreshes [_autoPauseEnabled] from
-  /// whatever the user left it as — the sheet writes straight through
-  /// [AutoPausePreferences] itself, so this is just picking the new value
-  /// back up for the in-flight [_autoPauseDetector] to actually honor.
+  /// Opens [CardioSessionSettingsSheet] and refreshes both cached settings
+  /// from whatever the user left them as — the sheet writes straight through
+  /// the preference stores itself, so this is just picking the new values
+  /// back up for the in-flight [_autoPauseDetector]/[_kmCueController] to
+  /// actually honor.
   Future<void> _openAutoPauseSettings() async {
-    await showAutoPauseSettingsSheet(context);
-    if (mounted) unawaited(_seedAutoPauseEnabled());
+    await showCardioSessionSettingsSheet(context);
+    if (!mounted) return;
+    unawaited(_seedAutoPauseEnabled());
+    unawaited(_seedKmCueSettings());
   }
 
   /// Starts/stops the raw GPS point recording subscription to match current
@@ -514,6 +574,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         _armWeakSignalTimer();
         if (mounted && filter.distanceMeters > 0) {
           setState(() => _distanceMeters = filter.distanceMeters);
+          _kmCueController?.onDistance(filter.distanceMeters);
         }
       }
     }
@@ -1128,13 +1189,17 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       // (`exerciseSets`) `WorkoutSession` doesn't already assemble.
       final priorSessions = (ref.read(workoutSessionControllerProvider).value ?? const [])
           .where((s) => s.clientId != _clientId);
-      final newRecords = detectCardioPrs(
-        CardioPrBaseline.fromSessions(priorSessions),
-        finishedSession,
-      );
+      final baseline = CardioPrBaseline.fromSessions(priorSessions);
+      final newRecords = detectCardioPrs(baseline, finishedSession);
       navigator.pushReplacement(
         MaterialPageRoute(
-          builder: (_) => CardioSummaryScreen(session: finishedSession, newRecords: newRecords),
+          builder: (_) => CardioSummaryScreen(
+            session: finishedSession,
+            newRecords: newRecords,
+            // The baseline as it stood *before* this session — what the
+            // celebration names as the record just replaced (C6.7, M36).
+            previousBests: baseline,
+          ),
         ),
       );
     } catch (_) {

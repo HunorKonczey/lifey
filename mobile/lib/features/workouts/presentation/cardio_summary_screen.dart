@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -56,7 +57,12 @@ import 'workouts_screen.dart';
 /// `MANUAL` source) on the two fields where it's real today, and leaves the
 /// rest read-only, carried over unchanged from however they were recorded.
 class CardioSummaryScreen extends ConsumerStatefulWidget {
-  const CardioSummaryScreen({super.key, required this.session, this.newRecords = const []});
+  const CardioSummaryScreen({
+    super.key,
+    required this.session,
+    this.newRecords = const [],
+    this.previousBests = CardioPrBaseline.empty,
+  });
 
   final WorkoutSession session;
 
@@ -66,6 +72,11 @@ class CardioSummaryScreen extends ConsumerStatefulWidget {
   /// session (`open_workout_screens.dart`), since re-viewing a past session
   /// isn't the moment it earned anything. See `cardio_personal_record.dart`.
   final List<CardioPrType> newRecords;
+
+  /// What each record stood at *before* this session, so the celebration can
+  /// name what was replaced ("previous: 24:36 · 12 October" — docs/cardio/61
+  /// §2 M36). Empty when [newRecords] is, and when reopening a past session.
+  final CardioPrBaseline previousBests;
 
   @override
   ConsumerState<CardioSummaryScreen> createState() => _CardioSummaryScreenState();
@@ -144,6 +155,36 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     _rpe = s.rpe;
     _noteController = TextEditingController(text: s.feedbackNote ?? '');
     _noteFocusNode = FocusNode()..addListener(_onNoteFocusChange);
+
+    // One celebration for the whole session, however many records it broke
+    // (M36) — scheduled once, from initState, so reopening a past session
+    // (which arrives with no records) never triggers it.
+    if (widget.newRecords.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _celebrateRecords());
+    }
+  }
+
+  /// M36: **one** dialog, **one** haptic, **one** list — never one
+  /// celebration per record. Four records on a single run is the case this
+  /// exists for; four dialogs in a row would turn the best moment of the run
+  /// into four taps to dismiss.
+  Future<void> _celebrateRecords() async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final unitSystem = (ref.read(settingsControllerProvider).value ??
+            const UserSettings.defaults())
+        .unitSystem;
+    HapticFeedback.mediumImpact();
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _CardioRecordCelebrationDialog(
+        types: widget.newRecords,
+        session: widget.session,
+        previousBests: widget.previousBests,
+        unitSystem: unitSystem,
+        label: (type) => _recordLabel(l10n, type),
+      ),
+    );
   }
 
   @override
@@ -488,6 +529,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                 ),
             ],
           ),
+          ..._bestEffortSection(l10n, theme, unitSystem),
           ..._routeSections(l10n, theme, scheme, unitSystem),
         ];
       // M15: indoor sessions keep the big moving-time card, with the three
@@ -591,6 +633,66 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
         ];
     }
   }
+
+  /// M34's "BEST EFFORTS" card, under the metric grid (C6.7). One row per
+  /// sub-distance the run actually contains.
+  ///
+  /// A distance the run never reached **does not appear at all** — not greyed,
+  /// not "not enough distance": on a 4 km run the 10 km best effort isn't
+  /// missing data, it's not a concept (M34). That falls out of the values
+  /// being null, which is exactly why C6.2 stores null there and never 0.
+  List<Widget> _bestEffortSection(
+    AppLocalizations l10n,
+    ThemeData theme,
+    UnitSystem unitSystem,
+  ) {
+    final cardio = widget.session.cardio;
+    if (cardio == null) return const [];
+    final rows = <_BestEffortRow>[
+      for (final (type, seconds, meters) in [
+        (CardioPrType.fastest1k, cardio.best1kSeconds, 1000.0),
+        (CardioPrType.fastest5k, cardio.best5kSeconds, 5000.0),
+        (CardioPrType.fastest10k, cardio.best10kSeconds, 10000.0),
+      ])
+        if (seconds != null)
+          _BestEffortRow(
+            label: _recordLabel(l10n, type),
+            duration: Duration(seconds: seconds),
+            // Only this is comparable across the three rows — a longer
+            // distance always takes more absolute time (M34).
+            pace: CardioFormatter.pace(meters, Duration(seconds: seconds), unitSystem),
+            isRecord: widget.newRecords.contains(type),
+          ),
+    ];
+    if (rows.isEmpty) return const [];
+
+    return [
+      const SizedBox(height: 12),
+      _SectionCard(
+        label: l10n.bestEffortsSectionLabel,
+        child: Column(
+          children: [
+            for (final row in rows)
+              _BestEffortTile(
+                row: row,
+                subtitle: l10n.bestEffortOnRouteSubtitle,
+                recordBadge: l10n.cardioRecordBadge,
+                theme: theme,
+              ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  String _recordLabel(AppLocalizations l10n, CardioPrType type) => switch (type) {
+        CardioPrType.longestDistance => l10n.cardioRecordLongestDistance,
+        CardioPrType.longestMovingTime => l10n.cardioRecordLongestMovingTime,
+        CardioPrType.greatestElevationGain => l10n.cardioRecordGreatestElevationGain,
+        CardioPrType.fastest1k => l10n.cardioRecordFastest1k,
+        CardioPrType.fastest5k => l10n.cardioRecordFastest5k,
+        CardioPrType.fastest10k => l10n.cardioRecordFastest10k,
+      };
 
   /// The route/elevation-profile/splits block (C4a.6) — DISTANCE only, and
   /// only once a session actually finished with a GPS trail
@@ -1182,6 +1284,269 @@ class _InnerMetricTile extends StatelessWidget {
 /// doc) is calmer than a post-workout dialog. Reuses the same trophy icon +
 /// amber accent as `exercise_session_card.dart`'s `_prBadge` for a
 /// consistent "you just set a record" visual language app-wide.
+/// M36's celebration: the count in the header, then one row per record with
+/// the value it replaced and by how much.
+///
+/// M36 also draws an "Open summary" primary button; there is deliberately no
+/// such button here, because this dialog already opens *on top of* the
+/// summary — the frame was drawn for a celebration reached from elsewhere.
+class _CardioRecordCelebrationDialog extends StatelessWidget {
+  const _CardioRecordCelebrationDialog({
+    required this.types,
+    required this.session,
+    required this.previousBests,
+    required this.unitSystem,
+    required this.label,
+  });
+
+  final List<CardioPrType> types;
+  final WorkoutSession session;
+  final CardioPrBaseline previousBests;
+  final UnitSystem unitSystem;
+  final String Function(CardioPrType type) label;
+
+  static const _amber = Color(0xFFD8B35A);
+  static final _previousDate = DateFormat.MMMMd();
+
+  /// Each type's own unit — a distance record reads in km, a time record in
+  /// minutes, an elevation record in metres.
+  String _format(CardioPrType type, double value) => switch (type) {
+        CardioPrType.longestDistance => CardioFormatter.distance(value, unitSystem),
+        CardioPrType.greatestElevationGain => CardioFormatter.elevation(value, unitSystem),
+        CardioPrType.longestMovingTime ||
+        CardioPrType.fastest1k ||
+        CardioPrType.fastest5k ||
+        CardioPrType.fastest10k =>
+          CardioFormatter.duration(Duration(seconds: value.round())),
+      };
+
+  /// The improvement, always written as a gain: a best-effort record moves
+  /// *down*, so its delta is shown as seconds saved rather than as a negative
+  /// number the reader has to interpret.
+  String? _delta(CardioPrType type, double value, double previous) {
+    if (type.lowerIsBetter) {
+      final saved = (previous - value).round();
+      return saved <= 0 ? null : '−${CardioFormatter.duration(Duration(seconds: saved))}';
+    }
+    final gained = value - previous;
+    if (gained <= 0) return null;
+    return '+${_format(type, gained)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return AlertDialog(
+      icon: const Icon(Icons.emoji_events, color: _amber, size: 32),
+      title: Text(
+        l10n.cardioRecordCelebrationTitle(types.length),
+        textAlign: TextAlign.center,
+        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final type in types)
+              Builder(builder: (context) {
+                final value = type.valueIn(session);
+                final previous = previousBests[type];
+                if (value == null) return const SizedBox.shrink();
+                final delta = previous == null ? null : _delta(type, value, previous.value);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              label(type),
+                              style: theme.textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            if (previous != null)
+                              Text(
+                                l10n.cardioRecordPrevious(
+                                  _format(type, previous.value),
+                                  _previousDate.format(previous.at),
+                                ),
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: scheme.outline),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            _format(type, value),
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                          if (delta != null)
+                            Text(
+                              delta,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cardioRecordCelebrationClose),
+        ),
+      ],
+    );
+  }
+}
+
+/// One line of M34's best-efforts card.
+class _BestEffortRow {
+  const _BestEffortRow({
+    required this.label,
+    required this.duration,
+    required this.pace,
+    required this.isRecord,
+  });
+
+  final String label;
+  final Duration duration;
+
+  /// Null only when the pace can't be derived — never in practice here,
+  /// since every row has both a distance and a time by construction.
+  final String? pace;
+  final bool isRecord;
+}
+
+/// M34's row: distance · time · normalized pace. A record row is marked with
+/// an amber wash, border and trophy pill rather than a different background
+/// colour — the same "highlighted row" pattern the statistics record list
+/// uses, so a record reads as *this* row emphasized, not as another kind of
+/// row.
+class _BestEffortTile extends StatelessWidget {
+  const _BestEffortTile({
+    required this.row,
+    required this.subtitle,
+    required this.recordBadge,
+    required this.theme,
+  });
+
+  final _BestEffortRow row;
+  final String subtitle;
+  final String recordBadge;
+  final ThemeData theme;
+
+  static const _amber = Color(0xFFD8B35A);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = theme.colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: row.isRecord ? _amber.withValues(alpha: 0.12) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: row.isRecord ? Border.all(color: _amber.withValues(alpha: 0.34)) : null,
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 44,
+            child: Text(
+              row.label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  CardioFormatter.duration(row.duration),
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(height: 1),
+                // The trophy pill sits on the subtitle line rather than
+                // beside the time: on a 360 px phone "49:40" + the pill +
+                // the pace don't fit one row, and an ellipsized record time
+                // would be worse than a pill one line lower.
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        subtitle,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 10, color: scheme.outline),
+                      ),
+                    ),
+                    if (row.isRecord) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: _amber,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          recordBadge,
+                          style: const TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF161611),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (row.pace != null)
+            Text(
+              row.pace!,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: row.isRecord ? _amber : scheme.onSurfaceVariant,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _NewRecordBanner extends StatelessWidget {
   const _NewRecordBanner({
     required this.types,
@@ -1201,6 +1566,9 @@ class _NewRecordBanner extends StatelessWidget {
         CardioPrType.longestDistance => l10n.cardioRecordLongestDistance,
         CardioPrType.longestMovingTime => l10n.cardioRecordLongestMovingTime,
         CardioPrType.greatestElevationGain => l10n.cardioRecordGreatestElevationGain,
+        CardioPrType.fastest1k => l10n.cardioRecordFastest1k,
+        CardioPrType.fastest5k => l10n.cardioRecordFastest5k,
+        CardioPrType.fastest10k => l10n.cardioRecordFastest10k,
       };
 
   @override

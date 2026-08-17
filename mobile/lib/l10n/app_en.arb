@@ -3597,6 +3597,58 @@
   "@cardioRecordLongestMovingTime": {
     "description": "Cardio record type label: this session's moving time is longer than any prior cardio session's"
   },
+  "cardioRecordFastest1k": "Fastest 1 km",
+  "@cardioRecordFastest1k": {
+    "description": "Name of the fastest-1km cardio record (C6.7). The distance stays metric even on an imperial profile — the record is defined as a 1 km window (C6.1's best_1k_seconds column), so calling it anything else would name a different record."
+  },
+  "cardioRecordFastest5k": "Fastest 5 km",
+  "@cardioRecordFastest5k": {
+    "description": "Name of the fastest-5km cardio record (C6.7) — see cardioRecordFastest1k on why the distance stays metric"
+  },
+  "cardioRecordFastest10k": "Fastest 10 km",
+  "@cardioRecordFastest10k": {
+    "description": "Name of the fastest-10km cardio record (C6.7)"
+  },
+  "bestEffortsSectionLabel": "BEST EFFORTS",
+  "@bestEffortsSectionLabel": {
+    "description": "Header of the card listing the fastest 1/5/10 km inside a run, on the cardio summary screen (C6.7, M34)"
+  },
+  "bestEffortOnRouteSubtitle": "computed on the route",
+  "@bestEffortOnRouteSubtitle": {
+    "description": "Subtitle under a best-effort time (C6.7, M34/M36) — says the number comes from the recorded GPS track rather than from the session's average pace"
+  },
+  "cardioRecordBadge": "record",
+  "@cardioRecordBadge": {
+    "description": "Small trophy pill marking the best-effort row that was set this session (C6.7, M34)"
+  },
+  "cardioRecordCelebrationTitle": "{count, plural, =1{New record} other{{count} records in one run}}",
+  "@cardioRecordCelebrationTitle": {
+    "description": "Title of the single celebration dialog shown after a run that broke records (C6.7, M36). One dialog, one haptic, one list — never one celebration per record.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "cardioRecordPrevious": "previous: {value} · {date}",
+  "@cardioRecordPrevious": {
+    "description": "Per-row line in the celebration dialog naming the record that was just replaced, with the date it was set (C6.7, M36)",
+    "placeholders": {
+      "value": {
+        "type": "String",
+        "example": "24:36"
+      },
+      "date": {
+        "type": "String",
+        "example": "12 October"
+      }
+    }
+  },
+  "cardioRecordCelebrationClose": "Close",
+  "@cardioRecordCelebrationClose": {
+    "description": "The celebration dialog's only button. M36 also draws an 'Open summary' primary button, but this dialog already opens on top of the summary, so there is nowhere for it to go."
+  },
   "cardioRecordGreatestElevationGain": "Greatest elevation gain",
   "@cardioRecordGreatestElevationGain": {
     "description": "Cardio record type label: this session gained more elevation than any prior running/walking/hiking session"
@@ -3712,6 +3764,50 @@
   "splitsSectionLabel": "SPLITS",
   "@splitsSectionLabel": {
     "description": "Section header above the per-km split list on the cardio summary screen (C4a.6, DISTANCE family only, shown when the session has any recorded splits)"
+  },
+  "kmCueSectionLabel": "DISTANCE FEEDBACK",
+  "@kmCueSectionLabel": {
+    "description": "Section header inside the in-session settings sheet (C6.6, M35), above the per-kilometre cue switches. Unit-neutral on purpose — the profile decides whether the cue fires per kilometre or per mile, and the explanation row at the bottom of the sheet spells out which is in effect."
+  },
+  "kmCueVibrationLabel": "Vibration",
+  "@kmCueVibrationLabel": {
+    "description": "Switch label: buzz the phone at each completed kilometre/mile"
+  },
+  "kmCueVibrationDescription": "Two short taps",
+  "@kmCueVibrationDescription": {
+    "description": "Subtitle under the vibration switch, describing what the cue feels like"
+  },
+  "kmCueSoundLabel": "Sound",
+  "@kmCueSoundLabel": {
+    "description": "Switch label: play a short sound at each completed kilometre/mile"
+  },
+  "kmCueSoundDescription": "A short chime, over your music",
+  "@kmCueSoundDescription": {
+    "description": "Subtitle under the sound switch"
+  },
+  "kmCueSpokenLabel": "Spoken feedback",
+  "@kmCueSpokenLabel": {
+    "description": "Label of the not-yet-built spoken-cue row (C6.6, M35). Shown with a dashed border and a 'soon' badge rather than as a working switch — the row keeps its place visible without looking like a broken toggle."
+  },
+  "kmCueSpokenExample": "\"Kilometer 3, pace 5:12\"",
+  "@kmCueSpokenExample": {
+    "description": "Example of what the spoken cue would say, shown under the disabled spoken-feedback row"
+  },
+  "kmCueComingSoonBadge": "soon",
+  "@kmCueComingSoonBadge": {
+    "description": "Small badge marking a feature whose place is reserved but which isn't built yet"
+  },
+  "kmCueUnitExplanationMetric": "The unit comes from your profile: kilometers right now. Switch to miles and the cue fires every mile, and the splits switch too.",
+  "@kmCueUnitExplanationMetric": {
+    "description": "Closing row of the in-session settings sheet (C6.6, M35). Explains where the unit comes from — it is deliberately NOT a second place to set it, since a unit settable in two places is a guaranteed bug report."
+  },
+  "kmCueUnitExplanationImperial": "The unit comes from your profile: miles right now. Switch to kilometers and the cue fires every kilometer, and the splits switch too.",
+  "@kmCueUnitExplanationImperial": {
+    "description": "The imperial-profile variant of kmCueUnitExplanationMetric"
+  },
+  "cardioSessionSettingsTitle": "During the workout",
+  "@cardioSessionSettingsTitle": {
+    "description": "Title of the in-session settings sheet reachable from the DISTANCE-family header (C6.6, M35) — it now holds both auto-pause and the distance cue, so it is no longer named after auto-pause alone"
   },
   "paceSectionLabel": "PACE PER SPLIT",
   "@paceSectionLabel": {

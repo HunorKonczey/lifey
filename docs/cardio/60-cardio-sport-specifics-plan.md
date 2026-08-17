@@ -1,8 +1,9 @@
 # 60 – Cardio sport-specifikumok: fejlesztési terv (C6–C9)
 
-Státusz: **A fejlesztés elindult — a design kész (2026-08-16), a C6.1–C6.5 leszállt; a C6.5
-watchOS-fele Macen készült el (2026-08-17), ezzel a terv egyetlen Mac-es lépése is megvan
-(ld. [§4](#4-c6--futás-specifikum-8-lépés--mf6a)).**
+Státusz: **A design kész (2026-08-16), és a teljes C6 — az MF6a mérföldkő — leszállt (2026-08-17).**
+A C6.5 watchOS-fele Macen készült el, ezzel a terv egyetlen Mac-es lépése is megvan; a C6.7
+statisztika-listája az egyetlen kimaradt darab, mert nincs mit bővíteni
+(ld. [§4](#4-c6--futás-specifikum-8-lépés--mf6a)). A sorrend szerint a következő iteráció a **C9 (Játék)**.
 A frame-ek: [`design/Lifey Cardio Sport-specifikumok.dc.html`](design/Lifey%20Cardio%20Sport-specifikumok.dc.html),
 részletes leírásuk a [61-es docban](61-cardio-sport-specifics-design-prompts.md) — **minden UI-lépés onnan dolgozik.**
 Előzmény: az [59](59-cardio-implementation-plan.md)
@@ -154,8 +155,8 @@ A teljes, C0–C9-re kiterjedő platform-mátrix és a besorolás szabálya:
 | **C6.3** ✅ | Zárás-bekötés: a best-effort ugyanott számolódik, ahol a splitek; drift-oszlopok + repository + payload + `pull_engine` | `core/local_db/tables/workout_session_tables.dart` (+ **drift séma 37**), `data/workout_session_repository.dart`, `domain/workout_session.dart`, `presentation/cardio_session_screen.dart`, `core/sync/pull_engine.dart` | – | **Kész (2026-08-16)** — a `_finish()` ugyanabból a `trail`-ből és ugyanabban az outbox-írásban számolja, mint a spliteket; a három érték a drift-soron, a payloadon és a pullon is átmegy; 1 km alatti futásnál mindhárom `null`, nem 0 (widget-teszt). A `workout_session_controller` nem igényelt változást — a `CardioMetrics` már végig-vezette a mezőket |
 | **C6.4** ✅ | Összegzés: **tempó-oszlopdiagram** (nem terület — ld. [61 §2](61-cardio-sport-specifics-design-prompts.md)) + split-sor **táv + tempó + szint** mélységgel | `presentation/cardio_summary_screen.dart`, `shared/widgets/charts/pace_bar_chart.dart` (új), `l10n/` | **M33** | **Kész (2026-08-16)** — a diagram és a lista ugyanazt a `session.splits`-et kapja (teszt hasonlítja a kettőt); a kiválasztás **egy állapot a képernyőn**, ezért a sor és az oszlop együtt világít; 1 splitnél nincs diagram; a részleges utolsó split **szürkén megjelenik, de kimarad az értékelésből** (skála, átlagvonal, „leggyorsabb" felirat) — ld. a lenti megjegyzést. Szintadat nélkül a kártya **egyszer** mondja ki, nem soronként üres oszlop |
 | **C6.5** ✅ | **Kadencia** bekötése: óráról érkező `avgCadence`/`maxCadence` megjelenítése (csak futásnál), Wear OS + watchOS oldal | `presentation/cardio_summary_screen.dart`, `android/wear/.../ExerciseService.kt`, `mobile/ios/LifeyWatch/WorkoutManager.swift`, `StandaloneSessionPayload.swift` | **M33** | **Kész (2026-08-17)** — a telefon-fél és a **Wear OS-fél** aznap, a **watchOS-fél** ugyanaznap Macen: a futás-összegzés `spm`-ben mutatja a kadenciát, és csak akkor, ha a szenzor tényleg küldte; séta/túra sosem, a szobabicikli `rpm`-je változatlan. A watchOS-oldal **nem talált kész kadencia-adattípust** a HealthKitben, ezért lépésszámból származtat — ld. a lenti megjegyzést |
-| **C6.6** | **Km-visszajelzés** futás közben: rezgés + rövid csengő külön kapcsolóval; a beszélt sor **szaggatott, „hamarosan”** állapotban | `presentation/cardio_session_screen.dart`, `application/km_cue_controller.dart` (új), `presentation/widgets/auto_pause_settings_sheet.dart` (a lap mintája), beállítás-tár | **M35** | Háttérben/zárolt képernyőn is megszólal; **auto-pause alatt nem üt** (teszt); a lap a mértékegységet **magyarázza, nem állítja** |
-| **C6.7** | **Futás-PR-ok**: `CardioPrType` bővítés `fastest1k` / `fastest5k` / `fastest10k` + baseline + **egy** ünneplő dialógus + statisztika-lista | `domain/cardio_personal_record.dart`, `presentation/cardio_summary_screen.dart`, `features/statistics/application/stat_summary_data.dart` | **M34**, **M36** | Csak futás termel ilyen PR-t; **séta/túra nem** ([56 §5.2](56-cardio-statistics-plan.md)); **négy rekord = egy dialógus, egy haptika, egy lista**, soronként az előző értékkel; a nem létező résztávok **szürkén sem** jelennek meg |
+| **C6.6** ✅ | **Km-visszajelzés** futás közben: rezgés + rövid csengő külön kapcsolóval; a beszélt sor **szaggatott, „hamarosan”** állapotban | `application/km_cue_controller.dart` (új), `application/km_cue_preferences.dart` (új), `presentation/widgets/cardio_session_settings_sheet.dart` (az `auto_pause_settings_sheet` átnevezve+bővítve), `presentation/cardio_session_screen.dart`, `l10n/` | **M35** | **Kész (2026-08-17)** — **auto-pause alatt nem üt** (teszt: 500 m után auto-szünet, majd 660 m sodródás → egyetlen jelzés sem); a beszélt sor **szaggatott kerettel, kapcsoló nélkül**; a lap a mértékegységet **magyarázza, nem állítja**. A háttér/zárolt képernyő **szerkezetileg adott** (a jelzés a GPS-fix-folyamról jön, aminek már van háttér-kézbesítése), de **eszközön nincs próbálva**. A csengő a platform saját hangja — ld. a lenti megjegyzést |
+| **C6.7** ✅ | **Futás-PR-ok**: `CardioPrType` bővítés `fastest1k` / `fastest5k` / `fastest10k` + baseline + **egy** ünneplő dialógus + statisztika-lista | `domain/cardio_personal_record.dart`, `presentation/cardio_summary_screen.dart`, `presentation/cardio_session_screen.dart`, `l10n/` | **M34**, **M36** | **Kész (2026-08-17)** — csak futás termel ilyen PR-t (séta/túra a baseline-ba sem kerül be, teszt); **négy rekord = egy dialógus, egy haptika, egy lista**, soronként az előző értékkel és dátummal; a nem létező résztávok **egyáltalán nem** jelennek meg. A statisztika-lista **elmaradt** — ld. a lenti megjegyzést |
 
 > ### ✅ C6.5 — a watchOS-fél leszállt (2026-08-17, Macen)
 >
@@ -213,6 +214,51 @@ A teljes, C0–C9-re kiterjedő platform-mátrix és a besorolás szabálya:
 > drift-generáltakon — `app_database.g.dart`-ból hiányzott a C6.3 séma 37 `best1k/5k/10kSeconds`
 > hármasa. Nem repó-hiba, csak friss checkout: egy `dart run build_runner build` rendezi.)*
 >
+> ### ⏳ C6.7 — a „statisztika-lista" ELMARADT (nincs mit bővíteni)
+>
+> A lépés fájllistája `features/statistics/application/stat_summary_data.dart`-ot említ, de **abban
+> nincs rekord-lista**: az a fájl a kiválasztott metrika/tartomány diagram-pontjait összegzi (összeg,
+> átlag, min, max, trend). A **statisztika-képernyőn ma egyáltalán nincs PR-lista** — se cardio, se
+> erősítő —, tehát nem bővítésről lenne szó, hanem egy új felületről; az **nem fér ebbe a lépésbe**,
+> és a design sem ad rá frame-et (az M34 az *összegzésre* való). A rekordok tehát **az összegzésen
+> látszanak** (legjobb-résztávok kártya + a meglévő rekord-sáv), a statisztikai lista külön tétel.
+>
+> **Amit a C6.7 megvalósítása eldöntött:**
+> - A `CardioPrBaseline` mostantól **értéket és dátumot** tárol típusonként (`CardioPrBest`), mert az
+>   M36 sorai a lecserélt rekordot dátummal nevezik meg. A régi olvasó getterek (`maxDistanceMeters`
+>   stb.) megmaradtak, így a korábbi hívók változatlanok.
+> - Az M34 „hol volt" alcíme (**„a 7,1–8,1 km szakaszon"**) **nem valósult meg**: a C6.1 séma csak a
+>   *másodperceket* tárolja, az ablak kezdő-offsetjét nem — az külön oszlop(ok) és migráció lenne.
+>   Helyette az M36 saját alcíme szerepel: **„a nyomvonalon számolva"**. Ha kell, a `computeBestEfforts`
+>   könnyen visszaadhatná az offsetet is, de tárolni kell hozzá.
+> - Az M36 **„Összegzés megnyitása"** gombja kimaradt: a dialógus *az összegzésen* nyílik, nincs hova
+>   navigálnia. Egy gomb maradt (Bezárás).
+> - A résztávok **méter-alapúak maradnak mérföldes profilon is** (1/5/10 km), mert a rekord maga van
+>   így definiálva (`best_1k_seconds`); a *tempó* viszont a profil egységében jelenik meg.
+> - A rekord-sor **borostyán pirulája a felirat sorába került**, nem az idő mellé: 360 px-en az idő +
+>   pirula + tempó nem fér ki egy sorba (a widget-teszt 400 px-en tényleges overflow-t fogott), és egy
+>   levágott rekord-idő rosszabb, mint egy sorral lejjebb tett pirula.
+>
+> **C6.6 — a csengő a platform saját hangja.** A rezgés teljes értékű (`HapticFeedback`, két rövid
+> koppintás az M35 szerint). A **hang** viszont `SystemSound.play(SystemSoundType.alert)` — a platform
+> beépített figyelmeztető hangja, **nem** csomagolt hangminta. Az M35 szövege („Rövid csengő, **a zene
+> alatt**”) saját mintát ír le, ami a zene alá keveredik: ahhoz audio-session kategória és
+> lejátszó-csomag kell (`audioplayers`/`just_audio`), a `CLAUDE.md` viszont tiltja az indoklás nélküli
+> új függőséget — **ez a döntés nem ezé a lépésé**. A kapcsoló és a teljes vezetékezés kész: ha a
+> csomag bekerül, csak a `_playKmCue()` hang-ága cserélődik.
+>
+> **Amit a C6.6 megvalósítása még eldöntött:**
+> - A lap **átnevezve** `AutoPauseSettingsSheet` → **`CardioSessionSettingsSheet`**: az M35 szerint az
+>   auto-pause **ebben a lapban** az első sor, tehát a lap két dologról szól — nem helyes az egyikről
+>   elnevezni.
+> - A szekció-fejléc **`TÁV-VISSZAJELZÉS`**, nem „kilométer-visszajelzés”: mérföldes profilnál a
+>   kilométeres fejléc hazudna. Hogy melyik van érvényben, azt a lap záró magyarázó sora mondja ki.
+> - A jelzés a **teljes DISTANCE-családra** vonatkozik (séta/túra is), nem csak futásra: a lépés címe
+>   futást mond, de semmi nem futás-specifikus benne — szemben a kadenciával (C6.5), ahol a megkötés
+>   indokolt.
+> - A **háttér/zárolt képernyő** szerkezetileg adott (a jelzés a GPS-fix-folyamról jön, aminek a C4a.5
+>   óta van háttér-kézbesítése), de **eszközön nincs próbálva** — widget-tesztből nem igazolható.
+>
 > **C6.4 — a részleges split kezelése.** A fenti kész-ha „nem kap oszlopot"-ot mond, a
 > [61 §2 M33](61-cardio-sport-specifics-design-prompts.md) viszont „**szürke** (`3C3E32`) és nem kap
 > saját oszlopot **az értékelésben**". A megvalósítás a 61-est követi (a §1 szerint a UI-lépések
@@ -227,10 +273,10 @@ A teljes, C0–C9-re kiterjedő platform-mátrix és a besorolás szabálya:
 
 **Elfogadás (MF6a)**
 
-- [ ] Egy 7 km-es futás után a „legjobb 5 km" **nem** az átlagtempóból számolt érték ([56 D-C3.8](56-cardio-statistics-plan.md))
-- [ ] A tempó-diagram és a split-lista minden során ugyanaz a tempó szerepel
-- [ ] GPS nélküli (futópad) futás minden C6-felülete elrejtve, nem üres kártyaként látszik
-- [ ] Erősítő session nem termel futás-PR-t, és fordítva
+- [x] Egy 7 km-es futás után a „legjobb 5 km" **nem** az átlagtempóból számolt érték ([56 D-C3.8](56-cardio-statistics-plan.md)) — `best_effort_calculator_test.dart`: a csúszóablak a leggyorsabb szakaszt találja meg, nem az átlagot
+- [x] A tempó-diagram és a split-lista minden során ugyanaz a tempó szerepel — a kettő **ugyanazt a `session.splits`-et** kapja (`cardio_summary_screen_test.dart` összehasonlítja)
+- [x] GPS nélküli (futópad) futás minden C6-felülete elrejtve, nem üres kártyaként látszik — nyomvonal nélkül nincs diagram/split-kártya, best-effort nélkül nincs résztáv-kártya (tesztek)
+- [x] Erősítő session nem termel futás-PR-t, és fordítva — `cardio_personal_record_test.dart`; a két PR-motor szerkezetileg külön ([59](59-cardio-implementation-plan.md) C3.5)
 
 ---
 

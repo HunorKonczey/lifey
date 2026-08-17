@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/core/local_db/app_database.dart';
@@ -98,6 +99,58 @@ LocationFix _fix({required double lat, required double speed}) => LocationFix(
       speed: speed,
       recordedAt: DateTime.utc(2026, 8, 13),
     );
+
+
+/// A fix that actually *moves*, with an advancing timestamp — unlike [_fix],
+/// which is only ever fed to the auto-pause detector. `track_filter.dart`
+/// rejects a fix that shares its predecessor's timestamp (it can't derive a
+/// speed from a zero interval), so anything meant to grow the live distance
+/// has to carry real time.
+///
+/// ~11.1 m north of fix `n - 1`, 3 s apart. [speed] is what the auto-pause
+/// detector reads, and it is deliberately independent of that displacement:
+/// a GPS drifting 11 m while its owner stands at a light reports a low speed,
+/// which is exactly the case C6.6 has to get right.
+LocationFix _movingFix(int n, {required double speed}) => LocationFix(
+      latitude: 47.5 + n * 0.0001,
+      longitude: 19.05,
+      speed: speed,
+      recordedAt: DateTime.utc(2026, 8, 13, 7).add(Duration(seconds: n * 3)),
+    );
+
+/// Records every `HapticFeedback` platform call — how the kilometre cue is
+/// observed from a widget test (C6.6). The channel also carries
+/// `SystemSound.play`, so this doubles as proof that a silent profile stays
+/// silent.
+List<String> _recordPlatformCalls(WidgetTester tester) {
+  final calls = <String>[];
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    SystemChannels.platform,
+    (call) async {
+      if (call.method == 'HapticFeedback.vibrate' || call.method == 'SystemSound.play') {
+        calls.add(call.method);
+      }
+      return null;
+    },
+  );
+  addTearDown(() => tester.binding.defaultBinaryMessenger
+      .setMockMethodCallHandler(SystemChannels.platform, null));
+  return calls;
+}
+
+/// Emits [count] moving fixes starting at index [from].
+Future<void> _emitMoving(
+  WidgetTester tester,
+  LocationServiceStub location, {
+  required int from,
+  required int count,
+  required double speed,
+}) async {
+  for (var n = from; n < from + count; n++) {
+    location.emitFix(_movingFix(n, speed: speed));
+    await tester.pump();
+  }
+}
 
 Future<
     ({
@@ -219,16 +272,107 @@ void main() {
 
     await tester.tap(find.byTooltip('Auto-pause settings'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(SwitchListTile));
+    // The sheet holds three switches since C6.6 — auto-pause is the first.
+    await tester.tap(find.byType(SwitchListTile).first);
     await tester.pump();
     // Dismiss the sheet by dragging it down / tapping the barrier — simplest
     // reliable way in a widget test is popping the root navigator directly.
-    Navigator.of(tester.element(find.byType(SwitchListTile)), rootNavigator: true).pop();
+    Navigator.of(tester.element(find.byType(SwitchListTile).first), rootNavigator: true).pop();
     await tester.pumpAndSettle();
 
     ctx.location.emitFix(_fix(lat: 47.5, speed: 0.1));
     await tester.pump(const Duration(seconds: 15));
 
     expect(ctx.controller.pauseCalls, isEmpty);
+  });
+
+  // -- Kilometre cue (C6.6, docs/cardio/61 §2 M35) -------------------------
+
+  group('kilometre cue', () {
+    testWidgets('crossing a kilometre while running fires the cue', (tester) async {
+      final ctx = await _pump(tester);
+      final calls = _recordPlatformCalls(tester);
+
+      // ~11.1 m per fix: 89 fixes is just under a kilometre, 95 is past it.
+      await _emitMoving(tester, ctx.location, from: 0, count: 89, speed: 5);
+      expect(calls, isEmpty, reason: 'the first kilometre is not finished yet');
+
+      await _emitMoving(tester, ctx.location, from: 89, count: 6, speed: 5);
+      // Two short taps (M35), the second one 140 ms later.
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(calls.where((c) => c == 'HapticFeedback.vibrate'), hasLength(2));
+      // Sound is off by default — the cue is silent unless asked for.
+      expect(calls, isNot(contains('SystemSound.play')));
+    });
+
+    testWidgets('the same kilometre never cues twice', (tester) async {
+      final ctx = await _pump(tester);
+      final calls = _recordPlatformCalls(tester);
+
+      await _emitMoving(tester, ctx.location, from: 0, count: 95, speed: 5);
+      await tester.pump(const Duration(milliseconds: 200));
+      final afterFirstKm = calls.length;
+
+      await _emitMoving(tester, ctx.location, from: 95, count: 20, speed: 5);
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(calls, hasLength(afterFirstKm), reason: 'still inside the second kilometre');
+    });
+
+    testWidgets('an auto-paused session never cues, however far its fixes drift',
+        (tester) async {
+      // The kész-ha: "auto-pause alatt nem üt". A phone left on a bench keeps
+      // producing fixes, and a drifting GPS can wander a long way — none of
+      // it is running, so none of it may cue.
+      final ctx = await _pump(tester);
+      final calls = _recordPlatformCalls(tester);
+
+      // ~500 m of real running first, so the cue is genuinely close.
+      await _emitMoving(tester, ctx.location, from: 0, count: 45, speed: 5);
+      expect(calls, isEmpty);
+
+      // Slow down and stay slow: 15 s of sub-threshold speed auto-pauses.
+      await _emitMoving(tester, ctx.location, from: 45, count: 3, speed: 0.1);
+      await tester.pump(const Duration(seconds: 15));
+      expect(ctx.controller.pauseCalls, hasLength(1), reason: 'auto-paused');
+
+      // Now drift far past where the first kilometre would have been. If a
+      // paused session counted these, the cue would fire.
+      await _emitMoving(tester, ctx.location, from: 48, count: 60, speed: 0.1);
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(calls, isEmpty);
+    });
+
+    testWidgets('with both cue switches off, crossing a kilometre stays silent',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'cardio.kmCueVibration': false,
+        'cardio.kmCueSound': false,
+      });
+      final ctx = await _pump(tester);
+      final calls = _recordPlatformCalls(tester);
+
+      await _emitMoving(tester, ctx.location, from: 0, count: 95, speed: 5);
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(calls, isEmpty);
+    });
+
+    testWidgets('with sound on, the kilometre also plays a tone', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'cardio.kmCueVibration': false,
+        'cardio.kmCueSound': true,
+      });
+      final ctx = await _pump(tester);
+      final calls = _recordPlatformCalls(tester);
+
+      await _emitMoving(tester, ctx.location, from: 0, count: 95, speed: 5);
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(calls, contains('SystemSound.play'));
+      expect(calls, isNot(contains('HapticFeedback.vibrate')));
+    });
   });
 }
