@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -15,11 +16,15 @@ import '../../../shared/widgets/charts/pace_bar_chart.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
+import '../application/game_setup_preferences.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
 import '../domain/cardio_personal_record.dart';
+import '../domain/hr_zone_breakdown.dart';
 import '../domain/route_encoder.dart';
 import '../domain/workout_session.dart';
+import 'widgets/game_setup_sheet.dart';
+import 'widgets/hr_zone_panel.dart';
 import 'widgets/prompt_number_dialog.dart';
 import 'widgets/route_painter.dart';
 import 'widgets/rpe_selector.dart';
@@ -104,8 +109,11 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   double? _avgWatts;
   int? _resistanceLevel;
   String? _venue;
+  String? _gameFormat;
   int? _intensity;
   int? _scorePoints;
+  int? _scoreAssists;
+  int? _scoreRebounds;
 
   // C4a.6 — the closing route, also read-only carry-over here (this screen
   // has no route re-processing UI, only `CardioSessionScreenState._finish()`
@@ -147,8 +155,11 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     _avgWatts = cardio?.avgWatts;
     _resistanceLevel = cardio?.resistanceLevel;
     _venue = cardio?.venue;
+    _gameFormat = cardio?.gameFormat;
     _intensity = cardio?.intensity;
     _scorePoints = cardio?.scorePoints;
+    _scoreAssists = cardio?.scoreAssists;
+    _scoreRebounds = cardio?.scoreRebounds;
     _routePolyline = cardio?.routePolyline;
     _routePointCount = cardio?.routePointCount;
 
@@ -239,12 +250,22 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     String? distanceSource,
     double? deviceCalories,
     String? caloriesSource,
+    int? scorePoints,
+    int? scoreAssists,
+    int? scoreRebounds,
+    String? venue,
+    String? gameFormat,
   }) async {
     final l10n = AppLocalizations.of(context)!;
     final newDistance = distanceMeters ?? _distanceMeters;
     final newDistanceSource = distanceSource ?? _distanceSource;
     final newCalories = deviceCalories ?? _deviceCalories;
     final newCaloriesSource = caloriesSource ?? _caloriesSource;
+    final newPoints = scorePoints ?? _scorePoints;
+    final newAssists = scoreAssists ?? _scoreAssists;
+    final newRebounds = scoreRebounds ?? _scoreRebounds;
+    final newVenue = venue ?? _venue;
+    final newFormat = gameFormat ?? _gameFormat;
     setState(() => _busy = true);
     try {
       await ref.read(workoutSessionControllerProvider.notifier).updateLiveCardioMetrics(
@@ -257,9 +278,21 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
               avgWatts: _avgWatts,
               resistanceLevel: _resistanceLevel,
               deviceCalories: newCalories,
-              venue: _venue,
+              venue: newVenue,
+              gameFormat: newFormat,
               intensity: _intensity,
-              scorePoints: _scorePoints,
+              scorePoints: newPoints,
+              scoreAssists: newAssists,
+              scoreRebounds: newRebounds,
+              hrZone1Seconds: widget.session.cardio?.hrZone1Seconds,
+              hrZone2Seconds: widget.session.cardio?.hrZone2Seconds,
+              hrZone3Seconds: widget.session.cardio?.hrZone3Seconds,
+              hrZone4Seconds: widget.session.cardio?.hrZone4Seconds,
+              hrZone5Seconds: widget.session.cardio?.hrZone5Seconds,
+              best1kSeconds: widget.session.cardio?.best1kSeconds,
+              best5kSeconds: widget.session.cardio?.best5kSeconds,
+              best10kSeconds: widget.session.cardio?.best10kSeconds,
+              maxHeartRate: widget.session.cardio?.maxHeartRate,
               distanceSource: newDistanceSource,
               caloriesSource: newCaloriesSource,
               routePolyline: _routePolyline,
@@ -272,6 +305,11 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
         _distanceSource = newDistanceSource;
         _deviceCalories = newCalories;
         _caloriesSource = newCaloriesSource;
+        _scorePoints = newPoints;
+        _scoreAssists = newAssists;
+        _scoreRebounds = newRebounds;
+        _venue = newVenue;
+        _gameFormat = newFormat;
         _busy = false;
       });
     } catch (_) {
@@ -298,6 +336,89 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     );
     if (result == null || result < 0 || !mounted) return;
     await _persistCardio(distanceMeters: result * unitMeters, distanceSource: 'MANUAL');
+  }
+
+  /// The box score's edit path on the summary (C9.2, M44's "az összegzésen és
+  /// a kézi lapon ... `edit` szerkesztés móddal") — the same tap-the-tile
+  /// pattern the distance and device-calorie tiles already use, rather than a
+  /// second stepper: after the match the job is correcting a miscount, not
+  /// counting live.
+  Future<void> _editScore({
+    required String title,
+    required int? current,
+    required Future<void> Function(int value) persist,
+  }) async {
+    if (_busy) return;
+    final l10n = AppLocalizations.of(context)!;
+    final result = await promptNumber(
+      context,
+      l10n,
+      title: title,
+      suffix: '',
+      initialText: current?.toString() ?? '',
+    );
+    if (result == null || result < 0 || !mounted) return;
+    await persist(result.round());
+  }
+
+  /// M45's own promise — "a beállítás utólag is módosítható" — made real on
+  /// the summary. Both selectors are the *same widgets* the start sheet uses,
+  /// so the two surfaces can't drift apart.
+  Future<void> _editGameSetup() async {
+    if (_busy) return;
+    final l10n = AppLocalizations.of(context)!;
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      useRootNavigator: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.gameFormatSectionLabel,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              GameFormatSelector(
+                value: GameFormat.fromCode(_gameFormat) ?? GameSetup.defaults.format,
+                onChanged: (format) {
+                  setSheetState(() => _gameFormat = format.code);
+                  unawaited(_persistCardio(gameFormat: format.code));
+                },
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.venueSectionLabel,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              GameVenueSelector(
+                venue: _venue ?? GameSetup.defaults.venue,
+                onChanged: (venue) {
+                  setSheetState(() => _venue = venue);
+                  unawaited(_persistCardio(venue: venue));
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (changed == true && mounted) setState(() {});
   }
 
   Future<void> _editDeviceCalories() async {
@@ -531,6 +652,10 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
           ),
           ..._bestEffortSection(l10n, theme, unitSystem),
           ..._routeSections(l10n, theme, scheme, unitSystem),
+          // Q-D7: one component for every cardio type, placed per family —
+          // after the splits for DISTANCE, so the pace story finishes before
+          // the physiological one starts.
+          ..._hrZoneSection(l10n),
         ];
       // M15: indoor sessions keep the big moving-time card, with the three
       // machine numbers nested inside it.
@@ -588,6 +713,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
           // for an indoor session this is the normal case, so it reads as an
           // explanation in a neutral tone, never as an error.
           _NoRouteCard(title: l10n.noRouteCardTitle, body: l10n.noRouteCardBody),
+          ..._hrZoneSection(l10n),
         ];
       case ActivityFamily.game:
         return [
@@ -597,15 +723,31 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             scheme: scheme,
             theme: theme,
           ),
+          // GAME puts the zones straight after the dominant number (Q-D7):
+          // on a match the zone spread *is* the story, so it outranks the
+          // venue/intensity/score grid below it.
+          ..._hrZoneSection(l10n),
           const SizedBox(height: 12),
           _MetricGrid(
             children: [
               if (_venue != null)
                 _MetricTile(
-                  icon: _venue == 'INDOOR' ? Icons.home : Icons.park,
+                  icon: _venue == 'INDOOR' ? Icons.home_work : Icons.park,
                   iconColor: accent,
                   label: l10n.venueSectionLabel,
                   value: _venue == 'INDOOR' ? l10n.venueIndoorLabel : l10n.venueOutdoorLabel,
+                  onTap: _busy ? null : _editGameSetup,
+                ),
+              if (_gameFormat != null)
+                _MetricTile(
+                  icon: Icons.grid_view,
+                  iconColor: accent,
+                  label: l10n.gameFormatSectionLabel,
+                  value: gameFormatLabel(
+                    l10n,
+                    GameFormat.fromCode(_gameFormat) ?? GameSetup.defaults.format,
+                  ),
+                  onTap: _busy ? null : _editGameSetup,
                 ),
               if (_intensity != null)
                 _MetricTile(
@@ -621,17 +763,90 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   label: l10n.heartRateFieldLabel,
                   value: '${heartRate.round()} bpm',
                 ),
+              // Editable since C9.2: a live stepper collects miscounts, so the
+              // summary has to be able to fix them. A never-counted stat stays
+              // absent rather than showing a zero nobody entered.
+              // C9.4 — an outdoor match that recorded GPS shows its distance.
+              // An indoor one has none: not a dash, not a zero, no tile at
+              // all ("nem letiltva, hanem nem létezik"). **No pace tile ever**
+              // for a match — the setup sheet's promise says why, and adding
+              // one here would contradict it (docs/cardio/51 §3.4).
+              if (hasDistance)
+                _MetricTile(
+                  icon: Icons.straighten,
+                  iconColor: accent,
+                  label: l10n.distanceFieldLabel,
+                  value: CardioFormatter.distance(_distanceMeters!, unitSystem),
+                ),
               if (_scorePoints != null)
                 _MetricTile(
                   icon: Icons.scoreboard,
                   iconColor: accent,
-                  label: l10n.scorePointsFieldLabel,
+                  label: _activityType == 'BASKETBALL'
+                      ? l10n.boxScorePointsLabel
+                      : l10n.boxScoreGoalsLabel,
                   value: '$_scorePoints',
+                  onTap: _busy
+                      ? null
+                      : () => _editScore(
+                            title: l10n.boxScorePointsLabel,
+                            current: _scorePoints,
+                            persist: (v) => _persistCardio(scorePoints: v),
+                          ),
+                ),
+              if (_scoreRebounds != null)
+                _MetricTile(
+                  icon: Icons.replay,
+                  iconColor: accent,
+                  label: l10n.boxScoreReboundsLabel,
+                  value: '$_scoreRebounds',
+                  onTap: _busy
+                      ? null
+                      : () => _editScore(
+                            title: l10n.boxScoreReboundsLabel,
+                            current: _scoreRebounds,
+                            persist: (v) => _persistCardio(scoreRebounds: v),
+                          ),
+                ),
+              if (_scoreAssists != null)
+                _MetricTile(
+                  icon: Icons.handshake,
+                  iconColor: accent,
+                  label: l10n.boxScoreAssistsLabel,
+                  value: '$_scoreAssists',
+                  onTap: _busy
+                      ? null
+                      : () => _editScore(
+                            title: l10n.boxScoreAssistsLabel,
+                            current: _scoreAssists,
+                            persist: (v) => _persistCardio(scoreAssists: v),
+                          ),
                 ),
             ],
           ),
         ];
     }
+  }
+
+  /// M43's zone panel, wrapped in the same section card every other block on
+  /// this screen uses (C9.1). **Absent entirely when the session carries no
+  /// zone data** — the common case, and an empty five-row panel would be a
+  /// worse answer than no panel: nothing here is ever estimated.
+  List<Widget> _hrZoneSection(AppLocalizations l10n) {
+    final breakdown = HrZoneBreakdown.fromSession(widget.session);
+    if (breakdown == null) return const [];
+    return [
+      const SizedBox(height: 12),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: HrZonePanel(breakdown: breakdown),
+      ),
+    ];
   }
 
   /// M34's "BEST EFFORTS" card, under the metric grid (C6.7). One row per

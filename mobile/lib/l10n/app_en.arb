@@ -1304,6 +1304,10 @@
   "@statMetricMaxHeartRateLabel": {
     "description": "Statistics metric label: highest heart rate recorded in a cardio session per day"
   },
+  "statMetricCardioHardZoneMinutesLabel": "Time at threshold+",
+  "@statMetricCardioHardZoneMinutesLabel": {
+    "description": "Statistics metric (C9.5): minutes spent in heart-rate zones 4 and 5. Deliberately not 'zone time' in total — the five zones together roughly equal the session, which the moving-minutes metric already charts."
+  },
   "statMetricCardioSessionsLabel": "Cardio sessions",
   "@statMetricCardioSessionsLabel": {
     "description": "Statistics metric label: number of cardio sessions per day"
@@ -3608,6 +3612,148 @@
   "cardioRecordFastest10k": "Fastest 10 km",
   "@cardioRecordFastest10k": {
     "description": "Name of the fastest-10km cardio record (C6.7)"
+  },
+  "gameSetupTitle": "Before the match",
+  "@gameSetupTitle": {
+    "description": "Title of the sheet shown when starting a GAME-family cardio session (C9.3, M45) — format and venue"
+  },
+  "gameSetupSubtitle": "You can change this afterwards.",
+  "@gameSetupSubtitle": {
+    "description": "Subtitle of the match-setup sheet: nothing chosen here is final, which is what lets the sheet be skippable"
+  },
+  "gameFormatSectionLabel": "FORMAT",
+  "@gameFormatSectionLabel": {
+    "description": "Section label above the 2x2 format selector (C9.3, M45)"
+  },
+  "gameFormatFiveVsFive": "5v5",
+  "@gameFormatFiveVsFive": {
+    "description": "Match format: full-court five-a-side"
+  },
+  "gameFormatSmallSided": "Small-sided",
+  "@gameFormatSmallSided": {
+    "description": "Match format: a smaller pitch/court. This is the label that forces the selector into 2x2 — in Hungarian ('Kispálya') four of these do not fit on one row."
+  },
+  "gameFormatPractice": "Practice",
+  "@gameFormatPractice": {
+    "description": "Match format: training session rather than a game"
+  },
+  "gameFormatMatch": "Match",
+  "@gameFormatMatch": {
+    "description": "Match format: a competitive fixture"
+  },
+  "gameGpsSwitchLabel": "Turn on GPS",
+  "@gameGpsSwitchLabel": {
+    "description": "The outdoor-only GPS opt-in on the match-setup sheet (C9.4, M45). Absent indoors entirely — not switched off, not there."
+  },
+  "gameGpsSwitchDescription": "Uses more battery",
+  "@gameGpsSwitchDescription": {
+    "description": "Subtitle of the GPS switch on the match-setup sheet"
+  },
+  "gameGpsPromise": "You get distance and a route. Not pace: min/km isn't a meaningful number in a match.",
+  "@gameGpsPromise": {
+    "description": "The one place the app states that a match records no pace (C9.4, M45; docs/cardio/51 §3.4). Said here so its absence on the summary doesn't read as a bug."
+  },
+  "gameSetupStart": "Start",
+  "@gameSetupStart": {
+    "description": "The match-setup sheet's start button — reachable on the first tap, since every field already has a value (C9.3, M45)"
+  },
+  "boxScoreCircleLabel": "Box",
+  "@boxScoreCircleLabel": {
+    "description": "The bottom-right circle button on the live GAME screen that opens the box-score stepper (C9.2, M44). The stepper is not always open: in a pocket or while defending, a permanently visible stepper would collect accidental taps."
+  },
+  "boxScoreAutoCloseHint": "closes after 6 s",
+  "@boxScoreAutoCloseHint": {
+    "description": "Header note on the box-score stepper panel, stating that it dismisses itself after 6 seconds of no interaction (C9.2, M44)"
+  },
+  "boxScorePointsLabel": "POINTS",
+  "@boxScorePointsLabel": {
+    "description": "Basketball column of the box-score stepper (C9.2, M44)"
+  },
+  "boxScoreGoalsLabel": "GOALS",
+  "@boxScoreGoalsLabel": {
+    "description": "Football's counterpart to boxScorePointsLabel — the same stored column, named for the sport"
+  },
+  "boxScoreAssistsLabel": "ASSISTS",
+  "@boxScoreAssistsLabel": {
+    "description": "Assists column of the box-score stepper (C9.2, M44)"
+  },
+  "boxScoreReboundsLabel": "REBOUNDS",
+  "@boxScoreReboundsLabel": {
+    "description": "Rebounds column of the box-score stepper — basketball only, so football shows two columns instead of three (C9.2, M44)"
+  },
+  "boxScoreOfferTitle": "Keep score?",
+  "@boxScoreOfferTitle": {
+    "description": "Title of the one-time offer to track the box score during a match (C9.2, M44, Q-D2)"
+  },
+  "boxScoreOfferBody": "Points, rebounds and assists, one tap during the match. If you're not interested, we won't ask again.",
+  "@boxScoreOfferBody": {
+    "description": "Body of the one-time box-score offer. The last sentence is a promise the code keeps literally — a decline is permanent."
+  },
+  "boxScoreOfferAccept": "Yes, please",
+  "@boxScoreOfferAccept": {
+    "description": "Accept button of the one-time box-score offer"
+  },
+  "boxScoreOfferDecline": "No thanks",
+  "@boxScoreOfferDecline": {
+    "description": "Decline button of the one-time box-score offer — answering this hides the offer forever"
+  },
+  "hrZonesSectionLabel": "HEART RATE ZONES",
+  "@hrZonesSectionLabel": {
+    "description": "Header of the heart-rate zone panel on the cardio summary screen (C9.1, M43). One component for every cardio type — only its position differs by family."
+  },
+  "hrZoneEasyEndLabel": "easy",
+  "@hrZoneEasyEndLabel": {
+    "description": "Label at the left end of the stacked zone bar (C9.1, M43)"
+  },
+  "hrZoneHardEndLabel": "hard",
+  "@hrZoneHardEndLabel": {
+    "description": "Label at the right end of the stacked zone bar (C9.1, M43)"
+  },
+  "hrZoneVerdictHard": "hard session",
+  "@hrZoneVerdictHard": {
+    "description": "Headline chip when zones 4-5 dominate (C9.1, M43). Said in words because the bar's colours alone are not accessible to a colour-blind reader."
+  },
+  "hrZoneVerdictBalanced": "balanced session",
+  "@hrZoneVerdictBalanced": {
+    "description": "Headline chip for a session spread across the middle zones (C9.1, M43)"
+  },
+  "hrZoneVerdictEasy": "easy session",
+  "@hrZoneVerdictEasy": {
+    "description": "Headline chip when almost no time was spent at threshold or above (C9.1, M43)"
+  },
+  "hrZone1Name": "warm-up",
+  "@hrZone1Name": {
+    "description": "Name of heart-rate zone 1, shown next to the Z1 code (C9.1, M43)"
+  },
+  "hrZone2Name": "base",
+  "@hrZone2Name": {
+    "description": "Name of heart-rate zone 2"
+  },
+  "hrZone3Name": "tempo",
+  "@hrZone3Name": {
+    "description": "Name of heart-rate zone 3"
+  },
+  "hrZone4Name": "threshold",
+  "@hrZone4Name": {
+    "description": "Name of heart-rate zone 4"
+  },
+  "hrZone5Name": "maximum",
+  "@hrZone5Name": {
+    "description": "Name of heart-rate zone 5"
+  },
+  "hrZonePartialCoverage": "{percent}% of the session",
+  "@hrZonePartialCoverage": {
+    "description": "Shown with a timelapse icon when the zone data covers only part of the session (C9.1, M43) — the unmeasured remainder is hatched on the bar rather than stretched over.",
+    "placeholders": {
+      "percent": {
+        "type": "String",
+        "example": "62"
+      }
+    }
+  },
+  "hrZoneSourceNote": "From your watch's heart rate, against your profile's maximum. Never estimated.",
+  "@hrZoneSourceNote": {
+    "description": "Closing line of the zone panel (C9.1, M43). States outright that nothing here is inferred — a zone with no measurement stays empty."
   },
   "bestEffortsSectionLabel": "BEST EFFORTS",
   "@bestEffortsSectionLabel": {

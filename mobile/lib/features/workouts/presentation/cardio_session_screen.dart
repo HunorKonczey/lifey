@@ -21,6 +21,8 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/auto_pause_preferences.dart';
+import '../application/box_score_preferences.dart';
+import '../application/game_setup_preferences.dart';
 import '../application/km_cue_controller.dart';
 import '../application/km_cue_preferences.dart';
 import '../application/workout_session_controller.dart';
@@ -34,6 +36,7 @@ import '../domain/route_encoder.dart';
 import '../domain/track_filter.dart';
 import '../domain/workout_session.dart';
 import 'cardio_summary_screen.dart';
+import 'widgets/box_score_stepper.dart';
 import 'widgets/cardio_session_settings_sheet.dart';
 import 'widgets/prompt_number_dialog.dart';
 import 'widgets/route_painter.dart';
@@ -272,6 +275,44 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   Timer? _ticker;
   bool _busy = false;
 
+  // -- Box score (C9.2, M44) ------------------------------------------------
+
+  /// Live counters, seeded from the session and persisted through
+  /// [_updateCardioMetrics] like every other live metric. `null` means "never
+  /// counted", which is what keeps an untouched match from storing zeroes.
+  int? _scorePoints;
+  int? _scoreAssists;
+  int? _scoreRebounds;
+
+  /// Whether the stepper panel is currently up. Hidden by default (Q-D2): in
+  /// a pocket or while defending, a permanently visible stepper collects
+  /// accidental taps.
+  bool _boxScoreOpen = false;
+
+  /// Closes [_boxScoreOpen] after 6 s of **idle** time — restarted by every
+  /// tap, so a stepper being actively used never folds away mid-count.
+  Timer? _boxScoreIdleTimer;
+
+  /// Answer to the one-time offer; drives whether the offer card shows at all.
+  BoxScoreOffer _boxScoreOffer = BoxScoreOffer.unanswered;
+
+  /// Whether this **outdoor** match records distance (C9.4). Opt-in, and only
+  /// ever true outdoors: indoors there is nothing to record, so GPS is not
+  /// disabled here — it doesn't exist ([GameSetup.recordsDistance]). Read from
+  /// the same device-local store the setup sheet writes, so a session
+  /// reopened after an app kill resumes with the same answer.
+  bool _gameGpsEnabled = false;
+
+  /// True when this session should have a GPS subscription at all: every
+  /// DISTANCE session, and an outdoor GAME that opted in. The single question
+  /// [_syncPositionTracking] asks, so "no GPS indoors" is one condition in one
+  /// place rather than a rule repeated per call site.
+  bool get _tracksLocation =>
+      _family == ActivityFamily.distance ||
+      (_family == ActivityFamily.game &&
+          widget.session.cardio?.venue == 'OUTDOOR' &&
+          _gameGpsEnabled);
+
   // Phone-displayed heart rate (DISTANCE/GAME's tertiary tile) — mirrors
   // `LogSessionScreen`'s identical fields/`_pollHeartRate` exactly, just
   // missing here until now: this screen showed a hardcoded '—' regardless of
@@ -339,6 +380,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     _avgCadence = s.cardio?.avgCadence;
     _avgWatts = s.cardio?.avgWatts;
     _resistanceLevel = s.cardio?.resistanceLevel;
+    _scorePoints = s.cardio?.scorePoints;
+    _scoreAssists = s.cardio?.scoreAssists;
+    _scoreRebounds = s.cardio?.scoreRebounds;
 
     // A frozen `movingSinceEpochMs` on a not-yet-finished session means
     // *some* pause was active when this was last persisted — manual pause
@@ -396,13 +440,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     // see `LocationService.availability`'s doc for why nothing pushes that
     // change on its own.
     if (_family == ActivityFamily.distance) {
-      WidgetsBinding.instance.addObserver(this);
-      _locationSub = ref.read(locationServiceProvider).availability.listen((a) {
-        if (mounted) {
-          setState(() => _locationAvailability = a);
-          _syncPositionTracking();
-        }
-      });
+      _startLocationPipeline();
       // Async on purpose (initState itself can't await) — see
       // [_trackPointSeqSeeded]'s doc for why [_syncPositionTracking] is safe
       // to call reactively before this resolves.
@@ -433,6 +471,97 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       );
       unawaited(_seedKmCueSettings());
     }
+    if (_family == ActivityFamily.game) {
+      unawaited(_seedBoxScoreOffer());
+      // Outdoor GAME distance recording (C9.4). Seeded before the trail replay
+      // so `_syncPositionTracking` never starts a subscription for an indoor
+      // match, not even for one frame.
+      unawaited(_seedGameGps());
+    }
+  }
+
+  /// Reads the outdoor-GPS opt-in, then — only if this match actually records
+  /// distance — sets up the same trail machinery a DISTANCE session uses.
+  Future<void> _seedGameGps() async {
+    final setup = await ref.read(gameSetupPreferencesProvider).load();
+    if (!mounted) return;
+    _gameGpsEnabled = setup.gpsEnabled;
+    // Nothing at all happens for an indoor match, or an outdoor one that
+    // didn't opt in: no availability subscription, so no permission prompt
+    // and no radio (the C9.4 battery guarantee).
+    if (!_tracksLocation) return;
+    _startLocationPipeline();
+    unawaited(_seedTrackPointSeqAndSync());
+  }
+
+  /// The availability subscription + lifecycle observer both tracking families
+  /// need. Extracted so an outdoor GAME reuses the DISTANCE path exactly
+  /// rather than growing a parallel one that could drift.
+  void _startLocationPipeline() {
+    WidgetsBinding.instance.addObserver(this);
+    _locationSub = ref.read(locationServiceProvider).availability.listen((a) {
+      if (mounted) {
+        setState(() => _locationAvailability = a);
+        _syncPositionTracking();
+      }
+    });
+  }
+
+  /// One-time read of [BoxScorePreferences] (C9.2). An `accepted` answer also
+  /// opens the stepper straight away — the user asked for it, so they
+  /// shouldn't have to find the button again on the next match.
+  Future<void> _seedBoxScoreOffer() async {
+    final offer = await ref.read(boxScorePreferencesProvider).offerState();
+    if (!mounted) return;
+    setState(() {
+      _boxScoreOffer = offer;
+      if (offer == BoxScoreOffer.accepted) _boxScoreOpen = true;
+    });
+    if (_boxScoreOpen) _armBoxScoreIdleTimer();
+  }
+
+  Future<void> _answerBoxScoreOffer(BoxScoreOffer answer) async {
+    setState(() {
+      _boxScoreOffer = answer;
+      _boxScoreOpen = answer == BoxScoreOffer.accepted;
+    });
+    if (_boxScoreOpen) _armBoxScoreIdleTimer();
+    await ref.read(boxScorePreferencesProvider).setOfferState(answer);
+  }
+
+  void _toggleBoxScore() {
+    setState(() => _boxScoreOpen = !_boxScoreOpen);
+    if (_boxScoreOpen) {
+      _armBoxScoreIdleTimer();
+    } else {
+      _boxScoreIdleTimer?.cancel();
+    }
+  }
+
+  /// (Re)starts the 6 s idle countdown — measured from the last interaction,
+  /// not from opening, so counting a fast break doesn't race the timer.
+  void _armBoxScoreIdleTimer() {
+    _boxScoreIdleTimer?.cancel();
+    _boxScoreIdleTimer = Timer(const Duration(seconds: 6), () {
+      if (mounted) setState(() => _boxScoreOpen = false);
+    });
+  }
+
+  /// One box-score column changed. Persisted through the same merged write
+  /// every other live metric uses — and deliberately **nowhere near
+  /// `movingSeconds`**: counting a basket is not a clock event, and the
+  /// court/bench switch remains the only thing that moves playing time.
+  /// [delta] is +1/-1, applied to whatever the counter currently holds — see
+  /// [BoxScoreColumn.onStep] for why the stepper reports a step rather than a
+  /// finished number.
+  Future<void> _stepBoxScore({int? points, int? assists, int? rebounds}) {
+    int? next(int? delta, int? current) =>
+        delta == null ? null : ((current ?? 0) + delta).clamp(0, 1 << 30);
+    return _updateCardioMetrics(
+      scorePoints: next(points, _scorePoints),
+      scoreAssists: next(assists, _scoreAssists),
+      scoreRebounds: next(rebounds, _scoreRebounds),
+    );
   }
 
   Future<void> _seedKmCueSettings() async {
@@ -530,7 +659,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// either way).
   void _syncPositionTracking() {
     final shouldTrack = _trackPointSeqSeeded &&
-        _family == ActivityFamily.distance &&
+        _tracksLocation &&
         (_locationAvailability?.canTrack ?? false) &&
         (_isRunning || _pauseReason == _PauseReason.auto);
     if (shouldTrack && _positionSub == null) {
@@ -616,6 +745,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     _locationSub?.cancel();
     _positionSub?.cancel();
     _weakSignalTimer?.cancel();
+    _boxScoreIdleTimer?.cancel();
     _autoPauseDetector?.dispose();
     if (_family == ActivityFamily.distance) WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -1090,14 +1220,21 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     final trail = _trackFilter?.trail ?? const [];
     CardioMetrics? routeCardio;
     List<CardioSplit> routeSplits = const [];
-    if (_family == ActivityFamily.distance && trail.isNotEmpty) {
+    if (_tracksLocation && trail.isNotEmpty) {
       final encoded = encodeRoute(trail);
-      routeSplits = computeSplits(trail);
+      // A match gets **distance and a route, and nothing derived from pace**
+      // (C9.4's promise, docs/cardio/51 §3.4): km splits across a basketball
+      // court describe nothing, and the best efforts are running's alone
+      // anyway. Both stay empty for GAME rather than being computed and then
+      // hidden.
+      final isDistanceFamily = _family == ActivityFamily.distance;
+      routeSplits = isDistanceFamily ? computeSplits(trail) : const [];
       // Same trail, same moment, same write (docs/cardio/60 C6.3) — the
       // best efforts have exactly the splits' inputs and lifetime, and
       // deriving them here rather than later is what makes them survive the
       // raw track points being pruned.
-      final bestEfforts = computeBestEfforts(trail);
+      final bestEfforts =
+          isDistanceFamily ? computeBestEfforts(trail) : CardioBestEfforts.none;
       final originalCardio = widget.session.cardio;
       // elevationGainMeters is never null on the accumulator itself (it
       // starts at 0 and only grows) — but "0 m gain" and "no altitude data
@@ -1115,8 +1252,13 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         avgWatts: _avgWatts,
         resistanceLevel: _resistanceLevel,
         venue: originalCardio?.venue,
+        gameFormat: originalCardio?.gameFormat,
         intensity: originalCardio?.intensity,
-        scorePoints: originalCardio?.scorePoints,
+        // The live counters, not the session's copy from when this screen
+        // opened — C9.2's stepper has been changing these all match.
+        scorePoints: _scorePoints,
+        scoreAssists: _scoreAssists,
+        scoreRebounds: _scoreRebounds,
         distanceSource: 'MEASURED',
         routePolyline: encoded.polyline,
         routePointCount: encoded.pointCount,
@@ -1166,7 +1308,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             resistanceLevel: _resistanceLevel,
             venue: widget.session.cardio?.venue,
             intensity: widget.session.cardio?.intensity,
-            scorePoints: widget.session.cardio?.scorePoints,
+            scorePoints: _scorePoints,
+            scoreAssists: _scoreAssists,
+            scoreRebounds: _scoreRebounds,
             distanceSource: _hasGpsDistance ? 'MEASURED' : (_distanceMeters == null ? null : 'MANUAL'),
           );
       final finishedSession = WorkoutSession(
@@ -1281,12 +1425,18 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     double? avgCadence,
     double? avgWatts,
     int? resistanceLevel,
+    int? scorePoints,
+    int? scoreAssists,
+    int? scoreRebounds,
   }) async {
     final l10n = AppLocalizations.of(context)!;
     final newDistance = distanceMeters ?? _distanceMeters;
     final newCadence = avgCadence ?? _avgCadence;
     final newWatts = avgWatts ?? _avgWatts;
     final newResistance = resistanceLevel ?? _resistanceLevel;
+    final newPoints = scorePoints ?? _scorePoints;
+    final newAssists = scoreAssists ?? _scoreAssists;
+    final newRebounds = scoreRebounds ?? _scoreRebounds;
     setState(() => _busy = true);
     try {
       await ref.read(workoutSessionControllerProvider.notifier).updateLiveCardioMetrics(
@@ -1297,6 +1447,18 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
               avgCadence: newCadence,
               avgWatts: newWatts,
               resistanceLevel: newResistance,
+              scorePoints: newPoints,
+              scoreAssists: newAssists,
+              scoreRebounds: newRebounds,
+              // Carried through, not edited here: `updateLiveCardioMetrics`
+              // full-replaces the cardio row, so any field this method omits
+              // is *erased*. Before C9.2 nothing on a GAME session could
+              // reach this method (distance/cadence/watts/resistance are all
+              // DISTANCE/MACHINE), so the omission was latent — the box-score
+              // stepper is the first GAME caller, and without these two lines
+              // counting a basket would wipe the match's venue and intensity.
+              venue: widget.session.cardio?.venue,
+              intensity: widget.session.cardio?.intensity,
               // GPS wins permanently once it's contributed anything this
               // session ([_hasGpsDistance]'s own doc) — even a call that's
               // only changing cadence/watts/resistance still carries the
@@ -1312,6 +1474,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         _avgCadence = newCadence;
         _avgWatts = newWatts;
         _resistanceLevel = newResistance;
+        _scorePoints = newPoints;
+        _scoreAssists = newAssists;
+        _scoreRebounds = newRebounds;
         _busy = false;
       });
       unawaited(_updateSessionNotifier());
@@ -1612,8 +1777,59 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             ),
           ),
         ],
+        // C9.2/M44 — the offer is asked at most once ever, and the stepper
+        // sits *above* the court/bench switch rather than replacing it: that
+        // switch keeps its size and its place, since it is the control a
+        // player reaches for without looking.
+        if (_boxScoreOffer == BoxScoreOffer.unanswered && !_isFinished) ...[
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: BoxScoreOfferCard(
+              onAccept: () => unawaited(_answerBoxScoreOffer(BoxScoreOffer.accepted)),
+              onDecline: () => unawaited(_answerBoxScoreOffer(BoxScoreOffer.declined)),
+            ),
+          ),
+        ],
+        if (_boxScoreOpen) ...[
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: BoxScoreStepper(
+              columns: _boxScoreColumns(l10n),
+              enabled: !(_busy || _isFinished),
+              onInteraction: _armBoxScoreIdleTimer,
+            ),
+          ),
+        ],
       ],
     );
+  }
+
+  /// Three columns for basketball, **two for football** (M44): a rebound is
+  /// not a concept there, so the column is absent rather than pinned at zero.
+  /// Football's first column is the same stored `scorePoints` field, named
+  /// "goals" for the sport.
+  List<BoxScoreColumn> _boxScoreColumns(AppLocalizations l10n) {
+    final isBasketball = _activityType == 'BASKETBALL';
+    return [
+      BoxScoreColumn(
+        label: isBasketball ? l10n.boxScorePointsLabel : l10n.boxScoreGoalsLabel,
+        value: _scorePoints ?? 0,
+        onStep: (delta) => unawaited(_stepBoxScore(points: delta)),
+      ),
+      if (isBasketball)
+        BoxScoreColumn(
+          label: l10n.boxScoreReboundsLabel,
+          value: _scoreRebounds ?? 0,
+          onStep: (delta) => unawaited(_stepBoxScore(rebounds: delta)),
+        ),
+      BoxScoreColumn(
+        label: l10n.boxScoreAssistsLabel,
+        value: _scoreAssists ?? 0,
+        onStep: (delta) => unawaited(_stepBoxScore(assists: delta)),
+      ),
+    ];
   }
 
   @override
@@ -1844,10 +2060,26 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       // M06/M07: GAME pauses through a full-width bar, not a circle — a
       // "meccs szünet" stops both clocks and is a rarer, more deliberate
       // action than the court/bench toggle above it.
-      children.add(_WideActionButton(
-        icon: Icons.pause,
-        label: l10n.gameMatchPauseLabel,
-        onPressed: _busy ? null : pause,
+      children.add(Row(
+        children: [
+          Expanded(
+            child: _WideActionButton(
+              icon: Icons.pause,
+              label: l10n.gameMatchPauseLabel,
+              onPressed: _busy ? null : pause,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // M44's bottom-right circle — the same corner DISTANCE's trailing
+          // circle already sits in. It only opens and closes the panel; the
+          // court/bench switch above is untouched.
+          _CircleAction(
+            key: const Key('boxScoreCircle'),
+            icon: Icons.scoreboard,
+            label: l10n.boxScoreCircleLabel,
+            onPressed: _toggleBoxScore,
+          ),
+        ],
       ));
     } else {
       children.add(_RunningControlRow(
@@ -3180,6 +3412,7 @@ class _RunningControlRow extends StatelessWidget {
 /// One 72 px secondary circle of the control row.
 class _CircleAction extends StatelessWidget {
   const _CircleAction({
+    super.key,
     required this.icon,
     required this.label,
     required this.onPressed,

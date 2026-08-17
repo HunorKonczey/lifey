@@ -50,6 +50,16 @@ TrackFilterProfile trackFilterProfileFor(String activityType) {
         accuracyThresholdMeters: 30,
         maxSpeedMetersPerSecond: 30 * 1000 / 3600,
       ),
+    // An outdoor GAME (C9.4). Same ceilings as running on purpose: a match is
+    // a string of sprints, so a slower speed gate would reject the very
+    // motion worth recording, and the accuracy gate is about the fix's
+    // quality, which doesn't depend on the sport. What *is* different about a
+    // game is that its distance is the only thing derived from this trail —
+    // no pace, no splits, no best efforts (docs/cardio/51 §3.4).
+    'BASKETBALL' || 'FOOTBALL' => const TrackFilterProfile(
+        accuracyThresholdMeters: 20,
+        maxSpeedMetersPerSecond: 30 * 1000 / 3600,
+      ),
     // RUNNING, and any other DISTANCE-family fallback.
     _ => const TrackFilterProfile(
         accuracyThresholdMeters: 20,

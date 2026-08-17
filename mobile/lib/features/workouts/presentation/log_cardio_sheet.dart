@@ -9,6 +9,7 @@ import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
+import 'widgets/box_score_stepper.dart';
 import '../domain/workout_session.dart';
 import 'widgets/rpe_selector.dart';
 
@@ -45,6 +46,8 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
   int? _intensity;
   String? _venue;
   int? _scorePoints;
+  int? _scoreAssists;
+  int? _scoreRebounds;
   int? _rpe;
 
   @override
@@ -132,6 +135,9 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
     final intensity = _family == ActivityFamily.game ? _intensity : null;
     final venue = _family == ActivityFamily.game ? _venue : null;
     final scorePoints = _family == ActivityFamily.game ? _scorePoints : null;
+    final scoreAssists = _family == ActivityFamily.game ? _scoreAssists : null;
+    final scoreRebounds =
+        _family == ActivityFamily.game && _activityType == 'BASKETBALL' ? _scoreRebounds : null;
 
     final hasAnyMetric = distanceMeters != null ||
         elevationGainM != null ||
@@ -155,6 +161,8 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
             intensity: intensity,
             venue: venue,
             scorePoints: scorePoints,
+            scoreAssists: scoreAssists,
+            scoreRebounds: scoreRebounds,
             // A manual override always wins over a measured value (docs/cardio/
             // 51-cardio-overview-plan.md R8) — every numeric field this sheet
             // captures ultimately maps to one of these two source flags, the
@@ -368,33 +376,38 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
                 onChanged: _submitting ? (_) {} : (v) => setState(() => _intensity = v),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(l10n.scorePointsFieldLabel,
-                        style: Theme.of(context).textTheme.labelLarge),
+              // C9.2/M44: the *same* stepper component the live screen uses,
+              // so a hand-logged match and a counted one are entered the same
+              // way — and so football gets two columns here too, without a
+              // second implementation to keep in step.
+              BoxScoreStepper(
+                columns: [
+                  BoxScoreColumn(
+                    label: _activityType == 'BASKETBALL'
+                        ? l10n.boxScorePointsLabel
+                        : l10n.boxScoreGoalsLabel,
+                    value: _scorePoints ?? 0,
+                    onStep: (d) =>
+                        setState(() => _scorePoints = ((_scorePoints ?? 0) + d).clamp(0, 1 << 30)),
                   ),
-                  IconButton.outlined(
-                    onPressed: _submitting || (_scorePoints ?? 0) <= 0
-                        ? null
-                        : () => setState(() => _scorePoints = (_scorePoints ?? 0) - 1),
-                    icon: const Icon(Icons.remove),
-                  ),
-                  SizedBox(
-                    width: 32,
-                    child: Text(
-                      '${_scorePoints ?? 0}',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium,
+                  if (_activityType == 'BASKETBALL')
+                    BoxScoreColumn(
+                      label: l10n.boxScoreReboundsLabel,
+                      value: _scoreRebounds ?? 0,
+                      onStep: (d) => setState(
+                          () => _scoreRebounds = ((_scoreRebounds ?? 0) + d).clamp(0, 1 << 30)),
                     ),
-                  ),
-                  IconButton.outlined(
-                    onPressed: _submitting
-                        ? null
-                        : () => setState(() => _scorePoints = (_scorePoints ?? 0) + 1),
-                    icon: const Icon(Icons.add),
+                  BoxScoreColumn(
+                    label: l10n.boxScoreAssistsLabel,
+                    value: _scoreAssists ?? 0,
+                    onStep: (d) => setState(
+                        () => _scoreAssists = ((_scoreAssists ?? 0) + d).clamp(0, 1 << 30)),
                   ),
                 ],
+                enabled: !_submitting,
+                // The sheet has no idle-dismiss: it is already a deliberate,
+                // post-hoc entry surface, not something open mid-match.
+                onInteraction: () {},
               ),
             ],
             const SizedBox(height: 16),

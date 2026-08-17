@@ -83,6 +83,7 @@ WorkoutSession _cardioSession({
   double? distanceMeters,
   double? elevationGainMeters,
   double? maxHeartRate,
+  List<int?> zoneSeconds = const [null, null, null, null, null],
 }) {
   return WorkoutSession(
     clientId: 'cardio-session-${startedAt.microsecondsSinceEpoch}',
@@ -93,11 +94,19 @@ WorkoutSession _cardioSession({
     sessionKind: 'CARDIO',
     activityType: activityType,
     movingSeconds: movingSeconds,
-    cardio: (distanceMeters != null || elevationGainMeters != null || maxHeartRate != null)
+    cardio: (distanceMeters != null ||
+            elevationGainMeters != null ||
+            maxHeartRate != null ||
+            zoneSeconds.any((z) => z != null))
         ? CardioMetrics(
             distanceMeters: distanceMeters,
             elevationGainMeters: elevationGainMeters,
             maxHeartRate: maxHeartRate,
+            hrZone1Seconds: zoneSeconds[0],
+            hrZone2Seconds: zoneSeconds[1],
+            hrZone3Seconds: zoneSeconds[2],
+            hrZone4Seconds: zoneSeconds[3],
+            hrZone5Seconds: zoneSeconds[4],
           )
         : null,
   );
@@ -541,6 +550,144 @@ void main() {
           StatMetric.workoutCount,
           StatMetric.workoutMinutes,
         });
+      });
+    });
+
+    // -- Time at threshold+ (C9.5) ----------------------------------------
+
+    group('cardioHardZoneMinutes', () {
+      test('sums zone 4+5 minutes per day, across every cardio family', () async {
+        final container = _buildContainer(sessions: [
+          // A run: 9 min at Z4, 3 at Z5 => 12.
+          _cardioSession(
+            startedAt: _day(1).add(const Duration(hours: 7)),
+            finishedAt: _day(1).add(const Duration(hours: 8)),
+            zoneSeconds: const [600, 1200, 900, 540, 180],
+          ),
+          // A match on the same day: 10 min at Z4, 5 at Z5 => 15. Zones are
+          // where a GAME session finally contributes to the statistics.
+          _cardioSession(
+            startedAt: _day(1).add(const Duration(hours: 19)),
+            finishedAt: _day(1).add(const Duration(hours: 20)),
+            activityType: 'BASKETBALL',
+            zoneSeconds: const [300, 900, 900, 600, 300],
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        container
+            .read(statMetricControllerProvider.notifier)
+            .select(StatMetric.cardioHardZoneMinutes);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(1), 27.0)]);
+      });
+
+      test('a session with no zone data is absent, but a genuine zero is charted', () async {
+        final container = _buildContainer(sessions: [
+          // No zones at all: contributes nothing, not a zero.
+          _cardioSession(
+            startedAt: _day(2).add(const Duration(hours: 7)),
+            finishedAt: _day(2).add(const Duration(hours: 8)),
+            distanceMeters: 5000,
+          ),
+          // Zones measured, none of them hard: zero is the honest answer.
+          _cardioSession(
+            startedAt: _day(1).add(const Duration(hours: 7)),
+            finishedAt: _day(1).add(const Duration(hours: 8)),
+            zoneSeconds: const [1800, 1800, null, null, null],
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        container
+            .read(statMetricControllerProvider.notifier)
+            .select(StatMetric.cardioHardZoneMinutes);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        expect(_asPairs(container.read(statChartDataProvider).value!), [(_day(1), 0.0)]);
+      });
+
+      test('an inconsistent row cannot inflate a day beyond the session length', () async {
+        // The docs/cardio/60 §9 case: the watch and the phone both wrote
+        // zones, so the five total 90 minutes on a 60 minute session. Read
+        // through HrZoneBreakdown, the sum is capped rather than charted.
+        final container = _buildContainer(sessions: [
+          _cardioSession(
+            startedAt: _day(1).add(const Duration(hours: 7)),
+            finishedAt: _day(1).add(const Duration(hours: 8)), // 60 min
+            zoneSeconds: const [1200, 1200, 1200, 1200, 600],
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        container
+            .read(statMetricControllerProvider.notifier)
+            .select(StatMetric.cardioHardZoneMinutes);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        final value = container.read(statChartDataProvider).value!.single.value;
+        expect(value, lessThanOrEqualTo(60.0));
+      });
+
+      test('the strength filter hides it entirely', () async {
+        final container = _buildContainer(sessions: [
+          _cardioSession(
+            startedAt: _day(1).add(const Duration(hours: 7)),
+            finishedAt: _day(1).add(const Duration(hours: 8)),
+            zoneSeconds: const [600, 600, 600, 600, 600],
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        container
+            .read(statMetricControllerProvider.notifier)
+            .select(StatMetric.cardioHardZoneMinutes);
+        container.read(statKindFilterControllerProvider.notifier).select(StatKindFilter.strength);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        expect(container.read(statChartDataProvider).value, isEmpty);
+      });
+
+      test('is offered only once some session actually carries zone data', () async {
+        // `availableStatMetricsProvider` watches every source, so all five
+        // have to resolve before it can be read — same shape as the strength-
+        // filter availability test above.
+        Future<Set<StatMetric>> availableWith(WorkoutSession session) async {
+          final container = _buildContainer(
+            meals: [],
+            sessions: [session],
+            water: [],
+            weights: [],
+            steps: [],
+          );
+          addTearDown(container.dispose);
+          await container.listen(mealControllerProvider.future, (previous, next) {}).read();
+          await container
+              .listen(workoutSessionControllerProvider.future, (previous, next) {})
+              .read();
+          await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
+          await container.listen(weightControllerProvider.future, (previous, next) {}).read();
+          await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
+          return container.read(availableStatMetricsProvider);
+        }
+
+        expect(
+          await availableWith(_cardioSession(
+            startedAt: _day(1).add(const Duration(hours: 7)),
+            finishedAt: _day(1).add(const Duration(hours: 8)),
+            distanceMeters: 5000,
+          )),
+          isNot(contains(StatMetric.cardioHardZoneMinutes)),
+        );
+        expect(
+          await availableWith(_cardioSession(
+            startedAt: _day(1).add(const Duration(hours: 7)),
+            finishedAt: _day(1).add(const Duration(hours: 8)),
+            zoneSeconds: const [600, null, null, null, null],
+          )),
+          contains(StatMetric.cardioHardZoneMinutes),
+        );
       });
     });
 

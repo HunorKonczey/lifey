@@ -7,6 +7,7 @@ import '../../../core/location/location_service_geolocator.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/quick_start_options_provider.dart';
+import '../application/game_setup_preferences.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
 import '../domain/workout_session.dart';
@@ -14,6 +15,7 @@ import '../domain/workout_template.dart';
 import 'activity_picker_screen.dart';
 import 'log_session_screen.dart';
 import 'open_workout_screens.dart';
+import 'widgets/game_setup_sheet.dart';
 import 'widgets/gps_explainer_sheet.dart';
 
 /// Opens the quick-start sheet — the FAB long-press destination
@@ -313,11 +315,15 @@ String activityModalitySubtitle(AppLocalizations l10n, ActivityFamily family) {
 /// C2.11a deep-link/app-shortcut/widget entry point can reuse the exact same
 /// creation logic without a [BuildContext] or a sheet to pop.
 Future<WorkoutSession> createCardioSession(
-    WorkoutSessionController controller, String activityType) async {
+  WorkoutSessionController controller,
+  String activityType, {
+  CardioMetrics? cardio,
+}) async {
   final startedAt = DateTime.now();
   final clientId = await controller.startCardioSession(
     startedAt: startedAt,
     activityType: activityType,
+    cardio: cardio,
   );
   return WorkoutSession(
     clientId: clientId,
@@ -328,6 +334,7 @@ Future<WorkoutSession> createCardioSession(
     activityType: activityType,
     movingSeconds: 0,
     movingSinceEpochMs: startedAt.millisecondsSinceEpoch,
+    cardio: cardio,
   );
 }
 
@@ -353,14 +360,39 @@ Future<void> startCardioQuickly(BuildContext context, WidgetRef ref, String acti
   HapticFeedback.mediumImpact();
   final sheetNavigator = Navigator.of(context);
   final rootNavigator = Navigator.of(context, rootNavigator: true);
-  // Captured up front: `ref` reads the *provider value* here (not a live
-  // reference into the tile's own widget), so these stay valid after
-  // `sheetNavigator.pop()` disposes the tile below — `ref` itself does not.
-  // Using `ref.read(...)` again after that pop throws ("Using 'ref' when a
-  // widget is about to or has been unmounted is unsafe"), caught the hard
-  // way via this function's own widget tests.
+  // Read before any `pop()`: `ref` becomes unusable once the tile that owns
+  // it is disposed (see the note below), and both the GAME branch and the
+  // DISTANCE one need these afterwards.
   final sessionController = ref.read(workoutSessionControllerProvider.notifier);
+  final setupPreferences = ref.read(gameSetupPreferencesProvider);
 
+  // C9.3/M45 — a GAME session asks for its format and venue first. The sheet
+  // opens pre-filled with the last match's answers, so "Start" is one tap
+  // away; a dismissal (swipe) means "not now" and starts nothing, rather
+  // than starting a match with fields the user never saw.
+  if (activityFamilyOf(activityType) == ActivityFamily.game) {
+    sheetNavigator.pop();
+    if (!rootNavigator.mounted) return;
+    final setup = await showGameSetupSheet(rootNavigator.context);
+    if (setup == null || !rootNavigator.mounted) return;
+    await setupPreferences.save(setup);
+    final session = await createCardioSession(
+      sessionController,
+      activityType,
+      // The one place venue is decided: from here it drives the phone's GPS
+      // and the watch's locationType (C5.2), both reading this same row.
+      cardio: CardioMetrics(venue: setup.venue, gameFormat: setup.format.code),
+    );
+    await openSessionScreen(rootNavigator, session);
+    return;
+  }
+  // Why the reads above happen before any `pop()`: `ref` reads the *provider
+  // value* (not a live reference into the tile's own widget), so the values
+  // stay valid after `sheetNavigator.pop()` disposes the tile — `ref` itself
+  // does not. Using `ref.read(...)` after that pop throws ("Using 'ref' when
+  // a widget is about to or has been unmounted is unsafe"), caught the hard
+  // way via this function's own widget tests. The DISTANCE branch below still
+  // reads two more providers, but does so *before* its own pop.
   if (activityFamilyOf(activityType) == ActivityFamily.distance) {
     final prefs = ref.read(locationPermissionPreferencesProvider);
     if (!await prefs.hasSeenGpsExplainer()) {

@@ -45,7 +45,15 @@ enum StatMetric {
   cardioElevationGain,
   cardioAvgPace,
   maxHeartRate,
-  cardioSessions;
+  cardioSessions,
+
+  /// Time spent at threshold or above — zones 4+5 (docs/cardio/60 C9.5).
+  ///
+  /// **Not** total zone time: the five zones together add up to roughly the
+  /// session itself, which [cardioMovingMinutes] already charts. The training
+  /// question a zone chart answers is "how much hard work did I do this
+  /// week", and that is Z4+Z5.
+  cardioHardZoneMinutes;
 
   String label(AppLocalizations l10n) => switch (this) {
         StatMetric.calories => l10n.caloriesLabel,
@@ -64,6 +72,7 @@ enum StatMetric {
         StatMetric.cardioAvgPace => l10n.statMetricCardioAvgPaceLabel,
         StatMetric.maxHeartRate => l10n.statMetricMaxHeartRateLabel,
         StatMetric.cardioSessions => l10n.statMetricCardioSessionsLabel,
+        StatMetric.cardioHardZoneMinutes => l10n.statMetricCardioHardZoneMinutesLabel,
       };
 
   /// Unit shown next to the value (e.g. "kcal", "g"). Empty for the
@@ -91,6 +100,7 @@ enum StatMetric {
         StatMetric.cardioAvgPace => l10n.statUnitPaceMinPerKm,
         StatMetric.maxHeartRate => l10n.statUnitBpm,
         StatMetric.cardioSessions => '',
+        StatMetric.cardioHardZoneMinutes => l10n.statUnitMinutes,
       };
 
   /// How daily values for this metric should be combined into one point.
@@ -115,5 +125,6 @@ enum StatMetric {
         // of daily maximums", 56 §3), not a within-day average.
         StatMetric.maxHeartRate => StatAggregationType.average,
         StatMetric.cardioSessions => StatAggregationType.sum,
+        StatMetric.cardioHardZoneMinutes => StatAggregationType.sum,
       };
 }

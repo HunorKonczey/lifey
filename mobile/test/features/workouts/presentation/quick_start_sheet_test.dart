@@ -47,8 +47,13 @@ class _RecordingSessionController extends WorkoutSessionController {
   Stream<List<WorkoutSession>> build() => Stream.value(sessions);
 
   @override
-  Future<String> startCardioSession({required DateTime startedAt, required String activityType}) async {
-    startCardioCalls.add({'startedAt': startedAt, 'activityType': activityType});
+  Future<String> startCardioSession({
+    required DateTime startedAt,
+    required String activityType,
+    CardioMetrics? cardio,
+  }) async {
+    startCardioCalls
+        .add({'startedAt': startedAt, 'activityType': activityType, 'cardio': cardio});
     return nextClientId;
   }
 }

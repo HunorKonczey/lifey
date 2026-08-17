@@ -1,9 +1,10 @@
 # 60 – Cardio sport-specifikumok: fejlesztési terv (C6–C9)
 
-Státusz: **A design kész (2026-08-16), és a teljes C6 — az MF6a mérföldkő — leszállt (2026-08-17).**
+Státusz: **A design kész (2026-08-16), és két iteráció leszállt (2026-08-17): a teljes C6 (MF6a)
+és a teljes C9 (MF6b).**
 A C6.5 watchOS-fele Macen készült el, ezzel a terv egyetlen Mac-es lépése is megvan; a C6.7
 statisztika-listája az egyetlen kimaradt darab, mert nincs mit bővíteni
-(ld. [§4](#4-c6--futás-specifikum-8-lépés--mf6a)). A sorrend szerint a következő iteráció a **C9 (Játék)**.
+(ld. [§4](#4-c6--futás-specifikum-8-lépés--mf6a)). A hátralévő iterációk: **C7 (bicikli)** és **C8 (túra)**.
 A frame-ek: [`design/Lifey Cardio Sport-specifikumok.dc.html`](design/Lifey%20Cardio%20Sport-specifikumok.dc.html),
 részletes leírásuk a [61-es docban](61-cardio-sport-specifics-design-prompts.md) — **minden UI-lépés onnan dolgozik.**
 Előzmény: az [59](59-cardio-implementation-plan.md)
@@ -42,8 +43,9 @@ A C0–C5 leszállt, tehát a sport-specifikumok **nem nulláról indulnak**. Am
 
 **Két dolog, ami látszik késznek, de nem az:**
 
-1. **A HR-zóna oszlopok végig-vezetve, de sehol nem jelennek meg** (`hrZone1Seconds` … a
-   `pull_engine`-től a domainig megvan, UI nincs) — ez a **C9.1** tényleges munkája.
+1. ~~**A HR-zóna oszlopok végig-vezetve, de sehol nem jelennek meg**~~ — **megoldva a C9.1-ben
+   (2026-08-17):** a `hrZone1..5Seconds` most az M43 zóna-paneljén jelenik meg, mindhárom
+   cardio-családon.
 2. **A magasságprofil az összegzésen ma nem valódi profil**: a polyline nem hordoz időbélyeget,
    ezért a jelenlegi diagram csak a szintemelkedésből rajzolt közelítés
    (`cardio_summary_screen.dart:478` kommentje ezt le is írja). A **C8.3** ezt cseréli le valódi,
@@ -214,6 +216,138 @@ A teljes, C0–C9-re kiterjedő platform-mátrix és a besorolás szabálya:
 > drift-generáltakon — `app_database.g.dart`-ból hiányzott a C6.3 séma 37 `best1k/5k/10kSeconds`
 > hármasa. Nem repó-hiba, csak friss checkout: egy `dart run build_runner build` rendezi.)*
 >
+> **C9.5 — Z4+Z5, nem összes zóna-idő; és nincs negyedik szűrő-fokozat.**
+> A lépés „zóna-idő mint metrika" sora egy metrikát kér. **Az öt zóna összege együtt körülbelül maga
+> a session**, amit a `cardioMovingMinutes` már diagramra tesz — abból új információ nem születik. Az
+> a kérdés, amire egy zóna-diagram válaszol, az „mennyi kemény munkát végeztem a héten", és az a
+> **Z4+Z5**. A metrika ezért `cardioHardZoneMinutes` („Küszöb feletti idő").
+>
+> **„A GAME-fajta szűrése" nem egy negyedik szűrő-fokozat.** A `StatKindFilter` saját doc-kommentje
+> kimondottan kizárja („Never a fourth, finer-grained per-`kActivityTypes` option" — az a `SessionsTab`
+> listaszűrőjének a dolga, és a design M21/M22-je egy háromállású SegmentedButton). A GAME itt máshogy
+> „szűrődik": ez az **első metrika, amihez egy meccs a sajátjából ad valamit**. Egy meccsnek nincs
+> távja, szintje és tempója — zóna-ideje viszont van, tehát ez a metrika **családtól függetlenül**
+> minden cardiót számol, és `strength` szűrő alatt — mint minden cardio-only metrika — nem jelenik meg.
+>
+> **Amit a megvalósítás eldöntött:**
+> - A metrika a **`HrZoneBreakdown`-on keresztül** olvas, nem közvetlenül a két oszlopból: így a
+>   diagram ugyanazt a vágást kapja, mint a C9.1 panelje. Egy olyan sor, ahol az óra és a telefon is
+>   írt zónát, több időt adhat, mint a session hossza (§9) — vágás nélkül ez **csendben felfújná** egy
+>   hét edzés-terhelését. Külön teszt: 90 perc zóna egy 60 perces session-ön nem ad 60 percnél többet.
+> - A **nulla valódi válasz**, a hiányzó adat nem: egy könnyű edzés, amiben mértük a zónákat, de nem
+>   volt küszöb feletti idő, **0-t** rajzol; egy zóna-adat nélküli session **nem szerepel** a napi
+>   összegben.
+> - A metrika a **szív színét** kapja (`mc.heart`), nem a cardio-narancsot: pulzus-metrika.
+> - A picker csak akkor ajánlja fel, ha **van** zóna-adat — különben egy lapos semmit rajzoló metrika
+>   ülne a listában a felhasználók többségénél.
+>
+> **C9.4 — az akku-garancia egy feltétel egy helyen, és a meccs nem kap tempót.**
+> A „teremben nincs rádió" nem szabály, amit minden hívási helyen be kell tartani, hanem **egy
+> getter**: `_tracksLocation` (DISTANCE-család, **vagy** kültéri GAME opt-innel). Ezt kérdezi a
+> `_syncPositionTracking`, és ez dönti el, hogy elindul-e egyáltalán az `availability`-feliratkozás —
+> vagyis teremben **nincs engedélykérés sem**, nem csak rádió nincs. Teszt számolja: egy termi
+> meccs **nulla** `availability` és **nulla** `positionStream` hívást csinál, még akkor is, ha a
+> kültéri opt-in bekapcsolva maradt egy korábbi meccsről (a `recordsDistance` a `venue`-ra is szűr).
+>
+> **Amit a megvalósítás eldöntött:**
+> - **A meccs távot és útvonalat kap, de semmit, ami tempóból származik.** A záró pipeline GAME-nél
+>   **nem számol km-splitet és nem számol best-effortot** — nem kiszámolja és elrejti, hanem meg sem
+>   próbálja: km-split egy kosárpályán semmit nem ír le. A `PACE` csempe sem jelenik meg a
+>   GAME-összegzésen, mert az M45 GPS-ígérete pont ezt mondja ki előre („Tempót nem"), és ha utólag
+>   mégis ott lenne, az ígéret hazudott volna.
+> - **Az útvonal-rajz ingyen jött**: az összegzés route-hőse eddig is csak a polyline létére szűrt,
+>   nem családra — így a kültéri meccs a térképét is megkapja, ahogy az ígéret mondja.
+> - **`track_filter.dart` GAME-profil**: ugyanaz a pontosság- és sebesség-plafon, mint futásnál,
+>   szándékosan — egy meccs sprintek sorozata, egy lassabb sebesség-kapu épp a rögzítendő mozgást
+>   dobná el.
+> - **Az élő GAME képernyőn nincs táv-csempe**: sem az M07, sem az M43 nem rajzol egyet, a mérés
+>   pedig így is megy — a szám az összegzésen jelenik meg. A widget-teszt ezért a **záró írásból**
+>   olvassa ki a távot, nem a képernyőről.
+> - A `_startLocationPipeline()` kiemelése azért történt, hogy a kültéri GAME **pontosan** a
+>   DISTANCE-utat használja, ne egy párhuzamosat, ami idővel elcsúszhat tőle.
+> - **Sprint-szám nincs** (Q-D8/Q-C9.1: „Most ne.").
+>
+> **C9.3 — a GPS-sor a C9.4-re maradt, és az indítási út megváltozott.**
+> Az M45 négy blokkot ír le; ez a lépés az elsőt kettőt szállítja (**formátum 2×2**, **helyszín**),
+> a **GPS-sort és a „mit kapok / mit nem" ígéretet nem**: az a szabadtéri táv-rögzítés kapcsolója,
+> ami a **C9.4** tárgya (ott meg is épült). Kapcsolót kitenni a mögötte lévő viselkedés nélkül üres
+> ígéret lenne, ezért a C9.3-ban még nem volt ott.
+>
+> **Amit a megvalósítás eldöntött:**
+> - **A GAME-indítás mostantól a lapon megy át** — eddig a koppintás azonnal indított. A lap viszont
+>   **előre kitöltve** nyílik a legutóbbi meccs válaszaival (`GameSetupPreferences`), tehát aki minden
+>   héten ugyanazt az 5v5-öt játssza ugyanabban a teremben, egyetlen extra koppintással indul. Ez
+>   **viselkedés-változás**, ezért egy meglévő teszt („tapping a cardio row starts that activity
+>   immediately") átíródott: a DISTANCE-út változatlan, a GAME-út a lapon keresztül vezet.
+> - **A lap elhúzása nem indít semmit.** Egy félig látott beállítással induló meccs rosszabb, mint
+>   egy nem induló: a „nem blokkolja" azt jelenti, hogy *egy koppintással átléphető*, nem azt, hogy
+>   megkerülhetetlen.
+> - A `venue` **egyetlen helye** ez a lap: innen kerül a `cardio_details`-be a session létrejöttekor,
+>   és onnan olvassa a telefon GPS-e és a `startWorkout` a watch `locationType`-jához (C5.2) — nincs
+>   második vezérlő, ami eltérhetne tőle.
+> - A `startCardioSession` mostantól **kaphat `CardioMetrics`-et** a létrehozáshoz. Enélkül a
+>   formátum/helyszín csak egy második, közvetlenül utána futó írásból kerülhetett volna a sorba —
+>   két írás egy létrehozásra, aminek a második el is hasalhat.
+> - Az **összegzésen ugyanazok a widgetek** szerkesztik a két mezőt, mint az indító lapon
+>   (`GameFormatSelector` / `GameVenueSelector`), hogy a két felület ne tudjon eltérni.
+>
+> **C9.2 — két lappangó hibát is javítani kellett hozzá.**
+> A léptető az első GAME-hívó a `updateLiveCardioMetrics` **teljes-csere** írásán, és ez két
+> korábban néma lyukat világított meg:
+> 1. Az élő képernyő `_updateCardioMetrics`-e nem vitte tovább a **`venue`-t és az `intensity`-t** —
+>    egy koppintás a léptetőn letörölte volna a meccs helyszínét és intenzitását. Eddig lappangó
+>    volt, mert GAME-en semmi nem hívta ezt a metódust (a táv/kadencia/watt/ellenállás mind
+>    DISTANCE/MACHINE).
+> 2. Az összegzés `_persistCardio`-ja nem vitte tovább a **best-effortokat és a HR-zónákat** — a táv
+>    szerkesztése törölte volna a C6.3 óta tárolt legjobb résztávokat és a C9.1 zóna-adatát. Ez
+>    **valódi, szállítható hiba volt a C6.3 óta**; a route-ra már volt teszt ugyanerre a mintára, a
+>    két újabb adatcsoportra nem. Most mindkettőre van.
+>
+> **Amit a megvalósítás eldöntött:**
+> - A léptető **deltát** jelent (+1/−1), nem kész számot: két koppintás egy kereten belül különben
+>   mindkettő „a build-időbeli érték + 1"-et számolna, és **egy kosár elveszne**. Teszt fedi.
+> - A **„Box" kör a tálca jobb alsó sarkába** került, a széles „Meccs szünet" sáv mellé — ugyanabba a
+>   pozícióba, ahol a DISTANCE-elrendezés `trailing` köre már ül. A pályán/padon kapcsoló mérete és
+>   helye **bitre változatlan** (teszt hasonlítja a `Rect`-jét nyitott és zárt panellel).
+> - A felajánlás **kártya a törzsben, nem dialógus**: egy modális ablak futó meccs fölött pont az,
+>   amit a rejtve-indulás elkerülni akar.
+> - Az **elutasítás véglegesen megjegyződik**, de a „Box" kör megmarad — az M44 rejtett alapállapota
+>   szerint („csak a »Box« kör látszik"), tehát aki meggondolja magát, eléri. Amit az ígéret tilt, az
+>   az **újbóli kérdezés**, nem a funkció elérése.
+> - A **kézi lap ugyanezt a komponenst** használja a korábbi saját, egyoszlopos pont-léptető helyett:
+>   így a focis kétoszlopos vágás is egy helyen él, nem kettőben.
+> - A felajánló kártya gombsora **`Wrap`**, nem `Row`: 400 px-en angol szöveggel túlcsordult (a
+>   widget-teszt fogta meg), és egy elvágott „többé nem kérdezzük" ígéret a legrosszabb, amit levágni
+>   lehet.
+>
+> **C9.1 — az őr két helyen ül, és a modell nem a formatterben van.**
+> A §9-es néma hiba („a zóna-másodpercek összege > bruttó idő, mert az óra és a telefon is ír")
+> **két ponton** van elzárva. (1) A **merge-ben**: a `mergedWithWatchMeasurement` a zóna-ötöst
+> mostantól **egy blokként** veszi át — akinek már van bármelyik zóna-oszlopa, az mind az ötöt
+> megtartja. Mezőnkénti `??`-fal egy telefon-mért Z1 mellé kerülhetett volna egy óra-mért Z2–Z5
+> *ugyanazon session más méréséből*, és az öt együtt több időt adott volna, mint a session hossza —
+> a sávnál szélesebb sáv és „112% a zónában", anélkül hogy az adatból kiderülne, melyik fele hibás.
+> (2) A **modellben**: a `HrZoneBreakdown` a bruttó időre **vág**, és `exceedsGross` flaggel jelzi az
+> ellentmondást, hogy teszt elkaphassa, ne pedig csendben átskálázza.
+>
+> **A modell `domain/hr_zone_breakdown.dart`-ban van, nem a `cardio_formatter.dart`-ban** (amit a
+> lépés fájllistája említ): az intenzitás-osztályozás, a vágás és a részleges-lefedettség számítás
+> tesztelhető logika, nem formázás — a formatter végül nem is igényelt változtatást.
+>
+> **Amit a megvalósítás eldöntött:**
+> - Az **intenzitás-küszöbök** szándékosan egyszerűek: a mért idő ≥33%-a küszöb felett = kemény,
+>   <10% = könnyű, közte kiegyensúlyozott. Profil-bemenet és becslés nincs — pont amit az M43 záró
+>   sora ígér („Becslés nincs").
+> - A chip a **mért** időt olvassa, nem a session hosszát: 10 perc mérés, mind maximumon, egy órás
+>   meccsen **„kemény meccs"** + „a meccs 17%-a" — nem hígítjuk „könnyűre" azzal, amit nem mértünk.
+> - **Mind az öt sor megjelenik**, a nulla másodperceseket is beleértve: az, hogy egy zónában nem
+>   volt idő, információ, nem üres sor. A **szám ilyenkor is teljes kontrasztú**.
+> - A zóna-színek **a widgetben, lokálisan** vannak definiálva (hideg→meleg ötös rampa): az
+>   `AppMetricColors` egy-egy metrika *identitása*, ez viszont skála — csak együtt van értelme.
+> - Elhelyezés a Q-D7 szerint: **DISTANCE** a splitek után, **GAME** közvetlenül a domináns szám
+>   után (meccsen a zóna-eloszlás *maga* a történet, ezért megelőzi a helyszín/intenzitás rácsot),
+>   **MACHINE** a „nincs útvonal" kártya után.
+>
 > ### ⏳ C6.7 — a „statisztika-lista" ELMARADT (nincs mit bővíteni)
 >
 > A lépés fájllistája `features/statistics/application/stat_summary_data.dart`-ot említ, de **abban
@@ -289,17 +423,17 @@ léteznek, a DTO végig-vezeti őket. Ez a legolcsóbb iteráció.
 | # | Lépés | Fájlok | Frame | Kész-ha |
 |---|---|---|---|---|
 | **C9.0** ✅ | Design: játék-frame-ek | [61 §5](61-cardio-sport-specifics-design-prompts.md#5-c9--játék--m43m45) | **M43–M45** | **Kész (2026-08-16)** — a canvasban M43–M45 + állapot-kivágatok + M43 light/EN minta |
-| **C9.1** | **Pulzuszóna-panel**: 22 px halmozott sáv + „kemény / kiegyensúlyozott / könnyű meccs" chip + 5 sor (zóna · név · idő · %) a meglévő `hrZone1..5Seconds`-ből | `presentation/cardio_summary_screen.dart`, `core/format/cardio_formatter.dart`, `l10n/` | **M43** | **Egy komponens minden cardio-típusra** (Q-D7), csak a helye családfüggő: DISTANCE-nál a splitek után, GAME-nél a domináns szám után. Az öt zóna összege **sosem haladja meg a bruttó időt** (őr + teszt); adat nélkül a panel **eltűnik**, részlegesnél a hiányzó rész sraffozott; a **szám mindig teljes kontrasztú**, a szín csak a címkén és a kis sávon |
-| **C9.2** | **Box score léptető** (pont/gól · gólpassz · lepattanó) az élő GAME képernyőn a Q-D2 szerint: alapból rejtve, egyszeri felajánlással; az összegzésen és a kézi lapon szerkeszthető | `presentation/cardio_session_screen.dart:1386` (a ma szándékosan üres GAME-elrendezés), `presentation/cardio_summary_screen.dart`, `presentation/log_cardio_sheet.dart` | **M44** | A felajánlás **egyszer** jelenik meg és megjegyzi a választ; a léptetőt a **jobb alsó „Box” kör** nyitja, és **6 s tétlenség után magától becsukódik**; a `+` **1,4× szélesebb**, mint a `−`; a pályán/padon kapcsoló mérete és helye **nem változik**; a léptető nem nyúl a `movingSeconds`-hoz; kosár 3, foci 2 oszlop |
-| **C9.3** | **Formátum + helyszín** választó: `gameFormat` (5v5 / kispálya / edzés / meccs) és `venue` a gyorsindításnál és az összegzésen | `presentation/quick_start_sheet.dart`, `presentation/activity_picker_screen.dart`, `presentation/cardio_summary_screen.dart`, `l10n/` | **M45** | A lap **nem blokkolja az indítást** (minden mezőnek van alapértéke: a legutóbbi választás); a formátum-választó **2×2 segmented** (magyarul egy sorban nem fér ki); a `venue` továbbra is **egy** helyről vezérli a GPS-t és a watch `locationType`-ot (C5.2) |
-| **C9.4** | **Kültéri GPS-mód** GAME-hez: opt-in `venue == OUTDOOR` esetén táv-rögzítés (+ sprint-szám, ha a Q-C9.1 eldőlt) | `application/` GPS-vezérlés, `presentation/cardio_session_screen.dart`, `domain/track_filter.dart` | **M45** | Teremben **nincs GPS-sor, nincs engedélykérés, és az összegzésen sincs táv** — „nem letiltva, hanem nem létezik” (akku-teszt); kültéren a kapcsoló alatt ott a **mit kapok / mit nem** ígéret, mert a tempó hiányát itt kell kimondani ([51 §3.4](51-cardio-overview-plan.md)) |
-| **C9.5** | Statisztika: zóna-idő mint metrika + a GAME-fajta szűrése | `features/statistics/application/stat_chart_data.dart`, `stat_summary_data.dart` | – | A meglévő `StatMetric` értékek számai **bitre változatlanok** (regressziós teszt, [59 §11](59-cardio-implementation-plan.md)) |
+| **C9.1** ✅ | **Pulzuszóna-panel**: 22 px halmozott sáv + „kemény / kiegyensúlyozott / könnyű meccs" chip + 5 sor (zóna · név · idő · %) a meglévő `hrZone1..5Seconds`-ből | `domain/hr_zone_breakdown.dart` (új), `presentation/widgets/hr_zone_panel.dart` (új), `presentation/cardio_summary_screen.dart`, `domain/workout_session.dart` (merge-őr), `l10n/` | **M43** | **Kész (2026-08-17)** — **Egy komponens minden cardio-típusra** (Q-D7), csak a helye családfüggő: DISTANCE-nál a splitek után, GAME-nél a domináns szám után. Az öt zóna összege **sosem haladja meg a bruttó időt** (őr + teszt); adat nélkül a panel **eltűnik**, részlegesnél a hiányzó rész sraffozott; a **szám mindig teljes kontrasztú**, a szín csak a címkén és a kis sávon |
+| **C9.2** ✅ | **Box score léptető** (pont/gól · gólpassz · lepattanó) az élő GAME képernyőn a Q-D2 szerint: alapból rejtve, egyszeri felajánlással; az összegzésen és a kézi lapon szerkeszthető | `presentation/cardio_session_screen.dart:1386` (a ma szándékosan üres GAME-elrendezés), `presentation/cardio_summary_screen.dart`, `presentation/log_cardio_sheet.dart` | **M44** | **Kész (2026-08-17)** — a felajánlás **egyszer** jelenik meg és megjegyzi a választ; a léptetőt a **jobb alsó „Box” kör** nyitja, és **6 s tétlenség után magától becsukódik**; a `+` **1,4× szélesebb**, mint a `−`; a pályán/padon kapcsoló mérete és helye **nem változik**; a léptető nem nyúl a `movingSeconds`-hoz; kosár 3, foci 2 oszlop |
+| **C9.3** ✅ | **Formátum + helyszín** választó: `gameFormat` (5v5 / kispálya / edzés / meccs) és `venue` a gyorsindításnál és az összegzésen | `presentation/quick_start_sheet.dart`, `presentation/activity_picker_screen.dart`, `presentation/cardio_summary_screen.dart`, `l10n/` | **M45** | **Kész (2026-08-17)** — a lap **nem blokkolja az indítást** (minden mezőnek van alapértéke: a legutóbbi választás); a formátum-választó **2×2 segmented** (magyarul egy sorban nem fér ki); a `venue` továbbra is **egy** helyről vezérli a GPS-t és a watch `locationType`-ot (C5.2) |
+| **C9.4** ✅ | **Kültéri GPS-mód** GAME-hez: opt-in `venue == OUTDOOR` esetén táv-rögzítés (+ sprint-szám, ha a Q-C9.1 eldőlt) | `application/` GPS-vezérlés, `presentation/cardio_session_screen.dart`, `domain/track_filter.dart` | **M45** | **Kész (2026-08-17)** — teremben **nincs GPS-sor, nincs engedélykérés, és az összegzésen sincs táv** — „nem letiltva, hanem nem létezik” (akku-teszt); kültéren a kapcsoló alatt ott a **mit kapok / mit nem** ígéret, mert a tempó hiányát itt kell kimondani ([51 §3.4](51-cardio-overview-plan.md)) |
+| **C9.5** ✅ | Statisztika: zóna-idő mint metrika + a GAME-fajta szűrése | `features/statistics/application/stat_chart_data.dart`, `stat_summary_data.dart` | – | **Kész (2026-08-17)** — a meglévő `StatMetric` értékek számai **bitre változatlanok**: a `stat_chart_data_test.dart` 35 meglévő esete változtatás nélkül zöld, ez maga a regressziós háló ([59 §11](59-cardio-implementation-plan.md)) |
 
 **Elfogadás (MF6b)**
 
-- [ ] Óra nélküli meccs is teljesen használható (zóna-panel nélkül), semmi nem üres folt
-- [ ] A box score kikapcsolható és a kikapcsolt állapot marad
-- [ ] Termi meccs alatt nulla GPS-fogyasztás
+- [x] Óra nélküli meccs is teljesen használható (zóna-panel nélkül), semmi nem üres folt — zóna-adat nélkül a panel **eltűnik** (C9.1 tesztjei), a box score és a formátum/helyszín órától független
+- [x] A box score kikapcsolható és a kikapcsolt állapot marad — a felajánlás elutasítása **véglegesen** megjegyződik (C9.2 tesztjei); a „Box" kör marad, ha valaki meggondolja magát
+- [x] Termi meccs alatt nulla GPS-fogyasztás — teszt **számolja**: nulla `availability`- és nulla `positionStream`-hívás, akkor is, ha a kültéri opt-in bekapcsolva maradt (C9.4)
 
 ---
 

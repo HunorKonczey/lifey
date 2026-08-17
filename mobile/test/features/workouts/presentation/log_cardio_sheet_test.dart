@@ -146,7 +146,11 @@ void main() {
     expect(find.text('ELEVATION GAIN'), findsNothing);
     expect(find.text('VENUE'), findsOneWidget);
     expect(find.text('INTENSITY'), findsOneWidget);
-    expect(find.text('SCORE'), findsOneWidget);
+    // C9.2 replaced the single hand-rolled points row with the shared
+    // three-column box-score stepper the live screen uses.
+    expect(find.text('POINTS'), findsOneWidget);
+    expect(find.text('REBOUNDS'), findsOneWidget);
+    expect(find.text('ASSISTS'), findsOneWidget);
     expect(find.text('Indoor'), findsOneWidget);
     expect(find.text('Outdoor'), findsOneWidget);
   });
@@ -229,10 +233,13 @@ void main() {
     await tester.tap(find.text('4').first);
     await tester.pump();
 
-    // Score stepper: two taps on the "+" button.
-    final incrementButtons = find.widgetWithIcon(IconButton, Icons.add);
-    await tester.tap(incrementButtons.last);
-    await tester.tap(incrementButtons.last);
+    // Box-score stepper (C9.2): two taps on the points column's "+", then one
+    // on the assists column's. The columns are in M44's order — points,
+    // rebounds, assists — so assists is the last "+".
+    final plusButtons = find.byIcon(Icons.add);
+    await tester.tap(plusButtons.first);
+    await tester.tap(plusButtons.first);
+    await tester.tap(plusButtons.last);
     await tester.pump();
 
     await _tapSave(tester);
@@ -241,6 +248,9 @@ void main() {
     expect(cardio.venue, 'OUTDOOR');
     expect(cardio.intensity, 4);
     expect(cardio.scorePoints, 2);
+    expect(cardio.scoreAssists, 1);
+    // Never counted, so absent rather than zero.
+    expect(cardio.scoreRebounds, isNull);
     // GAME never touches the DISTANCE/MACHINE fields.
     expect(cardio.distanceMeters, isNull);
     expect(cardio.avgWatts, isNull);

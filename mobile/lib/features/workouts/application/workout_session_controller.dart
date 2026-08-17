@@ -67,9 +67,13 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
   /// (docs/cardio/59-cardio-implementation-plan.md C2.1). Begins already
   /// `RUNNING`: `movingSinceEpochMs` is set to [startedAt]'s own epoch, so
   /// the very first tick already counts. Returns the new session's clientId.
+  /// [cardio] carries whatever the start flow already knows about the
+  /// session — today the GAME setup sheet's format and venue (C9.3). Absent
+  /// for every other family, which starts with no cardio row at all.
   Future<String> startCardioSession({
     required DateTime startedAt,
     required String activityType,
+    CardioMetrics? cardio,
   }) {
     return _repo.create(
       startedAt: startedAt,
@@ -79,6 +83,7 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
       activityType: activityType,
       movingSeconds: 0,
       movingSinceEpochMs: startedAt.millisecondsSinceEpoch,
+      cardio: cardio,
     );
   }
 

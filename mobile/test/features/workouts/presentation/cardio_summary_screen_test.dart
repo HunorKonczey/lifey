@@ -558,7 +558,9 @@ void main() {
     expect(find.text('Indoor'), findsOneWidget);
     expect(find.text('INTENSITY'), findsOneWidget);
     expect(find.text('4/5'), findsOneWidget);
-    expect(find.text('SCORE'), findsOneWidget);
+    // Labelled per sport since C9.2 — a basketball match scores POINTS, a
+    // football one GOALS, and both write the same stored column.
+    expect(find.text('POINTS'), findsOneWidget);
     expect(find.text('18'), findsOneWidget);
   });
 
@@ -959,6 +961,310 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('New record'), findsOneWidget);
+    });
+  });
+
+  // -- Heart-rate zone panel (C9.1, M43) -----------------------------------
+
+  group('heart-rate zone panel', () {
+    CardioMetrics zones({
+      int? z1 = 300,
+      int? z2 = 900,
+      int? z3 = 1200,
+      int? z4 = 900,
+      int? z5 = 300,
+      double? distanceMeters,
+    }) {
+      return CardioMetrics(
+        distanceMeters: distanceMeters,
+        hrZone1Seconds: z1,
+        hrZone2Seconds: z2,
+        hrZone3Seconds: z3,
+        hrZone4Seconds: z4,
+        hrZone5Seconds: z5,
+      );
+    }
+
+    Future<void> pumpTall(WidgetTester tester, WorkoutSession session) async {
+      await tester.binding.setSurfaceSize(const Size(400, 2000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _pump(tester, session);
+    }
+
+    testWidgets('a match with zone data lists all five zones with times and shares',
+        (tester) async {
+      await pumpTall(
+        tester,
+        _session(activityType: 'BASKETBALL', movingSeconds: 3600, cardio: zones()),
+      );
+
+      expect(find.text('HEART RATE ZONES'), findsOneWidget);
+      // Every zone is listed, including ones with no time — seeing that a zone
+      // was untouched is information.
+      for (final code in ['Z1', 'Z2', 'Z3', 'Z4', 'Z5']) {
+        expect(find.text(code), findsOneWidget);
+      }
+      expect(find.text('warm-up'), findsOneWidget);
+      expect(find.text('threshold'), findsOneWidget);
+      expect(find.text('20:00'), findsOneWidget); // z3, 1200 s
+      expect(find.text('33%'), findsOneWidget); // z3 of 3600 s measured
+    });
+
+    testWidgets('an untouched zone still shows its row, at zero', (tester) async {
+      await pumpTall(
+        tester,
+        _session(
+          activityType: 'BASKETBALL',
+          movingSeconds: 3600,
+          cardio: zones(z4: null, z5: null),
+        ),
+      );
+
+      expect(find.text('Z5'), findsOneWidget);
+      expect(find.text('0:00'), findsNWidgets(2)); // z4 and z5
+      expect(find.text('0%'), findsNWidgets(2));
+    });
+
+    testWidgets('no zone data at all: the panel is absent, not empty', (tester) async {
+      await pumpTall(
+        tester,
+        _session(activityType: 'BASKETBALL', movingSeconds: 3600, cardio: const CardioMetrics()),
+      );
+
+      expect(find.text('HEART RATE ZONES'), findsNothing);
+      expect(find.text('Z1'), findsNothing);
+    });
+
+    testWidgets('the verdict is said in words, not only in colour', (tester) async {
+      // M43: the bar's colours are not accessible to a colour-blind reader,
+      // so the chip states the conclusion.
+      await pumpTall(
+        tester,
+        _session(
+          activityType: 'BASKETBALL',
+          movingSeconds: 3600,
+          cardio: zones(z1: 300, z2: 600, z3: 900, z4: 1200, z5: 600),
+        ),
+      );
+
+      expect(find.text('hard session'), findsOneWidget);
+    });
+
+    testWidgets('an easy match says so', (tester) async {
+      await pumpTall(
+        tester,
+        _session(
+          activityType: 'BASKETBALL',
+          movingSeconds: 3600,
+          cardio: zones(z1: 1800, z2: 1500, z3: 240, z4: 60, z5: null),
+        ),
+      );
+
+      expect(find.text('easy session'), findsOneWidget);
+    });
+
+    testWidgets('partial coverage is stated as a share of the session', (tester) async {
+      // A watch paired half-way through: 37 of 60 minutes measured.
+      await pumpTall(
+        tester,
+        _session(
+          activityType: 'BASKETBALL',
+          movingSeconds: 3600,
+          cardio: zones(z1: 600, z2: 900, z3: 720, z4: null, z5: null),
+        ),
+      );
+
+      expect(find.text('62% of the session'), findsOneWidget);
+    });
+
+    testWidgets('full coverage says nothing about coverage', (tester) async {
+      await pumpTall(
+        tester,
+        _session(activityType: 'BASKETBALL', movingSeconds: 3600, cardio: zones()),
+      );
+
+      expect(find.textContaining('of the session'), findsNothing);
+    });
+
+    testWidgets('the same panel appears for a run (Q-D7: one component for every type)',
+        (tester) async {
+      await pumpTall(
+        tester,
+        _session(
+          activityType: 'RUNNING',
+          movingSeconds: 3600,
+          cardio: zones(distanceMeters: 10000),
+        ),
+      );
+
+      expect(find.text('HEART RATE ZONES'), findsOneWidget);
+      expect(find.text('Z5'), findsOneWidget);
+    });
+
+    testWidgets('and for the indoor bike', (tester) async {
+      await pumpTall(
+        tester,
+        _session(activityType: 'INDOOR_BIKE', movingSeconds: 3600, cardio: zones()),
+      );
+
+      expect(find.text('HEART RATE ZONES'), findsOneWidget);
+    });
+
+    testWidgets('nothing here is estimated, and the panel says so', (tester) async {
+      await pumpTall(
+        tester,
+        _session(activityType: 'BASKETBALL', movingSeconds: 3600, cardio: zones()),
+      );
+
+      expect(
+        find.text(
+          "From your watch's heart rate, against your profile's maximum. Never estimated.",
+        ),
+        findsOneWidget,
+      );
+    });
+  });
+
+  // -- The full-replace write must not erase what it isn't editing ----------
+
+  group('a metric edit preserves every other cardio field', () {
+    // `updateLiveCardioMetrics` replaces the whole cardio row, so anything the
+    // screen forgets to carry along is *deleted*. The route already had this
+    // coverage; C9.1/C9.2 found the same hole for the best efforts and the
+    // heart-rate zones, which had been silently erasable since C6.3.
+    testWidgets('editing distance keeps the best efforts and the zones', (tester) async {
+      final controller = await _pump(
+        tester,
+        _session(
+          activityType: 'RUNNING',
+          movingSeconds: 3600,
+          cardio: const CardioMetrics(
+            distanceMeters: 12000,
+            best1kSeconds: 250,
+            best5kSeconds: 1400,
+            best10kSeconds: 2980,
+            hrZone2Seconds: 1200,
+            hrZone4Seconds: 900,
+            maxHeartRate: 186,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('12.00 km'));
+      await tester.pumpAndSettle();
+      // The dialog takes kilometres, like every other distance edit here.
+      await tester.enterText(find.byType(TextField), '13');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final cardio =
+          controller.updateLiveCardioMetricsCalls.single['cardio'] as CardioMetrics;
+      expect(cardio.distanceMeters, 13000);
+      expect(cardio.best1kSeconds, 250, reason: 'C6.3 data must survive a distance edit');
+      expect(cardio.best5kSeconds, 1400);
+      expect(cardio.best10kSeconds, 2980);
+      expect(cardio.hrZone2Seconds, 1200, reason: 'C9.1 data must survive it too');
+      expect(cardio.hrZone4Seconds, 900);
+      expect(cardio.maxHeartRate, 186);
+    });
+  });
+
+  // -- Format + venue on the summary (C9.3, M45) ----------------------------
+
+  group('match format and venue', () {
+    WorkoutSession match({String? format = '5V5', String? venue = 'INDOOR'}) => _session(
+          activityType: 'BASKETBALL',
+          movingSeconds: 3120,
+          cardio: CardioMetrics(venue: venue, gameFormat: format, scorePoints: 18),
+        );
+
+    testWidgets('both are shown on the summary', (tester) async {
+      await _pump(tester, match());
+
+      expect(find.text('VENUE'), findsOneWidget);
+      expect(find.text('Indoor'), findsOneWidget);
+      expect(find.text('FORMAT'), findsOneWidget);
+      expect(find.text('5v5'), findsOneWidget);
+    });
+
+    testWidgets('a session with no format recorded shows no format tile', (tester) async {
+      // Every match logged before C9.3 — absent rather than guessed at.
+      await _pump(tester, match(format: null));
+
+      expect(find.text('FORMAT'), findsNothing);
+    });
+
+    testWidgets('the format can be corrected afterwards, and persists', (tester) async {
+      // M45's own promise: "a beállítás utólag is módosítható".
+      final controller = await _pump(tester, match());
+
+      await tester.tap(find.text('5v5'));
+      await tester.pumpAndSettle();
+      // The same 2x2 selector the start sheet uses.
+      await tester.tap(find.text('Practice'));
+      await tester.pumpAndSettle();
+
+      final cardio =
+          controller.updateLiveCardioMetricsCalls.last['cardio'] as CardioMetrics;
+      expect(cardio.gameFormat, 'PRACTICE');
+      // The write is a full replace — the match's own numbers must survive it.
+      expect(cardio.scorePoints, 18);
+      expect(cardio.venue, 'INDOOR');
+    });
+
+    testWidgets('the venue can be corrected from the same sheet', (tester) async {
+      final controller = await _pump(tester, match());
+
+      await tester.tap(find.text('Indoor').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Outdoor'));
+      await tester.pumpAndSettle();
+
+      final cardio =
+          controller.updateLiveCardioMetricsCalls.last['cardio'] as CardioMetrics;
+      expect(cardio.venue, 'OUTDOOR');
+      expect(cardio.gameFormat, '5V5');
+    });
+  });
+
+  // -- Outdoor match distance (C9.4) ---------------------------------------
+
+  group('a match records distance only outdoors', () {
+    testWidgets('an outdoor match with GPS shows its distance, and never a pace',
+        (tester) async {
+      await _pump(
+        tester,
+        _session(
+          activityType: 'BASKETBALL',
+          movingSeconds: 3120,
+          cardio: const CardioMetrics(
+            venue: 'OUTDOOR',
+            gameFormat: 'SMALL_SIDED',
+            distanceMeters: 4200,
+            distanceSource: 'MEASURED',
+          ),
+        ),
+      );
+
+      expect(find.text('DISTANCE'), findsOneWidget);
+      expect(find.text('4.20 km'), findsOneWidget);
+      // The setup sheet promised no pace; the summary must keep that promise.
+      expect(find.text('PACE'), findsNothing);
+      expect(find.textContaining('/km'), findsNothing);
+    });
+
+    testWidgets('an indoor match shows no distance tile at all', (tester) async {
+      // Not a dash and not a zero — the number does not exist.
+      await _pump(
+        tester,
+        _session(
+          activityType: 'BASKETBALL',
+          movingSeconds: 3120,
+          cardio: const CardioMetrics(venue: 'INDOOR', gameFormat: '5V5'),
+        ),
+      );
+
+      expect(find.text('DISTANCE'), findsNothing);
     });
   });
 }

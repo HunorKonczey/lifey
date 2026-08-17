@@ -12,6 +12,7 @@ import '../../weight/application/weight_controller.dart';
 import '../../weight/domain/weight_entry.dart';
 import '../../workouts/application/workout_session_controller.dart';
 import '../../workouts/domain/activity_type.dart';
+import '../../workouts/domain/hr_zone_breakdown.dart';
 import '../../workouts/domain/workout_session.dart';
 import '../domain/stat_kind_filter.dart';
 import '../domain/stat_metric.dart';
@@ -50,6 +51,7 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
     case StatMetric.cardioMovingMinutes:
     case StatMetric.cardioElevationGain:
     case StatMetric.cardioSessions:
+    case StatMetric.cardioHardZoneMinutes:
       return ref.watch(workoutSessionControllerProvider).whenData((all) =>
           kindFilter == StatKindFilter.strength ? const [] : _sessionPoints(all, metric, range));
     case StatMetric.cardioAvgPace:
@@ -124,6 +126,11 @@ final availableStatMetricsProvider = Provider<Set<StatMetric>>((ref) {
       StatMetric.cardioAvgPace,
     if (sessions.any((s) => s.isCardio && s.cardio?.maxHeartRate != null))
       StatMetric.maxHeartRate,
+    // Offered only once some session actually carries zone data — which today
+    // means a watch was involved. Without this gate the picker would list a
+    // metric that charts a flat nothing for most users.
+    if (sessions.any((s) => HrZoneBreakdown.fromSession(s) != null))
+      StatMetric.cardioHardZoneMinutes,
     if (water.isNotEmpty) StatMetric.water,
     if (weights.isNotEmpty) StatMetric.weight,
     if (ref.watch(allStepCountsProvider).value?.isNotEmpty ?? false) StatMetric.steps,
@@ -201,6 +208,18 @@ List<TimeSeriesPoint> _sessionPoints(
               session.cardio?.elevationGainMeters != null)
           ? session.cardio!.elevationGainMeters!
           : null,
+      // Zones come from the watch, so this is where a GAME session finally
+      // contributes something of its own to the statistics: a match has no
+      // distance, no elevation and no pace, but it does have zone time
+      // (docs/cardio/60 C9.5). Every cardio family is counted — the metric is
+      // about heart rate, not about which sport produced it.
+      //
+      // Read through [HrZoneBreakdown] rather than adding the two columns
+      // straight up, so the chart inherits the same cap the panel uses: a row
+      // where the watch and the phone both wrote zones can total more time
+      // than the session lasted (docs/cardio/60 §9), and an uncapped sum here
+      // would quietly inflate a week's training load.
+      StatMetric.cardioHardZoneMinutes => _hardZoneMinutes(session),
       _ => null,
     };
     if (value == null) continue;
@@ -222,6 +241,16 @@ List<TimeSeriesPoint> _sessionPoints(
 /// so the division below can't hit zero, and a day with nothing usable is
 /// simply absent (missing, not a 0:00/km point) rather than crashing or
 /// lying, matching D-C3.5's "missing, not zero" rule for cardio metrics.
+/// Minutes at zone 4+5, or null when this session measured no zones at all.
+/// Zero is a real answer (an easy session that never reached threshold) and is
+/// charted as such; *no data* is not, and stays out of the day's sum.
+double? _hardZoneMinutes(WorkoutSession session) {
+  if (!session.isCardio) return null;
+  final breakdown = HrZoneBreakdown.fromSession(session);
+  if (breakdown == null) return null;
+  return (breakdown.secondsIn(4) + breakdown.secondsIn(5)) / 60.0;
+}
+
 List<TimeSeriesPoint> _cardioAvgPacePoints(List<WorkoutSession> sessions, StatsRange range) {
   final cutoff = range.cutoff();
   final secondsByDay = <DateTime, double>{};

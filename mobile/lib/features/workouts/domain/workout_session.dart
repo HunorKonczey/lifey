@@ -164,6 +164,15 @@ class CardioMetrics {
   /// only ever set to `'DEVICE'` when the watch's distance is what actually
   /// *filled* a previously-empty value — a manual/measured distance already
   /// on this session keeps its own source tag untouched, distance and all.
+  /// Whether *any* of the five zone columns is filled in here — the test the
+  /// zone block's all-or-nothing merge turns on.
+  bool get _hasZoneData =>
+      hrZone1Seconds != null ||
+      hrZone2Seconds != null ||
+      hrZone3Seconds != null ||
+      hrZone4Seconds != null ||
+      hrZone5Seconds != null;
+
   CardioMetrics mergedWithWatchMeasurement(CardioMetrics fromWatch) => CardioMetrics(
         distanceMeters: distanceMeters ?? fromWatch.distanceMeters,
         distanceSource: distanceMeters != null || fromWatch.distanceMeters == null
@@ -183,11 +192,19 @@ class CardioMetrics {
         resistanceLevel: resistanceLevel ?? fromWatch.resistanceLevel,
         deviceCalories: deviceCalories ?? fromWatch.deviceCalories,
         maxHeartRate: maxHeartRate ?? fromWatch.maxHeartRate,
-        hrZone1Seconds: hrZone1Seconds ?? fromWatch.hrZone1Seconds,
-        hrZone2Seconds: hrZone2Seconds ?? fromWatch.hrZone2Seconds,
-        hrZone3Seconds: hrZone3Seconds ?? fromWatch.hrZone3Seconds,
-        hrZone4Seconds: hrZone4Seconds ?? fromWatch.hrZone4Seconds,
-        hrZone5Seconds: hrZone5Seconds ?? fromWatch.hrZone5Seconds,
+        // The zone set moves as **one block**, not field by field (C9.1's
+        // guard, docs/cardio/60 §9): whoever already has zone data here keeps
+        // all five columns. Merging them individually would let a phone-
+        // measured Z1 sit next to a watch-measured Z2-Z5 from a different
+        // measurement of the same session, and the five would then total more
+        // time than the session lasted — a bar wider than its own track and a
+        // "112% in zone" reading, with nothing in the data to say which half
+        // was wrong.
+        hrZone1Seconds: _hasZoneData ? hrZone1Seconds : fromWatch.hrZone1Seconds,
+        hrZone2Seconds: _hasZoneData ? hrZone2Seconds : fromWatch.hrZone2Seconds,
+        hrZone3Seconds: _hasZoneData ? hrZone3Seconds : fromWatch.hrZone3Seconds,
+        hrZone4Seconds: _hasZoneData ? hrZone4Seconds : fromWatch.hrZone4Seconds,
+        hrZone5Seconds: _hasZoneData ? hrZone5Seconds : fromWatch.hrZone5Seconds,
         intensity: intensity ?? fromWatch.intensity,
         venue: venue ?? fromWatch.venue,
         gameFormat: gameFormat ?? fromWatch.gameFormat,
