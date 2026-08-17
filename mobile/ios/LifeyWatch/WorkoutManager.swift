@@ -339,9 +339,16 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// a missing field as a no-op, so there's nothing to fake here). `"DEVICE"`
   /// matches `source = DEVICE` — the phone's manual/measured value always
   /// wins (docs/cardio/51-cardio-overview-plan.md R8).
+  ///
+  /// The cadence pair rides along only for a RUNNING session that produced at
+  /// least one full window ([collectsCadence], [cadenceWindowSeconds]) —
+  /// everything else sends the block without those keys, exactly as before
+  /// C6.5.
   private func cardioSummaryPayload() -> CardioSummaryPayload? {
     guard isCardio, let lastDistanceMeters else { return nil }
-    return CardioSummaryPayload(distanceMeters: lastDistanceMeters, distanceSource: "DEVICE")
+    return CardioSummaryPayload(
+      distanceMeters: lastDistanceMeters, distanceSource: "DEVICE",
+      avgCadence: averageCadenceSpm(), maxCadence: maxCadenceSpm)
   }
 
   /// Whether `EffortSelectorView` should be shown over `ActiveWorkoutView`
@@ -582,6 +589,42 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// `cardioSummaryPayload()`).
   private var lastDistanceMeters: Double?
 
+  /// Whether this session collects running cadence at all (docs/cardio/
+  /// 60-cardio-sport-specifics-plan.md C6.5) — true only for a `.running`
+  /// `HKWorkoutConfiguration`, decided once in `startSession(configuration:)`
+  /// and restored by `recoverStandaloneSessionIfNeeded()`. The same gate Wear
+  /// OS applies by simply not requesting `DataType.STEPS_PER_MINUTE_STATS`
+  /// (`ExerciseService.buildExerciseConfig`): a walker's or hiker's
+  /// steps-per-minute is a number nobody trains on and the phone's summary
+  /// has no place to show it, so it never goes on the wire.
+  private var collectsCadence = false
+  /// Steps counted inside completed cadence windows, and the seconds those
+  /// windows spanned — the duration-weighted average's two halves (see
+  /// `averageCadenceSpm()`). Accumulated in `workoutBuilder(_:didCollectDataOf:)`
+  /// rather than derived at close from `builder.elapsedTime`, so a stretch
+  /// where HealthKit reported no steps at all simply contributes nothing
+  /// instead of dragging the average toward zero.
+  private var cadenceSteps: Double = 0
+  private var cadenceSeconds: TimeInterval = 0
+  /// The fastest completed window, spm — C6.5's `maxCadence`. Nil until the
+  /// first window closes.
+  private var maxCadenceSpm: Double?
+  /// The open window's start: the cumulative step total and the instant it was
+  /// read at. Seeded from the session start (0 steps at `startedAt`) so the
+  /// first window loses nothing, cleared on every pause/resume transition so a
+  /// window can't straddle a pause and report the standing minutes as slow
+  /// running.
+  private var cadenceAnchorSteps: Double?
+  private var cadenceAnchorAt: Date?
+  /// The shortest stretch a cadence window may be scored over. HealthKit
+  /// delivers step samples in small chunks, and over one or two seconds the
+  /// step count quantizes brutally — 3 steps in 1 s reads as 180 spm, 4 as
+  /// 240 — so a raw per-tick rate would put a number in `maxCadence` that the
+  /// runner never actually ran. A window is only closed (and the anchor only
+  /// advanced) once this much time has passed, which makes the window a
+  /// sliding ≥10 s one rather than a per-tick sample.
+  private static let cadenceWindowSeconds: TimeInterval = 10
+
   // docs/40-watch-app-plan.md §4.2 — the traditional `quantityType(forIdentifier:)`
   // form rather than the `HKQuantityType(.heartRate)` convenience init, which
   // needs a newer OS than this target's WATCHOS_DEPLOYMENT_TARGET (10.0).
@@ -601,6 +644,16 @@ final class WorkoutManager: NSObject, ObservableObject {
   private static let distanceWalkingRunningType = HKObjectType.quantityType(
     forIdentifier: .distanceWalkingRunning)!
   private static let distanceCyclingType = HKObjectType.quantityType(forIdentifier: .distanceCycling)!
+  /// C6.5's cadence source. HealthKit has **no running-cadence quantity type**
+  /// — the `cycling*` family got one (`.cyclingCadence`), the running family
+  /// only ever got stride length, power, speed and the two form metrics — so
+  /// unlike Wear OS's ready-made `DataType.STEPS_PER_MINUTE_STATS` the average
+  /// and the max are derived here, out of the step count the live builder
+  /// collects (`workoutBuilder(_:didCollectDataOf:)`). Not part of
+  /// `HKLiveWorkoutDataSource`'s default set for a running configuration
+  /// either, hence the explicit `enableCollection(for:predicate:)` in
+  /// `startSession(configuration:)`.
+  private static let stepCountType = HKObjectType.quantityType(forIdentifier: .stepCount)!
 
   private override init() {}
 
@@ -1079,9 +1132,21 @@ final class WorkoutManager: NSObject, ObservableObject {
     return true
   }
 
+  /// The distance and step-count types are here for the same reason the heart
+  /// rate and energy ones are: `HKLiveWorkoutBuilder.statistics(for:)` reads
+  /// collected samples back, and HealthKit answers a never-requested read type
+  /// with silence, not an error — so a type missing from this set doesn't fail
+  /// loudly, it just makes the corresponding summary field permanently nil
+  /// (docs/cardio/59-cardio-implementation-plan.md §11's "néma hiba" class).
+  /// `stepCountType` is C6.5's addition; the two distance types back C5.7b's
+  /// `cardioSummaryPayload()` distance, which this build had been collecting
+  /// without ever asking to read.
   private func requestAuthorizationIfNeeded() async throws {
     let typesToShare: Set<HKSampleType> = [HKObjectType.workoutType()]
-    let typesToRead: Set<HKObjectType> = [Self.heartRateType, Self.activeEnergyType]
+    let typesToRead: Set<HKObjectType> = [
+      Self.heartRateType, Self.activeEnergyType, Self.distanceWalkingRunningType,
+      Self.distanceCyclingType, Self.stepCountType,
+    ]
     try await store.requestAuthorization(toShare: typesToShare, read: typesToRead)
   }
 
@@ -1096,8 +1161,18 @@ final class WorkoutManager: NSObject, ObservableObject {
   private func startSession(configuration: HKWorkoutConfiguration) async throws {
     let session = try HKWorkoutSession(healthStore: store, configuration: configuration)
     let builder = session.associatedWorkoutBuilder()
-    builder.dataSource = HKLiveWorkoutDataSource(
+    let dataSource = HKLiveWorkoutDataSource(
       healthStore: store, workoutConfiguration: configuration)
+    // C6.5 — the one place both entry points (`start(configuration:)`'s
+    // phone-mastered session and `startStandalone`'s watch-started one) pass
+    // through, so the cadence decision and its accumulators are made exactly
+    // once per session, off the configuration rather than off
+    // `cardioActivityType` (which is still nil here for a phone-mastered
+    // session — `PhoneConnector`'s context can arrive after this runs).
+    if configuration.activityType == .running {
+      dataSource.enableCollection(for: Self.stepCountType, predicate: nil)
+    }
+    builder.dataSource = dataSource
     session.delegate = self
     builder.delegate = self
 
@@ -1108,6 +1183,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     self.session = session
     self.builder = builder
     self.startedAt = now
+    startCadenceCollection(enabled: configuration.activityType == .running, from: now, steps: 0)
     self.phase = .active
     notifyStartedOnWatchIfNeeded()
   }
@@ -1833,6 +1909,7 @@ final class WorkoutManager: NSObject, ObservableObject {
     cardioActivityType = nil
     cardioMetrics = nil
     lastDistanceMeters = nil
+    clearCadenceCollection()
     isStandalone = false
     isAdopted = false
     standaloneSets = []
@@ -1922,6 +1999,19 @@ final class WorkoutManager: NSObject, ObservableObject {
       guard let type else { return nil }
       return recoveredBuilder.statistics(for: type)?.sumQuantity()?.doubleValue(for: .meter())
     }
+    // C6.5's half of the same re-seeding, for the same reason: the recovered
+    // builder kept counting steps while this process was dead, so starting the
+    // accumulators at zero would report the cadence of whatever is left of the
+    // run rather than of the run. The per-window history is gone with the
+    // process, so only the average can be restored — from the cumulative step
+    // total over `elapsedTime` (which excludes paused time) — and `maxCadence`
+    // starts over from the windows that come after the recovery.
+    let recoveredSteps =
+      recoveredBuilder.statistics(for: Self.stepCountType)?.sumQuantity()?
+      .doubleValue(for: .count()) ?? 0
+    startCadenceCollection(
+      enabled: meta.activityType == "RUNNING", from: Date(), steps: recoveredSteps,
+      seconds: recoveredBuilder.elapsedTime)
     phase = .active
   }
 
@@ -1981,6 +2071,15 @@ extension WorkoutManager: HKWorkoutSessionDelegate {
   ) {
     Task { @MainActor in
       self.isPaused = (toState == .paused)
+      // C6.5: the open cadence window is measured in wall time, so one that
+      // spans a pause would score the standing minutes as very slow running.
+      // Dropping it costs at most the last sub-window of steps. Only the two
+      // pause transitions themselves — the `.running` one this callback also
+      // fires on at `startActivity` would otherwise race
+      // `startSession(configuration:)`'s own anchor and throw it away.
+      if toState == .paused || fromState == .paused {
+        self.resetCadenceWindow()
+      }
     }
   }
 
@@ -2006,6 +2105,10 @@ extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
           activeCalories = statistics.sumQuantity()?.doubleValue(for: .kilocalorie())
         case Self.distanceWalkingRunningType, Self.distanceCyclingType:
           lastDistanceMeters = statistics.sumQuantity()?.doubleValue(for: .meter())
+        case Self.stepCountType:
+          recordCadenceProgress(
+            totalSteps: statistics.sumQuantity()?.doubleValue(for: .count()),
+            at: statistics.endDate)
         default:
           break
         }
@@ -2027,4 +2130,91 @@ extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
   }
 
   nonisolated func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {}
+}
+
+// MARK: - Running cadence (docs/cardio/60-cardio-sport-specifics-plan.md C6.5)
+
+/// HealthKit exposes no running-cadence quantity type (see `stepCountType`'s
+/// doc comment), so the two numbers Wear OS gets handed by
+/// `DataType.STEPS_PER_MINUTE_STATS` are derived here from the workout's own
+/// step count, over sliding windows of at least `cadenceWindowSeconds`:
+///
+/// - **max** is the fastest single window,
+/// - **avg** is duration-weighted across every completed window — i.e. total
+///   steps over total scored seconds, not the mean of the window rates, so a
+///   short window can't count as much as a long one.
+///
+/// Both stay nil until the first window closes, which is what makes "the watch
+/// measured no cadence" a missing key on the wire rather than a zero.
+extension WorkoutManager {
+  /// Called once per session from `startSession(configuration:)` — and again,
+  /// with the recovered totals, from `recoverStandaloneSessionIfNeeded()`.
+  /// [steps]/[seconds] seed the accumulators (both 0 for a fresh session),
+  /// [from] opens the first window, so no steps fall outside a window at
+  /// either end.
+  private func startCadenceCollection(
+    enabled: Bool, from: Date, steps: Double, seconds: TimeInterval = 0
+  ) {
+    collectsCadence = enabled
+    cadenceSteps = steps
+    cadenceSeconds = seconds
+    maxCadenceSpm = nil
+    guard enabled else {
+      cadenceAnchorSteps = nil
+      cadenceAnchorAt = nil
+      return
+    }
+    cadenceAnchorSteps = steps
+    cadenceAnchorAt = from
+  }
+
+  /// Clears everything C6.5 accumulated — `reset()`'s cadence half.
+  private func clearCadenceCollection() {
+    startCadenceCollection(enabled: false, from: Date(), steps: 0)
+  }
+
+  /// Abandons the open window without touching what's already been scored —
+  /// the pause/resume handler's tool.
+  private func resetCadenceWindow() {
+    guard collectsCadence else { return }
+    cadenceAnchorSteps = nil
+    cadenceAnchorAt = nil
+  }
+
+  /// One `didCollectDataOf` tick's cumulative step total, as of [instant]
+  /// (`HKStatistics.endDate` — the end of the newest sample, which is a truer
+  /// clock for this than `Date()` and its collection latency).
+  ///
+  /// Closes the open window only once it is long enough to score; until then
+  /// the anchor stays put and the window simply keeps growing, so a burst of
+  /// ticks a second apart still produces ≥10 s windows rather than ten
+  /// quantized ones.
+  private func recordCadenceProgress(totalSteps: Double?, at instant: Date) {
+    guard collectsCadence, let totalSteps else { return }
+    guard let anchorSteps = cadenceAnchorSteps, let anchorAt = cadenceAnchorAt else {
+      // First tick after a pause dropped the window (or after a recovery).
+      cadenceAnchorSteps = totalSteps
+      cadenceAnchorAt = instant
+      return
+    }
+    let seconds = instant.timeIntervalSince(anchorAt)
+    guard seconds >= Self.cadenceWindowSeconds else { return }
+    // A cumulative total can only grow; a negative delta would mean HealthKit
+    // restated the statistics under us, and re-anchoring is the honest answer.
+    let steps = totalSteps - anchorSteps
+    cadenceAnchorSteps = totalSteps
+    cadenceAnchorAt = instant
+    guard steps > 0 else { return }
+    cadenceSteps += steps
+    cadenceSeconds += seconds
+    let spm = steps / seconds * 60
+    maxCadenceSpm = max(maxCadenceSpm ?? spm, spm)
+  }
+
+  /// The session's average cadence, spm — nil when no window ever closed
+  /// (a non-running session, or a run shorter than one window).
+  private func averageCadenceSpm() -> Double? {
+    guard collectsCadence, cadenceSeconds > 0, cadenceSteps > 0 else { return nil }
+    return cadenceSteps / cadenceSeconds * 60
+  }
 }
