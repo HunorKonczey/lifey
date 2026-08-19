@@ -8,10 +8,12 @@ import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.session.*;
 import com.lifey.workout.session.cardio.CardioDetails;
 import com.lifey.workout.session.cardio.CardioSplit;
+import com.lifey.workout.session.cardio.CardioWaypoint;
 import com.lifey.workout.session.cardio.InvalidCardioRequestException;
 import com.lifey.workout.session.cardio.SplitType;
 import com.lifey.workout.session.dto.CardioDetailsRequest;
 import com.lifey.workout.session.dto.CardioSplitRequest;
+import com.lifey.workout.session.dto.CardioWaypointRequest;
 import com.lifey.workout.session.dto.ExerciseSetRequest;
 import com.lifey.workout.session.dto.PlannedExerciseRequest;
 import com.lifey.workout.session.dto.WorkoutSessionRequest;
@@ -123,6 +125,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         replaceSets(session, request.sets());
         replaceCardioDetails(session, request.cardio());
         replaceSplits(session, request.splits());
+        replaceWaypoints(session, request.waypoints());
         return WorkoutSessionMapper.toResponse(sessionRepository.save(session));
     }
 
@@ -144,7 +147,8 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         replaceSets(session, request.sets());
         replaceCardioDetails(session, request.cardio());
         replaceSplits(session, request.splits());
-        // Sets/planned exercises/cardio details/splits are child rows with no
+        replaceWaypoints(session, request.waypoints());
+        // Sets/planned exercises/cardio details/splits/waypoints are child rows with no
         // delta feed of their own (docs/16 §2.3, docs/cardio/52 §4) — a
         // child-only edit could leave every WorkoutSession scalar field
         // unchanged, so Hibernate's dirty-checking could skip @PreUpdate.
@@ -271,6 +275,9 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             if (request.splits() != null && !request.splits().isEmpty()) {
                 throw new InvalidCardioRequestException("splits must be empty unless sessionKind is CARDIO");
             }
+            if (request.waypoints() != null && !request.waypoints().isEmpty()) {
+                throw new InvalidCardioRequestException("waypoints must be empty unless sessionKind is CARDIO");
+            }
         }
     }
 
@@ -380,6 +387,12 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         details.setCaloriesSource(request.caloriesSource());
         details.setRoutePolyline(request.routePolyline());
         details.setRoutePointCount(request.routePointCount());
+        details.setBackpackWeightKg(request.backpackWeightKg());
+        details.setAvgGapSecondsPerKm(request.avgGapSecondsPerKm());
+        details.setWeatherTempC(request.weatherTempC());
+        details.setWeatherWindKph(request.weatherWindKph());
+        details.setWeatherPrecipMm(request.weatherPrecipMm());
+        details.setWeatherCondition(request.weatherCondition());
     }
 
     /**
@@ -402,6 +415,26 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             split.setAvgWatts(item.avgWatts());
             split.setIntensity(item.intensity());
             session.getSplits().add(split);
+        }
+    }
+
+    /**
+     * Rebuilds the session's waypoint list from the request. Full-replace,
+     * same model as {@link #replaceSplits}. Relies on {@code orphanRemoval}
+     * to delete dropped waypoints.
+     */
+    private void replaceWaypoints(WorkoutSession session, List<CardioWaypointRequest> requested) {
+        session.getWaypoints().clear();
+        if (requested == null) return;
+        for (CardioWaypointRequest item : requested) {
+            CardioWaypoint waypoint = new CardioWaypoint();
+            waypoint.setWorkoutSession(session);
+            waypoint.setWaypointIndex(item.waypointIndex());
+            waypoint.setLatitude(item.latitude());
+            waypoint.setLongitude(item.longitude());
+            waypoint.setAltitudeMeters(item.altitudeMeters());
+            waypoint.setLabel(item.label());
+            session.getWaypoints().add(waypoint);
         }
     }
 }

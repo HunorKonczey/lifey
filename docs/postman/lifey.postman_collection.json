@@ -981,6 +981,17 @@
           "response": []
         },
         {
+          "name": "Log a hike session (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-08-10T05:00:00Z\",\n  \"finishedAt\": \"2026-08-10T08:30:00Z\",\n  \"exerciseIds\": [],\n  \"sets\": [],\n  \"sessionKind\": \"CARDIO\",\n  \"activityType\": \"HIKING\",\n  \"movingSeconds\": 11400,\n  \"cardio\": {\n    \"distanceMeters\": 14200,\n    \"elevationGainMeters\": 756,\n    \"maxAltitudeMeters\": 892,\n    \"maxHeartRate\": 164,\n    \"distanceSource\": \"MEASURED\",\n    \"backpackWeightKg\": 8.5,\n    \"avgGapSecondsPerKm\": 842,\n    \"weatherTempC\": 7,\n    \"weatherWindKph\": 12,\n    \"weatherPrecipMm\": 0,\n    \"weatherCondition\": \"PARTLY_CLOUDY\"\n  },\n  \"waypoints\": [\n    { \"waypointIndex\": 0, \"latitude\": 47.4979, \"longitude\": 19.0402, \"altitudeMeters\": 612 },\n    { \"waypointIndex\": 1, \"latitude\": 47.5102, \"longitude\": 19.0561, \"altitudeMeters\": 892 }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] },
+            "description": "Logs a HIKING session with the C8.1 hike fields (docs/cardio/60 §7). `backpackWeightKg` and the `weather*` fields are always kept as plain manual entries — never fetched from an external API (Q-C8.1, decided 2026-08-19) — so there is no timestamp on them, unlike the design frame's original \"captured at start\" idea. `avgGapSecondsPerKm` is computed client-side from the elevation profile, same as the running best-effort fields. `waypoints` are points marked along the route — `waypointIndex` + `latitude`/`longitude` + optional `altitudeMeters`; no distance/elapsed-time fields (the client derives those from its own local track points, same source the elevation profile reads). `label` is omitted here — always null in V1 (Q-D5). Returns 201 and stores the id in `sessionId`."
+          },
+          "response": []
+        },
+        {
           "name": "Update workout session",
           "request": {
             "method": "PUT",

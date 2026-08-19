@@ -68,6 +68,18 @@ public record CardioDetailsRequest(
         // Route (docs/cardio/54-cardio-gps-route-plan.md)
         /* Encoded, simplified polyline; raw GPS points never leave the phone. */
         String routePolyline,
-        @PositiveOrZero Integer routePointCount
+        @PositiveOrZero Integer routePointCount,
+
+        // Hike (docs/cardio/60 C8.1)
+        /* The one field only the user can know — refines the calorie estimate. */
+        @PositiveOrZero Double backpackWeightKg,
+        /* Grade-adjusted pace, computed client-side (docs/cardio/56-cardio-statistics-plan.md). */
+        @PositiveOrZero Double avgGapSecondsPerKm,
+        /* Manual weather snapshot (docs/cardio/60 Q-C8.1) — can be sub-zero, unconstrained. */
+        Double weatherTempC,
+        @PositiveOrZero Double weatherWindKph,
+        @PositiveOrZero Double weatherPrecipMm,
+        /* Free code (CLEAR | PARTLY_CLOUDY | CLOUDY | RAIN | SNOW | WINDY, ...); unconstrained, display only. */
+        String weatherCondition
 ) {
 }

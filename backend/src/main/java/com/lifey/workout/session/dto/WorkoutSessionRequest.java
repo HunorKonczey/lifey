@@ -100,6 +100,13 @@ public record WorkoutSessionRequest(
          * the whole list on update, same model as sets/plannedExercises. Must
          * be null or empty unless sessionKind is CARDIO.
          */
-        List<@Valid CardioSplitRequest> splits
+        List<@Valid CardioSplitRequest> splits,
+
+        /*
+         * Waypoints marked along a hike's route, computed client-side
+         * (docs/cardio/60 C8.1). Same replace-the-whole-list model as splits;
+         * must be null or empty unless sessionKind is CARDIO.
+         */
+        List<@Valid CardioWaypointRequest> waypoints
 ) {
 }

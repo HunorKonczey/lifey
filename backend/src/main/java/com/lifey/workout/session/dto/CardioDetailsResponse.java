@@ -34,6 +34,12 @@ public record CardioDetailsResponse(
         String distanceSource,
         String caloriesSource,
         String routePolyline,
-        Integer routePointCount
+        Integer routePointCount,
+        Double backpackWeightKg,
+        Double avgGapSecondsPerKm,
+        Double weatherTempC,
+        Double weatherWindKph,
+        Double weatherPrecipMm,
+        String weatherCondition
 ) {
 }
