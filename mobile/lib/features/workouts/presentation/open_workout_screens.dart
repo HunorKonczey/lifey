@@ -109,11 +109,20 @@ Future<void> openSessionScreen(
   WorkoutSession session, {
   bool watchMastered = false,
   int? watchCurrentExerciseIndex,
+  String? intervalPlanClientId,
 }) {
   if (session.isCardio) {
     if (session.inProgress) {
       return navigator.push(
-        MaterialPageRoute(builder: (_) => CardioSessionScreen(session: session)),
+        MaterialPageRoute(
+          builder: (_) => CardioSessionScreen(
+            session: session,
+            // Only ever non-null for a ride just started from the plan picker
+            // (C7.5). A session reopened later resolves its own plan from
+            // `IntervalPlanSessionMemory`, so resuming needs nothing here.
+            intervalPlanClientId: intervalPlanClientId,
+          ),
+        ),
       );
     }
     return navigator.push(

@@ -4056,5 +4056,281 @@
   "quickStartOrderHint": "by frequency",
   "@quickStartOrderHint": {
     "description": "Right-hand hint next to the quick-start title explaining the tile order (M01)"
+  },
+  "intervalPlanTitle": "Interval plan",
+  "@intervalPlanTitle": {
+    "description": "Title of the interval plan editor screen (M37)"
+  },
+  "intervalPlanNameLabel": "PLAN NAME",
+  "@intervalPlanNameLabel": {
+    "description": "Label above the plan name field in the interval editor (M37)"
+  },
+  "intervalPlanNameHint": "Tuesday 4x4",
+  "@intervalPlanNameHint": {
+    "description": "Placeholder for the interval plan name field (M37)"
+  },
+  "intervalTotalLengthLabel": "total length",
+  "@intervalTotalLengthLabel": {
+    "description": "Caption under the total duration in the interval editor header (M37)"
+  },
+  "intervalSectionsLabel": "sections",
+  "@intervalSectionsLabel": {
+    "description": "Caption under the section count in the interval editor header (M37)"
+  },
+  "intervalHardTimeLabel": "hard time",
+  "@intervalHardTimeLabel": {
+    "description": "Caption under the hard-effort time in the interval editor header — the number that actually defines an interval plan (M37)"
+  },
+  "intervalRepeatBlockLabel": "REPEAT BLOCK",
+  "@intervalRepeatBlockLabel": {
+    "description": "Header of a repeat block card in the interval editor (M37)"
+  },
+  "intervalAddSectionButton": "Section",
+  "@intervalAddSectionButton": {
+    "description": "Add-a-section button in the interval editor (M37)"
+  },
+  "intervalAddRepeatButton": "Repeat",
+  "@intervalAddRepeatButton": {
+    "description": "Add-a-repeat-block button in the interval editor (M37)"
+  },
+  "intervalSaveAndStartButton": "Save and start",
+  "@intervalSaveAndStartButton": {
+    "description": "Primary button of the interval editor: saves the plan and starts a session with it (M37)"
+  },
+  "intervalSaveOnlyButton": "Save only",
+  "@intervalSaveOnlyButton": {
+    "description": "Secondary button of the interval editor: saves the plan without starting a session (M37)"
+  },
+  "intervalEmptyTitle": "Build a plan",
+  "@intervalEmptyTitle": {
+    "description": "Title of the interval editor empty state (M37)"
+  },
+  "intervalEmptyBody": "Sections one after another: how long, how hard. If a series repeats, put it in a repeat block.",
+  "@intervalEmptyBody": {
+    "description": "Body of the interval editor empty state (M37)"
+  },
+  "intervalStarterTitle": "Start with the 4x4",
+  "@intervalStarterTitle": {
+    "description": "Title of the ready-made starter plan offered on the empty state (M37)"
+  },
+  "intervalStarterSubtitle": "4 minutes hard / 3 minutes easy, four times",
+  "@intervalStarterSubtitle": {
+    "description": "Subtitle of the starter plan offer (M37)"
+  },
+  "intervalDurationLabel": "DURATION",
+  "@intervalDurationLabel": {
+    "description": "Label above the duration stepper in the section editor (M37)"
+  },
+  "intervalTargetIntensityLabel": "TARGET INTENSITY",
+  "@intervalTargetIntensityLabel": {
+    "description": "Label above the three-step intensity picker in the section editor (M37)"
+  },
+  "intervalIntensityEasy": "easy",
+  "@intervalIntensityEasy": {
+    "description": "The EASY target intensity of an interval section (M37)"
+  },
+  "intervalIntensityModerate": "moderate",
+  "@intervalIntensityModerate": {
+    "description": "The MODERATE target intensity of an interval section (M37)"
+  },
+  "intervalIntensityHard": "hard",
+  "@intervalIntensityHard": {
+    "description": "The HARD target intensity of an interval section (M37)"
+  },
+  "intervalResistanceNote": "We do not ask for a resistance level: every machine runs a different scale. Hard = what you can just about hold for 4 minutes.",
+  "@intervalResistanceNote": {
+    "description": "Footnote in the section editor explaining why the plan asks for an effort level instead of a resistance level (M37)"
+  },
+  "intervalSectionEditorTitle": "{intensity} section",
+  "@intervalSectionEditorTitle": {
+    "description": "Title of the section editor sheet, e.g. \"hard section\" (M37)",
+    "placeholders": {
+      "intensity": {
+        "type": "String"
+      }
+    }
+  },
+  "intervalRemoveSectionButton": "Remove section",
+  "@intervalRemoveSectionButton": {
+    "description": "Removes the edited section from the plan (M37)"
+  },
+  "intervalRemoveBlockButton": "Remove block",
+  "@intervalRemoveBlockButton": {
+    "description": "Removes a repeat block, with the sections inside it, from the plan (M37)"
+  },
+  "intervalWarmUpSectionName": "Warm-up",
+  "@intervalWarmUpSectionName": {
+    "description": "Default name of the warm-up section in the starter plan (M37)"
+  },
+  "intervalCoolDownSectionName": "Cool-down",
+  "@intervalCoolDownSectionName": {
+    "description": "Default name of the cool-down section in the starter plan (M37)"
+  },
+  "intervalHardSectionName": "Hard",
+  "@intervalHardSectionName": {
+    "description": "Default name of a hard section (M37)"
+  },
+  "intervalRestSectionName": "Rest",
+  "@intervalRestSectionName": {
+    "description": "Default name of a recovery section (M37)"
+  },
+  "intervalDefaultPlanName": "Interval plan",
+  "@intervalDefaultPlanName": {
+    "description": "Plan name used when the user saves without typing one (M37)"
+  },
+  "couldNotSaveIntervalPlanMessage": "Could not save the plan",
+  "@couldNotSaveIntervalPlanMessage": {
+    "description": "Error snackbar shown when saving an interval plan fails (M37)"
+  },
+  "intervalSectionCounterLabel": "SECTION {current}/{total}",
+  "@intervalSectionCounterLabel": {
+    "description": "Section counter above the countdown in the interval player (M38)",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "intervalRemainingLabel": "to go",
+  "@intervalRemainingLabel": {
+    "description": "Caption under the section countdown in the interval player (M38)"
+  },
+  "intervalNextLabel": "Next: {duration} {intensity}",
+  "@intervalNextLabel": {
+    "description": "Preview of the section coming after the current one (M38)",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      },
+      "intensity": {
+        "type": "String"
+      }
+    }
+  },
+  "intervalUpNextLabel": "UP NEXT",
+  "@intervalUpNextLabel": {
+    "description": "Label of the last-three-seconds state, above the next section (M38)"
+  },
+  "intervalSkipCircleLabel": "Skip",
+  "@intervalSkipCircleLabel": {
+    "description": "Bottom-right circle on the live MACHINE screen while a plan is playing: ends the current section now (M38)"
+  },
+  "intervalPausedSectionLabel": "paused",
+  "@intervalPausedSectionLabel": {
+    "description": "Shown next to the section counter while the session is paused (M38)"
+  },
+  "intervalPausedSectionBody": "The section clock stops with the pause — the plan does not run out on you.",
+  "@intervalPausedSectionBody": {
+    "description": "Explanation shown in the interval player while the session is paused (M38)"
+  },
+  "intervalPlanFinishedLabel": "Plan complete",
+  "@intervalPlanFinishedLabel": {
+    "description": "Shown in the interval player once the last section has played (M38)"
+  },
+  "intervalCueSectionLabel": "SECTION CHANGE",
+  "@intervalCueSectionLabel": {
+    "description": "Label of the interval cue switches in the in-session settings sheet (Q-D4)"
+  },
+  "intervalCueVibrationDescription": "Three taps, then the switch",
+  "@intervalCueVibrationDescription": {
+    "description": "Subtitle of the interval vibration switch (M38)"
+  },
+  "intervalCueSoundDescription": "Short chime, under the music",
+  "@intervalCueSoundDescription": {
+    "description": "Subtitle of the interval sound switch (M38)"
+  },
+  "intervalCueSettingsDescription": "What the player gives you at a section change. Both off is silence — the countdown is still on screen.",
+  "@intervalCueSettingsDescription": {
+    "description": "Description at the top of the MACHINE in-session settings sheet (Q-D4)"
+  },
+  "intervalPlanPickerTitle": "Interval plan",
+  "@intervalPlanPickerTitle": {
+    "description": "Title of the sheet that offers a plan before an indoor-bike session starts (M37/M38)"
+  },
+  "intervalPlanPickerBody": "Pick a plan for this ride, or start without one.",
+  "@intervalPlanPickerBody": {
+    "description": "Body of the plan picker sheet"
+  },
+  "intervalPlanPickerNewPlan": "New plan",
+  "@intervalPlanPickerNewPlan": {
+    "description": "Row that opens the interval plan editor from the plan picker sheet"
+  },
+  "intervalPlanPickerWithoutPlan": "Without a plan",
+  "@intervalPlanPickerWithoutPlan": {
+    "description": "Starts the indoor-bike session with no interval plan — the screen then looks exactly as it always has (M38)"
+  },
+  "intervalPlanSummaryLabel": "{duration} · {sections} sections",
+  "@intervalPlanSummaryLabel": {
+    "description": "Subtitle of a saved plan in the picker: total length and section count",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      },
+      "sections": {
+        "type": "int"
+      }
+    }
+  },
+  "totalWorkLabel": "total work",
+  "@totalWorkLabel": {
+    "description": "Caption of the derived total-work number on the machine summary (M39)"
+  },
+  "totalWorkSourceHint": "from the power",
+  "@totalWorkSourceHint": {
+    "description": "Second line of the total-work card, naming where the number comes from (M39)"
+  },
+  "maxWattsShortLabel": "max {watts} W",
+  "@maxWattsShortLabel": {
+    "description": "Peak power under the average on the total-work card (M39)",
+    "placeholders": {
+      "watts": {
+        "type": "int"
+      }
+    }
+  },
+  "intervalSectionsSectionLabel": "INTERVAL SECTIONS",
+  "@intervalSectionsSectionLabel": {
+    "description": "Header of the executed interval sections card on the machine summary (M39)"
+  },
+  "intervalSectionsCountChip": "{count} sections",
+  "@intervalSectionsCountChip": {
+    "description": "Chip in the interval sections card header (M39)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "intervalSectionsShowAll": "All {count} sections",
+  "@intervalSectionsShowAll": {
+    "description": "Expander under the first few interval sections (M39)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "activeCaloriesLabel": "ACTIVE",
+  "@activeCaloriesLabel": {
+    "description": "Left half of the two-sided calorie card: the calories that count towards the day (M39)"
+  },
+  "activeCaloriesHint": "kcal · this is what counts towards your day",
+  "@activeCaloriesHint": {
+    "description": "Explanation under the active calories (M39)"
+  },
+  "machineCaloriesLabel": "THE MACHINE READS",
+  "@machineCaloriesLabel": {
+    "description": "Right half of the two-sided calorie card: the machine own estimate (M39)"
+  },
+  "machineCaloriesHint": "kcal · for reference, never added",
+  "@machineCaloriesHint": {
+    "description": "Explanation under the machine calories (M39)"
+  },
+  "machineCaloriesFootnote": "Machines estimate calories without knowing your body weight — which is why this never enters your daily total.",
+  "@machineCaloriesFootnote": {
+    "description": "Footnote of the calorie card explaining why the machine number is never summed (M39, docs/cardio/51 Q4)"
   }
 }

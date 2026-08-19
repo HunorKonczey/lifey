@@ -67,6 +67,7 @@ class PullEngine {
         await _guard('daily_steps', _pullDailySteps);
         await _guard('settings', _pullSettings);
         await _guard('workout_templates', _pullWorkoutTemplates);
+        await _guard('cardio_interval_plans', _pullCardioIntervalPlans);
         await _guard('workout_sessions', _pullWorkoutSessions);
         await _guard('recipes', _pullRecipes);
         await _guard('meals', _pullMeals);
@@ -701,6 +702,132 @@ class PullEngine {
     });
   }
 
+  Future<void> _pullCardioIntervalPlans() async {
+    final cursor = await _getSyncCursor('cardio_interval_plans');
+    if (cursor == null) {
+      await _pullCardioIntervalPlansFull();
+    } else {
+      await _pullCardioIntervalPlansDelta(cursor);
+    }
+  }
+
+  Future<void> _pullCardioIntervalPlansFull() async {
+    final items = await _getList('/cardio-interval-plans');
+    final seen = <int>{};
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      final serverId = json['id'] as int;
+      seen.add(serverId);
+      await _upsertCardioIntervalPlan(json);
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    await _deleteMissing(
+      'cardio_interval_plans',
+      seen,
+      onDelete: (clientId) => (_db.delete(_db.cardioIntervalSteps)
+            ..where((t) => t.planClientId.equals(clientId)))
+          .go(),
+    );
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('cardio_interval_plans', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  Future<void> _pullCardioIntervalPlansDelta(DateTime since) async {
+    final items = await _getAllPages(
+      '/cardio-interval-plans',
+      size: 200,
+      extraQueryParameters: {'updatedSince': since.toUtc().toIso8601String()},
+    );
+    DateTime? maxUpdatedAt;
+    for (final json in items) {
+      if (json['deletedAt'] != null) {
+        await _deleteCardioIntervalPlanTombstone(json['id'] as int);
+      } else {
+        await _upsertCardioIntervalPlan(json);
+      }
+      maxUpdatedAt = _maxUpdatedAt(maxUpdatedAt, json);
+    }
+    if (maxUpdatedAt != null) {
+      await _setSyncCursor('cardio_interval_plans', maxUpdatedAt.subtract(_cursorOverlap));
+    }
+  }
+
+  /// Upserts one plan row and unconditionally replaces all of its local steps
+  /// — called from both the full pull (every row, every time) and the delta
+  /// pull (every upserted row), per docs/16-delta-sync-rollout.md §2.3: steps
+  /// are never independently delta-synced, so any edit to the plan —
+  /// including a step-only edit, since that bumps the plan's own `updatedAt`
+  /// — must bring a fresh full set of children.
+  Future<void> _upsertCardioIntervalPlan(Map<String, dynamic> json) async {
+    final serverId = json['id'] as int;
+    final existingClientId = await _localClientId('cardio_interval_plans', serverId);
+    if (existingClientId != null && await _hasPendingOperation(existingClientId)) return;
+
+    final clientId = existingClientId ?? newClientId();
+    final values = CardioIntervalPlansCompanion(name: Value(json['name'] as String));
+    // BE returns the steps as a one-level tree: [{type, name, intensity,
+    // durationSeconds, repeatCount, children}, ...]
+    final stepsJson = (json['steps'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+    // Transacted so a crash partway through can't leave this plan's row
+    // updated but its steps deleted-and-not-reinserted.
+    await _db.transaction(() async {
+      if (existingClientId != null) {
+        await (_db.update(_db.cardioIntervalPlans)..where((t) => t.clientId.equals(clientId)))
+            .write(values);
+      } else {
+        await _db.into(_db.cardioIntervalPlans).insert(
+              values.copyWith(clientId: Value(clientId), serverId: Value(serverId)),
+            );
+      }
+
+      await (_db.delete(_db.cardioIntervalSteps)..where((t) => t.planClientId.equals(clientId)))
+          .go();
+      await _insertCardioIntervalSteps(clientId, stepsJson, null);
+    });
+  }
+
+  /// Flattens one level of the step tree into rows. `stepIndex` counts per
+  /// sibling group (not across the plan), same as the backend stores it.
+  Future<void> _insertCardioIntervalSteps(
+    String planClientId,
+    List<Map<String, dynamic>> steps,
+    String? parentStepClientId,
+  ) async {
+    for (var i = 0; i < steps.length; i++) {
+      final step = steps[i];
+      final stepClientId = newClientId();
+      await _db.into(_db.cardioIntervalSteps).insert(
+            CardioIntervalStepsCompanion.insert(
+              clientId: stepClientId,
+              planClientId: planClientId,
+              parentStepClientId: Value(parentStepClientId),
+              stepIndex: i,
+              stepType: step['type'] as String,
+              name: Value(step['name'] as String?),
+              intensity: Value(step['intensity'] as String?),
+              durationSeconds: Value(step['durationSeconds'] as int?),
+              repeatCount: Value(step['repeatCount'] as int?),
+            ),
+          );
+      final children = (step['children'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+      if (children.isNotEmpty) {
+        await _insertCardioIntervalSteps(planClientId, children, stepClientId);
+      }
+    }
+  }
+
+  Future<void> _deleteCardioIntervalPlanTombstone(int serverId) async {
+    final clientId = await _localClientId('cardio_interval_plans', serverId);
+    if (clientId == null) return;
+    if (await _hasPendingOperation(clientId)) return;
+    await _db.transaction(() async {
+      await (_db.delete(_db.cardioIntervalSteps)..where((t) => t.planClientId.equals(clientId)))
+          .go();
+      await (_db.delete(_db.cardioIntervalPlans)..where((t) => t.clientId.equals(clientId))).go();
+    });
+  }
+
   Future<void> _pullWorkoutSessions() async {
     final cursor = await _getSyncCursor('workout_sessions');
     if (cursor == null) {
@@ -957,10 +1084,15 @@ class PullEngine {
       clientId: newClientId(),
       sessionClientId: sessionClientId,
       splitIndex: (json['splitIndex'] as num).toInt(),
-      distanceMeters: (json['distanceMeters'] as num).toDouble(),
+      // Absent on a response that predates intervals — the column's own
+      // default says the same thing (docs/cardio/60 C7.1).
+      splitType: Value(json['splitType'] as String? ?? 'DISTANCE'),
+      distanceMeters: Value((json['distanceMeters'] as num?)?.toDouble()),
       durationSeconds: (json['durationSeconds'] as num).toInt(),
       elevationDeltaM: Value((json['elevationDeltaM'] as num?)?.toDouble()),
       avgHeartRate: Value((json['avgHeartRate'] as num?)?.toDouble()),
+      avgWatts: Value((json['avgWatts'] as num?)?.toDouble()),
+      intensity: Value(json['intensity'] as String?),
     );
   }
 

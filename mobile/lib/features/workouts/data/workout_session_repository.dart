@@ -8,6 +8,7 @@ import '../../../core/sync/client_ref.dart';
 import '../../../core/sync/outbox_writer.dart';
 import '../../../core/sync/pending_delete_filter.dart';
 import '../../../core/utils/combine_latest.dart';
+import '../domain/cardio_interval_plan.dart';
 import '../domain/personal_record.dart';
 import '../domain/workout_session.dart';
 
@@ -657,10 +658,13 @@ class WorkoutSessionRepository {
               clientId: newClientId(),
               sessionClientId: sessionClientId,
               splitIndex: split.splitIndex,
-              distanceMeters: split.distanceMeters,
+              splitType: Value(split.splitType.wire),
+              distanceMeters: Value(split.distanceMeters),
               durationSeconds: split.durationSeconds,
               elevationDeltaM: Value(split.elevationDeltaM),
               avgHeartRate: Value(split.avgHeartRate),
+              avgWatts: Value(split.avgWatts),
+              intensity: Value(split.intensity?.wire),
             ),
           );
     }
@@ -722,10 +726,13 @@ class WorkoutSessionRepository {
   CardioSplit _cardioSplitFromRow(CardioSplitRow row) {
     return CardioSplit(
       splitIndex: row.splitIndex,
+      splitType: CardioSplitType.fromWire(row.splitType),
       distanceMeters: row.distanceMeters,
       durationSeconds: row.durationSeconds,
       elevationDeltaM: row.elevationDeltaM,
       avgHeartRate: row.avgHeartRate,
+      avgWatts: row.avgWatts,
+      intensity: row.intensity == null ? null : IntervalIntensity.fromWire(row.intensity!),
     );
   }
 
@@ -834,13 +841,20 @@ class WorkoutSessionRepository {
     };
   }
 
+  /// Field order mirrors the backend's `CardioSplitRequest`
+  /// (docs/cardio/60 C7.1). `splitType` is sent explicitly rather than left
+  /// to the server's default: an INTERVAL section without it would be
+  /// rejected for having no distance.
   Map<String, dynamic> _splitPayload(CardioSplit split) {
     return {
       'splitIndex': split.splitIndex,
+      'splitType': split.splitType.wire,
       'distanceMeters': split.distanceMeters,
       'durationSeconds': split.durationSeconds,
       'elevationDeltaM': split.elevationDeltaM,
       'avgHeartRate': split.avgHeartRate,
+      'avgWatts': split.avgWatts,
+      'intensity': split.intensity?.wire,
     };
   }
 

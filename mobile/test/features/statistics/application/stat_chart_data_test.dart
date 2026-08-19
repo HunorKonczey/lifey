@@ -287,6 +287,37 @@ void main() {
     });
 
     test(
+      'activeCalories: the calorie display of an indoor bike never joins the total '
+      '(docs/cardio/51 Q4, C7.6)',
+      () async {
+        final container = _buildContainer(sessions: [
+          WorkoutSession(
+            clientId: 'ride-1',
+            startedAt: _day(1).add(const Duration(hours: 18)),
+            finishedAt: _day(1).add(const Duration(hours: 18, minutes: 30)),
+            exercises: const [],
+            sets: const [],
+            sessionKind: 'CARDIO',
+            activityType: 'INDOOR_BIKE',
+            movingSeconds: 1800,
+            activeCalories: 486,
+            // The machine claimed 612 — a number that knows nothing about
+            // body weight, which is why it stays out of every total.
+            cardio: const CardioMetrics(deviceCalories: 612),
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        container.read(statMetricControllerProvider.notifier).select(StatMetric.activeCalories);
+        await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+        final points = container.read(statChartDataProvider).value!;
+        // 486, not 1098 and not 612.
+        expect(_asPairs(points), [(_day(1), 486.0)]);
+      },
+    );
+
+    test(
       'workoutMinutes: D-C3.3 — a cardio session reports moving time, not wall-clock',
       () async {
         final container = _buildContainer(sessions: [

@@ -59,6 +59,29 @@ void main() {
     });
   });
 
+  group('totalWorkKj (docs/cardio/61 §3 M39, docs/cardio/51 §3.3)', () {
+    test('is average power over the time it was held', () {
+      // 168 W for 30:00 = 302.4 kJ.
+      expect(CardioFormatter.totalWorkKj(168, 1800), 302);
+    });
+
+    test('is null without power — the number it would print is not a zero', () {
+      expect(CardioFormatter.totalWorkKj(null, 1800), isNull);
+      expect(CardioFormatter.totalWorkKj(0, 1800), isNull);
+    });
+
+    test('is null without a moving time to hold that power over', () {
+      expect(CardioFormatter.totalWorkKj(168, null), isNull);
+      expect(CardioFormatter.totalWorkKj(168, 0), isNull);
+    });
+
+    test('follows a corrected average, since nothing stores the result', () {
+      // The rider fixes the average power on the summary from 168 to 200:
+      // the work has to move with it, which is only true while it is derived.
+      expect(CardioFormatter.totalWorkKj(200, 1800), 360);
+    });
+  });
+
   group('duration', () {
     test('renders m:ss under an hour without a leading zero', () {
       expect(CardioFormatter.duration(const Duration(minutes: 5, seconds: 12)), '5:12');

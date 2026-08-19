@@ -59,6 +59,24 @@ abstract final class CardioFormatter {
     return '${((meters / _metersPerKm) / hours).toStringAsFixed(1)} km/h';
   }
 
+  /// Total mechanical work in kilojoules — average power over the time it was
+  /// held (docs/cardio/61 §3 M39's "összmunka").
+  ///
+  /// **Derived, never stored** (docs/cardio/51 §3.3): it is exactly
+  /// `avgWatts × movingSeconds / 1000`, so a stored copy could only ever
+  /// disagree with the two numbers it comes from — e.g. after the average
+  /// power is corrected by hand on the summary.
+  ///
+  /// Null when there is no power to derive it from, which is most home
+  /// machines (docs/cardio/51 §3.3): a session without watts shows moving
+  /// time in this card's place rather than a 0 kJ that reads like a measured
+  /// zero.
+  static int? totalWorkKj(double? avgWatts, int? movingSeconds) {
+    if (avgWatts == null || movingSeconds == null) return null;
+    if (avgWatts <= 0 || movingSeconds <= 0) return null;
+    return (avgWatts * movingSeconds / 1000).round();
+  }
+
   /// "5:12" under an hour, "1:05:12" from an hour up — a moving/elapsed
   /// duration, tabular enough for a live, second-ticking display.
   static String duration(Duration duration) {

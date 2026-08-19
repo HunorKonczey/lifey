@@ -1,4 +1,5 @@
 import 'activity_type.dart';
+import 'cardio_interval_plan.dart';
 
 /// Cardio metrics for a CARDIO-kind session (docs/cardio/51-cardio-overview-plan.md
 /// §3, docs/cardio/52-cardio-domain-backend-plan.md §2.2). Every field is
@@ -223,22 +224,56 @@ class CardioMetrics {
 class CardioSplit {
   const CardioSplit({
     required this.splitIndex,
-    required this.distanceMeters,
     required this.durationSeconds,
+    this.splitType = CardioSplitType.distance,
+    this.distanceMeters,
     this.elevationDeltaM,
     this.avgHeartRate,
+    this.avgWatts,
+    this.intensity,
   });
 
   /// 0-based position within the session's split list.
   final int splitIndex;
 
-  /// Usually exactly 1000 (one km); the last split of a run is shorter.
-  final double distanceMeters;
+  /// What this row measures — a per-km split or an executed interval section
+  /// (docs/cardio/60 D-C7.1). Defaults to [CardioSplitType.distance], which
+  /// is what every split was before intervals existed.
+  final CardioSplitType splitType;
+
+  /// Usually exactly 1000 (one km); the last split of a run is shorter. Null
+  /// for an interval section on a machine that reports no distance.
+  final double? distanceMeters;
   final int durationSeconds;
 
   /// Net elevation change over the split; null when no altitude data was available.
   final double? elevationDeltaM;
   final double? avgHeartRate;
+
+  /// Average power over the section; null without a watt-reporting machine.
+  final double? avgWatts;
+
+  /// The target effort an interval section was run at; null for a per-km split.
+  final IntervalIntensity? intensity;
+}
+
+/// What a [CardioSplit] row measures (docs/cardio/60 D-C7.1). The wire codes
+/// mirror the backend's `SplitType`.
+enum CardioSplitType {
+  distance('DISTANCE'),
+  interval('INTERVAL');
+
+  const CardioSplitType(this.wire);
+
+  final String wire;
+
+  static CardioSplitType fromWire(String? wire) => values.firstWhere(
+        (t) => t.wire == wire,
+        // An unknown code is a newer server talking to an older app; a split
+        // is a per-km one unless it says otherwise, which is also the DB
+        // column's own default.
+        orElse: () => CardioSplitType.distance,
+      );
 }
 
 /// A single set within a logged session (response side).

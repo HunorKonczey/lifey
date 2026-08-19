@@ -11,11 +11,13 @@ import '../application/game_setup_preferences.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
 import '../domain/workout_session.dart';
+import '../application/interval_cue_preferences.dart';
 import '../domain/workout_template.dart';
 import 'activity_picker_screen.dart';
 import 'log_session_screen.dart';
 import 'open_workout_screens.dart';
 import 'widgets/game_setup_sheet.dart';
+import 'widgets/interval_plan_picker_sheet.dart';
 import 'widgets/gps_explainer_sheet.dart';
 
 /// Opens the quick-start sheet — the FAB long-press destination
@@ -412,6 +414,27 @@ Future<void> startCardioQuickly(BuildContext context, WidgetRef ref, String acti
       await openSessionScreen(rootNavigator, session);
       return;
     }
+  }
+
+  // C7.5/M37 — an indoor-bike ride offers a saved interval plan first, the
+  // same "ask the session-shaping question before the session starts" move
+  // the GAME branch above makes. Dismissing the sheet starts nothing, also
+  // like GAME; "Terv nélkül" starts the ride the screen has always shown.
+  if (activityFamilyOf(activityType) == ActivityFamily.machine) {
+    final planMemory = ref.read(intervalPlanSessionMemoryProvider);
+    sheetNavigator.pop();
+    if (!rootNavigator.mounted) return;
+    final choice = await showIntervalPlanPicker(rootNavigator.context);
+    if (choice == null || !rootNavigator.mounted) return;
+    final session = await createCardioSession(sessionController, activityType);
+    final planClientId = choice.planClientId;
+    if (planClientId != null) {
+      // Remembered so a ride reopened after an app kill resumes the same
+      // plan, at the section its moving time says it is on.
+      await planMemory.remember(session.clientId, planClientId);
+    }
+    await openSessionScreen(rootNavigator, session, intervalPlanClientId: planClientId);
+    return;
   }
 
   final session = await createCardioSession(sessionController, activityType);

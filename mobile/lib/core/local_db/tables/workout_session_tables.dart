@@ -195,13 +195,29 @@ class CardioSplits extends Table {
   /// 0-based position within the session's split list.
   IntColumn get splitIndex => integer()();
 
-  /// Usually exactly 1000 (one km); the last split of a run is shorter.
-  RealColumn get distanceMeters => real()();
+  /// `DISTANCE` (the original per-km split) or `INTERVAL` (one executed
+  /// section of an interval plan, docs/cardio/60 D-C7.1). Defaults to
+  /// DISTANCE so every row written before intervals existed keeps meaning
+  /// exactly what it did.
+  TextColumn get splitType => text().withDefault(const Constant('DISTANCE'))();
+
+  /// Usually exactly 1000 (one km); the last split of a run is shorter. Null
+  /// for an INTERVAL section on a machine that reports no distance, which is
+  /// most of them.
+  RealColumn get distanceMeters => real().nullable()();
   IntColumn get durationSeconds => integer()();
 
   /// Net elevation change over the split; null when no altitude data was available.
   RealColumn get elevationDeltaM => real().nullable()();
   RealColumn get avgHeartRate => real().nullable()();
+
+  /// Average power over the section; null without a watt-reporting machine.
+  RealColumn get avgWatts => real().nullable()();
+
+  /// `EASY` | `MODERATE` | `HARD` — the target effort an INTERVAL section was
+  /// run at, null for a DISTANCE split. Stored on the execution rather than
+  /// looked up from the plan: the plan stays editable and deletable.
+  TextColumn get intensity => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {clientId};

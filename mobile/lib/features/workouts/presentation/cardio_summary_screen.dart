@@ -22,6 +22,7 @@ import '../domain/activity_type.dart';
 import '../domain/cardio_personal_record.dart';
 import '../domain/hr_zone_breakdown.dart';
 import '../domain/route_encoder.dart';
+import '../domain/cardio_interval_plan.dart';
 import '../domain/workout_session.dart';
 import 'widgets/game_setup_sheet.dart';
 import 'widgets/hr_zone_panel.dart';
@@ -99,6 +100,9 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   double? _distanceMeters;
   String? _distanceSource;
   double? _deviceCalories;
+
+  /// M39's "Mind a 10 szakasz" expander state — view-only, never persisted.
+  bool _intervalSectionsExpanded = false;
   String? _caloriesSource;
 
   // Read-only carry-over — no provenance field exists for any of these yet
@@ -657,32 +661,67 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
           // the physiological one starts.
           ..._hrZoneSection(l10n),
         ];
-      // M15: indoor sessions keep the big moving-time card, with the three
-      // machine numbers nested inside it.
+      // M39: with power, total work is the hero and moving time joins the
+      // grid; without it, M15's moving-time card keeps the top slot (the
+      // frame's own "watt-adat nélkül" state — a 0 kJ would read as a
+      // measured zero rather than as "this machine doesn't report watts").
       case ActivityFamily.machine:
+        final totalWorkKj = CardioFormatter.totalWorkKj(_avgWatts, widget.session.movingSeconds);
         return [
-          _PrimaryMetricCard(
-            label: l10n.movingTimeLabel,
-            value: durationValue,
-            scheme: scheme,
-            theme: theme,
-            inner: [
-              _InnerMetric(
-                label: l10n.distanceFieldLabel,
-                value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
-                edited: _distanceSource == 'MANUAL',
-                onTap: _busy ? null : _editDistance,
-              ),
-              if (_avgCadence != null)
+          if (totalWorkKj != null)
+            _TotalWorkCard(
+              totalWorkKj: totalWorkKj,
+              avgWatts: _avgWatts!,
+              maxWatts: widget.session.cardio?.maxWatts,
+              accent: metrics?.calories ?? accent,
+            )
+          else
+            _PrimaryMetricCard(
+              label: l10n.movingTimeLabel,
+              value: durationValue,
+              scheme: scheme,
+              theme: theme,
+              inner: [
                 _InnerMetric(
-                    label: l10n.avgCadenceFieldLabel, value: '${_avgCadence!.round()} rpm'),
-              if (_avgWatts != null)
-                _InnerMetric(label: l10n.avgWattsFieldLabel, value: '${_avgWatts!.round()} W'),
-            ],
-          ),
+                  label: l10n.distanceFieldLabel,
+                  value: hasDistance ? CardioFormatter.distance(_distanceMeters!, unitSystem) : '—',
+                  edited: _distanceSource == 'MANUAL',
+                  onTap: _busy ? null : _editDistance,
+                ),
+                if (_avgCadence != null)
+                  _InnerMetric(
+                      label: l10n.avgCadenceFieldLabel, value: '${_avgCadence!.round()} rpm'),
+              ],
+            ),
           const SizedBox(height: 12),
           _MetricGrid(
             children: [
+              // Moving time is only a grid cell when the work card took the
+              // top slot — it never disappears, it just stops being the hero.
+              if (totalWorkKj != null)
+                _MetricTile(
+                  icon: Icons.schedule,
+                  iconColor: metrics?.protein,
+                  label: l10n.movingTimeLabel,
+                  value: durationValue,
+                ),
+              if (totalWorkKj != null && hasDistance)
+                _MetricTile(
+                  icon: Icons.straighten,
+                  iconColor: accent,
+                  label: l10n.distanceFieldLabel,
+                  value: CardioFormatter.distance(_distanceMeters!, unitSystem),
+                  edited: _distanceSource == 'MANUAL',
+                  editedLabel: l10n.manuallyEditedBadgeLabel,
+                  onTap: _busy ? null : _editDistance,
+                ),
+              if (totalWorkKj != null && _avgCadence != null)
+                _MetricTile(
+                  icon: Icons.autorenew,
+                  iconColor: metrics?.protein,
+                  label: l10n.avgCadenceFieldLabel,
+                  value: '${_avgCadence!.round()} rpm',
+                ),
               if (_resistanceLevel != null)
                 _MetricTile(
                   icon: Icons.tune,
@@ -697,16 +736,20 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   label: l10n.heartRateFieldLabel,
                   value: '${heartRate.round()} bpm',
                 ),
-              _MetricTile(
-                icon: Icons.local_fire_department,
-                iconColor: metrics?.calories,
-                label: l10n.deviceCaloriesFieldLabel,
-                value: _deviceCalories == null ? '—' : '${_deviceCalories!.round()} kcal',
-                edited: _caloriesSource == 'MANUAL',
-                editedLabel: l10n.manuallyEditedBadgeLabel,
-                onTap: _busy ? null : _editDeviceCalories,
-              ),
             ],
+          ),
+          ..._intervalSectionsSection(l10n, theme, scheme),
+          const SizedBox(height: 12),
+          // M39's key card: one card, two sides, a line between them. Two
+          // separate cards tested worse — they read as two equal numbers, and
+          // the suspicion that they get added up survived.
+          _CalorieCard(
+            activeCalories: activeCalories,
+            machineCalories: _deviceCalories,
+            machineEdited: _caloriesSource == 'MANUAL',
+            onEditMachine: _busy ? null : _editDeviceCalories,
+            l10n: l10n,
+            accent: metrics?.calories ?? accent,
           ),
           const SizedBox(height: 12),
           // "Az »útvonal nélkül« nem üres hely, hanem kimondott állapot" —
@@ -832,6 +875,63 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   /// this screen uses (C9.1). **Absent entirely when the session carries no
   /// zone data** — the common case, and an empty five-row panel would be a
   /// worse answer than no panel: nothing here is ever estimated.
+  /// M39's executed-sections card. Only ever built for a ride that actually
+  /// played a plan — a plain ride has no INTERVAL splits and shows no list,
+  /// which is the frame's own "terv nélkül" state.
+  ///
+  /// The header chip counts sections rather than naming the plan's shape
+  /// ("4×(4+3)"): nothing links a session to a plan (docs/cardio/60 D-C7.1),
+  /// and reconstructing the shape from what was ridden would be a guess that
+  /// a single skipped section turns into a lie.
+  List<Widget> _intervalSectionsSection(
+    AppLocalizations l10n,
+    ThemeData theme,
+    ColorScheme scheme,
+  ) {
+    final sections = widget.session.splits
+        .where((s) => s.splitType == CardioSplitType.interval)
+        .toList();
+    if (sections.isEmpty) return const [];
+
+    final accent = activityTypeColor(_activityType, context);
+    // Long plans collapse: the first six rows carry the shape, and the rest
+    // are one tap away rather than a screenful of scrolling.
+    const collapsedCount = 6;
+    final showAll = _intervalSectionsExpanded || sections.length <= collapsedCount;
+    final visible = showAll ? sections : sections.take(collapsedCount).toList();
+
+    return [
+      const SizedBox(height: 12),
+      _SectionCard(
+        label: l10n.intervalSectionsSectionLabel,
+        trailingWidget: _IntervalCountChip(
+          label: l10n.intervalSectionsCountChip(sections.length),
+          accent: accent,
+        ),
+        child: Column(
+          children: [
+            for (var i = 0; i < visible.length; i++)
+              _IntervalSectionRow(
+                number: i + 1,
+                split: visible[i],
+                accent: accent,
+                l10n: l10n,
+              ),
+            if (!showAll)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => setState(() => _intervalSectionsExpanded = true),
+                  icon: const Icon(Icons.expand_more, size: 18),
+                  label: Text(l10n.intervalSectionsShowAll(sections.length)),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ];
+  }
+
   List<Widget> _hrZoneSection(AppLocalizations l10n) {
     final breakdown = HrZoneBreakdown.fromSession(widget.session);
     if (breakdown == null) return const [];
@@ -963,11 +1063,19 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
       }
     }
 
-    final splits = widget.session.splits;
+    // Per-km splits only: an executed interval section is stored in the same
+    // list (docs/cardio/60 D-C7.1) but has no distance and no pace, so it
+    // belongs in its own card (M39, C7.6) rather than in a km chart it would
+    // read as a 0-length kilometre in. A DISTANCE split always carries a
+    // distance — hence the `?? 0` fallbacks below being unreachable in
+    // practice, and harmless (a 0 reads as a partial split) if they aren't.
+    final splits = widget.session.splits
+        .where((s) => s.splitType == CardioSplitType.distance)
+        .toList();
     if (splits.isNotEmpty) {
       // M14's split bars are scaled against the slowest full split, so the
       // fastest km fills the track and the rest are read against it.
-      final fullSplits = splits.where((s) => s.distanceMeters >= 999).toList();
+      final fullSplits = splits.where((s) => (s.distanceMeters ?? 0) >= 999).toList();
       final slowest =
           fullSplits.isEmpty ? 1 : fullSplits.map((s) => s.durationSeconds).reduce(math.max);
       final fastest =
@@ -992,7 +1100,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                     for (final s in splits)
                       PaceBar(
                         durationSeconds: s.durationSeconds,
-                        partial: s.distanceMeters < 999,
+                        partial: (s.distanceMeters ?? 0) < 999,
                         label: CardioFormatter.duration(Duration(seconds: s.durationSeconds)),
                       ),
                   ],
@@ -1006,7 +1114,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                 _PaceChartAxis(
                   averageLabel: _averagePaceLabel(l10n, fullSplits, unitSystem),
                   totalLabel: CardioFormatter.distance(
-                    splits.fold<double>(0, (sum, s) => sum + s.distanceMeters),
+                    splits.fold<double>(0, (sum, s) => sum + (s.distanceMeters ?? 0)),
                     unitSystem,
                   ),
                 ),
@@ -1060,7 +1168,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     UnitSystem unitSystem,
   ) {
     if (fullSplits.isEmpty) return null;
-    final meters = fullSplits.fold<double>(0, (sum, s) => sum + s.distanceMeters);
+    final meters = fullSplits.fold<double>(0, (sum, s) => sum + (s.distanceMeters ?? 0));
     final seconds = fullSplits.fold<int>(0, (sum, s) => sum + s.durationSeconds);
     final pace = CardioFormatter.pace(meters, Duration(seconds: seconds), unitSystem);
     return pace == null ? null : l10n.paceChartAverageLabel(pace);
@@ -2040,7 +2148,7 @@ class _SplitRow extends StatelessWidget {
     final duration = Duration(seconds: split.durationSeconds);
     // "Az utolsó split részleges, ezért nem tempót mutat, hanem a megtett
     // távot — így nem tűnik hirtelen belassulásnak" (M14).
-    final partial = split.distanceMeters < 999;
+    final partial = (split.distanceMeters ?? 0) < 999;
 
     // Faster split = longer, lighter bar. One hue, two lightness steps —
     // never a second color family (M13's note).
@@ -2049,7 +2157,8 @@ class _SplitRow extends StatelessWidget {
     final barColor = partial
         ? scheme.outlineVariant
         : Color.lerp(accent.withValues(alpha: 0.55), accent, speed)!;
-    final fraction = partial ? (split.distanceMeters / 1000).clamp(0.1, 1.0) : 0.55 + 0.45 * speed;
+    final fraction =
+        partial ? ((split.distanceMeters ?? 0) / 1000).clamp(0.1, 1.0) : 0.55 + 0.45 * speed;
 
     final elevation = split.elevationDeltaM;
 
@@ -2107,7 +2216,7 @@ class _SplitRow extends StatelessWidget {
               // A full km split's duration *is* its pace, so one number does
               // both jobs; a partial split shows how far it actually got.
               partial
-                  ? CardioFormatter.distance(split.distanceMeters, unitSystem)
+                  ? CardioFormatter.distance(split.distanceMeters ?? 0, unitSystem)
                   : CardioFormatter.duration(duration),
               style: TextStyle(
                 fontSize: 12.5,
@@ -2231,6 +2340,421 @@ class _SplitSelectionHint extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// M39's hero: the work actually done, derived from average power and the
+/// time it was held ([CardioFormatter.totalWorkKj]) — never stored, so it can
+/// never disagree with the two numbers beside it (docs/cardio/51 §3.3).
+class _TotalWorkCard extends StatelessWidget {
+  const _TotalWorkCard({
+    required this.totalWorkKj,
+    required this.avgWatts,
+    required this.maxWatts,
+    required this.accent,
+  });
+
+  final int totalWorkKj;
+  final double avgWatts;
+  final double? maxWatts;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.bolt, size: 18, color: accent),
+                const SizedBox(height: 6),
+                Text(
+                  '$totalWorkKj',
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1.6,
+                    height: 1.05,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+                Text(
+                  'kJ ${l10n.totalWorkLabel}',
+                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  l10n.totalWorkSourceHint,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.speed, size: 18, color: scheme.onSurfaceVariant),
+                const SizedBox(height: 6),
+                Text(
+                  '${avgWatts.round()}',
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1.6,
+                    height: 1.05,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+                Text(
+                  l10n.avgWattsFieldLabel,
+                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                ),
+                if (maxWatts != null)
+                  Text(
+                    l10n.maxWattsShortLabel(maxWatts!.round()),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// M39's calorie card — **one card, two sides, a line between them**.
+///
+/// The left side is the app's own estimate, in the calorie accent at full
+/// contrast, and it is the one that counts towards the day. The right side is
+/// what the machine displayed, in a secondary tone: informative, never added
+/// (docs/cardio/51 Q4). Two separate cards were tried and were worse — they
+/// read as two equal numbers, and the suspicion that something sums them
+/// survived.
+class _CalorieCard extends StatelessWidget {
+  const _CalorieCard({
+    required this.activeCalories,
+    required this.machineCalories,
+    required this.machineEdited,
+    required this.onEditMachine,
+    required this.l10n,
+    required this.accent,
+  });
+
+  final double? activeCalories;
+  final double? machineCalories;
+  final bool machineEdited;
+  final VoidCallback? onEditMachine;
+  final AppLocalizations l10n;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _CalorieSide(
+                    icon: Icons.local_fire_department,
+                    label: l10n.activeCaloriesLabel,
+                    value: activeCalories,
+                    hint: l10n.activeCaloriesHint,
+                    valueColor: accent,
+                    labelColor: accent,
+                    hintColor: scheme.onSurfaceVariant,
+                  ),
+                ),
+                // The line is the whole point: it separates two facts instead
+                // of listing two comparable numbers.
+                VerticalDivider(width: 25, thickness: 1, color: scheme.outlineVariant),
+                Expanded(
+                  child: InkWell(
+                    onTap: onEditMachine,
+                    borderRadius: BorderRadius.circular(12),
+                    child: _CalorieSide(
+                      icon: Icons.monitor,
+                      label: l10n.machineCaloriesLabel,
+                      value: machineCalories,
+                      hint: l10n.machineCaloriesHint,
+                      valueColor: scheme.onSurfaceVariant,
+                      labelColor: scheme.onSurfaceVariant,
+                      hintColor: scheme.onSurfaceVariant,
+                      badge: machineEdited ? l10n.manuallyEditedBadgeLabel : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, size: 15, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.machineCaloriesFootnote,
+                  style: TextStyle(
+                    fontSize: 11,
+                    height: 1.45,
+                    fontWeight: FontWeight.w500,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalorieSide extends StatelessWidget {
+  const _CalorieSide({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.hint,
+    required this.valueColor,
+    required this.labelColor,
+    required this.hintColor,
+    this.badge,
+  });
+
+  final IconData icon;
+  final String label;
+  final double? value;
+  final String hint;
+  final Color valueColor;
+  final Color labelColor;
+  final Color hintColor;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 14, color: labelColor),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.1,
+                  color: labelColor,
+                ),
+              ),
+            ),
+            if (badge != null) ...[
+              const SizedBox(width: 5),
+              Text(
+                badge!,
+                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: hintColor),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value == null ? '—' : '${value!.round()}',
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1.2,
+            height: 1.1,
+            color: valueColor,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        Text(
+          hint,
+          style: TextStyle(
+            fontSize: 10.5,
+            height: 1.4,
+            fontWeight: FontWeight.w500,
+            color: hintColor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One executed interval section (M39): the same row shape as a running km
+/// split, with two differences — the section's own intensity stands where the
+/// kilometre would, and the bar's length shows that intensity rather than a
+/// pace.
+class _IntervalSectionRow extends StatelessWidget {
+  const _IntervalSectionRow({
+    required this.number,
+    required this.split,
+    required this.accent,
+    required this.l10n,
+  });
+
+  final int number;
+  final CardioSplit split;
+  final Color accent;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final intensity = split.intensity;
+    final hard = intensity == IntervalIntensity.hard;
+    final fraction = switch (intensity) {
+      IntervalIntensity.hard => 1.0,
+      IntervalIntensity.moderate => 0.65,
+      _ => 0.35,
+    };
+    final label = switch (intensity) {
+      IntervalIntensity.hard => l10n.intervalIntensityHard,
+      IntervalIntensity.moderate => l10n.intervalIntensityModerate,
+      _ => l10n.intervalIntensityEasy,
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 16,
+            child: Text(
+              '$number',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurfaceVariant,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 66,
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: hard ? accent : scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(5),
+              child: LinearProgressIndicator(
+                value: fraction,
+                minHeight: 10,
+                backgroundColor: scheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation(
+                  hard ? accent : accent.withValues(alpha: fraction),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 40,
+            child: Text(
+              CardioFormatter.duration(Duration(seconds: split.durationSeconds)),
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          if (split.avgWatts != null)
+            SizedBox(
+              width: 48,
+              child: Text(
+                '${split.avgWatts!.round()} W',
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurfaceVariant,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The section count in the interval card's header — the same chip shape M39
+/// uses for its `repeat` badge.
+class _IntervalCountChip extends StatelessWidget {
+  const _IntervalCountChip({required this.label, required this.accent});
+
+  final String label;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.repeat, size: 12, color: accent),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: accent),
+          ),
+        ],
+      ),
     );
   }
 }

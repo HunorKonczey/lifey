@@ -11,9 +11,11 @@ import 'package:lifey/core/sync/sync_status_provider.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/exercise_controller.dart';
+import 'package:lifey/features/workouts/application/cardio_interval_plan_controller.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/application/workout_template_controller.dart';
 import 'package:lifey/features/workouts/domain/exercise.dart';
+import 'package:lifey/features/workouts/domain/cardio_interval_plan.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/domain/workout_template.dart';
 import 'package:lifey/features/workouts/presentation/activity_picker_screen.dart';
@@ -95,6 +97,17 @@ AppDatabase _testDatabase() {
   return db;
 }
 
+/// The plan list the C7.5 picker reads. Faked like every other controller in
+/// this file — a widget watching the real, drift-backed provider leaves a
+/// live query stream behind, which the test binding then reports as a pending
+/// timer when the ProviderScope is torn down.
+class _FakePlans extends CardioIntervalPlanController {
+  List<CardioIntervalPlan> plans = const [];
+
+  @override
+  Stream<List<CardioIntervalPlan>> build() => Stream.value(plans);
+}
+
 Future<_RecordingSessionController> _pumpAndOpenSheet(
   WidgetTester tester, {
   List<WorkoutSession> sessions = const [],
@@ -113,6 +126,7 @@ Future<_RecordingSessionController> _pumpAndOpenSheet(
         syncStatusByClientIdProvider.overrideWithValue(const {}),
         locationServiceProvider.overrideWithValue(locationService ?? LocationServiceStub()),
         appDatabaseProvider.overrideWithValue(_testDatabase()),
+        cardioIntervalPlanControllerProvider.overrideWith(_FakePlans.new),
       ],
       child: MaterialApp(
         locale: const Locale('en'),
@@ -335,8 +349,55 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('So we can see where you ran'), findsNothing);
+      // C7.5: the ride asks about an interval plan first (M37/M38) — the same
+      // "shape the session before it starts" move the GAME branch makes.
+      expect(find.text('Interval plan'), findsOneWidget);
+      await tester.tap(find.text('Without a plan'));
+      await tester.pumpAndSettle();
+
       expect(controller.startCardioCalls, hasLength(1));
       expect(controller.startCardioCalls.single['activityType'], 'INDOOR_BIKE');
+    });
+  });
+
+  // ── The interval plan offer (C7.5, M37/M38) ─────────────────────────────
+
+  group('interval plan picker (C7.5)', () {
+    testWidgets('an indoor-bike start offers a plan before anything begins',
+        (tester) async {
+      final controller = await _pumpAndOpenSheet(tester);
+
+      await tester.ensureVisible(find.text('Indoor bike'));
+      await tester.tap(find.text('Indoor bike'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Interval plan'), findsOneWidget);
+      // Nothing has started yet: the question comes first, the session second.
+      expect(controller.startCardioCalls, isEmpty);
+    });
+
+    testWidgets('dismissing the offer starts nothing', (tester) async {
+      final controller = await _pumpAndOpenSheet(tester);
+
+      await tester.ensureVisible(find.text('Indoor bike'));
+      await tester.tap(find.text('Indoor bike'));
+      await tester.pumpAndSettle();
+      // A swipe means "not now" — same as the game setup sheet.
+      await tester.drag(find.text('Interval plan'), const Offset(0, 400));
+      await tester.pumpAndSettle();
+
+      expect(controller.startCardioCalls, isEmpty);
+    });
+
+    testWidgets('a run is never asked about interval plans', (tester) async {
+      final controller = await _pumpAndOpenSheet(tester);
+
+      await tester.ensureVisible(find.text('Running'));
+      await tester.tap(find.text('Running'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Interval plan'), findsNothing);
+      expect(controller.startCardioCalls, hasLength(1));
     });
   });
 }

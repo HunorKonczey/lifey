@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../sync/client_ref.dart';
+import 'tables/cardio_interval_plan_tables.dart';
 import 'tables/chat_tables.dart';
 import 'tables/exercise_table.dart';
 import 'tables/food_table.dart';
@@ -48,6 +49,8 @@ part 'app_database.g.dart';
   CardioDetails,
   CardioSplits,
   CardioTrackPoints,
+  CardioIntervalPlans,
+  CardioIntervalSteps,
   WaterSources,
   WaterEntries,
   UserSettingsTable,
@@ -61,7 +64,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 37;
+  int get schemaVersion => 39;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -321,6 +324,31 @@ class AppDatabase extends _$AppDatabase {
             await _addColumnIfMissing(m, cardioDetails, cardioDetails.best1kSeconds);
             await _addColumnIfMissing(m, cardioDetails, cardioDetails.best5kSeconds);
             await _addColumnIfMissing(m, cardioDetails, cardioDetails.best10kSeconds);
+          }
+          // V38: interval plans for the indoor bike (docs/cardio/60 C7.3) —
+          // two brand-new, empty tables. Nothing to backfill: a plan is a
+          // blueprint the user builds, and no session row references one (the
+          // execution lands in cardio_splits, docs/cardio/60 D-C7.1), so every
+          // existing session keeps reading exactly as before.
+          if (from < 38) {
+            await m.createTable(cardioIntervalPlans);
+            await m.createTable(cardioIntervalSteps);
+          }
+          // V39: a split can now be an executed interval section, not just a
+          // per-km one (docs/cardio/60 C7.5). splitType defaults to
+          // 'DISTANCE', so every existing row stays exactly what it was;
+          // distanceMeters loses its NOT NULL, which SQLite can't ALTER, so
+          // the table is recreated from the current schema and refilled —
+          // same approach as V20's on workout_sessions.
+          if (from < 39) {
+            await m.alterTable(TableMigration(
+              cardioSplits,
+              newColumns: [
+                cardioSplits.splitType,
+                cardioSplits.avgWatts,
+                cardioSplits.intensity,
+              ],
+            ));
           }
         },
       );

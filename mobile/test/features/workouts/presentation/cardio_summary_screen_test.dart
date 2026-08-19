@@ -513,7 +513,12 @@ void main() {
     expect(find.text('Edited'), findsOneWidget);
   });
 
-  testWidgets('MACHINE always shows moving time as primary, never distance', (tester) async {
+  // C7.6/M39 changed which number is the hero *when power is known*: total
+  // work takes the top card, moving time moves into the grid, and distance
+  // still never gets the top slot. Without watts (the case below this one)
+  // moving time keeps the hero card exactly as M15 had it.
+  testWidgets('MACHINE with power: total work leads, moving time keeps its place',
+      (tester) async {
     await _pump(
       tester,
       _session(
@@ -531,14 +536,34 @@ void main() {
       ),
     );
 
+    // 164 W held for 42:18 = 416 kJ, derived on the spot (docs/cardio/51 §3.3).
+    expect(find.text('416'), findsOneWidget);
+    expect(find.text('kJ total work'), findsOneWidget);
     expect(find.text('MOVING TIME'), findsOneWidget);
     expect(find.text('42:18'), findsOneWidget);
-    expect(find.text('DISTANCE'), findsOneWidget); // secondary tile, not primary
+    expect(find.text('DISTANCE'), findsOneWidget); // still a tile, never the hero
     expect(find.text('18.40 km'), findsOneWidget);
-    expect(find.text('164 W'), findsOneWidget);
+    expect(find.text('164'), findsOneWidget); // avg watts, beside the work
     expect(find.text('81 rpm'), findsOneWidget);
     expect(find.text('14'), findsOneWidget);
-    expect(find.text('420 kcal'), findsOneWidget);
+    // The machine's own calorie estimate, on its own side of the calorie card.
+    expect(find.text('420'), findsOneWidget);
+    expect(find.text('THE MACHINE READS'), findsOneWidget);
+  });
+
+  testWidgets('MACHINE without power keeps moving time as the hero (M15)', (tester) async {
+    await _pump(
+      tester,
+      _session(
+        activityType: 'INDOOR_BIKE',
+        cardio: const CardioMetrics(distanceMeters: 18400, avgCadence: 81),
+        movingSeconds: 2538,
+      ),
+    );
+
+    expect(find.text('MOVING TIME'), findsOneWidget);
+    expect(find.text('42:18'), findsOneWidget);
+    expect(find.text('kJ total work'), findsNothing);
   });
 
   testWidgets('GAME shows playing time as primary and its own fields as secondary',
@@ -681,7 +706,10 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('—')); // deviceCalories placeholder tile
+      // C7.6/M39: the machine's calories live on the right half of the
+      // calorie card now, not in the metric grid — tapping that side is what
+      // opens the editor.
+      await tester.tap(find.text('THE MACHINE READS'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField), '350');
       await tester.tap(find.text('Save'));
@@ -690,7 +718,7 @@ void main() {
       final cardio = controller.updateLiveCardioMetricsCalls.single['cardio'] as CardioMetrics;
       expect(cardio.deviceCalories, 350);
       expect(cardio.caloriesSource, 'MANUAL');
-      expect(find.text('350 kcal'), findsOneWidget);
+      expect(find.text('350'), findsOneWidget);
       expect(find.text('Edited'), findsOneWidget);
     });
 

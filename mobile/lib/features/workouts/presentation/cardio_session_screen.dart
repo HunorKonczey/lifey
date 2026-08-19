@@ -24,6 +24,8 @@ import '../application/auto_pause_preferences.dart';
 import '../application/box_score_preferences.dart';
 import '../application/game_setup_preferences.dart';
 import '../application/km_cue_controller.dart';
+import '../application/interval_cue_preferences.dart';
+import '../application/interval_player_controller.dart';
 import '../application/km_cue_preferences.dart';
 import '../application/workout_session_controller.dart';
 import '../data/cardio_track_point_repository.dart';
@@ -31,6 +33,8 @@ import '../domain/activity_type.dart';
 import '../domain/auto_pause_detector.dart';
 import '../domain/best_effort_calculator.dart';
 import '../domain/cardio_personal_record.dart';
+import '../data/cardio_interval_plan_repository.dart';
+import '../domain/cardio_interval_plan.dart';
 import '../domain/cardio_splits_calculator.dart';
 import '../domain/route_encoder.dart';
 import '../domain/track_filter.dart';
@@ -99,9 +103,16 @@ import 'workouts_screen.dart';
 /// this — it's exactly the same durable, epoch-checkpointed field C2.1 built,
 /// just fed by two gates instead of one.
 class CardioSessionScreen extends ConsumerStatefulWidget {
-  const CardioSessionScreen({super.key, required this.session});
+  const CardioSessionScreen({super.key, required this.session, this.intervalPlanClientId});
 
   final WorkoutSession session;
+
+  /// The interval plan this ride is playing back (docs/cardio/60 C7.5), or
+  /// null — which is the normal case and leaves the screen exactly as it was
+  /// before intervals existed (M38's "terv nélkül" state). Passed in rather
+  /// than read off the session: no session ever references a plan
+  /// (D-C7.1), so the choice belongs to whoever started the ride.
+  final String? intervalPlanClientId;
 
   @override
   ConsumerState<CardioSessionScreen> createState() => CardioSessionScreenState();
@@ -269,6 +280,14 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// running, so a paused session never reaches [KmCueController.onDistance].
   KmCueController? _kmCueController;
 
+  /// Non-null only while a plan is playing. Owns no clock of its own — it is
+  /// fed [_liveMovingSeconds] from [_startTicker], which is what makes the
+  /// section countdown stop dead with a pause (docs/cardio/60 §9's named
+  /// risk for this step).
+  IntervalPlayerController? _intervalPlayer;
+  IntervalPlayerState? _intervalState;
+  IntervalCueSettings _intervalCueSettings = IntervalCueSettings.defaults;
+
   /// Cached like [_autoPauseEnabled], and for the same reason.
   KmCueSettings _kmCueSettings = KmCueSettings.defaults;
 
@@ -424,6 +443,15 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       _pollHeartRate(); // don't wait a full interval for the first read
     }
 
+    // C7.5 — the interval player. Only ever set up when this ride has a
+    // plan; without one nothing below it changes and the screen is M05 to
+    // the pixel. The id comes either from the picker that just started the
+    // ride or, for a session reopened after an app kill, from the memory
+    // that same picker wrote.
+    if (_finishedAt == null) {
+      unawaited(_seedIntervalPlayer());
+    }
+
     // Deferred a frame, same as `LogSessionScreen` — this can run during
     // `initState`, before ancestor InheritedWidgets are guaranteed ready
     // for `AppLocalizations.of(context)`.
@@ -564,6 +592,83 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     );
   }
 
+  /// Loads the plan and fast-forwards the player to wherever this ride
+  /// already is — a session reopened after an app kill resumes mid-plan
+  /// rather than starting the plan over, because [IntervalPlayerController]
+  /// derives everything from moving time (which survives the kill) instead
+  /// of from when the screen happened to open.
+  Future<void> _seedIntervalPlayer() async {
+    final planClientId = widget.intervalPlanClientId ??
+        await ref.read(intervalPlanSessionMemoryProvider).planFor(_clientId);
+    if (planClientId == null || !mounted) return;
+    final plan = await ref.read(cardioIntervalPlanRepositoryProvider).findByClientId(planClientId);
+    final cueSettings = await ref.read(intervalCuePreferencesProvider).load();
+    if (!mounted || plan == null || plan.steps.isEmpty) return;
+    final player = IntervalPlayerController(plan: plan, onSectionChanged: _onIntervalSection);
+    // Catching up is silent: a resumed ride must not fire a burst of cues
+    // for the sections it already rode (same lesson as KmCueController.seed).
+    final resuming = _liveMovingSeconds;
+    _suppressIntervalCues = true;
+    final state = player.update(resuming);
+    _suppressIntervalCues = false;
+    setState(() {
+      _intervalCueSettings = cueSettings;
+      _intervalPlayer = player;
+      _intervalState = state;
+    });
+  }
+
+  bool _suppressIntervalCues = false;
+
+  /// M38's cue: three short taps through the 3–2–1 countdown and a longer one
+  /// at the switch. The taps are what the *countdown* fires (see
+  /// [_tickIntervalPlayer]); this is the switch itself.
+  ///
+  /// A change into an easy section gets only the long tap — after four hard
+  /// minutes the rider doesn't need to be told to relax, and the countdown
+  /// ceremony is what makes the hard start feel deliberate.
+  void _onIntervalSection(IntervalPlayerState state) {
+    if (_suppressIntervalCues) return;
+    if (_intervalCueSettings.vibration) HapticFeedback.heavyImpact();
+    if (_intervalCueSettings.sound) {
+      // The platform's own alert sound, same call and same reasoning as the
+      // kilometre cue's — see [_playKmCue].
+      unawaited(SystemSound.play(SystemSoundType.alert));
+    }
+  }
+
+  /// Advances the player to the session's current moving time and fires the
+  /// 3–2–1 taps on the way into a hard section. Called once a second from
+  /// [_startTicker] — and only from there, so a paused session (whose moving
+  /// time is frozen) simply keeps handing the player the same number.
+  void _tickIntervalPlayer() {
+    final player = _intervalPlayer;
+    if (player == null) return;
+    final previous = _intervalState;
+    final state = player.update(_liveMovingSeconds);
+    _intervalState = state;
+
+    // Only into a hard section, and only once per second of the countdown:
+    // the long tap at the switch itself comes from [_onIntervalSection].
+    final crossedIntoCountdown = previous == null ||
+        previous.secondsRemaining != state.secondsRemaining ||
+        previous.sectionNumber != state.sectionNumber;
+    if (state.isCountingDown &&
+        crossedIntoCountdown &&
+        state.nextIntensity == IntervalIntensity.hard &&
+        _intervalCueSettings.vibration) {
+      HapticFeedback.selectionClick();
+    }
+  }
+
+  /// The "Léptet" circle (M38): ends the current section at whatever length
+  /// it actually got, and moves on.
+  void _skipIntervalSection() {
+    final player = _intervalPlayer;
+    if (player == null) return;
+    setState(() => _intervalState = player.skip(_liveMovingSeconds));
+  }
+
   Future<void> _seedKmCueSettings() async {
     final settings = await ref.read(kmCuePreferencesProvider).load();
     if (mounted) _kmCueSettings = settings;
@@ -638,11 +743,16 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// the preference stores itself, so this is just picking the new values
   /// back up for the in-flight [_autoPauseDetector]/[_kmCueController] to
   /// actually honor.
+  /// The in-session settings sheet — auto-pause and the kilometre cue for a
+  /// run, the section-change cue for a ride playing a plan (Q-D4). One sheet,
+  /// one entry point; which switches it shows follows the family.
   Future<void> _openAutoPauseSettings() async {
-    await showCardioSessionSettingsSheet(context);
+    await showCardioSessionSettingsSheet(context, family: _family);
     if (!mounted) return;
     unawaited(_seedAutoPauseEnabled());
     unawaited(_seedKmCueSettings());
+    final cueSettings = await ref.read(intervalCuePreferencesProvider).load();
+    if (mounted) setState(() => _intervalCueSettings = cueSettings);
   }
 
   /// Starts/stops the raw GPS point recording subscription to match current
@@ -803,7 +913,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   void _startTicker() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      // The player rides on this same tick and on the same moving-time
+      // number the dominant metric shows — it never starts a clock of its own.
+      _tickIntervalPlayer();
+      setState(() {});
     });
   }
 
@@ -1220,6 +1334,10 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     final trail = _trackFilter?.trail ?? const [];
     CardioMetrics? routeCardio;
     List<CardioSplit> routeSplits = const [];
+    // The executed sections of an interval plan are splits too (D-C7.1) —
+    // cut off wherever the ride actually ended, so a session finished
+    // mid-section still logs the part that was ridden.
+    final intervalSplits = _intervalPlayer?.executedSplits(total) ?? const <CardioSplit>[];
     if (_tracksLocation && trail.isNotEmpty) {
       final encoded = encodeRoute(trail);
       // A match gets **distance and a route, and nothing derived from pace**
@@ -1271,7 +1389,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             finishedAt: finishedAt,
             movingSeconds: total,
             cardio: routeCardio == null ? const Value.absent() : Value(routeCardio),
-            splits: routeCardio == null ? const Value.absent() : Value(routeSplits),
+            splits: intervalSplits.isNotEmpty
+                ? Value([...routeSplits, ...intervalSplits])
+                : (routeCardio == null ? const Value.absent() : Value(routeSplits)),
           );
       if (!mounted) return;
       _ticker?.cancel();
@@ -1285,6 +1405,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       if (_watchStartPushed) {
         unawaited(ref.read(watchWorkoutServiceProvider).endWorkout(_clientId));
       }
+      // The plan has done its job: the executed sections are on the session
+      // now, as splits.
+      unawaited(ref.read(intervalPlanSessionMemoryProvider).forget(_clientId));
       // So the summary screen's back button lands on the session list
       // (docs/cardio/59-cardio-implementation-plan.md) instead of wherever
       // the shell happened to be showing when this workout was started —
@@ -1323,7 +1446,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         activityType: _activityType,
         movingSeconds: total,
         cardio: displayCardio,
-        splits: routeSplits,
+        splits: [...routeSplits, ...intervalSplits],
       );
       // Baseline is every other cardio session already known locally — read
       // once, here, rather than a dedicated repository query: the whole list
@@ -1607,10 +1730,23 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     // time), so it isn't tappable: there's nothing to manually override.
     final metrics = theme.extension<AppMetricColors>();
     final accent = activityTypeColor(_activityType, context);
+    final intervalState = _intervalState;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // M38 sits between the header and the dominant number, and takes
+        // space from neither: the resistance stepper below is pixel-identical
+        // either way.
+        if (intervalState != null) ...[
+          _IntervalPlayerBlock(
+            state: intervalState,
+            accent: accent,
+            paused: !_isRunning,
+            l10n: l10n,
+          ),
+          const SizedBox(height: 12),
+        ],
         Opacity(
           opacity: _isRunning ? 1 : 0.62,
           child: Column(
@@ -1619,6 +1755,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
               _DominantMetric(
                 label: l10n.movingTimeLabel,
                 value: CardioFormatter.duration(duration),
+                // The one size change M38 allows against M05, and only while
+                // a plan is playing: the countdown needs the 14 px.
+                valueFontSize: intervalState == null ? 96 : 82,
               ),
               const SizedBox(height: 18),
               _MetricRow(
@@ -1871,11 +2010,40 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
 
     final autoPaused = paused && _pauseReason == _PauseReason.auto;
 
+    // M38: on a hard section the top third of the screen is painted, not
+    // just labelled — sweating, with peripheral vision, the colour field is
+    // what carries. Behind the content, and never on an easy section.
+    final hardSection = _intervalState != null &&
+        !_intervalState!.finished &&
+        _intervalState!.intensity == IntervalIntensity.hard &&
+        _isRunning;
+
     return Scaffold(
       backgroundColor: scheme.surface,
       body: SafeArea(
         child: Stack(
           children: [
+            if (hardSection)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: MediaQuery.sizeOf(context).height / 3,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          activityTypeColor(_activityType, context).withValues(alpha: 0.22),
+                          activityTypeColor(_activityType, context).withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             Column(
               children: [
                 // M09's first of three auto-pause signals: a full-width amber
@@ -1893,7 +2061,12 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                     // DISTANCE only. M04 has no slot for it, so it rides in
                     // the header bar's trailing corner rather than growing a
                     // second bar of its own.
-                    onSettings: _family == ActivityFamily.distance
+                    // DISTANCE has always had it (auto-pause, C4a.5a).
+                    // MACHINE grows one only while a plan is playing, for
+                    // Q-D4's "kikapcsolható" sound — with no plan there is
+                    // nothing to configure and no gear, so M05 is intact.
+                    onSettings: _family == ActivityFamily.distance ||
+                            (_family == ActivityFamily.machine && _intervalState != null)
                         ? () => unawaited(_openAutoPauseSettings())
                         : null,
                     settingsTooltip: l10n.autoPauseSettingsIconTooltip,
@@ -2120,6 +2293,18 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// heart-rate readout. Null when neither applies — the row then centers
   /// the pause button on its own.
   Widget? _trailingCircle(AppLocalizations l10n) {
+    // M38: the same circle, the same size, in the same corner — while a plan
+    // is playing it steps the section instead of opening the distance sheet.
+    // The finish gesture below it is untouched.
+    final intervalState = _intervalState;
+    if (intervalState != null && !intervalState.finished && !_isFinished) {
+      return _CircleAction(
+        key: const Key('intervalSkipCircle'),
+        icon: Icons.skip_next,
+        label: l10n.intervalSkipCircleLabel,
+        onPressed: _busy ? null : _skipIntervalSection,
+      );
+    }
     final canEditDistance = !_isFinished && !_hasGpsDistance && _family != ActivityFamily.game;
     if (canEditDistance) {
       return _CircleAction(
@@ -2922,10 +3107,15 @@ class _DominantMetric extends StatelessWidget {
     this.labelColor,
     this.valueColor,
     this.onTap,
+    this.valueFontSize = 96,
   });
 
   final String label;
   final String value;
+
+  /// 96 everywhere (M04/M05); 82 only on the MACHINE screen while an interval
+  /// plan is playing, which is the single size change M38 makes against M05.
+  final double valueFontSize;
 
   /// Small pill next to [label] — M10's "BECSÜLT" while the GPS signal is
   /// weak (docs/cardio/59-cardio-implementation-plan.md C4a.4). `null` the
@@ -3008,7 +3198,7 @@ class _DominantMetric extends StatelessWidget {
                     TextSpan(
                       text: number,
                       style: TextStyle(
-                        fontSize: 96,
+                        fontSize: valueFontSize,
                         height: 1.02,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -4,
@@ -3525,6 +3715,227 @@ class _WideActionButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// M38's player block: which section is running, how much of it is left, and
+/// what comes next. Sits between the header and the dominant number and takes
+/// space from neither — see [_DominantMetric.valueFontSize] for the one
+/// concession (96 → 82 px) M38 allows itself against M05.
+class _IntervalPlayerBlock extends StatelessWidget {
+  const _IntervalPlayerBlock({
+    required this.state,
+    required this.accent,
+    required this.paused,
+    required this.l10n,
+  });
+
+  final IntervalPlayerState state;
+  final Color accent;
+  final bool paused;
+  final AppLocalizations l10n;
+
+  String _intensityLabel(IntervalIntensity intensity) => switch (intensity) {
+        IntervalIntensity.easy => l10n.intervalIntensityEasy,
+        IntervalIntensity.moderate => l10n.intervalIntensityModerate,
+        IntervalIntensity.hard => l10n.intervalIntensityHard,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final hard = state.intensity == IntervalIntensity.hard;
+    // The last three seconds are their own state: the screen stops reporting
+    // the section that is ending and starts announcing the one that is coming.
+    final countingDown = state.isCountingDown && !paused;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 13),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(24),
+          border: hard && !paused ? Border.all(color: accent.withValues(alpha: 0.35)) : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  l10n.intervalSectionCounterLabel(state.sectionNumber, state.totalSections),
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                if (paused) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.intervalPausedSectionLabel,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 2),
+            if (state.finished)
+              Text(
+                l10n.intervalPlanFinishedLabel,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+              )
+            else if (countingDown)
+              _UpNext(state: state, accent: accent, l10n: l10n, label: _intensityLabel)
+            else ...[
+              Text(
+                _intensityLabel(state.intensity).toUpperCase(),
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
+                  height: 1.1,
+                  color: hard ? accent : scheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    CardioFormatter.duration(Duration(seconds: state.secondsRemaining)),
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.8,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    l10n.intervalRemainingLabel,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              if (state.nextIntensity != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.arrow_forward, size: 15, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        l10n.intervalNextLabel(
+                          CardioFormatter.duration(
+                              Duration(seconds: state.nextDurationSeconds ?? 0)),
+                          _intensityLabel(state.nextIntensity!),
+                        ),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+            if (paused && !state.finished) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n.intervalPausedSectionBody,
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The last three seconds (M38): the screen switches from "this section" to
+/// "the one starting now", with the count itself as the biggest thing on the
+/// block.
+class _UpNext extends StatelessWidget {
+  const _UpNext({
+    required this.state,
+    required this.accent,
+    required this.l10n,
+    required this.label,
+  });
+
+  final IntervalPlayerState state;
+  final Color accent;
+  final AppLocalizations l10n;
+  final String Function(IntervalIntensity) label;
+
+  @override
+  Widget build(BuildContext context) {
+    final next = state.nextIntensity;
+    final nextDuration =
+        CardioFormatter.duration(Duration(seconds: state.nextDurationSeconds ?? 0));
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.intervalUpNextLabel,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.4,
+                  color: accent,
+                ),
+              ),
+              Text(
+                next == null
+                    ? l10n.intervalPlanFinishedLabel
+                    : '$nextDuration ${label(next).toUpperCase()}',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          '${state.secondsRemaining}',
+          style: TextStyle(
+            fontSize: 44,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -2,
+            color: accent,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
     );
   }
 }
