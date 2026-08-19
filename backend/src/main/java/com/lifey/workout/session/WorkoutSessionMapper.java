@@ -107,10 +107,13 @@ public final class WorkoutSessionMapper {
     private static CardioSplitResponse toSplitResponse(CardioSplit split) {
         return new CardioSplitResponse(
                 split.getSplitIndex(),
+                split.getSplitType(),
                 split.getDistanceMeters(),
                 split.getDurationSeconds(),
                 split.getElevationDeltaM(),
-                split.getAvgHeartRate()
+                split.getAvgHeartRate(),
+                split.getAvgWatts(),
+                split.getIntensity()
         );
     }
 }

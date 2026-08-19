@@ -92,9 +92,9 @@ A designer nyolc kérdést adott vissza javaslattal ([61 §6](61-cardio-sport-sp
 | **Q-D1** ✅ | Split-mélység | – | **Eldöntve designban:** táv + tempó + szint, **pulzus nélkül** (négy szám 390 px-en 10,5 px-es tipográfiát kényszerítene). Kézi split-javítás **nincs**; a session-táv szerkesztésekor a splitek **arányosan újraszámolódnak** |
 | **Q-D2** ✅ | A box score alapból látszik-e | – | **Eldöntve designban (M44):** rejtve, egyszeri felajánlással, véglegesen elutasíthatóan |
 | **Q-C6.1** ✅ | Hangos (beszélt) km-visszajelzés | – | **Eldöntve designban (M35):** most nem épül, a helye szaggatott „hamarosan" sorként megvan. Rezgés + rövid csengő igen |
-| **Q-D3** | Az intervallum cél-intenzitás skálája | C7.4 | **Három fokozat**; ha a gép ad wattot, opcionális watt-sáv ugyanabban a sorban („kemény · 200–230 W") |
-| **Q-D4** | Hang a szakaszváltásra | C7.5 | **Legyen, kikapcsolhatóan** (a bicikli mellett zene szól, a rezgést a kormánytartó elnyeli) — az M35 kapcsolópár-mintájával |
-| **Q-C7.1** | Az intervallum-terv külön entitás-e | C7.1 | Külön entitás (`cardio_interval_plans`) — nem designkérdés, ld. D-C7.1 |
+| **Q-D3** ✅ | Az intervallum cél-intenzitás skálája | – | **Eldöntve (2026-08-17): három fokozat, watt-sáv nélkül.** Gépfüggetlen, tehát a terv újrahasznosítható. A watt-sáv kimarad, amíg nincs élő watt-forrás (BLE-trainert az app nem párosít, a watt kézzel beírt érték — [51 §3.3](51-cardio-overview-plan.md)): olyan célt írna elő, amit a lejátszó semmivel nem tud összemérni, és a legtöbb szakaszon üres mező maradna |
+| **Q-D4** ✅ | Hang a szakaszváltásra | – | **Eldöntve (2026-08-17): legyen, kikapcsolhatóan, a platform saját hangjával** (`SystemSound`), az M35 kapcsolópár-mintájával — **új audio-függőség nélkül**. Ugyanaz a megoldás, mint a C6.6 km-csengőjénél; ha később mégis bejön egy lejátszó-csomag, a két hely egyszerre cserélhető |
+| **Q-C7.1** ✅ | Az intervallum-terv külön entitás-e | – | **Már eldöntve a D-C7.1-ben** (ugyanennek a docnak a §6-a): külön entitás (`cardio_interval_plans`), a végrehajtás a `cardio_splits`-be. Nem designkérdés, és valójában sosem volt nyitva — ez a tábla listázta tévesen pipa nélkül |
 | **Q-D6** | A max magasság hova tartozik | C8.3/C8.5 | **Mindkettő** (profil-marker + metrika-rács) — a degradált nézetben csak a rács marad |
 | **Q-C8.1** | Időjárás-forrás (külső API vs. kézi) | C8.6 | **A design nem dönti el** — a kártya és a „nincs adat" állapot kész (M42). Javaslat változatlanul: külső API, külön utolsó lépésként |
 | **Q-D5** | Útpont-címke utólag | C8.4 (V2) | V1-ben nincs beviteli mező; a címke a **következő körre**, az összegzés listáján helyben szerkeszthetően. Élőben **soha** ne kelljen gépelni |
@@ -114,7 +114,7 @@ Nincs kemény függés a négy iteráció között. Az ajánlott sorrend **ért�
 | 3. | **C7 – Bicikli** | A legnagyobb új felület (intervallum-motor: új tábla, új szerkesztő, új lejátszó) |
 | 4. | **C8 – Túra** | Külső API-döntést és új számítási képletet (GAP) igényel |
 
-**Nyitott döntést egyik sem vár** a C6 és a C9 közül: a Q-D1/Q-D2/Q-C6.1 eldőlt a designban. A C7 a Q-D3/Q-D4-re, a C8 a Q-C8.1-re vár — de mindkettőnél csak az érintett lépés (C7.4/C7.5, C8.6), a többi indulhat.
+**Nyitott döntést egyik sem vár** a C6 és a C9 közül: a Q-D1/Q-D2/Q-C6.1 eldőlt a designban. **A C7 sem vár már**: a Q-D3/Q-D4 eldőlt (2026-08-17), a Q-C7.1 pedig sosem volt nyitva. Egyedül a C8 vár a Q-C8.1-re, ott is csak az érintett lépés (C8.6), a többi indulhat.
 
 ### 3.1 Mérföldkövek
 
@@ -451,8 +451,8 @@ formát tárolja (index + időtartam), csak egy típus- és egy watt-oszlop hiá
 | # | Lépés | Fájlok | Frame | Kész-ha |
 |---|---|---|---|---|
 | **C7.0** ✅ | Design: bicikli-frame-ek | [61 §3](61-cardio-sport-specifics-design-prompts.md#3-c7--szobabicikli--m37m39) | **M37–M39** | **Kész (2026-08-16)** — a canvasban M37–M39 + állapot-kivágatok + M38 light/EN minta |
-| **C7.1** | Backend: **V70** — `cardio_interval_plans` + `cardio_interval_steps` (felhasználóhoz kötve, CLAUDE.md), plusz `cardio_splits` + `split_type` (`DISTANCE` \| `INTERVAL`) és `avg_watts` | `db/migration/V70__*.sql`, `session/cardio/`, `session/dto/CardioSplitRequest.java`, `CardioSplitResponse.java` | – | A meglévő splitek `DISTANCE`-ra migrálódnak; a C6 split-listája **változatlanul működik** (teszt) |
-| **C7.2** | Backend: terv-CRUD végpont + delta-sync bekötés | `session/cardio/`, `session/service/WorkoutSessionServiceImpl.java` vagy új `cardio/interval/` csomag, Postman | – | A terv törlése **nem** törli a vele futott session-öket; minden terv szigorúan user-scope-os (teszt idegen userrel) |
+| **C7.1** ✅ | Backend: **V70** — `cardio_interval_plans` + `cardio_interval_steps` (felhasználóhoz kötve, CLAUDE.md), plusz `cardio_splits` + `split_type` (`DISTANCE` \| `INTERVAL`) és `avg_watts` | `db/migration/V70__cardio_interval_plans.sql`, `session/cardio/` (+`interval/`), `session/dto/CardioSplitRequest.java`, `CardioSplitResponse.java` | – | **Kész (2026-08-19)** — a `split_type` oszlop **defaultja `DISTANCE`**, így a meglévő sorok maguktól migrálódnak és a `splitType` nélkül küldő kliens is pontosan a mait kapja (`CardioSplitTypeMigrationTest`, `WorkoutSessionServiceImplTest`). A `distance_meters` csak az INTERVAL-nak lett nullozható — DISTANCE-nál DB-constraint követeli (`cardio_splits_distance_required_ck`). A **szakasz intenzitása a splitre kerül**, nem a tervről olvassuk vissza: a terv szerkeszthető és törölhető, egy utólag átcímkézett összegzés hazudna. A lépések egy szinten ágyazódnak (REPEAT-be nem kerülhet REPEAT — `cardio_interval_steps_shape_ck`), és a gyerek-lépés összetett kulccsal van a saját tervéhez kötve (`cardio_interval_steps_parent_fk`) |
+| **C7.2** ✅ | Backend: terv-CRUD végpont + delta-sync bekötés | `session/cardio/interval/` (controller, repository, mapper, `service/`, `dto/`), `docs/postman/` | – | **Kész (2026-08-19)** — `/api/v1/cardio-interval-plans` CRUD + `?updatedSince=` delta-feed (fix `updatedAt,id` sorrend, tombstone-nal), a `workout-templates` mintájára. **A terv törlése soft delete**, és semmit nem visz magával: session→terv hivatkozás nincs is (D-C7.1), ezt külön teszt bizonyítja egy INTERVAL-splites session-nel. **User-scope**: minden olvasó és író út `findBy...AndUserId`-n megy, idegen userrel a findById/update/delete mind 404 és a delta-feed üres (`CardioIntervalPlanCrudIntegrationTest`). A kérés **fa alakú** (a szerkesztő alakja), a tárolás lapos — a szakasz-shape ellenőrzése a service-ben is megvan, hogy tiszta 400 legyen a nyers constraint-hiba helyett |
 | **C7.3** | Mobil adatréteg: drift-táblák + repository + outbox a tervekhez | `core/local_db/tables/`, `features/workouts/data/`, `core/sync/pull_engine.dart` | – | Terv offline létrehozható és átszinkronizál; a `STRENGTH` payload továbbra is bájtra azonos |
 | **C7.4** | **Intervallum-szerkesztő** UI (szakaszok: idő + cél-intenzitás, ismétlés, mentés névvel) | `presentation/interval_plan_editor_screen.dart` (új), `l10n/` | **M37** | Egy 4×(4+3) perces terv 6 koppintásból összeáll; a teljes hossz élőben látszik |
 | **C7.5** | **Lejátszó** az élő MACHINE képernyőn: szakasz-számláló, visszaszámláló, „utána” előnézet, kemény szakasznál **felső gradiens**, 3–2–1 haptika, kikapcsolható hang | `presentation/cardio_session_screen.dart`, `application/interval_player_controller.dart` (új) | **M38** | A lejátszó a **C2 időzítőjén** ül (hosszú, 30+ perces eszközös próba); **a szakasz órája a szünettel együtt áll meg**; a mozgásidő 96→82 px, az ellenállás-léptető nem mozdul; terv nélkül a képernyő **bitre az M05**; a végrehajtott szakaszok `INTERVAL`-splitként mentődnek |
@@ -531,7 +531,7 @@ hanem rossz szám.
 |---|---|---|---|---|
 | **C6** Futás | 8 | 1 ✅ (M33–M36) | V69 | MF6a |
 | **C9** Játék | 6 | 1 ✅ (M43–M45) | – | MF6b |
-| **C7** Bicikli | 8 | 1 ✅ (M37–M39) | V70 | MF6c |
+| **C7** Bicikli | 8 | 1 ✅ (M37–M39) | V70 ✅ | MF6c |
 | **C8** Túra | 8 | 1 ✅ (M40–M42) | V71 | MF6d |
 | *(opcionális)* web | 4 | – | – | – |
 

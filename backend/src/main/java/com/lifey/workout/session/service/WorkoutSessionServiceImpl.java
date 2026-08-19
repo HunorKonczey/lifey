@@ -9,6 +9,7 @@ import com.lifey.workout.session.*;
 import com.lifey.workout.session.cardio.CardioDetails;
 import com.lifey.workout.session.cardio.CardioSplit;
 import com.lifey.workout.session.cardio.InvalidCardioRequestException;
+import com.lifey.workout.session.cardio.SplitType;
 import com.lifey.workout.session.dto.CardioDetailsRequest;
 import com.lifey.workout.session.dto.CardioSplitRequest;
 import com.lifey.workout.session.dto.ExerciseSetRequest;
@@ -259,6 +260,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
                 throw new InvalidCardioRequestException("activityType is required when sessionKind is CARDIO");
             }
             validateBestEfforts(request.cardio());
+            validateSplits(request.splits());
         } else {
             if (request.activityType() != null) {
                 throw new InvalidCardioRequestException("activityType must be null unless sessionKind is CARDIO");
@@ -270,6 +272,38 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
                 throw new InvalidCardioRequestException("splits must be empty unless sessionKind is CARDIO");
             }
         }
+    }
+
+    /**
+     * The per-split shape invariants, mirroring
+     * {@code cardio_splits_distance_required_ck} and
+     * {@code cardio_splits_intensity_ck} (V70): a DISTANCE split is a
+     * distance, so it must carry one; a target intensity only means something
+     * for an interval section (docs/cardio/60 D-C7.1). Cross-field, so Bean
+     * Validation can't express either — the DTO only annotates each field on
+     * its own.
+     */
+    private void validateSplits(List<CardioSplitRequest> splits) {
+        if (splits == null) return;
+        for (CardioSplitRequest split : splits) {
+            if (splitTypeOf(split) == SplitType.DISTANCE) {
+                if (split.distanceMeters() == null) {
+                    throw new InvalidCardioRequestException("distanceMeters is required for a DISTANCE split");
+                }
+                if (split.intensity() != null) {
+                    throw new InvalidCardioRequestException("intensity must be null unless splitType is INTERVAL");
+                }
+            }
+        }
+    }
+
+    /**
+     * A split with no {@code splitType} is a per-km split — the only kind
+     * that existed before V70, and what a client that predates intervals
+     * sends. Same default as the entity and the DB column.
+     */
+    private SplitType splitTypeOf(CardioSplitRequest split) {
+        return split.splitType() != null ? split.splitType() : SplitType.DISTANCE;
     }
 
     /**
@@ -360,10 +394,13 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             CardioSplit split = new CardioSplit();
             split.setWorkoutSession(session);
             split.setSplitIndex(item.splitIndex());
+            split.setSplitType(splitTypeOf(item));
             split.setDistanceMeters(item.distanceMeters());
             split.setDurationSeconds(item.durationSeconds());
             split.setElevationDeltaM(item.elevationDeltaM());
             split.setAvgHeartRate(item.avgHeartRate());
+            split.setAvgWatts(item.avgWatts());
+            split.setIntensity(item.intensity());
             session.getSplits().add(split);
         }
     }
