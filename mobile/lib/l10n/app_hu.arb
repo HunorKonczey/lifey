@@ -953,5 +953,6 @@
   "activeCaloriesHint": "kcal · a napi keretbe ez számít bele",
   "machineCaloriesLabel": "A GÉP KIJELZÉSE",
   "machineCaloriesHint": "kcal · tájékoztató, nem adjuk össze",
-  "machineCaloriesFootnote": "A gépek kalóriabecslése testsúlyt nem ismer — ezért soha nem kerül a napi összegbe."
+  "machineCaloriesFootnote": "A gépek kalóriabecslése testsúlyt nem ismer — ezért soha nem kerül a napi összegbe.",
+  "cardioRecordGreatestTotalWork": "Legnagyobb összmunka"
 }

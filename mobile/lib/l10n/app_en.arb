@@ -4332,5 +4332,9 @@
   "machineCaloriesFootnote": "Machines estimate calories without knowing your body weight — which is why this never enters your daily total.",
   "@machineCaloriesFootnote": {
     "description": "Footnote of the calorie card explaining why the machine number is never summed (M39, docs/cardio/51 Q4)"
+  },
+  "cardioRecordGreatestTotalWork": "Greatest total work",
+  "@cardioRecordGreatestTotalWork": {
+    "description": "Cardio record type label: this indoor-bike ride derived more total work (kJ) than any prior MACHINE-family session (docs/cardio/60 C7.7)"
   }
 }

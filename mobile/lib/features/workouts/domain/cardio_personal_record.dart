@@ -1,3 +1,4 @@
+import '../../../core/format/cardio_formatter.dart';
 import 'activity_type.dart';
 import 'workout_session.dart';
 
@@ -8,8 +9,7 @@ import 'workout_session.dart';
 /// set/rep-based and structurally cannot see a cardio session at all (a
 /// cardio session never writes an `exerciseSets` row; see
 /// docs/cardio/59-cardio-implementation-plan.md C3.5's kész-ha: "Cardio nem
-/// termel erősítő PR-t és fordítva"). Cycling total work (kJ) is still out
-/// of scope here — deferred to C7.7 per D-C3.8.
+/// termel erősítő PR-t és fordítva").
 enum CardioPrType {
   /// DISTANCE + MACHINE family — running, walking, hiking, indoor bike share
   /// one combined record, matching how `stat_chart_data.dart`'s
@@ -32,7 +32,15 @@ enum CardioPrType {
   /// and 56 §5.2 keeps these to the one activity they mean something for.
   fastest1k,
   fastest5k,
-  fastest10k;
+  fastest10k,
+
+  /// MACHINE family only (docs/cardio/60 C7.7): total work in kJ, derived the
+  /// same way the summary card derives it
+  /// ([CardioFormatter.totalWorkKj]) — never stored, so a session with no
+  /// power reading has no value here and can neither set nor break this
+  /// record (a 0 kJ session would otherwise silently "win" against every
+  /// watt-less past ride).
+  greatestTotalWork;
 
   /// True when a *smaller* number is the better one. The three best-effort
   /// types are times to beat downward; everything else is a maximum.
@@ -51,6 +59,7 @@ enum CardioPrType {
       longestMovingTime => true,
       greatestElevationGain => family == ActivityFamily.distance,
       fastest1k || fastest5k || fastest10k => session.activityType == 'RUNNING',
+      greatestTotalWork => family == ActivityFamily.machine,
     };
   }
 
@@ -65,6 +74,8 @@ enum CardioPrType {
       fastest1k => session.cardio?.best1kSeconds?.toDouble(),
       fastest5k => session.cardio?.best5kSeconds?.toDouble(),
       fastest10k => session.cardio?.best10kSeconds?.toDouble(),
+      greatestTotalWork => CardioFormatter.totalWorkKj(
+            session.cardio?.avgWatts, session.movingSeconds)?.toDouble(),
     };
   }
 }
@@ -90,6 +101,7 @@ class CardioPrBaseline {
     this.fastest1k,
     this.fastest5k,
     this.fastest10k,
+    this.greatestTotalWork,
   });
 
   final CardioPrBest? longestDistance;
@@ -98,6 +110,7 @@ class CardioPrBaseline {
   final CardioPrBest? fastest1k;
   final CardioPrBest? fastest5k;
   final CardioPrBest? fastest10k;
+  final CardioPrBest? greatestTotalWork;
 
   static const empty = CardioPrBaseline();
 
@@ -109,6 +122,7 @@ class CardioPrBaseline {
         CardioPrType.fastest1k => fastest1k,
         CardioPrType.fastest5k => fastest5k,
         CardioPrType.fastest10k => fastest10k,
+        CardioPrType.greatestTotalWork => greatestTotalWork,
       };
 
   double? get maxDistanceMeters => longestDistance?.value;
@@ -117,6 +131,7 @@ class CardioPrBaseline {
   int? get best1kSeconds => fastest1k?.value.round();
   int? get best5kSeconds => fastest5k?.value.round();
   int? get best10kSeconds => fastest10k?.value.round();
+  int? get maxTotalWorkKj => greatestTotalWork?.value.round();
 
   /// Builds a baseline from prior sessions (order doesn't matter). Callers
   /// pass every past cardio session except the one about to be checked —
@@ -150,6 +165,7 @@ class CardioPrBaseline {
       fastest1k: better(CardioPrType.fastest1k, fastest1k),
       fastest5k: better(CardioPrType.fastest5k, fastest5k),
       fastest10k: better(CardioPrType.fastest10k, fastest10k),
+      greatestTotalWork: better(CardioPrType.greatestTotalWork, greatestTotalWork),
     );
   }
 }

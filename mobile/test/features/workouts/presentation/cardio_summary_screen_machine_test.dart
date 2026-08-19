@@ -6,6 +6,7 @@ import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/domain/cardio_interval_plan.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
+import 'package:lifey/features/workouts/domain/cardio_personal_record.dart';
 import 'package:lifey/features/workouts/presentation/cardio_summary_screen.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 
@@ -62,7 +63,11 @@ List<CardioSplit> _executedSections(int count) => [
         ),
     ];
 
-Future<void> _pump(WidgetTester tester, WorkoutSession session) async {
+Future<void> _pump(
+  WidgetTester tester,
+  WorkoutSession session, {
+  List<CardioPrType> newRecords = const [],
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -73,7 +78,7 @@ Future<void> _pump(WidgetTester tester, WorkoutSession session) async {
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: CardioSummaryScreen(session: session),
+        home: CardioSummaryScreen(session: session, newRecords: newRecords),
       ),
     ),
   );
@@ -183,6 +188,22 @@ void main() {
 
       expect(find.text('THE MACHINE READS'), findsOneWidget);
       expect(find.text('—'), findsWidgets);
+    });
+  });
+
+  group('greatest total work record (C7.7)', () {
+    testWidgets('the celebration banner names it in kJ', (tester) async {
+      await _pump(
+        tester,
+        _bikeSession(cardio: const CardioMetrics(avgWatts: 168)),
+        newRecords: const [CardioPrType.greatestTotalWork],
+      );
+
+      expect(find.text('New personal record!'), findsOneWidget);
+      // Appears twice: the banner row and the celebration dialog that opens
+      // automatically on top of it — both draw their label from the same
+      // switch, which is what this test actually exercises.
+      expect(find.text('Greatest total work'), findsWidgets);
     });
   });
 

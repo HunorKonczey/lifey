@@ -1007,6 +1007,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
         CardioPrType.fastest1k => l10n.cardioRecordFastest1k,
         CardioPrType.fastest5k => l10n.cardioRecordFastest5k,
         CardioPrType.fastest10k => l10n.cardioRecordFastest10k,
+        CardioPrType.greatestTotalWork => l10n.cardioRecordGreatestTotalWork,
       };
 
   /// The route/elevation-profile/splits block (C4a.6) — DISTANCE only, and
@@ -1641,6 +1642,9 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
         CardioPrType.fastest5k ||
         CardioPrType.fastest10k =>
           CardioFormatter.duration(Duration(seconds: value.round())),
+        // Already in kJ — `valueIn` derives it via CardioFormatter.totalWorkKj,
+        // so this only rounds for display, no unit conversion needed.
+        CardioPrType.greatestTotalWork => '${value.round()} kJ',
       };
 
   /// The improvement, always written as a gain: a best-effort record moves
@@ -1892,6 +1896,7 @@ class _NewRecordBanner extends StatelessWidget {
         CardioPrType.fastest1k => l10n.cardioRecordFastest1k,
         CardioPrType.fastest5k => l10n.cardioRecordFastest5k,
         CardioPrType.fastest10k => l10n.cardioRecordFastest10k,
+        CardioPrType.greatestTotalWork => l10n.cardioRecordGreatestTotalWork,
       };
 
   @override

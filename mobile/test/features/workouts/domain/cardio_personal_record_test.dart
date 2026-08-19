@@ -13,6 +13,7 @@ CardioPrBaseline _baseline({
   int? best1kSeconds,
   int? best5kSeconds,
   int? best10kSeconds,
+  int? maxTotalWorkKj,
 }) {
   final at = DateTime(2026, 1, 1);
   CardioPrBest? best(num? value) =>
@@ -24,6 +25,7 @@ CardioPrBaseline _baseline({
     fastest1k: best(best1kSeconds),
     fastest5k: best(best5kSeconds),
     fastest10k: best(best10kSeconds),
+    greatestTotalWork: best(maxTotalWorkKj),
   );
 }
 
@@ -41,6 +43,7 @@ void main() {
     int? best1kSeconds,
     int? best5kSeconds,
     int? best10kSeconds,
+    double? avgWatts,
     bool finished = true,
   }) {
     return WorkoutSession(
@@ -56,7 +59,8 @@ void main() {
               elevationGainMeters == null &&
               best1kSeconds == null &&
               best5kSeconds == null &&
-              best10kSeconds == null)
+              best10kSeconds == null &&
+              avgWatts == null)
           ? null
           : CardioMetrics(
               distanceMeters: distanceMeters,
@@ -64,6 +68,7 @@ void main() {
               best1kSeconds: best1kSeconds,
               best5kSeconds: best5kSeconds,
               best10kSeconds: best10kSeconds,
+              avgWatts: avgWatts,
             ),
     );
   }
@@ -285,6 +290,84 @@ void main() {
       final previous = baseline[CardioPrType.fastest5k]!;
       expect(previous.value, 1400);
       expect(previous.at, day1.add(const Duration(minutes: 30)));
+    });
+  });
+
+  // -- Total work (kJ), MACHINE only (docs/cardio/60 C7.7) ------------------
+
+  group('greatest total work (kJ)', () {
+    test('MACHINE family only — a run with any average power still sets nothing', () {
+      final session = cardioSession(
+        day1,
+        activityType: 'RUNNING',
+        movingSeconds: 1800,
+        avgWatts: 250,
+      );
+      final baseline = CardioPrBaseline.fromSessions([session]);
+      expect(baseline.maxTotalWorkKj, isNull);
+    });
+
+    test('derives kJ from average power over the moving time', () {
+      // 168 W held for 30:00 = 302.4 kJ, truncated the same way valueIn does.
+      final session = cardioSession(
+        day1,
+        activityType: 'INDOOR_BIKE',
+        movingSeconds: 1800,
+        avgWatts: 168,
+      );
+      final baseline = CardioPrBaseline.fromSessions([session]);
+      expect(baseline.maxTotalWorkKj, 302);
+    });
+
+    test('a ride with no power reading sets no baseline at all', () {
+      final session = cardioSession(day1, activityType: 'INDOOR_BIKE', movingSeconds: 1800);
+      final baseline = CardioPrBaseline.fromSessions([session]);
+      expect(baseline.maxTotalWorkKj, isNull);
+    });
+
+    test('a strictly greater derived value is a record; equal is not', () {
+      final baseline = _baseline(maxTotalWorkKj: 300);
+      final more = cardioSession(
+        day2,
+        activityType: 'INDOOR_BIKE',
+        movingSeconds: 1800,
+        avgWatts: 170, // 306 kJ
+      );
+      final same = cardioSession(
+        day2,
+        activityType: 'INDOOR_BIKE',
+        movingSeconds: 1800,
+        avgWatts: 500 / 3, // exactly 300 kJ
+      );
+      expect(detectCardioPrs(baseline, more), [CardioPrType.greatestTotalWork]);
+      expect(detectCardioPrs(baseline, same), isEmpty);
+    });
+
+    test('a watt-less session never breaks the record, however generous the baseline', () {
+      final baseline = _baseline(maxTotalWorkKj: 1);
+      final session = cardioSession(day2, activityType: 'INDOOR_BIKE', movingSeconds: 1800);
+      expect(detectCardioPrs(baseline, session), isEmpty);
+    });
+
+    test('a run with high power never breaks this record — it is not a concept for it', () {
+      final baseline = _baseline(maxTotalWorkKj: 1);
+      final session = cardioSession(
+        day2,
+        activityType: 'RUNNING',
+        movingSeconds: 1800,
+        avgWatts: 500,
+      );
+      expect(detectCardioPrs(baseline, session), isEmpty);
+    });
+
+    test('the first watt-bearing ride sets the bar rather than breaking one', () {
+      final session = cardioSession(
+        day1,
+        activityType: 'INDOOR_BIKE',
+        movingSeconds: 1800,
+        avgWatts: 168,
+      );
+      expect(detectCardioPrs(CardioPrBaseline.empty, session), isEmpty);
     });
   });
 }
