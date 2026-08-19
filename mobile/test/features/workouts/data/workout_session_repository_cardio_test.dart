@@ -271,6 +271,130 @@ void main() {
       expect(cardioJson['best1kSeconds'], isNull);
     });
 
+    test(
+        'max altitude and backpack weight round-trip through the local row, the payload, '
+        'and watchAll (C8.5)', () async {
+      const hikeMetrics = CardioMetrics(
+        distanceMeters: 14200,
+        elevationGainMeters: 684,
+        maxAltitudeMeters: 756,
+        backpackWeightKg: 8.5,
+        distanceSource: 'MEASURED',
+      );
+
+      final clientId = await repo.create(
+        startedAt: DateTime.utc(2026, 8, 19, 6),
+        finishedAt: DateTime.utc(2026, 8, 19, 10),
+        exercises: const [],
+        sets: const [],
+        sessionKind: 'CARDIO',
+        activityType: 'HIKING',
+        movingSeconds: 14400,
+        cardio: hikeMetrics,
+      );
+
+      final cardioRow = await (db.select(db.cardioDetails)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .getSingle();
+      expect(cardioRow.maxAltitudeMeters, 756);
+      expect(cardioRow.backpackWeightKg, 8.5);
+
+      final cardioJson = (await lastPayload('create'))['cardio'] as Map<String, dynamic>;
+      expect(cardioJson['maxAltitudeMeters'], 756);
+      expect(cardioJson['backpackWeightKg'], 8.5);
+
+      final session = (await repo.watchAll().first).single;
+      expect(session.cardio!.maxAltitudeMeters, 756);
+      expect(session.cardio!.backpackWeightKg, 8.5);
+    });
+
+    test('a hike with no backpack weight entered stores and sends null, not zero', () async {
+      final clientId = await repo.create(
+        startedAt: DateTime.utc(2026, 8, 19, 6),
+        exercises: const [],
+        sets: const [],
+        sessionKind: 'CARDIO',
+        activityType: 'HIKING',
+        movingSeconds: 3600,
+        cardio: metrics,
+      );
+
+      final cardioRow = await (db.select(db.cardioDetails)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .getSingle();
+      expect(cardioRow.backpackWeightKg, isNull);
+
+      final cardioJson = (await lastPayload('create'))['cardio'] as Map<String, dynamic>;
+      expect(cardioJson.containsKey('backpackWeightKg'), isTrue);
+      expect(cardioJson['backpackWeightKg'], isNull);
+    });
+
+    test(
+        'a weather snapshot round-trips through the local row, the payload, and watchAll '
+        '(C8.6)', () async {
+      const withWeather = CardioMetrics(
+        distanceMeters: 14200,
+        weatherCondition: 'PARTLY_CLOUDY',
+        weatherTempC: -3.5,
+        weatherWindKph: 12,
+        weatherPrecipMm: 0,
+        distanceSource: 'MEASURED',
+      );
+
+      final clientId = await repo.create(
+        startedAt: DateTime.utc(2026, 8, 19, 6),
+        exercises: const [],
+        sets: const [],
+        sessionKind: 'CARDIO',
+        activityType: 'HIKING',
+        movingSeconds: 14400,
+        cardio: withWeather,
+      );
+
+      final cardioRow = await (db.select(db.cardioDetails)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .getSingle();
+      expect(cardioRow.weatherCondition, 'PARTLY_CLOUDY');
+      expect(cardioRow.weatherTempC, -3.5); // negative — winter hikes
+      expect(cardioRow.weatherWindKph, 12);
+      expect(cardioRow.weatherPrecipMm, 0);
+
+      final cardioJson = (await lastPayload('create'))['cardio'] as Map<String, dynamic>;
+      expect(cardioJson['weatherCondition'], 'PARTLY_CLOUDY');
+      expect(cardioJson['weatherTempC'], -3.5);
+
+      final session = (await repo.watchAll().first).single;
+      expect(session.cardio!.weatherCondition, 'PARTLY_CLOUDY');
+      expect(session.cardio!.weatherTempC, -3.5);
+      expect(session.cardio!.weatherWindKph, 12);
+      expect(session.cardio!.weatherPrecipMm, 0);
+    });
+
+    test('a hike with no weather entered stores and sends null for all four fields, not zero',
+        () async {
+      final clientId = await repo.create(
+        startedAt: DateTime.utc(2026, 8, 19, 6),
+        exercises: const [],
+        sets: const [],
+        sessionKind: 'CARDIO',
+        activityType: 'HIKING',
+        movingSeconds: 3600,
+        cardio: metrics,
+      );
+
+      final cardioRow = await (db.select(db.cardioDetails)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .getSingle();
+      expect(cardioRow.weatherCondition, isNull);
+      expect(cardioRow.weatherTempC, isNull);
+      expect(cardioRow.weatherWindKph, isNull);
+      expect(cardioRow.weatherPrecipMm, isNull);
+
+      final cardioJson = (await lastPayload('create'))['cardio'] as Map<String, dynamic>;
+      expect(cardioJson.containsKey('weatherTempC'), isTrue);
+      expect(cardioJson['weatherTempC'], isNull);
+    });
+
     test('a repeat save (update) replaces cardio metrics and splits, not appends', () async {
       final startedAt = DateTime.utc(2026, 7, 10, 17);
       final clientId = await repo.create(

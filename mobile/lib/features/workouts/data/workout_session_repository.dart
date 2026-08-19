@@ -113,6 +113,15 @@ class WorkoutSessionRepository {
       for (final splits in splitsBySession.values) {
         splits.sort((a, b) => a.splitIndex.compareTo(b.splitIndex));
       }
+      final waypointsBySession = <String, List<CardioWaypoint>>{};
+      for (final row in await _db.select(_db.cardioWaypoints).get()) {
+        waypointsBySession
+            .putIfAbsent(row.sessionClientId, () => [])
+            .add(_cardioWaypointFromRow(row));
+      }
+      for (final waypoints in waypointsBySession.values) {
+        waypoints.sort((a, b) => a.waypointIndex.compareTo(b.waypointIndex));
+      }
 
       final sessions = sessionRows
           .map((row) => _toDomain(
@@ -121,6 +130,7 @@ class WorkoutSessionRepository {
                 setsBySession[row.clientId] ?? const [],
                 cardio: cardioBySession[row.clientId],
                 splits: splitsBySession[row.clientId] ?? const [],
+                waypoints: waypointsBySession[row.clientId] ?? const [],
               ))
           .toList()
         // Upcoming (not-yet-started) sessions have no startedAt — fall back
@@ -202,8 +212,9 @@ class WorkoutSessionRepository {
 
     final cardio = await _loadCardioMetrics(row.clientId);
     final splits = await _loadCardioSplits(row.clientId);
+    final waypoints = await _loadCardioWaypoints(row.clientId);
 
-    return _toDomain(row, exercises, sets, cardio: cardio, splits: splits);
+    return _toDomain(row, exercises, sets, cardio: cardio, splits: splits, waypoints: waypoints);
   }
 
   /// Returns the newly generated [WorkoutSession.clientId] so callers can keep
@@ -236,6 +247,7 @@ class WorkoutSessionRepository {
     int? movingSinceEpochMs,
     CardioMetrics? cardio,
     List<CardioSplit> splits = const [],
+    List<CardioWaypoint> waypoints = const [],
   }) async {
     final resolvedClientId = clientId ?? newClientId();
     await _db.transaction(() async {
@@ -259,6 +271,7 @@ class WorkoutSessionRepository {
           );
       await _insertChildren(resolvedClientId, exercises, sets);
       await _replaceCardio(resolvedClientId, cardio, splits);
+      await _replaceWaypoints(resolvedClientId, waypoints);
     });
     await _outbox.enqueueCreate(
       clientId: resolvedClientId,
@@ -279,6 +292,7 @@ class WorkoutSessionRepository {
         movingSeconds: movingSeconds,
         cardio: cardio,
         splits: splits,
+        waypoints: waypoints,
       ),
     );
     return resolvedClientId;
@@ -353,6 +367,7 @@ class WorkoutSessionRepository {
     Value<int?> movingSinceEpochMs = const Value.absent(),
     Value<CardioMetrics?> cardio = const Value.absent(),
     Value<List<CardioSplit>> splits = const Value.absent(),
+    Value<List<CardioWaypoint>> waypoints = const Value.absent(),
   }) async {
     // Merged (caller-supplied or preserved) values, resolved inside the
     // transaction but also needed for the outbox payload below.
@@ -367,6 +382,7 @@ class WorkoutSessionRepository {
     int? mergedMovingSinceEpochMs;
     CardioMetrics? mergedCardio;
     List<CardioSplit> mergedSplits = const [];
+    List<CardioWaypoint> mergedWaypoints = const [];
     await _db.transaction(() async {
       final row = await (_db.select(_db.workoutSessions)
             ..where((t) => t.clientId.equals(clientId)))
@@ -390,6 +406,8 @@ class WorkoutSessionRepository {
           : row.movingSinceEpochMs;
       mergedCardio = cardio.present ? cardio.value : await _loadCardioMetrics(clientId);
       mergedSplits = splits.present ? splits.value : await _loadCardioSplits(clientId);
+      mergedWaypoints =
+          waypoints.present ? waypoints.value : await _loadCardioWaypoints(clientId);
       await (_db.update(_db.workoutSessions)
             ..where((t) => t.clientId.equals(clientId)))
           .write(
@@ -415,6 +433,7 @@ class WorkoutSessionRepository {
           .go();
       await _insertChildren(clientId, exercises, sets);
       await _replaceCardio(clientId, mergedCardio, mergedSplits);
+      await _replaceWaypoints(clientId, mergedWaypoints);
     });
     await _outbox.enqueueUpdate(
       clientId: clientId,
@@ -434,6 +453,7 @@ class WorkoutSessionRepository {
         movingSeconds: mergedMovingSeconds,
         cardio: mergedCardio,
         splits: mergedSplits,
+        waypoints: mergedWaypoints,
       ),
     );
   }
@@ -560,6 +580,9 @@ class WorkoutSessionRepository {
         await (_db.delete(_db.cardioSplits)
               ..where((t) => t.sessionClientId.equals(clientId)))
             .go();
+        await (_db.delete(_db.cardioWaypoints)
+              ..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
         await (_db.delete(_db.cardioTrackPoints)
               ..where((t) => t.sessionClientId.equals(clientId)))
             .go();
@@ -645,6 +668,11 @@ class WorkoutSessionRepository {
               caloriesSource: Value(cardio.caloriesSource),
               routePolyline: Value(cardio.routePolyline),
               routePointCount: Value(cardio.routePointCount),
+              backpackWeightKg: Value(cardio.backpackWeightKg),
+              weatherCondition: Value(cardio.weatherCondition),
+              weatherTempC: Value(cardio.weatherTempC),
+              weatherWindKph: Value(cardio.weatherWindKph),
+              weatherPrecipMm: Value(cardio.weatherPrecipMm),
             ),
           );
     }
@@ -670,6 +698,32 @@ class WorkoutSessionRepository {
     }
   }
 
+  /// [_replaceCardio]'s counterpart for a session's waypoint list — its own
+  /// method rather than folded into [_replaceCardio] since a waypoint can be
+  /// marked mid-session (docs/cardio/60 C8.4) without touching `cardio` at
+  /// all, and the two full-replace independently either way.
+  Future<void> _replaceWaypoints(
+    String sessionClientId,
+    List<CardioWaypoint> waypoints,
+  ) async {
+    await (_db.delete(_db.cardioWaypoints)
+          ..where((t) => t.sessionClientId.equals(sessionClientId)))
+        .go();
+    for (final waypoint in waypoints) {
+      await _db.into(_db.cardioWaypoints).insert(
+            CardioWaypointsCompanion.insert(
+              clientId: newClientId(),
+              sessionClientId: sessionClientId,
+              waypointIndex: waypoint.waypointIndex,
+              latitude: waypoint.latitude,
+              longitude: waypoint.longitude,
+              altitudeMeters: Value(waypoint.altitudeMeters),
+              label: Value(waypoint.label),
+            ),
+          );
+    }
+  }
+
   /// The [update]-merge counterpart of [_replaceCardio]'s write side — reads
   /// what's currently stored, for a caller (e.g. [rate]) that didn't pass a
   /// [Value] for `cardio` and therefore isn't asking to change it.
@@ -686,6 +740,14 @@ class WorkoutSessionRepository {
           ..orderBy([(t) => OrderingTerm.asc(t.splitIndex)]))
         .get();
     return [for (final row in rows) _cardioSplitFromRow(row)];
+  }
+
+  Future<List<CardioWaypoint>> _loadCardioWaypoints(String sessionClientId) async {
+    final rows = await (_db.select(_db.cardioWaypoints)
+          ..where((t) => t.sessionClientId.equals(sessionClientId))
+          ..orderBy([(t) => OrderingTerm.asc(t.waypointIndex)]))
+        .get();
+    return [for (final row in rows) _cardioWaypointFromRow(row)];
   }
 
   CardioMetrics _cardioMetricsFromRow(CardioDetailsRow row) {
@@ -720,6 +782,11 @@ class WorkoutSessionRepository {
       caloriesSource: row.caloriesSource,
       routePolyline: row.routePolyline,
       routePointCount: row.routePointCount,
+      backpackWeightKg: row.backpackWeightKg,
+      weatherCondition: row.weatherCondition,
+      weatherTempC: row.weatherTempC,
+      weatherWindKph: row.weatherWindKph,
+      weatherPrecipMm: row.weatherPrecipMm,
     );
   }
 
@@ -733,6 +800,16 @@ class WorkoutSessionRepository {
       avgHeartRate: row.avgHeartRate,
       avgWatts: row.avgWatts,
       intensity: row.intensity == null ? null : IntervalIntensity.fromWire(row.intensity!),
+    );
+  }
+
+  CardioWaypoint _cardioWaypointFromRow(CardioWaypointRow row) {
+    return CardioWaypoint(
+      waypointIndex: row.waypointIndex,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      altitudeMeters: row.altitudeMeters,
+      label: row.label,
     );
   }
 
@@ -752,6 +829,7 @@ class WorkoutSessionRepository {
     int? movingSeconds,
     CardioMetrics? cardio,
     List<CardioSplit> splits = const [],
+    List<CardioWaypoint> waypoints = const [],
   }) {
     return {
       'startedAt': startedAt.toUtc().toIso8601String(),
@@ -798,6 +876,8 @@ class WorkoutSessionRepository {
       if (cardio != null) 'cardio': _cardioPayload(cardio),
       if (splits.isNotEmpty)
         'splits': splits.map(_splitPayload).toList(),
+      if (waypoints.isNotEmpty)
+        'waypoints': waypoints.map(_waypointPayload).toList(),
     };
   }
 
@@ -838,6 +918,11 @@ class WorkoutSessionRepository {
       'caloriesSource': cardio.caloriesSource,
       'routePolyline': cardio.routePolyline,
       'routePointCount': cardio.routePointCount,
+      'backpackWeightKg': cardio.backpackWeightKg,
+      'weatherCondition': cardio.weatherCondition,
+      'weatherTempC': cardio.weatherTempC,
+      'weatherWindKph': cardio.weatherWindKph,
+      'weatherPrecipMm': cardio.weatherPrecipMm,
     };
   }
 
@@ -858,12 +943,25 @@ class WorkoutSessionRepository {
     };
   }
 
+  /// Field order mirrors the backend's `CardioWaypointRequest`
+  /// (docs/cardio/60 C8.1/C8.4).
+  Map<String, dynamic> _waypointPayload(CardioWaypoint waypoint) {
+    return {
+      'waypointIndex': waypoint.waypointIndex,
+      'latitude': waypoint.latitude,
+      'longitude': waypoint.longitude,
+      'altitudeMeters': waypoint.altitudeMeters,
+      'label': waypoint.label,
+    };
+  }
+
   WorkoutSession _toDomain(
     WorkoutSessionRow row,
     List<SessionExercise> exercises,
     List<ExerciseSet> sets, {
     CardioMetrics? cardio,
     List<CardioSplit> splits = const [],
+    List<CardioWaypoint> waypoints = const [],
   }) {
     return WorkoutSession(
       clientId: row.clientId,
@@ -890,6 +988,7 @@ class WorkoutSessionRepository {
       movingSinceEpochMs: row.movingSinceEpochMs,
       cardio: cardio,
       splits: splits,
+      waypoints: waypoints,
     );
   }
 

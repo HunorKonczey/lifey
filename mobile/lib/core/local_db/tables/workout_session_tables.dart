@@ -176,6 +176,18 @@ class CardioDetails extends Table {
   TextColumn get routePolyline => text().nullable()();
   IntColumn get routePointCount => integer().nullable()();
 
+  // Hike-only (docs/cardio/60 C8.5) — the one field only the user can know
+  // (docs/cardio/61 §4 M42); no `*Source` column, since there's no measured
+  // value it could ever conflict with.
+  RealColumn get backpackWeightKg => real().nullable()();
+
+  // Hike-only weather snapshot (docs/cardio/60 C8.6, Q-C8.1: manual entry,
+  // no external API). [weatherTempC] is signed; wind/precip are not.
+  TextColumn get weatherCondition => text().nullable()();
+  RealColumn get weatherTempC => real().nullable()();
+  RealColumn get weatherWindKph => real().nullable()();
+  RealColumn get weatherPrecipMm => real().nullable()();
+
   @override
   Set<Column> get primaryKey => {sessionClientId};
 }
@@ -218,6 +230,37 @@ class CardioSplits extends Table {
   /// run at, null for a DISTANCE split. Stored on the execution rather than
   /// looked up from the plan: the plan stays editable and deletable.
   TextColumn get intensity => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {clientId};
+}
+
+/// Points marked along a hike's route (docs/cardio/60 C8.4, docs/cardio/61
+/// §4 M41) — computed client-side at the moment the user taps the marker
+/// button, replaced in full on every create/update, same as [CardioSplits].
+/// No distance/elapsed-time columns: the summary screen derives those by
+/// matching against the session's own local [CardioTrackPoints], the same
+/// source the elevation profile (C8.3) reads from.
+@DataClassName('CardioWaypointRow')
+class CardioWaypoints extends Table {
+  @override
+  String get tableName => 'cardio_waypoints';
+
+  TextColumn get clientId => text()();
+  TextColumn get sessionClientId => text().references(WorkoutSessions, #clientId)();
+
+  /// 0-based position in the order the waypoints were marked.
+  IntColumn get waypointIndex => integer()();
+
+  RealColumn get latitude => real()();
+  RealColumn get longitude => real()();
+
+  /// Null when the GPS fix at the moment of marking carried no altitude.
+  RealColumn get altitudeMeters => real().nullable()();
+
+  /// Always null in V1 (docs/cardio/60 Q-D5) — the column exists for the
+  /// planned V2 rename-after-the-fact feature.
+  TextColumn get label => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {clientId};

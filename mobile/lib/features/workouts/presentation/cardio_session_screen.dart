@@ -36,6 +36,7 @@ import '../domain/cardio_personal_record.dart';
 import '../data/cardio_interval_plan_repository.dart';
 import '../domain/cardio_interval_plan.dart';
 import '../domain/cardio_splits_calculator.dart';
+import '../domain/elevation_profile.dart';
 import '../domain/route_encoder.dart';
 import '../domain/track_filter.dart';
 import '../domain/workout_session.dart';
@@ -230,6 +231,27 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// completes, same lifetime as [_trackPointSeqSeeded].
   TrackFilterAccumulator? _trackFilter;
 
+  // -- Waypoints (C8.4, M41) — HIKING only ----------------------------------
+
+  /// This session's marked waypoints so far — seeded from [widget.session] in
+  /// `initState`, appended/truncated locally on mark/undo, persisted through
+  /// [WorkoutSessionController.updateLiveWaypoints] as a full replace, same
+  /// convention as [_distanceMeters]/[_updateCardioMetrics].
+  List<CardioWaypoint> _waypoints = const [];
+
+  /// The most recent GPS fix (regardless of [_isRunning] — set from every
+  /// [_onPositionFix] call, since tracking also runs during an auto-pause).
+  /// Null until the first fix of the session arrives — the marker button
+  /// stays disabled until then, same as the "GPS nélkül" state, since there
+  /// is nothing yet to mark.
+  LocationFix? _lastFix;
+
+  /// Non-null while the "N. útpont megjelölve" feedback banner is showing
+  /// (M41) — cleared by [_waypointFeedbackTimer] after 4 s, or immediately by
+  /// "Vissza" undoing the mark.
+  CardioWaypoint? _justMarkedWaypoint;
+  Timer? _waypointFeedbackTimer;
+
   /// Whether GPS has contributed any distance yet this session (C4a.4) —
   /// once true, it's the authoritative distance source for the rest of the
   /// session: the dominant metric's manual-edit affordance disables, and
@@ -402,6 +424,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     _scorePoints = s.cardio?.scorePoints;
     _scoreAssists = s.cardio?.scoreAssists;
     _scoreRebounds = s.cardio?.scoreRebounds;
+    _waypoints = s.waypoints;
 
     // A frozen `movingSinceEpochMs` on a not-yet-finished session means
     // *some* pause was active when this was last persisted — manual pause
@@ -804,6 +827,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// itself, on the other hand, always sees every fix — it's the one thing
   /// that needs to know about a fix arriving *during* the pause it caused.
   void _onPositionFix(LocationFix fix) {
+    _lastFix = fix;
     if (_isRunning) {
       final seq = _nextTrackPointSeq++;
       unawaited(ref.read(cardioTrackPointRepositoryProvider).addPoint(_clientId, seq, fix));
@@ -856,6 +880,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     _positionSub?.cancel();
     _weakSignalTimer?.cancel();
     _boxScoreIdleTimer?.cancel();
+    _waypointFeedbackTimer?.cancel();
     _autoPauseDetector?.dispose();
     if (_family == ActivityFamily.distance) WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -1360,9 +1385,15 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       // elevation-gain tile/profile downstream (CardioSummaryScreen gates on
       // null). A trail with zero altitude readings genuinely has neither.
       final hasAltitude = trail.any((p) => p.altitude != null);
+      // Same source as the elevation profile itself (C8.3) — the highest
+      // vertex across the whole local trail, computed once here so it
+      // survives the raw points being pruned, exactly like the best efforts
+      // above (docs/cardio/60 C8.5, Q-D6).
+      final maxAltitudeMeters = hasAltitude ? buildElevationProfile(trail)?.peak?.altitudeMeters : null;
       routeCardio = CardioMetrics(
         distanceMeters: _trackFilter!.distanceMeters,
         elevationGainMeters: hasAltitude ? _trackFilter!.elevationGainMeters : null,
+        maxAltitudeMeters: maxAltitudeMeters,
         best1kSeconds: bestEfforts.best1kSeconds,
         best5kSeconds: bestEfforts.best5kSeconds,
         best10kSeconds: bestEfforts.best10kSeconds,
@@ -1380,6 +1411,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         distanceSource: 'MEASURED',
         routePolyline: encoded.polyline,
         routePointCount: encoded.pointCount,
+        // Never set on this screen (docs/cardio/60 C8.5: backpack weight is
+        // only ever entered afterward, on the summary, or up front via
+        // `LogCardioSheet`) — carried through defensively so a live-tracked
+        // hike that somehow already had one doesn't lose it at finish.
+        backpackWeightKg: originalCardio?.backpackWeightKg,
       );
     }
     try {
@@ -1435,6 +1471,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             scoreAssists: _scoreAssists,
             scoreRebounds: _scoreRebounds,
             distanceSource: _hasGpsDistance ? 'MEASURED' : (_distanceMeters == null ? null : 'MANUAL'),
+            backpackWeightKg: widget.session.cardio?.backpackWeightKg,
           );
       final finishedSession = WorkoutSession(
         clientId: _clientId,
@@ -1535,6 +1572,74 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     if (_busy || _isFinished) return;
     final next = ((_resistanceLevel ?? 0) + delta).clamp(0, 1 << 30);
     await _updateCardioMetrics(resistanceLevel: next);
+  }
+
+  /// Marks a waypoint at [_lastFix] (M41) — appended, never replacing what's
+  /// already there, so a failed write can simply be retried without losing
+  /// earlier marks. The 4 s feedback banner is purely local state; the write
+  /// itself is fire-and-forget from the user's point of view (same shape as
+  /// every other live-metric edit on this screen), since undo within the
+  /// window still has the original list to fall back to.
+  Future<void> _markWaypoint() async {
+    final fix = _lastFix;
+    if (fix == null) return;
+    final waypoint = CardioWaypoint(
+      waypointIndex: _waypoints.length,
+      latitude: fix.latitude,
+      longitude: fix.longitude,
+      altitudeMeters: fix.altitude,
+    );
+    final updated = [..._waypoints, waypoint];
+    setState(() {
+      _waypoints = updated;
+      _justMarkedWaypoint = waypoint;
+    });
+    _armWaypointFeedbackTimer();
+    unawaited(ref.read(workoutSessionControllerProvider.notifier).updateLiveWaypoints(
+          _clientId,
+          startedAt: _startedAt,
+          waypoints: updated,
+        ));
+  }
+
+  /// "Vissza" — undoes exactly the mark [_markWaypoint] just made, only
+  /// reachable while its feedback banner is still showing.
+  Future<void> _undoLastWaypoint() async {
+    final justMarked = _justMarkedWaypoint;
+    if (justMarked == null) return;
+    _waypointFeedbackTimer?.cancel();
+    final updated = _waypoints.where((w) => w.waypointIndex != justMarked.waypointIndex).toList();
+    setState(() {
+      _waypoints = updated;
+      _justMarkedWaypoint = null;
+    });
+    unawaited(ref.read(workoutSessionControllerProvider.notifier).updateLiveWaypoints(
+          _clientId,
+          startedAt: _startedAt,
+          waypoints: updated,
+        ));
+  }
+
+  void _armWaypointFeedbackTimer() {
+    _waypointFeedbackTimer?.cancel();
+    _waypointFeedbackTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _justMarkedWaypoint = null);
+    });
+  }
+
+  /// M41's "8,24 km · 612 m · 12:19" — the session's own live numbers at the
+  /// moment of marking, since a waypoint has nothing else to show yet (no
+  /// label in V1, docs/cardio/60 Q-D5).
+  String _waypointFeedbackDetail(AppLocalizations l10n, CardioWaypoint waypoint) {
+    final unitSystem =
+        (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults()).unitSystem;
+    final parts = <String>[
+      if ((_distanceMeters ?? 0) > 0) CardioFormatter.distance(_distanceMeters!, unitSystem),
+      if (waypoint.altitudeMeters != null)
+        CardioFormatter.elevation(waypoint.altitudeMeters!, unitSystem),
+      CardioFormatter.duration(Duration(seconds: _liveMovingSeconds)),
+    ];
+    return parts.join(' · ');
   }
 
   /// Persists one changed field, **merged** against whatever the others
@@ -1709,7 +1814,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
               borderRadius: BorderRadius.circular(24),
               child: Container(
                 color: scheme.surfaceContainerLow,
-                child: RoutePainter(polyline: routePolyline, height: 200),
+                child: RoutePainter(
+                  polyline: routePolyline,
+                  height: 200,
+                  waypoints: _activityType == 'HIKING' ? _waypoints : const [],
+                ),
               ),
             ),
           ),
@@ -2267,6 +2376,32 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             : null,
         trailing: _trailingCircle(l10n),
       ));
+    }
+
+    // M41: the waypoint marker — HIKING only, directly above the thumb zone
+    // and the finish-gesture bar it must never overlap. A full-width hasáb
+    // rather than a fourth circle, so it can't be confused with the three
+    // circular controls above it, and stays reachable in gloves/boots.
+    if (_activityType == 'HIKING') {
+      children.add(const SizedBox(height: 14));
+      children.add(_WaypointMarkerButton(
+        onPressed: _busy ? null : _markWaypoint,
+        available: _gpsChipState != _GpsChipState.off,
+        onUnavailableTap: () => setState(() => _locationCardDismissed = false),
+        label: l10n.waypointMarkButtonLabel,
+        subtitleLabel: l10n.waypointMarkButtonSubtitle,
+        unavailableLabel: l10n.waypointMarkButtonUnavailable,
+      ));
+      final justMarked = _justMarkedWaypoint;
+      if (justMarked != null) {
+        children.add(const SizedBox(height: 10));
+        children.add(_WaypointMarkedBanner(
+          message: l10n.waypointMarkedFeedback(justMarked.waypointIndex + 1),
+          detail: _waypointFeedbackDetail(l10n, justMarked),
+          undoLabel: l10n.waypointMarkUndoLabel,
+          onUndo: _undoLastWaypoint,
+        ));
+      }
     }
 
     children.add(const SizedBox(height: 14));
@@ -3681,6 +3816,137 @@ class _ResumeButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// M41's "Útpont jelölése" bar — 88 px tall, full width, so it can't be
+/// mistaken for one of the three circular controls above it and stays
+/// reachable in gloves/boots. [available] false renders the "GPS nélkül"
+/// state (M25): the button never disappears, it just stops accepting the
+/// mark and opens the location explanation instead.
+class _WaypointMarkerButton extends StatelessWidget {
+  const _WaypointMarkerButton({
+    required this.onPressed,
+    required this.available,
+    required this.onUnavailableTap,
+    required this.label,
+    required this.subtitleLabel,
+    required this.unavailableLabel,
+  });
+
+  final VoidCallback? onPressed;
+  final bool available;
+  final VoidCallback onUnavailableTap;
+  final String label;
+  final String subtitleLabel;
+  final String unavailableLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: available ? scheme.tertiaryContainer : scheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        key: const Key('waypointMarkButton'),
+        onTap: available ? onPressed : onUnavailableTap,
+        borderRadius: BorderRadius.circular(24),
+        child: SizedBox(
+          height: 88,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                available ? Icons.add_location_alt : Icons.location_off,
+                size: 26,
+                color: available ? scheme.onTertiaryContainer : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 12),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                      color: available ? scheme.onTertiaryContainer : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    available ? subtitleLabel : unavailableLabel,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: (available ? scheme.onTertiaryContainer : scheme.onSurfaceVariant)
+                          .withValues(alpha: 0.72),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// M41's 4 s auto-dismissing "3. útpont megjelölve" confirmation, with the
+/// numbers the waypoint itself has nothing else to show yet, and "Vissza" to
+/// undo the mark it's reporting on.
+class _WaypointMarkedBanner extends StatelessWidget {
+  const _WaypointMarkedBanner({
+    required this.message,
+    required this.detail,
+    required this.undoLabel,
+    required this.onUndo,
+  });
+
+  final String message;
+  final String detail;
+  final String undoLabel;
+  final VoidCallback onUndo;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('waypointMarkedBanner'),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, size: 18, color: scheme.tertiary),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(message, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                if (detail.isNotEmpty)
+                  Text(
+                    detail,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          TextButton(onPressed: onUndo, child: Text(undoLabel)),
+        ],
       ),
     );
   }

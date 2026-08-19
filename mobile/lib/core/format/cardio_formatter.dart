@@ -16,6 +16,9 @@ abstract final class CardioFormatter {
   static const double _metersPerKm = 1000;
   static const double _metersPerMile = 1609.344;
   static const double _metersPerFoot = 0.3048;
+  static const double _kgPerLb = 0.45359237;
+  static const double _kphPerMph = 1.609344;
+  static const double _mmPerInch = 25.4;
 
   /// "5.23 km" or "3.25 mi".
   static String distance(double meters, UnitSystem unitSystem) {
@@ -32,6 +35,42 @@ abstract final class CardioFormatter {
       return '${(meters / _metersPerFoot).round()} ft';
     }
     return '${meters.round()} m';
+  }
+
+  /// "8.5 kg" or "18.7 lb" — a backpack's weight (docs/cardio/60 C8.5), one
+  /// decimal since a whole kg is coarse enough to matter for gear.
+  static String weight(double kg, UnitSystem unitSystem) {
+    if (unitSystem == UnitSystem.imperial) {
+      return '${(kg / _kgPerLb).toStringAsFixed(1)} lb';
+    }
+    return '${kg.toStringAsFixed(1)} kg';
+  }
+
+  /// "7 °C" or "45 °F" — a hike-start weather snapshot (docs/cardio/60 C8.6).
+  /// Whole degrees; signed (winter hikes go below zero).
+  static String temperature(double celsius, UnitSystem unitSystem) {
+    if (unitSystem == UnitSystem.imperial) {
+      return '${(celsius * 9 / 5 + 32).round()} °F';
+    }
+    return '${celsius.round()} °C';
+  }
+
+  /// "12 km/h" or "7 mph" — never negative (docs/cardio/60 C8.6).
+  static String windSpeed(double kph, UnitSystem unitSystem) {
+    if (unitSystem == UnitSystem.imperial) {
+      return '${(kph / _kphPerMph).round()} mph';
+    }
+    return '${kph.round()} km/h';
+  }
+
+  /// "0 mm" or "0.02 in" — never negative (docs/cardio/60 C8.6). Imperial
+  /// keeps two decimals since a whole inch would round away any real hike's
+  /// rainfall.
+  static String precipitation(double mm, UnitSystem unitSystem) {
+    if (unitSystem == UnitSystem.imperial) {
+      return '${(mm / _mmPerInch).toStringAsFixed(2)} in';
+    }
+    return '${mm.round()} mm';
   }
 
   /// "5:12 /km" or "8:22 /mi". Null when there's no distance to derive a

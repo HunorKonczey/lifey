@@ -14,6 +14,7 @@ CardioPrBaseline _baseline({
   int? best5kSeconds,
   int? best10kSeconds,
   int? maxTotalWorkKj,
+  double? maxAltitudeMeters,
 }) {
   final at = DateTime(2026, 1, 1);
   CardioPrBest? best(num? value) =>
@@ -26,6 +27,7 @@ CardioPrBaseline _baseline({
     fastest5k: best(best5kSeconds),
     fastest10k: best(best10kSeconds),
     greatestTotalWork: best(maxTotalWorkKj),
+    greatestMaxAltitude: best(maxAltitudeMeters),
   );
 }
 
@@ -44,6 +46,7 @@ void main() {
     int? best5kSeconds,
     int? best10kSeconds,
     double? avgWatts,
+    double? maxAltitudeMeters,
     bool finished = true,
   }) {
     return WorkoutSession(
@@ -60,7 +63,8 @@ void main() {
               best1kSeconds == null &&
               best5kSeconds == null &&
               best10kSeconds == null &&
-              avgWatts == null)
+              avgWatts == null &&
+              maxAltitudeMeters == null)
           ? null
           : CardioMetrics(
               distanceMeters: distanceMeters,
@@ -69,6 +73,7 @@ void main() {
               best5kSeconds: best5kSeconds,
               best10kSeconds: best10kSeconds,
               avgWatts: avgWatts,
+              maxAltitudeMeters: maxAltitudeMeters,
             ),
     );
   }
@@ -367,6 +372,52 @@ void main() {
         movingSeconds: 1800,
         avgWatts: 168,
       );
+      expect(detectCardioPrs(CardioPrBaseline.empty, session), isEmpty);
+    });
+  });
+
+  group('greatest max altitude (docs/cardio/60 C8.7)', () {
+    test('DISTANCE family only — an indoor bike with a value still sets nothing', () {
+      final session =
+          cardioSession(day1, activityType: 'INDOOR_BIKE', maxAltitudeMeters: 900);
+      final baseline = CardioPrBaseline.fromSessions([session]);
+      expect(baseline.maxAltitudeMeters, isNull);
+    });
+
+    test('a HIKING session sets the baseline', () {
+      final session = cardioSession(day1, activityType: 'HIKING', maxAltitudeMeters: 756);
+      final baseline = CardioPrBaseline.fromSessions([session]);
+      expect(baseline.maxAltitudeMeters, 756);
+    });
+
+    test('not hike-restricted — a RUNNING session sets it too, same as elevation gain', () {
+      final session = cardioSession(day1, activityType: 'RUNNING', maxAltitudeMeters: 340);
+      final baseline = CardioPrBaseline.fromSessions([session]);
+      expect(baseline.maxAltitudeMeters, 340);
+    });
+
+    test('a session with no altitude data sets no baseline at all', () {
+      final session = cardioSession(day1, activityType: 'HIKING', distanceMeters: 5000);
+      final baseline = CardioPrBaseline.fromSessions([session]);
+      expect(baseline.maxAltitudeMeters, isNull);
+    });
+
+    test('a strictly higher peak is a record; equal is not', () {
+      final baseline = _baseline(maxAltitudeMeters: 756);
+      final higher = cardioSession(day2, activityType: 'HIKING', maxAltitudeMeters: 812);
+      final same = cardioSession(day2, activityType: 'HIKING', maxAltitudeMeters: 756);
+      expect(detectCardioPrs(baseline, higher), [CardioPrType.greatestMaxAltitude]);
+      expect(detectCardioPrs(baseline, same), isEmpty);
+    });
+
+    test('an INDOOR_BIKE session never breaks this record — it is not a concept for it', () {
+      final baseline = _baseline(maxAltitudeMeters: 1);
+      final session = cardioSession(day2, activityType: 'INDOOR_BIKE', maxAltitudeMeters: 5000);
+      expect(detectCardioPrs(baseline, session), isEmpty);
+    });
+
+    test('the first altitude-bearing hike sets the bar rather than breaking one', () {
+      final session = cardioSession(day1, activityType: 'HIKING', maxAltitudeMeters: 756);
       expect(detectCardioPrs(CardioPrBaseline.empty, session), isEmpty);
     });
   });

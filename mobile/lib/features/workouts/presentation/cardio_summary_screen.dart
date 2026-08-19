@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/format/cardio_formatter.dart';
+import '../../../core/location/location_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/activity_chip.dart';
@@ -22,8 +24,14 @@ import '../domain/activity_type.dart';
 import '../domain/cardio_personal_record.dart';
 import '../domain/hr_zone_breakdown.dart';
 import '../domain/route_encoder.dart';
+import '../data/cardio_track_point_repository.dart';
 import '../domain/cardio_interval_plan.dart';
+import '../domain/elevation_profile.dart';
+import '../domain/track_filter.dart';
+import '../domain/waypoint_track_match.dart';
+import '../domain/weather_condition.dart';
 import '../domain/workout_session.dart';
+import 'widgets/elevation_profile_chart.dart';
 import 'widgets/game_setup_sheet.dart';
 import 'widgets/hr_zone_panel.dart';
 import 'widgets/prompt_number_dialog.dart';
@@ -109,6 +117,12 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   // (see the class doc), so they're never edited on this screen, just
   // preserved byte-for-byte across every write this screen makes.
   double? _elevationGainMeters;
+
+  /// The highest point of the local trail, computed once at
+  /// `CardioSessionScreenState._finish()` and read-only carry-over here
+  /// (docs/cardio/60 C8.5, Q-D6) — same "no edit path, must round-trip
+  /// through `_persistCardio` or it's erased" shape as [_elevationGainMeters].
+  double? _maxAltitudeMeters;
   double? _avgCadence;
   double? _avgWatts;
   int? _resistanceLevel;
@@ -127,6 +141,38 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   // the route the moment someone edits, say, the distance on this screen.
   String? _routePolyline;
   int? _routePointCount;
+
+  /// HIKING-only (docs/cardio/60 C8.5, M42) — the one cardio field that's
+  /// only ever hand-entered, so its "edited" badge reads "kézzel" (M42),
+  /// not "szerkesztve" the way [_distanceMeters]'s does: there's no measured
+  /// baseline it could be overriding.
+  double? _backpackWeightKg;
+
+  /// Hike-only weather snapshot (docs/cardio/60 C8.6) — same hand-entered,
+  /// no-`*Source`-tag shape as [_backpackWeightKg].
+  String? _weatherCondition;
+  double? _weatherTempC;
+  double? _weatherWindKph;
+  double? _weatherPrecipMm;
+
+  // C8.3 — the real, local-track-derived elevation profile. Null until
+  // `_loadElevationProfile` resolves, and possibly forever null after that
+  // (no local points left, or none ever existed): `_elevationProfileSimplified`
+  // is what tells the difference apart from "still loading".
+  ElevationProfile? _elevationProfile;
+  bool _elevationProfileSimplified = false;
+
+  /// Index into `_elevationProfile!.allPoints` — never persisted, a pure
+  // view state, same as `_selectedSplitIndex` right above it.
+  int? _selectedElevationPointIndex;
+
+  /// The same filtered local trail [_loadElevationProfile] builds
+  /// `_elevationProfile` from — kept around (C8.4) so the waypoint list can
+  /// match each `CardioWaypoint` against it (`matchWaypointsToTrail`) without
+  /// replaying the track points a second time. Empty, not null, once loading
+  /// has resolved with nothing to show (mirrors `_elevationProfileSimplified`'s
+  /// "loading vs. genuinely empty" distinction via that same flag).
+  List<TrackFilterTrailPoint> _localTrail = const [];
 
   /// Which split the reader has tapped, if any (C6.4, M33). Lives here rather
   /// than inside either widget because it drives *both* the list row and the
@@ -155,6 +201,12 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     _deviceCalories = cardio?.deviceCalories;
     _caloriesSource = cardio?.caloriesSource;
     _elevationGainMeters = cardio?.elevationGainMeters;
+    _maxAltitudeMeters = cardio?.maxAltitudeMeters;
+    _backpackWeightKg = cardio?.backpackWeightKg;
+    _weatherCondition = cardio?.weatherCondition;
+    _weatherTempC = cardio?.weatherTempC;
+    _weatherWindKph = cardio?.weatherWindKph;
+    _weatherPrecipMm = cardio?.weatherPrecipMm;
     _avgCadence = cardio?.avgCadence;
     _avgWatts = cardio?.avgWatts;
     _resistanceLevel = cardio?.resistanceLevel;
@@ -177,6 +229,48 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     if (widget.newRecords.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _celebrateRecords());
     }
+
+    // C8.3: only DISTANCE ever has a route/elevation profile at all
+    // (MACHINE/GAME never track location) — same gate `_routeSections` uses.
+    if (_family == ActivityFamily.distance) {
+      unawaited(_loadElevationProfile());
+    }
+  }
+
+  /// Replays this session's local raw track points (docs/cardio/54 §4.1)
+  // through the same filter gates the live screen applies
+  // (`CardioSessionScreenState._seedTrackPointSeqAndSync`'s identical
+  // pattern) and builds the real profile from the result. Falls back to
+  // nothing — the caller keeps rendering the old polyline-based
+  // approximation and marks it "EGYSZERŰSÍTETT" — whenever there are no
+  // local points left to replay (pruned after 90 days, or this session was
+  // never recorded on this device) or the trail carries no altitude at all.
+  Future<void> _loadElevationProfile() async {
+    final points = await ref.read(cardioTrackPointRepositoryProvider).pointsForSession(_clientId);
+    if (!mounted) return;
+    if (points.isEmpty) {
+      setState(() => _elevationProfileSimplified = true);
+      return;
+    }
+
+    final filter = TrackFilterAccumulator(trackFilterProfileFor(_activityType));
+    for (final p in points) {
+      filter.addFix(LocationFix(
+        latitude: p.latitude,
+        longitude: p.longitude,
+        recordedAt: p.recordedAt,
+        altitude: p.altitude,
+        accuracy: p.accuracy,
+        speed: p.speed,
+      ));
+    }
+    final profile = buildElevationProfile(filter.trail);
+    if (!mounted) return;
+    setState(() {
+      _elevationProfile = profile;
+      _elevationProfileSimplified = profile == null;
+      _localTrail = filter.trail;
+    });
   }
 
   /// M36: **one** dialog, **one** haptic, **one** list — never one
@@ -259,6 +353,11 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     int? scoreRebounds,
     String? venue,
     String? gameFormat,
+    Value<double?> backpackWeightKg = const Value.absent(),
+    Value<String?> weatherCondition = const Value.absent(),
+    Value<double?> weatherTempC = const Value.absent(),
+    Value<double?> weatherWindKph = const Value.absent(),
+    Value<double?> weatherPrecipMm = const Value.absent(),
   }) async {
     final l10n = AppLocalizations.of(context)!;
     final newDistance = distanceMeters ?? _distanceMeters;
@@ -270,6 +369,19 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     final newRebounds = scoreRebounds ?? _scoreRebounds;
     final newVenue = venue ?? _venue;
     final newFormat = gameFormat ?? _gameFormat;
+    // A plain optional param can't tell "unchanged" apart from "clear it" —
+    // every other field here happens to never need that distinction, but a
+    // backpack weight genuinely can be removed after being set.
+    final newBackpackWeightKg =
+        backpackWeightKg.present ? backpackWeightKg.value : _backpackWeightKg;
+    // The weather sheet always submits all four together (one snapshot, one
+    // edit) — same absent-preserving `Value` shape, so a distance/calorie
+    // edit elsewhere on this screen can't accidentally wipe it.
+    final newWeatherCondition =
+        weatherCondition.present ? weatherCondition.value : _weatherCondition;
+    final newWeatherTempC = weatherTempC.present ? weatherTempC.value : _weatherTempC;
+    final newWeatherWindKph = weatherWindKph.present ? weatherWindKph.value : _weatherWindKph;
+    final newWeatherPrecipMm = weatherPrecipMm.present ? weatherPrecipMm.value : _weatherPrecipMm;
     setState(() => _busy = true);
     try {
       await ref.read(workoutSessionControllerProvider.notifier).updateLiveCardioMetrics(
@@ -278,6 +390,12 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             cardio: CardioMetrics(
               distanceMeters: newDistance,
               elevationGainMeters: _elevationGainMeters,
+              maxAltitudeMeters: _maxAltitudeMeters,
+              backpackWeightKg: newBackpackWeightKg,
+              weatherCondition: newWeatherCondition,
+              weatherTempC: newWeatherTempC,
+              weatherWindKph: newWeatherWindKph,
+              weatherPrecipMm: newWeatherPrecipMm,
               avgCadence: _avgCadence,
               avgWatts: _avgWatts,
               resistanceLevel: _resistanceLevel,
@@ -314,6 +432,11 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
         _scoreRebounds = newRebounds;
         _venue = newVenue;
         _gameFormat = newFormat;
+        _backpackWeightKg = newBackpackWeightKg;
+        _weatherCondition = newWeatherCondition;
+        _weatherTempC = newWeatherTempC;
+        _weatherWindKph = newWeatherWindKph;
+        _weatherPrecipMm = newWeatherPrecipMm;
         _busy = false;
       });
     } catch (_) {
@@ -425,6 +548,160 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     if (changed == true && mounted) setState(() {});
   }
 
+  /// HIKING-only (docs/cardio/60 C8.5, M42) — the only cardio field where the
+  /// user *is* the source; there's no "MEASURED" state to compare against, so
+  /// unlike [_editDistance] this has no `*Source` tag to set.
+  Future<void> _editBackpackWeightKg() async {
+    if (_busy) return;
+    final l10n = AppLocalizations.of(context)!;
+    final unitSystem =
+        (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults()).unitSystem;
+    final imperial = unitSystem == UnitSystem.imperial;
+    const kgPerLb = 0.45359237;
+    final current = _backpackWeightKg;
+    final result = await promptNumber(
+      context,
+      l10n,
+      title: l10n.editBackpackWeightDialogTitle,
+      suffix: imperial ? 'lb' : 'kg',
+      initialText: current == null
+          ? ''
+          : (imperial ? current / kgPerLb : current).toStringAsFixed(1),
+    );
+    if (result == null || result < 0 || !mounted) return;
+    await _persistCardio(backpackWeightKg: Value(imperial ? result * kgPerLb : result));
+  }
+
+  /// HIKING-only (docs/cardio/60 C8.6, Q-C8.1: manual entry, no external
+  /// API) — the four fields are one snapshot, so they're edited and
+  /// persisted together in a single sheet + [_persistCardio] call, unlike
+  /// [_editBackpackWeightKg]'s single-field [promptNumber] dialog.
+  /// `TextFormField`s with plain local variables, not owned controllers —
+  /// same reasoning as [promptNumber]'s own doc comment.
+  Future<void> _editWeather() async {
+    if (_busy) return;
+    final l10n = AppLocalizations.of(context)!;
+    final unitSystem =
+        (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults()).unitSystem;
+    final imperial = unitSystem == UnitSystem.imperial;
+    const kphPerMph = 1.609344;
+    const mmPerInch = 25.4;
+
+    String? condition = _weatherCondition;
+    var tempText = _weatherTempC == null
+        ? ''
+        : (imperial ? (_weatherTempC! * 9 / 5 + 32) : _weatherTempC!).round().toString();
+    var windText = _weatherWindKph == null
+        ? ''
+        : (imperial ? _weatherWindKph! / kphPerMph : _weatherWindKph!).round().toString();
+    var precipText = _weatherPrecipMm == null
+        ? ''
+        : (imperial ? _weatherPrecipMm! / mmPerInch : _weatherPrecipMm!)
+            .toStringAsFixed(imperial ? 2 : 0);
+
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      useRootNavigator: true,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 4, 20, 28 + MediaQuery.of(sheetContext).viewInsets.bottom),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.editWeatherDialogTitle,
+                    style: Theme.of(sheetContext).textTheme.titleLarge),
+                const SizedBox(height: 16),
+                Text(l10n.weatherConditionSectionLabel,
+                    style: Theme.of(sheetContext).textTheme.labelLarge),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final code in kWeatherConditions)
+                      ChoiceChip(
+                        label: Text(weatherConditionLabel(l10n, code)),
+                        avatar: Icon(weatherConditionIcon(code), size: 18),
+                        selected: condition == code,
+                        onSelected: (_) =>
+                            setSheetState(() => condition = condition == code ? null : code),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  initialValue: tempText,
+                  keyboardType: const TextInputType.numberWithOptions(signed: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[-\d.,]'))],
+                  onChanged: (v) => tempText = v,
+                  decoration: InputDecoration(
+                    labelText: l10n.weatherTemperatureFieldLabel,
+                    suffixText: imperial ? '°F' : '°C',
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  initialValue: windText,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (v) => windText = v,
+                  decoration: InputDecoration(
+                    labelText: l10n.weatherWindFieldLabel,
+                    suffixText: imperial ? 'mph' : 'km/h',
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  initialValue: precipText,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
+                  onChanged: (v) => precipText = v,
+                  decoration: InputDecoration(
+                    labelText: l10n.weatherPrecipFieldLabel,
+                    suffixText: imperial ? 'in' : 'mm',
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(true),
+                  child: Text(l10n.saveButton),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (saved != true || !mounted) return;
+
+    double? parse(String text) => double.tryParse(text.replaceAll(',', '.').trim());
+    final tempInput = parse(tempText);
+    final weatherTempC = tempInput == null ? null : (imperial ? (tempInput - 32) * 5 / 9 : tempInput);
+    final windInput = parse(windText);
+    final weatherWindKph = windInput == null ? null : (imperial ? windInput * kphPerMph : windInput);
+    final precipInput = parse(precipText);
+    final weatherPrecipMm =
+        precipInput == null ? null : (imperial ? precipInput * mmPerInch : precipInput);
+
+    await _persistCardio(
+      weatherCondition: Value(condition),
+      weatherTempC: Value(weatherTempC),
+      weatherWindKph: Value(weatherWindKph),
+      weatherPrecipMm: Value(weatherPrecipMm),
+    );
+  }
+
   Future<void> _editDeviceCalories() async {
     if (_busy) return;
     final l10n = AppLocalizations.of(context)!;
@@ -504,7 +781,11 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                       borderRadius: BorderRadius.circular(26),
                       child: Container(
                         color: scheme.surfaceContainerLow,
-                        child: RoutePainter(polyline: polyline, height: 262),
+                        child: RoutePainter(
+                          polyline: polyline,
+                          height: 262,
+                          waypoints: _activityType == 'HIKING' ? widget.session.waypoints : const [],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -626,6 +907,34 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                   label: l10n.elevationGainFieldLabel,
                   value: CardioFormatter.elevation(_elevationGainMeters!, unitSystem),
                 ),
+              // Q-D6: the peak marker+caption already lives inside the
+              // elevation profile chart (C8.3) — this is the number's *other*
+              // home, the one that survives the degraded (no local track)
+              // view where the chart itself falls back to the old
+              // approximation and has no peak to mark.
+              if (_maxAltitudeMeters != null)
+                _MetricTile(
+                  icon: Icons.landscape,
+                  iconColor: metrics?.weight,
+                  label: l10n.maxAltitudeFieldLabel,
+                  value: CardioFormatter.elevation(_maxAltitudeMeters!, unitSystem),
+                ),
+              // M42: backpack weight is hike-only, and the only field the
+              // user is the sole source for — always tappable, even before
+              // anything's been entered (M11's "koppints" affordance, same
+              // shape as the distance tile above it).
+              if (_activityType == 'HIKING')
+                _MetricTile(
+                  icon: Icons.backpack,
+                  iconColor: accent,
+                  label: l10n.backpackWeightFieldLabel,
+                  value: _backpackWeightKg == null
+                      ? '—'
+                      : CardioFormatter.weight(_backpackWeightKg!, unitSystem),
+                  edited: _backpackWeightKg != null,
+                  editedLabel: l10n.handEnteredBadgeLabel,
+                  onTap: _busy ? null : _editBackpackWeightKg,
+                ),
               // Cadence is running's metric only (C6.5): a walk or a hike
               // never shows it, even when a watch happened to measure steps —
               // the tile appears solely when a sensor genuinely reported it
@@ -655,6 +964,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             ],
           ),
           ..._bestEffortSection(l10n, theme, unitSystem),
+          ..._weatherSection(l10n, unitSystem),
           ..._routeSections(l10n, theme, scheme, unitSystem),
           // Q-D7: one component for every cardio type, placed per family —
           // after the splits for DISTANCE, so the pace story finishes before
@@ -1008,7 +1318,39 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
         CardioPrType.fastest5k => l10n.cardioRecordFastest5k,
         CardioPrType.fastest10k => l10n.cardioRecordFastest10k,
         CardioPrType.greatestTotalWork => l10n.cardioRecordGreatestTotalWork,
+        CardioPrType.greatestMaxAltitude => l10n.cardioRecordGreatestMaxAltitude,
       };
+
+  /// M42's "IDŐJÁRÁS INDULÁSKOR" card (docs/cardio/60 C8.6) — HIKING only.
+  /// Shown whenever any of the four fields is set (a partial snapshot is
+  /// still a snapshot, missing sub-values read "—"); otherwise a compact,
+  /// still-tappable "no weather data" row takes its place — unlike the M42
+  /// mockup's static version, tappable here so a session missing weather can
+  /// still get it added afterward, the same "add it later" affordance every
+  /// other hand-entered field on this screen already has.
+  List<Widget> _weatherSection(AppLocalizations l10n, UnitSystem unitSystem) {
+    if (_activityType != 'HIKING') return const [];
+    final hasData = _weatherCondition != null ||
+        _weatherTempC != null ||
+        _weatherWindKph != null ||
+        _weatherPrecipMm != null;
+    return [
+      const SizedBox(height: 12),
+      if (hasData)
+        _WeatherCard(
+          condition: _weatherCondition,
+          tempC: _weatherTempC,
+          windKph: _weatherWindKph,
+          precipMm: _weatherPrecipMm,
+          unitSystem: unitSystem,
+          snapshotTime: _startedAt,
+          l10n: l10n,
+          onTap: _busy ? null : _editWeather,
+        )
+      else
+        _WeatherEmptyRow(message: l10n.weatherNoDataMessage, onTap: _busy ? null : _editWeather),
+    ];
+  }
 
   /// The route/elevation-profile/splits block (C4a.6) — DISTANCE only, and
   /// only once a session actually finished with a GPS trail
@@ -1038,30 +1380,98 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     // descends), not a real time axis — splits and moving time already cover
     // precise timing elsewhere on this screen.
     if (_elevationGainMeters != null) {
-      final segments = decodeRouteSegments(polyline);
-      var index = 0;
-      final elevationPoints = <TimeSeriesPoint>[
-        for (final segment in segments)
-          for (final (_, _, alt) in segment)
-            TimeSeriesPoint(date: _startedAt.add(Duration(seconds: index++)), value: alt),
-      ];
-      if (elevationPoints.length >= 2) {
+      final profile = _elevationProfile;
+      if (profile != null) {
+        // C8.3: the real profile, built from this device's local track —
+        // cumulative distance on the X axis, actual signal gaps as shaded
+        // bands, a peak marker, and a tap-to-select point (M40).
         sections.addAll([
           const SizedBox(height: 12),
-          // M16 — the profile lives in its own card with the gain/loss
-          // summary on the same line as the section label.
-          _SectionCard(
-            label: l10n.elevationProfileSectionLabel,
-            trailing: '+${CardioFormatter.elevation(_elevationGainMeters!, unitSystem)}',
-            child: TimeSeriesChart(
-              points: elevationPoints,
-              dateLabelBuilder: (_) => '',
-              valueLabelBuilder: (v) => CardioFormatter.elevation(v, unitSystem),
-              height: 120,
+          _ElevationProfileCard(
+            profile: profile,
+            selectedIndex: _selectedElevationPointIndex,
+            elevationGainMeters: _elevationGainMeters!,
+            unitSystem: unitSystem,
+            l10n: l10n,
+            onPointTap: (i) => setState(
+              () => _selectedElevationPointIndex =
+                  _selectedElevationPointIndex == i ? null : i,
             ),
           ),
         ]);
+      } else {
+        // The C4a.6-era approximation: the stored (simplified, lossy)
+        // polyline's own altitude channel, plotted against a synthetic
+        // per-second index rather than real distance — kept only as the
+        // fallback for a session whose local track points are gone
+        // (docs/cardio/60 C8.3's own "törölt pontok" case), flagged as such
+        // once `_loadElevationProfile` has actually confirmed there's
+        // nothing better to show.
+        final segments = decodeRouteSegments(polyline);
+        var index = 0;
+        final elevationPoints = <TimeSeriesPoint>[
+          for (final segment in segments)
+            for (final (_, _, alt) in segment)
+              TimeSeriesPoint(date: _startedAt.add(Duration(seconds: index++)), value: alt),
+        ];
+        if (elevationPoints.length >= 2) {
+          sections.addAll([
+            const SizedBox(height: 12),
+            _SectionCard(
+              label: l10n.elevationProfileSectionLabel,
+              trailingWidget: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_elevationProfileSimplified) ...[
+                    _SimplifiedBadge(label: l10n.elevationProfileSimplifiedBadge),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
+                    '+${CardioFormatter.elevation(_elevationGainMeters!, unitSystem)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+              child: TimeSeriesChart(
+                points: elevationPoints,
+                dateLabelBuilder: (_) => '',
+                valueLabelBuilder: (v) => CardioFormatter.elevation(v, unitSystem),
+                height: 120,
+              ),
+            ),
+          ]);
+        }
       }
+    }
+
+    // M42's ÚTPONTOK list — HIKING only. Each row's distance/altitude/elapsed
+    // is derived by matching the waypoint against the same local track the
+    // elevation profile reads from (docs/cardio/60 C8.4) — a waypoint stores
+    // only where it was marked, never those three numbers.
+    final waypoints = widget.session.waypoints;
+    if (_activityType == 'HIKING' && waypoints.isNotEmpty) {
+      final matched = matchWaypointsToTrail(waypoints, _localTrail);
+      final accent = activityTypeColor(_activityType, context);
+      sections.addAll([
+        const SizedBox(height: 12),
+        _SectionCard(
+          label: l10n.waypointsSectionLabel,
+          trailingWidget: _IntervalCountChip(
+            label: l10n.waypointsCountChip(matched.length),
+            accent: accent,
+          ),
+          child: Column(
+            children: [
+              for (final m in matched) _WaypointRow(matched: m, unitSystem: unitSystem),
+            ],
+          ),
+        ),
+      ]);
     }
 
     // Per-km splits only: an executed interval section is stored in the same
@@ -1636,7 +2046,9 @@ class _CardioRecordCelebrationDialog extends StatelessWidget {
   /// minutes, an elevation record in metres.
   String _format(CardioPrType type, double value) => switch (type) {
         CardioPrType.longestDistance => CardioFormatter.distance(value, unitSystem),
-        CardioPrType.greatestElevationGain => CardioFormatter.elevation(value, unitSystem),
+        CardioPrType.greatestElevationGain ||
+        CardioPrType.greatestMaxAltitude =>
+          CardioFormatter.elevation(value, unitSystem),
         CardioPrType.longestMovingTime ||
         CardioPrType.fastest1k ||
         CardioPrType.fastest5k ||
@@ -1897,6 +2309,7 @@ class _NewRecordBanner extends StatelessWidget {
         CardioPrType.fastest5k => l10n.cardioRecordFastest5k,
         CardioPrType.fastest10k => l10n.cardioRecordFastest10k,
         CardioPrType.greatestTotalWork => l10n.cardioRecordGreatestTotalWork,
+        CardioPrType.greatestMaxAltitude => l10n.cardioRecordGreatestMaxAltitude,
       };
 
   @override
@@ -2630,6 +3043,239 @@ class _CalorieSide extends StatelessWidget {
 /// split, with two differences — the section's own intensity stands where the
 /// kilometre would, and the bar's length shows that intensity rather than a
 /// pace.
+/// One row of the ÚTPONTOK list (docs/cardio/60 C8.4, M42): sorszám · táv ·
+/// magasság · idő. The last three read "—" whenever [MatchedWaypoint]
+/// couldn't derive them (no local track left to match against) — the
+/// waypoint's own stored altitude is used when it's the only altitude
+/// available (see `matchWaypointsToTrail`'s fallback).
+/// M42's "IDŐJÁRÁS INDULÁSKOR" card — a condition icon plus three inline
+/// readouts (docs/cardio/60 C8.6). Whichever of the four fields is missing
+/// reads "—" rather than being omitted, so a partial snapshot (e.g.
+/// temperature entered, precipitation skipped) doesn't silently reflow the
+/// other two.
+class _WeatherCard extends StatelessWidget {
+  const _WeatherCard({
+    required this.condition,
+    required this.tempC,
+    required this.windKph,
+    required this.precipMm,
+    required this.unitSystem,
+    required this.snapshotTime,
+    required this.l10n,
+    required this.onTap,
+  });
+
+  static final _timeLabel = DateFormat('HH:mm');
+
+  final String? condition;
+  final double? tempC;
+  final double? windKph;
+  final double? precipMm;
+  final UnitSystem unitSystem;
+  final DateTime snapshotTime;
+  final AppLocalizations l10n;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.weatherSectionLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    l10n.weatherSnapshotCaption(_timeLabel.format(snapshotTime.toLocal())),
+                    style: TextStyle(
+                        fontSize: 10.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 13),
+              Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: scheme.secondary.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Icon(weatherConditionIcon(condition), color: scheme.secondary, size: 28),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _WeatherReadout(
+                            value: tempC == null ? '—' : CardioFormatter.temperature(tempC!, unitSystem),
+                            label: l10n.weatherTemperatureReadoutLabel,
+                          ),
+                        ),
+                        Expanded(
+                          child: _WeatherReadout(
+                            value:
+                                windKph == null ? '—' : CardioFormatter.windSpeed(windKph!, unitSystem),
+                            label: l10n.weatherWindReadoutLabel,
+                          ),
+                        ),
+                        Expanded(
+                          child: _WeatherReadout(
+                            value: precipMm == null
+                                ? '—'
+                                : CardioFormatter.precipitation(precipMm!, unitSystem),
+                            label: l10n.weatherPrecipReadoutLabel,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WeatherReadout extends StatelessWidget {
+  const _WeatherReadout({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+/// The empty-state row (M42: "Nincs időjárás-adat") — tappable, so it also
+/// serves as the add-weather entry point (see [_weatherSection]'s doc).
+class _WeatherEmptyRow extends StatelessWidget {
+  const _WeatherEmptyRow({required this.message, required this.onTap});
+
+  final String message;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.cloud_off, size: 19, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WaypointRow extends StatelessWidget {
+  const _WaypointRow({required this.matched, required this.unitSystem});
+
+  final MatchedWaypoint matched;
+  final UnitSystem unitSystem;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final distance = matched.distanceMeters == null
+        ? '—'
+        : CardioFormatter.distance(matched.distanceMeters!, unitSystem);
+    final altitude = matched.altitudeMeters == null
+        ? '—'
+        : CardioFormatter.elevation(matched.altitudeMeters!, unitSystem);
+    final elapsed = matched.elapsedSeconds == null
+        ? '—'
+        : CardioFormatter.duration(Duration(seconds: matched.elapsedSeconds!));
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 22,
+            child: Text(
+              '${matched.waypoint.waypointIndex + 1}',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurfaceVariant,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '$distance · $altitude · $elapsed',
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _IntervalSectionRow extends StatelessWidget {
   const _IntervalSectionRow({
     required this.number,
@@ -2759,6 +3405,210 @@ class _IntervalCountChip extends StatelessWidget {
             style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: accent),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// M40's real elevation-profile card: the chart, a fixed "csúcs" caption
+/// under the axis, and — only once a point has been tapped — a three-number
+/// readout row at the bottom of the card. No floating tooltip, per M40's own
+/// explicit call: on a 390 px screen it would either overflow or cover the
+/// curve.
+class _ElevationProfileCard extends StatelessWidget {
+  const _ElevationProfileCard({
+    required this.profile,
+    required this.selectedIndex,
+    required this.elevationGainMeters,
+    required this.unitSystem,
+    required this.l10n,
+    required this.onPointTap,
+  });
+
+  final ElevationProfile profile;
+  final int? selectedIndex;
+  final double elevationGainMeters;
+  final UnitSystem unitSystem;
+  final AppLocalizations l10n;
+  final ValueChanged<int> onPointTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final peak = profile.peak!;
+    final index = selectedIndex;
+    final selected = index != null && index < profile.allPoints.length
+        ? profile.allPoints[index]
+        : null;
+
+    return _SectionCard(
+      label: l10n.elevationProfileSectionLabel,
+      trailingWidget: selected != null
+          ? _SelectedPointChip(
+              label: l10n.elevationProfileSelectedPointChip(
+                CardioFormatter.distance(selected.cumulativeDistanceMeters, unitSystem),
+              ),
+              accent: scheme.primary,
+            )
+          : Text(
+              '+${CardioFormatter.elevation(elevationGainMeters, unitSystem)}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurfaceVariant,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ElevationProfileChart(
+            profile: profile,
+            selectedIndex: selectedIndex,
+            onPointTap: onPointTap,
+            gapLabel: l10n.elevationProfileGapLabel,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l10n.elevationProfilePeakCaption(
+              CardioFormatter.elevation(peak.altitudeMeters, unitSystem),
+              CardioFormatter.distance(peak.cumulativeDistanceMeters, unitSystem),
+            ),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          if (selected != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _ElevationReadout(
+                    icon: Icons.my_location,
+                    value: CardioFormatter.elevation(selected.altitudeMeters, unitSystem),
+                    label: l10n.elevationProfileAltitudeReadoutLabel,
+                  ),
+                ),
+                Expanded(
+                  child: _ElevationReadout(
+                    value: CardioFormatter.distance(selected.cumulativeDistanceMeters, unitSystem),
+                    label: l10n.elevationProfileDistanceReadoutLabel,
+                  ),
+                ),
+                Expanded(
+                  child: _ElevationReadout(
+                    value: CardioFormatter.duration(Duration(seconds: selected.elapsedSeconds)),
+                    label: l10n.elevationProfileElapsedReadoutLabel,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One number of the selected-point readout row (M40: "my_location 612 m
+/// magasság · 8,4 km idáig · 2:38 eltelt").
+class _ElevationReadout extends StatelessWidget {
+  const _ElevationReadout({required this.value, required this.label, this.icon});
+
+  final IconData? icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 13, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+/// The "kiválasztott pont · 6,4 km" header chip — same shape as
+/// [_IntervalCountChip], different icon.
+class _SelectedPointChip extends StatelessWidget {
+  const _SelectedPointChip({required this.label, required this.accent});
+
+  final String label;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.location_on, size: 12, color: accent),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: accent),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Marks a fallen-back-to-the-old-approximation elevation profile
+/// (docs/cardio/60 C8.3's kész-ha: "a nyers pontok törlése után
+/// 'EGYSZERŰSÍTETT' profil marad, nem üres hely") — a small, muted badge
+/// rather than an error state, since nothing actually went wrong.
+class _SimplifiedBadge extends StatelessWidget {
+  const _SimplifiedBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
+          color: scheme.onSurfaceVariant,
+        ),
       ),
     );
   }

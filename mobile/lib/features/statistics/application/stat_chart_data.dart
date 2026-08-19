@@ -60,6 +60,9 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
     case StatMetric.maxHeartRate:
       return ref.watch(workoutSessionControllerProvider).whenData((all) =>
           kindFilter == StatKindFilter.strength ? const [] : _maxHeartRatePoints(all, range));
+    case StatMetric.cardioMaxAltitude:
+      return ref.watch(workoutSessionControllerProvider).whenData((all) =>
+          kindFilter == StatKindFilter.strength ? const [] : _maxAltitudePoints(all, range));
     case StatMetric.water:
       return ref.watch(allWaterEntriesProvider).whenData((all) => _waterPoints(all, range));
     case StatMetric.weight:
@@ -126,6 +129,9 @@ final availableStatMetricsProvider = Provider<Set<StatMetric>>((ref) {
       StatMetric.cardioAvgPace,
     if (sessions.any((s) => s.isCardio && s.cardio?.maxHeartRate != null))
       StatMetric.maxHeartRate,
+    if (sessions.any((s) =>
+        s.isCardio && s.family == ActivityFamily.distance && s.cardio?.maxAltitudeMeters != null))
+      StatMetric.cardioMaxAltitude,
     // Offered only once some session actually carries zone data — which today
     // means a watch was involved. Without this gate the picker would list a
     // metric that charts a flat nothing for most users.
@@ -292,6 +298,27 @@ List<TimeSeriesPoint> _maxHeartRatePoints(List<WorkoutSession> sessions, StatsRa
     if (cutoff != null && day.isBefore(cutoff)) continue;
     final current = maxByDay[day];
     if (current == null || heartRate > current) maxByDay[day] = heartRate;
+  }
+  return _pointsFromSums(maxByDay);
+}
+
+/// [_maxHeartRatePoints]'s exact shape (docs/cardio/60 C8.7) — each day's
+/// point is that day's highest [CardioMetrics.maxAltitudeMeters] across its
+/// DISTANCE-family sessions (matching `cardio_personal_record.dart`'s own
+/// `greatestMaxAltitude` gating, and `stat_metric.dart`'s `cardioMaxAltitude`
+/// doc for why this is a max, not a sum).
+List<TimeSeriesPoint> _maxAltitudePoints(List<WorkoutSession> sessions, StatsRange range) {
+  final cutoff = range.cutoff();
+  final maxByDay = <DateTime, double>{};
+  for (final session in sessions) {
+    if (session.isUpcoming || !session.isCardio) continue;
+    if (session.family != ActivityFamily.distance) continue;
+    final altitude = session.cardio?.maxAltitudeMeters;
+    if (altitude == null) continue;
+    final day = _localDay(session.startedAt!);
+    if (cutoff != null && day.isBefore(cutoff)) continue;
+    final current = maxByDay[day];
+    if (current == null || altitude > current) maxByDay[day] = altitude;
   }
   return _pointsFromSums(maxByDay);
 }

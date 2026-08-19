@@ -860,6 +860,8 @@ class PullEngine {
             .go();
         await (_db.delete(_db.cardioSplits)..where((t) => t.sessionClientId.equals(clientId)))
             .go();
+        await (_db.delete(_db.cardioWaypoints)..where((t) => t.sessionClientId.equals(clientId)))
+            .go();
       },
     );
     if (maxUpdatedAt != null) {
@@ -1037,6 +1039,14 @@ class PullEngine {
       for (final splitJson in splitsJson) {
         await _db.into(_db.cardioSplits).insert(_cardioSplitCompanion(clientId, splitJson));
       }
+
+      await (_db.delete(_db.cardioWaypoints)..where((t) => t.sessionClientId.equals(clientId)))
+          .go();
+      final waypointsJson =
+          (json['waypoints'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+      for (final waypointJson in waypointsJson) {
+        await _db.into(_db.cardioWaypoints).insert(_cardioWaypointCompanion(clientId, waypointJson));
+      }
     });
   }
 
@@ -1076,6 +1086,11 @@ class PullEngine {
       caloriesSource: Value(json['caloriesSource'] as String?),
       routePolyline: Value(json['routePolyline'] as String?),
       routePointCount: Value((json['routePointCount'] as num?)?.toInt()),
+      backpackWeightKg: Value((json['backpackWeightKg'] as num?)?.toDouble()),
+      weatherCondition: Value(json['weatherCondition'] as String?),
+      weatherTempC: Value((json['weatherTempC'] as num?)?.toDouble()),
+      weatherWindKph: Value((json['weatherWindKph'] as num?)?.toDouble()),
+      weatherPrecipMm: Value((json['weatherPrecipMm'] as num?)?.toDouble()),
     );
   }
 
@@ -1096,6 +1111,21 @@ class PullEngine {
     );
   }
 
+  /// Field order mirrors the backend's `CardioWaypointResponse`
+  /// (docs/cardio/60 C8.1/C8.4).
+  CardioWaypointsCompanion _cardioWaypointCompanion(
+      String sessionClientId, Map<String, dynamic> json) {
+    return CardioWaypointsCompanion.insert(
+      clientId: newClientId(),
+      sessionClientId: sessionClientId,
+      waypointIndex: (json['waypointIndex'] as num).toInt(),
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+      altitudeMeters: Value((json['altitudeMeters'] as num?)?.toDouble()),
+      label: Value(json['label'] as String?),
+    );
+  }
+
   Future<void> _deleteWorkoutSessionTombstone(int serverId) async {
     final clientId = await _localClientId('workout_sessions', serverId);
     if (clientId == null) return;
@@ -1107,6 +1137,8 @@ class PullEngine {
       await (_db.delete(_db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId))).go();
       await (_db.delete(_db.cardioDetails)..where((t) => t.sessionClientId.equals(clientId))).go();
       await (_db.delete(_db.cardioSplits)..where((t) => t.sessionClientId.equals(clientId))).go();
+      await (_db.delete(_db.cardioWaypoints)..where((t) => t.sessionClientId.equals(clientId)))
+          .go();
       await (_db.delete(_db.workoutSessions)..where((t) => t.clientId.equals(clientId))).go();
     });
   }

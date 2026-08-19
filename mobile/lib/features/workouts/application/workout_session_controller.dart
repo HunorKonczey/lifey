@@ -178,6 +178,27 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
     );
   }
 
+  /// Persists a mid-session waypoint mark/undo on a **live** cardio session
+  /// (docs/cardio/60 C8.4, M41) — the caller (`CardioSessionScreenState`)
+  /// owns the append/remove-last logic and always passes its full, current
+  /// waypoint list, same full-replace convention as [updateLiveCardioMetrics].
+  /// Never touches `cardio`/`movingSeconds` — left absent, so marking a
+  /// waypoint can't clobber whichever of those an unrelated edit is mid-flight
+  /// on.
+  Future<void> updateLiveWaypoints(
+    String clientId, {
+    required DateTime startedAt,
+    required List<CardioWaypoint> waypoints,
+  }) {
+    return _repo.update(
+      clientId,
+      startedAt: startedAt,
+      exercises: const [],
+      sets: const [],
+      waypoints: Value(waypoints),
+    );
+  }
+
   Future<void> updateSession(
     String clientId, {
     required DateTime startedAt,

@@ -1,8 +1,11 @@
 import 'dart:async';
 
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/local_db/app_database.dart';
+import 'package:lifey/core/local_db/database_provider.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
@@ -69,6 +72,13 @@ Future<_RecordingSessionController> _pump(
       overrides: [
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         workoutSessionControllerProvider.overrideWith(() => controller),
+        // C8.3: an in-memory database, or every DISTANCE-family pump here
+        // would fall through to the real, path_provider-backed default —
+        // exactly the "created AppDatabase multiple times" drift warning
+        // this avoids. None of this file's tests care about local track
+        // points, so an empty in-memory db is enough to make
+        // `_loadElevationProfile` resolve to "no points" and move on.
+        appDatabaseProvider.overrideWithValue(_testDatabase()),
       ],
       child: MaterialApp(
         locale: const Locale('en'),
@@ -84,6 +94,15 @@ Future<_RecordingSessionController> _pump(
   );
   await tester.pumpAndSettle();
   return controller;
+}
+
+/// A fresh in-memory database per pump — closed automatically at the end
+/// of the test, same convention `cardio_session_screen_interval_test.dart`
+/// already uses for the same reason.
+AppDatabase _testDatabase() {
+  final db = AppDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
+  return db;
 }
 
 WorkoutSession _session({
@@ -740,12 +759,211 @@ void main() {
     });
   });
 
+  group('hike-specific fields (docs/cardio/60 C8.5)', () {
+    testWidgets('the peak-altitude tile shows whenever maxAltitudeMeters is set, any activity',
+        (tester) async {
+      await _pump(
+        tester,
+        _session(
+          activityType: 'RUNNING',
+          cardio: const CardioMetrics(distanceMeters: 5000, maxAltitudeMeters: 611.6),
+        ),
+      );
+
+      expect(find.text('PEAK ALTITUDE'), findsOneWidget);
+      expect(find.text('612 m'), findsOneWidget);
+    });
+
+    testWidgets('the peak-altitude tile is absent without a value', (tester) async {
+      await _pump(
+        tester,
+        _session(activityType: 'RUNNING', cardio: const CardioMetrics(distanceMeters: 5000)),
+      );
+
+      expect(find.text('PEAK ALTITUDE'), findsNothing);
+    });
+
+    testWidgets('the backpack-weight tile only appears for HIKING', (tester) async {
+      await _pump(
+        tester,
+        _session(activityType: 'RUNNING', cardio: const CardioMetrics(distanceMeters: 5000)),
+      );
+      expect(find.text('BACKPACK WEIGHT'), findsNothing);
+    });
+
+    testWidgets('the backpack-weight tile is tappable even before anything is entered',
+        (tester) async {
+      final controller = await _pump(
+        tester,
+        _session(activityType: 'HIKING', cardio: const CardioMetrics(distanceMeters: 14200)),
+      );
+
+      expect(find.text('BACKPACK WEIGHT'), findsOneWidget);
+      expect(find.text('By hand'), findsNothing); // nothing entered yet
+
+      // The whole tile is tappable, including its label — avoids matching
+      // any other '—' placeholder that might be on screen (e.g. an
+      // unavailable best-effort).
+      await tester.tap(
+        find.ancestor(of: find.text('BACKPACK WEIGHT'), matching: find.byType(InkWell)).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '8.5');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final cardio = controller.updateLiveCardioMetricsCalls.single['cardio'] as CardioMetrics;
+      expect(cardio.backpackWeightKg, 8.5);
+      expect(find.text('8.5 kg'), findsOneWidget);
+      expect(find.text('By hand'), findsOneWidget);
+    });
+
+    testWidgets('editing backpack weight preserves distance and its own source tag',
+        (tester) async {
+      final controller = await _pump(
+        tester,
+        _session(
+          activityType: 'HIKING',
+          cardio: const CardioMetrics(
+            distanceMeters: 14200,
+            distanceSource: 'MEASURED',
+            backpackWeightKg: 6,
+          ),
+        ),
+      );
+
+      expect(find.text('6.0 kg'), findsOneWidget);
+      await tester.tap(find.text('6.0 kg'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '9');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final cardio = controller.updateLiveCardioMetricsCalls.single['cardio'] as CardioMetrics;
+      expect(cardio.backpackWeightKg, 9);
+      expect(cardio.distanceMeters, 14200); // not clobbered
+      expect(cardio.distanceSource, 'MEASURED'); // not clobbered
+    });
+  });
+
+  group('weather snapshot (docs/cardio/60 C8.6)', () {
+    testWidgets('the empty-state row shows for a HIKING session with no weather data',
+        (tester) async {
+      await _pump(
+        tester,
+        _session(activityType: 'HIKING', cardio: const CardioMetrics(distanceMeters: 14200)),
+      );
+
+      expect(find.text('WEATHER AT START'), findsNothing);
+      expect(find.textContaining('No weather data'), findsOneWidget);
+    });
+
+    testWidgets('is entirely absent for a non-HIKING session', (tester) async {
+      await _pump(
+        tester,
+        _session(activityType: 'RUNNING', cardio: const CardioMetrics(distanceMeters: 5000)),
+      );
+
+      expect(find.textContaining('No weather data'), findsNothing);
+      expect(find.text('WEATHER AT START'), findsNothing);
+    });
+
+    testWidgets('the card shows whichever fields are set, dashes for the rest', (tester) async {
+      await _pump(
+        tester,
+        _session(
+          activityType: 'HIKING',
+          cardio: const CardioMetrics(
+            distanceMeters: 14200,
+            weatherCondition: 'PARTLY_CLOUDY',
+            weatherTempC: 7,
+          ),
+        ),
+      );
+
+      expect(find.text('WEATHER AT START'), findsOneWidget);
+      expect(find.text('7 °C'), findsOneWidget);
+      // Wind/precip were never entered.
+      expect(find.text('—'), findsWidgets);
+    });
+
+    testWidgets('tapping the empty-state row opens the editor and persists all four fields',
+        (tester) async {
+      final controller = await _pump(
+        tester,
+        _session(activityType: 'HIKING', cardio: const CardioMetrics(distanceMeters: 14200)),
+      );
+
+      await tester.tap(find.textContaining('No weather data'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Rain'));
+      await tester.pump();
+      await tester.enterText(find.widgetWithText(TextFormField, 'TEMPERATURE'), '11');
+      await tester.enterText(find.widgetWithText(TextFormField, 'WIND'), '18');
+      await tester.enterText(find.widgetWithText(TextFormField, 'PRECIPITATION'), '4');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final cardio = controller.updateLiveCardioMetricsCalls.single['cardio'] as CardioMetrics;
+      expect(cardio.weatherCondition, 'RAIN');
+      expect(cardio.weatherTempC, 11);
+      expect(cardio.weatherWindKph, 18);
+      expect(cardio.weatherPrecipMm, 4);
+      expect(find.text('WEATHER AT START'), findsOneWidget);
+      expect(find.text('11 °C'), findsOneWidget);
+    });
+
+    testWidgets('a signed negative temperature round-trips through the editor', (tester) async {
+      final controller = await _pump(
+        tester,
+        _session(activityType: 'HIKING', cardio: const CardioMetrics(distanceMeters: 14200)),
+      );
+
+      await tester.tap(find.textContaining('No weather data'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextFormField, 'TEMPERATURE'), '-6');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final cardio = controller.updateLiveCardioMetricsCalls.single['cardio'] as CardioMetrics;
+      expect(cardio.weatherTempC, -6);
+    });
+
+    testWidgets('editing weather preserves distance and the backpack weight already on the session',
+        (tester) async {
+      final controller = await _pump(
+        tester,
+        _session(
+          activityType: 'HIKING',
+          cardio: const CardioMetrics(
+            distanceMeters: 14200,
+            distanceSource: 'MEASURED',
+            backpackWeightKg: 8,
+          ),
+        ),
+      );
+
+      await tester.tap(find.textContaining('No weather data'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextFormField, 'TEMPERATURE'), '5');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final cardio = controller.updateLiveCardioMetricsCalls.single['cardio'] as CardioMetrics;
+      expect(cardio.weatherTempC, 5);
+      expect(cardio.distanceMeters, 14200);
+      expect(cardio.distanceSource, 'MEASURED');
+      expect(cardio.backpackWeightKg, 8);
+    });
+  });
+
   group('Done button', () {
     testWidgets('requests the Sessions tab (no GoRouter ancestor: falls back to a no-op pop)',
         (tester) async {
       final container = ProviderContainer(overrides: [
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
+        appDatabaseProvider.overrideWithValue(_testDatabase()),
       ]);
       addTearDown(container.dispose);
       await tester.pumpWidget(
@@ -783,6 +1001,7 @@ void main() {
           overrides: [
             settingsControllerProvider.overrideWith(_MetricSettings.new),
             workoutSessionControllerProvider.overrideWith(_RecordingSessionController.new),
+            appDatabaseProvider.overrideWithValue(_testDatabase()),
           ],
           child: const MaterialApp(
             locale: Locale('en'),

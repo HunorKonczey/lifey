@@ -155,6 +155,52 @@ Egy 7 km-es futás átlagtempójából nem lehet 5 km-es rekordot mondani. A cs�
 nyers pontokra épül, tehát a C4a után van értelme — addig a táv/idő rekordok is bőven adnak
 visszajelzést.
 
+### D-C3.9 — A GAP (emelkedés-normált tempó) képlete: Minetti-féle metabolikus költség (C8.2)
+
+A GAP azt válaszolja meg: *mekkora tempó lenne ugyanez az erőkifejtés sík terepen?* — nem a
+meredekség szerinti lineáris „büntetés", hanem a tényleges metabolikus költséget modellezi, mert
+egy 15%-os lejtő nem fele annyiba kerül, mint egy 15%-os emelkedő (a nagyon meredek lejtő a
+fékezés miatt megint drágul).
+
+A képlet Minetti et al. (2002, *J Appl Physiol* 93.3: 1039–1046) mért futási
+energiaköltség-görbéjének ötödfokú polinom-illesztése, ±45%-os meredekségig érvényesítve:
+
+```
+C(i) = 155.4·i⁵ − 30.4·i⁴ − 43.3·i³ + 46.3·i² + 19.5·i + 3.6      [J·kg⁻¹·m⁻¹]
+```
+
+ahol `i` a meredekség hányadosként (0,10 = 10%-os emelkedő), `C(i)` a vízszintes méterenkénti
+metabolikus költség. `C(0) = 3,6 J·kg⁻¹·m⁻¹` a sík futás költsége — ez a képlet saját, mért
+referenciapontja, nem külön becsült érték.
+
+Szakaszonként (a szűrt nyomvonal két egymást követő pontja között): a `C(i)/C(0)` arány
+**sík-egyenértékű távra** váltja át a szakasz vízszintes távját — `d_ekv = d_szakasz · C(i)/C(0)`.
+A teljes GAP a session összes idejének és az összes sík-egyenértékű távnak a hányadosa:
+
+```
+GAP [s/km] = Σ(idő_szakasz) / Σ(d_ekv_szakasz) · 1000
+```
+
+Sík terepen minden szakasz meredeksége 0, tehát `C(i)/C(0) = 1` minden szakaszon — a
+sík-egyenértékű táv megegyezik a tényleges távval, és a GAP **pontosan** a nyers átlagtempóval
+egyezik (ez a C8.2 kész-ha-ja, tesztelve). Hiányzó magasságadatú szakasz meredeksége 0-nak
+számít (nem hagyjuk ki a szakaszt a nevezőből) — ugyanaz az „egy hiányzó pont nem dobja el az
+egészet" elv, mint `cardio_splits_calculator.dart`-ban.
+
+**Az irány könnyen elcserélhető, ezért kimondva**: emelkedőn `C(i) > C(0)`, tehát a
+sík-egyenértékű táv **nagyobb** a ténylegesnél ugyanannyi idő alatt — a GAP **gyorsabb** számot ad,
+mint a nyers tempó (jóváírja az emelkedőt). Lejtőn nagyjából -20%-ig `C(i) < C(0)` (Minetti mért
+minimuma ott van), a sík-egyenértékű táv **kisebb** — a GAP **lassabb**, mint a nyers tempó
+(leszámítja az „ingyen" lejtős sebességet). -20% után a görbe visszakúszik a sík költség felé (és
+azon túl is), így egy nagyon meredek lejtő GAP-ja megint közelít a nyers tempóhoz, sőt túl is
+szárnyalhatja.
+
+**A képlet egyetlen helyen él**: `features/workouts/domain/grade_adjusted_pace.dart`
+(`computeGradeAdjustedPaceSecondsPerKm`), a backend és a web soha nem számol GAP-ot újra — a
+kliens a session zárásakor egyszer kiszámolja és elküldi (`avg_gap_seconds_per_km`, V71,
+[60 C8.1](60-cardio-sport-specifics-plan.md)), ugyanaz a „kiszámolva, nem újraszámolva"
+minta, mint a legjobb-résztávaknál.
+
 ---
 
 ## 6. Feladatlista (C3)

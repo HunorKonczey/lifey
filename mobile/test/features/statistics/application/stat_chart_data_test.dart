@@ -83,6 +83,7 @@ WorkoutSession _cardioSession({
   double? distanceMeters,
   double? elevationGainMeters,
   double? maxHeartRate,
+  double? maxAltitudeMeters,
   List<int?> zoneSeconds = const [null, null, null, null, null],
 }) {
   return WorkoutSession(
@@ -97,11 +98,13 @@ WorkoutSession _cardioSession({
     cardio: (distanceMeters != null ||
             elevationGainMeters != null ||
             maxHeartRate != null ||
+            maxAltitudeMeters != null ||
             zoneSeconds.any((z) => z != null))
         ? CardioMetrics(
             distanceMeters: distanceMeters,
             elevationGainMeters: elevationGainMeters,
             maxHeartRate: maxHeartRate,
+            maxAltitudeMeters: maxAltitudeMeters,
             hrZone1Seconds: zoneSeconds[0],
             hrZone2Seconds: zoneSeconds[1],
             hrZone3Seconds: zoneSeconds[2],
@@ -496,6 +499,45 @@ void main() {
 
       final points = container.read(statChartDataProvider).value!;
       expect(_asPairs(points), [(_day(1), 160.0), (_day(0), 171.0)]);
+    });
+
+    test(
+        'cardioMaxAltitude (C8.7): each day\'s point is that day\'s highest peak, not a sum/average',
+        () async {
+      final container = _buildContainer(sessions: [
+        _cardioSession(
+            startedAt: _day(0).add(const Duration(hours: 7)),
+            activityType: 'HIKING',
+            maxAltitudeMeters: 612),
+        _cardioSession(
+            startedAt: _day(0).add(const Duration(hours: 18)),
+            activityType: 'HIKING',
+            maxAltitudeMeters: 756),
+        _cardioSession(
+            startedAt: _day(1).add(const Duration(hours: 7)),
+            activityType: 'RUNNING',
+            maxAltitudeMeters: 340),
+      ]);
+      addTearDown(container.dispose);
+
+      container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioMaxAltitude);
+      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+      final points = container.read(statChartDataProvider).value!;
+      expect(_asPairs(points), [(_day(1), 340.0), (_day(0), 756.0)]);
+    });
+
+    test('cardioMaxAltitude ignores MACHINE/GAME sessions even with a value', () async {
+      final container = _buildContainer(sessions: [
+        _cardioSession(
+            startedAt: _day(0), activityType: 'INDOOR_BIKE', maxAltitudeMeters: 5000),
+      ]);
+      addTearDown(container.dispose);
+
+      container.read(statMetricControllerProvider.notifier).select(StatMetric.cardioMaxAltitude);
+      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+
+      expect(container.read(statChartDataProvider).value, isEmpty);
     });
 
     group('StatKindFilter (D-C3.4)', () {
@@ -959,8 +1001,57 @@ void main() {
         StatMetric.cardioAvgPace,
         StatMetric.maxHeartRate,
         // Not workoutMinutes: the session never finished. Not
-        // cardioElevationGain: no elevationGainMeters was set.
+        // cardioElevationGain: no elevationGainMeters was set. Not
+        // cardioMaxAltitude either, for the same reason (C8.7).
       });
+    });
+
+    test('cardioMaxAltitude appears only once a DISTANCE session has a value (C8.7)', () async {
+      final container = _buildContainer(
+        meals: [],
+        sessions: [
+          _cardioSession(
+            startedAt: _day(0),
+            activityType: 'INDOOR_BIKE',
+            maxAltitudeMeters: 5000, // MACHINE — doesn't count
+          ),
+        ],
+        water: [],
+        weights: [],
+        steps: [],
+      );
+      addTearDown(container.dispose);
+      await container.listen(mealControllerProvider.future, (previous, next) {}).read();
+      await container.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await container.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
+      await container.listen(weightControllerProvider.future, (previous, next) {}).read();
+      await container.listen(allStepCountsProvider.future, (previous, next) {}).read();
+
+      expect(
+        container.read(availableStatMetricsProvider).contains(StatMetric.cardioMaxAltitude),
+        isFalse,
+      );
+
+      final withHike = _buildContainer(
+        meals: [],
+        sessions: [
+          _cardioSession(startedAt: _day(0), activityType: 'HIKING', maxAltitudeMeters: 756),
+        ],
+        water: [],
+        weights: [],
+        steps: [],
+      );
+      addTearDown(withHike.dispose);
+      await withHike.listen(mealControllerProvider.future, (previous, next) {}).read();
+      await withHike.listen(workoutSessionControllerProvider.future, (previous, next) {}).read();
+      await withHike.listen(allWaterEntriesProvider.future, (previous, next) {}).read();
+      await withHike.listen(weightControllerProvider.future, (previous, next) {}).read();
+      await withHike.listen(allStepCountsProvider.future, (previous, next) {}).read();
+
+      expect(
+        withHike.read(availableStatMetricsProvider).contains(StatMetric.cardioMaxAltitude),
+        isTrue,
+      );
     });
   });
 }

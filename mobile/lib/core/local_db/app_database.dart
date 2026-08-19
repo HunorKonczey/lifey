@@ -48,6 +48,7 @@ part 'app_database.g.dart';
   ExerciseSets,
   CardioDetails,
   CardioSplits,
+  CardioWaypoints,
   CardioTrackPoints,
   CardioIntervalPlans,
   CardioIntervalSteps,
@@ -64,7 +65,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 39;
+  int get schemaVersion => 42;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -349,6 +350,25 @@ class AppDatabase extends _$AppDatabase {
                 cardioSplits.intensity,
               ],
             ));
+          }
+          // V40: hike waypoints (docs/cardio/60 C8.4) — a brand-new, empty
+          // table. No existing session ever recorded one (the marker button
+          // didn't exist before this).
+          if (from < 40) {
+            await m.createTable(cardioWaypoints);
+          }
+          // V41: backpack weight (docs/cardio/60 C8.5) — one nullable column,
+          // no backfill (no session before this could have recorded one).
+          if (from < 41) {
+            await _addColumnIfMissing(m, cardioDetails, cardioDetails.backpackWeightKg);
+          }
+          // V42: a manual weather snapshot at the hike's start (docs/cardio/60
+          // C8.6, Q-C8.1) — four nullable columns, no backfill.
+          if (from < 42) {
+            await _addColumnIfMissing(m, cardioDetails, cardioDetails.weatherCondition);
+            await _addColumnIfMissing(m, cardioDetails, cardioDetails.weatherTempC);
+            await _addColumnIfMissing(m, cardioDetails, cardioDetails.weatherWindKph);
+            await _addColumnIfMissing(m, cardioDetails, cardioDetails.weatherPrecipMm);
           }
         },
       );

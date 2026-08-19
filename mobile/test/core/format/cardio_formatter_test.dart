@@ -23,6 +23,51 @@ void main() {
     });
   });
 
+  group('weight', () {
+    test('metric renders kg with 1 decimal', () {
+      expect(CardioFormatter.weight(8.5, UnitSystem.metric), '8.5 kg');
+    });
+
+    test('imperial renders lb with 1 decimal', () {
+      expect(CardioFormatter.weight(8.5, UnitSystem.imperial), '18.7 lb');
+    });
+  });
+
+  group('temperature', () {
+    test('metric renders whole Celsius', () {
+      expect(CardioFormatter.temperature(7.4, UnitSystem.metric), '7 °C');
+    });
+
+    test('imperial renders whole Fahrenheit', () {
+      expect(CardioFormatter.temperature(0, UnitSystem.imperial), '32 °F');
+    });
+
+    test('a below-zero winter reading stays signed in both systems', () {
+      expect(CardioFormatter.temperature(-8, UnitSystem.metric), '-8 °C');
+      expect(CardioFormatter.temperature(-8, UnitSystem.imperial), '18 °F');
+    });
+  });
+
+  group('windSpeed', () {
+    test('metric renders whole km/h', () {
+      expect(CardioFormatter.windSpeed(12.4, UnitSystem.metric), '12 km/h');
+    });
+
+    test('imperial renders whole mph', () {
+      expect(CardioFormatter.windSpeed(16.09344, UnitSystem.imperial), '10 mph');
+    });
+  });
+
+  group('precipitation', () {
+    test('metric renders whole mm', () {
+      expect(CardioFormatter.precipitation(0, UnitSystem.metric), '0 mm');
+    });
+
+    test('imperial renders inches with 2 decimals', () {
+      expect(CardioFormatter.precipitation(25.4, UnitSystem.imperial), '1.00 in');
+    });
+  });
+
   group('pace', () {
     test('metric renders min:sec per km', () {
       final pace = CardioFormatter.pace(5000, const Duration(minutes: 26), UnitSystem.metric);

@@ -41,6 +41,11 @@ class CardioMetrics {
     this.caloriesSource,
     this.routePolyline,
     this.routePointCount,
+    this.backpackWeightKg,
+    this.weatherTempC,
+    this.weatherWindKph,
+    this.weatherPrecipMm,
+    this.weatherCondition,
   });
 
   // DISTANCE + MACHINE
@@ -105,6 +110,23 @@ class CardioMetrics {
   final String? routePolyline;
   final int? routePointCount;
 
+  // Hike-only (docs/cardio/60 C8.5) — the one field only the user can know
+  // (docs/cardio/61 §4 M42): no measured baseline exists for it to conflict
+  // with, so it carries no `*Source` tag the way distance/calories do.
+  final double? backpackWeightKg;
+
+  // Hike-only weather snapshot (docs/cardio/60 C8.6, Q-C8.1: manual entry,
+  // no external API — same "kézzel szerkeszthető mező" pattern as
+  // [backpackWeightKg]). [weatherTempC] is signed (winter hikes);
+  // [weatherWindKph]/[weatherPrecipMm] are never negative.
+  /// A free code the client maps to an icon (e.g. `CLEAR`, `PARTLY_CLOUDY`,
+  /// `CLOUDY`, `RAIN`, `SNOW`, `WINDY`) — unconstrained on the wire, same
+  /// precedent as `gameFormat`/`distanceSource`.
+  final String? weatherCondition;
+  final double? weatherTempC;
+  final double? weatherWindKph;
+  final double? weatherPrecipMm;
+
   /// Mirrors `WorkoutSessionRepository._cardioPayload`'s key names 1:1 — used
   /// to decode the cardio block of a watch standalone-session wire payload
   /// (docs/cardio/55-cardio-watch-plan.md §5, W-1), the one other place a
@@ -140,6 +162,11 @@ class CardioMetrics {
         caloriesSource: json['caloriesSource'] as String?,
         routePolyline: json['routePolyline'] as String?,
         routePointCount: (json['routePointCount'] as num?)?.toInt(),
+        backpackWeightKg: (json['backpackWeightKg'] as num?)?.toDouble(),
+        weatherTempC: (json['weatherTempC'] as num?)?.toDouble(),
+        weatherWindKph: (json['weatherWindKph'] as num?)?.toDouble(),
+        weatherPrecipMm: (json['weatherPrecipMm'] as num?)?.toDouble(),
+        weatherCondition: json['weatherCondition'] as String?,
       );
 
   /// Fills in [fromWatch]'s watch-measured fields for whichever ones this
@@ -215,6 +242,11 @@ class CardioMetrics {
         caloriesSource: caloriesSource ?? fromWatch.caloriesSource,
         routePolyline: routePolyline ?? fromWatch.routePolyline,
         routePointCount: routePointCount ?? fromWatch.routePointCount,
+        backpackWeightKg: backpackWeightKg ?? fromWatch.backpackWeightKg,
+        weatherTempC: weatherTempC ?? fromWatch.weatherTempC,
+        weatherWindKph: weatherWindKph ?? fromWatch.weatherWindKph,
+        weatherPrecipMm: weatherPrecipMm ?? fromWatch.weatherPrecipMm,
+        weatherCondition: weatherCondition ?? fromWatch.weatherCondition,
       );
 }
 
@@ -276,6 +308,36 @@ enum CardioSplitType {
       );
 }
 
+/// One point marked along a hike's route (docs/cardio/60 C8.4, docs/cardio/61
+/// §4 M41) — position + altitude only, computed client-side at the moment
+/// the user taps the marker button. Distance/elapsed-time are never stored
+/// here: the summary screen derives them by matching against the session's
+/// own local track points, the same source the elevation profile (C8.3)
+/// reads from (`waypoint_track_match.dart`) — see the migration's own doc
+/// comment on why a second, server-stored copy of those numbers would just
+/// be another place for them to disagree.
+class CardioWaypoint {
+  const CardioWaypoint({
+    required this.waypointIndex,
+    required this.latitude,
+    required this.longitude,
+    this.altitudeMeters,
+    this.label,
+  });
+
+  /// 0-based position in the order the waypoints were marked.
+  final int waypointIndex;
+
+  final double latitude;
+  final double longitude;
+
+  /// Null when the GPS fix at the moment of marking carried no altitude.
+  final double? altitudeMeters;
+
+  /// Always null in V1 (docs/cardio/60 Q-D5) — no input field for it yet.
+  final String? label;
+}
+
 /// A single set within a logged session (response side).
 class ExerciseSet {
   const ExerciseSet({
@@ -335,6 +397,7 @@ class WorkoutSession {
     this.movingSinceEpochMs,
     this.cardio,
     this.splits = const [],
+    this.waypoints = const [],
   });
 
   final String clientId;
@@ -433,6 +496,11 @@ class WorkoutSession {
 
   /// Per-km/lap splits; empty unless [isCardio] and splits were recorded.
   final List<CardioSplit> splits;
+
+  /// Points marked along a hike's route (docs/cardio/60 C8.4); empty unless
+  /// [isCardio] and at least one waypoint was marked. Ordered by
+  /// [CardioWaypoint.waypointIndex].
+  final List<CardioWaypoint> waypoints;
 
   bool get inProgress => startedAt != null && finishedAt == null;
 

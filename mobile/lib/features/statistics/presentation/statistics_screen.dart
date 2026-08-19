@@ -384,6 +384,7 @@ class _StatisticsChart extends StatelessWidget {
       // A heart-rate metric, so it takes the heart colour rather than
       // cardio's orange (C9.5).
       StatMetric.cardioHardZoneMinutes => mc.heart,
+      StatMetric.cardioMaxAltitude => mc.calories,
     };
   }
 

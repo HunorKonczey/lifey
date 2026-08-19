@@ -1312,6 +1312,10 @@
   "@statMetricCardioSessionsLabel": {
     "description": "Statistics metric label: number of cardio sessions per day"
   },
+  "statMetricCardioMaxAltitudeLabel": "Peak altitude",
+  "@statMetricCardioMaxAltitudeLabel": {
+    "description": "Statistics metric (docs/cardio/60 C8.7): the highest point reached per day, DISTANCE family only — a daily maximum, same shape as max heart rate, not a sum"
+  },
   "statisticsTitle": "Statistics",
   "@statisticsTitle": {
     "description": "Title of the statistics screen"
@@ -3799,6 +3803,10 @@
   "@cardioRecordGreatestElevationGain": {
     "description": "Cardio record type label: this session gained more elevation than any prior running/walking/hiking session"
   },
+  "cardioRecordGreatestMaxAltitude": "Highest peak",
+  "@cardioRecordGreatestMaxAltitude": {
+    "description": "Cardio record type label: this session reached a higher point than any prior DISTANCE-family session (docs/cardio/60 C8.7)"
+  },
   "gpsExplainerTitle": "So we can see where you ran",
   "@gpsExplainerTitle": {
     "description": "Title of the one-time GPS explainer sheet shown before the system location-permission dialog, the first time ever a DISTANCE-family session is started (docs/cardio/54-cardio-gps-route-plan.md §3.1, C4a.2, M26)"
@@ -4336,5 +4344,173 @@
   "cardioRecordGreatestTotalWork": "Greatest total work",
   "@cardioRecordGreatestTotalWork": {
     "description": "Cardio record type label: this indoor-bike ride derived more total work (kJ) than any prior MACHINE-family session (docs/cardio/60 C7.7)"
+  },
+  "elevationProfileGapLabel": "gap",
+  "@elevationProfileGapLabel": {
+    "description": "Label inside the shaded band on the elevation profile where the GPS signal was lost for a stretch (docs/cardio/60 C8.3, M40)"
+  },
+  "elevationProfilePeakCaption": "peak {altitude} · {distance}",
+  "@elevationProfilePeakCaption": {
+    "description": "Caption under the elevation profile axis naming the highest point (M40)",
+    "placeholders": {
+      "altitude": {
+        "type": "String"
+      },
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "elevationProfileSelectedPointChip": "selected point · {distance}",
+  "@elevationProfileSelectedPointChip": {
+    "description": "Chip in the elevation profile card header once a point has been tapped (M40)",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "elevationProfileSimplifiedBadge": "SIMPLIFIED",
+  "@elevationProfileSimplifiedBadge": {
+    "description": "Badge shown on the elevation profile when the local GPS track has been pruned and only the coarser stored route is left to draw from (docs/cardio/60 C8.3)"
+  },
+  "elevationProfileAltitudeReadoutLabel": "altitude",
+  "@elevationProfileAltitudeReadoutLabel": {
+    "description": "One of the three readout numbers under the elevation profile for a tapped point (M40)"
+  },
+  "elevationProfileDistanceReadoutLabel": "so far",
+  "@elevationProfileDistanceReadoutLabel": {
+    "description": "One of the three readout numbers under the elevation profile for a tapped point (M40)"
+  },
+  "elevationProfileElapsedReadoutLabel": "elapsed",
+  "@elevationProfileElapsedReadoutLabel": {
+    "description": "One of the three readout numbers under the elevation profile for a tapped point (M40)"
+  },
+  "waypointMarkButtonLabel": "Mark waypoint",
+  "@waypointMarkButtonLabel": {
+    "description": "Title of the full-width waypoint marker button on the live hike screen (docs/cardio/60 C8.4, M41)"
+  },
+  "waypointMarkButtonSubtitle": "where you are now",
+  "@waypointMarkButtonSubtitle": {
+    "description": "Subtitle under the waypoint marker button's title (M41)"
+  },
+  "waypointMarkButtonUnavailable": "no location, nothing to mark",
+  "@waypointMarkButtonUnavailable": {
+    "description": "Subtitle shown in the waypoint marker button's place of the normal one when GPS isn't available (M41)"
+  },
+  "waypointMarkedFeedback": "Waypoint {count} marked",
+  "@waypointMarkedFeedback": {
+    "description": "4-second auto-dismissing confirmation after marking a waypoint (M41)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "waypointMarkUndoLabel": "Undo",
+  "@waypointMarkUndoLabel": {
+    "description": "Undoes the waypoint mark the feedback banner is reporting on (M41)"
+  },
+  "waypointsSectionLabel": "WAYPOINTS",
+  "@waypointsSectionLabel": {
+    "description": "Header of the waypoint list card on the hike summary screen (docs/cardio/60 C8.4, M42)"
+  },
+  "waypointsCountChip": "{count} waypoints",
+  "@waypointsCountChip": {
+    "description": "Chip in the waypoint list card header (M42)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maxAltitudeFieldLabel": "PEAK ALTITUDE",
+  "@maxAltitudeFieldLabel": {
+    "description": "Label for the max-altitude metric tile on the DISTANCE-family summary grid (docs/cardio/60 C8.5, Q-D6) — shown whenever the session has one, not hike-only, same gating as elevationGainFieldLabel"
+  },
+  "backpackWeightFieldLabel": "BACKPACK WEIGHT",
+  "@backpackWeightFieldLabel": {
+    "description": "Label for the backpack-weight metric tile — HIKING only (docs/cardio/60 C8.5, M42)"
+  },
+  "handEnteredBadgeLabel": "By hand",
+  "@handEnteredBadgeLabel": {
+    "description": "Badge on the backpack-weight tile once it's been entered — a different label from manuallyEditedBadgeLabel because there's no measured value it could be overriding (M42: \"kézzel\", not \"szerkesztve\")"
+  },
+  "editBackpackWeightDialogTitle": "Backpack weight",
+  "@editBackpackWeightDialogTitle": {
+    "description": "Title of the dialog that sets a hike's backpack weight on the summary screen (docs/cardio/60 C8.5)"
+  },
+  "weatherConditionClear": "Clear",
+  "@weatherConditionClear": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionPartlyCloudy": "Partly cloudy",
+  "@weatherConditionPartlyCloudy": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionCloudy": "Cloudy",
+  "@weatherConditionCloudy": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionRain": "Rain",
+  "@weatherConditionRain": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionSnow": "Snow",
+  "@weatherConditionSnow": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionWindy": "Windy",
+  "@weatherConditionWindy": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionSectionLabel": "CONDITION",
+  "@weatherConditionSectionLabel": {
+    "description": "Header above the weather-condition chip picker (log sheet + summary edit sheet)"
+  },
+  "weatherTemperatureFieldLabel": "TEMPERATURE",
+  "@weatherTemperatureFieldLabel": {
+    "description": "Numeric field label for the hike-start temperature (docs/cardio/60 C8.6) — signed, unlike every other numeric cardio field"
+  },
+  "weatherWindFieldLabel": "WIND",
+  "@weatherWindFieldLabel": {
+    "description": "Numeric field label for the hike-start wind speed (docs/cardio/60 C8.6)"
+  },
+  "weatherPrecipFieldLabel": "PRECIPITATION",
+  "@weatherPrecipFieldLabel": {
+    "description": "Numeric field label for the hike-start precipitation (docs/cardio/60 C8.6)"
+  },
+  "weatherSectionLabel": "WEATHER AT START",
+  "@weatherSectionLabel": {
+    "description": "Header of the weather-snapshot card on the hike summary screen (docs/cardio/60 C8.6, M42)"
+  },
+  "weatherSnapshotCaption": "{time} · snapshot",
+  "@weatherSnapshotCaption": {
+    "description": "Trailing caption on the weather card header — the session's own start time (M42: \"8:12 · pillanatkép\")",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherTemperatureReadoutLabel": "temperature",
+  "@weatherTemperatureReadoutLabel": {
+    "description": "One of the three readout numbers in the weather card (M42)"
+  },
+  "weatherWindReadoutLabel": "wind",
+  "@weatherWindReadoutLabel": {
+    "description": "One of the three readout numbers in the weather card (M42)"
+  },
+  "weatherPrecipReadoutLabel": "precipitation",
+  "@weatherPrecipReadoutLabel": {
+    "description": "One of the three readout numbers in the weather card (M42)"
+  },
+  "weatherNoDataMessage": "No weather data — add it by hand",
+  "@weatherNoDataMessage": {
+    "description": "Empty-state row shown in place of the weather card when nothing's been entered (M42: \"Nincs időjárás-adat\") — tappable, unlike the design mockup's static version, so a session missing weather can still get it added afterward"
+  },
+  "editWeatherDialogTitle": "Weather at start",
+  "@editWeatherDialogTitle": {
+    "description": "Title of the bottom sheet that sets a hike's weather snapshot on the summary screen (docs/cardio/60 C8.6)"
   }
 }

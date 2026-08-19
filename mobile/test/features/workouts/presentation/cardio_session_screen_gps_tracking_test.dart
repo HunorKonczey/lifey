@@ -97,9 +97,10 @@ final _epoch = DateTime.utc(2026, 8, 13, 7, 0, 0);
 /// A fix ~11 m north of the previous one (well over the 3 m displacement
 /// gate), 3 s apart (~13.3 km/h — plausible for a run, well under RUNNING's
 /// 30 km/h speed-gate ceiling).
-LocationFix _fixAt(int n) => LocationFix(
+LocationFix _fixAt(int n, {double? altitude}) => LocationFix(
       latitude: 47.5 + n * 0.0001,
       longitude: 19.05,
+      altitude: altitude,
       recordedAt: _epoch.add(Duration(seconds: n * 3)),
     );
 
@@ -348,6 +349,43 @@ void main() {
     final call = ctx.controller.finishCalls.single;
     expect(call['cardio'], isNull);
     expect(call['splits'], isNull);
+  });
+
+  testWidgets('finishing a hike with altitude data persists the peak as maxAltitudeMeters (C8.5)',
+      (tester) async {
+    final ctx = await _pump(tester,
+        session: _runningSession(clientId: 'hike-1', activityType: 'HIKING'));
+    // Climbs 5 m per fix, peaking at the last one.
+    for (var n = 0; n <= 5; n++) {
+      ctx.location.emitFix(_fixAt(n, altitude: 600 + n * 5));
+      await tester.pump();
+    }
+
+    final rect = tester.getRect(find.byKey(const Key('slideToFinishBar')));
+    await tester.startGesture(rect.center);
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    final persistedCardio = ctx.controller.finishCalls.single['cardio'] as CardioMetrics?;
+    expect(persistedCardio?.maxAltitudeMeters, 625);
+  });
+
+  testWidgets('finishing a hike with no altitude data leaves maxAltitudeMeters null, not zero',
+      (tester) async {
+    final ctx = await _pump(tester,
+        session: _runningSession(clientId: 'hike-1', activityType: 'HIKING'));
+    ctx.location.emitFix(_fixAt(0));
+    await tester.pump();
+    ctx.location.emitFix(_fixAt(1));
+    await tester.pump();
+
+    final rect = tester.getRect(find.byKey(const Key('slideToFinishBar')));
+    await tester.startGesture(rect.center);
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    final persistedCardio = ctx.controller.finishCalls.single['cardio'] as CardioMetrics?;
+    expect(persistedCardio?.maxAltitudeMeters, isNull);
   });
 
   testWidgets('reopening a session with existing raw points replays them into the live distance '

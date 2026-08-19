@@ -23,6 +23,7 @@ Future<void> _cleanupWorkoutSessionChildren(AppDatabase db, String clientId) asy
   await (db.delete(db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId))).go();
   await (db.delete(db.cardioDetails)..where((t) => t.sessionClientId.equals(clientId))).go();
   await (db.delete(db.cardioSplits)..where((t) => t.sessionClientId.equals(clientId))).go();
+  await (db.delete(db.cardioWaypoints)..where((t) => t.sessionClientId.equals(clientId))).go();
   await (db.delete(db.cardioTrackPoints)..where((t) => t.sessionClientId.equals(clientId))).go();
 }
 

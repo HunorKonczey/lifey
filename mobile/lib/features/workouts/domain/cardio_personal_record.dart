@@ -40,7 +40,14 @@ enum CardioPrType {
   /// power reading has no value here and can neither set nor break this
   /// record (a 0 kJ session would otherwise silently "win" against every
   /// watt-less past ride).
-  greatestTotalWork;
+  greatestTotalWork,
+
+  /// DISTANCE family only (docs/cardio/60 C8.7) — the highest point reached,
+  /// matching `stat_chart_data.dart`'s `StatMetric.cardioMaxAltitude` gating.
+  /// Not hike-restricted: `maxAltitudeMeters` is populated for any
+  /// DISTANCE-family session with local altitude data (C8.5), same as
+  /// [greatestElevationGain].
+  greatestMaxAltitude;
 
   /// True when a *smaller* number is the better one. The three best-effort
   /// types are times to beat downward; everything else is a maximum.
@@ -60,6 +67,7 @@ enum CardioPrType {
       greatestElevationGain => family == ActivityFamily.distance,
       fastest1k || fastest5k || fastest10k => session.activityType == 'RUNNING',
       greatestTotalWork => family == ActivityFamily.machine,
+      greatestMaxAltitude => family == ActivityFamily.distance,
     };
   }
 
@@ -76,6 +84,7 @@ enum CardioPrType {
       fastest10k => session.cardio?.best10kSeconds?.toDouble(),
       greatestTotalWork => CardioFormatter.totalWorkKj(
             session.cardio?.avgWatts, session.movingSeconds)?.toDouble(),
+      greatestMaxAltitude => session.cardio?.maxAltitudeMeters,
     };
   }
 }
@@ -102,6 +111,7 @@ class CardioPrBaseline {
     this.fastest5k,
     this.fastest10k,
     this.greatestTotalWork,
+    this.greatestMaxAltitude,
   });
 
   final CardioPrBest? longestDistance;
@@ -111,6 +121,7 @@ class CardioPrBaseline {
   final CardioPrBest? fastest5k;
   final CardioPrBest? fastest10k;
   final CardioPrBest? greatestTotalWork;
+  final CardioPrBest? greatestMaxAltitude;
 
   static const empty = CardioPrBaseline();
 
@@ -123,6 +134,7 @@ class CardioPrBaseline {
         CardioPrType.fastest5k => fastest5k,
         CardioPrType.fastest10k => fastest10k,
         CardioPrType.greatestTotalWork => greatestTotalWork,
+        CardioPrType.greatestMaxAltitude => greatestMaxAltitude,
       };
 
   double? get maxDistanceMeters => longestDistance?.value;
@@ -132,6 +144,7 @@ class CardioPrBaseline {
   int? get best5kSeconds => fastest5k?.value.round();
   int? get best10kSeconds => fastest10k?.value.round();
   int? get maxTotalWorkKj => greatestTotalWork?.value.round();
+  double? get maxAltitudeMeters => greatestMaxAltitude?.value;
 
   /// Builds a baseline from prior sessions (order doesn't matter). Callers
   /// pass every past cardio session except the one about to be checked —
@@ -166,6 +179,7 @@ class CardioPrBaseline {
       fastest5k: better(CardioPrType.fastest5k, fastest5k),
       fastest10k: better(CardioPrType.fastest10k, fastest10k),
       greatestTotalWork: better(CardioPrType.greatestTotalWork, greatestTotalWork),
+      greatestMaxAltitude: better(CardioPrType.greatestMaxAltitude, greatestMaxAltitude),
     );
   }
 }
