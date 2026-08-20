@@ -176,6 +176,26 @@ class CardioDetails extends Table {
   TextColumn get routePolyline => text().nullable()();
   IntColumn get routePointCount => integer().nullable()();
 
+  // Hike-only (docs/cardio/60 C8.5) — the one field only the user can know
+  // (docs/cardio/61 §4 M42); no `*Source` column, since there's no measured
+  // value it could ever conflict with.
+  RealColumn get backpackWeightKg => real().nullable()();
+
+  // Hike-only weather snapshot (docs/cardio/60 C8.6, Q-C8.1: manual entry,
+  // no external API). [weatherTempC] is signed; wind/precip are not.
+  TextColumn get weatherCondition => text().nullable()();
+  RealColumn get weatherTempC => real().nullable()();
+  RealColumn get weatherWindKph => real().nullable()();
+  RealColumn get weatherPrecipMm => real().nullable()();
+
+  // Grade-adjusted pace, seconds/km (docs/cardio/60 C8.2, docs/cardio/56
+  // D-C3.9) — computed once at close time by
+  // `grade_adjusted_pace.dart#computeGradeAdjustedPaceSecondsPerKm` from the
+  // filtered local trail, same "computed, never recomputed" pattern as the
+  // best efforts. Null when there's no trail to compute one from (a GPS-less
+  // indoor session, or fewer than two points) — never a fabricated 0.
+  RealColumn get avgGapSecondsPerKm => real().nullable()();
+
   @override
   Set<Column> get primaryKey => {sessionClientId};
 }
@@ -195,13 +215,60 @@ class CardioSplits extends Table {
   /// 0-based position within the session's split list.
   IntColumn get splitIndex => integer()();
 
-  /// Usually exactly 1000 (one km); the last split of a run is shorter.
-  RealColumn get distanceMeters => real()();
+  /// `DISTANCE` (the original per-km split) or `INTERVAL` (one executed
+  /// section of an interval plan, docs/cardio/60 D-C7.1). Defaults to
+  /// DISTANCE so every row written before intervals existed keeps meaning
+  /// exactly what it did.
+  TextColumn get splitType => text().withDefault(const Constant('DISTANCE'))();
+
+  /// Usually exactly 1000 (one km); the last split of a run is shorter. Null
+  /// for an INTERVAL section on a machine that reports no distance, which is
+  /// most of them.
+  RealColumn get distanceMeters => real().nullable()();
   IntColumn get durationSeconds => integer()();
 
   /// Net elevation change over the split; null when no altitude data was available.
   RealColumn get elevationDeltaM => real().nullable()();
   RealColumn get avgHeartRate => real().nullable()();
+
+  /// Average power over the section; null without a watt-reporting machine.
+  RealColumn get avgWatts => real().nullable()();
+
+  /// `EASY` | `MODERATE` | `HARD` — the target effort an INTERVAL section was
+  /// run at, null for a DISTANCE split. Stored on the execution rather than
+  /// looked up from the plan: the plan stays editable and deletable.
+  TextColumn get intensity => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {clientId};
+}
+
+/// Points marked along a hike's route (docs/cardio/60 C8.4, docs/cardio/61
+/// §4 M41) — computed client-side at the moment the user taps the marker
+/// button, replaced in full on every create/update, same as [CardioSplits].
+/// No distance/elapsed-time columns: the summary screen derives those by
+/// matching against the session's own local [CardioTrackPoints], the same
+/// source the elevation profile (C8.3) reads from.
+@DataClassName('CardioWaypointRow')
+class CardioWaypoints extends Table {
+  @override
+  String get tableName => 'cardio_waypoints';
+
+  TextColumn get clientId => text()();
+  TextColumn get sessionClientId => text().references(WorkoutSessions, #clientId)();
+
+  /// 0-based position in the order the waypoints were marked.
+  IntColumn get waypointIndex => integer()();
+
+  RealColumn get latitude => real()();
+  RealColumn get longitude => real()();
+
+  /// Null when the GPS fix at the moment of marking carried no altitude.
+  RealColumn get altitudeMeters => real().nullable()();
+
+  /// Always null in V1 (docs/cardio/60 Q-D5) — the column exists for the
+  /// planned V2 rename-after-the-fact feature.
+  TextColumn get label => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {clientId};

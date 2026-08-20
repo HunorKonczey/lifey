@@ -51,7 +51,7 @@ class WorkoutSessionControllerTest {
         return new WorkoutSessionResponse(id, startedAt, finishedAt, exercises, sets, activeCalories,
                 averageHeartRate, healthWorkoutId, templateId, templateName, scheduledFor, scheduledTime,
                 scheduleId, rpe, feedbackNote, trainerComment, trainerCommentAt, updatedAt, deletedAt,
-                SessionKind.STRENGTH, null, null, null, List.of());
+                SessionKind.STRENGTH, null, null, null, List.of(), null);
     }
 
     @Test

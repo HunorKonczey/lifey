@@ -2,8 +2,10 @@ package com.lifey.workout.session;
 
 import com.lifey.workout.session.cardio.CardioDetails;
 import com.lifey.workout.session.cardio.CardioSplit;
+import com.lifey.workout.session.cardio.CardioWaypoint;
 import com.lifey.workout.session.dto.CardioDetailsResponse;
 import com.lifey.workout.session.dto.CardioSplitResponse;
+import com.lifey.workout.session.dto.CardioWaypointResponse;
 import com.lifey.workout.session.dto.ExerciseSetResponse;
 import com.lifey.workout.session.dto.ExerciseSummary;
 import com.lifey.workout.session.dto.WorkoutSessionResponse;
@@ -40,6 +42,10 @@ public final class WorkoutSessionMapper {
                 .map(WorkoutSessionMapper::toSplitResponse)
                 .toList();
 
+        List<CardioWaypointResponse> waypoints = session.getWaypoints().stream()
+                .map(WorkoutSessionMapper::toWaypointResponse)
+                .toList();
+
         return new WorkoutSessionResponse(
                 session.getId(),
                 session.getStartedAt(),
@@ -64,7 +70,8 @@ public final class WorkoutSessionMapper {
                 session.getActivityType(),
                 session.getMovingSeconds(),
                 toCardioResponse(session.getCardioDetails()),
-                splits
+                splits,
+                waypoints
         );
     }
 
@@ -100,17 +107,36 @@ public final class WorkoutSessionMapper {
                 details.getDistanceSource(),
                 details.getCaloriesSource(),
                 details.getRoutePolyline(),
-                details.getRoutePointCount()
+                details.getRoutePointCount(),
+                details.getBackpackWeightKg(),
+                details.getAvgGapSecondsPerKm(),
+                details.getWeatherTempC(),
+                details.getWeatherWindKph(),
+                details.getWeatherPrecipMm(),
+                details.getWeatherCondition()
+        );
+    }
+
+    private static CardioWaypointResponse toWaypointResponse(CardioWaypoint waypoint) {
+        return new CardioWaypointResponse(
+                waypoint.getWaypointIndex(),
+                waypoint.getLatitude(),
+                waypoint.getLongitude(),
+                waypoint.getAltitudeMeters(),
+                waypoint.getLabel()
         );
     }
 
     private static CardioSplitResponse toSplitResponse(CardioSplit split) {
         return new CardioSplitResponse(
                 split.getSplitIndex(),
+                split.getSplitType(),
                 split.getDistanceMeters(),
                 split.getDurationSeconds(),
                 split.getElevationDeltaM(),
-                split.getAvgHeartRate()
+                split.getAvgHeartRate(),
+                split.getAvgWatts(),
+                split.getIntensity()
         );
     }
 }

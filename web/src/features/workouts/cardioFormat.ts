@@ -39,3 +39,51 @@ export function formatPace(meters: number, durationSeconds: number): string | nu
   const seconds = Math.round(secondsPerKm % 60);
   return `${minutes}:${String(seconds).padStart(2, "0")} /km`;
 }
+
+/** "+42 m" / "−12 m" / "0 m" — a split's elevation change, always signed. */
+export function formatElevationDelta(meters: number): string {
+  const rounded = Math.round(meters);
+  if (rounded > 0) return `+${rounded} m`;
+  return `${rounded} m`;
+}
+
+/**
+ * Total mechanical work in kilojoules — average power over the time it was
+ * held (docs/cardio/60 §8 C7w.2, M39's "összmunka"). **Derived, never
+ * stored**, exactly like the mobile `CardioFormatter.totalWorkKj`: it is
+ * `avgWatts × movingSeconds / 1000`, so a stored copy could only ever
+ * disagree with the two numbers it comes from. Null when there is no power
+ * to derive it from — most home machines don't report watts, and a session
+ * without them shows moving time in this card's place rather than a
+ * misleading 0 kJ.
+ */
+export function totalWorkKj(avgWatts: number | null, movingSeconds: number | null): number | null {
+  if (avgWatts == null || movingSeconds == null) return null;
+  if (avgWatts <= 0 || movingSeconds <= 0) return null;
+  return Math.round((avgWatts * movingSeconds) / 1000);
+}
+
+/** "1234 m" — a peak altitude or elevation gain (docs/cardio/60 §8 C8w.4), metric-only, whole meters. */
+export function formatElevation(meters: number): string {
+  return `${Math.round(meters)} m`;
+}
+
+/** "8.5 kg" — a hike's backpack weight (docs/cardio/60 §8 C8w.4), one decimal since a whole kg is coarse. */
+export function formatWeight(kg: number): string {
+  return `${kg.toFixed(1)} kg`;
+}
+
+/** "7 °C" — whole degrees, signed (winter hikes go below zero). */
+export function formatTemperature(celsius: number): string {
+  return `${Math.round(celsius)} °C`;
+}
+
+/** "12 km/h". */
+export function formatWindSpeed(kph: number): string {
+  return `${Math.round(kph)} km/h`;
+}
+
+/** "0 mm". */
+export function formatPrecipitation(mm: number): string {
+  return `${Math.round(mm)} mm`;
+}

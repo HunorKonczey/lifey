@@ -99,7 +99,7 @@ export function SessionsView({
         {/* Cardio never opens the set-logger — the web reads/filters/statisticizes
             cardio but never edits it (docs/cardio/58-cardio-web-plan.md D-W.2). */}
         {active.sessionKind === "CARDIO" ? (
-          <CardioSessionDetail session={active} />
+          <CardioSessionDetail session={active} history={sessions} />
         ) : (
           <SessionLogger session={active} history={sessions} onFinished={() => setActiveId(null)} />
         )}

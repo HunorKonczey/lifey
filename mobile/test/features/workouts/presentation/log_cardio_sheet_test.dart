@@ -146,7 +146,11 @@ void main() {
     expect(find.text('ELEVATION GAIN'), findsNothing);
     expect(find.text('VENUE'), findsOneWidget);
     expect(find.text('INTENSITY'), findsOneWidget);
-    expect(find.text('SCORE'), findsOneWidget);
+    // C9.2 replaced the single hand-rolled points row with the shared
+    // three-column box-score stepper the live screen uses.
+    expect(find.text('POINTS'), findsOneWidget);
+    expect(find.text('REBOUNDS'), findsOneWidget);
+    expect(find.text('ASSISTS'), findsOneWidget);
     expect(find.text('Indoor'), findsOneWidget);
     expect(find.text('Outdoor'), findsOneWidget);
   });
@@ -229,10 +233,13 @@ void main() {
     await tester.tap(find.text('4').first);
     await tester.pump();
 
-    // Score stepper: two taps on the "+" button.
-    final incrementButtons = find.widgetWithIcon(IconButton, Icons.add);
-    await tester.tap(incrementButtons.last);
-    await tester.tap(incrementButtons.last);
+    // Box-score stepper (C9.2): two taps on the points column's "+", then one
+    // on the assists column's. The columns are in M44's order — points,
+    // rebounds, assists — so assists is the last "+".
+    final plusButtons = find.byIcon(Icons.add);
+    await tester.tap(plusButtons.first);
+    await tester.tap(plusButtons.first);
+    await tester.tap(plusButtons.last);
     await tester.pump();
 
     await _tapSave(tester);
@@ -241,6 +248,9 @@ void main() {
     expect(cardio.venue, 'OUTDOOR');
     expect(cardio.intensity, 4);
     expect(cardio.scorePoints, 2);
+    expect(cardio.scoreAssists, 1);
+    // Never counted, so absent rather than zero.
+    expect(cardio.scoreRebounds, isNull);
     // GAME never touches the DISTANCE/MACHINE fields.
     expect(cardio.distanceMeters, isNull);
     expect(cardio.avgWatts, isNull);
@@ -288,5 +298,149 @@ void main() {
 
     final cardio = controller.calls.single['cardio'] as CardioMetrics;
     expect(cardio.distanceMeters, closeTo(1609.344, 0.001));
+  });
+
+  group('backpack weight (docs/cardio/60 C8.5)', () {
+    testWidgets('is absent for the default RUNNING type', (tester) async {
+      await _pumpSheet(tester);
+      expect(find.text('BACKPACK WEIGHT'), findsNothing);
+    });
+
+    testWidgets('is absent for WALKING too — HIKING only', (tester) async {
+      await _pumpSheet(tester);
+      final chip = find.widgetWithText(ChoiceChip, 'Walking');
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+
+      expect(find.text('BACKPACK WEIGHT'), findsNothing);
+    });
+
+    testWidgets('appears for HIKING and submits a MANUAL-tagged kg value', (tester) async {
+      final controller = await _pumpSheet(tester);
+      final chip = find.widgetWithText(ChoiceChip, 'Hiking');
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+
+      expect(find.text('BACKPACK WEIGHT'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).at(1), '30'); // minutes
+      await tester.enterText(find.widgetWithText(TextField, 'BACKPACK WEIGHT'), '8.5');
+      await tester.pump();
+
+      await _tapSave(tester);
+
+      final cardio = controller.calls.single['cardio'] as CardioMetrics;
+      expect(cardio.backpackWeightKg, 8.5);
+      expect(controller.calls.single['activityType'], 'HIKING');
+    });
+
+    testWidgets('respects the imperial unit system, converting lb to kg', (tester) async {
+      final controller = await _pumpSheet(tester, imperial: true);
+      final chip = find.widgetWithText(ChoiceChip, 'Hiking');
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TextField, 'BACKPACK WEIGHT'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).at(1), '30');
+      await tester.enterText(find.widgetWithText(TextField, 'BACKPACK WEIGHT'), '20');
+      await tester.pump();
+
+      await _tapSave(tester);
+
+      final cardio = controller.calls.single['cardio'] as CardioMetrics;
+      expect(cardio.backpackWeightKg, closeTo(9.0718, 0.001)); // 20 lb -> kg
+    });
+  });
+
+  group('weather snapshot (docs/cardio/60 C8.6)', () {
+    testWidgets('is absent for the default RUNNING type', (tester) async {
+      await _pumpSheet(tester);
+      expect(find.text('TEMPERATURE'), findsNothing);
+      expect(find.text('CONDITION'), findsNothing);
+    });
+
+    testWidgets('appears for HIKING and submits signed temperature plus the picked condition',
+        (tester) async {
+      final controller = await _pumpSheet(tester);
+      final chip = find.widgetWithText(ChoiceChip, 'Hiking');
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TextField, 'TEMPERATURE'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).at(1), '30'); // minutes
+      await tester.enterText(find.widgetWithText(TextField, 'TEMPERATURE'), '-4');
+      await tester.enterText(find.widgetWithText(TextField, 'WIND'), '12');
+      await tester.enterText(find.widgetWithText(TextField, 'PRECIPITATION'), '0');
+      await tester.pump();
+      final snowChip = find.widgetWithText(ChoiceChip, 'Snow');
+      await tester.ensureVisible(snowChip);
+      await tester.pumpAndSettle();
+      await tester.tap(snowChip);
+      await tester.pump();
+
+      await _tapSave(tester);
+
+      final cardio = controller.calls.single['cardio'] as CardioMetrics;
+      expect(cardio.weatherTempC, -4);
+      expect(cardio.weatherWindKph, 12);
+      expect(cardio.weatherPrecipMm, 0);
+      expect(cardio.weatherCondition, 'SNOW');
+    });
+
+    testWidgets('tapping a selected condition chip again deselects it', (tester) async {
+      // A taller surface, not the default 800x600 — this sheet has every
+      // HIKING field plus the six condition chips on screen at once, and
+      // `ensureVisible`'s scroll estimate flakes at the edge of that height
+      // right after the chip's own selection-state rebuild.
+      await tester.binding.setSurfaceSize(const Size(400, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final controller = await _pumpSheet(tester);
+      final chip = find.widgetWithText(ChoiceChip, 'Hiking');
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+
+      final clearChip = find.widgetWithText(ChoiceChip, 'Clear');
+      await tester.ensureVisible(clearChip);
+      await tester.pumpAndSettle();
+      await tester.tap(clearChip);
+      await tester.pumpAndSettle();
+      await tester.tap(clearChip);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).at(1), '30');
+      await tester.pump();
+      await _tapSave(tester);
+
+      expect(controller.calls.single['cardio'], isNull); // nothing else was entered either
+    });
+
+    testWidgets('respects the imperial unit system, converting Fahrenheit to Celsius',
+        (tester) async {
+      final controller = await _pumpSheet(tester, imperial: true);
+      final chip = find.widgetWithText(ChoiceChip, 'Hiking');
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+
+      expect(find.text('°F'), findsWidgets);
+      await tester.enterText(find.byType(TextField).at(1), '30');
+      await tester.enterText(find.widgetWithText(TextField, 'TEMPERATURE'), '32');
+      await tester.pump();
+
+      await _tapSave(tester);
+
+      final cardio = controller.calls.single['cardio'] as CardioMetrics;
+      expect(cardio.weatherTempC, closeTo(0, 0.001)); // 32 °F -> 0 °C
+    });
   });
 }

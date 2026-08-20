@@ -8,9 +8,12 @@ import com.lifey.workout.exercise.ExerciseRepository;
 import com.lifey.workout.session.*;
 import com.lifey.workout.session.cardio.CardioDetails;
 import com.lifey.workout.session.cardio.CardioSplit;
+import com.lifey.workout.session.cardio.CardioWaypoint;
 import com.lifey.workout.session.cardio.InvalidCardioRequestException;
+import com.lifey.workout.session.cardio.SplitType;
 import com.lifey.workout.session.dto.CardioDetailsRequest;
 import com.lifey.workout.session.dto.CardioSplitRequest;
+import com.lifey.workout.session.dto.CardioWaypointRequest;
 import com.lifey.workout.session.dto.ExerciseSetRequest;
 import com.lifey.workout.session.dto.PlannedExerciseRequest;
 import com.lifey.workout.session.dto.WorkoutSessionRequest;
@@ -122,6 +125,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         replaceSets(session, request.sets());
         replaceCardioDetails(session, request.cardio());
         replaceSplits(session, request.splits());
+        replaceWaypoints(session, request.waypoints());
         return WorkoutSessionMapper.toResponse(sessionRepository.save(session));
     }
 
@@ -143,7 +147,8 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         replaceSets(session, request.sets());
         replaceCardioDetails(session, request.cardio());
         replaceSplits(session, request.splits());
-        // Sets/planned exercises/cardio details/splits are child rows with no
+        replaceWaypoints(session, request.waypoints());
+        // Sets/planned exercises/cardio details/splits/waypoints are child rows with no
         // delta feed of their own (docs/16 §2.3, docs/cardio/52 §4) — a
         // child-only edit could leave every WorkoutSession scalar field
         // unchanged, so Hibernate's dirty-checking could skip @PreUpdate.
@@ -259,6 +264,7 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
                 throw new InvalidCardioRequestException("activityType is required when sessionKind is CARDIO");
             }
             validateBestEfforts(request.cardio());
+            validateSplits(request.splits());
         } else {
             if (request.activityType() != null) {
                 throw new InvalidCardioRequestException("activityType must be null unless sessionKind is CARDIO");
@@ -269,7 +275,42 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             if (request.splits() != null && !request.splits().isEmpty()) {
                 throw new InvalidCardioRequestException("splits must be empty unless sessionKind is CARDIO");
             }
+            if (request.waypoints() != null && !request.waypoints().isEmpty()) {
+                throw new InvalidCardioRequestException("waypoints must be empty unless sessionKind is CARDIO");
+            }
         }
+    }
+
+    /**
+     * The per-split shape invariants, mirroring
+     * {@code cardio_splits_distance_required_ck} and
+     * {@code cardio_splits_intensity_ck} (V70): a DISTANCE split is a
+     * distance, so it must carry one; a target intensity only means something
+     * for an interval section (docs/cardio/60 D-C7.1). Cross-field, so Bean
+     * Validation can't express either — the DTO only annotates each field on
+     * its own.
+     */
+    private void validateSplits(List<CardioSplitRequest> splits) {
+        if (splits == null) return;
+        for (CardioSplitRequest split : splits) {
+            if (splitTypeOf(split) == SplitType.DISTANCE) {
+                if (split.distanceMeters() == null) {
+                    throw new InvalidCardioRequestException("distanceMeters is required for a DISTANCE split");
+                }
+                if (split.intensity() != null) {
+                    throw new InvalidCardioRequestException("intensity must be null unless splitType is INTERVAL");
+                }
+            }
+        }
+    }
+
+    /**
+     * A split with no {@code splitType} is a per-km split — the only kind
+     * that existed before V70, and what a client that predates intervals
+     * sends. Same default as the entity and the DB column.
+     */
+    private SplitType splitTypeOf(CardioSplitRequest split) {
+        return split.splitType() != null ? split.splitType() : SplitType.DISTANCE;
     }
 
     /**
@@ -346,6 +387,12 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
         details.setCaloriesSource(request.caloriesSource());
         details.setRoutePolyline(request.routePolyline());
         details.setRoutePointCount(request.routePointCount());
+        details.setBackpackWeightKg(request.backpackWeightKg());
+        details.setAvgGapSecondsPerKm(request.avgGapSecondsPerKm());
+        details.setWeatherTempC(request.weatherTempC());
+        details.setWeatherWindKph(request.weatherWindKph());
+        details.setWeatherPrecipMm(request.weatherPrecipMm());
+        details.setWeatherCondition(request.weatherCondition());
     }
 
     /**
@@ -360,11 +407,34 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
             CardioSplit split = new CardioSplit();
             split.setWorkoutSession(session);
             split.setSplitIndex(item.splitIndex());
+            split.setSplitType(splitTypeOf(item));
             split.setDistanceMeters(item.distanceMeters());
             split.setDurationSeconds(item.durationSeconds());
             split.setElevationDeltaM(item.elevationDeltaM());
             split.setAvgHeartRate(item.avgHeartRate());
+            split.setAvgWatts(item.avgWatts());
+            split.setIntensity(item.intensity());
             session.getSplits().add(split);
+        }
+    }
+
+    /**
+     * Rebuilds the session's waypoint list from the request. Full-replace,
+     * same model as {@link #replaceSplits}. Relies on {@code orphanRemoval}
+     * to delete dropped waypoints.
+     */
+    private void replaceWaypoints(WorkoutSession session, List<CardioWaypointRequest> requested) {
+        session.getWaypoints().clear();
+        if (requested == null) return;
+        for (CardioWaypointRequest item : requested) {
+            CardioWaypoint waypoint = new CardioWaypoint();
+            waypoint.setWorkoutSession(session);
+            waypoint.setWaypointIndex(item.waypointIndex());
+            waypoint.setLatitude(item.latitude());
+            waypoint.setLongitude(item.longitude());
+            waypoint.setAltitudeMeters(item.altitudeMeters());
+            waypoint.setLabel(item.label());
+            session.getWaypoints().add(waypoint);
         }
     }
 }

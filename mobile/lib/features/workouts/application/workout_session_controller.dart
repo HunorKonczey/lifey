@@ -67,9 +67,13 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
   /// (docs/cardio/59-cardio-implementation-plan.md C2.1). Begins already
   /// `RUNNING`: `movingSinceEpochMs` is set to [startedAt]'s own epoch, so
   /// the very first tick already counts. Returns the new session's clientId.
+  /// [cardio] carries whatever the start flow already knows about the
+  /// session — today the GAME setup sheet's format and venue (C9.3). Absent
+  /// for every other family, which starts with no cardio row at all.
   Future<String> startCardioSession({
     required DateTime startedAt,
     required String activityType,
+    CardioMetrics? cardio,
   }) {
     return _repo.create(
       startedAt: startedAt,
@@ -79,6 +83,7 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
       activityType: activityType,
       movingSeconds: 0,
       movingSinceEpochMs: startedAt.millisecondsSinceEpoch,
+      cardio: cardio,
     );
   }
 
@@ -170,6 +175,27 @@ class WorkoutSessionController extends StreamNotifier<List<WorkoutSession>> {
       exercises: const [],
       sets: const [],
       cardio: Value(cardio),
+    );
+  }
+
+  /// Persists a mid-session waypoint mark/undo on a **live** cardio session
+  /// (docs/cardio/60 C8.4, M41) — the caller (`CardioSessionScreenState`)
+  /// owns the append/remove-last logic and always passes its full, current
+  /// waypoint list, same full-replace convention as [updateLiveCardioMetrics].
+  /// Never touches `cardio`/`movingSeconds` — left absent, so marking a
+  /// waypoint can't clobber whichever of those an unrelated edit is mid-flight
+  /// on.
+  Future<void> updateLiveWaypoints(
+    String clientId, {
+    required DateTime startedAt,
+    required List<CardioWaypoint> waypoints,
+  }) {
+    return _repo.update(
+      clientId,
+      startedAt: startedAt,
+      exercises: const [],
+      sets: const [],
+      waypoints: Value(waypoints),
     );
   }
 

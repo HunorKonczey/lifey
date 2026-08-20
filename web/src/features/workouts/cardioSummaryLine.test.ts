@@ -28,6 +28,7 @@ function baseSession(overrides: Partial<WorkoutSessionResponse> = {}): WorkoutSe
     movingSeconds: 2716,
     cardio: null,
     splits: [],
+    waypoints: [],
     ...overrides,
   };
 }

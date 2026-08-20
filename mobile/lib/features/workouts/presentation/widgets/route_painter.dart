@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../domain/route_encoder.dart';
+import '../../domain/workout_session.dart' show CardioWaypoint;
 
 /// Draws a session's GPS route from its stored `route_polyline`
 /// (docs/cardio/54-cardio-gps-route-plan.md §6.1, C4a.6) — the large form,
@@ -16,10 +17,19 @@ import '../../domain/route_encoder.dart';
 /// doc itself calls that "opcionális"; this step ships the plain single-color
 /// line, a deliberate, documented scope cut (see the C4a.6 kész write-up).
 class RoutePainter extends StatelessWidget {
-  const RoutePainter({super.key, required this.polyline, this.height = 220});
+  const RoutePainter({
+    super.key,
+    required this.polyline,
+    this.height = 220,
+    this.waypoints = const [],
+  });
 
   final String polyline;
   final double height;
+
+  /// Numbered markers along the route (docs/cardio/60 C8.4, M41) — empty
+  /// outside a hike, or before any waypoint has been marked.
+  final List<CardioWaypoint> waypoints;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +48,9 @@ class RoutePainter extends StatelessWidget {
             strokeWidth: 3.5,
             margin: 20,
             showMarkers: true,
+            waypoints: waypoints,
+            waypointColor: scheme.tertiary,
+            waypointLabelColor: scheme.onSurface,
           ),
         ),
       ),
@@ -175,6 +188,9 @@ class _RouteDelegate extends CustomPainter {
     required this.strokeWidth,
     required this.margin,
     required this.showMarkers,
+    this.waypoints = const [],
+    this.waypointColor,
+    this.waypointLabelColor,
   });
 
   final _RouteGeometry geometry;
@@ -184,6 +200,9 @@ class _RouteDelegate extends CustomPainter {
   final double strokeWidth;
   final double margin;
   final bool showMarkers;
+  final List<CardioWaypoint> waypoints;
+  final Color? waypointColor;
+  final Color? waypointLabelColor;
 
   static const _dashLength = 5.0;
   static const _dashGap = 4.0;
@@ -248,6 +267,43 @@ class _RouteDelegate extends CustomPainter {
       );
       canvas.drawCircle(end, 5, Paint()..color = endColor ?? routeColor);
     }
+
+    // Numbered waypoint markers (docs/cardio/60 C8.4, M41) — a small filled
+    // dot plus its 1-based number just above-right, so dense marker runs
+    // (50+ on a long hike) stay readable without the number ever needing to
+    // fit *inside* a marker too small to hold it.
+    final markerColor = waypointColor;
+    final labelColor = waypointLabelColor;
+    if (waypoints.isNotEmpty && markerColor != null && labelColor != null) {
+      final markerPaint = Paint()..color = markerColor;
+      final ringPaint = Paint()
+        ..color = backgroundColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      for (final waypoint in waypoints) {
+        final projected =
+            fit.project(_RouteGeometry._mercator(waypoint.latitude, waypoint.longitude));
+        canvas.drawCircle(projected, 3.5, markerPaint);
+        canvas.drawCircle(projected, 3.5, ringPaint);
+        _drawWaypointLabel(
+          canvas,
+          '${waypoint.waypointIndex + 1}',
+          projected + const Offset(5, -5),
+          labelColor,
+        );
+      }
+    }
+  }
+
+  void _drawWaypointLabel(Canvas canvas, String text, Offset anchor, Color color) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, anchor);
   }
 
   void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
@@ -268,6 +324,7 @@ class _RouteDelegate extends CustomPainter {
     return oldDelegate.geometry != geometry ||
         oldDelegate.backgroundColor != backgroundColor ||
         oldDelegate.routeColor != routeColor ||
-        oldDelegate.endColor != endColor;
+        oldDelegate.endColor != endColor ||
+        oldDelegate.waypoints.length != waypoints.length;
   }
 }

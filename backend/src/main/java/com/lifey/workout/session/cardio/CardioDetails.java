@@ -150,4 +150,45 @@ public class CardioDetails extends BaseEntity {
 
     @Column(name = "route_point_count")
     private Integer routePointCount;
+
+    // -- Hike (docs/cardio/60 C8.1) ------------------------------------------
+
+    /** The one field only the user can know (docs/cardio/61 §4 M42) — refines the calorie estimate. */
+    @Column(name = "backpack_weight_kg")
+    private Double backpackWeightKg;
+
+    /**
+     * Grade-adjusted pace, computed client-side from the filtered track at
+     * close time (docs/cardio/56-cardio-statistics-plan.md) — same
+     * computed-once-and-synced treatment as {@link #best1kSeconds} and
+     * siblings, not derived on every read the way total work is
+     * (docs/cardio/60 C7.6): GAP needs the whole elevation profile, not two
+     * numbers already sitting on this row.
+     */
+    @Column(name = "avg_gap_seconds_per_km")
+    private Double avgGapSecondsPerKm;
+
+    /**
+     * Manual weather snapshot (docs/cardio/60 Q-C8.1, decided 2026-08-19: no
+     * external API) — a plain editable field, same tier as
+     * {@link #backpackWeightKg} and {@link #deviceCalories}, not a
+     * timestamped capture-at-start reading.
+     */
+    @Column(name = "weather_temp_c")
+    private Double weatherTempC;
+
+    @Column(name = "weather_wind_kph")
+    private Double weatherWindKph;
+
+    @Column(name = "weather_precip_mm")
+    private Double weatherPrecipMm;
+
+    /**
+     * Free code (e.g. {@code CLEAR}, {@code PARTLY_CLOUDY}, {@code CLOUDY},
+     * {@code RAIN}, {@code SNOW}, {@code WINDY}) the client maps to an icon —
+     * unconstrained at the DB layer, same precedent as {@link #gameFormat}/
+     * {@link #distanceSource}: it drives display only.
+     */
+    @Column(name = "weather_condition")
+    private String weatherCondition;
 }

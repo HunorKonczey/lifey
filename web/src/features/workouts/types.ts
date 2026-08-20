@@ -68,6 +68,29 @@ export interface ExerciseSetResponse {
   performedAt: string; // Instant
 }
 
+// ─── Cardio sport-specifics (docs/cardio/60) ───
+export const SPLIT_TYPES = ["DISTANCE", "INTERVAL"] as const;
+export type SplitType = (typeof SPLIT_TYPES)[number];
+
+export const INTERVAL_INTENSITIES = ["EASY", "MODERATE", "HARD"] as const;
+export type IntervalIntensity = (typeof INTERVAL_INTENSITIES)[number];
+
+export interface CardioWaypointResponse {
+  waypointIndex: number;
+  latitude: number;
+  longitude: number;
+  altitudeMeters: number | null;
+  label: string | null;
+}
+
+export interface CardioWaypointRequest {
+  waypointIndex: number;
+  latitude: number;
+  longitude: number;
+  altitudeMeters?: number | null;
+  label?: string | null;
+}
+
 // ─── Cardio details / splits ───
 export interface CardioDetailsResponse {
   distanceMeters: number | null;
@@ -77,6 +100,10 @@ export interface CardioDetailsResponse {
   steps: number | null;
   avgCadence: number | null;
   maxCadence: number | null;
+  /** Fastest 1/5/10 km window over the local track (docs/cardio/60 C6.1/C6.2) — RUNNING only. */
+  best1kSeconds: number | null;
+  best5kSeconds: number | null;
+  best10kSeconds: number | null;
   avgWatts: number | null;
   maxWatts: number | null;
   resistanceLevel: number | null;
@@ -97,6 +124,16 @@ export interface CardioDetailsResponse {
   caloriesSource: string | null;
   routePolyline: string | null;
   routePointCount: number | null;
+  /** HIKING only, manually entered (docs/cardio/60 Q-C8.1). */
+  backpackWeightKg: number | null;
+  /** Grade-adjusted pace, seconds/km — stored, not derived on read (docs/cardio/60 C8.2). */
+  avgGapSecondsPerKm: number | null;
+  /** Weather snapshot, all four manually entered together, HIKING only (docs/cardio/60 C8.6). */
+  weatherTempC: number | null;
+  weatherWindKph: number | null;
+  weatherPrecipMm: number | null;
+  /** Free-form code (e.g. "CLEAR", "RAIN") the client maps to an icon, same precedent as `gameFormat`. */
+  weatherCondition: string | null;
 }
 
 export interface CardioDetailsRequest {
@@ -107,6 +144,9 @@ export interface CardioDetailsRequest {
   steps?: number | null;
   avgCadence?: number | null;
   maxCadence?: number | null;
+  best1kSeconds?: number | null;
+  best5kSeconds?: number | null;
+  best10kSeconds?: number | null;
   avgWatts?: number | null;
   maxWatts?: number | null;
   resistanceLevel?: number | null;
@@ -127,22 +167,35 @@ export interface CardioDetailsRequest {
   caloriesSource?: string | null;
   routePolyline?: string | null;
   routePointCount?: number | null;
+  backpackWeightKg?: number | null;
+  avgGapSecondsPerKm?: number | null;
+  weatherTempC?: number | null;
+  weatherWindKph?: number | null;
+  weatherPrecipMm?: number | null;
+  weatherCondition?: string | null;
 }
 
 export interface CardioSplitResponse {
   splitIndex: number;
-  distanceMeters: number;
+  splitType: SplitType;
+  /** Null exactly for an INTERVAL split (docs/cardio/60 C7.1: DB-required for DISTANCE only). */
+  distanceMeters: number | null;
   durationSeconds: number;
   elevationDeltaM: number | null;
   avgHeartRate: number | null;
+  avgWatts: number | null;
+  intensity: IntervalIntensity | null;
 }
 
 export interface CardioSplitRequest {
   splitIndex: number;
-  distanceMeters: number;
+  splitType: SplitType;
+  distanceMeters?: number | null;
   durationSeconds: number;
   elevationDeltaM?: number | null;
   avgHeartRate?: number | null;
+  avgWatts?: number | null;
+  intensity?: IntervalIntensity | null;
 }
 
 export interface WorkoutSessionResponse {
@@ -169,6 +222,8 @@ export interface WorkoutSessionResponse {
   cardio: CardioDetailsResponse | null;
   /** Empty, never null, unless sessionKind is CARDIO and splits were recorded. */
   splits: CardioSplitResponse[];
+  /** Empty, never null, unless sessionKind is CARDIO and activityType is HIKING (docs/cardio/60 C8.4). */
+  waypoints: CardioWaypointResponse[];
 }
 
 export interface ExerciseSetRequest {

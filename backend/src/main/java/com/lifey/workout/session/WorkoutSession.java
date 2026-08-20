@@ -5,6 +5,7 @@ import com.lifey.user.User;
 import com.lifey.workout.session.cardio.ActivityType;
 import com.lifey.workout.session.cardio.CardioDetails;
 import com.lifey.workout.session.cardio.CardioSplit;
+import com.lifey.workout.session.cardio.CardioWaypoint;
 import com.lifey.workout.template.WorkoutTemplate;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -121,6 +122,14 @@ public class WorkoutSession extends SyncableEntity {
     @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("splitIndex ASC")
     private List<CardioSplit> splits = new ArrayList<>();
+
+    /**
+     * Waypoints marked along a hike's route (docs/cardio/60 C8.1) — same
+     * never-independently-synced caveat as {@link #splits}.
+     */
+    @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("waypointIndex ASC")
+    private List<CardioWaypoint> waypoints = new ArrayList<>();
 
     @OneToMany(mappedBy = "workoutSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("performedAt ASC")

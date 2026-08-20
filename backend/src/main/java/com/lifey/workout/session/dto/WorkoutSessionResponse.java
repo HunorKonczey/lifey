@@ -46,6 +46,8 @@ public record WorkoutSessionResponse(
         /* Non-null exactly when sessionKind is CARDIO and at least one metric was recorded. */
         CardioDetailsResponse cardio,
         /* Empty, never null, unless sessionKind is CARDIO and splits were recorded. */
-        List<CardioSplitResponse> splits
+        List<CardioSplitResponse> splits,
+        /* Empty, never null, unless sessionKind is CARDIO and waypoints were marked. */
+        List<CardioWaypointResponse> waypoints
 ) {
 }

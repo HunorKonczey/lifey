@@ -9,6 +9,8 @@ import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/workout_session_controller.dart';
 import '../domain/activity_type.dart';
+import '../domain/weather_condition.dart';
+import 'widgets/box_score_stepper.dart';
 import '../domain/workout_session.dart';
 import 'widgets/rpe_selector.dart';
 
@@ -36,6 +38,10 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
   final _secondsController = TextEditingController();
   final _distanceController = TextEditingController();
   final _elevationGainController = TextEditingController();
+  final _backpackWeightController = TextEditingController();
+  final _weatherTempController = TextEditingController();
+  final _weatherWindController = TextEditingController();
+  final _weatherPrecipController = TextEditingController();
   final _avgWattsController = TextEditingController();
   final _avgCadenceController = TextEditingController();
   final _resistanceController = TextEditingController();
@@ -45,7 +51,10 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
   int? _intensity;
   String? _venue;
   int? _scorePoints;
+  int? _scoreAssists;
+  int? _scoreRebounds;
   int? _rpe;
+  String? _weatherCondition;
 
   @override
   void dispose() {
@@ -54,6 +63,10 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
     _secondsController.dispose();
     _distanceController.dispose();
     _elevationGainController.dispose();
+    _backpackWeightController.dispose();
+    _weatherTempController.dispose();
+    _weatherWindController.dispose();
+    _weatherPrecipController.dispose();
     _avgWattsController.dispose();
     _avgCadenceController.dispose();
     _resistanceController.dispose();
@@ -122,6 +135,32 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
     final elevationGainM = _family == ActivityFamily.distance
         ? _parseDouble(_elevationGainController.text)
         : null;
+    // Hike-only (docs/cardio/60 C8.5, M42) — entered in whatever unit the
+    // field itself showed, converted to kg for storage.
+    const kgPerLb = 0.45359237;
+    final backpackWeightInput =
+        _activityType == 'HIKING' ? _parseDouble(_backpackWeightController.text) : null;
+    final backpackWeightKg = backpackWeightInput == null
+        ? null
+        : (unitSystem == UnitSystem.imperial ? backpackWeightInput * kgPerLb : backpackWeightInput);
+    final hiking = _activityType == 'HIKING';
+    final weatherTempInput = hiking ? _parseDouble(_weatherTempController.text) : null;
+    final weatherTempC = weatherTempInput == null
+        ? null
+        : (unitSystem == UnitSystem.imperial
+            ? (weatherTempInput - 32) * 5 / 9
+            : weatherTempInput);
+    const kphPerMph = 1.609344;
+    final weatherWindInput = hiking ? _parseDouble(_weatherWindController.text) : null;
+    final weatherWindKph = weatherWindInput == null
+        ? null
+        : (unitSystem == UnitSystem.imperial ? weatherWindInput * kphPerMph : weatherWindInput);
+    const mmPerInch = 25.4;
+    final weatherPrecipInput = hiking ? _parseDouble(_weatherPrecipController.text) : null;
+    final weatherPrecipMm = weatherPrecipInput == null
+        ? null
+        : (unitSystem == UnitSystem.imperial ? weatherPrecipInput * mmPerInch : weatherPrecipInput);
+    final weatherCondition = hiking ? _weatherCondition : null;
     final avgWatts = _family == ActivityFamily.machine ? _parseDouble(_avgWattsController.text) : null;
     final avgCadence =
         _family == ActivityFamily.machine ? _parseDouble(_avgCadenceController.text) : null;
@@ -132,9 +171,17 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
     final intensity = _family == ActivityFamily.game ? _intensity : null;
     final venue = _family == ActivityFamily.game ? _venue : null;
     final scorePoints = _family == ActivityFamily.game ? _scorePoints : null;
+    final scoreAssists = _family == ActivityFamily.game ? _scoreAssists : null;
+    final scoreRebounds =
+        _family == ActivityFamily.game && _activityType == 'BASKETBALL' ? _scoreRebounds : null;
 
     final hasAnyMetric = distanceMeters != null ||
         elevationGainM != null ||
+        backpackWeightKg != null ||
+        weatherTempC != null ||
+        weatherWindKph != null ||
+        weatherPrecipMm != null ||
+        weatherCondition != null ||
         avgWatts != null ||
         avgCadence != null ||
         resistanceLevel != null ||
@@ -148,6 +195,11 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
         : CardioMetrics(
             distanceMeters: distanceMeters,
             elevationGainMeters: elevationGainM,
+            backpackWeightKg: backpackWeightKg,
+            weatherTempC: weatherTempC,
+            weatherWindKph: weatherWindKph,
+            weatherPrecipMm: weatherPrecipMm,
+            weatherCondition: weatherCondition,
             avgWatts: avgWatts,
             avgCadence: avgCadence,
             resistanceLevel: resistanceLevel,
@@ -155,6 +207,8 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
             intensity: intensity,
             venue: venue,
             scorePoints: scorePoints,
+            scoreAssists: scoreAssists,
+            scoreRebounds: scoreRebounds,
             // A manual override always wins over a measured value (docs/cardio/
             // 51-cardio-overview-plan.md R8) — every numeric field this sheet
             // captures ultimately maps to one of these two source flags, the
@@ -211,16 +265,22 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
     required TextEditingController controller,
     required String suffix,
     bool decimal = true,
+    // Winter-hike temperatures go below zero (docs/cardio/60 C8.1) — every
+    // other numeric field this sheet captures is a non-negative measurement,
+    // so this defaults off rather than adding a stray '-' to fields where it
+    // would never be a valid entry.
+    bool signed = false,
   }) {
+    final pattern = signed
+        ? (decimal ? r'[-\d.,]' : r'[-\d]')
+        : (decimal ? r'[\d.,]' : r'\d');
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: controller,
         enabled: !_submitting,
-        keyboardType: TextInputType.numberWithOptions(decimal: decimal),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(decimal ? RegExp(r'[\d.,]') : RegExp(r'\d')),
-        ],
+        keyboardType: TextInputType.numberWithOptions(decimal: decimal, signed: signed),
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(pattern))],
         decoration: InputDecoration(
           labelText: label,
           suffixText: suffix,
@@ -228,6 +288,30 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
           border: const OutlineInputBorder(),
         ),
       ),
+    );
+  }
+
+  /// The condition chip row (docs/cardio/60 C8.6, M42) — shared between this
+  /// sheet and `CardioSummaryScreen`'s weather edit sheet, but small enough
+  /// (six chips) that duplicating the ~15-line builder was simpler than
+  /// threading a callback-shaped widget between two otherwise unrelated
+  /// screens.
+  Widget _weatherConditionChips(AppLocalizations l10n) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final code in kWeatherConditions)
+          ChoiceChip(
+            label: Text(weatherConditionLabel(l10n, code)),
+            avatar: Icon(weatherConditionIcon(code), size: 18),
+            selected: _weatherCondition == code,
+            onSelected: _submitting
+                ? null
+                : (_) => setState(
+                    () => _weatherCondition = _weatherCondition == code ? null : code),
+          ),
+      ],
     );
   }
 
@@ -241,6 +325,10 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
             .unitSystem;
     final distanceUnit = unitSystem == UnitSystem.imperial ? 'mi' : 'km';
     final elevationUnit = unitSystem == UnitSystem.imperial ? 'ft' : 'm';
+    final weightUnit = unitSystem == UnitSystem.imperial ? 'lb' : 'kg';
+    final tempUnit = unitSystem == UnitSystem.imperial ? '°F' : '°C';
+    final windUnit = unitSystem == UnitSystem.imperial ? 'mph' : 'km/h';
+    final precipUnit = unitSystem == UnitSystem.imperial ? 'in' : 'mm';
     final canSubmit = !_submitting && _durationSeconds > 0;
 
     return Padding(
@@ -313,6 +401,39 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
                 suffix: elevationUnit,
                 decimal: false,
               ),
+              // Hike-only (docs/cardio/60 C8.5's kész-ha: "csak túránál
+              // látszik") — RUNNING/WALKING share this branch but never see
+              // the field.
+              if (_activityType == 'HIKING') ...[
+                _numericField(
+                  label: l10n.backpackWeightFieldLabel,
+                  controller: _backpackWeightController,
+                  suffix: weightUnit,
+                ),
+                _numericField(
+                  label: l10n.weatherTemperatureFieldLabel,
+                  controller: _weatherTempController,
+                  suffix: tempUnit,
+                  decimal: false,
+                  signed: true,
+                ),
+                _numericField(
+                  label: l10n.weatherWindFieldLabel,
+                  controller: _weatherWindController,
+                  suffix: windUnit,
+                  decimal: false,
+                ),
+                _numericField(
+                  label: l10n.weatherPrecipFieldLabel,
+                  controller: _weatherPrecipController,
+                  suffix: precipUnit,
+                ),
+                Text(l10n.weatherConditionSectionLabel,
+                    style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 8),
+                _weatherConditionChips(l10n),
+                const SizedBox(height: 10),
+              ],
             ] else if (_family == ActivityFamily.machine) ...[
               _numericField(
                 label: l10n.distanceFieldLabel,
@@ -368,33 +489,38 @@ class _LogCardioSheetState extends ConsumerState<LogCardioSheet> {
                 onChanged: _submitting ? (_) {} : (v) => setState(() => _intensity = v),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(l10n.scorePointsFieldLabel,
-                        style: Theme.of(context).textTheme.labelLarge),
+              // C9.2/M44: the *same* stepper component the live screen uses,
+              // so a hand-logged match and a counted one are entered the same
+              // way — and so football gets two columns here too, without a
+              // second implementation to keep in step.
+              BoxScoreStepper(
+                columns: [
+                  BoxScoreColumn(
+                    label: _activityType == 'BASKETBALL'
+                        ? l10n.boxScorePointsLabel
+                        : l10n.boxScoreGoalsLabel,
+                    value: _scorePoints ?? 0,
+                    onStep: (d) =>
+                        setState(() => _scorePoints = ((_scorePoints ?? 0) + d).clamp(0, 1 << 30)),
                   ),
-                  IconButton.outlined(
-                    onPressed: _submitting || (_scorePoints ?? 0) <= 0
-                        ? null
-                        : () => setState(() => _scorePoints = (_scorePoints ?? 0) - 1),
-                    icon: const Icon(Icons.remove),
-                  ),
-                  SizedBox(
-                    width: 32,
-                    child: Text(
-                      '${_scorePoints ?? 0}',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium,
+                  if (_activityType == 'BASKETBALL')
+                    BoxScoreColumn(
+                      label: l10n.boxScoreReboundsLabel,
+                      value: _scoreRebounds ?? 0,
+                      onStep: (d) => setState(
+                          () => _scoreRebounds = ((_scoreRebounds ?? 0) + d).clamp(0, 1 << 30)),
                     ),
-                  ),
-                  IconButton.outlined(
-                    onPressed: _submitting
-                        ? null
-                        : () => setState(() => _scorePoints = (_scorePoints ?? 0) + 1),
-                    icon: const Icon(Icons.add),
+                  BoxScoreColumn(
+                    label: l10n.boxScoreAssistsLabel,
+                    value: _scoreAssists ?? 0,
+                    onStep: (d) => setState(
+                        () => _scoreAssists = ((_scoreAssists ?? 0) + d).clamp(0, 1 << 30)),
                   ),
                 ],
+                enabled: !_submitting,
+                // The sheet has no idle-dismiss: it is already a deliberate,
+                // post-hoc entry surface, not something open mid-match.
+                onInteraction: () {},
               ),
             ],
             const SizedBox(height: 16),

@@ -45,7 +45,22 @@ enum StatMetric {
   cardioElevationGain,
   cardioAvgPace,
   maxHeartRate,
-  cardioSessions;
+  cardioSessions,
+
+  /// The highest point reached, DISTANCE family only (docs/cardio/60 C8.7) —
+  /// a peak, not a cumulative amount, so it follows [maxHeartRate]'s "each
+  /// day's point is already that day's max" shape rather than
+  /// [cardioElevationGain]'s sum: two hikes summiting 750 m each on the same
+  /// day did not together reach 1500 m.
+  cardioMaxAltitude,
+
+  /// Time spent at threshold or above — zones 4+5 (docs/cardio/60 C9.5).
+  ///
+  /// **Not** total zone time: the five zones together add up to roughly the
+  /// session itself, which [cardioMovingMinutes] already charts. The training
+  /// question a zone chart answers is "how much hard work did I do this
+  /// week", and that is Z4+Z5.
+  cardioHardZoneMinutes;
 
   String label(AppLocalizations l10n) => switch (this) {
         StatMetric.calories => l10n.caloriesLabel,
@@ -64,6 +79,8 @@ enum StatMetric {
         StatMetric.cardioAvgPace => l10n.statMetricCardioAvgPaceLabel,
         StatMetric.maxHeartRate => l10n.statMetricMaxHeartRateLabel,
         StatMetric.cardioSessions => l10n.statMetricCardioSessionsLabel,
+        StatMetric.cardioHardZoneMinutes => l10n.statMetricCardioHardZoneMinutesLabel,
+        StatMetric.cardioMaxAltitude => l10n.statMetricCardioMaxAltitudeLabel,
       };
 
   /// Unit shown next to the value (e.g. "kcal", "g"). Empty for the
@@ -91,6 +108,8 @@ enum StatMetric {
         StatMetric.cardioAvgPace => l10n.statUnitPaceMinPerKm,
         StatMetric.maxHeartRate => l10n.statUnitBpm,
         StatMetric.cardioSessions => '',
+        StatMetric.cardioHardZoneMinutes => l10n.statUnitMinutes,
+        StatMetric.cardioMaxAltitude => l10n.statUnitMeters,
       };
 
   /// How daily values for this metric should be combined into one point.
@@ -115,5 +134,9 @@ enum StatMetric {
         // of daily maximums", 56 §3), not a within-day average.
         StatMetric.maxHeartRate => StatAggregationType.average,
         StatMetric.cardioSessions => StatAggregationType.sum,
+        StatMetric.cardioHardZoneMinutes => StatAggregationType.sum,
+        // Same "average of daily maximums" shape as maxHeartRate, for the
+        // same reason — see the enum value's own doc.
+        StatMetric.cardioMaxAltitude => StatAggregationType.average,
       };
 }

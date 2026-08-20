@@ -15,9 +15,15 @@ import com.lifey.workout.session.WorkoutSessionRepository;
 import com.lifey.workout.session.cardio.ActivityType;
 import com.lifey.workout.session.cardio.CardioDetails;
 import com.lifey.workout.session.cardio.CardioSplit;
+import com.lifey.workout.session.cardio.CardioWaypoint;
 import com.lifey.workout.session.cardio.InvalidCardioRequestException;
+import com.lifey.workout.session.cardio.IntervalIntensity;
+import com.lifey.workout.session.cardio.SplitType;
 import com.lifey.workout.session.dto.CardioDetailsRequest;
 import com.lifey.workout.session.dto.CardioSplitRequest;
+import com.lifey.workout.session.dto.CardioSplitResponse;
+import com.lifey.workout.session.dto.CardioWaypointRequest;
+import com.lifey.workout.session.dto.CardioWaypointResponse;
 import com.lifey.workout.session.dto.ExerciseSetRequest;
 import com.lifey.workout.session.dto.PlannedExerciseRequest;
 import com.lifey.workout.session.dto.ExerciseSummary;
@@ -92,7 +98,7 @@ class WorkoutSessionServiceImplTest {
             List<PlannedExerciseRequest> plannedExercises) {
         return new WorkoutSessionRequest(startedAt, finishedAt, exerciseIds, sets, activeCalories,
                 averageHeartRate, healthWorkoutId, templateId, rpe, feedbackNote, plannedExercises,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 
     @Test
@@ -494,7 +500,7 @@ class WorkoutSessionServiceImplTest {
                 null, null, null, null,                // avgWatts..deviceCalories
                 null, null, null, null, null, null,    // maxHeartRate..hrZone5Seconds
                 intensity,
-                null, null, null, null, null, null, null, null, null); // venue..routePointCount
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null); // venue..routePointCount
     }
 
     @Test
@@ -505,7 +511,7 @@ class WorkoutSessionServiceImplTest {
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.RUNNING, 1800,
                 cardioDetails(5230.0, 4),
-                List.of(new CardioSplitRequest(0, 1000.0, 320, -2.5, 151.0)));
+                List.of(new CardioSplitRequest(0, null, 1000.0, 320, -2.5, 151.0, null, null)), null);
 
         WorkoutSessionResponse result = service.create(request);
 
@@ -517,8 +523,14 @@ class WorkoutSessionServiceImplTest {
         assertThat(result.cardio().intensity()).isEqualTo(4);
         assertThat(result.splits()).singleElement().satisfies(s -> {
             assertThat(s.splitIndex()).isZero();
+            // Sent without a splitType, as every pre-interval client does —
+            // it must come back as the per-km split it has always been
+            // (docs/cardio/60 C7.1).
+            assertThat(s.splitType()).isEqualTo(SplitType.DISTANCE);
             assertThat(s.distanceMeters()).isEqualTo(1000.0);
             assertThat(s.durationSeconds()).isEqualTo(320);
+            assertThat(s.avgWatts()).isNull();
+            assertThat(s.intensity()).isNull();
         });
         // Empty, never null — a cardio session has no exercises/sets (docs/cardio/52 §3.3).
         assertThat(result.exercises()).isEmpty();
@@ -547,7 +559,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                SessionKind.CARDIO, null, null, null, null);
+                SessionKind.CARDIO, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(InvalidCardioRequestException.class);
@@ -558,7 +570,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                null, ActivityType.RUNNING, null, null, null);
+                null, ActivityType.RUNNING, null, null, null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(InvalidCardioRequestException.class);
@@ -569,7 +581,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                null, null, null, cardioDetails(1000.0, null), null);
+                null, null, null, cardioDetails(1000.0, null), null, null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(InvalidCardioRequestException.class);
@@ -580,10 +592,140 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                null, null, null, null, List.of(new CardioSplitRequest(0, 1000.0, 300, null, null)));
+                null, null, null, null, List.of(new CardioSplitRequest(0, null, 1000.0, 300, null, null, null, null)), null);
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(InvalidCardioRequestException.class);
+    }
+
+    // -- Waypoints (docs/cardio/60 C8.1) -------------------------------------
+
+    @Test
+    void create_hikeSession_persistsWaypoints() {
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.HIKING, 5400, cardioDetails(8200.0, null), null,
+                List.of(new CardioWaypointRequest(0, 47.4979, 19.0402, 612.0, null),
+                        new CardioWaypointRequest(1, 47.5010, 19.0450, 640.0, null)));
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.waypoints()).extracting(CardioWaypointResponse::waypointIndex).containsExactly(0, 1);
+        assertThat(result.waypoints()).extracting(CardioWaypointResponse::latitude)
+                .containsExactly(47.4979, 47.5010);
+        assertThat(result.waypoints()).extracting(CardioWaypointResponse::altitudeMeters)
+                .containsExactly(612.0, 640.0);
+        assertThat(result.waypoints()).extracting(CardioWaypointResponse::label).containsOnlyNulls();
+    }
+
+    @Test
+    void create_omittedWaypoints_resultInAnEmptyListNotNull() {
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 10L));
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.HIKING, 5400, cardioDetails(8200.0, null), null, null);
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.waypoints()).isEmpty();
+    }
+
+    @Test
+    void create_strengthWithNonEmptyWaypoints_throwsInvalidCardioRequestException() {
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                null, null, null, null, null,
+                List.of(new CardioWaypointRequest(0, 47.4979, 19.0402, null, null)));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(InvalidCardioRequestException.class);
+    }
+
+    @Test
+    void update_waypointsListIsFullyReplaced() {
+        WorkoutSession existing = new WorkoutSession();
+        existing.setId(3L);
+        existing.setStartedAt(Instant.parse("2026-06-18T05:00:00Z"));
+        existing.setSessionKind(SessionKind.CARDIO);
+        existing.setActivityType(ActivityType.HIKING);
+        CardioWaypoint oldWaypoint = new CardioWaypoint();
+        oldWaypoint.setWorkoutSession(existing);
+        oldWaypoint.setWaypointIndex(0);
+        oldWaypoint.setLatitude(40.0);
+        oldWaypoint.setLongitude(10.0);
+        existing.getWaypoints().add(oldWaypoint);
+        when(sessionRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
+
+        WorkoutSessionRequest request = new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.HIKING, null, null, null,
+                List.of(new CardioWaypointRequest(0, 47.10, 19.00, null, null),
+                        new CardioWaypointRequest(1, 47.20, 19.05, null, null)));
+
+        service.update(3L, request);
+
+        assertThat(existing.getWaypoints()).hasSize(2);
+        assertThat(existing.getWaypoints()).extracting(CardioWaypoint::getLatitude)
+                .containsExactly(47.10, 47.20);
+    }
+
+    // -- Interval splits (docs/cardio/60 C7.1, D-C7.1) ---------------------
+
+    private static WorkoutSessionRequest cyclingRequest(List<CardioSplitRequest> splits) {
+        return new WorkoutSessionRequest(
+                Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.INDOOR_BIKE, 1800, null, splits, null);
+    }
+
+    @Test
+    void create_intervalSplit_persistsTypeIntensityAndWattsWithoutADistance() {
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 9L));
+        // The common indoor-bike case: the machine reports power but no
+        // distance, so the executed section has a duration and nothing else
+        // spatial (docs/cardio/61 §3 M39).
+        WorkoutSessionRequest request = cyclingRequest(List.of(
+                new CardioSplitRequest(0, SplitType.INTERVAL, null, 240, null, null, 218.0, IntervalIntensity.HARD),
+                new CardioSplitRequest(1, SplitType.INTERVAL, null, 180, null, null, 96.0, IntervalIntensity.EASY)));
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.splits()).hasSize(2);
+        assertThat(result.splits()).extracting(CardioSplitResponse::splitType)
+                .containsExactly(SplitType.INTERVAL, SplitType.INTERVAL);
+        assertThat(result.splits()).extracting(CardioSplitResponse::distanceMeters)
+                .containsExactly(null, null);
+        assertThat(result.splits()).extracting(CardioSplitResponse::intensity)
+                .containsExactly(IntervalIntensity.HARD, IntervalIntensity.EASY);
+        assertThat(result.splits()).extracting(CardioSplitResponse::avgWatts)
+                .containsExactly(218.0, 96.0);
+    }
+
+    @Test
+    void create_distanceSplitWithoutDistance_throwsInvalidCardioRequestException() {
+        // Mirrors cardio_splits_distance_required_ck (V70): loosening the
+        // column for intervals must not loosen it for per-km splits.
+        WorkoutSessionRequest request = cyclingRequest(List.of(
+                new CardioSplitRequest(0, SplitType.DISTANCE, null, 300, null, null, null, null)));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(InvalidCardioRequestException.class)
+                .hasMessageContaining("distanceMeters");
+    }
+
+    @Test
+    void create_distanceSplitWithAnIntensity_throwsInvalidCardioRequestException() {
+        WorkoutSessionRequest request = cyclingRequest(List.of(
+                new CardioSplitRequest(0, null, 1000.0, 300, null, null, null, IntervalIntensity.HARD)));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(InvalidCardioRequestException.class)
+                .hasMessageContaining("intensity");
     }
 
     // -- Best efforts (docs/cardio/60 C6.1) ---------------------------------
@@ -592,7 +734,7 @@ class WorkoutSessionServiceImplTest {
         return new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                SessionKind.CARDIO, ActivityType.RUNNING, 1800, cardio, null);
+                SessionKind.CARDIO, ActivityType.RUNNING, 1800, cardio, null, null);
     }
 
     @Test
@@ -682,7 +824,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.RUNNING, null,
-                cardioDetails(6100.0, null), null);
+                cardioDetails(6100.0, null), null, null);
 
         service.update(3L, request);
 
@@ -707,7 +849,7 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.RUNNING, null,
-                cardioDetails(4200.0, null), null);
+                cardioDetails(4200.0, null), null, null);
 
         service.update(3L, request);
 
@@ -734,7 +876,7 @@ class WorkoutSessionServiceImplTest {
         WorkoutSessionRequest request = new WorkoutSessionRequest(
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
-                SessionKind.CARDIO, ActivityType.RUNNING, null, null, null);
+                SessionKind.CARDIO, ActivityType.RUNNING, null, null, null, null);
 
         service.update(3L, request);
 
@@ -760,8 +902,8 @@ class WorkoutSessionServiceImplTest {
                 Instant.parse("2026-06-18T05:00:00Z"), null, List.of(), List.of(),
                 null, null, null, null, null, null, null,
                 SessionKind.CARDIO, ActivityType.RUNNING, null, null,
-                List.of(new CardioSplitRequest(0, 1000.0, 310, null, null),
-                        new CardioSplitRequest(1, 1000.0, 315, null, null)));
+                List.of(new CardioSplitRequest(0, null, 1000.0, 310, null, null, null, null),
+                        new CardioSplitRequest(1, null, 1000.0, 315, null, null, null, null)), null);
 
         service.update(3L, request);
 

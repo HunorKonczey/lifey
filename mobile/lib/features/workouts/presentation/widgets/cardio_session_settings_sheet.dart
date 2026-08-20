@@ -7,7 +7,9 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../settings/application/settings_controller.dart';
 import '../../../settings/domain/user_settings.dart';
 import '../../application/auto_pause_preferences.dart';
+import '../../application/interval_cue_preferences.dart';
 import '../../application/km_cue_preferences.dart';
+import '../../domain/activity_type.dart';
 
 /// The DISTANCE family's in-session settings (docs/cardio/61 §2 M35) —
 /// reachable from `CardioSessionScreen`'s header, not the main Settings
@@ -18,8 +20,14 @@ import '../../application/km_cue_preferences.dart';
 /// original and only occupant) and the per-kilometre cue (C6.6). Named after
 /// the session rather than after auto-pause since C6.6 — a sheet with two
 /// sections shouldn't be named after one of them.
+///
+/// A MACHINE ride playing an interval plan opens the same sheet for its own
+/// pair of switches (Q-D4). Neither family sees the other's: auto-pause is
+/// GPS-only, and a section-change cue means nothing without sections.
 class CardioSessionSettingsSheet extends ConsumerStatefulWidget {
-  const CardioSessionSettingsSheet({super.key});
+  const CardioSessionSettingsSheet({super.key, this.family = ActivityFamily.distance});
+
+  final ActivityFamily family;
 
   @override
   ConsumerState<CardioSessionSettingsSheet> createState() => _CardioSessionSettingsSheetState();
@@ -31,6 +39,9 @@ class _CardioSessionSettingsSheetState extends ConsumerState<CardioSessionSettin
   /// default.
   bool? _autoPauseEnabled;
   KmCueSettings? _kmCue;
+  IntervalCueSettings? _intervalCue;
+
+  bool get _isInterval => widget.family == ActivityFamily.machine;
 
   @override
   void initState() {
@@ -41,12 +52,24 @@ class _CardioSessionSettingsSheetState extends ConsumerState<CardioSessionSettin
   Future<void> _load() async {
     final autoPause = await ref.read(autoPausePreferencesProvider).isEnabled();
     final kmCue = await ref.read(kmCuePreferencesProvider).load();
+    final intervalCue = await ref.read(intervalCuePreferencesProvider).load();
     if (mounted) {
       setState(() {
         _autoPauseEnabled = autoPause;
         _kmCue = kmCue;
+        _intervalCue = intervalCue;
       });
     }
+  }
+
+  Future<void> _toggleIntervalVibration(bool value) async {
+    setState(() => _intervalCue = _intervalCue?.copyWith(vibration: value));
+    await ref.read(intervalCuePreferencesProvider).setVibrationEnabled(value);
+  }
+
+  Future<void> _toggleIntervalSound(bool value) async {
+    setState(() => _intervalCue = _intervalCue?.copyWith(sound: value));
+    await ref.read(intervalCuePreferencesProvider).setSoundEnabled(value);
   }
 
   // Optimistic throughout — these are plain local flags, not synced calls.
@@ -63,6 +86,41 @@ class _CardioSessionSettingsSheetState extends ConsumerState<CardioSessionSettin
   Future<void> _toggleSound(bool value) async {
     setState(() => _kmCue = _kmCue?.copyWith(sound: value));
     await ref.read(kmCuePreferencesProvider).setSoundEnabled(value);
+  }
+
+  /// M38's cue pair, built on M35's switch pattern (Q-D4) — the same two
+  /// rows, about a section change instead of a kilometre.
+  Widget _intervalSection(AppLocalizations l10n, ColorScheme scheme) {
+    final intervalCue = _intervalCue;
+    if (intervalCue == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionLabel(label: l10n.intervalCueSectionLabel),
+        const SizedBox(height: 4),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: Icon(Icons.vibration, color: scheme.onSurfaceVariant),
+          title: Text(l10n.kmCueVibrationLabel),
+          subtitle: Text(l10n.intervalCueVibrationDescription),
+          value: intervalCue.vibration,
+          onChanged: _toggleIntervalVibration,
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: Icon(Icons.volume_up, color: scheme.onSurfaceVariant),
+          title: Text(l10n.kmCueSoundLabel),
+          subtitle: Text(l10n.intervalCueSoundDescription),
+          value: intervalCue.sound,
+          onChanged: _toggleIntervalSound,
+        ),
+      ],
+    );
   }
 
   @override
@@ -88,11 +146,15 @@ class _CardioSessionSettingsSheetState extends ConsumerState<CardioSessionSettin
             ),
             const SizedBox(height: 8),
             Text(
-              l10n.autoPauseSettingsDescription,
+              _isInterval
+                  ? l10n.intervalCueSettingsDescription
+                  : l10n.autoPauseSettingsDescription,
               style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant, height: 1.4),
             ),
             const SizedBox(height: 8),
-            if (autoPauseEnabled == null || kmCue == null)
+            if (_isInterval)
+              _intervalSection(l10n, scheme)
+            else if (autoPauseEnabled == null || kmCue == null)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 20),
                 child: Center(child: CircularProgressIndicator()),
@@ -308,12 +370,15 @@ class _DashedBorderPainter extends CustomPainter {
 /// Shows [CardioSessionSettingsSheet]. Fire-and-forget from the caller's
 /// side — there's no choice to act on afterward, the sheet writes straight
 /// through the preference stores itself.
-Future<void> showCardioSessionSettingsSheet(BuildContext context) {
+Future<void> showCardioSessionSettingsSheet(
+  BuildContext context, {
+  ActivityFamily family = ActivityFamily.distance,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (_) => const CardioSessionSettingsSheet(),
+    builder: (_) => CardioSessionSettingsSheet(family: family),
   );
 }

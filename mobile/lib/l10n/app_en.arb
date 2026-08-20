@@ -1304,9 +1304,17 @@
   "@statMetricMaxHeartRateLabel": {
     "description": "Statistics metric label: highest heart rate recorded in a cardio session per day"
   },
+  "statMetricCardioHardZoneMinutesLabel": "Time at threshold+",
+  "@statMetricCardioHardZoneMinutesLabel": {
+    "description": "Statistics metric (C9.5): minutes spent in heart-rate zones 4 and 5. Deliberately not 'zone time' in total — the five zones together roughly equal the session, which the moving-minutes metric already charts."
+  },
   "statMetricCardioSessionsLabel": "Cardio sessions",
   "@statMetricCardioSessionsLabel": {
     "description": "Statistics metric label: number of cardio sessions per day"
+  },
+  "statMetricCardioMaxAltitudeLabel": "Peak altitude",
+  "@statMetricCardioMaxAltitudeLabel": {
+    "description": "Statistics metric (docs/cardio/60 C8.7): the highest point reached per day, DISTANCE family only — a daily maximum, same shape as max heart rate, not a sum"
   },
   "statisticsTitle": "Statistics",
   "@statisticsTitle": {
@@ -3609,6 +3617,148 @@
   "@cardioRecordFastest10k": {
     "description": "Name of the fastest-10km cardio record (C6.7)"
   },
+  "gameSetupTitle": "Before the match",
+  "@gameSetupTitle": {
+    "description": "Title of the sheet shown when starting a GAME-family cardio session (C9.3, M45) — format and venue"
+  },
+  "gameSetupSubtitle": "You can change this afterwards.",
+  "@gameSetupSubtitle": {
+    "description": "Subtitle of the match-setup sheet: nothing chosen here is final, which is what lets the sheet be skippable"
+  },
+  "gameFormatSectionLabel": "FORMAT",
+  "@gameFormatSectionLabel": {
+    "description": "Section label above the 2x2 format selector (C9.3, M45)"
+  },
+  "gameFormatFiveVsFive": "5v5",
+  "@gameFormatFiveVsFive": {
+    "description": "Match format: full-court five-a-side"
+  },
+  "gameFormatSmallSided": "Small-sided",
+  "@gameFormatSmallSided": {
+    "description": "Match format: a smaller pitch/court. This is the label that forces the selector into 2x2 — in Hungarian ('Kispálya') four of these do not fit on one row."
+  },
+  "gameFormatPractice": "Practice",
+  "@gameFormatPractice": {
+    "description": "Match format: training session rather than a game"
+  },
+  "gameFormatMatch": "Match",
+  "@gameFormatMatch": {
+    "description": "Match format: a competitive fixture"
+  },
+  "gameGpsSwitchLabel": "Turn on GPS",
+  "@gameGpsSwitchLabel": {
+    "description": "The outdoor-only GPS opt-in on the match-setup sheet (C9.4, M45). Absent indoors entirely — not switched off, not there."
+  },
+  "gameGpsSwitchDescription": "Uses more battery",
+  "@gameGpsSwitchDescription": {
+    "description": "Subtitle of the GPS switch on the match-setup sheet"
+  },
+  "gameGpsPromise": "You get distance and a route. Not pace: min/km isn't a meaningful number in a match.",
+  "@gameGpsPromise": {
+    "description": "The one place the app states that a match records no pace (C9.4, M45; docs/cardio/51 §3.4). Said here so its absence on the summary doesn't read as a bug."
+  },
+  "gameSetupStart": "Start",
+  "@gameSetupStart": {
+    "description": "The match-setup sheet's start button — reachable on the first tap, since every field already has a value (C9.3, M45)"
+  },
+  "boxScoreCircleLabel": "Box",
+  "@boxScoreCircleLabel": {
+    "description": "The bottom-right circle button on the live GAME screen that opens the box-score stepper (C9.2, M44). The stepper is not always open: in a pocket or while defending, a permanently visible stepper would collect accidental taps."
+  },
+  "boxScoreAutoCloseHint": "closes after 6 s",
+  "@boxScoreAutoCloseHint": {
+    "description": "Header note on the box-score stepper panel, stating that it dismisses itself after 6 seconds of no interaction (C9.2, M44)"
+  },
+  "boxScorePointsLabel": "POINTS",
+  "@boxScorePointsLabel": {
+    "description": "Basketball column of the box-score stepper (C9.2, M44)"
+  },
+  "boxScoreGoalsLabel": "GOALS",
+  "@boxScoreGoalsLabel": {
+    "description": "Football's counterpart to boxScorePointsLabel — the same stored column, named for the sport"
+  },
+  "boxScoreAssistsLabel": "ASSISTS",
+  "@boxScoreAssistsLabel": {
+    "description": "Assists column of the box-score stepper (C9.2, M44)"
+  },
+  "boxScoreReboundsLabel": "REBOUNDS",
+  "@boxScoreReboundsLabel": {
+    "description": "Rebounds column of the box-score stepper — basketball only, so football shows two columns instead of three (C9.2, M44)"
+  },
+  "boxScoreOfferTitle": "Keep score?",
+  "@boxScoreOfferTitle": {
+    "description": "Title of the one-time offer to track the box score during a match (C9.2, M44, Q-D2)"
+  },
+  "boxScoreOfferBody": "Points, rebounds and assists, one tap during the match. If you're not interested, we won't ask again.",
+  "@boxScoreOfferBody": {
+    "description": "Body of the one-time box-score offer. The last sentence is a promise the code keeps literally — a decline is permanent."
+  },
+  "boxScoreOfferAccept": "Yes, please",
+  "@boxScoreOfferAccept": {
+    "description": "Accept button of the one-time box-score offer"
+  },
+  "boxScoreOfferDecline": "No thanks",
+  "@boxScoreOfferDecline": {
+    "description": "Decline button of the one-time box-score offer — answering this hides the offer forever"
+  },
+  "hrZonesSectionLabel": "HEART RATE ZONES",
+  "@hrZonesSectionLabel": {
+    "description": "Header of the heart-rate zone panel on the cardio summary screen (C9.1, M43). One component for every cardio type — only its position differs by family."
+  },
+  "hrZoneEasyEndLabel": "easy",
+  "@hrZoneEasyEndLabel": {
+    "description": "Label at the left end of the stacked zone bar (C9.1, M43)"
+  },
+  "hrZoneHardEndLabel": "hard",
+  "@hrZoneHardEndLabel": {
+    "description": "Label at the right end of the stacked zone bar (C9.1, M43)"
+  },
+  "hrZoneVerdictHard": "hard session",
+  "@hrZoneVerdictHard": {
+    "description": "Headline chip when zones 4-5 dominate (C9.1, M43). Said in words because the bar's colours alone are not accessible to a colour-blind reader."
+  },
+  "hrZoneVerdictBalanced": "balanced session",
+  "@hrZoneVerdictBalanced": {
+    "description": "Headline chip for a session spread across the middle zones (C9.1, M43)"
+  },
+  "hrZoneVerdictEasy": "easy session",
+  "@hrZoneVerdictEasy": {
+    "description": "Headline chip when almost no time was spent at threshold or above (C9.1, M43)"
+  },
+  "hrZone1Name": "warm-up",
+  "@hrZone1Name": {
+    "description": "Name of heart-rate zone 1, shown next to the Z1 code (C9.1, M43)"
+  },
+  "hrZone2Name": "base",
+  "@hrZone2Name": {
+    "description": "Name of heart-rate zone 2"
+  },
+  "hrZone3Name": "tempo",
+  "@hrZone3Name": {
+    "description": "Name of heart-rate zone 3"
+  },
+  "hrZone4Name": "threshold",
+  "@hrZone4Name": {
+    "description": "Name of heart-rate zone 4"
+  },
+  "hrZone5Name": "maximum",
+  "@hrZone5Name": {
+    "description": "Name of heart-rate zone 5"
+  },
+  "hrZonePartialCoverage": "{percent}% of the session",
+  "@hrZonePartialCoverage": {
+    "description": "Shown with a timelapse icon when the zone data covers only part of the session (C9.1, M43) — the unmeasured remainder is hatched on the bar rather than stretched over.",
+    "placeholders": {
+      "percent": {
+        "type": "String",
+        "example": "62"
+      }
+    }
+  },
+  "hrZoneSourceNote": "From your watch's heart rate, against your profile's maximum. Never estimated.",
+  "@hrZoneSourceNote": {
+    "description": "Closing line of the zone panel (C9.1, M43). States outright that nothing here is inferred — a zone with no measurement stays empty."
+  },
   "bestEffortsSectionLabel": "BEST EFFORTS",
   "@bestEffortsSectionLabel": {
     "description": "Header of the card listing the fastest 1/5/10 km inside a run, on the cardio summary screen (C6.7, M34)"
@@ -3652,6 +3802,10 @@
   "cardioRecordGreatestElevationGain": "Greatest elevation gain",
   "@cardioRecordGreatestElevationGain": {
     "description": "Cardio record type label: this session gained more elevation than any prior running/walking/hiking session"
+  },
+  "cardioRecordGreatestMaxAltitude": "Highest peak",
+  "@cardioRecordGreatestMaxAltitude": {
+    "description": "Cardio record type label: this session reached a higher point than any prior DISTANCE-family session (docs/cardio/60 C8.7)"
   },
   "gpsExplainerTitle": "So we can see where you ran",
   "@gpsExplainerTitle": {
@@ -3910,5 +4064,453 @@
   "quickStartOrderHint": "by frequency",
   "@quickStartOrderHint": {
     "description": "Right-hand hint next to the quick-start title explaining the tile order (M01)"
+  },
+  "intervalPlanTitle": "Interval plan",
+  "@intervalPlanTitle": {
+    "description": "Title of the interval plan editor screen (M37)"
+  },
+  "intervalPlanNameLabel": "PLAN NAME",
+  "@intervalPlanNameLabel": {
+    "description": "Label above the plan name field in the interval editor (M37)"
+  },
+  "intervalPlanNameHint": "Tuesday 4x4",
+  "@intervalPlanNameHint": {
+    "description": "Placeholder for the interval plan name field (M37)"
+  },
+  "intervalTotalLengthLabel": "total length",
+  "@intervalTotalLengthLabel": {
+    "description": "Caption under the total duration in the interval editor header (M37)"
+  },
+  "intervalSectionsLabel": "sections",
+  "@intervalSectionsLabel": {
+    "description": "Caption under the section count in the interval editor header (M37)"
+  },
+  "intervalHardTimeLabel": "hard time",
+  "@intervalHardTimeLabel": {
+    "description": "Caption under the hard-effort time in the interval editor header — the number that actually defines an interval plan (M37)"
+  },
+  "intervalRepeatBlockLabel": "REPEAT BLOCK",
+  "@intervalRepeatBlockLabel": {
+    "description": "Header of a repeat block card in the interval editor (M37)"
+  },
+  "intervalAddSectionButton": "Section",
+  "@intervalAddSectionButton": {
+    "description": "Add-a-section button in the interval editor (M37)"
+  },
+  "intervalAddRepeatButton": "Repeat",
+  "@intervalAddRepeatButton": {
+    "description": "Add-a-repeat-block button in the interval editor (M37)"
+  },
+  "intervalSaveAndStartButton": "Save and start",
+  "@intervalSaveAndStartButton": {
+    "description": "Primary button of the interval editor: saves the plan and starts a session with it (M37)"
+  },
+  "intervalSaveOnlyButton": "Save only",
+  "@intervalSaveOnlyButton": {
+    "description": "Secondary button of the interval editor: saves the plan without starting a session (M37)"
+  },
+  "intervalEmptyTitle": "Build a plan",
+  "@intervalEmptyTitle": {
+    "description": "Title of the interval editor empty state (M37)"
+  },
+  "intervalEmptyBody": "Sections one after another: how long, how hard. If a series repeats, put it in a repeat block.",
+  "@intervalEmptyBody": {
+    "description": "Body of the interval editor empty state (M37)"
+  },
+  "intervalStarterTitle": "Start with the 4x4",
+  "@intervalStarterTitle": {
+    "description": "Title of the ready-made starter plan offered on the empty state (M37)"
+  },
+  "intervalStarterSubtitle": "4 minutes hard / 3 minutes easy, four times",
+  "@intervalStarterSubtitle": {
+    "description": "Subtitle of the starter plan offer (M37)"
+  },
+  "intervalDurationLabel": "DURATION",
+  "@intervalDurationLabel": {
+    "description": "Label above the duration stepper in the section editor (M37)"
+  },
+  "intervalTargetIntensityLabel": "TARGET INTENSITY",
+  "@intervalTargetIntensityLabel": {
+    "description": "Label above the three-step intensity picker in the section editor (M37)"
+  },
+  "intervalIntensityEasy": "easy",
+  "@intervalIntensityEasy": {
+    "description": "The EASY target intensity of an interval section (M37)"
+  },
+  "intervalIntensityModerate": "moderate",
+  "@intervalIntensityModerate": {
+    "description": "The MODERATE target intensity of an interval section (M37)"
+  },
+  "intervalIntensityHard": "hard",
+  "@intervalIntensityHard": {
+    "description": "The HARD target intensity of an interval section (M37)"
+  },
+  "intervalResistanceNote": "We do not ask for a resistance level: every machine runs a different scale. Hard = what you can just about hold for 4 minutes.",
+  "@intervalResistanceNote": {
+    "description": "Footnote in the section editor explaining why the plan asks for an effort level instead of a resistance level (M37)"
+  },
+  "intervalSectionEditorTitle": "{intensity} section",
+  "@intervalSectionEditorTitle": {
+    "description": "Title of the section editor sheet, e.g. \"hard section\" (M37)",
+    "placeholders": {
+      "intensity": {
+        "type": "String"
+      }
+    }
+  },
+  "intervalRemoveSectionButton": "Remove section",
+  "@intervalRemoveSectionButton": {
+    "description": "Removes the edited section from the plan (M37)"
+  },
+  "intervalRemoveBlockButton": "Remove block",
+  "@intervalRemoveBlockButton": {
+    "description": "Removes a repeat block, with the sections inside it, from the plan (M37)"
+  },
+  "intervalWarmUpSectionName": "Warm-up",
+  "@intervalWarmUpSectionName": {
+    "description": "Default name of the warm-up section in the starter plan (M37)"
+  },
+  "intervalCoolDownSectionName": "Cool-down",
+  "@intervalCoolDownSectionName": {
+    "description": "Default name of the cool-down section in the starter plan (M37)"
+  },
+  "intervalHardSectionName": "Hard",
+  "@intervalHardSectionName": {
+    "description": "Default name of a hard section (M37)"
+  },
+  "intervalRestSectionName": "Rest",
+  "@intervalRestSectionName": {
+    "description": "Default name of a recovery section (M37)"
+  },
+  "intervalDefaultPlanName": "Interval plan",
+  "@intervalDefaultPlanName": {
+    "description": "Plan name used when the user saves without typing one (M37)"
+  },
+  "couldNotSaveIntervalPlanMessage": "Could not save the plan",
+  "@couldNotSaveIntervalPlanMessage": {
+    "description": "Error snackbar shown when saving an interval plan fails (M37)"
+  },
+  "intervalSectionCounterLabel": "SECTION {current}/{total}",
+  "@intervalSectionCounterLabel": {
+    "description": "Section counter above the countdown in the interval player (M38)",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "intervalRemainingLabel": "to go",
+  "@intervalRemainingLabel": {
+    "description": "Caption under the section countdown in the interval player (M38)"
+  },
+  "intervalNextLabel": "Next: {duration} {intensity}",
+  "@intervalNextLabel": {
+    "description": "Preview of the section coming after the current one (M38)",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      },
+      "intensity": {
+        "type": "String"
+      }
+    }
+  },
+  "intervalUpNextLabel": "UP NEXT",
+  "@intervalUpNextLabel": {
+    "description": "Label of the last-three-seconds state, above the next section (M38)"
+  },
+  "intervalSkipCircleLabel": "Skip",
+  "@intervalSkipCircleLabel": {
+    "description": "Bottom-right circle on the live MACHINE screen while a plan is playing: ends the current section now (M38)"
+  },
+  "intervalPausedSectionLabel": "paused",
+  "@intervalPausedSectionLabel": {
+    "description": "Shown next to the section counter while the session is paused (M38)"
+  },
+  "intervalPausedSectionBody": "The section clock stops with the pause — the plan does not run out on you.",
+  "@intervalPausedSectionBody": {
+    "description": "Explanation shown in the interval player while the session is paused (M38)"
+  },
+  "intervalPlanFinishedLabel": "Plan complete",
+  "@intervalPlanFinishedLabel": {
+    "description": "Shown in the interval player once the last section has played (M38)"
+  },
+  "intervalCueSectionLabel": "SECTION CHANGE",
+  "@intervalCueSectionLabel": {
+    "description": "Label of the interval cue switches in the in-session settings sheet (Q-D4)"
+  },
+  "intervalCueVibrationDescription": "Three taps, then the switch",
+  "@intervalCueVibrationDescription": {
+    "description": "Subtitle of the interval vibration switch (M38)"
+  },
+  "intervalCueSoundDescription": "Short chime, under the music",
+  "@intervalCueSoundDescription": {
+    "description": "Subtitle of the interval sound switch (M38)"
+  },
+  "intervalCueSettingsDescription": "What the player gives you at a section change. Both off is silence — the countdown is still on screen.",
+  "@intervalCueSettingsDescription": {
+    "description": "Description at the top of the MACHINE in-session settings sheet (Q-D4)"
+  },
+  "intervalPlanPickerTitle": "Interval plan",
+  "@intervalPlanPickerTitle": {
+    "description": "Title of the sheet that offers a plan before an indoor-bike session starts (M37/M38)"
+  },
+  "intervalPlanPickerBody": "Pick a plan for this ride, or start without one.",
+  "@intervalPlanPickerBody": {
+    "description": "Body of the plan picker sheet"
+  },
+  "intervalPlanPickerNewPlan": "New plan",
+  "@intervalPlanPickerNewPlan": {
+    "description": "Row that opens the interval plan editor from the plan picker sheet"
+  },
+  "intervalPlanPickerWithoutPlan": "Without a plan",
+  "@intervalPlanPickerWithoutPlan": {
+    "description": "Starts the indoor-bike session with no interval plan — the screen then looks exactly as it always has (M38)"
+  },
+  "intervalPlanSummaryLabel": "{duration} · {sections} sections",
+  "@intervalPlanSummaryLabel": {
+    "description": "Subtitle of a saved plan in the picker: total length and section count",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      },
+      "sections": {
+        "type": "int"
+      }
+    }
+  },
+  "totalWorkLabel": "total work",
+  "@totalWorkLabel": {
+    "description": "Caption of the derived total-work number on the machine summary (M39)"
+  },
+  "totalWorkSourceHint": "from the power",
+  "@totalWorkSourceHint": {
+    "description": "Second line of the total-work card, naming where the number comes from (M39)"
+  },
+  "maxWattsShortLabel": "max {watts} W",
+  "@maxWattsShortLabel": {
+    "description": "Peak power under the average on the total-work card (M39)",
+    "placeholders": {
+      "watts": {
+        "type": "int"
+      }
+    }
+  },
+  "intervalSectionsSectionLabel": "INTERVAL SECTIONS",
+  "@intervalSectionsSectionLabel": {
+    "description": "Header of the executed interval sections card on the machine summary (M39)"
+  },
+  "intervalSectionsCountChip": "{count} sections",
+  "@intervalSectionsCountChip": {
+    "description": "Chip in the interval sections card header (M39)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "intervalSectionsShowAll": "All {count} sections",
+  "@intervalSectionsShowAll": {
+    "description": "Expander under the first few interval sections (M39)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "activeCaloriesLabel": "ACTIVE",
+  "@activeCaloriesLabel": {
+    "description": "Left half of the two-sided calorie card: the calories that count towards the day (M39)"
+  },
+  "activeCaloriesHint": "kcal · this is what counts towards your day",
+  "@activeCaloriesHint": {
+    "description": "Explanation under the active calories (M39)"
+  },
+  "machineCaloriesLabel": "THE MACHINE READS",
+  "@machineCaloriesLabel": {
+    "description": "Right half of the two-sided calorie card: the machine own estimate (M39)"
+  },
+  "machineCaloriesHint": "kcal · for reference, never added",
+  "@machineCaloriesHint": {
+    "description": "Explanation under the machine calories (M39)"
+  },
+  "machineCaloriesFootnote": "Machines estimate calories without knowing your body weight — which is why this never enters your daily total.",
+  "@machineCaloriesFootnote": {
+    "description": "Footnote of the calorie card explaining why the machine number is never summed (M39, docs/cardio/51 Q4)"
+  },
+  "cardioRecordGreatestTotalWork": "Greatest total work",
+  "@cardioRecordGreatestTotalWork": {
+    "description": "Cardio record type label: this indoor-bike ride derived more total work (kJ) than any prior MACHINE-family session (docs/cardio/60 C7.7)"
+  },
+  "elevationProfileGapLabel": "gap",
+  "@elevationProfileGapLabel": {
+    "description": "Label inside the shaded band on the elevation profile where the GPS signal was lost for a stretch (docs/cardio/60 C8.3, M40)"
+  },
+  "elevationProfilePeakCaption": "peak {altitude} · {distance}",
+  "@elevationProfilePeakCaption": {
+    "description": "Caption under the elevation profile axis naming the highest point (M40)",
+    "placeholders": {
+      "altitude": {
+        "type": "String"
+      },
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "elevationProfileSelectedPointChip": "selected point · {distance}",
+  "@elevationProfileSelectedPointChip": {
+    "description": "Chip in the elevation profile card header once a point has been tapped (M40)",
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "elevationProfileSimplifiedBadge": "SIMPLIFIED",
+  "@elevationProfileSimplifiedBadge": {
+    "description": "Badge shown on the elevation profile when the local GPS track has been pruned and only the coarser stored route is left to draw from (docs/cardio/60 C8.3)"
+  },
+  "elevationProfileAltitudeReadoutLabel": "altitude",
+  "@elevationProfileAltitudeReadoutLabel": {
+    "description": "One of the three readout numbers under the elevation profile for a tapped point (M40)"
+  },
+  "elevationProfileDistanceReadoutLabel": "so far",
+  "@elevationProfileDistanceReadoutLabel": {
+    "description": "One of the three readout numbers under the elevation profile for a tapped point (M40)"
+  },
+  "elevationProfileElapsedReadoutLabel": "elapsed",
+  "@elevationProfileElapsedReadoutLabel": {
+    "description": "One of the three readout numbers under the elevation profile for a tapped point (M40)"
+  },
+  "waypointMarkButtonLabel": "Mark waypoint",
+  "@waypointMarkButtonLabel": {
+    "description": "Title of the full-width waypoint marker button on the live hike screen (docs/cardio/60 C8.4, M41)"
+  },
+  "waypointMarkButtonSubtitle": "where you are now",
+  "@waypointMarkButtonSubtitle": {
+    "description": "Subtitle under the waypoint marker button's title (M41)"
+  },
+  "waypointMarkButtonUnavailable": "no location, nothing to mark",
+  "@waypointMarkButtonUnavailable": {
+    "description": "Subtitle shown in the waypoint marker button's place of the normal one when GPS isn't available (M41)"
+  },
+  "waypointMarkedFeedback": "Waypoint {count} marked",
+  "@waypointMarkedFeedback": {
+    "description": "4-second auto-dismissing confirmation after marking a waypoint (M41)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "waypointMarkUndoLabel": "Undo",
+  "@waypointMarkUndoLabel": {
+    "description": "Undoes the waypoint mark the feedback banner is reporting on (M41)"
+  },
+  "waypointsSectionLabel": "WAYPOINTS",
+  "@waypointsSectionLabel": {
+    "description": "Header of the waypoint list card on the hike summary screen (docs/cardio/60 C8.4, M42)"
+  },
+  "waypointsCountChip": "{count} waypoints",
+  "@waypointsCountChip": {
+    "description": "Chip in the waypoint list card header (M42)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maxAltitudeFieldLabel": "PEAK ALTITUDE",
+  "@maxAltitudeFieldLabel": {
+    "description": "Label for the max-altitude metric tile on the DISTANCE-family summary grid (docs/cardio/60 C8.5, Q-D6) — shown whenever the session has one, not hike-only, same gating as elevationGainFieldLabel"
+  },
+  "backpackWeightFieldLabel": "BACKPACK WEIGHT",
+  "@backpackWeightFieldLabel": {
+    "description": "Label for the backpack-weight metric tile — HIKING only (docs/cardio/60 C8.5, M42)"
+  },
+  "handEnteredBadgeLabel": "By hand",
+  "@handEnteredBadgeLabel": {
+    "description": "Badge on the backpack-weight tile once it's been entered — a different label from manuallyEditedBadgeLabel because there's no measured value it could be overriding (M42: \"kézzel\", not \"szerkesztve\")"
+  },
+  "editBackpackWeightDialogTitle": "Backpack weight",
+  "@editBackpackWeightDialogTitle": {
+    "description": "Title of the dialog that sets a hike's backpack weight on the summary screen (docs/cardio/60 C8.5)"
+  },
+  "weatherConditionClear": "Clear",
+  "@weatherConditionClear": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionPartlyCloudy": "Partly cloudy",
+  "@weatherConditionPartlyCloudy": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionCloudy": "Cloudy",
+  "@weatherConditionCloudy": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionRain": "Rain",
+  "@weatherConditionRain": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionSnow": "Snow",
+  "@weatherConditionSnow": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionWindy": "Windy",
+  "@weatherConditionWindy": {
+    "description": "Weather condition option (docs/cardio/60 C8.6)"
+  },
+  "weatherConditionSectionLabel": "CONDITION",
+  "@weatherConditionSectionLabel": {
+    "description": "Header above the weather-condition chip picker (log sheet + summary edit sheet)"
+  },
+  "weatherTemperatureFieldLabel": "TEMPERATURE",
+  "@weatherTemperatureFieldLabel": {
+    "description": "Numeric field label for the hike-start temperature (docs/cardio/60 C8.6) — signed, unlike every other numeric cardio field"
+  },
+  "weatherWindFieldLabel": "WIND",
+  "@weatherWindFieldLabel": {
+    "description": "Numeric field label for the hike-start wind speed (docs/cardio/60 C8.6)"
+  },
+  "weatherPrecipFieldLabel": "PRECIPITATION",
+  "@weatherPrecipFieldLabel": {
+    "description": "Numeric field label for the hike-start precipitation (docs/cardio/60 C8.6)"
+  },
+  "weatherSectionLabel": "WEATHER AT START",
+  "@weatherSectionLabel": {
+    "description": "Header of the weather-snapshot card on the hike summary screen (docs/cardio/60 C8.6, M42)"
+  },
+  "weatherSnapshotCaption": "{time} · snapshot",
+  "@weatherSnapshotCaption": {
+    "description": "Trailing caption on the weather card header — the session's own start time (M42: \"8:12 · pillanatkép\")",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherTemperatureReadoutLabel": "temperature",
+  "@weatherTemperatureReadoutLabel": {
+    "description": "One of the three readout numbers in the weather card (M42)"
+  },
+  "weatherWindReadoutLabel": "wind",
+  "@weatherWindReadoutLabel": {
+    "description": "One of the three readout numbers in the weather card (M42)"
+  },
+  "weatherPrecipReadoutLabel": "precipitation",
+  "@weatherPrecipReadoutLabel": {
+    "description": "One of the three readout numbers in the weather card (M42)"
+  },
+  "weatherNoDataMessage": "No weather data — add it by hand",
+  "@weatherNoDataMessage": {
+    "description": "Empty-state row shown in place of the weather card when nothing's been entered (M42: \"Nincs időjárás-adat\") — tappable, unlike the design mockup's static version, so a session missing weather can still get it added afterward"
+  },
+  "editWeatherDialogTitle": "Weather at start",
+  "@editWeatherDialogTitle": {
+    "description": "Title of the bottom sheet that sets a hike's weather snapshot on the summary screen (docs/cardio/60 C8.6)"
   }
 }

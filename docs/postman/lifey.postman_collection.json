@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Lifey API",
-    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Weight Tracking*, *Statistics*, *Settings*, *Water Tracking*, *Steps*, *User Details*, *User Avatar*, *Trainer Invites*, *Client Invites*, *My Trainers*, *Trainer Clients*, *Trainer Client Data*, *Trainer Schedules*, *Trainer Assignments*, *Chat*, *Super Admin*.\n\nAll `/api/v1/**` routes require a JWT access token except `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/social/google`, `/api/v1/auth/refresh`, `/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`, and the public `/api/v1/trainer-invites/email/**` invite-response link — note `/api/v1/auth/logout` requires auth too, it is NOT public. `/api/v1/trainer/**` additionally requires `ROLE_TRAINER` and `/api/v1/superadmin/**` requires `ROLE_SUPER_ADMIN`. The collection is set up to send the bearer token automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nFoods and exercises are per-user (see V40__foods_exercises_ownership.sql): the first real user in the database keeps the original seeded exercise rows (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank), every other user gets their own copy with different ids. Both are managed via their CRUD endpoints; deletes are soft (tombstoned) and no longer return 409 when still referenced.\n\nMany list endpoints additionally support a mobile offline delta-sync feed via `?updatedSince=<ISO-8601 instant>` (see docs/16-delta-sync-rollout.md) and/or pagination via `?page=`; see the 'Delta sync ...' / '... (paged...)' requests in each folder.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall; `totalWater` sums water entries over the same period.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace). `unitSystem`, `theme` and `language` are all required.\n\nWater Tracking has two parts: *Water Sources* (reusable presets like \"Creatine Shake\" = 0.9L, full CRUD) and *Water Entries* (logged intake, list/create/delete only — like Weight Tracking). An entry's `volumeLiters` is always client-supplied (picking a source just pre-fills it); `sourceId` is optional and purely informational.\n\nThe *Trainer ...* / *Super Admin* folders are the personal-trainer module (docs/personal_trainer/): a `ROLE_TRAINER` account manages invites/clients/schedules/assignments under `/api/v1/trainer/**`, clients respond to invites and view their trainers under `/api/v1/trainer-invites/**` and `/api/v1/my-trainers`, and a `ROLE_SUPER_ADMIN` account grants/revokes `ROLE_TRAINER` under `/api/v1/superadmin/**`.\n\nThe *Chat* folder (docs/chat/40-trainer-chat-plan.md) is the one trainer-module surface that is deliberately NOT role-gated: both sides of a conversation call the same `/api/v1/chat/**` endpoints, and access is decided by participation in the thread, so a non-participant gets 404 rather than 403.",
+    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Cardio Interval Plans*, *Weight Tracking*, *Statistics*, *Settings*, *Water Tracking*, *Steps*, *User Details*, *User Avatar*, *Trainer Invites*, *Client Invites*, *My Trainers*, *Trainer Clients*, *Trainer Client Data*, *Trainer Schedules*, *Trainer Assignments*, *Chat*, *Super Admin*.\n\nAll `/api/v1/**` routes require a JWT access token except `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/social/google`, `/api/v1/auth/refresh`, `/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`, and the public `/api/v1/trainer-invites/email/**` invite-response link — note `/api/v1/auth/logout` requires auth too, it is NOT public. `/api/v1/trainer/**` additionally requires `ROLE_TRAINER` and `/api/v1/superadmin/**` requires `ROLE_SUPER_ADMIN`. The collection is set up to send the bearer token automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nFoods and exercises are per-user (see V40__foods_exercises_ownership.sql): the first real user in the database keeps the original seeded exercise rows (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank), every other user gets their own copy with different ids. Both are managed via their CRUD endpoints; deletes are soft (tombstoned) and no longer return 409 when still referenced.\n\nMany list endpoints additionally support a mobile offline delta-sync feed via `?updatedSince=<ISO-8601 instant>` (see docs/16-delta-sync-rollout.md) and/or pagination via `?page=`; see the 'Delta sync ...' / '... (paged...)' requests in each folder.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall; `totalWater` sums water entries over the same period.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace). `unitSystem`, `theme` and `language` are all required.\n\nWater Tracking has two parts: *Water Sources* (reusable presets like \"Creatine Shake\" = 0.9L, full CRUD) and *Water Entries* (logged intake, list/create/delete only — like Weight Tracking). An entry's `volumeLiters` is always client-supplied (picking a source just pre-fills it); `sourceId` is optional and purely informational.\n\nThe *Trainer ...* / *Super Admin* folders are the personal-trainer module (docs/personal_trainer/): a `ROLE_TRAINER` account manages invites/clients/schedules/assignments under `/api/v1/trainer/**`, clients respond to invites and view their trainers under `/api/v1/trainer-invites/**` and `/api/v1/my-trainers`, and a `ROLE_SUPER_ADMIN` account grants/revokes `ROLE_TRAINER` under `/api/v1/superadmin/**`.\n\nThe *Chat* folder (docs/chat/40-trainer-chat-plan.md) is the one trainer-module surface that is deliberately NOT role-gated: both sides of a conversation call the same `/api/v1/chat/**` endpoints, and access is decided by participation in the thread, so a non-participant gets 404 rather than 403.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -21,6 +21,7 @@
     { "key": "mealId", "value": "", "type": "string" },
     { "key": "templateId", "value": "", "type": "string" },
     { "key": "sessionId", "value": "", "type": "string" },
+    { "key": "intervalPlanId", "value": "", "type": "string" },
     { "key": "exerciseId", "value": "", "type": "string" },
     { "key": "waterSourceId", "value": "", "type": "string" },
     { "key": "waterEntryId", "value": "", "type": "string" },
@@ -980,6 +981,17 @@
           "response": []
         },
         {
+          "name": "Log a hike session (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"startedAt\": \"2026-08-10T05:00:00Z\",\n  \"finishedAt\": \"2026-08-10T08:30:00Z\",\n  \"exerciseIds\": [],\n  \"sets\": [],\n  \"sessionKind\": \"CARDIO\",\n  \"activityType\": \"HIKING\",\n  \"movingSeconds\": 11400,\n  \"cardio\": {\n    \"distanceMeters\": 14200,\n    \"elevationGainMeters\": 756,\n    \"maxAltitudeMeters\": 892,\n    \"maxHeartRate\": 164,\n    \"distanceSource\": \"MEASURED\",\n    \"backpackWeightKg\": 8.5,\n    \"avgGapSecondsPerKm\": 842,\n    \"weatherTempC\": 7,\n    \"weatherWindKph\": 12,\n    \"weatherPrecipMm\": 0,\n    \"weatherCondition\": \"PARTLY_CLOUDY\"\n  },\n  \"waypoints\": [\n    { \"waypointIndex\": 0, \"latitude\": 47.4979, \"longitude\": 19.0402, \"altitudeMeters\": 612 },\n    { \"waypointIndex\": 1, \"latitude\": 47.5102, \"longitude\": 19.0561, \"altitudeMeters\": 892 }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions"] },
+            "description": "Logs a HIKING session with the C8.1 hike fields (docs/cardio/60 §7). `backpackWeightKg` and the `weather*` fields are always kept as plain manual entries — never fetched from an external API (Q-C8.1, decided 2026-08-19) — so there is no timestamp on them, unlike the design frame's original \"captured at start\" idea. `avgGapSecondsPerKm` is computed client-side from the elevation profile, same as the running best-effort fields. `waypoints` are points marked along the route — `waypointIndex` + `latitude`/`longitude` + optional `altitudeMeters`; no distance/elapsed-time fields (the client derives those from its own local track points, same source the elevation profile reads). `label` is omitted here — always null in V1 (Q-D5). Returns 201 and stores the id in `sessionId`."
+          },
+          "response": []
+        },
+        {
           "name": "Update workout session",
           "request": {
             "method": "PUT",
@@ -997,6 +1009,105 @@
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/v1/workout-sessions/{{sessionId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workout-sessions", "{{sessionId}}"] },
             "description": "Deletes the session (and its sets) by id. Returns 204, or 404 if not found."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cardio Interval Plans",
+      "description": "Implemented feature (docs/cardio/60 §6, C7.2). Reusable interval plans for the indoor bike: a plan is a blueprint the live MACHINE screen plays back, and running it writes INTERVAL splits onto the session (Workouts > Log a cardio session), not onto the plan — so deleting a plan never touches the sessions run with it. A plan is an ordered list of items where each item is either a STEP (a duration at a target intensity: EASY, MODERATE or HARD) or a REPEAT block holding STEPs; nesting stops there, a REPEAT can never contain another REPEAT.",
+      "item": [
+        {
+          "name": "List interval plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/cardio-interval-plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cardio-interval-plans"] },
+            "description": "Returns the current user's plans with their full step trees, ordered by name. Tombstoned (deleted) plans are excluded."
+          },
+          "response": []
+        },
+        {
+          "name": "Delta sync interval plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cardio-interval-plans?updatedSince=2026-08-01T00:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "cardio-interval-plans"],
+              "query": [
+                { "key": "updatedSince", "value": "2026-08-01T00:00:00Z", "description": "ISO-8601 instant — required, switches to the delta-sync feed" }
+              ]
+            },
+            "description": "Backs the mobile offline sync pull. `updatedSince` is required; ordering is fixed to updatedAt,id ascending, and a non-null `deletedAt` is a tombstone. Steps are not independently delta-synced — whenever a plan appears here, replace all of its local steps."
+          },
+          "response": []
+        },
+        {
+          "name": "Create interval plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body && body.id) { pm.collectionVariables.set('intervalPlanId', body.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Kedd esti 4x4\",\n  \"steps\": [\n    { \"type\": \"STEP\", \"name\": \"Bemelegítés\", \"intensity\": \"EASY\", \"durationSeconds\": 300 },\n    {\n      \"type\": \"REPEAT\",\n      \"repeatCount\": 4,\n      \"children\": [\n        { \"type\": \"STEP\", \"name\": \"Kemény\", \"intensity\": \"HARD\", \"durationSeconds\": 240 },\n        { \"type\": \"STEP\", \"name\": \"Pihenő\", \"intensity\": \"EASY\", \"durationSeconds\": 180 }\n      ]\n    },\n    { \"type\": \"STEP\", \"name\": \"Levezetés\", \"intensity\": \"EASY\", \"durationSeconds\": 300 }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/cardio-interval-plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cardio-interval-plans"] },
+            "description": "Creates the starter 4×4 plan: 5:00 easy, 4× (4:00 hard + 3:00 easy), 5:00 easy. `name` required, at least one step required. A STEP needs `intensity` and a positive `durationSeconds` and nothing else; a REPEAT needs `repeatCount` (1-99) and a non-empty `children`, and must not carry a duration or intensity. Returns 201 and stores the id in `intervalPlanId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create interval plan - validation error (example)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Beágyazott\",\n  \"steps\": [\n    {\n      \"type\": \"REPEAT\",\n      \"repeatCount\": 4,\n      \"children\": [\n        { \"type\": \"REPEAT\", \"repeatCount\": 2, \"children\": [{ \"type\": \"STEP\", \"intensity\": \"HARD\", \"durationSeconds\": 240 }] }\n      ]\n    }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/cardio-interval-plans", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cardio-interval-plans"] },
+            "description": "Demonstrates the 400 for a block inside a block. Nesting is one level deep — the same rule the cardio_interval_steps_shape_ck constraint enforces in the database."
+          },
+          "response": []
+        },
+        {
+          "name": "Get interval plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/cardio-interval-plans/{{intervalPlanId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cardio-interval-plans", "{{intervalPlanId}}"] },
+            "description": "Returns one plan with its step tree, or 404 — including for another user's plan, which is indistinguishable from a missing one."
+          },
+          "response": []
+        },
+        {
+          "name": "Update interval plan",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Rövid sprintek\",\n  \"steps\": [\n    {\n      \"type\": \"REPEAT\",\n      \"repeatCount\": 6,\n      \"children\": [\n        { \"type\": \"STEP\", \"name\": \"Sprint\", \"intensity\": \"HARD\", \"durationSeconds\": 30 },\n        { \"type\": \"STEP\", \"name\": \"Pihenő\", \"intensity\": \"EASY\", \"durationSeconds\": 90 }\n      ]\n    }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/cardio-interval-plans/{{intervalPlanId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cardio-interval-plans", "{{intervalPlanId}}"] },
+            "description": "Renames the plan and replaces its steps in full — the editor always sends the complete plan it currently shows. A step-only edit still bumps `updatedAt`, so it reaches the delta feed. Returns 200, or 404 if not found."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete interval plan",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/cardio-interval-plans/{{intervalPlanId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "cardio-interval-plans", "{{intervalPlanId}}"] },
+            "description": "Soft-deletes the plan: it disappears from the list and returns 404 by id, but shows up in the delta feed with `deletedAt` set. Sessions run with this plan are untouched — the executed sections live on the session as INTERVAL splits (docs/cardio/60 D-C7.1). Returns 204, or 404 if not found."
           },
           "response": []
         }

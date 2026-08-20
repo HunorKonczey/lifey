@@ -1,4 +1,5 @@
 import 'activity_type.dart';
+import 'cardio_interval_plan.dart';
 
 /// Cardio metrics for a CARDIO-kind session (docs/cardio/51-cardio-overview-plan.md
 /// §3, docs/cardio/52-cardio-domain-backend-plan.md §2.2). Every field is
@@ -40,6 +41,12 @@ class CardioMetrics {
     this.caloriesSource,
     this.routePolyline,
     this.routePointCount,
+    this.backpackWeightKg,
+    this.weatherTempC,
+    this.weatherWindKph,
+    this.weatherPrecipMm,
+    this.weatherCondition,
+    this.avgGapSecondsPerKm,
   });
 
   // DISTANCE + MACHINE
@@ -104,6 +111,29 @@ class CardioMetrics {
   final String? routePolyline;
   final int? routePointCount;
 
+  // Hike-only (docs/cardio/60 C8.5) — the one field only the user can know
+  // (docs/cardio/61 §4 M42): no measured baseline exists for it to conflict
+  // with, so it carries no `*Source` tag the way distance/calories do.
+  final double? backpackWeightKg;
+
+  // Hike-only weather snapshot (docs/cardio/60 C8.6, Q-C8.1: manual entry,
+  // no external API — same "kézzel szerkeszthető mező" pattern as
+  // [backpackWeightKg]). [weatherTempC] is signed (winter hikes);
+  // [weatherWindKph]/[weatherPrecipMm] are never negative.
+  /// A free code the client maps to an icon (e.g. `CLEAR`, `PARTLY_CLOUDY`,
+  /// `CLOUDY`, `RAIN`, `SNOW`, `WINDY`) — unconstrained on the wire, same
+  /// precedent as `gameFormat`/`distanceSource`.
+  final String? weatherCondition;
+  final double? weatherTempC;
+  final double? weatherWindKph;
+  final double? weatherPrecipMm;
+
+  // Hike-only (docs/cardio/60 C8.2, docs/cardio/56 D-C3.9) — grade-adjusted
+  // pace in seconds/km, computed once at close time from the filtered local
+  // trail (`grade_adjusted_pace.dart`), never recomputed server-side or on
+  // the web. Null when there's no trail to compute one from.
+  final double? avgGapSecondsPerKm;
+
   /// Mirrors `WorkoutSessionRepository._cardioPayload`'s key names 1:1 — used
   /// to decode the cardio block of a watch standalone-session wire payload
   /// (docs/cardio/55-cardio-watch-plan.md §5, W-1), the one other place a
@@ -139,6 +169,12 @@ class CardioMetrics {
         caloriesSource: json['caloriesSource'] as String?,
         routePolyline: json['routePolyline'] as String?,
         routePointCount: (json['routePointCount'] as num?)?.toInt(),
+        backpackWeightKg: (json['backpackWeightKg'] as num?)?.toDouble(),
+        weatherTempC: (json['weatherTempC'] as num?)?.toDouble(),
+        weatherWindKph: (json['weatherWindKph'] as num?)?.toDouble(),
+        weatherPrecipMm: (json['weatherPrecipMm'] as num?)?.toDouble(),
+        weatherCondition: json['weatherCondition'] as String?,
+        avgGapSecondsPerKm: (json['avgGapSecondsPerKm'] as num?)?.toDouble(),
       );
 
   /// Fills in [fromWatch]'s watch-measured fields for whichever ones this
@@ -164,6 +200,15 @@ class CardioMetrics {
   /// only ever set to `'DEVICE'` when the watch's distance is what actually
   /// *filled* a previously-empty value — a manual/measured distance already
   /// on this session keeps its own source tag untouched, distance and all.
+  /// Whether *any* of the five zone columns is filled in here — the test the
+  /// zone block's all-or-nothing merge turns on.
+  bool get _hasZoneData =>
+      hrZone1Seconds != null ||
+      hrZone2Seconds != null ||
+      hrZone3Seconds != null ||
+      hrZone4Seconds != null ||
+      hrZone5Seconds != null;
+
   CardioMetrics mergedWithWatchMeasurement(CardioMetrics fromWatch) => CardioMetrics(
         distanceMeters: distanceMeters ?? fromWatch.distanceMeters,
         distanceSource: distanceMeters != null || fromWatch.distanceMeters == null
@@ -183,11 +228,19 @@ class CardioMetrics {
         resistanceLevel: resistanceLevel ?? fromWatch.resistanceLevel,
         deviceCalories: deviceCalories ?? fromWatch.deviceCalories,
         maxHeartRate: maxHeartRate ?? fromWatch.maxHeartRate,
-        hrZone1Seconds: hrZone1Seconds ?? fromWatch.hrZone1Seconds,
-        hrZone2Seconds: hrZone2Seconds ?? fromWatch.hrZone2Seconds,
-        hrZone3Seconds: hrZone3Seconds ?? fromWatch.hrZone3Seconds,
-        hrZone4Seconds: hrZone4Seconds ?? fromWatch.hrZone4Seconds,
-        hrZone5Seconds: hrZone5Seconds ?? fromWatch.hrZone5Seconds,
+        // The zone set moves as **one block**, not field by field (C9.1's
+        // guard, docs/cardio/60 §9): whoever already has zone data here keeps
+        // all five columns. Merging them individually would let a phone-
+        // measured Z1 sit next to a watch-measured Z2-Z5 from a different
+        // measurement of the same session, and the five would then total more
+        // time than the session lasted — a bar wider than its own track and a
+        // "112% in zone" reading, with nothing in the data to say which half
+        // was wrong.
+        hrZone1Seconds: _hasZoneData ? hrZone1Seconds : fromWatch.hrZone1Seconds,
+        hrZone2Seconds: _hasZoneData ? hrZone2Seconds : fromWatch.hrZone2Seconds,
+        hrZone3Seconds: _hasZoneData ? hrZone3Seconds : fromWatch.hrZone3Seconds,
+        hrZone4Seconds: _hasZoneData ? hrZone4Seconds : fromWatch.hrZone4Seconds,
+        hrZone5Seconds: _hasZoneData ? hrZone5Seconds : fromWatch.hrZone5Seconds,
         intensity: intensity ?? fromWatch.intensity,
         venue: venue ?? fromWatch.venue,
         gameFormat: gameFormat ?? fromWatch.gameFormat,
@@ -197,6 +250,12 @@ class CardioMetrics {
         caloriesSource: caloriesSource ?? fromWatch.caloriesSource,
         routePolyline: routePolyline ?? fromWatch.routePolyline,
         routePointCount: routePointCount ?? fromWatch.routePointCount,
+        backpackWeightKg: backpackWeightKg ?? fromWatch.backpackWeightKg,
+        weatherTempC: weatherTempC ?? fromWatch.weatherTempC,
+        weatherWindKph: weatherWindKph ?? fromWatch.weatherWindKph,
+        weatherPrecipMm: weatherPrecipMm ?? fromWatch.weatherPrecipMm,
+        weatherCondition: weatherCondition ?? fromWatch.weatherCondition,
+        avgGapSecondsPerKm: avgGapSecondsPerKm ?? fromWatch.avgGapSecondsPerKm,
       );
 }
 
@@ -206,22 +265,86 @@ class CardioMetrics {
 class CardioSplit {
   const CardioSplit({
     required this.splitIndex,
-    required this.distanceMeters,
     required this.durationSeconds,
+    this.splitType = CardioSplitType.distance,
+    this.distanceMeters,
     this.elevationDeltaM,
     this.avgHeartRate,
+    this.avgWatts,
+    this.intensity,
   });
 
   /// 0-based position within the session's split list.
   final int splitIndex;
 
-  /// Usually exactly 1000 (one km); the last split of a run is shorter.
-  final double distanceMeters;
+  /// What this row measures — a per-km split or an executed interval section
+  /// (docs/cardio/60 D-C7.1). Defaults to [CardioSplitType.distance], which
+  /// is what every split was before intervals existed.
+  final CardioSplitType splitType;
+
+  /// Usually exactly 1000 (one km); the last split of a run is shorter. Null
+  /// for an interval section on a machine that reports no distance.
+  final double? distanceMeters;
   final int durationSeconds;
 
   /// Net elevation change over the split; null when no altitude data was available.
   final double? elevationDeltaM;
   final double? avgHeartRate;
+
+  /// Average power over the section; null without a watt-reporting machine.
+  final double? avgWatts;
+
+  /// The target effort an interval section was run at; null for a per-km split.
+  final IntervalIntensity? intensity;
+}
+
+/// What a [CardioSplit] row measures (docs/cardio/60 D-C7.1). The wire codes
+/// mirror the backend's `SplitType`.
+enum CardioSplitType {
+  distance('DISTANCE'),
+  interval('INTERVAL');
+
+  const CardioSplitType(this.wire);
+
+  final String wire;
+
+  static CardioSplitType fromWire(String? wire) => values.firstWhere(
+        (t) => t.wire == wire,
+        // An unknown code is a newer server talking to an older app; a split
+        // is a per-km one unless it says otherwise, which is also the DB
+        // column's own default.
+        orElse: () => CardioSplitType.distance,
+      );
+}
+
+/// One point marked along a hike's route (docs/cardio/60 C8.4, docs/cardio/61
+/// §4 M41) — position + altitude only, computed client-side at the moment
+/// the user taps the marker button. Distance/elapsed-time are never stored
+/// here: the summary screen derives them by matching against the session's
+/// own local track points, the same source the elevation profile (C8.3)
+/// reads from (`waypoint_track_match.dart`) — see the migration's own doc
+/// comment on why a second, server-stored copy of those numbers would just
+/// be another place for them to disagree.
+class CardioWaypoint {
+  const CardioWaypoint({
+    required this.waypointIndex,
+    required this.latitude,
+    required this.longitude,
+    this.altitudeMeters,
+    this.label,
+  });
+
+  /// 0-based position in the order the waypoints were marked.
+  final int waypointIndex;
+
+  final double latitude;
+  final double longitude;
+
+  /// Null when the GPS fix at the moment of marking carried no altitude.
+  final double? altitudeMeters;
+
+  /// Always null in V1 (docs/cardio/60 Q-D5) — no input field for it yet.
+  final String? label;
 }
 
 /// A single set within a logged session (response side).
@@ -283,6 +406,7 @@ class WorkoutSession {
     this.movingSinceEpochMs,
     this.cardio,
     this.splits = const [],
+    this.waypoints = const [],
   });
 
   final String clientId;
@@ -381,6 +505,11 @@ class WorkoutSession {
 
   /// Per-km/lap splits; empty unless [isCardio] and splits were recorded.
   final List<CardioSplit> splits;
+
+  /// Points marked along a hike's route (docs/cardio/60 C8.4); empty unless
+  /// [isCardio] and at least one waypoint was marked. Ordered by
+  /// [CardioWaypoint.waypointIndex].
+  final List<CardioWaypoint> waypoints;
 
   bool get inProgress => startedAt != null && finishedAt == null;
 

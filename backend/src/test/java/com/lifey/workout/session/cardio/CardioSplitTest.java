@@ -32,12 +32,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * V68__cardio_splits.sql + the {@link CardioSplit} entity
- * (docs/cardio/52-cardio-domain-backend-plan.md §2.3;
- * docs/cardio/59-cardio-implementation-plan.md C1.3). Runs against a real
- * Postgres to exercise the DB-level invariants: the per-session split-index
- * uniqueness (and that it's scoped *per session*, not global), and the
- * cascade delete.
+ * V68__cardio_splits.sql + V70__cardio_interval_plans.sql + the
+ * {@link CardioSplit} entity (docs/cardio/52-cardio-domain-backend-plan.md
+ * §2.3; docs/cardio/59-cardio-implementation-plan.md C1.3;
+ * docs/cardio/60 D-C7.1). Runs against a real Postgres to exercise the
+ * DB-level invariants: the per-session split-index uniqueness (and that it's
+ * scoped *per session*, not global), the cascade delete, and the split-type
+ * shape rules V70 added for interval sections.
  *
  * <p>Not {@code @Transactional}: that would roll every test back at the end,
  * which would hide the {@link #hardDeletingTheSessionCascadesToItsSplits}
@@ -101,12 +102,23 @@ class CardioSplitTest {
         return txTemplate.execute(status -> action.get());
     }
 
-    private CardioSplit newSplit(int index, double distanceMeters, int durationSeconds) {
+    private CardioSplit newSplit(int index, Double distanceMeters, int durationSeconds) {
         CardioSplit split = new CardioSplit();
         split.setWorkoutSession(cardioSession);
         split.setSplitIndex(index);
         split.setDistanceMeters(distanceMeters);
         split.setDurationSeconds(durationSeconds);
+        return split;
+    }
+
+    /** An executed section of an interval plan — no distance, see V70. */
+    private CardioSplit newIntervalSplit(int index, int durationSeconds, IntervalIntensity intensity) {
+        CardioSplit split = new CardioSplit();
+        split.setWorkoutSession(cardioSession);
+        split.setSplitIndex(index);
+        split.setSplitType(SplitType.INTERVAL);
+        split.setDurationSeconds(durationSeconds);
+        split.setIntensity(intensity);
         return split;
     }
 
@@ -126,6 +138,85 @@ class CardioSplitTest {
         assertThat(reloaded.getDurationSeconds()).isEqualTo(312);
         assertThat(reloaded.getElevationDeltaM()).isEqualTo(-4.5);
         assertThat(reloaded.getAvgHeartRate()).isEqualTo(151.0);
+        // Untouched by the request, so it must land as the per-km split it
+        // has always been (V70's column default, docs/cardio/60 C7.1).
+        assertThat(reloaded.getSplitType()).isEqualTo(SplitType.DISTANCE);
+        assertThat(reloaded.getAvgWatts()).isNull();
+        assertThat(reloaded.getIntensity()).isNull();
+    }
+
+    // -- Interval sections (V70, docs/cardio/60 D-C7.1) --------------------
+
+    @Test
+    void anIntervalSplitPersistsWithoutADistance() {
+        // The indoor bike usually reports no distance at all — an interval
+        // section is a duration at an intensity, and forcing a fake 0 m here
+        // would show up as a 0-length section in the summary.
+        CardioSplit split = newIntervalSplit(0, 240, IntervalIntensity.HARD);
+        split.setAvgWatts(218.0);
+
+        inTransaction(() -> entityManager.persist(split));
+        entityManager.clear();
+
+        CardioSplit reloaded = inTransaction(() -> entityManager.find(CardioSplit.class, split.getId()));
+        assertThat(reloaded.getSplitType()).isEqualTo(SplitType.INTERVAL);
+        assertThat(reloaded.getDistanceMeters()).isNull();
+        assertThat(reloaded.getDurationSeconds()).isEqualTo(240);
+        assertThat(reloaded.getIntensity()).isEqualTo(IntervalIntensity.HARD);
+        assertThat(reloaded.getAvgWatts()).isEqualTo(218.0);
+    }
+
+    @Test
+    void distanceAndIntervalSplitsCoexistInOneSession() {
+        // Nothing forbids it at the DB level, and the summary's split list
+        // renders both from the same rows (docs/cardio/61 §3 M39).
+        inTransaction(() -> {
+            entityManager.persist(newSplit(0, 1000.0, 300));
+            entityManager.persist(newIntervalSplit(1, 240, IntervalIntensity.HARD));
+        });
+        entityManager.clear();
+
+        List<CardioSplit> splits = inTransaction(() -> entityManager
+                .createQuery(
+                        "select s from CardioSplit s where s.workoutSession.id = :sessionId order by s.splitIndex",
+                        CardioSplit.class)
+                .setParameter("sessionId", cardioSession.getId())
+                .getResultList());
+
+        assertThat(splits).extracting(CardioSplit::getSplitType)
+                .containsExactly(SplitType.DISTANCE, SplitType.INTERVAL);
+    }
+
+    @Test
+    void aDistanceSplitWithoutADistanceViolatesTheCheckConstraint() {
+        // Making the column nullable for intervals must not make it optional
+        // for per-km splits — the whole point of a DISTANCE split is the
+        // distance.
+        CardioSplit split = newSplit(0, null, 300);
+
+        assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(split)))
+                .isInstanceOf(PersistenceException.class)
+                .hasStackTraceContaining("cardio_splits_distance_required_ck");
+    }
+
+    @Test
+    void anIntensityOnADistanceSplitViolatesTheCheckConstraint() {
+        CardioSplit split = newSplit(0, 1000.0, 300);
+        split.setIntensity(IntervalIntensity.HARD);
+
+        assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(split)))
+                .isInstanceOf(PersistenceException.class)
+                .hasStackTraceContaining("cardio_splits_intensity_ck");
+    }
+
+    @Test
+    void aNegativeAveragePowerViolatesTheCheckConstraint() {
+        CardioSplit split = newIntervalSplit(0, 240, IntervalIntensity.HARD);
+        split.setAvgWatts(-1.0);
+
+        assertThatThrownBy(() -> inTransaction(() -> entityManager.persist(split)))
+                .isInstanceOf(PersistenceException.class)
+                .hasStackTraceContaining("cardio_splits_avg_watts_nonneg_ck");
     }
 
     @Test

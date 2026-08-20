@@ -21,7 +21,11 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
 import '../application/auto_pause_preferences.dart';
+import '../application/box_score_preferences.dart';
+import '../application/game_setup_preferences.dart';
 import '../application/km_cue_controller.dart';
+import '../application/interval_cue_preferences.dart';
+import '../application/interval_player_controller.dart';
 import '../application/km_cue_preferences.dart';
 import '../application/workout_session_controller.dart';
 import '../data/cardio_track_point_repository.dart';
@@ -29,11 +33,16 @@ import '../domain/activity_type.dart';
 import '../domain/auto_pause_detector.dart';
 import '../domain/best_effort_calculator.dart';
 import '../domain/cardio_personal_record.dart';
+import '../data/cardio_interval_plan_repository.dart';
+import '../domain/cardio_interval_plan.dart';
 import '../domain/cardio_splits_calculator.dart';
+import '../domain/elevation_profile.dart';
+import '../domain/grade_adjusted_pace.dart';
 import '../domain/route_encoder.dart';
 import '../domain/track_filter.dart';
 import '../domain/workout_session.dart';
 import 'cardio_summary_screen.dart';
+import 'widgets/box_score_stepper.dart';
 import 'widgets/cardio_session_settings_sheet.dart';
 import 'widgets/prompt_number_dialog.dart';
 import 'widgets/route_painter.dart';
@@ -96,9 +105,16 @@ import 'workouts_screen.dart';
 /// this — it's exactly the same durable, epoch-checkpointed field C2.1 built,
 /// just fed by two gates instead of one.
 class CardioSessionScreen extends ConsumerStatefulWidget {
-  const CardioSessionScreen({super.key, required this.session});
+  const CardioSessionScreen({super.key, required this.session, this.intervalPlanClientId});
 
   final WorkoutSession session;
+
+  /// The interval plan this ride is playing back (docs/cardio/60 C7.5), or
+  /// null — which is the normal case and leaves the screen exactly as it was
+  /// before intervals existed (M38's "terv nélkül" state). Passed in rather
+  /// than read off the session: no session ever references a plan
+  /// (D-C7.1), so the choice belongs to whoever started the ride.
+  final String? intervalPlanClientId;
 
   @override
   ConsumerState<CardioSessionScreen> createState() => CardioSessionScreenState();
@@ -216,6 +232,27 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// completes, same lifetime as [_trackPointSeqSeeded].
   TrackFilterAccumulator? _trackFilter;
 
+  // -- Waypoints (C8.4, M41) — HIKING only ----------------------------------
+
+  /// This session's marked waypoints so far — seeded from [widget.session] in
+  /// `initState`, appended/truncated locally on mark/undo, persisted through
+  /// [WorkoutSessionController.updateLiveWaypoints] as a full replace, same
+  /// convention as [_distanceMeters]/[_updateCardioMetrics].
+  List<CardioWaypoint> _waypoints = const [];
+
+  /// The most recent GPS fix (regardless of [_isRunning] — set from every
+  /// [_onPositionFix] call, since tracking also runs during an auto-pause).
+  /// Null until the first fix of the session arrives — the marker button
+  /// stays disabled until then, same as the "GPS nélkül" state, since there
+  /// is nothing yet to mark.
+  LocationFix? _lastFix;
+
+  /// Non-null while the "N. útpont megjelölve" feedback banner is showing
+  /// (M41) — cleared by [_waypointFeedbackTimer] after 4 s, or immediately by
+  /// "Vissza" undoing the mark.
+  CardioWaypoint? _justMarkedWaypoint;
+  Timer? _waypointFeedbackTimer;
+
   /// Whether GPS has contributed any distance yet this session (C4a.4) —
   /// once true, it's the authoritative distance source for the rest of the
   /// session: the dominant metric's manual-edit affordance disables, and
@@ -266,11 +303,57 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// running, so a paused session never reaches [KmCueController.onDistance].
   KmCueController? _kmCueController;
 
+  /// Non-null only while a plan is playing. Owns no clock of its own — it is
+  /// fed [_liveMovingSeconds] from [_startTicker], which is what makes the
+  /// section countdown stop dead with a pause (docs/cardio/60 §9's named
+  /// risk for this step).
+  IntervalPlayerController? _intervalPlayer;
+  IntervalPlayerState? _intervalState;
+  IntervalCueSettings _intervalCueSettings = IntervalCueSettings.defaults;
+
   /// Cached like [_autoPauseEnabled], and for the same reason.
   KmCueSettings _kmCueSettings = KmCueSettings.defaults;
 
   Timer? _ticker;
   bool _busy = false;
+
+  // -- Box score (C9.2, M44) ------------------------------------------------
+
+  /// Live counters, seeded from the session and persisted through
+  /// [_updateCardioMetrics] like every other live metric. `null` means "never
+  /// counted", which is what keeps an untouched match from storing zeroes.
+  int? _scorePoints;
+  int? _scoreAssists;
+  int? _scoreRebounds;
+
+  /// Whether the stepper panel is currently up. Hidden by default (Q-D2): in
+  /// a pocket or while defending, a permanently visible stepper collects
+  /// accidental taps.
+  bool _boxScoreOpen = false;
+
+  /// Closes [_boxScoreOpen] after 6 s of **idle** time — restarted by every
+  /// tap, so a stepper being actively used never folds away mid-count.
+  Timer? _boxScoreIdleTimer;
+
+  /// Answer to the one-time offer; drives whether the offer card shows at all.
+  BoxScoreOffer _boxScoreOffer = BoxScoreOffer.unanswered;
+
+  /// Whether this **outdoor** match records distance (C9.4). Opt-in, and only
+  /// ever true outdoors: indoors there is nothing to record, so GPS is not
+  /// disabled here — it doesn't exist ([GameSetup.recordsDistance]). Read from
+  /// the same device-local store the setup sheet writes, so a session
+  /// reopened after an app kill resumes with the same answer.
+  bool _gameGpsEnabled = false;
+
+  /// True when this session should have a GPS subscription at all: every
+  /// DISTANCE session, and an outdoor GAME that opted in. The single question
+  /// [_syncPositionTracking] asks, so "no GPS indoors" is one condition in one
+  /// place rather than a rule repeated per call site.
+  bool get _tracksLocation =>
+      _family == ActivityFamily.distance ||
+      (_family == ActivityFamily.game &&
+          widget.session.cardio?.venue == 'OUTDOOR' &&
+          _gameGpsEnabled);
 
   // Phone-displayed heart rate (DISTANCE/GAME's tertiary tile) — mirrors
   // `LogSessionScreen`'s identical fields/`_pollHeartRate` exactly, just
@@ -339,6 +422,10 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     _avgCadence = s.cardio?.avgCadence;
     _avgWatts = s.cardio?.avgWatts;
     _resistanceLevel = s.cardio?.resistanceLevel;
+    _scorePoints = s.cardio?.scorePoints;
+    _scoreAssists = s.cardio?.scoreAssists;
+    _scoreRebounds = s.cardio?.scoreRebounds;
+    _waypoints = s.waypoints;
 
     // A frozen `movingSinceEpochMs` on a not-yet-finished session means
     // *some* pause was active when this was last persisted — manual pause
@@ -380,6 +467,15 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       _pollHeartRate(); // don't wait a full interval for the first read
     }
 
+    // C7.5 — the interval player. Only ever set up when this ride has a
+    // plan; without one nothing below it changes and the screen is M05 to
+    // the pixel. The id comes either from the picker that just started the
+    // ride or, for a session reopened after an app kill, from the memory
+    // that same picker wrote.
+    if (_finishedAt == null) {
+      unawaited(_seedIntervalPlayer());
+    }
+
     // Deferred a frame, same as `LogSessionScreen` — this can run during
     // `initState`, before ancestor InheritedWidgets are guaranteed ready
     // for `AppLocalizations.of(context)`.
@@ -396,13 +492,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     // see `LocationService.availability`'s doc for why nothing pushes that
     // change on its own.
     if (_family == ActivityFamily.distance) {
-      WidgetsBinding.instance.addObserver(this);
-      _locationSub = ref.read(locationServiceProvider).availability.listen((a) {
-        if (mounted) {
-          setState(() => _locationAvailability = a);
-          _syncPositionTracking();
-        }
-      });
+      _startLocationPipeline();
       // Async on purpose (initState itself can't await) — see
       // [_trackPointSeqSeeded]'s doc for why [_syncPositionTracking] is safe
       // to call reactively before this resolves.
@@ -433,6 +523,174 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       );
       unawaited(_seedKmCueSettings());
     }
+    if (_family == ActivityFamily.game) {
+      unawaited(_seedBoxScoreOffer());
+      // Outdoor GAME distance recording (C9.4). Seeded before the trail replay
+      // so `_syncPositionTracking` never starts a subscription for an indoor
+      // match, not even for one frame.
+      unawaited(_seedGameGps());
+    }
+  }
+
+  /// Reads the outdoor-GPS opt-in, then — only if this match actually records
+  /// distance — sets up the same trail machinery a DISTANCE session uses.
+  Future<void> _seedGameGps() async {
+    final setup = await ref.read(gameSetupPreferencesProvider).load();
+    if (!mounted) return;
+    _gameGpsEnabled = setup.gpsEnabled;
+    // Nothing at all happens for an indoor match, or an outdoor one that
+    // didn't opt in: no availability subscription, so no permission prompt
+    // and no radio (the C9.4 battery guarantee).
+    if (!_tracksLocation) return;
+    _startLocationPipeline();
+    unawaited(_seedTrackPointSeqAndSync());
+  }
+
+  /// The availability subscription + lifecycle observer both tracking families
+  /// need. Extracted so an outdoor GAME reuses the DISTANCE path exactly
+  /// rather than growing a parallel one that could drift.
+  void _startLocationPipeline() {
+    WidgetsBinding.instance.addObserver(this);
+    _locationSub = ref.read(locationServiceProvider).availability.listen((a) {
+      if (mounted) {
+        setState(() => _locationAvailability = a);
+        _syncPositionTracking();
+      }
+    });
+  }
+
+  /// One-time read of [BoxScorePreferences] (C9.2). An `accepted` answer also
+  /// opens the stepper straight away — the user asked for it, so they
+  /// shouldn't have to find the button again on the next match.
+  Future<void> _seedBoxScoreOffer() async {
+    final offer = await ref.read(boxScorePreferencesProvider).offerState();
+    if (!mounted) return;
+    setState(() {
+      _boxScoreOffer = offer;
+      if (offer == BoxScoreOffer.accepted) _boxScoreOpen = true;
+    });
+    if (_boxScoreOpen) _armBoxScoreIdleTimer();
+  }
+
+  Future<void> _answerBoxScoreOffer(BoxScoreOffer answer) async {
+    setState(() {
+      _boxScoreOffer = answer;
+      _boxScoreOpen = answer == BoxScoreOffer.accepted;
+    });
+    if (_boxScoreOpen) _armBoxScoreIdleTimer();
+    await ref.read(boxScorePreferencesProvider).setOfferState(answer);
+  }
+
+  void _toggleBoxScore() {
+    setState(() => _boxScoreOpen = !_boxScoreOpen);
+    if (_boxScoreOpen) {
+      _armBoxScoreIdleTimer();
+    } else {
+      _boxScoreIdleTimer?.cancel();
+    }
+  }
+
+  /// (Re)starts the 6 s idle countdown — measured from the last interaction,
+  /// not from opening, so counting a fast break doesn't race the timer.
+  void _armBoxScoreIdleTimer() {
+    _boxScoreIdleTimer?.cancel();
+    _boxScoreIdleTimer = Timer(const Duration(seconds: 6), () {
+      if (mounted) setState(() => _boxScoreOpen = false);
+    });
+  }
+
+  /// One box-score column changed. Persisted through the same merged write
+  /// every other live metric uses — and deliberately **nowhere near
+  /// `movingSeconds`**: counting a basket is not a clock event, and the
+  /// court/bench switch remains the only thing that moves playing time.
+  /// [delta] is +1/-1, applied to whatever the counter currently holds — see
+  /// [BoxScoreColumn.onStep] for why the stepper reports a step rather than a
+  /// finished number.
+  Future<void> _stepBoxScore({int? points, int? assists, int? rebounds}) {
+    int? next(int? delta, int? current) =>
+        delta == null ? null : ((current ?? 0) + delta).clamp(0, 1 << 30);
+    return _updateCardioMetrics(
+      scorePoints: next(points, _scorePoints),
+      scoreAssists: next(assists, _scoreAssists),
+      scoreRebounds: next(rebounds, _scoreRebounds),
+    );
+  }
+
+  /// Loads the plan and fast-forwards the player to wherever this ride
+  /// already is — a session reopened after an app kill resumes mid-plan
+  /// rather than starting the plan over, because [IntervalPlayerController]
+  /// derives everything from moving time (which survives the kill) instead
+  /// of from when the screen happened to open.
+  Future<void> _seedIntervalPlayer() async {
+    final planClientId = widget.intervalPlanClientId ??
+        await ref.read(intervalPlanSessionMemoryProvider).planFor(_clientId);
+    if (planClientId == null || !mounted) return;
+    final plan = await ref.read(cardioIntervalPlanRepositoryProvider).findByClientId(planClientId);
+    final cueSettings = await ref.read(intervalCuePreferencesProvider).load();
+    if (!mounted || plan == null || plan.steps.isEmpty) return;
+    final player = IntervalPlayerController(plan: plan, onSectionChanged: _onIntervalSection);
+    // Catching up is silent: a resumed ride must not fire a burst of cues
+    // for the sections it already rode (same lesson as KmCueController.seed).
+    final resuming = _liveMovingSeconds;
+    _suppressIntervalCues = true;
+    final state = player.update(resuming);
+    _suppressIntervalCues = false;
+    setState(() {
+      _intervalCueSettings = cueSettings;
+      _intervalPlayer = player;
+      _intervalState = state;
+    });
+  }
+
+  bool _suppressIntervalCues = false;
+
+  /// M38's cue: three short taps through the 3–2–1 countdown and a longer one
+  /// at the switch. The taps are what the *countdown* fires (see
+  /// [_tickIntervalPlayer]); this is the switch itself.
+  ///
+  /// A change into an easy section gets only the long tap — after four hard
+  /// minutes the rider doesn't need to be told to relax, and the countdown
+  /// ceremony is what makes the hard start feel deliberate.
+  void _onIntervalSection(IntervalPlayerState state) {
+    if (_suppressIntervalCues) return;
+    if (_intervalCueSettings.vibration) HapticFeedback.heavyImpact();
+    if (_intervalCueSettings.sound) {
+      // The platform's own alert sound, same call and same reasoning as the
+      // kilometre cue's — see [_playKmCue].
+      unawaited(SystemSound.play(SystemSoundType.alert));
+    }
+  }
+
+  /// Advances the player to the session's current moving time and fires the
+  /// 3–2–1 taps on the way into a hard section. Called once a second from
+  /// [_startTicker] — and only from there, so a paused session (whose moving
+  /// time is frozen) simply keeps handing the player the same number.
+  void _tickIntervalPlayer() {
+    final player = _intervalPlayer;
+    if (player == null) return;
+    final previous = _intervalState;
+    final state = player.update(_liveMovingSeconds);
+    _intervalState = state;
+
+    // Only into a hard section, and only once per second of the countdown:
+    // the long tap at the switch itself comes from [_onIntervalSection].
+    final crossedIntoCountdown = previous == null ||
+        previous.secondsRemaining != state.secondsRemaining ||
+        previous.sectionNumber != state.sectionNumber;
+    if (state.isCountingDown &&
+        crossedIntoCountdown &&
+        state.nextIntensity == IntervalIntensity.hard &&
+        _intervalCueSettings.vibration) {
+      HapticFeedback.selectionClick();
+    }
+  }
+
+  /// The "Léptet" circle (M38): ends the current section at whatever length
+  /// it actually got, and moves on.
+  void _skipIntervalSection() {
+    final player = _intervalPlayer;
+    if (player == null) return;
+    setState(() => _intervalState = player.skip(_liveMovingSeconds));
   }
 
   Future<void> _seedKmCueSettings() async {
@@ -509,11 +767,16 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// the preference stores itself, so this is just picking the new values
   /// back up for the in-flight [_autoPauseDetector]/[_kmCueController] to
   /// actually honor.
+  /// The in-session settings sheet — auto-pause and the kilometre cue for a
+  /// run, the section-change cue for a ride playing a plan (Q-D4). One sheet,
+  /// one entry point; which switches it shows follows the family.
   Future<void> _openAutoPauseSettings() async {
-    await showCardioSessionSettingsSheet(context);
+    await showCardioSessionSettingsSheet(context, family: _family);
     if (!mounted) return;
     unawaited(_seedAutoPauseEnabled());
     unawaited(_seedKmCueSettings());
+    final cueSettings = await ref.read(intervalCuePreferencesProvider).load();
+    if (mounted) setState(() => _intervalCueSettings = cueSettings);
   }
 
   /// Starts/stops the raw GPS point recording subscription to match current
@@ -530,7 +793,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// either way).
   void _syncPositionTracking() {
     final shouldTrack = _trackPointSeqSeeded &&
-        _family == ActivityFamily.distance &&
+        _tracksLocation &&
         (_locationAvailability?.canTrack ?? false) &&
         (_isRunning || _pauseReason == _PauseReason.auto);
     if (shouldTrack && _positionSub == null) {
@@ -565,6 +828,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// itself, on the other hand, always sees every fix — it's the one thing
   /// that needs to know about a fix arriving *during* the pause it caused.
   void _onPositionFix(LocationFix fix) {
+    _lastFix = fix;
     if (_isRunning) {
       final seq = _nextTrackPointSeq++;
       unawaited(ref.read(cardioTrackPointRepositoryProvider).addPoint(_clientId, seq, fix));
@@ -616,6 +880,8 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     _locationSub?.cancel();
     _positionSub?.cancel();
     _weakSignalTimer?.cancel();
+    _boxScoreIdleTimer?.cancel();
+    _waypointFeedbackTimer?.cancel();
     _autoPauseDetector?.dispose();
     if (_family == ActivityFamily.distance) WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -673,7 +939,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   void _startTicker() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      // The player rides on this same tick and on the same moving-time
+      // number the dominant metric shows — it never starts a clock of its own.
+      _tickIntervalPlayer();
+      setState(() {});
     });
   }
 
@@ -1090,14 +1360,25 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     final trail = _trackFilter?.trail ?? const [];
     CardioMetrics? routeCardio;
     List<CardioSplit> routeSplits = const [];
-    if (_family == ActivityFamily.distance && trail.isNotEmpty) {
+    // The executed sections of an interval plan are splits too (D-C7.1) —
+    // cut off wherever the ride actually ended, so a session finished
+    // mid-section still logs the part that was ridden.
+    final intervalSplits = _intervalPlayer?.executedSplits(total) ?? const <CardioSplit>[];
+    if (_tracksLocation && trail.isNotEmpty) {
       final encoded = encodeRoute(trail);
-      routeSplits = computeSplits(trail);
+      // A match gets **distance and a route, and nothing derived from pace**
+      // (C9.4's promise, docs/cardio/51 §3.4): km splits across a basketball
+      // court describe nothing, and the best efforts are running's alone
+      // anyway. Both stay empty for GAME rather than being computed and then
+      // hidden.
+      final isDistanceFamily = _family == ActivityFamily.distance;
+      routeSplits = isDistanceFamily ? computeSplits(trail) : const [];
       // Same trail, same moment, same write (docs/cardio/60 C6.3) — the
       // best efforts have exactly the splits' inputs and lifetime, and
       // deriving them here rather than later is what makes them survive the
       // raw track points being pruned.
-      final bestEfforts = computeBestEfforts(trail);
+      final bestEfforts =
+          isDistanceFamily ? computeBestEfforts(trail) : CardioBestEfforts.none;
       final originalCardio = widget.session.cardio;
       // elevationGainMeters is never null on the accumulator itself (it
       // starts at 0 and only grows) — but "0 m gain" and "no altitude data
@@ -1105,9 +1386,25 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       // elevation-gain tile/profile downstream (CardioSummaryScreen gates on
       // null). A trail with zero altitude readings genuinely has neither.
       final hasAltitude = trail.any((p) => p.altitude != null);
+      // Same source as the elevation profile itself (C8.3) — the highest
+      // vertex across the whole local trail, computed once here so it
+      // survives the raw points being pruned, exactly like the best efforts
+      // above (docs/cardio/60 C8.5, Q-D6).
+      final maxAltitudeMeters = hasAltitude ? buildElevationProfile(trail)?.peak?.altitudeMeters : null;
+      // Hike-only (docs/cardio/60 C8.2, docs/cardio/56 D-C3.9), same trail
+      // and same close-time computation as the best efforts/elevation peak
+      // above — the M42 "TEREP" block is what actually shows this, and that
+      // frame only ever appears on a hike. `computeGradeAdjustedPaceSecondsPerKm`
+      // is itself null-tolerant of missing altitude (a flat/no-altitude
+      // trail just returns the raw average pace), so no extra `hasAltitude`
+      // gate is needed here.
+      final avgGapSecondsPerKm =
+          _activityType == 'HIKING' ? computeGradeAdjustedPaceSecondsPerKm(trail) : null;
       routeCardio = CardioMetrics(
         distanceMeters: _trackFilter!.distanceMeters,
         elevationGainMeters: hasAltitude ? _trackFilter!.elevationGainMeters : null,
+        maxAltitudeMeters: maxAltitudeMeters,
+        avgGapSecondsPerKm: avgGapSecondsPerKm,
         best1kSeconds: bestEfforts.best1kSeconds,
         best5kSeconds: bestEfforts.best5kSeconds,
         best10kSeconds: bestEfforts.best10kSeconds,
@@ -1115,11 +1412,21 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         avgWatts: _avgWatts,
         resistanceLevel: _resistanceLevel,
         venue: originalCardio?.venue,
+        gameFormat: originalCardio?.gameFormat,
         intensity: originalCardio?.intensity,
-        scorePoints: originalCardio?.scorePoints,
+        // The live counters, not the session's copy from when this screen
+        // opened — C9.2's stepper has been changing these all match.
+        scorePoints: _scorePoints,
+        scoreAssists: _scoreAssists,
+        scoreRebounds: _scoreRebounds,
         distanceSource: 'MEASURED',
         routePolyline: encoded.polyline,
         routePointCount: encoded.pointCount,
+        // Never set on this screen (docs/cardio/60 C8.5: backpack weight is
+        // only ever entered afterward, on the summary, or up front via
+        // `LogCardioSheet`) — carried through defensively so a live-tracked
+        // hike that somehow already had one doesn't lose it at finish.
+        backpackWeightKg: originalCardio?.backpackWeightKg,
       );
     }
     try {
@@ -1129,7 +1436,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             finishedAt: finishedAt,
             movingSeconds: total,
             cardio: routeCardio == null ? const Value.absent() : Value(routeCardio),
-            splits: routeCardio == null ? const Value.absent() : Value(routeSplits),
+            splits: intervalSplits.isNotEmpty
+                ? Value([...routeSplits, ...intervalSplits])
+                : (routeCardio == null ? const Value.absent() : Value(routeSplits)),
           );
       if (!mounted) return;
       _ticker?.cancel();
@@ -1143,6 +1452,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       if (_watchStartPushed) {
         unawaited(ref.read(watchWorkoutServiceProvider).endWorkout(_clientId));
       }
+      // The plan has done its job: the executed sections are on the session
+      // now, as splits.
+      unawaited(ref.read(intervalPlanSessionMemoryProvider).forget(_clientId));
       // So the summary screen's back button lands on the session list
       // (docs/cardio/59-cardio-implementation-plan.md) instead of wherever
       // the shell happened to be showing when this workout was started —
@@ -1166,8 +1478,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             resistanceLevel: _resistanceLevel,
             venue: widget.session.cardio?.venue,
             intensity: widget.session.cardio?.intensity,
-            scorePoints: widget.session.cardio?.scorePoints,
+            scorePoints: _scorePoints,
+            scoreAssists: _scoreAssists,
+            scoreRebounds: _scoreRebounds,
             distanceSource: _hasGpsDistance ? 'MEASURED' : (_distanceMeters == null ? null : 'MANUAL'),
+            backpackWeightKg: widget.session.cardio?.backpackWeightKg,
           );
       final finishedSession = WorkoutSession(
         clientId: _clientId,
@@ -1179,7 +1494,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         activityType: _activityType,
         movingSeconds: total,
         cardio: displayCardio,
-        splits: routeSplits,
+        splits: [...routeSplits, ...intervalSplits],
       );
       // Baseline is every other cardio session already known locally — read
       // once, here, rather than a dedicated repository query: the whole list
@@ -1270,6 +1585,74 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     await _updateCardioMetrics(resistanceLevel: next);
   }
 
+  /// Marks a waypoint at [_lastFix] (M41) — appended, never replacing what's
+  /// already there, so a failed write can simply be retried without losing
+  /// earlier marks. The 4 s feedback banner is purely local state; the write
+  /// itself is fire-and-forget from the user's point of view (same shape as
+  /// every other live-metric edit on this screen), since undo within the
+  /// window still has the original list to fall back to.
+  Future<void> _markWaypoint() async {
+    final fix = _lastFix;
+    if (fix == null) return;
+    final waypoint = CardioWaypoint(
+      waypointIndex: _waypoints.length,
+      latitude: fix.latitude,
+      longitude: fix.longitude,
+      altitudeMeters: fix.altitude,
+    );
+    final updated = [..._waypoints, waypoint];
+    setState(() {
+      _waypoints = updated;
+      _justMarkedWaypoint = waypoint;
+    });
+    _armWaypointFeedbackTimer();
+    unawaited(ref.read(workoutSessionControllerProvider.notifier).updateLiveWaypoints(
+          _clientId,
+          startedAt: _startedAt,
+          waypoints: updated,
+        ));
+  }
+
+  /// "Vissza" — undoes exactly the mark [_markWaypoint] just made, only
+  /// reachable while its feedback banner is still showing.
+  Future<void> _undoLastWaypoint() async {
+    final justMarked = _justMarkedWaypoint;
+    if (justMarked == null) return;
+    _waypointFeedbackTimer?.cancel();
+    final updated = _waypoints.where((w) => w.waypointIndex != justMarked.waypointIndex).toList();
+    setState(() {
+      _waypoints = updated;
+      _justMarkedWaypoint = null;
+    });
+    unawaited(ref.read(workoutSessionControllerProvider.notifier).updateLiveWaypoints(
+          _clientId,
+          startedAt: _startedAt,
+          waypoints: updated,
+        ));
+  }
+
+  void _armWaypointFeedbackTimer() {
+    _waypointFeedbackTimer?.cancel();
+    _waypointFeedbackTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _justMarkedWaypoint = null);
+    });
+  }
+
+  /// M41's "8,24 km · 612 m · 12:19" — the session's own live numbers at the
+  /// moment of marking, since a waypoint has nothing else to show yet (no
+  /// label in V1, docs/cardio/60 Q-D5).
+  String _waypointFeedbackDetail(AppLocalizations l10n, CardioWaypoint waypoint) {
+    final unitSystem =
+        (ref.read(settingsControllerProvider).value ?? const UserSettings.defaults()).unitSystem;
+    final parts = <String>[
+      if ((_distanceMeters ?? 0) > 0) CardioFormatter.distance(_distanceMeters!, unitSystem),
+      if (waypoint.altitudeMeters != null)
+        CardioFormatter.elevation(waypoint.altitudeMeters!, unitSystem),
+      CardioFormatter.duration(Duration(seconds: _liveMovingSeconds)),
+    ];
+    return parts.join(' · ');
+  }
+
   /// Persists one changed field, **merged** against whatever the others
   /// currently hold — omitting a parameter here means "use the value already
   /// in state", not "clear it". Each `_edit*`/`_adjust*` caller passes only
@@ -1281,12 +1664,18 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     double? avgCadence,
     double? avgWatts,
     int? resistanceLevel,
+    int? scorePoints,
+    int? scoreAssists,
+    int? scoreRebounds,
   }) async {
     final l10n = AppLocalizations.of(context)!;
     final newDistance = distanceMeters ?? _distanceMeters;
     final newCadence = avgCadence ?? _avgCadence;
     final newWatts = avgWatts ?? _avgWatts;
     final newResistance = resistanceLevel ?? _resistanceLevel;
+    final newPoints = scorePoints ?? _scorePoints;
+    final newAssists = scoreAssists ?? _scoreAssists;
+    final newRebounds = scoreRebounds ?? _scoreRebounds;
     setState(() => _busy = true);
     try {
       await ref.read(workoutSessionControllerProvider.notifier).updateLiveCardioMetrics(
@@ -1297,6 +1686,18 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
               avgCadence: newCadence,
               avgWatts: newWatts,
               resistanceLevel: newResistance,
+              scorePoints: newPoints,
+              scoreAssists: newAssists,
+              scoreRebounds: newRebounds,
+              // Carried through, not edited here: `updateLiveCardioMetrics`
+              // full-replaces the cardio row, so any field this method omits
+              // is *erased*. Before C9.2 nothing on a GAME session could
+              // reach this method (distance/cadence/watts/resistance are all
+              // DISTANCE/MACHINE), so the omission was latent — the box-score
+              // stepper is the first GAME caller, and without these two lines
+              // counting a basket would wipe the match's venue and intensity.
+              venue: widget.session.cardio?.venue,
+              intensity: widget.session.cardio?.intensity,
               // GPS wins permanently once it's contributed anything this
               // session ([_hasGpsDistance]'s own doc) — even a call that's
               // only changing cadence/watts/resistance still carries the
@@ -1312,6 +1713,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         _avgCadence = newCadence;
         _avgWatts = newWatts;
         _resistanceLevel = newResistance;
+        _scorePoints = newPoints;
+        _scoreAssists = newAssists;
+        _scoreRebounds = newRebounds;
         _busy = false;
       });
       unawaited(_updateSessionNotifier());
@@ -1421,7 +1825,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
               borderRadius: BorderRadius.circular(24),
               child: Container(
                 color: scheme.surfaceContainerLow,
-                child: RoutePainter(polyline: routePolyline, height: 200),
+                child: RoutePainter(
+                  polyline: routePolyline,
+                  height: 200,
+                  waypoints: _activityType == 'HIKING' ? _waypoints : const [],
+                ),
               ),
             ),
           ),
@@ -1442,10 +1850,23 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     // time), so it isn't tappable: there's nothing to manually override.
     final metrics = theme.extension<AppMetricColors>();
     final accent = activityTypeColor(_activityType, context);
+    final intervalState = _intervalState;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // M38 sits between the header and the dominant number, and takes
+        // space from neither: the resistance stepper below is pixel-identical
+        // either way.
+        if (intervalState != null) ...[
+          _IntervalPlayerBlock(
+            state: intervalState,
+            accent: accent,
+            paused: !_isRunning,
+            l10n: l10n,
+          ),
+          const SizedBox(height: 12),
+        ],
         Opacity(
           opacity: _isRunning ? 1 : 0.62,
           child: Column(
@@ -1454,6 +1875,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
               _DominantMetric(
                 label: l10n.movingTimeLabel,
                 value: CardioFormatter.duration(duration),
+                // The one size change M38 allows against M05, and only while
+                // a plan is playing: the countdown needs the 14 px.
+                valueFontSize: intervalState == null ? 96 : 82,
               ),
               const SizedBox(height: 18),
               _MetricRow(
@@ -1612,8 +2036,59 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             ),
           ),
         ],
+        // C9.2/M44 — the offer is asked at most once ever, and the stepper
+        // sits *above* the court/bench switch rather than replacing it: that
+        // switch keeps its size and its place, since it is the control a
+        // player reaches for without looking.
+        if (_boxScoreOffer == BoxScoreOffer.unanswered && !_isFinished) ...[
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: BoxScoreOfferCard(
+              onAccept: () => unawaited(_answerBoxScoreOffer(BoxScoreOffer.accepted)),
+              onDecline: () => unawaited(_answerBoxScoreOffer(BoxScoreOffer.declined)),
+            ),
+          ),
+        ],
+        if (_boxScoreOpen) ...[
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: BoxScoreStepper(
+              columns: _boxScoreColumns(l10n),
+              enabled: !(_busy || _isFinished),
+              onInteraction: _armBoxScoreIdleTimer,
+            ),
+          ),
+        ],
       ],
     );
+  }
+
+  /// Three columns for basketball, **two for football** (M44): a rebound is
+  /// not a concept there, so the column is absent rather than pinned at zero.
+  /// Football's first column is the same stored `scorePoints` field, named
+  /// "goals" for the sport.
+  List<BoxScoreColumn> _boxScoreColumns(AppLocalizations l10n) {
+    final isBasketball = _activityType == 'BASKETBALL';
+    return [
+      BoxScoreColumn(
+        label: isBasketball ? l10n.boxScorePointsLabel : l10n.boxScoreGoalsLabel,
+        value: _scorePoints ?? 0,
+        onStep: (delta) => unawaited(_stepBoxScore(points: delta)),
+      ),
+      if (isBasketball)
+        BoxScoreColumn(
+          label: l10n.boxScoreReboundsLabel,
+          value: _scoreRebounds ?? 0,
+          onStep: (delta) => unawaited(_stepBoxScore(rebounds: delta)),
+        ),
+      BoxScoreColumn(
+        label: l10n.boxScoreAssistsLabel,
+        value: _scoreAssists ?? 0,
+        onStep: (delta) => unawaited(_stepBoxScore(assists: delta)),
+      ),
+    ];
   }
 
   @override
@@ -1655,11 +2130,40 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
 
     final autoPaused = paused && _pauseReason == _PauseReason.auto;
 
+    // M38: on a hard section the top third of the screen is painted, not
+    // just labelled — sweating, with peripheral vision, the colour field is
+    // what carries. Behind the content, and never on an easy section.
+    final hardSection = _intervalState != null &&
+        !_intervalState!.finished &&
+        _intervalState!.intensity == IntervalIntensity.hard &&
+        _isRunning;
+
     return Scaffold(
       backgroundColor: scheme.surface,
       body: SafeArea(
         child: Stack(
           children: [
+            if (hardSection)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: MediaQuery.sizeOf(context).height / 3,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          activityTypeColor(_activityType, context).withValues(alpha: 0.22),
+                          activityTypeColor(_activityType, context).withValues(alpha: 0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             Column(
               children: [
                 // M09's first of three auto-pause signals: a full-width amber
@@ -1677,7 +2181,12 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                     // DISTANCE only. M04 has no slot for it, so it rides in
                     // the header bar's trailing corner rather than growing a
                     // second bar of its own.
-                    onSettings: _family == ActivityFamily.distance
+                    // DISTANCE has always had it (auto-pause, C4a.5a).
+                    // MACHINE grows one only while a plan is playing, for
+                    // Q-D4's "kikapcsolható" sound — with no plan there is
+                    // nothing to configure and no gear, so M05 is intact.
+                    onSettings: _family == ActivityFamily.distance ||
+                            (_family == ActivityFamily.machine && _intervalState != null)
                         ? () => unawaited(_openAutoPauseSettings())
                         : null,
                     settingsTooltip: l10n.autoPauseSettingsIconTooltip,
@@ -1844,10 +2353,26 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       // M06/M07: GAME pauses through a full-width bar, not a circle — a
       // "meccs szünet" stops both clocks and is a rarer, more deliberate
       // action than the court/bench toggle above it.
-      children.add(_WideActionButton(
-        icon: Icons.pause,
-        label: l10n.gameMatchPauseLabel,
-        onPressed: _busy ? null : pause,
+      children.add(Row(
+        children: [
+          Expanded(
+            child: _WideActionButton(
+              icon: Icons.pause,
+              label: l10n.gameMatchPauseLabel,
+              onPressed: _busy ? null : pause,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // M44's bottom-right circle — the same corner DISTANCE's trailing
+          // circle already sits in. It only opens and closes the panel; the
+          // court/bench switch above is untouched.
+          _CircleAction(
+            key: const Key('boxScoreCircle'),
+            icon: Icons.scoreboard,
+            label: l10n.boxScoreCircleLabel,
+            onPressed: _toggleBoxScore,
+          ),
+        ],
       ));
     } else {
       children.add(_RunningControlRow(
@@ -1862,6 +2387,32 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
             : null,
         trailing: _trailingCircle(l10n),
       ));
+    }
+
+    // M41: the waypoint marker — HIKING only, directly above the thumb zone
+    // and the finish-gesture bar it must never overlap. A full-width hasáb
+    // rather than a fourth circle, so it can't be confused with the three
+    // circular controls above it, and stays reachable in gloves/boots.
+    if (_activityType == 'HIKING') {
+      children.add(const SizedBox(height: 14));
+      children.add(_WaypointMarkerButton(
+        onPressed: _busy ? null : _markWaypoint,
+        available: _gpsChipState != _GpsChipState.off,
+        onUnavailableTap: () => setState(() => _locationCardDismissed = false),
+        label: l10n.waypointMarkButtonLabel,
+        subtitleLabel: l10n.waypointMarkButtonSubtitle,
+        unavailableLabel: l10n.waypointMarkButtonUnavailable,
+      ));
+      final justMarked = _justMarkedWaypoint;
+      if (justMarked != null) {
+        children.add(const SizedBox(height: 10));
+        children.add(_WaypointMarkedBanner(
+          message: l10n.waypointMarkedFeedback(justMarked.waypointIndex + 1),
+          detail: _waypointFeedbackDetail(l10n, justMarked),
+          undoLabel: l10n.waypointMarkUndoLabel,
+          onUndo: _undoLastWaypoint,
+        ));
+      }
     }
 
     children.add(const SizedBox(height: 14));
@@ -1888,6 +2439,18 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   /// heart-rate readout. Null when neither applies — the row then centers
   /// the pause button on its own.
   Widget? _trailingCircle(AppLocalizations l10n) {
+    // M38: the same circle, the same size, in the same corner — while a plan
+    // is playing it steps the section instead of opening the distance sheet.
+    // The finish gesture below it is untouched.
+    final intervalState = _intervalState;
+    if (intervalState != null && !intervalState.finished && !_isFinished) {
+      return _CircleAction(
+        key: const Key('intervalSkipCircle'),
+        icon: Icons.skip_next,
+        label: l10n.intervalSkipCircleLabel,
+        onPressed: _busy ? null : _skipIntervalSection,
+      );
+    }
     final canEditDistance = !_isFinished && !_hasGpsDistance && _family != ActivityFamily.game;
     if (canEditDistance) {
       return _CircleAction(
@@ -2690,10 +3253,15 @@ class _DominantMetric extends StatelessWidget {
     this.labelColor,
     this.valueColor,
     this.onTap,
+    this.valueFontSize = 96,
   });
 
   final String label;
   final String value;
+
+  /// 96 everywhere (M04/M05); 82 only on the MACHINE screen while an interval
+  /// plan is playing, which is the single size change M38 makes against M05.
+  final double valueFontSize;
 
   /// Small pill next to [label] — M10's "BECSÜLT" while the GPS signal is
   /// weak (docs/cardio/59-cardio-implementation-plan.md C4a.4). `null` the
@@ -2776,7 +3344,7 @@ class _DominantMetric extends StatelessWidget {
                     TextSpan(
                       text: number,
                       style: TextStyle(
-                        fontSize: 96,
+                        fontSize: valueFontSize,
                         height: 1.02,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -4,
@@ -3180,6 +3748,7 @@ class _RunningControlRow extends StatelessWidget {
 /// One 72 px secondary circle of the control row.
 class _CircleAction extends StatelessWidget {
   const _CircleAction({
+    super.key,
     required this.icon,
     required this.label,
     required this.onPressed,
@@ -3263,6 +3832,137 @@ class _ResumeButton extends StatelessWidget {
   }
 }
 
+/// M41's "Útpont jelölése" bar — 88 px tall, full width, so it can't be
+/// mistaken for one of the three circular controls above it and stays
+/// reachable in gloves/boots. [available] false renders the "GPS nélkül"
+/// state (M25): the button never disappears, it just stops accepting the
+/// mark and opens the location explanation instead.
+class _WaypointMarkerButton extends StatelessWidget {
+  const _WaypointMarkerButton({
+    required this.onPressed,
+    required this.available,
+    required this.onUnavailableTap,
+    required this.label,
+    required this.subtitleLabel,
+    required this.unavailableLabel,
+  });
+
+  final VoidCallback? onPressed;
+  final bool available;
+  final VoidCallback onUnavailableTap;
+  final String label;
+  final String subtitleLabel;
+  final String unavailableLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: available ? scheme.tertiaryContainer : scheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        key: const Key('waypointMarkButton'),
+        onTap: available ? onPressed : onUnavailableTap,
+        borderRadius: BorderRadius.circular(24),
+        child: SizedBox(
+          height: 88,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                available ? Icons.add_location_alt : Icons.location_off,
+                size: 26,
+                color: available ? scheme.onTertiaryContainer : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 12),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                      color: available ? scheme.onTertiaryContainer : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    available ? subtitleLabel : unavailableLabel,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: (available ? scheme.onTertiaryContainer : scheme.onSurfaceVariant)
+                          .withValues(alpha: 0.72),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// M41's 4 s auto-dismissing "3. útpont megjelölve" confirmation, with the
+/// numbers the waypoint itself has nothing else to show yet, and "Vissza" to
+/// undo the mark it's reporting on.
+class _WaypointMarkedBanner extends StatelessWidget {
+  const _WaypointMarkedBanner({
+    required this.message,
+    required this.detail,
+    required this.undoLabel,
+    required this.onUndo,
+  });
+
+  final String message;
+  final String detail;
+  final String undoLabel;
+  final VoidCallback onUndo;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('waypointMarkedBanner'),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, size: 18, color: scheme.tertiary),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(message, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                if (detail.isNotEmpty)
+                  Text(
+                    detail,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          TextButton(onPressed: onUndo, child: Text(undoLabel)),
+        ],
+      ),
+    );
+  }
+}
+
 /// M06/M07's full-width "Meccs szünet" bar.
 class _WideActionButton extends StatelessWidget {
   const _WideActionButton({required this.icon, required this.label, required this.onPressed});
@@ -3292,6 +3992,227 @@ class _WideActionButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// M38's player block: which section is running, how much of it is left, and
+/// what comes next. Sits between the header and the dominant number and takes
+/// space from neither — see [_DominantMetric.valueFontSize] for the one
+/// concession (96 → 82 px) M38 allows itself against M05.
+class _IntervalPlayerBlock extends StatelessWidget {
+  const _IntervalPlayerBlock({
+    required this.state,
+    required this.accent,
+    required this.paused,
+    required this.l10n,
+  });
+
+  final IntervalPlayerState state;
+  final Color accent;
+  final bool paused;
+  final AppLocalizations l10n;
+
+  String _intensityLabel(IntervalIntensity intensity) => switch (intensity) {
+        IntervalIntensity.easy => l10n.intervalIntensityEasy,
+        IntervalIntensity.moderate => l10n.intervalIntensityModerate,
+        IntervalIntensity.hard => l10n.intervalIntensityHard,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final hard = state.intensity == IntervalIntensity.hard;
+    // The last three seconds are their own state: the screen stops reporting
+    // the section that is ending and starts announcing the one that is coming.
+    final countingDown = state.isCountingDown && !paused;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 13),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(24),
+          border: hard && !paused ? Border.all(color: accent.withValues(alpha: 0.35)) : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  l10n.intervalSectionCounterLabel(state.sectionNumber, state.totalSections),
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                if (paused) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.intervalPausedSectionLabel,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 2),
+            if (state.finished)
+              Text(
+                l10n.intervalPlanFinishedLabel,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+              )
+            else if (countingDown)
+              _UpNext(state: state, accent: accent, l10n: l10n, label: _intensityLabel)
+            else ...[
+              Text(
+                _intensityLabel(state.intensity).toUpperCase(),
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
+                  height: 1.1,
+                  color: hard ? accent : scheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    CardioFormatter.duration(Duration(seconds: state.secondsRemaining)),
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.8,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    l10n.intervalRemainingLabel,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              if (state.nextIntensity != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.arrow_forward, size: 15, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        l10n.intervalNextLabel(
+                          CardioFormatter.duration(
+                              Duration(seconds: state.nextDurationSeconds ?? 0)),
+                          _intensityLabel(state.nextIntensity!),
+                        ),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+            if (paused && !state.finished) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n.intervalPausedSectionBody,
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The last three seconds (M38): the screen switches from "this section" to
+/// "the one starting now", with the count itself as the biggest thing on the
+/// block.
+class _UpNext extends StatelessWidget {
+  const _UpNext({
+    required this.state,
+    required this.accent,
+    required this.l10n,
+    required this.label,
+  });
+
+  final IntervalPlayerState state;
+  final Color accent;
+  final AppLocalizations l10n;
+  final String Function(IntervalIntensity) label;
+
+  @override
+  Widget build(BuildContext context) {
+    final next = state.nextIntensity;
+    final nextDuration =
+        CardioFormatter.duration(Duration(seconds: state.nextDurationSeconds ?? 0));
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.intervalUpNextLabel,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.4,
+                  color: accent,
+                ),
+              ),
+              Text(
+                next == null
+                    ? l10n.intervalPlanFinishedLabel
+                    : '$nextDuration ${label(next).toUpperCase()}',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          '${state.secondsRemaining}',
+          style: TextStyle(
+            fontSize: 44,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -2,
+            color: accent,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
     );
   }
 }

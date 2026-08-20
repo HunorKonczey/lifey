@@ -86,4 +86,55 @@ void main() {
       expect(merged.distanceSource, 'DEVICE');
     });
   });
+
+  group('heart-rate zones move as one block (C9.1 guard)', () {
+    const watchZones = CardioMetrics(
+      hrZone1Seconds: 300,
+      hrZone2Seconds: 900,
+      hrZone3Seconds: 1200,
+      hrZone4Seconds: 900,
+      hrZone5Seconds: 300,
+    );
+
+    test('a session with no zones at all takes the whole watch set', () {
+      const onPhone = CardioMetrics(distanceMeters: 8000);
+
+      final merged = onPhone.mergedWithWatchMeasurement(watchZones);
+
+      expect(merged.hrZone1Seconds, 300);
+      expect(merged.hrZone3Seconds, 1200);
+      expect(merged.hrZone5Seconds, 300);
+    });
+
+    test('one zone already on the session keeps the whole phone set — no mixing', () {
+      // The §9 failure this guard exists for: merging field by field would
+      // pair a phone-measured Z1 with watch-measured Z2-Z5 from a *different*
+      // measurement of the same session, and the five would then total more
+      // time than the session lasted.
+      const onPhone = CardioMetrics(hrZone1Seconds: 1800);
+
+      final merged = onPhone.mergedWithWatchMeasurement(watchZones);
+
+      expect(merged.hrZone1Seconds, 1800);
+      expect(merged.hrZone2Seconds, isNull);
+      expect(merged.hrZone3Seconds, isNull);
+      expect(merged.hrZone4Seconds, isNull);
+      expect(merged.hrZone5Seconds, isNull);
+    });
+
+    test('the block rule does not touch the other watch-measured fields', () {
+      const onPhone = CardioMetrics(hrZone1Seconds: 1800);
+      const fromWatch = CardioMetrics(
+        distanceMeters: 8200,
+        avgCadence: 172,
+        hrZone2Seconds: 900,
+      );
+
+      final merged = onPhone.mergedWithWatchMeasurement(fromWatch);
+
+      expect(merged.hrZone2Seconds, isNull, reason: 'zones stay with the phone');
+      expect(merged.distanceMeters, 8200);
+      expect(merged.avgCadence, 172);
+    });
+  });
 }

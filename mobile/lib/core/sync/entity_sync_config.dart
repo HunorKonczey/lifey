@@ -14,12 +14,16 @@ Future<void> _cleanupWorkoutTemplateChildren(AppDatabase db, String clientId) =>
     (db.delete(db.workoutTemplateExercises)..where((t) => t.templateClientId.equals(clientId)))
         .go();
 
+Future<void> _cleanupCardioIntervalPlanChildren(AppDatabase db, String clientId) =>
+    (db.delete(db.cardioIntervalSteps)..where((t) => t.planClientId.equals(clientId))).go();
+
 Future<void> _cleanupWorkoutSessionChildren(AppDatabase db, String clientId) async {
   await (db.delete(db.workoutSessionExercises)..where((t) => t.sessionClientId.equals(clientId)))
       .go();
   await (db.delete(db.exerciseSets)..where((t) => t.sessionClientId.equals(clientId))).go();
   await (db.delete(db.cardioDetails)..where((t) => t.sessionClientId.equals(clientId))).go();
   await (db.delete(db.cardioSplits)..where((t) => t.sessionClientId.equals(clientId))).go();
+  await (db.delete(db.cardioWaypoints)..where((t) => t.sessionClientId.equals(clientId))).go();
   await (db.delete(db.cardioTrackPoints)..where((t) => t.sessionClientId.equals(clientId))).go();
 }
 
@@ -73,6 +77,11 @@ const entitySyncConfigs = <String, EntitySyncConfig>{
     basePath: '/workout-templates',
     cleanupChildren: _cleanupWorkoutTemplateChildren,
   ),
+  'cardio_interval_plan': EntitySyncConfig(
+    tableName: 'cardio_interval_plans',
+    basePath: '/cardio-interval-plans',
+    cleanupChildren: _cleanupCardioIntervalPlanChildren,
+  ),
   'workout_session': EntitySyncConfig(
     tableName: 'workout_sessions',
     basePath: '/workout-sessions',
@@ -96,6 +105,7 @@ const allEntityTableNames = [
   'meals',
   'exercises',
   'workout_templates',
+  'cardio_interval_plans',
   'workout_sessions',
   'water_sources',
   'water_entries',
