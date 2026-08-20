@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { formatDistanceKm, formatDuration, formatPace } from "./cardioFormat";
+import {
+  formatDistanceKm, formatDuration, formatPace, formatElevationDelta, totalWorkKj,
+  formatElevation, formatWeight, formatTemperature, formatWindSpeed, formatPrecipitation,
+} from "./cardioFormat";
 
 describe("formatDistanceKm", () => {
   it("formats with 2 decimals and a period for en", () => {
@@ -32,5 +35,73 @@ describe("formatPace", () => {
   it("returns null for zero or negative distance (avoids divide-by-zero)", () => {
     expect(formatPace(0, 100)).toBeNull();
     expect(formatPace(-5, 100)).toBeNull();
+  });
+});
+
+describe("formatElevationDelta", () => {
+  it("signs a positive delta with a leading +", () => {
+    expect(formatElevationDelta(42.4)).toBe("+42 m");
+  });
+  it("keeps the minus sign a negative delta already carries", () => {
+    expect(formatElevationDelta(-12.2)).toBe("-12 m");
+  });
+  it("shows zero unsigned", () => {
+    expect(formatElevationDelta(0)).toBe("0 m");
+  });
+});
+
+// Parity port of `cardio_formatter_test.dart`'s "totalWorkKj" group
+// (docs/cardio/60 §8 C7w.2 kész-ha) — same input/output pairs.
+describe("totalWorkKj", () => {
+  it("is average power over the time it was held", () => {
+    // 168 W for 30:00 = 302.4 kJ.
+    expect(totalWorkKj(168, 1800)).toBe(302);
+  });
+
+  it("is null without power — the number it would print is not a zero", () => {
+    expect(totalWorkKj(null, 1800)).toBeNull();
+    expect(totalWorkKj(0, 1800)).toBeNull();
+  });
+
+  it("is null without a moving time to hold that power over", () => {
+    expect(totalWorkKj(168, null)).toBeNull();
+    expect(totalWorkKj(168, 0)).toBeNull();
+  });
+
+  it("follows a corrected average, since nothing stores the result", () => {
+    // Same 30:00, average corrected from 168 to 200 → 360, not the original 302.
+    expect(totalWorkKj(200, 1800)).toBe(360);
+  });
+});
+
+describe("formatElevation", () => {
+  it("rounds to whole meters", () => {
+    expect(formatElevation(1234.6)).toBe("1235 m");
+  });
+});
+
+describe("formatWeight", () => {
+  it("keeps one decimal", () => {
+    expect(formatWeight(8.5)).toBe("8.5 kg");
+    expect(formatWeight(9)).toBe("9.0 kg");
+  });
+});
+
+describe("formatTemperature", () => {
+  it("rounds to whole degrees and keeps the sign", () => {
+    expect(formatTemperature(7.4)).toBe("7 °C");
+    expect(formatTemperature(-3.6)).toBe("-4 °C");
+  });
+});
+
+describe("formatWindSpeed", () => {
+  it("rounds to whole km/h", () => {
+    expect(formatWindSpeed(11.6)).toBe("12 km/h");
+  });
+});
+
+describe("formatPrecipitation", () => {
+  it("rounds to whole mm", () => {
+    expect(formatPrecipitation(0.4)).toBe("0 mm");
   });
 });

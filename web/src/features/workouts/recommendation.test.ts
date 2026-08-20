@@ -27,6 +27,7 @@ function strengthSession(templateId: number | null, dayOffset: number): WorkoutS
     movingSeconds: null,
     cardio: null,
     splits: [],
+    waypoints: [],
   };
 }
 

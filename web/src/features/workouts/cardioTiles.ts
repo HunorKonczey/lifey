@@ -1,5 +1,5 @@
 import { activityFamilyOf } from "./activityType";
-import { formatDistanceKm, formatDuration, formatPace } from "./cardioFormat";
+import { formatDistanceKm, formatDuration, formatPace, formatElevation, formatWeight } from "./cardioFormat";
 import type { ActivityType, WorkoutSessionResponse } from "./types";
 
 export interface CardioTile {
@@ -10,6 +10,22 @@ export interface CardioTile {
 
 /** Minimal shape of next-intl's translator — enough to call it, nothing UI-specific. */
 type Translate = (key: string) => string;
+
+/**
+ * `cardio_details.game_format` is a free-text wire value (docs/cardio/60
+ * §5 M45 doc-comment on the mobile `GameFormat` enum: "a future format needs
+ * no migration"), so this is only the set the picker offers today — the same
+ * four codes as mobile's `GameFormat`. An unrecognized code falls back to
+ * showing the raw string rather than mislabeling it, unlike mobile's
+ * `GameFormat.fromCode(...) ?? GameSetup.defaults.format`, which would
+ * silently relabel an unknown code as "5v5".
+ */
+const GAME_FORMAT_LABEL_KEYS: Record<string, string> = {
+  "5V5": "cardioGameFormatFiveVsFive",
+  SMALL_SIDED: "cardioGameFormatSmallSided",
+  PRACTICE: "cardioGameFormatPractice",
+  MATCH: "cardioGameFormatMatch",
+};
 
 /**
  * Builds the family-dependent metric tiles for a cardio session's read-only
@@ -55,18 +71,45 @@ export function buildCardioTiles(
     if (cardio?.elevationGainMeters != null) {
       tiles.push({ label: t("cardioElevationGainLabel"), value: `${Math.round(cardio.elevationGainMeters)} m`, icon: "terrain" });
     }
+    // Peak altitude is DISTANCE-wide (Q-D6), not HIKING-only — any DISTANCE
+    // session with local altitude data gets it, same gating as elevation gain.
+    if (cardio?.maxAltitudeMeters != null) {
+      tiles.push({ label: t("cardioMaxAltitudeLabel"), value: formatElevation(cardio.maxAltitudeMeters), icon: "landscape" });
+    }
+    if (activityType === "HIKING") {
+      // Backpack weight is hike-only and manual-only (docs/cardio/60 §8
+      // C8w.4) — always a tile once you're on a hike, "—" until it's set,
+      // same presence rule as mobile's tappable version (this one just isn't
+      // tappable, the web never edits cardio).
+      tiles.push({
+        label: t("cardioBackpackWeightLabel"),
+        value: cardio?.backpackWeightKg != null ? formatWeight(cardio.backpackWeightKg) : "—",
+        icon: "backpack",
+      });
+      // Grade-adjusted pace, unlike backpack weight, is presence-gated, not
+      // always shown: it's a derived value with no manual-entry path, so a
+      // "—" here would mean something different (nobody bothered to enter
+      // it) than what's actually true (nothing produced it — see docs/cardio/60
+      // §8 C8w.4's note on `avgGapSecondsPerKm` never being populated today).
+      if (cardio?.avgGapSecondsPerKm != null) {
+        const gap = formatPace(1000, cardio.avgGapSecondsPerKm);
+        if (gap) tiles.push({ label: t("cardioGapLabel"), value: gap, icon: "trending_up" });
+      }
+    }
     return tiles;
   }
 
   if (family === "MACHINE") {
+    // avgWatts and deviceCalories are deliberately not grid tiles here —
+    // avgWatts only ever appears inside `TotalWorkCard` (docs/cardio/60 §8
+    // C7w.2, mirroring mobile: the MACHINE grid never has its own watts
+    // tile, only the hero card does), and deviceCalories moved to the
+    // two-sided `CalorieCard`, which explains *why* it's never summed —
+    // strictly more context than a bare "N kcal" tile gave.
     tiles.push({ label: t("cardioMovingTimeLabel"), value: durationValue, icon: "schedule" });
     tiles.push({ label: t("cardioDistanceLabel"), value: hasDistance ? formatDistanceKm(distanceM, locale) : "—", icon: "route" });
-    if (cardio?.avgWatts != null) tiles.push({ label: t("cardioAvgWattsLabel"), value: `${Math.round(cardio.avgWatts)} W`, icon: "bolt" });
     if (cardio?.avgCadence != null) tiles.push({ label: t("cardioAvgCadenceLabel"), value: `${Math.round(cardio.avgCadence)} rpm`, icon: "autorenew" });
     if (cardio?.resistanceLevel != null) tiles.push({ label: t("cardioResistanceLabel"), value: `${cardio.resistanceLevel}`, icon: "tune" });
-    if (cardio?.deviceCalories != null) {
-      tiles.push({ label: t("cardioDeviceCaloriesLabel"), value: `${Math.round(cardio.deviceCalories)} kcal`, icon: "local_fire_department" });
-    }
     return tiles;
   }
 
@@ -79,7 +122,27 @@ export function buildCardioTiles(
       icon: "place",
     });
   }
+  if (cardio?.gameFormat != null) {
+    const labelKey = GAME_FORMAT_LABEL_KEYS[cardio.gameFormat];
+    tiles.push({
+      label: t("cardioGameFormatLabel"),
+      value: labelKey ? t(labelKey) : cardio.gameFormat,
+      icon: "grid_view",
+    });
+  }
   if (cardio?.intensity != null) tiles.push({ label: t("cardioIntensityLabel"), value: `${cardio.intensity}/5`, icon: "whatshot" });
-  if (cardio?.scorePoints != null) tiles.push({ label: t("cardioScoreLabel"), value: `${cardio.scorePoints}`, icon: "scoreboard" });
+  if (cardio?.scorePoints != null) {
+    tiles.push({
+      label: activityType === "BASKETBALL" ? t("cardioBoxScorePointsLabel") : t("cardioBoxScoreGoalsLabel"),
+      value: `${cardio.scorePoints}`,
+      icon: "scoreboard",
+    });
+  }
+  if (cardio?.scoreRebounds != null) {
+    tiles.push({ label: t("cardioBoxScoreReboundsLabel"), value: `${cardio.scoreRebounds}`, icon: "replay" });
+  }
+  if (cardio?.scoreAssists != null) {
+    tiles.push({ label: t("cardioBoxScoreAssistsLabel"), value: `${cardio.scoreAssists}`, icon: "handshake" });
+  }
   return tiles;
 }

@@ -28,6 +28,7 @@ function strengthSession(
     movingSeconds: null,
     cardio: null,
     splits: [],
+    waypoints: [],
     ...overrides,
   };
 }
