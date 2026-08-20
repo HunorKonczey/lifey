@@ -388,6 +388,48 @@ void main() {
     expect(persistedCardio?.maxAltitudeMeters, isNull);
   });
 
+  testWidgets(
+      'finishing a hike with a climbing trail persists a non-null avgGapSecondsPerKm (C8.2 wiring)',
+      (tester) async {
+    final ctx = await _pump(tester,
+        session: _runningSession(clientId: 'hike-1', activityType: 'HIKING'));
+    // Same climbing fixture as the maxAltitudeMeters test above — the exact
+    // grade-adjusted number is `grade_adjusted_pace_test.dart`'s job, this
+    // test is only about the wiring: does `_finish()` call the formula and
+    // persist the result at all.
+    for (var n = 0; n <= 5; n++) {
+      ctx.location.emitFix(_fixAt(n, altitude: 600 + n * 5));
+      await tester.pump();
+    }
+
+    final rect = tester.getRect(find.byKey(const Key('slideToFinishBar')));
+    await tester.startGesture(rect.center);
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    final persistedCardio = ctx.controller.finishCalls.single['cardio'] as CardioMetrics?;
+    expect(persistedCardio?.avgGapSecondsPerKm, isNotNull);
+    expect(persistedCardio!.avgGapSecondsPerKm, greaterThan(0));
+  });
+
+  testWidgets(
+      'a RUNNING session finish never computes avgGapSecondsPerKm — the field is hike-only (M42)',
+      (tester) async {
+    final ctx = await _pump(tester); // default activityType: RUNNING
+    for (var n = 0; n <= 5; n++) {
+      ctx.location.emitFix(_fixAt(n, altitude: 600 + n * 5));
+      await tester.pump();
+    }
+
+    final rect = tester.getRect(find.byKey(const Key('slideToFinishBar')));
+    await tester.startGesture(rect.center);
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.pumpAndSettle();
+
+    final persistedCardio = ctx.controller.finishCalls.single['cardio'] as CardioMetrics?;
+    expect(persistedCardio?.avgGapSecondsPerKm, isNull);
+  });
+
   testWidgets('reopening a session with existing raw points replays them into the live distance '
       'immediately, without waiting for a new fix', (tester) async {
     final db = _testDatabase();

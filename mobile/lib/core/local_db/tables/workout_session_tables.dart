@@ -188,6 +188,14 @@ class CardioDetails extends Table {
   RealColumn get weatherWindKph => real().nullable()();
   RealColumn get weatherPrecipMm => real().nullable()();
 
+  // Grade-adjusted pace, seconds/km (docs/cardio/60 C8.2, docs/cardio/56
+  // D-C3.9) — computed once at close time by
+  // `grade_adjusted_pace.dart#computeGradeAdjustedPaceSecondsPerKm` from the
+  // filtered local trail, same "computed, never recomputed" pattern as the
+  // best efforts. Null when there's no trail to compute one from (a GPS-less
+  // indoor session, or fewer than two points) — never a fabricated 0.
+  RealColumn get avgGapSecondsPerKm => real().nullable()();
+
   @override
   Set<Column> get primaryKey => {sessionClientId};
 }

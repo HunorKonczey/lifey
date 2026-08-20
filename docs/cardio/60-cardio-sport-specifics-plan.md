@@ -647,17 +647,30 @@ oszlop lent erre a mobil-frame-re mutat referenciaként, nem egy elkészült web
 > `altitudeMeters`-e — ugyanaz a fallback-érték, amit a mobil is használ, ha a track-illesztés nem
 > ad semmit) + a `label`-t, ha valaha lesz (V1-ben Q-D5 szerint mindig `null`).
 >
-> **C8w.4 — a GAP-csempe ma gyakorlatban sosem jelenik meg, és ez nem web-oldali hiba.** A
-> `grade_adjusted_pace.dart` (C8.2) képletét **soha semmi nem hívja meg** a mobil kódban a
-> `cardio_session_screen.dart` `_finish()`-ében — nincs `avgGapSecondsPerKm` írás sehol a mobil
-> repóban (`grep -r avgGapSecondsPerKm mobile/lib` nulla találat a saját domain-tesztjén kívül).
-> A backend oszlop és a DTO-mező létezik, a doc-számítás létezik és tesztelve van, de **soha semmi
-> nem tölti ki** — a C8.2 kész-ha csak a képletet és a dokumentálást ígérte, a `_finish()`-be
-> kötést nem. A web `cardioGapLabel` csempéje ezért **helyesen** viselkedik (presence-gated, ahogy
-> minden más derivált mezőé itt), csak az adat, amire vár, ma sosem érkezik meg — ez egy valódi,
-> a webtől független termékhiányosság, nem valami, amit ez a lépés eldönthetne vagy kijavíthatna.
-> **Javaslat:** külön feladatként érdemes felvenni a `_finish()` bekötését, ha a GAP-számot
-> valaha látni akarja bárki, akár mobilon, akár weben.
+> **C8w.4 — a GAP-csempe hiánya utólag javítva (2026-08-20), mobil-oldali follow-upként.**
+> A `grade_adjusted_pace.dart` (C8.2) képletét **soha semmi nem hívta meg** a
+> `cardio_session_screen.dart` `_finish()`-ében — a backend oszlop és a DTO-mező létezett, a
+> képlet is, de az `avgGapSecondsPerKm` mezőt **a teljes mobil-oldali plumbing hiányzott**: nem
+> csak a `_finish()`-hívás, hanem maga a `CardioMetrics` domain-mező, a drift-oszlop, a
+> repository read/write és a `pull_engine` leképezés is — a C8.2 kész-ha csak a képletet és a
+> dokumentálást ígérte, semmi mást. Ezt a webes C8w.4 munka közben derítettük ki, és **ugyanebben
+> a beszélgetésben ki is javítottuk**, nem csak felvettük egy jövőbeli feladatnak:
+> - **Drift V43**: új `avg_gap_seconds_per_km` oszlop a `cardio_details` táblán, nullázható,
+>   backfill nélkül (a régi, már törölt nyers pontú session-ök úgysem tudnák visszaszámolni).
+> - `CardioMetrics` domain-osztály + `fromJson` + `mergedWithWatchMeasurement` bővítve.
+> - `workout_session_repository.dart` (write/read/outbox JSON) és `pull_engine.dart` (pull-oldali
+>   leképezés) mind a meglévő mezők mintáját követve bővítve.
+> - `cardio_session_screen.dart` `_finish()`-e most **HIKING-nél** meghívja
+>   `computeGradeAdjustedPaceSecondsPerKm(trail)`-t, ugyanabból a szűrt nyomvonalból, ugyanabban a
+>   pillanatban, mint a legjobb-résztávakat és a csúcsmagasságot (C6.3/C8.5 mintája) — RUNNING/
+>   WALKING-nál a mező marad `null` (M42 „TEREP" blokkja kizárólag túrán jelenik meg).
+> - Tesztek: 2 új widget-teszt a `_finish()`-bekötésre (hegymászó nyomvonal → nem-null GAP;
+>   RUNNING → `null`), 2 új repository-teszt (kerekre zárás a helyi soron/payloadon/`watchAll`-on
+>   át, illetve `null`-nál nem 0). **870/870 meglévő teszt is zöld maradt** (`flutter test
+>   test/features/workouts/ test/core/local_db/ test/core/sync/`), `dart analyze lib/` tiszta.
+>
+> A web `cardioGapLabel` csempéje (presence-gated, C8w.4) **mostantól ténylegesen meg is jelenik**
+> egy frissen rögzített túránál — a mobil-oldali javítás nélkül csak elméletben lett volna helyes.
 
 ### C9w — Játék: pulzuszóna-eloszlás + box score (M43, M44, M45) ✅
 

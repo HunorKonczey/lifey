@@ -46,6 +46,7 @@ class CardioMetrics {
     this.weatherWindKph,
     this.weatherPrecipMm,
     this.weatherCondition,
+    this.avgGapSecondsPerKm,
   });
 
   // DISTANCE + MACHINE
@@ -127,6 +128,12 @@ class CardioMetrics {
   final double? weatherWindKph;
   final double? weatherPrecipMm;
 
+  // Hike-only (docs/cardio/60 C8.2, docs/cardio/56 D-C3.9) — grade-adjusted
+  // pace in seconds/km, computed once at close time from the filtered local
+  // trail (`grade_adjusted_pace.dart`), never recomputed server-side or on
+  // the web. Null when there's no trail to compute one from.
+  final double? avgGapSecondsPerKm;
+
   /// Mirrors `WorkoutSessionRepository._cardioPayload`'s key names 1:1 — used
   /// to decode the cardio block of a watch standalone-session wire payload
   /// (docs/cardio/55-cardio-watch-plan.md §5, W-1), the one other place a
@@ -167,6 +174,7 @@ class CardioMetrics {
         weatherWindKph: (json['weatherWindKph'] as num?)?.toDouble(),
         weatherPrecipMm: (json['weatherPrecipMm'] as num?)?.toDouble(),
         weatherCondition: json['weatherCondition'] as String?,
+        avgGapSecondsPerKm: (json['avgGapSecondsPerKm'] as num?)?.toDouble(),
       );
 
   /// Fills in [fromWatch]'s watch-measured fields for whichever ones this
@@ -247,6 +255,7 @@ class CardioMetrics {
         weatherWindKph: weatherWindKph ?? fromWatch.weatherWindKph,
         weatherPrecipMm: weatherPrecipMm ?? fromWatch.weatherPrecipMm,
         weatherCondition: weatherCondition ?? fromWatch.weatherCondition,
+        avgGapSecondsPerKm: avgGapSecondsPerKm ?? fromWatch.avgGapSecondsPerKm,
       );
 }
 

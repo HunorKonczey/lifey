@@ -65,7 +65,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 42;
+  int get schemaVersion => 43;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -369,6 +369,14 @@ class AppDatabase extends _$AppDatabase {
             await _addColumnIfMissing(m, cardioDetails, cardioDetails.weatherTempC);
             await _addColumnIfMissing(m, cardioDetails, cardioDetails.weatherWindKph);
             await _addColumnIfMissing(m, cardioDetails, cardioDetails.weatherPrecipMm);
+          }
+          // V43: grade-adjusted pace (docs/cardio/60 C8.2) — one nullable
+          // column. The formula existed since C8.2 but was never actually
+          // wired into `_finish()` until now, so no pre-existing session has
+          // a value; no backfill possible (it needs the raw trail, which
+          // most sessions this old have already had pruned after 90 days).
+          if (from < 43) {
+            await _addColumnIfMissing(m, cardioDetails, cardioDetails.avgGapSecondsPerKm);
           }
         },
       );

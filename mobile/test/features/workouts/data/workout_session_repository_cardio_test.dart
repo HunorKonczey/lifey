@@ -395,6 +395,59 @@ void main() {
       expect(cardioJson['weatherTempC'], isNull);
     });
 
+    test(
+        'a grade-adjusted pace round-trips through the local row, the payload, and watchAll '
+        '(C8.2)', () async {
+      const withGap = CardioMetrics(
+        distanceMeters: 8400,
+        elevationGainMeters: 412,
+        avgGapSecondsPerKm: 323.5,
+        distanceSource: 'MEASURED',
+      );
+
+      final clientId = await repo.create(
+        startedAt: DateTime.utc(2026, 8, 19, 6),
+        exercises: const [],
+        sets: const [],
+        sessionKind: 'CARDIO',
+        activityType: 'HIKING',
+        movingSeconds: 3600,
+        cardio: withGap,
+      );
+
+      final cardioRow = await (db.select(db.cardioDetails)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .getSingle();
+      expect(cardioRow.avgGapSecondsPerKm, 323.5);
+
+      final cardioJson = (await lastPayload('create'))['cardio'] as Map<String, dynamic>;
+      expect(cardioJson['avgGapSecondsPerKm'], 323.5);
+
+      final session = (await repo.watchAll().first).single;
+      expect(session.cardio!.avgGapSecondsPerKm, 323.5);
+    });
+
+    test('a session with no grade-adjusted pace stores and sends null, not zero', () async {
+      final clientId = await repo.create(
+        startedAt: DateTime.utc(2026, 8, 19, 6),
+        exercises: const [],
+        sets: const [],
+        sessionKind: 'CARDIO',
+        activityType: 'HIKING',
+        movingSeconds: 3600,
+        cardio: metrics,
+      );
+
+      final cardioRow = await (db.select(db.cardioDetails)
+            ..where((t) => t.sessionClientId.equals(clientId)))
+          .getSingle();
+      expect(cardioRow.avgGapSecondsPerKm, isNull);
+
+      final cardioJson = (await lastPayload('create'))['cardio'] as Map<String, dynamic>;
+      expect(cardioJson.containsKey('avgGapSecondsPerKm'), isTrue);
+      expect(cardioJson['avgGapSecondsPerKm'], isNull);
+    });
+
     test('a repeat save (update) replaces cardio metrics and splits, not appends', () async {
       final startedAt = DateTime.utc(2026, 7, 10, 17);
       final clientId = await repo.create(

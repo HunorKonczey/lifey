@@ -1091,6 +1091,7 @@ class PullEngine {
       weatherTempC: Value((json['weatherTempC'] as num?)?.toDouble()),
       weatherWindKph: Value((json['weatherWindKph'] as num?)?.toDouble()),
       weatherPrecipMm: Value((json['weatherPrecipMm'] as num?)?.toDouble()),
+      avgGapSecondsPerKm: Value((json['avgGapSecondsPerKm'] as num?)?.toDouble()),
     );
   }
 

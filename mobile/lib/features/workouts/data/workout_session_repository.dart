@@ -673,6 +673,7 @@ class WorkoutSessionRepository {
               weatherTempC: Value(cardio.weatherTempC),
               weatherWindKph: Value(cardio.weatherWindKph),
               weatherPrecipMm: Value(cardio.weatherPrecipMm),
+              avgGapSecondsPerKm: Value(cardio.avgGapSecondsPerKm),
             ),
           );
     }
@@ -787,6 +788,7 @@ class WorkoutSessionRepository {
       weatherTempC: row.weatherTempC,
       weatherWindKph: row.weatherWindKph,
       weatherPrecipMm: row.weatherPrecipMm,
+      avgGapSecondsPerKm: row.avgGapSecondsPerKm,
     );
   }
 
@@ -923,6 +925,7 @@ class WorkoutSessionRepository {
       'weatherTempC': cardio.weatherTempC,
       'weatherWindKph': cardio.weatherWindKph,
       'weatherPrecipMm': cardio.weatherPrecipMm,
+      'avgGapSecondsPerKm': cardio.avgGapSecondsPerKm,
     };
   }
 

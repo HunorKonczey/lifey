@@ -37,6 +37,7 @@ import '../data/cardio_interval_plan_repository.dart';
 import '../domain/cardio_interval_plan.dart';
 import '../domain/cardio_splits_calculator.dart';
 import '../domain/elevation_profile.dart';
+import '../domain/grade_adjusted_pace.dart';
 import '../domain/route_encoder.dart';
 import '../domain/track_filter.dart';
 import '../domain/workout_session.dart';
@@ -1390,10 +1391,20 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       // survives the raw points being pruned, exactly like the best efforts
       // above (docs/cardio/60 C8.5, Q-D6).
       final maxAltitudeMeters = hasAltitude ? buildElevationProfile(trail)?.peak?.altitudeMeters : null;
+      // Hike-only (docs/cardio/60 C8.2, docs/cardio/56 D-C3.9), same trail
+      // and same close-time computation as the best efforts/elevation peak
+      // above — the M42 "TEREP" block is what actually shows this, and that
+      // frame only ever appears on a hike. `computeGradeAdjustedPaceSecondsPerKm`
+      // is itself null-tolerant of missing altitude (a flat/no-altitude
+      // trail just returns the raw average pace), so no extra `hasAltitude`
+      // gate is needed here.
+      final avgGapSecondsPerKm =
+          _activityType == 'HIKING' ? computeGradeAdjustedPaceSecondsPerKm(trail) : null;
       routeCardio = CardioMetrics(
         distanceMeters: _trackFilter!.distanceMeters,
         elevationGainMeters: hasAltitude ? _trackFilter!.elevationGainMeters : null,
         maxAltitudeMeters: maxAltitudeMeters,
+        avgGapSecondsPerKm: avgGapSecondsPerKm,
         best1kSeconds: bestEfforts.best1kSeconds,
         best5kSeconds: bestEfforts.best5kSeconds,
         best10kSeconds: bestEfforts.best10kSeconds,
