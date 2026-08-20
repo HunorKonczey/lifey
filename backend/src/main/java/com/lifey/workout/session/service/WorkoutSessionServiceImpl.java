@@ -399,9 +399,21 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
      * Rebuilds the session's split list from the request. Full-replace, same
      * model as {@link #replaceSets}. Relies on {@code orphanRemoval} to
      * delete dropped splits.
+     *
+     * <p>The {@code flush()} right after {@code clear()} is load-bearing: the
+     * client always resends the *same* split indexes it already has (every
+     * {@code update()} call round-trips whatever splits already exist, not
+     * just ones that actually changed — see the mobile repository's merge
+     * step), so without it Hibernate's default flush order (all inserts
+     * before all deletes) tries to insert the new rows before the
+     * orphan-removed old ones are gone, tripping
+     * {@code cardio_splits_session_index_unique} on the very next update
+     * after the first one that set any splits — every time, not
+     * intermittently. Flushing the delete here first keeps the two apart.
      */
     private void replaceSplits(WorkoutSession session, List<CardioSplitRequest> requested) {
         session.getSplits().clear();
+        sessionRepository.flush();
         if (requested == null) return;
         for (CardioSplitRequest item : requested) {
             CardioSplit split = new CardioSplit();
@@ -420,11 +432,13 @@ public class WorkoutSessionServiceImpl implements WorkoutSessionService {
 
     /**
      * Rebuilds the session's waypoint list from the request. Full-replace,
-     * same model as {@link #replaceSplits}. Relies on {@code orphanRemoval}
-     * to delete dropped waypoints.
+     * same model as {@link #replaceSplits} — including the same
+     * flush-before-reinsert requirement, for the same reason
+     * ({@code cardio_waypoints_session_index_unique}).
      */
     private void replaceWaypoints(WorkoutSession session, List<CardioWaypointRequest> requested) {
         session.getWaypoints().clear();
+        sessionRepository.flush();
         if (requested == null) return;
         for (CardioWaypointRequest item : requested) {
             CardioWaypoint waypoint = new CardioWaypoint();
