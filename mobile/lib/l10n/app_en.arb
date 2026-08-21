@@ -3459,10 +3459,6 @@
   "@finishCardioConfirmMessage": {
     "description": "Body text shown on the slide-to-finish confirmation overlay while dragging (C2.5)"
   },
-  "cardioSummaryDoneButton": "Done",
-  "@cardioSummaryDoneButton": {
-    "description": "Button at the bottom of the cardio summary screen, below the RPE rating, that navigates back to the Workouts screen's Sessions tab"
-  },
   "manualPauseCardTitle": "Paused",
   "@manualPauseCardTitle": {
     "description": "Title of the pause-status card shown when the user manually paused a live cardio session (C2.5, M08)"

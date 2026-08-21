@@ -4,7 +4,7 @@ See root `../CLAUDE.md` for project-wide rules (Java/Maven backend rules don't a
 
 ## Stack
 
-- State management: `flutter_riverpod` (+ `riverpod_generator`/`build_runner` for generated providers — never hand-edit `*.g.dart`)
+- State management: `flutter_riverpod` — providers are hand-written (`Notifier`/`StreamNotifier`/`AsyncNotifier` subclasses plus their `*Provider`). No `@riverpod` annotations and no provider code generation; don't introduce either.
 - Routing: `go_router`
 - HTTP: `dio` (`lib/core/network/dio_client.dart`, `lib/core/network/api_config.dart`)
 - Offline-first local cache: `drift` (SQLite) under `lib/core/local_db/`. Chosen over Isar — Isar 3.1.0 lacks an Android `namespace` and breaks AGP 8 builds, and Isar 4.x was still unstable when this was picked.
@@ -24,5 +24,5 @@ Shared cross-feature code lives in `lib/shared/widgets/` and `lib/core/` (theme,
 
 ## Conventions
 
-- Run `dart run build_runner build` after changing any `@riverpod`-annotated provider.
+- Run `dart run build_runner build --delete-conflicting-outputs` after changing a drift table under `lib/core/local_db/` — that's what regenerates `app_database.g.dart`. Never hand-edit any `*.g.dart`.
 - New features should follow the same four-layer split even if a layer is thin.

@@ -69,5 +69,5 @@ only from within their own subpackage can stay package-private; anything reached
 - The chat itself no longer lives here. What remains of it in this application is `V65`'s columns on
   `user_settings` (the settings API still exposes them), `com.lifey.internal` (the service-to-service
   seam: `/internal/push` and the revoke webhook) and `com.lifey.clientconfig`.
-- Note: root `CLAUDE.md` says "Use Java 21" but `pom.xml` pins `<java.version>24</java.version>` — the pom is
-  authoritative for this repo; flag this discrepancy if it matters for your task instead of silently picking one.
+- Java 24 — root `CLAUDE.md` and `pom.xml` (`<java.version>24</java.version>`) agree; the pom is authoritative
+  if they ever drift apart again.
