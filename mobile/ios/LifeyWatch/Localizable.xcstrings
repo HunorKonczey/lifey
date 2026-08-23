@@ -245,6 +245,7 @@
       }
     },
     "cardio_gross_time_label" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
