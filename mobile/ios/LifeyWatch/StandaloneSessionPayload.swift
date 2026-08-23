@@ -114,6 +114,21 @@ struct StandaloneAdoptionPayload: Codable, Equatable {
   /// survives a mid-session plan change and can name an exercise the template
   /// never had (one added to the session on the phone).
   let currentExerciseId: String?
+  /// `'CARDIO'` (+ its activity type) or nil for STRENGTH — the same pair
+  /// `StandaloneSessionPayload` carries, and read the same way on the phone
+  /// (`WatchStandaloneAdoption.kind`, absent = `'STRENGTH'`).
+  ///
+  /// Nil on every snapshot this build actually sends: `WorkoutManager
+  /// .sendAdoptionRequest()` doesn't send one at all for a cardio session,
+  /// because there's nothing about a run for the phone to mirror live and
+  /// the phone's only adoption shape is a strength one — a run adopted as
+  /// strength is what turned a watch-started Walking into "Quick strength"
+  /// on the phone. The fields are here so that stays true by construction:
+  /// a future live-cardio-bridging step (55 §7's W-9) that lifts the gate
+  /// sends a payload the phone can already tell apart, instead of one it
+  /// silently misreads.
+  var kind: String?
+  var activityType: String?
 }
 
 /// The in-progress standalone session's own metadata, kept up to date on
@@ -210,6 +225,25 @@ struct CachedTemplate: Codable, Equatable {
   let templateId: String
   let title: String
   let exercises: [CachedTemplateExercise]
+}
+
+/// One row of the picker's "all activity types" screen — every
+/// `kActivityTypes` code the phone knows, pre-localized, in display order,
+/// pushed alongside the ranked list (`allCardio`).
+///
+/// The wire shape is a `WatchQuickStartEntry.cardio` row verbatim
+/// (`type`/`activityType`/`title`); this decodes only the two fields it
+/// needs and lets `Codable` ignore the `type` discriminator, so the phone
+/// serializes one cardio shape and the watch reads it two ways instead of
+/// the payload carrying two.
+///
+/// Exists because the ranked list can't promise completeness: it's capped at
+/// 8 rows shared with strength templates, so a user who trains 8 templates
+/// regularly would otherwise have no way at all to start a cardio session
+/// from the watch. This list is the escape hatch behind it.
+struct CachedActivityType: Codable, Equatable {
+  let activityType: String
+  let title: String
 }
 
 /// One row of the unified, frequency-ranked quick-start list

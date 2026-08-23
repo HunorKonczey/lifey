@@ -228,6 +228,14 @@ final class WatchBridge: NSObject {
   /// empty array still writes and sends (never skipped), the same "watch
   /// whose last plan just got deleted is told to clear its cache" contract
   /// `templates` had (T1.3's phone-side decision).
+  ///
+  /// `allCardio` is the complete activity-type list behind the picker's "all
+  /// activity types" screen — every `kActivityTypes` code, pre-localized,
+  /// unranked. Carried in the *same* context write rather than a channel of
+  /// its own: it's ~7 short rows, the phone rebuilds it on the same triggers
+  /// as `entries`, and one write keeps `lastContext`'s single-value merge
+  /// contract (D-F6b.2) as simple as it is. Defaulted to `[]` rather than
+  /// guarded on, so a Dart build that predates it still syncs its `entries`.
   private func syncTemplates(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let args = call.arguments as? [String: Any],
       let entries = args["entries"] as? [[String: Any]],
@@ -241,8 +249,10 @@ final class WatchBridge: NSObject {
       result(nil)
       return
     }
+    let allCardio = args["allCardio"] as? [[String: Any]] ?? []
     lastContext["version"] = version
     lastContext["entries"] = (sanitizedForPropertyList(entries) as? [Any]) ?? []
+    lastContext["allCardio"] = (sanitizedForPropertyList(allCardio) as? [Any]) ?? []
     lastContext["syncedAtEpochMs"] = syncedAtEpochMs
     try? WCSession.default.updateApplicationContext(lastContext)
     result(nil)

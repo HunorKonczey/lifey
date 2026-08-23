@@ -43,6 +43,8 @@ void main() {
     double? activeCalories,
     double? averageHeartRate,
     String? healthWorkoutId,
+    String kind = 'STRENGTH',
+    String? activityType,
   }) =>
       WatchStandaloneSession(
         standaloneSessionId: standaloneSessionId,
@@ -54,6 +56,8 @@ void main() {
         activeCalories: activeCalories,
         averageHeartRate: averageHeartRate,
         healthWorkoutId: healthWorkoutId,
+        kind: kind,
+        activityType: activityType,
       );
 
   Future<String?> defaultWriteHealthWorkout({
@@ -562,6 +566,8 @@ void main() {
       String? templateId,
       double? activeCalories,
       double? averageHeartRate,
+      String kind = 'STRENGTH',
+      String? activityType,
     }) =>
         WatchStandaloneAdoption(
           standaloneSessionId: standaloneSessionId,
@@ -570,6 +576,8 @@ void main() {
           sets: sets,
           activeCalories: activeCalories,
           averageHeartRate: averageHeartRate,
+          kind: kind,
+          activityType: activityType,
         );
 
     test('creates a running (not-yet-finished) mirror session and acks adoption', () async {
@@ -586,6 +594,69 @@ void main() {
       expect(ackCalls, hasLength(1));
       expect(ackCalls.single.method, 'ackAdoption');
       expect(ackCalls.single.arguments, {'standaloneSessionId': 'standalone-1'});
+    });
+
+    test('ignores a cardio adoption entirely — no mirror row, no ack', () async {
+      // The regression this exists for: an adoption snapshot has only one
+      // shape here (resolve exercises, mirror a set list), so a watch-started
+      // run used to land as a template-less *strength* session and the phone
+      // opened "Quick strength" for a workout the user started as Walking.
+      // The session isn't lost — it arrives complete, as CARDIO, when it
+      // ends. No ack either: that flips the watch's `isAdopted` and hides its
+      // "watch only" badge, a promise the phone isn't keeping.
+      final processor = buildProcessor();
+
+      await processor.processAdoption(
+        sampleAdoptionEvent(kind: 'CARDIO', activityType: 'WALKING', sets: const []),
+        language: LanguagePreference.english,
+      );
+
+      expect(await db.select(db.workoutSessions).get(), isEmpty);
+      expect(ackCalls, isEmpty);
+    });
+
+    test('a cardio session ignored at adoption still lands complete when it ends', () async {
+      final processor = buildProcessor();
+      await processor.processAdoption(
+        sampleAdoptionEvent(kind: 'CARDIO', activityType: 'RUNNING', sets: const []),
+        language: LanguagePreference.english,
+      );
+
+      await processor.process(
+        sampleEvent(
+          kind: 'CARDIO',
+          activityType: 'RUNNING',
+          sets: const [],
+        ),
+        language: LanguagePreference.english,
+      );
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.clientId, 'standalone-1');
+      expect(row.sessionKind, 'CARDIO');
+      expect(row.activityType, 'RUNNING');
+      expect(row.finishedAt, isNotNull);
+    });
+
+    test('heals a strength mirror row a pre-fix build already created for a cardio session',
+        () async {
+      // What an already-affected phone holds: an in-progress "Quick strength"
+      // row a pre-fix watch build's adoption created for a run. The finished
+      // CARDIO payload converts it in place — same clientId, so it can't
+      // duplicate — rather than leaving a phantom strength workout behind.
+      final processor = buildProcessor();
+      await processor.processAdoption(sampleAdoptionEvent(), language: LanguagePreference.english);
+
+      await processor.process(
+        sampleEvent(kind: 'CARDIO', activityType: 'WALKING', sets: const []),
+        language: LanguagePreference.english,
+      );
+
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.sessionKind, 'CARDIO');
+      expect(row.activityType, 'WALKING');
+      expect(row.finishedAt, isNotNull);
+      expect(await db.select(db.exerciseSets).get(), isEmpty);
     });
 
     test('a resent adoption for an already-adopted session refreshes its set list, not a duplicate row', () async {

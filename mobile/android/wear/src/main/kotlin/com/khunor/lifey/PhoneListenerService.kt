@@ -208,6 +208,9 @@ class PhoneListenerService : WearableListenerService() {
      * D-F6b.2) — this is its own message path, entirely independent of the
      * state-sync branches above (D-F6b.3).
      *
+     * `allCardio` (the picker's "all activity types" screen) rides along in
+     * the same message and is stored the same raw way, under its own key.
+     *
      * `entries` replaces `templates` — C5.3's Dart side has sent
      * `{version: 2, entries: [...]}` since then, never `templates`, which
      * silently broke this handler until this fix: `optJSONArray("templates")`
@@ -223,6 +226,13 @@ class PhoneListenerService : WearableListenerService() {
             val json = JSONObject(String(data))
             val entries = json.optJSONArray("entries") ?: JSONArray()
             StandaloneSessionStore.saveEntries(this, entries.toString())
+            // Written only when the key is actually there — a phone build
+            // that predates the "all activity types" screen sends `entries`
+            // alone, and writing an empty array for it would retire a working
+            // screen on a watch that already holds a good copy.
+            json.optJSONArray("allCardio")?.let {
+                StandaloneSessionStore.saveAllCardio(this, it.toString())
+            }
         } catch (e: Exception) {
             Log.w(TAG, "applyTemplateSyncMessage failed to parse payload", e)
         }
@@ -239,6 +249,9 @@ class PhoneListenerService : WearableListenerService() {
         val map = DataMapItem.fromDataItem(dataItem).dataMap
         val entriesJson = map.getString("entriesJson") ?: return
         StandaloneSessionStore.saveEntries(this, entriesJson)
+        // Same "absent means an older phone build, not an empty list" rule as
+        // the message path above.
+        map.getString("allCardioJson")?.let { StandaloneSessionStore.saveAllCardio(this, it) }
     }
 
     /**

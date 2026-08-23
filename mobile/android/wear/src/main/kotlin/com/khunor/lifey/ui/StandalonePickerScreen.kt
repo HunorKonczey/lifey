@@ -15,9 +15,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -75,6 +79,13 @@ import org.json.JSONObject
  * straight through to `ExerciseService.startStandaloneIntent`'s
  * `activityType` extra, the same "this screen doesn't own the
  * `startForegroundService` call" split [onTemplateTapped] already follows.
+ *
+ * Below the ranked list sits one more row, opening [AllActivityTypesScreen]
+ * — every activity type the phone knows, not just the ones that ranked. The
+ * ranked list is capped at 8 rows *shared* between templates and cardio and
+ * ordered purely by usage, so a user who trains 8 templates regularly gets
+ * no cardio row in it at all; without that second page the watch would then
+ * have no way whatsoever to start a cardio session on its own.
  */
 @Composable
 fun StandalonePickerScreen(
@@ -84,6 +95,21 @@ fun StandalonePickerScreen(
     onCardioTapped: (String) -> Unit,
 ) {
     val context = LocalContext.current
+    // Local UI navigation only — `MainActivity` switches screens on the
+    // session phase, and this second page never changes that, so it stays
+    // here rather than becoming another phase or a Navigation graph this app
+    // doesn't otherwise use.
+    var showAllTypes by remember { mutableStateOf(false) }
+    val allCardio = remember { StandaloneSessionStore.allCardio(context) }
+
+    if (showAllTypes) {
+        AllActivityTypesScreen(
+            entries = allCardio,
+            onBack = { showAllTypes = false },
+            onTap = onCardioTapped,
+        )
+        return
+    }
     // Read once per composition, not observed live — matches
     // StandaloneSessionStore's existing "read is a point-in-time snapshot"
     // contract everywhere else it's used (SummarySender's pending-count,
@@ -171,6 +197,16 @@ fun StandalonePickerScreen(
                         }
                     }
                 }
+            }
+            // The ranked list above is capped at 8 rows shared between
+            // templates and cardio, so a user who trains that many templates
+            // regularly can end up with no cardio row at all — this is the
+            // way to every type regardless of what the ranking fit. Hidden,
+            // not disabled, while the cache is empty (a phone that hasn't
+            // synced one yet): a row that opens an empty screen is worse
+            // than no row.
+            if (allCardio.isNotEmpty()) {
+                item { AllTypesRow(onTap = { showAllTypes = true }) }
             }
         }
 
@@ -266,6 +302,103 @@ private fun CardioRow(activityType: String, title: String, isCompact: Boolean, o
             color = LifeyColors.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * The row that opens [AllActivityTypesScreen] — deliberately the quietest
+ * card on the picker (no icon circle, a chevron instead): the ranked list
+ * above is the fast path, this is the completeness guarantee behind it.
+ */
+@Composable
+private fun AllTypesRow(onTap: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onTap)
+            .background(LifeyColors.surface, LifeyShapes.card)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.standalone_all_types),
+            style = MaterialTheme.typography.body2,
+            color = LifeyColors.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = LifeyColors.onSurfaceVariant,
+            modifier = Modifier.size(16.dp),
+        )
+    }
+}
+
+/**
+ * Every activity type the phone offers, in its display order — the picker's
+ * second page, fed by `StandaloneSessionStore.allCardio()` rather than the
+ * ranked cache. Renders the same [CardioRow] and starts a session through
+ * the same `onCardioTapped` callback, so a type reached here behaves
+ * identically to one that happened to rank onto the previous screen.
+ *
+ * No "Quick strength" chip and no ranked entries: this page answers exactly
+ * one question ("what else can I start?"), and repeating the picker's own
+ * rows would just make the two pages ambiguous.
+ */
+@Composable
+private fun AllActivityTypesScreen(
+    entries: List<JSONObject>,
+    onBack: () -> Unit,
+    onTap: (String) -> Unit,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isCompact = isCompactScreen(maxWidth)
+        val listState = rememberScalingLazyListState()
+
+        ScalingLazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                horizontal = maxWidth * SCREEN_PADDING_FRACTION,
+                vertical = maxWidth * 0.14f,
+            ),
+        ) {
+            item {
+                Text(
+                    text = stringResource(R.string.standalone_all_types),
+                    style = if (isCompact) MaterialTheme.typography.title3 else MaterialTheme.typography.title2,
+                    color = LifeyColors.onSurface,
+                )
+            }
+            entries.forEach { entry ->
+                val activityType = entry.optString("activityType")
+                if (activityType.isNotEmpty()) {
+                    item {
+                        CardioRow(
+                            activityType = activityType,
+                            title = entry.optString("title"),
+                            isCompact = isCompact,
+                            onTap = { onTap(activityType) },
+                        )
+                    }
+                }
+            }
+        }
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = stringResource(R.string.effort_selector_back),
+            tint = LifeyColors.onSurfaceVariant,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+                .clickable(onClick = onBack)
+                .size(20.dp),
         )
     }
 }

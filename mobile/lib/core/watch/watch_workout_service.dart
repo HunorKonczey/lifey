@@ -3,7 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/workouts/application/watch_template_sync.dart' show WatchQuickStartEntryPayload;
+import '../../features/workouts/application/watch_template_sync.dart' show WatchQuickStartPayload;
 import '../../features/workouts/domain/workout_session.dart' show CardioMetrics;
 import '../workout_session_notifier/workout_session_notifier_service.dart' show WorkoutSessionState;
 
@@ -350,6 +350,8 @@ class WatchStandaloneAdoption {
     this.averageHeartRate,
     this.currentExerciseIndex,
     this.currentExerciseId,
+    this.kind = 'STRENGTH',
+    this.activityType,
   });
 
   final String standaloneSessionId;
@@ -358,6 +360,24 @@ class WatchStandaloneAdoption {
   final List<WatchStandaloneSet> sets;
   final double? activeCalories;
   final double? averageHeartRate;
+
+  /// `'STRENGTH'` or `'CARDIO'`, exactly like [WatchStandaloneSession.kind]
+  /// — and defaulted to `'STRENGTH'` the same way when the key is absent,
+  /// which is every watch build that predates it.
+  ///
+  /// Neither watch app currently sends a `'CARDIO'` adoption at all (a
+  /// watch-started cardio session reaches the phone only when it *ends*), so
+  /// in practice this is always `'STRENGTH'` today. It exists because the
+  /// receiver has to be able to tell before a sender ever exists — D-C5.4's
+  /// rule, and the exact failure this pair fixes: an adoption snapshot has
+  /// no kind on the wire, so the phone read a watch-started run as a
+  /// template-less *strength* session and mirrored it as "Quick strength".
+  final String kind;
+
+  /// One of `kActivityTypes`; non-null only alongside `kind == 'CARDIO'`.
+  final String? activityType;
+
+  bool get isCardio => kind == 'CARDIO';
 
   /// Which of [templateId]'s exercises the watch will log its *next* set
   /// against — same index space as [WatchStandaloneSet.exerciseIndex], but
@@ -390,6 +410,8 @@ class WatchStandaloneAdoption {
         averageHeartRate: (json['averageHeartRate'] as num?)?.toDouble(),
         currentExerciseIndex: (json['currentExerciseIndex'] as num?)?.toInt(),
         currentExerciseId: json['currentExerciseId'] as String?,
+        kind: json['kind'] as String? ?? 'STRENGTH',
+        activityType: json['activityType'] as String?,
       );
 }
 
@@ -611,14 +633,15 @@ class WatchWorkoutService {
 
   /// Pushes the watch's unified, frequency-ranked quick-start picker
   /// (docs/cardio/55-cardio-watch-plan.md §3, C5.3 — templates only through
-  /// F6b, docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T1.3). Build
-  /// [entries] with `buildWatchQuickStartEntries` — it owns the
-  /// ranking/truncation/rest-resolution rules this method deliberately knows
-  /// nothing about.
+  /// F6b, docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T1.3), plus
+  /// the complete activity-type list behind the picker's "all activity
+  /// types" screen. Build [payload] with `buildWatchQuickStartEntries` /
+  /// `buildWatchAllCardioEntries` — they own the ranking/truncation/
+  /// rest-resolution rules this method deliberately knows nothing about.
   ///
   /// Fire-and-forget, like every other call here: there's no ack, and a
   /// missed push simply leaves the watch on its previous cache until the next
-  /// push point (§4.3). An **empty** [entries] list is still sent rather than
+  /// push point (§4.3). An **empty** payload is still sent rather than
   /// skipped — that's how a watch whose last entry was just deleted gets told
   /// to clear its cache.
   ///
@@ -630,13 +653,17 @@ class WatchWorkoutService {
   /// always sent — nothing here still speaks version 1, so this isn't a
   /// runtime branch, just the stamp a still-unbuilt native T3 handler can
   /// check to refuse an unrecognized shape instead of misrendering it.
-  Future<void> syncTemplates(List<WatchQuickStartEntryPayload> entries) async {
+  Future<void> syncTemplates(WatchQuickStartPayload payload) async {
     if (!isAvailable) return;
     try {
       await _channel.invokeMethod('syncTemplates', {
+        // Still 2, not 3: `allCardio` is purely additive, and both watch
+        // builds ignore keys they don't know — while watchOS's own
+        // `version == 2` guard would reject the *whole* push, ranked list
+        // included, if this bumped ahead of a not-yet-updated watch app.
         'version': 2,
         'syncedAtEpochMs': DateTime.now().millisecondsSinceEpoch,
-        'entries': [for (final entry in entries) entry.toJson()],
+        ...payload.toJson(),
       });
     } catch (_) {
       // Best-effort, see class doc — on iOS/Android alike the native handler

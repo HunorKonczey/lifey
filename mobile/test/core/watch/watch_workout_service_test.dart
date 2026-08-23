@@ -348,23 +348,26 @@ void main() {
       final service = WatchWorkoutService(isAvailable: true);
       final before = DateTime.now().millisecondsSinceEpoch;
 
-      await service.syncTemplates(const [
-        WatchQuickStartTemplateEntry(
-          WatchTemplatePayload(
-            templateId: 'push',
-            title: 'Push day',
-            exercises: [
-              WatchTemplateExercisePayload(
-                exerciseId: 'bench',
-                name: 'Bench Press',
-                restSeconds: 90,
-                targetSets: 4,
-              ),
-            ],
+      await service.syncTemplates(const WatchQuickStartPayload(
+        entries: [
+          WatchQuickStartTemplateEntry(
+            WatchTemplatePayload(
+              templateId: 'push',
+              title: 'Push day',
+              exercises: [
+                WatchTemplateExercisePayload(
+                  exerciseId: 'bench',
+                  name: 'Bench Press',
+                  restSeconds: 90,
+                  targetSets: 4,
+                ),
+              ],
+            ),
           ),
-        ),
-        WatchQuickStartCardioEntry(activityType: 'RUNNING', title: 'Futás'),
-      ]);
+          WatchQuickStartCardioEntry(activityType: 'RUNNING', title: 'Futás'),
+        ],
+        allCardio: [WatchQuickStartCardioEntry(activityType: 'HIKING', title: 'Túra')],
+      ));
 
       expect(calls.single.method, 'syncTemplates');
       final arguments = calls.single.arguments as Map;
@@ -381,6 +384,11 @@ void main() {
         },
         {'type': 'CARDIO', 'activityType': 'RUNNING', 'title': 'Futás'},
       ]);
+      // The picker's "all activity types" screen travels in the same call —
+      // same cardio row shape as a ranked entry, just unranked and complete.
+      expect(arguments['allCardio'], [
+        {'type': 'CARDIO', 'activityType': 'HIKING', 'title': 'Túra'},
+      ]);
       expect(
         arguments['syncedAtEpochMs'],
         allOf(isA<int>(), greaterThanOrEqualTo(before)),
@@ -396,10 +404,13 @@ void main() {
       });
       final service = WatchWorkoutService(isAvailable: true);
 
-      await service.syncTemplates(const []);
+      await service.syncTemplates(
+        const WatchQuickStartPayload(entries: [], allCardio: []),
+      );
 
       expect(calls.single.method, 'syncTemplates');
       expect((calls.single.arguments as Map)['entries'], isEmpty);
+      expect((calls.single.arguments as Map)['allCardio'], isEmpty);
     });
 
     test('syncTemplates no-ops when unavailable', () async {
@@ -409,11 +420,14 @@ void main() {
       });
       final service = WatchWorkoutService(isAvailable: false);
 
-      await service.syncTemplates(const [
-        WatchQuickStartTemplateEntry(
-          WatchTemplatePayload(templateId: 'push', title: 'Push day', exercises: []),
-        ),
-      ]);
+      await service.syncTemplates(const WatchQuickStartPayload(
+        entries: [
+          WatchQuickStartTemplateEntry(
+            WatchTemplatePayload(templateId: 'push', title: 'Push day', exercises: []),
+          ),
+        ],
+        allCardio: [],
+      ));
 
       expect(calls, isEmpty);
     });
@@ -425,7 +439,10 @@ void main() {
       });
       final service = WatchWorkoutService(isAvailable: true);
 
-      await expectLater(service.syncTemplates(const []), completes);
+      await expectLater(
+        service.syncTemplates(const WatchQuickStartPayload(entries: [], allCardio: [])),
+        completes,
+      );
       expect(calls.single.method, 'syncTemplates');
     });
   });
@@ -814,6 +831,36 @@ void main() {
       expect(adoption.currentExerciseIndex, isNull);
       expect(adoption.templateId, isNull);
       expect(adoption.sets, isEmpty);
+      // No `kind` on the wire — every watch build that predates the field —
+      // reads as STRENGTH, exactly like a finished session's payload does.
+      expect(adoption.kind, 'STRENGTH');
+      expect(adoption.isCardio, isFalse);
+    });
+
+    test('an adoption marked CARDIO decodes as such (never mirrored as strength)', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'standaloneSessionAdopted',
+              'payload': {
+                'standaloneSessionId': 'standalone-5',
+                'startedAtEpochMs': 1783075200000,
+                'sets': <Object?>[],
+                'kind': 'CARDIO',
+                'activityType': 'WALKING',
+              },
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final adoption = await service.events.first as WatchStandaloneAdoption;
+
+      expect(adoption.isCardio, isTrue);
+      expect(adoption.activityType, 'WALKING');
     });
 
     test('an unknown event type falls back to its raw type string', () async {

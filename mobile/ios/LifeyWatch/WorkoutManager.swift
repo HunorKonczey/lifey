@@ -1792,7 +1792,11 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// `StandaloneSessionProcessor.processAdoption` creates the running mirror
   /// and fills in the already-logged sets in one go.
   func retryAdoption() {
-    guard isStandalone, !isRetryingAdoption else { return }
+    // `!isCardio`: there's no adoption to retry for a cardio session (see
+    // `sendAdoptionRequest()`), so the spinner would acknowledge a tap that
+    // does nothing. `ActiveWorkoutView` drops the tap gesture itself in that
+    // case — this is the guard behind it.
+    guard isStandalone, !isCardio, !isRetryingAdoption else { return }
     isRetryingAdoption = true
     WKInterfaceDevice.current().play(.click)
     sendAdoptionRequest()
@@ -1809,6 +1813,11 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// `retryAdoption()` (manual, ungated).
   private func sendAdoptionRequest() {
     guard isStandalone, let sessionClientId, let startedAt else { return }
+    // A cardio session is never adopted — see `StandaloneAdoptionPayload
+    // .kind`. Gated here, in the one shared body, rather than at each of the
+    // four call sites (start, reachability, per-set resend, badge tap), so
+    // no future trigger can reintroduce it by forgetting the check.
+    guard !isCardio else { return }
     let activeCaloriesTotal = builder?.statistics(for: Self.activeEnergyType)?
       .sumQuantity()?.doubleValue(for: .kilocalorie())
     let averageHeartRate = builder?.statistics(for: Self.heartRateType)?
@@ -1824,7 +1833,12 @@ final class WorkoutManager: NSObject, ObservableObject {
       // is what the phone actually resolves against (F6c); the index rides
       // along for a phone build that predates it.
       currentExerciseIndex: activePlanExercises.isEmpty ? nil : standaloneExerciseIndex,
-      currentExerciseId: standaloneCurrentExerciseId)
+      currentExerciseId: standaloneCurrentExerciseId,
+      // Always nil today (the guard above returns first for a cardio
+      // session) — see `StandaloneAdoptionPayload.kind` for why they're
+      // filled in regardless.
+      kind: isCardio ? "CARDIO" : nil,
+      activityType: cardioActivityType)
     PhoneConnector.shared.sendStandaloneAdoption(payload)
   }
 

@@ -806,6 +806,22 @@
         }
       }
     },
+    "standalone_all_types" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All activity types"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minden edzéstípus"
+          }
+        }
+      }
+    },
     "standalone_badge" : {
       "extractionState" : "stale",
       "localizations" : {

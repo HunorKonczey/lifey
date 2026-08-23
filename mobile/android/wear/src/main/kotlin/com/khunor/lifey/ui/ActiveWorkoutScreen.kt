@@ -2120,6 +2120,17 @@ private fun HeaderChip(
             // busywork. Most useful when the phone app simply wasn't running
             // at start — one tap sends the whole snapshot, already-logged sets
             // included, and the phone opens the workout.
+            //
+            // **Status only, not a button, during a cardio session**: there is
+            // no adoption to ask for ([SummarySender.sendAdoptionRequestIfNeeded]
+            // never sends one for cardio — the phone would mirror a run as a
+            // strength workout), so the badge tells the truth (this workout
+            // reaches the phone when it ends) and a tap that could only do
+            // nothing is left out rather than acknowledged with a spinner.
+            // Read here rather than threaded through as a parameter — six
+            // call sites would each have to pass the same value, and this
+            // chip already knows nothing else about the session.
+            val isCardio = SessionStateHolder.metadata.collectAsState().value.isCardio
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
             var isSyncing by remember { mutableStateOf(false) }
@@ -2133,7 +2144,7 @@ private fun HeaderChip(
                     // as part of the tap target rather than sitting outside
                     // it — the glyph itself is only 14–16 dp, too small to
                     // hit reliably on a wrist.
-                    .clickable(enabled = !isSyncing) {
+                    .clickable(enabled = !isSyncing && !isCardio) {
                         scope.launch {
                             isSyncing = true
                             SummarySender.sendAdoptionRequestIfNeeded(context)

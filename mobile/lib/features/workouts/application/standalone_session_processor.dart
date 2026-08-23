@@ -184,6 +184,26 @@ class StandaloneSessionProcessor {
     required LanguagePreference language,
   }) {
     return _serialized(() async {
+      // A **cardio** session is not adoptable, and mirroring one as if it
+      // were is exactly what broke a watch-started run: this method's only
+      // shape is a strength one (resolve exercises, mirror a set list), so a
+      // run arrived as a template-less strength session and the phone opened
+      // "Quick strength" for a workout the user started as Walking. There is
+      // nothing here worth mirroring anyway — a cardio session has no sets,
+      // its live metrics are the watch's own, and the phone's cardio screen
+      // is a GPS *master*, not a mirror — so the whole session travels once,
+      // when it ends, through [process]'s [_processCardio] branch, which
+      // already handles it completely.
+      //
+      // Not acked either: an ack flips the watch's `isAdopted`, hiding its
+      // "watch only" badge — a promise the phone would not be keeping. The
+      // badge stays, correctly, until the finished session lands.
+      //
+      // Neither watch app sends one of these today (both gate their own
+      // adoption sender on the session kind, the other half of this fix) —
+      // this is the receiver-side half, so a future live-cardio-bridging
+      // step (55 §7's W-9) can't land on a phone that would mangle it.
+      if (event.isCardio) return;
       final alreadyFinished =
           await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
       if (alreadyFinished == null) {

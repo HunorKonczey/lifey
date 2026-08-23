@@ -52,6 +52,7 @@
     <string name="standalone_empty_hint">A tervek a telefonról szinkronizálódnak</string>
     <string name="standalone_plan_exercises">%1$d gyakorlat</string>
     <string name="standalone_badge">Csak óra</string>
+    <string name="standalone_all_types">Minden edzéstípus</string>
     <string name="active_sets_free_format">%1$d. szett · összesen %2$d ismétlés</string>
     <string name="sync_pending">Szinkronizálás a telefonra</string>
     <string name="sync_done">Telefonra szinkronizálva</string>

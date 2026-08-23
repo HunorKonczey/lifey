@@ -180,6 +180,12 @@ class WorkoutResumePrompt {
       return;
     }
     if (event is WatchStandaloneAdoption) {
+      // A cardio session is never adopted (see
+      // [StandaloneSessionProcessor.processAdoption]) — returning before the
+      // screen push below is what keeps this file's half of that rule
+      // explicit, rather than relying on the mirror row simply not existing
+      // for `_findActiveSession` to find.
+      if (event.isCardio) return;
       final language =
           _ref.read(settingsControllerProvider).value?.language ?? LanguagePreference.system;
       await _ref.read(standaloneSessionProcessorProvider).processAdoption(event, language: language);

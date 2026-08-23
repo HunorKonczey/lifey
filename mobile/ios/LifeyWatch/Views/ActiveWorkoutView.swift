@@ -577,6 +577,13 @@ private struct HeaderChip: View {
         // already-logged sets included, and the phone opens the workout.
         // Tap target padded out to something findable on a wrist — the glyph
         // itself is ~16pt.
+        //
+        // **Status only, not a button, during a cardio session**: there is no
+        // adoption to ask for (`WorkoutManager.sendAdoptionRequest()` never
+        // sends one for cardio — the phone would mirror a run as a strength
+        // workout), so the badge tells the truth — this workout reaches the
+        // phone when it ends — and a tap that could only do nothing is left
+        // out rather than acknowledged with a spinner.
         Image(systemName: workoutManager.isRetryingAdoption ? "arrow.triangle.2.circlepath" : "iphone.slash")
           .font(.system(size: isCompact ? 14 : 16))
           .foregroundColor(LifeyColors.standaloneIndicator)
@@ -584,6 +591,7 @@ private struct HeaderChip: View {
           .padding(.horizontal, 4)
           .contentShape(Rectangle())
           .onTapGesture { workoutManager.retryAdoption() }
+          .disabled(workoutManager.isCardio)
           .accessibilityLabel(Text("standalone_sync_retry_a11y"))
       }
     }

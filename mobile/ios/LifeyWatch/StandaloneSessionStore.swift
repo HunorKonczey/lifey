@@ -21,6 +21,7 @@ final class StandaloneSessionStore {
   private let pendingURL: URL
   private let activeURL: URL
   private let templatesURL: URL
+  private let allCardioURL: URL
 
   private init() {
     let directory = FileManager.default.urls(
@@ -30,6 +31,7 @@ final class StandaloneSessionStore {
     pendingURL = directory.appendingPathComponent("standalone_sessions_pending.json")
     activeURL = directory.appendingPathComponent("standalone_session_active.json")
     templatesURL = directory.appendingPathComponent("standalone_templates.json")
+    allCardioURL = directory.appendingPathComponent("standalone_all_cardio.json")
   }
 
   // MARK: - Pending queue (docs/watch/44-watch-f6-standalone-plan.md §3.2, §4.1)
@@ -128,6 +130,30 @@ final class StandaloneSessionStore {
     queue.sync {
       guard let data = try? Data(contentsOf: templatesURL) else { return [] }
       return (try? JSONDecoder().decode([WatchQuickStartEntry].self, from: data)) ?? []
+    }
+  }
+
+  /// Overwrites the "all activity types" cache — a **separate file** from
+  /// [saveQuickStartEntries]'s, though both arrive in the same push: the two
+  /// lists have different lifetimes (this one changes only with the account's
+  /// language, the ranked one on every finished workout), and keeping them
+  /// apart means a decode failure on either can't take the other down with
+  /// it.
+  func saveAllCardio(_ entries: [CachedActivityType]) {
+    queue.sync {
+      guard let data = try? JSONEncoder().encode(entries) else { return }
+      try? data.write(to: allCardioURL, options: .atomic)
+    }
+  }
+
+  /// Every activity type the phone last offered, in display order — empty
+  /// until the first sync of a build that sends it, which is exactly when the
+  /// picker hides its "all activity types" row rather than opening an empty
+  /// screen.
+  func allCardio() -> [CachedActivityType] {
+    queue.sync {
+      guard let data = try? Data(contentsOf: allCardioURL) else { return [] }
+      return (try? JSONDecoder().decode([CachedActivityType].self, from: data)) ?? []
     }
   }
 }

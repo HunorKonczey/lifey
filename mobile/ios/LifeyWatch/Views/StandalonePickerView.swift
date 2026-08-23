@@ -31,6 +31,13 @@ import SwiftUI
 /// `WorkoutManager.startStandalone(activityType:)`'s own
 /// `HKWorkoutConfiguration` mapping and `kind: 'CARDIO'` closing payload
 /// (docs/cardio/55-cardio-watch-plan.md §5/§7, W-8).
+///
+/// Below the ranked list sits one more row, opening `AllActivityTypesView`
+/// — every activity type the phone knows, not just the ones that ranked.
+/// The ranked list is capped at 8 rows *shared* between templates and cardio
+/// and ordered purely by usage, so a user who trains 8 templates regularly
+/// gets no cardio row in it at all; without this screen, the watch would
+/// then have no way whatsoever to start a cardio session on its own.
 struct StandalonePickerView: View {
   let onBack: () -> Void
 
@@ -52,7 +59,30 @@ struct StandalonePickerView: View {
   /// before tapping something.
   @State private var entries: [WatchQuickStartEntry] = []
 
+  /// Every activity type the phone knows, pre-localized — the "all activity
+  /// types" screen's data, read at the same moment and with the same
+  /// point-in-time contract as [entries]. Empty until a phone build that
+  /// sends `allCardio` has synced once, which is when the row that opens the
+  /// screen simply isn't shown.
+  @State private var allCardio: [CachedActivityType] = []
+
+  /// Whether the "all activity types" list is showing instead of the picker
+  /// — local UI navigation, mirroring `ContentView`'s own
+  /// `showStandalonePicker` flag rather than a `NavigationStack` this app
+  /// doesn't otherwise use.
+  @State private var showAllTypes = false
+
   var body: some View {
+    if showAllTypes {
+      AllActivityTypesView(
+        entries: allCardio, isDisabled: isStarting, onBack: { showAllTypes = false },
+        onTap: cardioTapped)
+    } else {
+      picker
+    }
+  }
+
+  private var picker: some View {
     GeometryReader { geometry in
       let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
       let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
@@ -116,6 +146,15 @@ struct StandalonePickerView: View {
               }
             }
           }
+          // The ranked list above is capped at 8 rows shared between
+          // templates and cardio, so a user who trains that many templates
+          // regularly can end up with no cardio row at all — this is the way
+          // to every type regardless of what the ranking fit. Hidden, not
+          // disabled, while the cache is empty (a phone that hasn't synced
+          // one yet): a row that opens an empty screen is worse than no row.
+          if !allCardio.isEmpty {
+            AllTypesRow(isDisabled: isStarting) { showAllTypes = true }
+          }
         }
         .padding(.horizontal, padding)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -123,7 +162,10 @@ struct StandalonePickerView: View {
       .frame(width: geometry.size.width, height: geometry.size.height)
       .background(LifeyColors.trueBlack)
     }
-    .onAppear { entries = StandaloneSessionStore.shared.quickStartEntries() }
+    .onAppear {
+      entries = StandaloneSessionStore.shared.quickStartEntries()
+      allCardio = StandaloneSessionStore.shared.allCardio()
+    }
   }
 
   private var quickStrengthCard: some View {
@@ -264,6 +306,93 @@ private struct CardioRow: View {
     .disabled(isDisabled)
     .background(LifeyColors.surface)
     .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
+  }
+}
+
+/// The row that opens the "all activity types" screen — deliberately the
+/// quietest card on the picker (no accent fill, a chevron instead of an
+/// icon circle): the ranked list above is the fast path, this is the
+/// completeness guarantee behind it.
+private struct AllTypesRow: View {
+  let isDisabled: Bool
+  let onTap: () -> Void
+
+  var body: some View {
+    Button(action: onTap) {
+      HStack(spacing: 13) {
+        Text("standalone_all_types")
+          .font(.body)
+          .foregroundColor(LifeyColors.onSurfaceVariant)
+          .lineLimit(1)
+        Spacer(minLength: 0)
+        Image(systemName: "chevron.right")
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundColor(LifeyColors.onSurfaceVariant)
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+    }
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
+    .background(LifeyColors.surface)
+    .clipShape(RoundedRectangle(cornerRadius: LifeyShapes.card))
+  }
+}
+
+/// Every activity type the phone offers, in its display order — the picker's
+/// second page. Renders the same `CardioRow` and starts a session the same
+/// way (`onTap` is `StandalonePickerView.cardioTapped` itself), so a type
+/// reached here behaves identically to one that happened to rank into the
+/// list on the previous screen.
+///
+/// No "Quick strength" card and no ranked entries: this screen answers
+/// exactly one question ("what else can I start?"), and repeating the
+/// picker's own rows would just make the two pages ambiguous.
+private struct AllActivityTypesView: View {
+  let entries: [CachedActivityType]
+  let isDisabled: Bool
+  let onBack: () -> Void
+  let onTap: (String) -> Void
+
+  var body: some View {
+    GeometryReader { geometry in
+      let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
+      let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
+
+      ScrollView {
+        VStack(alignment: .leading, spacing: isCompact ? 10 : 14) {
+          HStack(spacing: 6) {
+            Button(action: onBack) {
+              Image(systemName: "chevron.left")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(LifeyColors.onSurfaceVariant)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("effort_selector_back"))
+            Text("standalone_all_types")
+              .font(isCompact ? .title3 : .title2)
+              .fontWeight(.heavy)
+              .foregroundColor(LifeyColors.onSurface)
+            Spacer(minLength: 0)
+          }
+          // Keyed by activity type, which really is unique here (the phone
+          // builds this list from `kActivityTypes` itself), unlike the ranked
+          // list's index keying.
+          ForEach(entries, id: \.activityType) { entry in
+            CardioRow(
+              activityType: entry.activityType, title: entry.title, isCompact: isCompact,
+              isDisabled: isDisabled
+            ) {
+              onTap(entry.activityType)
+            }
+          }
+        }
+        .padding(.horizontal, padding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .frame(width: geometry.size.width, height: geometry.size.height)
+      .background(LifeyColors.trueBlack)
+    }
   }
 }
 

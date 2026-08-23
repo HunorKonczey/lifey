@@ -37,14 +37,19 @@ class WatchTemplateSyncController {
   /// [payload] being null means "the sources haven't loaded yet", not "the
   /// watch should hold nothing" (see [watchTemplateSyncPayloadProvider]) —
   /// pushing then would wipe a good cache at every cold start.
-  void schedulePush(List<WatchQuickStartEntryPayload>? payload) {
+  void schedulePush(WatchQuickStartPayload? payload) {
     if (!_service.isAvailable || payload == null) return;
     _debounceTimer?.cancel();
     _debounceTimer = Timer(_debounce, () => unawaited(_pushNow(payload)));
   }
 
-  Future<void> _pushNow(List<WatchQuickStartEntryPayload> payload) async {
-    final encoded = jsonEncode([for (final entry in payload) entry.toJson()]);
+  Future<void> _pushNow(WatchQuickStartPayload payload) async {
+    // Both lists in the dedup key, not just the ranked one: the all-types
+    // list changes on its own whenever the account's language does, and a
+    // key that ignored it would leave the watch's "all activity types"
+    // screen in the old language until some unrelated ranking change
+    // happened to force a push.
+    final encoded = jsonEncode(payload.toJson());
     if (encoded == _lastPushed) return;
     // Recorded before awaiting, so a second change arriving mid-flight is
     // compared against what we're sending, not the previous payload.

@@ -212,9 +212,17 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         val entries = args["entries"] as? List<Map<*, *>> ?: return result.success(null)
         val version = (args["version"] as? Number)?.toInt() ?: return result.success(null)
         val syncedAtEpochMs = (args["syncedAtEpochMs"] as? Number)?.toLong() ?: return result.success(null)
+        // The picker's "all activity types" screen — every activity type,
+        // pre-localized, unranked. Defaulted rather than guarded on, so a
+        // Dart build that predates it still syncs its `entries`.
+        @Suppress("UNCHECKED_CAST")
+        val allCardio = args["allCardio"] as? List<Map<*, *>> ?: emptyList()
 
-        pushTemplates(version, syncedAtEpochMs, entries)
-        sendMessage(COMMAND_TEMPLATE_SYNC, templateSyncMessagePayload(version, syncedAtEpochMs, entries))
+        pushTemplates(version, syncedAtEpochMs, entries, allCardio)
+        sendMessage(
+            COMMAND_TEMPLATE_SYNC,
+            templateSyncMessagePayload(version, syncedAtEpochMs, entries, allCardio),
+        )
         result.success(null)
     }
 
@@ -264,11 +272,13 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         version: Int,
         syncedAtEpochMs: Long,
         entries: List<Map<*, *>>,
+        allCardio: List<Map<*, *>>,
     ): ByteArray {
         val json = JSONObject().apply {
             put("version", version)
             put("syncedAtEpochMs", syncedAtEpochMs)
             put("entries", entries.toJsonValue())
+            put("allCardio", allCardio.toJsonValue())
         }
         return json.toString().toByteArray()
     }
@@ -313,7 +323,12 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
      * Layer's per-path `DataItem`s never collide, so no merge step is needed
      * here — this can freely overwrite its own path on every call.
      */
-    private fun pushTemplates(version: Int, syncedAtEpochMs: Long, entries: List<Map<*, *>>) {
+    private fun pushTemplates(
+        version: Int,
+        syncedAtEpochMs: Long,
+        entries: List<Map<*, *>>,
+        allCardio: List<Map<*, *>>,
+    ) {
         executor.execute {
             val putDataMapRequest =
                 PutDataMapRequest.create(TEMPLATES_PATH).apply {
@@ -325,6 +340,14 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                     // rather than a native structure (D-F6b.3's one open
                     // implementation choice, now resolved).
                     dataMap.putString("entriesJson", (entries.toJsonValue() as JSONArray).toString())
+                    // Its own key, not nested inside `entriesJson`: the two
+                    // lists feed two different screens, and a Wear build that
+                    // predates the "all activity types" screen simply never
+                    // reads this one.
+                    dataMap.putString(
+                        "allCardioJson",
+                        (allCardio.toJsonValue() as JSONArray).toString(),
+                    )
                 }
             val putDataRequest = putDataMapRequest.asPutDataRequest().setUrgent()
             try {

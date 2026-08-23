@@ -358,7 +358,10 @@ extension PhoneConnector: WCSessionDelegate {
   /// `sanitizedForPropertyList` before landing in `applicationContext`, so
   /// each element is guaranteed property-list-safe — round-tripping it
   /// through `JSONSerialization` back into `Data` is the simplest way to
-  /// hand it to `JSONDecoder`. Decoded **element by element**, not as one
+  /// hand it to `JSONDecoder`. The context's `allCardio` key — the picker's
+  /// "all activity types" screen, every `kActivityTypes` code pre-localized —
+  /// rides along in the same write and is decoded the same way, into
+  /// [CachedActivityType]. Decoded **element by element**, not as one
   /// `[WatchQuickStartEntry]` array — an unknown/malformed row (a newer
   /// entry type, say) only costs that row, not the whole list, the same
   /// `compactMap`-drops-the-bad-one rule `applyState`'s
@@ -371,6 +374,19 @@ extension PhoneConnector: WCSessionDelegate {
       return try? JSONDecoder().decode(WatchQuickStartEntry.self, from: data)
     }
     StandaloneSessionStore.shared.saveQuickStartEntries(entries)
+
+    // Written only when the key is actually present — a phone build that
+    // predates the "all activity types" screen sends `entries` alone, and
+    // overwriting with an empty list there would retire a working screen on
+    // a watch that already holds a good copy. Same decode-per-row rule as
+    // above, for the same reason.
+    if let rawAllCardio = context["allCardio"] as? [[String: Any]] {
+      let allCardio = rawAllCardio.compactMap { raw -> CachedActivityType? in
+        guard let data = try? JSONSerialization.data(withJSONObject: raw) else { return nil }
+        return try? JSONDecoder().decode(CachedActivityType.self, from: data)
+      }
+      StandaloneSessionStore.shared.saveAllCardio(allCardio)
+    }
   }
 
   /// Decodes `state["cardio"]` into a `CardioActiveMetrics` (docs/cardio/

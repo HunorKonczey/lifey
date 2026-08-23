@@ -6,6 +6,7 @@ import 'package:lifey/features/workouts/application/exercise_controller.dart';
 import 'package:lifey/features/workouts/application/watch_template_sync.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
 import 'package:lifey/features/workouts/application/workout_template_controller.dart';
+import 'package:lifey/features/workouts/domain/activity_type.dart';
 import 'package:lifey/features/workouts/domain/exercise.dart';
 import 'package:lifey/features/workouts/domain/workout_session.dart';
 import 'package:lifey/features/workouts/domain/workout_template.dart';
@@ -529,7 +530,7 @@ void main() {
       );
       await harness.settle();
 
-      final result = harness.container.read(watchTemplateSyncPayloadProvider)!;
+      final result = harness.container.read(watchTemplateSyncPayloadProvider)!.entries;
 
       expect(
         result.map(tag).take(3),
@@ -557,7 +558,7 @@ void main() {
       );
       await harness.settle();
 
-      final result = harness.container.read(watchTemplateSyncPayloadProvider)!;
+      final result = harness.container.read(watchTemplateSyncPayloadProvider)!.entries;
 
       // Freeform would otherwise rank #1 (most recently used) — its absence
       // from #1 is what proves the filter ran, not just that push exists
@@ -574,8 +575,8 @@ void main() {
       );
       await harness.settle();
 
-      final entry =
-          harness.container.read(watchTemplateSyncPayloadProvider)!.first as WatchQuickStartCardioEntry;
+      final entry = harness.container.read(watchTemplateSyncPayloadProvider)!.entries.first
+          as WatchQuickStartCardioEntry;
       expect(entry.activityType, 'RUNNING');
       expect(entry.title, 'Futás');
     });
@@ -593,7 +594,11 @@ void main() {
       );
       await harness.settle();
 
-      expect(harness.container.read(watchTemplateSyncPayloadProvider), isEmpty);
+      final payload = harness.container.read(watchTemplateSyncPayloadProvider)!;
+      expect(payload.entries, isEmpty);
+      // The all-types list is watch traffic too — the gate clears both, or a
+      // user who switched the watch off would keep a full activity list on it.
+      expect(payload.allCardio, isEmpty);
     });
 
     test('is null — not empty — while any source is still loading', () async {
@@ -640,9 +645,64 @@ void main() {
       );
       await harness.settle();
 
-      final tags = harness.container.read(watchTemplateSyncPayloadProvider)!.map(tag);
+      final tags = harness.container.read(watchTemplateSyncPayloadProvider)!.entries.map(tag);
       expect(tags, isNot(contains(('TEMPLATE', 'deleted'))));
       expect(tags, contains(('TEMPLATE', 'push')));
+    });
+
+    test('a since-deleted template no longer costs a slot — the cap counts built rows', () async {
+      // The regression this fixture exists for: six templates deleted since
+      // they were last trained used to fill the ranked window, get dropped at
+      // resolve time, and leave the watch with two rows and no cardio at all
+      // — on a device whose only other way into a cardio session is the phone.
+      final now = DateTime.now();
+      final harness = buildContainer(
+        sessions: [
+          for (var i = 0; i < 6; i++)
+            session('gone$i', finishedAt: now.subtract(Duration(days: i + 1))),
+          for (var i = 0; i < 3; i++)
+            session('live$i', finishedAt: now.subtract(Duration(days: i + 8))),
+        ],
+        templates: [
+          for (var i = 0; i < 3; i++)
+            template('live$i', exercises: [const TemplateExercise(exerciseClientId: 'bench')]),
+        ],
+        exercises: [exercise('bench')],
+      );
+      await harness.settle();
+
+      final entries = harness.container.read(watchTemplateSyncPayloadProvider)!.entries;
+      expect(entries.length, watchQuickStartMaxEntries);
+      expect(
+        entries.map(tag).where((t) => t.$1 == 'TEMPLATE'),
+        [('TEMPLATE', 'live0'), ('TEMPLATE', 'live1'), ('TEMPLATE', 'live2')],
+      );
+      expect(entries.whereType<WatchQuickStartCardioEntry>(), isNotEmpty);
+    });
+
+    test('offers every activity type on the side, whatever the ranking fit', () async {
+      // The picker's "all activity types" screen: complete, in kActivityTypes
+      // display order, and localized like every other title the watch gets —
+      // independent of the ranked list, which here is all strength.
+      final now = DateTime.now();
+      final harness = buildContainer(
+        userSettings: const UserSettings.defaults().copyWith(language: LanguagePreference.hungarian),
+        sessions: [
+          for (var i = 0; i < watchQuickStartMaxEntries; i++)
+            session('t$i', finishedAt: now.subtract(Duration(days: i + 1))),
+        ],
+        templates: [
+          for (var i = 0; i < watchQuickStartMaxEntries; i++)
+            template('t$i', exercises: [const TemplateExercise(exerciseClientId: 'bench')]),
+        ],
+        exercises: [exercise('bench')],
+      );
+      await harness.settle();
+
+      final payload = harness.container.read(watchTemplateSyncPayloadProvider)!;
+      expect(payload.entries.whereType<WatchQuickStartCardioEntry>(), isEmpty);
+      expect(payload.allCardio.map((entry) => entry.activityType), kActivityTypes);
+      expect(payload.allCardio.first.title, 'Futás');
     });
   });
 }

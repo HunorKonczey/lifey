@@ -25,6 +25,7 @@ object StandaloneSessionStore {
     private const val KEY_PENDING = "pending"
     private const val KEY_ACTIVE = "active"
     private const val KEY_TEMPLATES = "templates"
+    private const val KEY_ALL_CARDIO = "allCardio"
 
     /** Queues a just-closed standalone session for delivery — `ExerciseService`
      * (S15) sends it and calls [remove] once the phone acks. */
@@ -110,8 +111,28 @@ object StandaloneSessionStore {
      * discriminator (`"TEMPLATE"`/`"CARDIO"`) at the call site
      * (`StandalonePickerScreen`), same as every other JSON row this app
      * hands around. */
-    fun entries(context: Context): List<JSONObject> {
-        val raw = prefs(context).getString(KEY_TEMPLATES, null) ?: return emptyList()
+    fun entries(context: Context): List<JSONObject> = readRows(context, KEY_TEMPLATES)
+
+    /** Overwrites the "all activity types" cache — the complete, unranked
+     * activity-type list behind the picker's second screen, pushed in the
+     * same message as [saveEntries]'s ranked one but kept under its own key:
+     * the two feed different screens and change for different reasons (usage
+     * vs. the account's language), and a corrupt write to either then can't
+     * take the other down with it. [allCardioJson] is the raw JSON array as
+     * sent on the wire — same "stored as-is, read with `opt*` at the call
+     * site" convention as [saveEntries]. */
+    fun saveAllCardio(context: Context, allCardioJson: String) {
+        prefs(context).edit().putString(KEY_ALL_CARDIO, allCardioJson).apply()
+    }
+
+    /** Every activity type the phone last offered, in display order — empty
+     * until a phone build that sends the list has synced once, which is
+     * exactly when the picker hides the row that opens the screen rather
+     * than opening an empty one. */
+    fun allCardio(context: Context): List<JSONObject> = readRows(context, KEY_ALL_CARDIO)
+
+    private fun readRows(context: Context, key: String): List<JSONObject> {
+        val raw = prefs(context).getString(key, null) ?: return emptyList()
         return try {
             val array = JSONArray(raw)
             (0 until array.length()).map { array.getJSONObject(it) }
