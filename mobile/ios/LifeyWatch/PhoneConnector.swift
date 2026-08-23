@@ -387,6 +387,13 @@ extension PhoneConnector: WCSessionDelegate {
       }
       StandaloneSessionStore.shared.saveAllCardio(allCardio)
     }
+    // The phone's unit setting, for the distances this watch measures itself
+    // (`WorkoutManager.localCardioMetrics`). Same "only when actually
+    // present" rule as `allCardio` above — an older phone build simply
+    // leaves whatever the watch already knew in place.
+    if let unitSystem = context["unitSystem"] as? String {
+      StandaloneSessionStore.shared.saveUnitSystem(unitSystem)
+    }
   }
 
   /// Decodes `state["cardio"]` into a `CardioActiveMetrics` (docs/cardio/

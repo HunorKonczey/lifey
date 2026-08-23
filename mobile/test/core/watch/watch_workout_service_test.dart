@@ -389,6 +389,9 @@ void main() {
       expect(arguments['allCardio'], [
         {'type': 'CARDIO', 'activityType': 'HIKING', 'title': 'Túra'},
       ]);
+      // The account's units, for the distances a watch-started cardio session
+      // formats on the watch itself.
+      expect(arguments['unitSystem'], 'METRIC');
       expect(
         arguments['syncedAtEpochMs'],
         allOf(isA<int>(), greaterThanOrEqualTo(before)),

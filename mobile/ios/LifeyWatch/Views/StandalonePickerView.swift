@@ -141,7 +141,7 @@ struct StandalonePickerView: View {
                   activityType: activityType, title: title, isCompact: isCompact,
                   isDisabled: isStarting
                 ) {
-                  cardioTapped(activityType)
+                  cardioTapped(activityType, title: title)
                 }
               }
             }
@@ -220,11 +220,14 @@ struct StandalonePickerView: View {
     }
   }
 
-  private func cardioTapped(_ activityType: String) {
+  /// [title] is the row's own pre-localized activity name, handed straight
+  /// through to the session so its header reads "Walking", not the generic
+  /// STRENGTH label — see `WorkoutManager.startStandalone`.
+  private func cardioTapped(_ activityType: String, title: String) {
     guard !isStarting else { return }
     isStarting = true
     Task {
-      await WorkoutManager.shared.startStandalone(activityType: activityType)
+      await WorkoutManager.shared.startStandalone(activityType: activityType, title: title)
       if WorkoutManager.shared.phase == .idle {
         isStarting = false
       }
@@ -352,7 +355,7 @@ private struct AllActivityTypesView: View {
   let entries: [CachedActivityType]
   let isDisabled: Bool
   let onBack: () -> Void
-  let onTap: (String) -> Void
+  let onTap: (String, String) -> Void
 
   var body: some View {
     GeometryReader { geometry in
@@ -383,7 +386,7 @@ private struct AllActivityTypesView: View {
               activityType: entry.activityType, title: entry.title, isCompact: isCompact,
               isDisabled: isDisabled
             ) {
-              onTap(entry.activityType)
+              onTap(entry.activityType, entry.title)
             }
           }
         }

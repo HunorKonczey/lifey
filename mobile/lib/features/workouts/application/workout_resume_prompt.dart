@@ -177,15 +177,17 @@ class WorkoutResumePrompt {
       final language =
           _ref.read(settingsControllerProvider).value?.language ?? LanguagePreference.system;
       await _ref.read(standaloneSessionProcessorProvider).process(event, language: language);
+      // A watch-started cardio session the phone joined ([_adoptCardio]) can
+      // have a live `CardioSessionScreen` open right now — running its own
+      // ticker and GPS for a workout that just ended on the wrist. It only
+      // gets here without having been asked to finish first when the watch's
+      // `endRequested` couldn't be delivered (phone unreachable at that
+      // moment), so this is the fallback that stops it measuring a session
+      // whose closing row has already landed.
+      if (event.isCardio) notifyWorkoutEndedElsewhere(event.standaloneSessionId);
       return;
     }
     if (event is WatchStandaloneAdoption) {
-      // A cardio session is never adopted (see
-      // [StandaloneSessionProcessor.processAdoption]) — returning before the
-      // screen push below is what keeps this file's half of that rule
-      // explicit, rather than relying on the mirror row simply not existing
-      // for `_findActiveSession` to find.
-      if (event.isCardio) return;
       final language =
           _ref.read(settingsControllerProvider).value?.language ?? LanguagePreference.system;
       await _ref.read(standaloneSessionProcessorProvider).processAdoption(event, language: language);
@@ -215,10 +217,19 @@ class WorkoutResumePrompt {
           // opened it — is the only place its exercise index can come from
           // until the watch logs its next set (see
           // LogSessionScreen.watchCurrentExerciseIndex).
+          //
+          // **Cardio is not watch-mastered.** `openSessionScreen` opens
+          // `CardioSessionScreen` for it, which runs the session for real —
+          // GPS, live metrics, Live Activity — exactly as if the walk had
+          // been started here (docs/cardio/55-cardio-watch-plan.md §5): the
+          // watch owns the wrist half, the phone owns everything only a
+          // phone can measure. `watchMastered` describes the strength
+          // mirror's read-only behavior and would mean nothing to that
+          // screen, so it stays false for cardio.
           await _pushSessionScreen(
             navigator,
             adopted,
-            watchMastered: true,
+            watchMastered: !event.isCardio,
             watchCurrentExerciseIndex: event.currentExerciseIndex,
           );
         }

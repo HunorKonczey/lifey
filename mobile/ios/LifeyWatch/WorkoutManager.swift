@@ -304,10 +304,11 @@ final class WorkoutManager: NSObject, ObservableObject {
 
   /// `'STRENGTH'` or `'CARDIO'` — mirrors `WorkoutSessionState.kind`
   /// (docs/cardio/55-cardio-watch-plan.md §4.1, C5.5). Only ever set by
-  /// `applyStateUpdate`'s phone-mastered path; a watch-started (standalone)
-  /// session stays `'STRENGTH'` here regardless of what `isStandalone` cardio
-  /// support C5.4 deliberately left unwired (`StandalonePickerView`'s
-  /// `CardioRow` never calls `startStandalone`).
+  /// `applyStateUpdate`'s phone-mastered path **and** by
+  /// `startStandalone(template:activityType:title:)` — a watch-started cardio
+  /// session (C5.7b's W-8) sets it from the picker row's own activity type,
+  /// which is what puts this watch on the cardio screens with no phone
+  /// involved at all.
   @Published private(set) var sessionKind = "STRENGTH"
   /// One of `activity_type.dart`'s `kActivityTypes` — non-nil exactly when
   /// [sessionKind] is `'CARDIO'`, mirroring `WorkoutSessionState.activityType`.
@@ -325,9 +326,90 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// base while paused (`movingAnchorUptime == nil`) or before any cardio
   /// metrics have arrived.
   func currentCardioMovingSeconds() -> Int {
-    guard let cardioMetrics else { return 0 }
-    guard let anchor = cardioMetrics.movingAnchorUptime else { return cardioMetrics.movingSecondsBase }
-    return cardioMetrics.movingSecondsBase + Int((ProcessInfo.processInfo.systemUptime - anchor).rounded(.down))
+    guard let metrics = activeCardioMetrics else { return 0 }
+    guard let anchor = metrics.movingAnchorUptime else { return metrics.movingSecondsBase }
+    return metrics.movingSecondsBase + Int((ProcessInfo.processInfo.systemUptime - anchor).rounded(.down))
+  }
+
+  /// What the cardio pages actually render: the phone's pushed metrics when
+  /// there are any, this watch's **own** measurements otherwise.
+  ///
+  /// The fallback is the whole difference between a watch-started cardio
+  /// session looking finished and looking real. `cardioMetrics` only ever
+  /// arrives from a phone-mastered session's state sync, so a session started
+  /// on the wrist (W-8) had nothing to show at all — no time, no distance,
+  /// just the heart-rate row under a header that read "STRENGTH" (the generic
+  /// `active_header_label`, since a standalone session has no phone-pushed
+  /// title). Meanwhile HealthKit was handing this class every number the page
+  /// needed.
+  var activeCardioMetrics: CardioActiveMetrics? {
+    if let cardioMetrics { return cardioMetrics }
+    guard isCardio, let startedAt else { return nil }
+    return localCardioMetrics(startedAt: startedAt)
+  }
+
+  /// This watch's own live cardio metrics, in the same slots and the same
+  /// order the phone fills them (`CardioSessionScreen._cardioLiveMetrics`) —
+  /// so the standalone screens are the *same* screens, not a second design:
+  ///
+  /// - `DISTANCE`: distance leads once there is one, moving time before that
+  ///   (exactly the phone's `hasDistance` swap), with pace in the third slot;
+  /// - `MACHINE`: moving time, and nothing else — the phone fills the other
+  ///   two from cadence/power sensors this watch doesn't have, and a box
+  ///   reading "—" for the whole session is worse than no box;
+  /// - `GAME`: playing time alone, for the same reason (gross time only
+  ///   differs from playing time once something actually pauses the
+  ///   accounting, which standalone has no way to do — see
+  ///   `CardioActiveContent`'s `onCourt` doc).
+  ///
+  /// Time is anchored, not stored: `movingSecondsBase: 0` plus an anchor
+  /// derived from [startedAt] means the ticking slot counts real elapsed
+  /// seconds even if this value is built once and held for a while. The
+  /// anchor is never dropped for a paused session, matching what both
+  /// platforms already do with a paused *phone-mastered* one — pausing stops
+  /// the sensors, not the clock (docs/40-watch-app-plan.md §4.4/§5.3).
+  private func localCardioMetrics(startedAt: Date) -> CardioActiveMetrics {
+    let elapsed = max(0, Date().timeIntervalSince(startedAt))
+    let anchor = ProcessInfo.processInfo.systemUptime - elapsed
+    let movingTimeLabel = String(localized: "cardio_moving_time_label")
+    let duration = formatCardioDuration(Int(elapsed))
+    let units = StandaloneSessionStore.shared.unitSystem()
+
+    switch cardioFamily {
+    case .distance:
+      let meters = lastDistanceMeters ?? 0
+      let hasDistance = meters > 0
+      let distanceLabel = String(localized: "cardio_distance_label")
+      return CardioActiveMetrics(
+        primaryLabel: hasDistance ? distanceLabel : movingTimeLabel,
+        primaryValue: hasDistance ? formatDistance(meters, units: units) : duration,
+        secondaryLabel: hasDistance ? movingTimeLabel : distanceLabel,
+        secondaryValue: hasDistance ? duration : "—",
+        tertiaryLabel: String(localized: "cardio_pace_label"),
+        tertiaryValue: formatPace(meters: meters, seconds: Int(elapsed), units: units) ?? "—",
+        movingSecondsBase: 0,
+        movingAnchorUptime: anchor)
+    case .machine:
+      return CardioActiveMetrics(
+        primaryLabel: movingTimeLabel,
+        primaryValue: duration,
+        secondaryLabel: nil,
+        secondaryValue: nil,
+        tertiaryLabel: nil,
+        tertiaryValue: nil,
+        movingSecondsBase: 0,
+        movingAnchorUptime: anchor)
+    case .game, .none:
+      return CardioActiveMetrics(
+        primaryLabel: String(localized: "cardio_playing_time_label"),
+        primaryValue: duration,
+        secondaryLabel: nil,
+        secondaryValue: nil,
+        tertiaryLabel: nil,
+        tertiaryValue: nil,
+        movingSecondsBase: 0,
+        movingAnchorUptime: anchor)
+    }
   }
 
   /// The closing-summary cardio block for whichever session is ending —
@@ -586,8 +668,11 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// close, by `cardioSummaryPayload()`. `nil` for a STRENGTH session and for
   /// a cardio one HealthKit hasn't reported a distance sample for yet (e.g.
   /// `GAME`, which has no matching quantity type at all — see
-  /// `cardioSummaryPayload()`).
-  private var lastDistanceMeters: Double?
+  /// `cardioSummaryPayload()`) — and, since standalone cardio renders its own
+  /// numbers ([localCardioMetrics]), read live by the metrics page too, which
+  /// is why it's `@Published` rather than the plain stored property it was
+  /// while only the closing payload looked at it.
+  @Published private(set) var lastDistanceMeters: Double?
 
   /// Whether this session collects running cadence at all (docs/cardio/
   /// 60-cardio-sport-specifics-plan.md C6.5) — true only for a `.running`
@@ -703,7 +788,9 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// .cardio` carries no `exercises`), so both default `nil` for the two
   /// pre-cardio call sites (Quick strength, a template row) and this
   /// function never receives both at once.
-  func startStandalone(template: CachedTemplate? = nil, activityType: String? = nil) async {
+  func startStandalone(
+    template: CachedTemplate? = nil, activityType: String? = nil, title: String? = nil
+  ) async {
     guard phase == .idle, HKHealthStore.isHealthDataAvailable() else { return }
     guard await ensureHealthAuthorized() else { return }
 
@@ -728,6 +815,15 @@ final class WorkoutManager: NSObject, ObservableObject {
     // nextSetWeight comment just below for why that isn't enough on its own.
     sessionKind = activityType != nil ? "CARDIO" : "STRENGTH"
     cardioActivityType = activityType
+    // The picker row's own pre-localized name ("Walking"/"Séta") — what
+    // `activeHeaderLabel` shows for this session. Without it a watch-started
+    // cardio session fell through to the generic `active_header_label`, so a
+    // walk announced itself as **STRENGTH** in its own header. Set here, from
+    // the tap, rather than looked up: the watch deliberately holds no
+    // activity-type dictionary of its own (docs/cardio/55-cardio-watch-plan.md
+    // §3.2 — the phone pre-localizes every title it syncs), and this is the
+    // same string the row the user tapped was already showing.
+    self.title = title
     lastDistanceMeters = nil
     // A leftover prefill from an earlier session in this process would
     // otherwise win over this session's own resolution (see
@@ -755,6 +851,7 @@ final class WorkoutManager: NSObject, ObservableObject {
       standaloneTemplate = nil
       sessionKind = "STRENGTH"
       cardioActivityType = nil
+      self.title = nil
       return
     }
     saveActiveSnapshot()
@@ -1741,6 +1838,22 @@ final class WorkoutManager: NSObject, ObservableObject {
     StandaloneSessionStore.shared.append(payload)
     StandaloneSessionStore.shared.clearActive()
     PhoneConnector.shared.flushPendingStandaloneSessions()
+    // A **cardio** session the phone has joined is running on both devices:
+    // the phone opened its own `CardioSessionScreen` for it and is measuring
+    // GPS. Ending on the wrist has to stop that too, or the phone keeps
+    // tracking a workout that is over and eventually writes its own, later
+    // finish over the row this watch just closed. The queued payload above
+    // is the durable half; this is the live half, and the phone's screen
+    // already handles it (`WatchEndRequested`) exactly as it does for a
+    // phone-mastered session.
+    //
+    // Strength is deliberately left out: the phone's mirror screen isn't
+    // measuring anything, and its row is finished by the payload itself
+    // (`_finishAdoptedSession`) — asking it to finish *as well* would be a
+    // second, racing writer for no gain.
+    if isAdopted, isCardio {
+      PhoneConnector.shared.sendEndRequested(sessionClientId: sessionClientId, rpe: rpe)
+    }
 
     let setsCount = standaloneSets.count
     let totalDuration = endedAt.timeIntervalSince(startedAt)
@@ -1792,11 +1905,7 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// `StandaloneSessionProcessor.processAdoption` creates the running mirror
   /// and fills in the already-logged sets in one go.
   func retryAdoption() {
-    // `!isCardio`: there's no adoption to retry for a cardio session (see
-    // `sendAdoptionRequest()`), so the spinner would acknowledge a tap that
-    // does nothing. `ActiveWorkoutView` drops the tap gesture itself in that
-    // case — this is the guard behind it.
-    guard isStandalone, !isCardio, !isRetryingAdoption else { return }
+    guard isStandalone, !isRetryingAdoption else { return }
     isRetryingAdoption = true
     WKInterfaceDevice.current().play(.click)
     sendAdoptionRequest()
@@ -1813,11 +1922,6 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// `retryAdoption()` (manual, ungated).
   private func sendAdoptionRequest() {
     guard isStandalone, let sessionClientId, let startedAt else { return }
-    // A cardio session is never adopted — see `StandaloneAdoptionPayload
-    // .kind`. Gated here, in the one shared body, rather than at each of the
-    // four call sites (start, reachability, per-set resend, badge tap), so
-    // no future trigger can reintroduce it by forgetting the check.
-    guard !isCardio else { return }
     let activeCaloriesTotal = builder?.statistics(for: Self.activeEnergyType)?
       .sumQuantity()?.doubleValue(for: .kilocalorie())
     let averageHeartRate = builder?.statistics(for: Self.heartRateType)?
@@ -1834,9 +1938,9 @@ final class WorkoutManager: NSObject, ObservableObject {
       // along for a phone build that predates it.
       currentExerciseIndex: activePlanExercises.isEmpty ? nil : standaloneExerciseIndex,
       currentExerciseId: standaloneCurrentExerciseId,
-      // Always nil today (the guard above returns first for a cardio
-      // session) — see `StandaloneAdoptionPayload.kind` for why they're
-      // filled in regardless.
+      // What tells the phone which kind of session to join — see
+      // `StandaloneAdoptionPayload.kind`. Without it a walk started here
+      // became a "Quick strength" workout on the phone.
       kind: isCardio ? "CARDIO" : nil,
       activityType: cardioActivityType)
     PhoneConnector.shared.sendStandaloneAdoption(payload)
@@ -1966,7 +2070,8 @@ final class WorkoutManager: NSObject, ObservableObject {
         startedAtEpochMs: Int64(startedAt.timeIntervalSince1970 * 1000),
         sets: standaloneSets,
         kind: isCardio ? "CARDIO" : nil,
-        activityType: cardioActivityType))
+        activityType: cardioActivityType,
+        title: title))
   }
 
   /// Reattaches to a still-running standalone `HKWorkoutSession` after a
@@ -2002,6 +2107,9 @@ final class WorkoutManager: NSObject, ObservableObject {
     // class docs/cardio/59-cardio-implementation-plan.md §11 keeps flagging).
     sessionKind = meta.kind ?? "STRENGTH"
     cardioActivityType = meta.activityType
+    // …and with the name the picker row gave it, or the header would come
+    // back reading "STRENGTH" for a recovered walk (see `startStandalone`).
+    title = meta.title
     lastDistanceMeters = meta.activityType.flatMap { activityType in
       let family = CardioActivityFamily(activityType: activityType)
       let type: HKQuantityType?
@@ -2231,4 +2339,45 @@ extension WorkoutManager {
     guard collectsCadence, cadenceSeconds > 0, cadenceSteps > 0 else { return nil }
     return cadenceSteps / cadenceSeconds * 60
   }
+}
+
+// MARK: - Local cardio formatting (docs/cardio/55-cardio-watch-plan.md §5, W-8)
+
+/// "5:12" under an hour, "1:05:12" from an hour up — a deliberate
+/// transcription of the phone's `CardioFormatter.duration`
+/// (`mobile/lib/core/format/cardio_formatter.dart`), so the same walk reads
+/// the same on both screens. Separate from `ActiveWorkoutView`'s own
+/// `formatSeconds`, which is the rest timer's mm:ss and must stay that way:
+/// a 90-minute hike showing "90:00" is exactly the kind of thing this
+/// function exists to avoid.
+func formatCardioDuration(_ totalSeconds: Int) -> String {
+  let hours = totalSeconds / 3600
+  let minutes = (totalSeconds % 3600) / 60
+  let seconds = totalSeconds % 60
+  let ss = String(format: "%02d", seconds)
+  if hours > 0 {
+    return "\(hours):" + String(format: "%02d", minutes) + ":" + ss
+  }
+  return "\(minutes):" + ss
+}
+
+/// "5.23 km" / "3.25 mi" — `CardioFormatter.distance`, transcribed.
+func formatDistance(_ meters: Double, units: WatchUnitSystem) -> String {
+  let unitMeters = units == .imperial ? 1609.344 : 1000.0
+  let suffix = units == .imperial ? "mi" : "km"
+  return String(format: "%.2f %@", meters / unitMeters, suffix)
+}
+
+/// "5:12 /km" / "8:22 /mi", or nil with no distance to derive one from —
+/// `CardioFormatter.pace`, transcribed (including its "never surface 0:00"
+/// rule).
+func formatPace(meters: Double, seconds: Int, units: WatchUnitSystem) -> String? {
+  guard meters > 0, seconds > 0 else { return nil }
+  let unitMeters = units == .imperial ? 1609.344 : 1000.0
+  let secondsPerUnit = Double(seconds) / (meters / unitMeters)
+  guard secondsPerUnit.isFinite else { return nil }
+  let minutes = Int(secondsPerUnit) / 60
+  let rest = Int((secondsPerUnit.truncatingRemainder(dividingBy: 60)).rounded())
+  let suffix = units == .imperial ? "/mi" : "/km"
+  return "\(minutes):" + String(format: "%02d", rest) + " " + suffix
 }

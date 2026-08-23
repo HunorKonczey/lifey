@@ -292,7 +292,7 @@ private struct DistanceMachineMetricsContent: View {
       HeaderChip(
         icon: cardioActivityIcon(for: activityType), label: workoutManager.activeHeaderLabel,
         isCompact: isCompact, isStandalone: workoutManager.showsStandaloneBadge)
-      if let metrics = workoutManager.cardioMetrics {
+      if let metrics = workoutManager.activeCardioMetrics {
         Text(primaryLabel(metrics))
           .font(isCompact ? .caption2 : .caption)
           .fontWeight(.bold)
@@ -347,7 +347,9 @@ private struct DistanceMachineMetricsContent: View {
   /// is the distance itself, which is only as fresh as the last GPS fix
   /// (i.e. always current on its own, no ticking needed).
   private func primaryValue(_ metrics: CardioActiveMetrics) -> String {
-    family == .distance ? metrics.primaryValue : formatSeconds(workoutManager.currentCardioMovingSeconds())
+    family == .distance
+      ? metrics.primaryValue
+      : formatCardioDuration(workoutManager.currentCardioMovingSeconds())
   }
 }
 
@@ -376,7 +378,7 @@ private struct GameMetricsContent: View {
         icon: onCourt ? cardioActivityIcon(for: activityType) : "figure.seated.side.right",
         label: onCourt ? workoutManager.activeHeaderLabel : String(localized: "cardio_on_bench_header_label"),
         isCompact: isCompact, isStandalone: workoutManager.showsStandaloneBadge)
-      if let metrics = workoutManager.cardioMetrics {
+      if let metrics = workoutManager.activeCardioMetrics {
         HStack(spacing: 7) {
           if onCourt {
             Circle().fill(LifeyColors.primary).frame(width: 8, height: 8)
@@ -388,7 +390,7 @@ private struct GameMetricsContent: View {
             .textCase(.uppercase)
             .foregroundColor(onCourt ? LifeyColors.primary : LifeyColors.secondary)
         }
-        Text(formatSeconds(workoutManager.currentCardioMovingSeconds()))
+        Text(formatCardioDuration(workoutManager.currentCardioMovingSeconds()))
           .font(heroFont)
           .fontWeight(.heavy)
           .foregroundColor(onCourt ? tint : LifeyColors.onSurfaceVariant)
@@ -577,13 +579,10 @@ private struct HeaderChip: View {
         // already-logged sets included, and the phone opens the workout.
         // Tap target padded out to something findable on a wrist — the glyph
         // itself is ~16pt.
-        //
-        // **Status only, not a button, during a cardio session**: there is no
-        // adoption to ask for (`WorkoutManager.sendAdoptionRequest()` never
-        // sends one for cardio — the phone would mirror a run as a strength
-        // workout), so the badge tells the truth — this workout reaches the
-        // phone when it ends — and a tap that could only do nothing is left
-        // out rather than acknowledged with a spinner.
+        // A cardio session's badge does the same thing, and means the same
+        // thing: the phone joins the walk/run live (its own
+        // `CardioSessionScreen`, GPS and all) instead of only importing it
+        // once it ends.
         Image(systemName: workoutManager.isRetryingAdoption ? "arrow.triangle.2.circlepath" : "iphone.slash")
           .font(.system(size: isCompact ? 14 : 16))
           .foregroundColor(LifeyColors.standaloneIndicator)
@@ -591,7 +590,6 @@ private struct HeaderChip: View {
           .padding(.horizontal, 4)
           .contentShape(Rectangle())
           .onTapGesture { workoutManager.retryAdoption() }
-          .disabled(workoutManager.isCardio)
           .accessibilityLabel(Text("standalone_sync_retry_a11y"))
       }
     }
@@ -1731,6 +1729,9 @@ private func formatWeight(_ weight: Double) -> String {
   weightFormatter.string(from: NSNumber(value: weight)) ?? "\(Int(weight))"
 }
 
+/// mm:ss — the **rest timer's** format, and only that: a cardio duration goes
+/// through `formatCardioDuration` instead, which rolls over into hours (a
+/// 90-minute walk reading "90:00" is exactly what that split avoids).
 private func formatSeconds(_ totalSeconds: Int) -> String {
   String(format: "%02d:%02d", totalSeconds / 60, totalSeconds % 60)
 }

@@ -183,19 +183,6 @@ object SummarySender {
     suspend fun sendAdoptionRequestIfNeeded(context: Context) {
         val metadata = SessionStateHolder.metadata.value
         if (!metadata.isStandalone) return
-        // A cardio session is never adopted. The phone's `processAdoption`
-        // has exactly one shape — resolve exercises, mirror a set list — so a
-        // watch-started run arrived there as a template-less *strength*
-        // session and the phone opened "Quick strength" for a workout the
-        // user started as Walking. There is nothing worth mirroring live
-        // anyway (no sets; the live metrics are this watch's own; the phone's
-        // cardio screen is a GPS master, not a mirror), so the whole session
-        // travels once, when it ends, through `emitStandaloneSession`'s
-        // CARDIO payload — which the phone already handles completely.
-        // Gated here, in the one shared body, so none of the five call sites
-        // (start, reconnect, per-set resend, the badge tap, MainActivity's
-        // resume) can reintroduce it by forgetting the check.
-        if (metadata.isCardio) return
         val sessionClientId = metadata.sessionClientId ?: return
         val startedAtElapsedRealtimeMs =
             SessionStateHolder.liveMetrics.value.startedAtElapsedRealtimeMs ?: return
@@ -245,12 +232,11 @@ object SummarySender {
             // since it survives a mid-session plan change and can name an
             // exercise the template never had (one added on the phone).
             putOpt("currentExerciseId", metadata.standaloneCurrentExerciseId)
-            // Always absent today (the cardio guard above returns first) —
-            // sent regardless so a future live-cardio-bridging step (docs/
-            // cardio/55-cardio-watch-plan.md §7, W-9) that lifts the gate
-            // hands the phone a payload it can already tell apart, instead of
-            // one it silently misreads as strength. The phone defaults a
-            // missing `kind` to `"STRENGTH"`, same as for a finished session.
+            // Which kind of session the phone should join — without it a
+            // walk started here became a template-less "Quick strength"
+            // workout there, since the phone's adoption handler had only that
+            // one shape. The phone defaults a missing `kind` to
+            // `"STRENGTH"`, same as for a finished session.
             putOpt("kind", if (metadata.isCardio) "CARDIO" else null)
             putOpt("activityType", metadata.cardioActivityType)
         }

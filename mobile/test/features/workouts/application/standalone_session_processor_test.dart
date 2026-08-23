@@ -596,14 +596,13 @@ void main() {
       expect(ackCalls.single.arguments, {'standaloneSessionId': 'standalone-1'});
     });
 
-    test('ignores a cardio adoption entirely — no mirror row, no ack', () async {
-      // The regression this exists for: an adoption snapshot has only one
-      // shape here (resolve exercises, mirror a set list), so a watch-started
-      // run used to land as a template-less *strength* session and the phone
-      // opened "Quick strength" for a workout the user started as Walking.
-      // The session isn't lost — it arrives complete, as CARDIO, when it
-      // ends. No ack either: that flips the watch's `isAdopted` and hides its
-      // "watch only" badge, a promise the phone isn't keeping.
+    test('adopts a cardio session as a live cardio row — not "Quick strength"', () async {
+      // The regression this exists for: the adoption path had only one shape
+      // (resolve exercises, mirror a set list), so a watch-started walk
+      // landed as a template-less *strength* session and the phone opened
+      // "Quick strength" for it. It now creates the same row the phone's own
+      // quick-start would — which is what lets `CardioSessionScreen` open on
+      // it and run the walk for real.
       final processor = buildProcessor();
 
       await processor.processAdoption(
@@ -611,11 +610,41 @@ void main() {
         language: LanguagePreference.english,
       );
 
-      expect(await db.select(db.workoutSessions).get(), isEmpty);
-      expect(ackCalls, isEmpty);
+      final row = await db.select(db.workoutSessions).getSingle();
+      expect(row.clientId, 'standalone-1');
+      expect(row.sessionKind, 'CARDIO');
+      expect(row.activityType, 'WALKING');
+      expect(row.templateClientId, isNull);
+      expect(row.finishedAt, isNull);
+      // Ticking from the watch's own start time, not from whenever this
+      // arrived — the phone's screen counts from `movingSinceEpochMs`.
+      expect(row.movingSeconds, 0);
+      expect(row.movingSinceEpochMs, 1783075200000);
+      expect(await db.select(db.exerciseSets).get(), isEmpty);
+      expect(ackCalls.single.method, 'ackAdoption');
     });
 
-    test('a cardio session ignored at adoption still lands complete when it ends', () async {
+    test('a resent cardio adoption leaves the running row alone', () async {
+      // The watch resends its snapshot on every reconnect. Rewriting
+      // `startedAt`/`movingSinceEpochMs` under a running screen would jerk
+      // its clock, and there is no set list to refresh for cardio.
+      final processor = buildProcessor();
+      final event = sampleAdoptionEvent(
+        kind: 'CARDIO', activityType: 'WALKING', sets: const [],
+      );
+      await processor.processAdoption(event, language: LanguagePreference.english);
+      final first = await db.select(db.workoutSessions).getSingle();
+
+      await processor.processAdoption(event, language: LanguagePreference.english);
+
+      final rows = await db.select(db.workoutSessions).get();
+      expect(rows, hasLength(1));
+      expect(rows.single.startedAt, first.startedAt);
+      expect(rows.single.movingSinceEpochMs, first.movingSinceEpochMs);
+      expect(ackCalls, hasLength(2));
+    });
+
+    test('the adopted cardio row is finished in place by the closing payload', () async {
       final processor = buildProcessor();
       await processor.processAdoption(
         sampleAdoptionEvent(kind: 'CARDIO', activityType: 'RUNNING', sets: const []),
@@ -1179,6 +1208,50 @@ void main() {
       expect(sessions.single.rpe, 7);
       expect(ackCalls, hasLength(1));
       expect(ackCalls.single.method, 'ackStandaloneSession');
+    });
+
+    test('a session the phone finished first keeps its own metrics, gains the watch\'s',
+        () async {
+      // The normal ending for a watch-started cardio session the phone
+      // joined: the wrist asks the phone to finish (`WatchEndRequested`), so
+      // by the time the closing payload lands the row is already closed with
+      // the phone's own GPS distance on it. That distance stays (R8); the
+      // wrist heart rate and calories — which no cardio screen writes at
+      // finish — are taken.
+      await sessionRepository.create(
+        clientId: 'standalone-cardio-1',
+        startedAt: DateTime.fromMillisecondsSinceEpoch(1783075200000, isUtc: true),
+        finishedAt: DateTime.fromMillisecondsSinceEpoch(1783078000000, isUtc: true),
+        exercises: const [],
+        sets: const [],
+        sessionKind: 'CARDIO',
+        activityType: 'RUNNING',
+        movingSeconds: 2800,
+        cardio: const CardioMetrics(distanceMeters: 4800, distanceSource: 'MEASURED'),
+      );
+      final processor = buildProcessor();
+
+      await processor.process(
+        sampleCardioEvent(activeCalories: 412, averageHeartRate: 138),
+        language: LanguagePreference.english,
+      );
+
+      final session = await sessionRepository.findByClientId('standalone-cardio-1');
+      expect(session!.activeCalories, 412);
+      expect(session.averageHeartRate, 138);
+      // The phone measured this one — the watch's 5023 m does not overwrite it.
+      expect(session.cardio?.distanceMeters, 4800);
+      expect(session.cardio?.distanceSource, 'MEASURED');
+      // …but a field the phone had no answer for is taken from the watch.
+      expect(session.cardio?.avgCadence, 172);
+      // Not reopened, and the phone's own end time stands.
+      expect(
+        session.finishedAt!.isAtSameMomentAs(
+          DateTime.fromMillisecondsSinceEpoch(1783078000000, isUtc: true),
+        ),
+        isTrue,
+      );
+      expect(session.movingSeconds, 2800);
     });
 
     test('a second cardio session does not create any generic exercise', () async {

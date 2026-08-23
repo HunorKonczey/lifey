@@ -107,6 +107,7 @@ import com.khunor.lifey.LogSetState
 import com.khunor.lifey.R
 import com.khunor.lifey.SessionMetadata
 import com.khunor.lifey.SessionStateHolder
+import com.khunor.lifey.StandaloneSessionStore
 import com.khunor.lifey.StandaloneTemplate
 import com.khunor.lifey.StandaloneTemplateExercise
 import com.khunor.lifey.SummarySender
@@ -114,6 +115,7 @@ import com.khunor.lifey.ui.theme.LifeyColors
 import com.khunor.lifey.ui.theme.LifeyShapes
 import java.util.UUID
 import kotlin.math.abs
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.sign
 import java.text.DecimalFormat
@@ -402,6 +404,109 @@ private fun CardioActiveScreen() {
  * just display whatever string the phone last pushed for the moving/game-time
  * slot.
  */
+/**
+ * This watch's own live cardio metrics, for a session **it** started — the
+ * fallback behind `metadata.cardioMetrics`, which only ever arrives from a
+ * phone-mastered session's state sync.
+ *
+ * Without it a watch-started walk had nothing to show at all: no time, no
+ * distance, just the heart-rate row under a header reading "STRENGTH" (the
+ * generic `active_header_label`, since a standalone session had no title
+ * either) — while Health Services was handing [ExerciseService] every number
+ * the page needed.
+ *
+ * Same slots, same order, same rules as the phone fills them with
+ * (`CardioSessionScreen._cardioLiveMetrics`), so the standalone screens are
+ * the *same* screens rather than a second design:
+ * - `DISTANCE`: distance leads once there is one, moving time before that,
+ *   pace third;
+ * - `MACHINE`: moving time alone — the phone's other two slots come from
+ *   cadence/power sensors this watch doesn't have, and a box reading "—" for
+ *   a whole session is worse than no box;
+ * - `GAME`: playing time alone, for the same reason (gross time only differs
+ *   once something pauses the accounting, which standalone can't do — see
+ *   [CardioActiveScreen]'s `onCourt` doc).
+ *
+ * Time is anchored, not stored: `movingSecondsBase = 0` plus the session's
+ * own start mark means the ticking slot counts real elapsed seconds. The
+ * anchor is never dropped for a paused session, matching what a paused
+ * *phone-mastered* one already does — pausing stops the sensors, not the
+ * clock (docs/40-watch-app-plan.md §4.4/§5.3).
+ */
+@Composable
+private fun localCardioMetrics(
+    family: CardioActivityFamily,
+    liveMetrics: LiveMetrics,
+): CardioActiveMetrics? {
+    val startedAt = liveMetrics.startedAtElapsedRealtimeMs ?: return null
+    val imperial = StandaloneSessionStore.isImperial(LocalContext.current)
+    val movingTimeLabel = stringResource(R.string.cardio_moving_time_label)
+    val distanceLabel = stringResource(R.string.cardio_distance_label)
+    val paceLabel = stringResource(R.string.cardio_pace_label)
+    val playingTimeLabel = stringResource(R.string.cardio_playing_time_label)
+    val elapsedSeconds = ((SystemClock.elapsedRealtime() - startedAt) / 1000L).toInt()
+    val duration = formatCardioDuration(elapsedSeconds)
+    val meters = liveMetrics.distanceMeters ?: 0.0
+    val hasDistance = meters > 0
+    return when (family) {
+        CardioActivityFamily.DISTANCE -> CardioActiveMetrics(
+            primaryLabel = if (hasDistance) distanceLabel else movingTimeLabel,
+            primaryValue = if (hasDistance) formatDistance(meters, imperial) else duration,
+            secondaryLabel = if (hasDistance) movingTimeLabel else distanceLabel,
+            secondaryValue = if (hasDistance) duration else "—",
+            tertiaryLabel = paceLabel,
+            tertiaryValue = formatPace(meters, elapsedSeconds, imperial) ?: "—",
+            movingSecondsBase = 0,
+            movingAnchorElapsedRealtimeMs = startedAt,
+        )
+        CardioActivityFamily.MACHINE -> CardioActiveMetrics(
+            primaryLabel = movingTimeLabel,
+            primaryValue = duration,
+            movingSecondsBase = 0,
+            movingAnchorElapsedRealtimeMs = startedAt,
+        )
+        CardioActivityFamily.GAME -> CardioActiveMetrics(
+            primaryLabel = playingTimeLabel,
+            primaryValue = duration,
+            movingSecondsBase = 0,
+            movingAnchorElapsedRealtimeMs = startedAt,
+        )
+    }
+}
+
+/** "5:12" under an hour, "1:05:12" from an hour up — a deliberate
+ * transcription of the phone's `CardioFormatter.duration`
+ * (`mobile/lib/core/format/cardio_formatter.dart`), so the same walk reads
+ * the same on both screens. */
+private fun formatCardioDuration(totalSeconds: Int): String {
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    val ss = seconds.toString().padStart(2, '0')
+    return if (hours > 0) "$hours:${minutes.toString().padStart(2, '0')}:$ss" else "$minutes:$ss"
+}
+
+/** "5.23 km" / "3.25 mi" — `CardioFormatter.distance`, transcribed. */
+private fun formatDistance(meters: Double, imperial: Boolean): String {
+    val unitMeters = if (imperial) 1609.344 else 1000.0
+    val suffix = if (imperial) "mi" else "km"
+    return String.format(Locale.US, "%.2f %s", meters / unitMeters, suffix)
+}
+
+/** "5:12 /km" / "8:22 /mi", or null with no distance to derive one from —
+ * `CardioFormatter.pace`, transcribed (including its "never surface 0:00"
+ * rule). */
+private fun formatPace(meters: Double, seconds: Int, imperial: Boolean): String? {
+    if (meters <= 0 || seconds <= 0) return null
+    val unitMeters = if (imperial) 1609.344 else 1000.0
+    val secondsPerUnit = seconds / (meters / unitMeters)
+    if (!secondsPerUnit.isFinite()) return null
+    val minutes = (secondsPerUnit / 60).toInt()
+    val rest = (secondsPerUnit % 60).roundToInt()
+    val suffix = if (imperial) "/mi" else "/km"
+    return "$minutes:${rest.toString().padStart(2, '0')} $suffix"
+}
+
 @Composable
 private fun CardioMetricsPage(
     metadata: SessionMetadata,
@@ -413,7 +518,7 @@ private fun CardioMetricsPage(
 ) {
     val activityType = metadata.cardioActivityType ?: "OTHER_CARDIO"
     val family = metadata.cardioFamily ?: CardioActivityFamily.DISTANCE
-    val cardioMetrics = metadata.cardioMetrics
+    val cardioMetrics = metadata.cardioMetrics ?: localCardioMetrics(family, liveMetrics)
 
     var movingSeconds by remember { mutableLongStateOf(0L) }
     LaunchedEffect(cardioMetrics) {
@@ -510,7 +615,7 @@ private fun DistanceMachineMetricsContent(
         text = if (family == CardioActivityFamily.DISTANCE) {
             cardioMetrics.primaryValue
         } else {
-            formatElapsed(movingSeconds * 1000)
+            formatCardioDuration(movingSeconds.toInt())
         },
         style = heroStyle,
         color = tint,
@@ -599,7 +704,11 @@ private fun GameMetricsContent(
             maxLines = 1,
         )
     }
-    Text(text = formatElapsed(movingSeconds * 1000), style = heroStyle, color = if (onCourt) tint else LifeyColors.onSurfaceVariant)
+    Text(
+        text = formatCardioDuration(movingSeconds.toInt()),
+        style = heroStyle,
+        color = if (onCourt) tint else LifeyColors.onSurfaceVariant,
+    )
     CardioHeartRateRow(liveMetrics = liveMetrics, isCompact = isCompact)
     if (cardioMetrics.secondaryLabel != null) {
         Box(modifier = Modifier.padding(top = if (isCompact) 6.dp else 10.dp)) {
@@ -2120,17 +2229,10 @@ private fun HeaderChip(
             // busywork. Most useful when the phone app simply wasn't running
             // at start — one tap sends the whole snapshot, already-logged sets
             // included, and the phone opens the workout.
-            //
-            // **Status only, not a button, during a cardio session**: there is
-            // no adoption to ask for ([SummarySender.sendAdoptionRequestIfNeeded]
-            // never sends one for cardio — the phone would mirror a run as a
-            // strength workout), so the badge tells the truth (this workout
-            // reaches the phone when it ends) and a tap that could only do
-            // nothing is left out rather than acknowledged with a spinner.
-            // Read here rather than threaded through as a parameter — six
-            // call sites would each have to pass the same value, and this
-            // chip already knows nothing else about the session.
-            val isCardio = SessionStateHolder.metadata.collectAsState().value.isCardio
+            // A cardio session's badge does the same thing, and means the
+            // same thing: the phone joins the walk/run live (its own
+            // `CardioSessionScreen`, GPS and all) instead of only importing
+            // it once it ends.
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
             var isSyncing by remember { mutableStateOf(false) }
@@ -2144,7 +2246,7 @@ private fun HeaderChip(
                     // as part of the tap target rather than sitting outside
                     // it — the glyph itself is only 14–16 dp, too small to
                     // hit reliably on a wrist.
-                    .clickable(enabled = !isSyncing && !isCardio) {
+                    .clickable(enabled = !isSyncing) {
                         scope.launch {
                             isSyncing = true
                             SummarySender.sendAdoptionRequestIfNeeded(context)
@@ -2430,6 +2532,9 @@ private val weightFormat = DecimalFormat("0.#")
 
 private fun formatWeight(weight: Double): String = weightFormat.format(weight)
 
+/** mm:ss — the **rest timer's** format, and only that: a cardio duration goes
+ * through [formatCardioDuration] instead, which rolls over into hours (a
+ * 90-minute walk reading "90:00" is exactly what that split avoids). */
 private fun formatElapsed(totalMs: Long): String {
     val totalSeconds = totalMs / 1000
     val minutes = totalSeconds / 60

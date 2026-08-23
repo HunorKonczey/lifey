@@ -193,6 +193,23 @@
         }
       }
     },
+    "cardio_distance_label" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DISTANCE"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TÁVOLSÁG"
+          }
+        }
+      }
+    },
     "cardio_game_paused_primary_label" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -223,6 +240,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Padra"
+          }
+        }
+      }
+    },
+    "cardio_moving_time_label" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MOVING TIME"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MOZGÁSIDŐ"
           }
         }
       }
@@ -272,6 +306,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PADON"
+          }
+        }
+      }
+    },
+    "cardio_pace_label" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PACE"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TEMPÓ"
+          }
+        }
+      }
+    },
+    "cardio_playing_time_label" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PLAYING TIME"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JÁTÉKIDŐ"
           }
         }
       }

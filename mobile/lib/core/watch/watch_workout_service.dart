@@ -281,6 +281,12 @@ class WatchStandaloneSession {
   /// `sessionKind` (C1.4 landed before the mobile UI that sends it, C1.5+).
   final String kind;
 
+  /// True for a watch-started **cardio** session — the one branch that has
+  /// nothing to do with exercises or sets. Mirrors
+  /// [WatchStandaloneAdoption.isCardio] so both halves of the same session
+  /// are asked the same question the same way.
+  bool get isCardio => kind == 'CARDIO';
+
   /// The `ActivityType` code (docs/cardio/52-cardio-domain-backend-plan.md
   /// §1.5) — set exactly when [kind] is `'CARDIO'`, mirroring the invariant
   /// the backend's CHECK constraint enforces server-side (V66).
@@ -365,13 +371,12 @@ class WatchStandaloneAdoption {
   /// — and defaulted to `'STRENGTH'` the same way when the key is absent,
   /// which is every watch build that predates it.
   ///
-  /// Neither watch app currently sends a `'CARDIO'` adoption at all (a
-  /// watch-started cardio session reaches the phone only when it *ends*), so
-  /// in practice this is always `'STRENGTH'` today. It exists because the
-  /// receiver has to be able to tell before a sender ever exists — D-C5.4's
-  /// rule, and the exact failure this pair fixes: an adoption snapshot has
-  /// no kind on the wire, so the phone read a watch-started run as a
-  /// template-less *strength* session and mirrored it as "Quick strength".
+  /// **This field is what decides which door the snapshot goes through**
+  /// (`StandaloneSessionProcessor.processAdoption`), and its absence is the
+  /// whole bug it was added for: an adoption used to carry no kind, so the
+  /// phone read a watch-started walk as a template-less *strength* session
+  /// and mirrored it as "Quick strength". A cardio snapshot now opens a real
+  /// live cardio session on the phone instead.
   final String kind;
 
   /// One of `kActivityTypes`; non-null only alongside `kind == 'CARDIO'`.

@@ -75,9 +75,11 @@ import org.json.JSONObject
  *
  * A **cardio** row ([CardioRow]) starts a standalone cardio exercise
  * (docs/cardio/55-cardio-watch-plan.md §5/§7 W-8, C5.7a) — [onCardioTapped]
- * receives the tapped row's `activityType` code, which `MainActivity` passes
- * straight through to `ExerciseService.startStandaloneIntent`'s
- * `activityType` extra, the same "this screen doesn't own the
+ * receives the tapped row's `activityType` code **and its pre-localized
+ * title**, which `MainActivity` passes straight through to
+ * `ExerciseService.startStandaloneIntent`'s `activityType`/`title` extras
+ * (the title is what keeps the session's own header from reading
+ * "STRENGTH"), the same "this screen doesn't own the
  * `startForegroundService` call" split [onTemplateTapped] already follows.
  *
  * Below the ranked list sits one more row, opening [AllActivityTypesScreen]
@@ -92,7 +94,7 @@ fun StandalonePickerScreen(
     onQuickStrengthTapped: () -> Unit,
     onBack: () -> Unit,
     onTemplateTapped: (JSONObject) -> Unit,
-    onCardioTapped: (String) -> Unit,
+    onCardioTapped: (String, String) -> Unit,
 ) {
     val context = LocalContext.current
     // Local UI navigation only — `MainActivity` switches screens on the
@@ -176,11 +178,12 @@ fun StandalonePickerScreen(
                     when (entry.optString("type")) {
                         "CARDIO" -> item {
                             val activityType = entry.optString("activityType")
+                            val title = entry.optString("title")
                             CardioRow(
                                 activityType = activityType,
-                                title = entry.optString("title"),
+                                title = title,
                                 isCompact = isCompact,
-                                onTap = { onCardioTapped(activityType) },
+                                onTap = { onCardioTapped(activityType, title) },
                             )
                         }
                         // "TEMPLATE", and any future/unknown type this build
@@ -354,7 +357,7 @@ private fun AllTypesRow(onTap: () -> Unit) {
 private fun AllActivityTypesScreen(
     entries: List<JSONObject>,
     onBack: () -> Unit,
-    onTap: (String) -> Unit,
+    onTap: (String, String) -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = isCompactScreen(maxWidth)
@@ -379,11 +382,12 @@ private fun AllActivityTypesScreen(
                 val activityType = entry.optString("activityType")
                 if (activityType.isNotEmpty()) {
                     item {
+                        val title = entry.optString("title")
                         CardioRow(
                             activityType = activityType,
-                            title = entry.optString("title"),
+                            title = title,
                             isCompact = isCompact,
-                            onTap = { onTap(activityType) },
+                            onTap = { onTap(activityType, title) },
                         )
                     }
                 }

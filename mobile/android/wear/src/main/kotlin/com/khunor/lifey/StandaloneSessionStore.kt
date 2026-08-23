@@ -26,6 +26,7 @@ object StandaloneSessionStore {
     private const val KEY_ACTIVE = "active"
     private const val KEY_TEMPLATES = "templates"
     private const val KEY_ALL_CARDIO = "allCardio"
+    private const val KEY_UNIT_SYSTEM = "unitSystem"
 
     /** Queues a just-closed standalone session for delivery — `ExerciseService`
      * (S15) sends it and calls [remove] once the phone acks. */
@@ -130,6 +131,23 @@ object StandaloneSessionStore {
      * exactly when the picker hides the row that opens the screen rather
      * than opening an empty one. */
     fun allCardio(context: Context): List<JSONObject> = readRows(context, KEY_ALL_CARDIO)
+
+    /** Which units the phone's owner reads distances in (`UserSettings
+     * .unitSystem` there), pushed with the quick-start sync so this watch can
+     * format its **own** measurements the way the phone would — a
+     * watch-started cardio session has no phone pushing pre-formatted
+     * strings into it. `"METRIC"`/`"IMPERIAL"`; anything else is ignored
+     * rather than collapsed to metric, so a newer phone build's new unit
+     * system can't silently reformat a watch that already knows a good one. */
+    fun saveUnitSystem(context: Context, raw: String) {
+        if (raw != "METRIC" && raw != "IMPERIAL") return
+        prefs(context).edit().putString(KEY_UNIT_SYSTEM, raw).apply()
+    }
+
+    /** Metric unless the phone has said otherwise — the same default a fresh
+     * account gets, and the safe answer for a watch that has never synced. */
+    fun isImperial(context: Context): Boolean =
+        prefs(context).getString(KEY_UNIT_SYSTEM, null) == "IMPERIAL"
 
     private fun readRows(context: Context, key: String): List<JSONObject> {
         val raw = prefs(context).getString(key, null) ?: return emptyList()

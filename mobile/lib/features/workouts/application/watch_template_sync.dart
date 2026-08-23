@@ -424,14 +424,29 @@ List<WatchQuickStartCardioEntry> buildWatchAllCardioEntries(AppLocalizations l10
 /// would mean either two round trips to the watch or a controller that has
 /// to correlate two streams to build one message.
 class WatchQuickStartPayload {
-  const WatchQuickStartPayload({required this.entries, required this.allCardio});
+  const WatchQuickStartPayload({
+    required this.entries,
+    required this.allCardio,
+    this.unitSystem = 'METRIC',
+  });
 
   final List<WatchQuickStartEntryPayload> entries;
   final List<WatchQuickStartCardioEntry> allCardio;
 
+  /// `'METRIC'` or `'IMPERIAL'` — the account's own setting, sent because a
+  /// **watch-started** cardio session formats its distance and pace on the
+  /// watch itself (there's no phone pushing pre-formatted strings into a
+  /// standalone session), and a walk that reads in km on the wrist and miles
+  /// on the phone is worse than either. Rides along with this payload rather
+  /// than getting a channel of its own: it changes for the same reason the
+  /// pre-localized titles here do — the user changed a setting — so one push
+  /// carries both.
+  final String unitSystem;
+
   Map<String, Object?> toJson() => {
         'entries': [for (final entry in entries) entry.toJson()],
         'allCardio': [for (final entry in allCardio) entry.toJson()],
+        'unitSystem': unitSystem,
       };
 }
 
@@ -476,6 +491,7 @@ final watchTemplateSyncPayloadProvider = Provider<WatchQuickStartPayload?>((ref)
   if (!settings.watchWorkoutEnabled) {
     return const WatchQuickStartPayload(entries: [], allCardio: []);
   }
+  final unitSystem = settings.unitSystem == UnitSystem.imperial ? 'IMPERIAL' : 'METRIC';
 
   final sessions = ref.watch(workoutSessionControllerProvider).value;
   final templates = ref.watch(workoutTemplateControllerProvider).value;
@@ -493,5 +509,6 @@ final watchTemplateSyncPayloadProvider = Provider<WatchQuickStartPayload?>((ref)
       now: DateTime.now(),
     ),
     allCardio: buildWatchAllCardioEntries(l10n),
+    unitSystem: unitSystem,
   );
 });

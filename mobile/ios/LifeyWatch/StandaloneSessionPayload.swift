@@ -118,15 +118,12 @@ struct StandaloneAdoptionPayload: Codable, Equatable {
   /// `StandaloneSessionPayload` carries, and read the same way on the phone
   /// (`WatchStandaloneAdoption.kind`, absent = `'STRENGTH'`).
   ///
-  /// Nil on every snapshot this build actually sends: `WorkoutManager
-  /// .sendAdoptionRequest()` doesn't send one at all for a cardio session,
-  /// because there's nothing about a run for the phone to mirror live and
-  /// the phone's only adoption shape is a strength one — a run adopted as
-  /// strength is what turned a watch-started Walking into "Quick strength"
-  /// on the phone. The fields are here so that stays true by construction:
-  /// a future live-cardio-bridging step (55 §7's W-9) that lifts the gate
-  /// sends a payload the phone can already tell apart, instead of one it
-  /// silently misreads.
+  /// **Load-bearing, not decoration.** The phone's adoption handler used to
+  /// have exactly one shape — resolve a template's exercises, mirror a set
+  /// list — so a snapshot with no kind on it turned a walk started here into
+  /// a template-less "Quick strength" workout there. With these two fields
+  /// the phone opens the *cardio* session instead, live, while the walk is
+  /// still running.
   var kind: String?
   var activityType: String?
 }
@@ -167,6 +164,12 @@ struct StandaloneActiveSessionMeta: Codable, Equatable {
   /// own `"STRENGTH"` default.
   var kind: String?
   var activityType: String?
+  /// The session's own display name — a cardio session's pre-localized
+  /// activity title, as the picker row showed it (`WorkoutManager.title`).
+  /// Nil for a Quick strength session and for a template-backed one, which
+  /// take their header from [template] instead. Optional so a snapshot
+  /// written by an older build still decodes.
+  var title: String?
 }
 
 /// One exercise of a synced template, exactly as the phone resolved it

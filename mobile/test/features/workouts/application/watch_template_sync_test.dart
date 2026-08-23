@@ -581,6 +581,19 @@ void main() {
       expect(entry.title, 'Futás');
     });
 
+    test('carries the account\'s unit system — a watch-started cardio session formats its own '
+        'distance', () async {
+      final harness = buildContainer(
+        userSettings: const UserSettings.defaults().copyWith(unitSystem: UnitSystem.imperial),
+      );
+      await harness.settle();
+
+      expect(
+        harness.container.read(watchTemplateSyncPayloadProvider)!.unitSystem,
+        'IMPERIAL',
+      );
+    });
+
     test('sends nothing while watchWorkoutEnabled is off', () async {
       // The single gate for all watch traffic — an empty payload also tells
       // the watch to clear whatever it still holds.

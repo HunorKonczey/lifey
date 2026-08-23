@@ -1,5 +1,16 @@
 import Foundation
 
+/// Which units the phone's owner reads distances in (`UserSettings.unitSystem`
+/// on the phone) — pushed with the quick-start sync so this watch can format
+/// its **own** measurements (`WorkoutManager.localCardioMetrics`) the way the
+/// phone would. Metric unless the phone has said otherwise: the same default
+/// a fresh account gets, and the safe answer for a watch that has never
+/// synced.
+enum WatchUnitSystem: String {
+  case metric = "METRIC"
+  case imperial = "IMPERIAL"
+}
+
 /// Local persistence for standalone (phone-less) watch sessions
 /// (docs/watch/44-watch-f6-standalone-plan.md §3.2) — two concerns:
 /// - the **pending queue**: closed sessions not yet acked by the phone,
@@ -155,5 +166,28 @@ final class StandaloneSessionStore {
       guard let data = try? Data(contentsOf: allCardioURL) else { return [] }
       return (try? JSONDecoder().decode([CachedActivityType].self, from: data)) ?? []
     }
+  }
+
+  // MARK: - Unit system (docs/cardio/55-cardio-watch-plan.md §5, W-8)
+
+  /// `UserDefaults`, not a file like every cache above it: this is one short
+  /// string read on every standalone cardio render, with none of the
+  /// atomicity or size concerns those JSON caches were built for.
+  private static let unitSystemKey = "lifey.unitSystem"
+
+  /// Remembers the phone's unit setting from the last quick-start sync — see
+  /// [WatchUnitSystem]. An unrecognized value is ignored rather than
+  /// collapsed to metric, so a newer phone build's new unit system can't
+  /// silently reformat a watch that already knows a good one.
+  func saveUnitSystem(_ raw: String) {
+    guard WatchUnitSystem(rawValue: raw) != nil else { return }
+    UserDefaults.standard.set(raw, forKey: Self.unitSystemKey)
+  }
+
+  func unitSystem() -> WatchUnitSystem {
+    guard let raw = UserDefaults.standard.string(forKey: Self.unitSystemKey),
+      let value = WatchUnitSystem(rawValue: raw)
+    else { return .metric }
+    return value
   }
 }

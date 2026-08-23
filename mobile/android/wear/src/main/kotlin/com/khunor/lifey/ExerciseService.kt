@@ -138,7 +138,14 @@ class ExerciseService : Service() {
             // running total, unlike CALORIES above (see [lastDistanceMeters]'s
             // own doc). A no-op when the data type wasn't requested at all
             // (`getData` simply returns null then).
-            update.latestMetrics.getData(DataType.DISTANCE_TOTAL)?.total?.let { lastDistanceMeters = it }
+            update.latestMetrics.getData(DataType.DISTANCE_TOTAL)?.total?.let {
+                lastDistanceMeters = it
+                // Also published, not just kept for the closing payload: a
+                // watch-started cardio session renders its own metrics page
+                // from `SessionStateHolder.liveMetrics` (see
+                // [LiveMetrics.distanceMeters]).
+                SessionStateHolder.onDistanceMeasured(it)
+            }
             update.latestMetrics.getData(DataType.ELEVATION_GAIN_TOTAL)?.total?.let { lastElevationGainMeters = it }
             update.latestMetrics.getData(DataType.ELEVATION_LOSS_TOTAL)?.total?.let { lastElevationLossMeters = it }
             update.latestMetrics.getData(DataType.STEPS_PER_MINUTE_STATS)?.let { stats ->
@@ -366,8 +373,9 @@ class ExerciseService : Service() {
             ACTION_START_STANDALONE -> {
                 val templateJson = intent.getStringExtra(EXTRA_TEMPLATE_JSON)
                 val activityType = intent.getStringExtra(EXTRA_ACTIVITY_TYPE)
+                val title = intent.getStringExtra(EXTRA_TITLE)
                 promoteToForeground()
-                scope.launch { startStandaloneExercise(templateJson, activityType) }
+                scope.launch { startStandaloneExercise(templateJson, activityType, title) }
             }
             ACTION_END_STANDALONE -> {
                 val rpe = if (intent.hasExtra(EXTRA_RPE)) intent.getIntExtra(EXTRA_RPE, 0) else null
@@ -573,7 +581,11 @@ class ExerciseService : Service() {
      * template, mutually exclusive with [templateJson] (`MainActivity` never
      * passes both).
      */
-    private suspend fun startStandaloneExercise(templateJson: String?, activityType: String? = null) {
+    private suspend fun startStandaloneExercise(
+        templateJson: String?,
+        activityType: String? = null,
+        title: String? = null,
+    ) {
         if (SessionStateHolder.phase.value != SessionPhase.IDLE) return
         val sessionClientId = UUID.randomUUID().toString()
         currentSessionClientId = sessionClientId
@@ -589,7 +601,7 @@ class ExerciseService : Service() {
             exerciseClient.setUpdateCallback(updateCallback)
             exerciseClient.startExerciseAsync(config).await()
             SessionStateHolder.onStandaloneStarted(
-                sessionClientId, SystemClock.elapsedRealtime(), template, activityType,
+                sessionClientId, SystemClock.elapsedRealtime(), template, activityType, title,
             )
             saveStandaloneActiveSnapshot()
             // Live bridging: if a phone is already connected at the exact
@@ -716,6 +728,22 @@ class ExerciseService : Service() {
             StandaloneSessionStore.add(this, payload.toString())
             StandaloneSessionStore.clearActive(this)
             SummarySender.flushPending(this)
+            // A **cardio** session the phone has joined is running on both
+            // devices: the phone opened its own `CardioSessionScreen` for it
+            // and is measuring GPS. Ending on the wrist has to stop that too,
+            // or the phone keeps tracking a workout that is over and
+            // eventually writes its own, later finish over the row this watch
+            // just closed. The queued payload above is the durable half; this
+            // is the live half, and the phone's screen already handles it
+            // (`WatchEndRequested`) exactly as for a phone-mastered session.
+            //
+            // Strength is deliberately left out: the phone's mirror screen
+            // measures nothing, and its row is finished by the payload itself
+            // (`_finishAdoptedSession`) — asking it to finish *as well* would
+            // be a second, racing writer for no gain.
+            if (metadata.isAdopted && currentActivityType != null) {
+                SummarySender.sendEndRequested(this, sessionClientId, rpe)
+            }
 
             SessionStateHolder.onStandaloneEnded(
                 StandaloneSummary(
@@ -811,6 +839,10 @@ class ExerciseService : Service() {
             if (metadata.isCardio) {
                 put("kind", metadata.kind)
                 metadata.cardioActivityType?.let { put("activityType", it) }
+                // …and the name the picker row gave it, or a recovered walk
+                // comes back headed "STRENGTH" (see
+                // `SessionStateHolder.onStandaloneStarted`).
+                metadata.title?.let { put("title", it) }
             }
             metadata.standaloneTemplate?.let { put("template", it.toJson()) }
             // The phone's live plan as it stood at this save (F6c) — restored
@@ -899,6 +931,7 @@ class ExerciseService : Service() {
             sessionClientId = sessionClientId,
             startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs,
             activityType = activityType,
+            title = snapshot.optString("title").ifEmpty { null },
             template = template,
             exerciseIndex = exerciseIndex,
             sets = sets,
@@ -983,6 +1016,12 @@ class ExerciseService : Service() {
         const val EXTRA_RPE = "rpe"
         const val EXTRA_TEMPLATE_JSON = "templateJson"
 
+        /** The tapped cardio row's own pre-localized activity name — what the
+         * session's header shows (`SessionStateHolder.onStandaloneStarted`'s
+         * `title`). Absent for a strength start, which takes its header from
+         * the template instead. */
+        const val EXTRA_TITLE = "title"
+
         fun startIntent(context: Context, sessionClientId: String, activityType: String? = null) =
             Intent(context, ExerciseService::class.java).apply {
                 action = ACTION_START
@@ -1005,11 +1044,17 @@ class ExerciseService : Service() {
          * 49-watch-f6b-template-sync-plan.md §3.3, T6). [activityType] is the
          * cardio counterpart — `MainActivity`'s `CardioRow` tap passes this
          * instead of [templateJson], never both. */
-        fun startStandaloneIntent(context: Context, templateJson: String? = null, activityType: String? = null) =
+        fun startStandaloneIntent(
+            context: Context,
+            templateJson: String? = null,
+            activityType: String? = null,
+            title: String? = null,
+        ) =
             Intent(context, ExerciseService::class.java).apply {
                 action = ACTION_START_STANDALONE
                 templateJson?.let { putExtra(EXTRA_TEMPLATE_JSON, it) }
                 activityType?.let { putExtra(EXTRA_ACTIVITY_TYPE, it) }
+                title?.let { putExtra(EXTRA_TITLE, it) }
             }
 
         /** Entry point for the End button in standalone mode (S17). [rpe] is

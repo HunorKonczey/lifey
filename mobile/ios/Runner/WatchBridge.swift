@@ -253,6 +253,14 @@ final class WatchBridge: NSObject {
     lastContext["version"] = version
     lastContext["entries"] = (sanitizedForPropertyList(entries) as? [Any]) ?? []
     lastContext["allCardio"] = (sanitizedForPropertyList(allCardio) as? [Any]) ?? []
+    // The account's unit setting, for the distances a *watch-started* cardio
+    // session formats on the watch itself — nothing else on this channel
+    // needs it, and it changes for the same reason the pre-localized titles
+    // do (see `WatchQuickStartPayload.unitSystem`). Absent on an older Dart
+    // build; the key is then simply left as-is rather than cleared.
+    if let unitSystem = args["unitSystem"] as? String {
+      lastContext["unitSystem"] = unitSystem
+    }
     lastContext["syncedAtEpochMs"] = syncedAtEpochMs
     try? WCSession.default.updateApplicationContext(lastContext)
     result(nil)

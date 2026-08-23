@@ -217,11 +217,16 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         // Dart build that predates it still syncs its `entries`.
         @Suppress("UNCHECKED_CAST")
         val allCardio = args["allCardio"] as? List<Map<*, *>> ?: emptyList()
+        // The account's unit setting, for the distances a *watch-started*
+        // cardio session formats on the watch itself (see
+        // `WatchQuickStartPayload.unitSystem`). Null on an older Dart build;
+        // the watch then keeps whatever it already knew.
+        val unitSystem = args["unitSystem"] as? String
 
-        pushTemplates(version, syncedAtEpochMs, entries, allCardio)
+        pushTemplates(version, syncedAtEpochMs, entries, allCardio, unitSystem)
         sendMessage(
             COMMAND_TEMPLATE_SYNC,
-            templateSyncMessagePayload(version, syncedAtEpochMs, entries, allCardio),
+            templateSyncMessagePayload(version, syncedAtEpochMs, entries, allCardio, unitSystem),
         )
         result.success(null)
     }
@@ -273,12 +278,14 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         syncedAtEpochMs: Long,
         entries: List<Map<*, *>>,
         allCardio: List<Map<*, *>>,
+        unitSystem: String?,
     ): ByteArray {
         val json = JSONObject().apply {
             put("version", version)
             put("syncedAtEpochMs", syncedAtEpochMs)
             put("entries", entries.toJsonValue())
             put("allCardio", allCardio.toJsonValue())
+            putOpt("unitSystem", unitSystem)
         }
         return json.toString().toByteArray()
     }
@@ -328,6 +335,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         syncedAtEpochMs: Long,
         entries: List<Map<*, *>>,
         allCardio: List<Map<*, *>>,
+        unitSystem: String?,
     ) {
         executor.execute {
             val putDataMapRequest =
@@ -348,6 +356,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                         "allCardioJson",
                         (allCardio.toJsonValue() as JSONArray).toString(),
                     )
+                    unitSystem?.let { dataMap.putString("unitSystem", it) }
                 }
             val putDataRequest = putDataMapRequest.asPutDataRequest().setUrgent()
             try {

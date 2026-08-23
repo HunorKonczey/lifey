@@ -233,6 +233,12 @@ class PhoneListenerService : WearableListenerService() {
             json.optJSONArray("allCardio")?.let {
                 StandaloneSessionStore.saveAllCardio(this, it.toString())
             }
+            // The phone's unit setting, for the distances this watch measures
+            // itself (`localCardioMetrics` in `ActiveWorkoutScreen`). Same
+            // "only when actually present" rule as `allCardio` above.
+            json.optString("unitSystem").ifEmpty { null }?.let {
+                StandaloneSessionStore.saveUnitSystem(this, it)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "applyTemplateSyncMessage failed to parse payload", e)
         }
@@ -252,6 +258,7 @@ class PhoneListenerService : WearableListenerService() {
         // Same "absent means an older phone build, not an empty list" rule as
         // the message path above.
         map.getString("allCardioJson")?.let { StandaloneSessionStore.saveAllCardio(this, it) }
+        map.getString("unitSystem")?.let { StandaloneSessionStore.saveUnitSystem(this, it) }
     }
 
     /**

@@ -101,17 +101,22 @@ class MainActivity : ComponentActivity() {
                                         ),
                                     )
                                 },
-                                onCardioTapped = { activityType ->
+                                onCardioTapped = { activityType, title ->
                                     // Same re-check-right-before-starting
                                     // reasoning as the two branches above
                                     // (docs/cardio/55-cardio-watch-plan.md
-                                    // §5/§7 W-8, C5.7a).
+                                    // §5/§7 W-8, C5.7a). [title] is the row's
+                                    // own pre-localized activity name, handed
+                                    // straight through so the session's header
+                                    // reads "Walking" rather than the generic
+                                    // STRENGTH label.
                                     requestSensorPermissionsIfNeeded()
                                     ContextCompat.startForegroundService(
                                         this@MainActivity,
                                         ExerciseService.startStandaloneIntent(
                                             this@MainActivity,
                                             activityType = activityType,
+                                            title = title,
                                         ),
                                     )
                                 },

@@ -659,6 +659,14 @@ data class StandalonePrefill(
 data class LiveMetrics(
     val heartRateBpm: Double? = null,
     val activeCalories: Double? = null,
+    /** Health Services' `DATA_TYPE_DISTANCE_TOTAL` for this session, in
+     * metres — null for a STRENGTH session and for a cardio one that doesn't
+     * request the type at all (GAME), or before the first sample. Published
+     * here, not just kept inside `ExerciseService` for the closing payload,
+     * because a **watch-started** cardio session formats its own metrics
+     * page from it (`localCardioMetrics` in `ActiveWorkoutScreen`): there is
+     * no phone pushing pre-formatted strings into a standalone session. */
+    val distanceMeters: Double? = null,
     val startedAtElapsedRealtimeMs: Long? = null,
     /** Mirrors `ExerciseUpdate.exerciseStateInfo.state.isPaused` — true for
      * both `USER_PAUSED` and `AUTO_PAUSED` (docs/40-watch-app-plan.md §12.1
@@ -922,6 +930,7 @@ object SessionStateHolder {
         startedAtElapsedRealtimeMs: Long,
         template: StandaloneTemplate? = null,
         activityType: String? = null,
+        title: String? = null,
     ) {
         _phase.value = SessionPhase.ACTIVE
         _metadata.update {
@@ -931,6 +940,16 @@ object SessionStateHolder {
                 standaloneTemplate = template,
                 kind = if (activityType != null) "CARDIO" else "STRENGTH",
                 cardioActivityType = activityType,
+                // The picker row's own pre-localized name ("Walking"/"Séta"),
+                // which is what `activeHeaderLabel` shows. Without it a
+                // watch-started cardio session fell through to the generic
+                // `active_header_label`, so a walk announced itself as
+                // **STRENGTH** in its own header. This watch holds no
+                // activity-type dictionary of its own by design (docs/cardio/
+                // 55-cardio-watch-plan.md §3.2 — the phone pre-localizes
+                // every title it syncs), so the name comes from the tapped
+                // row rather than a lookup here.
+                title = title,
             )
         }
         _liveMetrics.update { it.copy(startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs) }
@@ -961,8 +980,9 @@ object SessionStateHolder {
         sets: List<StandaloneSet>,
         sessionPlan: List<StandaloneTemplateExercise>? = null,
         // docs/cardio/55-cardio-watch-plan.md §5/§7 W-8, C5.7a — see
-        // [onStandaloneStarted]'s identical parameter.
+        // [onStandaloneStarted]'s identical parameters.
         activityType: String? = null,
+        title: String? = null,
     ) {
         if (_phase.value != SessionPhase.IDLE) return
         _phase.value = SessionPhase.ACTIVE
@@ -976,6 +996,9 @@ object SessionStateHolder {
                 sessionPlanExercises = sessionPlan,
                 kind = if (activityType != null) "CARDIO" else "STRENGTH",
                 cardioActivityType = activityType,
+                // …or a recovered walk would come back headed "STRENGTH" —
+                // see [onStandaloneStarted].
+                title = title,
             )
         }
         _liveMetrics.update { it.copy(startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs) }
@@ -1192,6 +1215,12 @@ object SessionStateHolder {
 
     fun onCalories(kcal: Double) {
         _liveMetrics.update { it.copy(activeCalories = kcal) }
+    }
+
+    /** Health Services' running distance total for this session — see
+     * [LiveMetrics.distanceMeters]. */
+    fun onDistanceMeasured(meters: Double) {
+        _liveMetrics.update { it.copy(distanceMeters = meters) }
     }
 
     fun onPausedChanged(isPaused: Boolean) {
