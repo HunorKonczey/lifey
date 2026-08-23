@@ -187,29 +187,23 @@ func cardioActivityTint(for activityType: String) -> Color {
 /// The cardio counterpart of `ActiveWorkoutView`'s STRENGTH `TabView` — two
 /// pages only (`CardioMetricsPage`, then the reused `ControlsPage`), no
 /// crown-driven page indicator beyond what `.tabViewStyle(.page)` draws on
-/// its own. `onCourt` lives here, not inside `CardioMetricsPage` itself, so
-/// swiping to `ControlsPage` and back doesn't reset it (a fresh `@State` in
-/// a page `TabView` re-creates on reappear the same way `ActiveWorkoutView`'s
-/// own `showExerciseList`/`selectedPage` are already hoisted to their
-/// parent for exactly this reason).
+/// its own.
 ///
-/// **`onCourt` is watch-local only** — not sent to the phone, not read from
-/// it (docs/cardio/59-cardio-implementation-plan.md's C5.5 progress note).
-/// This mirrors `CardioSessionScreen._onCourt`'s *own*, already-shipped
-/// design on the phone side (C2.4): "Local-only... never synced, never read
-/// back" — a benched *phone*-mastered session doesn't actually change
-/// anything about what `WorkoutManager.cardioMetrics` receives, so toggling
-/// this here only switches which of AW 19/AW 20's two layouts is on screen,
-/// not any real gross-vs-playing-time accounting (there is no separate
-/// ticking checkpoint for gross time to switch between, see
-/// `CardioActiveMetrics`'s own doc). Making the toggle **actually** pause
-/// this watch's contribution to the session's playing time — and telling the
-/// phone about it — is `C5.7`'s "GAME pályán/padon kapcsoló kétirányú
-/// szinkronja" (docs/cardio/55-cardio-watch-plan.md §7, W-9).
+/// **`onCourt` is two-way synced** (docs/cardio/55-cardio-watch-plan.md §7,
+/// W-9) and therefore lives on `WorkoutManager`, not in a view-local
+/// `@State`: a tap here reaches the phone (`PhoneConnector.sendCourtChanged`
+/// → `CardioSessionScreen._setOnCourt`), and the phone's own switch reaches
+/// this screen on its next state push. It is a real accounting switch on
+/// both sides now — benched minutes stop counting towards playing time,
+/// while gross time keeps running — not just a choice between AW 19's and
+/// AW 20's layouts.
 struct CardioActiveContent: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   @State private var selectedPage = 0
-  @State private var onCourt = true
+  /// Read from `WorkoutManager`, not a `@State` of this view's own: the phone
+  /// shows the same switch and either side can flip it (W-9), so the state
+  /// has to live where a pushed update can reach it too.
+  private var onCourt: Bool { workoutManager.isOnCourt }
 
   /// AW 20's edge border: the watch equivalent of the phone's top rail
   /// (M07/M09) — "csuklóemeléskor, fél másodperc alatt is látszik, hogy a
@@ -223,7 +217,7 @@ struct CardioActiveContent: View {
       let isCompact = DynamicSizing.isCompact(width: geometry.size.width)
       let padding = geometry.size.width * DynamicSizing.screenPaddingFraction
       TabView(selection: $selectedPage) {
-        CardioMetricsPage(isCompact: isCompact, padding: padding, onCourt: $onCourt).tag(0)
+        CardioMetricsPage(isCompact: isCompact, padding: padding).tag(0)
         ControlsPage(isCompact: isCompact, padding: padding, onOpenExerciseList: {}).tag(1)
       }
       .tabViewStyle(.page)
@@ -254,8 +248,8 @@ struct CardioMetricsPage: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
   let padding: CGFloat
-  @Binding var onCourt: Bool
 
+  private var onCourt: Bool { workoutManager.isOnCourt }
   private var activityType: String { workoutManager.cardioActivityType ?? "OTHER_CARDIO" }
   private var family: CardioActivityFamily { workoutManager.cardioFamily ?? .distance }
 
@@ -263,7 +257,7 @@ struct CardioMetricsPage: View {
     TimelineView(.periodic(from: .now, by: 1)) { _ in
       Group {
         if family == .game {
-          GameMetricsContent(isCompact: isCompact, activityType: activityType, onCourt: $onCourt)
+          GameMetricsContent(isCompact: isCompact, activityType: activityType)
         } else {
           DistanceMachineMetricsContent(isCompact: isCompact, family: family, activityType: activityType)
         }
@@ -359,13 +353,14 @@ private struct DistanceMachineMetricsContent: View {
 /// `DISTANCE`, so there's no swap to reason about here), a single "bruttó"
 /// box (GAME's `tertiaryValue` is a placeholder the phone never fills — see
 /// `CardioLiveMetrics`'s Dart doc — so only `secondaryLabel`/`Value` renders),
-/// and the pályán/padon toggle. See `CardioActiveContent`'s doc for why
-/// [onCourt] is watch-local only.
+/// and the pályán/padon toggle. See `CardioActiveContent`'s doc for where
+/// `onCourt` lives and why.
 private struct GameMetricsContent: View {
   @ObservedObject private var workoutManager = WorkoutManager.shared
   let isCompact: Bool
   let activityType: String
-  @Binding var onCourt: Bool
+
+  private var onCourt: Bool { workoutManager.isOnCourt }
 
   private var tint: Color { onCourt ? cardioActivityTint(for: activityType) : LifeyColors.secondary }
   private var heroFont: Font {
@@ -414,7 +409,7 @@ private struct GameMetricsContent: View {
   }
 
   private var toggleButton: some View {
-    Button(action: { onCourt.toggle() }) {
+    Button(action: { workoutManager.setOnCourt(!onCourt) }) {
       HStack(spacing: 10) {
         Image(systemName: onCourt ? "figure.seated.side.right" : "figure.run")
           .font(.system(size: isCompact ? 22 : 26))

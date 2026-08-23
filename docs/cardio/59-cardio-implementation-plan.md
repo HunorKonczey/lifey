@@ -4364,3 +4364,69 @@ LifeyWatch -sdk watchsimulator` **BUILD SUCCEEDED**; `flutter build ios --no-cod
 **Nyitva marad** (tudatosan, eszközös próbát igényel): a GAME „pályán/padon" kapcsoló kétirányú
 szinkronja ([55 §7](55-cardio-watch-plan.md) **W-9**) — standalone cardióban a bruttó és a játékidő
 egyelőre ugyanaz, ezért a bruttó doboz ilyenkor nem is jelenik meg.
+
+---
+
+## C5.8 kész (2026-08-23) — W-9: a `GAME` pályán/padon kapcsoló kétirányú szinkronja
+
+A [55 §7](55-cardio-watch-plan.md) utolsó nyitott C5-ös lépése, felhasználói jelzésre: *„foci/kosárnál
+az, hogy court vagy benchen vagyok, nincs szinkronban az órán és a telón."*
+
+### Miért nem volt szinkronban — két külön hiány
+
+**1. A kapcsoló állapota sehol nem utazott.** Mindkét oldalon képernyő-lokális állapot volt
+(`CardioSessionScreen._onCourt` „Local-only… never synced, never read back", és az órákon egy
+`@State`/`remember`), tehát a két kapcsoló egymástól függetlenül állt.
+
+**2. Az órai játékidő padon is ketyegett tovább** — két okból:
+- *telefon-vezérelt* sessionnél az órák a `paused` mezőt nézték a fagyasztáshoz, az viszont csak a
+  „Meccs szünet"-et jelenti; a padra ülés a telefonon a `movingSinceEpochMs` nullázásával fagyaszt,
+  amit az órák nem olvastak;
+- *óráról indított* (standalone) sessionnél az óra a saját játékidejét egyszerűen az eltelt időből
+  számolta, pad-elszámolás nélkül (a W-8 lépés ezt még nem fedte).
+
+### A javítás
+
+**Telefon → óra.** A `CardioLiveMetrics` új `onCourt` mezőt visz (GAME-nél; máshol null), és az órai
+dekóderek a fagyasztást mostantól a **telefon saját válaszából** olvassák: `paused` **vagy** hiányzó
+`movingSinceEpochMs` → áll az óra. (A hiányzó kulcs *maga* a fagyott állapot: a telefon nullázza, a
+hidak pedig a nullokat eldobják.) Így a telón padra ülve az órán is megáll a játékidő, és a képernyő
+is átvált a padon-elrendezésre.
+
+**Óra → telefon.** Új `courtChanged` üzenet (`sessionClientId` + `onCourt`) mindkét natív hídon
+átvezetve, Dart oldalon `WatchCourtChanged` eseményként, amit a `CardioSessionScreen` ugyanabba a
+`_setOnCourt`-ba fut bele, mint a saját gombja — egy helyen marad a fagyasztás/folytatás aritmetika
+és a perzisztálás, függetlenül attól, melyik eszközön koppintottak. Csak `GAME` családra: egy futás
+mozgás-óráját nem fagyaszthatja meg egy téves üzenet.
+
+**Visszhang-védelem.** Egy lokális koppintás után 5 másodpercig figyelmen kívül marad az azzal
+*ellentétes* telefon-push (a koppintás előtt épült állapot), különben a kapcsoló láthatóan
+visszaugrana egy pillanatra. Az első egyetértő push törli a várakozást — és a timeout is, hogy egy
+telefon által elutasított koppintás (pl. meccs-szünet közben) ne ragassza be az órát.
+
+**Az óra saját pad-elszámolása.** Standalone GAME sessionnél az óra mostantól ugyanolyan
+`base + horgony` párost vezet, mint a telefon (`movingSeconds`/`movingSinceEpochMs`): a padon töltött
+percek nem számítanak játékidőbe, a bruttó doboz viszont a fali órát mutatja tovább. Ez túléli a
+folyamat halálát is (a recovery-snapshot része), és a **záró payload** immár valódi `movingSeconds`-t
+küld GAME-nél — eddig szándékosan kimaradt, és a telefon a bruttó wall-clockra esett vissza, ami egy
+lecserélt játékosnál egyszerűen hamis.
+
+**Érintett fájlok:** `workout_session_notifier_service.dart`, `cardio_session_screen.dart`,
+`watch_workout_service.dart`; `Runner/WatchBridge.swift`, `app/.../WatchBridge.kt`;
+`LifeyWatch/{WorkoutManager,PhoneConnector,StandaloneSessionPayload}.swift`,
+`LifeyWatch/Views/ActiveWorkoutView.swift`, `Localizable.xcstrings`;
+`wear/.../{SessionStateHolder,SummarySender,ExerciseService,PhoneListenerService}.kt`,
+`ui/ActiveWorkoutScreen.kt`, `res/values{,-en}/strings.xml`.
+
+**Tesztek:** `cardio_session_screen_game_test.dart` +3 (az óra Bench-koppintása itt is fagyaszt és
+azonnal vissza is szinkronizál; másik sessionre szóló üzenet nem hat; a kipusholt állapot viszi a
+kapcsoló állását), `watch_workout_service_test.dart` +2 (a `courtChanged` huzalon, hiányzó mezővel is),
+`workout_session_notifier_service_test.dart` payload-alak frissítve.
+
+**Ellenőrzés:** `flutter analyze` tiszta, `flutter test` **1395/1395 zöld**; `xcodebuild -target
+LifeyWatch -sdk watchsimulator` **BUILD SUCCEEDED**; `flutter build ios --no-codesign` **✓ Built**;
+`:wear:compileDebugKotlin` + `:app:compileDebugKotlin` **BUILD SUCCESSFUL**. Eszközös végpróba
+(W-10) hátravan — ez a lépés két készülék együttes viselkedéséről szól, amit szimulátorpáron nem
+lehet érdemben lejátszani.
+
+**Ezzel a C5 (Óra) iteráció W-1…W-9 lépései mind megvannak.**

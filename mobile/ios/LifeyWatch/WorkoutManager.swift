@@ -126,6 +126,13 @@ struct CardioActiveMetrics: Equatable {
   let tertiaryLabel: String?
   let tertiaryValue: String?
 
+  /// GAME only — whether the phone says the player is on court or on the
+  /// bench (`CardioLiveMetrics.onCourt`, W-9). True for every other family
+  /// and for a phone build that predates the field, which is what keeps a
+  /// non-GAME session's screens exactly as they were.
+  let onCourt: Bool
+
+
   /// The moving/game-time checkpoint the ticking slot counts up from — plain
   /// relative seconds, so (unlike the Dart source's `movingSinceEpochMs`,
   /// which this struct deliberately drops) it's safe to use regardless of
@@ -318,6 +325,37 @@ final class WorkoutManager: NSObject, ObservableObject {
   /// [CardioActiveMetrics].
   @Published private(set) var cardioMetrics: CardioActiveMetrics?
 
+  /// GAME only — whether the player is on court or on the bench
+  /// (docs/cardio/55-cardio-watch-plan.md §7, W-9). **Not** a view-local
+  /// `@State` any more: the same switch exists on the phone, and the two
+  /// have to agree, so it lives where both directions can reach it — the
+  /// wrist's own tap (`setOnCourt`) and the phone's pushed state
+  /// (`CardioActiveMetrics.onCourt`).
+  @Published private(set) var isOnCourt = true
+
+  /// The **standalone** session's own playing-time accumulator: seconds
+  /// banked on court so far, plus (while on court) the time since
+  /// `localMovingAnchorUptime`. A phone-mastered session takes both numbers
+  /// from the phone instead — it owns that session's clock — so these are
+  /// only ever read through [localCardioMetrics].
+  ///
+  /// The pair mirrors the phone's own `movingSeconds`/`movingSinceEpochMs`
+  /// exactly (frozen anchor = benched), which is what lets a benched watch
+  /// session report real playing time when it closes instead of the
+  /// wall-clock fallback the phone would otherwise compute.
+  private var localMovingSecondsBase = 0
+  private var localMovingAnchorUptime: TimeInterval?
+
+  /// A local court/bench toggle the phone hasn't echoed back yet, and when it
+  /// was made. State pushes built *before* the tap arrived still carry the
+  /// old value; applying one would visibly flip the switch back for a second.
+  /// The first push that agrees clears this, and so does
+  /// [pendingCourtEchoWindow] passing — so a toggle the phone legitimately
+  /// refused (it guards on paused/finished) can't leave the watch stuck.
+  private var pendingOnCourt: Bool?
+  private var pendingOnCourtUptime: TimeInterval?
+  private static let pendingCourtEchoWindow: TimeInterval = 5
+
   var isCardio: Bool { sessionKind == "CARDIO" }
   var cardioFamily: CardioActivityFamily? { cardioActivityType.map(CardioActivityFamily.init(activityType:)) }
 
@@ -329,6 +367,60 @@ final class WorkoutManager: NSObject, ObservableObject {
     guard let metrics = activeCardioMetrics else { return 0 }
     guard let anchor = metrics.movingAnchorUptime else { return metrics.movingSecondsBase }
     return metrics.movingSecondsBase + Int((ProcessInfo.processInfo.systemUptime - anchor).rounded(.down))
+  }
+
+  /// The wrist's own pályán/padon tap (W-9) — moves this watch's state right
+  /// away and tells the phone, which runs its own `_setOnCourt` and answers
+  /// with the same value on its next push. GAME only; a no-op everywhere
+  /// else, so the toggle can't exist on a screen that has no bench.
+  func setOnCourt(_ onCourt: Bool) {
+    guard isCardio, cardioFamily == .game, isOnCourt != onCourt else { return }
+    applyOnCourt(onCourt)
+    pendingOnCourt = onCourt
+    pendingOnCourtUptime = ProcessInfo.processInfo.systemUptime
+    if let sessionClientId {
+      PhoneConnector.shared.sendCourtChanged(sessionClientId: sessionClientId, onCourt: onCourt)
+    }
+    // Survives a process death mid-match, like every other standalone field.
+    if isStandalone { saveActiveSnapshot() }
+  }
+
+  /// The phone's own answer, from a state push. Ignored only while it
+  /// contradicts a still-unconfirmed local tap — see [pendingOnCourt].
+  private func applyPhoneOnCourt(_ onCourt: Bool) {
+    if let pending = pendingOnCourt {
+      let age = ProcessInfo.processInfo.systemUptime - (pendingOnCourtUptime ?? 0)
+      let stillWaiting = pending != onCourt && age <= Self.pendingCourtEchoWindow
+      if !stillWaiting {
+        pendingOnCourt = nil
+        pendingOnCourtUptime = nil
+      }
+      if stillWaiting { return }
+    }
+    applyOnCourt(onCourt)
+  }
+
+  /// Banks or reopens the local playing-time stint. Shared by both
+  /// directions so the accumulator can't drift from what the screen shows.
+  private func applyOnCourt(_ onCourt: Bool) {
+    guard isOnCourt != onCourt else { return }
+    let now = ProcessInfo.processInfo.systemUptime
+    if onCourt {
+      localMovingAnchorUptime = now
+    } else {
+      if let anchor = localMovingAnchorUptime {
+        localMovingSecondsBase += Int((now - anchor).rounded(.down))
+      }
+      localMovingAnchorUptime = nil
+    }
+    isOnCourt = onCourt
+  }
+
+  /// This watch's own playing time so far — banked stints plus the open one.
+  private var localPlayingSeconds: Int {
+    guard let anchor = localMovingAnchorUptime else { return localMovingSecondsBase }
+    return localMovingSecondsBase
+      + Int((ProcessInfo.processInfo.systemUptime - anchor).rounded(.down))
   }
 
   /// What the cardio pages actually render: the phone's pushed metrics when
@@ -387,6 +479,7 @@ final class WorkoutManager: NSObject, ObservableObject {
         secondaryValue: hasDistance ? duration : "—",
         tertiaryLabel: String(localized: "cardio_pace_label"),
         tertiaryValue: formatPace(meters: meters, seconds: Int(elapsed), units: units) ?? "—",
+        onCourt: true,
         movingSecondsBase: 0,
         movingAnchorUptime: anchor)
     case .machine:
@@ -397,18 +490,23 @@ final class WorkoutManager: NSObject, ObservableObject {
         secondaryValue: nil,
         tertiaryLabel: nil,
         tertiaryValue: nil,
+        onCourt: true,
         movingSecondsBase: 0,
         movingAnchorUptime: anchor)
     case .game, .none:
+      // The one family whose playing time is *not* the elapsed time: benched
+      // minutes don't count (W-9), so the hero counts from this watch's own
+      // accumulator, and the gross box next to it keeps the wall clock.
       return CardioActiveMetrics(
         primaryLabel: String(localized: "cardio_playing_time_label"),
-        primaryValue: duration,
-        secondaryLabel: nil,
-        secondaryValue: nil,
+        primaryValue: formatCardioDuration(localPlayingSeconds),
+        secondaryLabel: String(localized: "cardio_gross_time_label"),
+        secondaryValue: duration,
         tertiaryLabel: nil,
         tertiaryValue: nil,
-        movingSecondsBase: 0,
-        movingAnchorUptime: anchor)
+        onCourt: isOnCourt,
+        movingSecondsBase: localMovingSecondsBase,
+        movingAnchorUptime: localMovingAnchorUptime)
     }
   }
 
@@ -1280,6 +1378,11 @@ final class WorkoutManager: NSObject, ObservableObject {
     self.session = session
     self.builder = builder
     self.startedAt = now
+    // Opens the first on-court stint for a standalone GAME session's own
+    // playing-time accumulator (W-9); harmless for every other family and for
+    // a phone-mastered session, neither of which ever reads it.
+    localMovingSecondsBase = 0
+    localMovingAnchorUptime = ProcessInfo.processInfo.systemUptime
     startCadenceCollection(enabled: configuration.activityType == .running, from: now, steps: 0)
     self.phase = .active
     notifyStartedOnWatchIfNeeded()
@@ -1418,6 +1521,13 @@ final class WorkoutManager: NSObject, ObservableObject {
         phoneSetsDone = nil
         phoneSetsTotal = nil
       }
+      // The phone's own court/bench state for a session this watch started
+      // and the phone joined (W-9) — deliberately applied inside the
+      // standalone branch, unlike everything else the phone pushes about a
+      // watch-owned session: this one isn't a measurement the watch already
+      // knows better, it's the user's own switch, and it can be flipped from
+      // either screen.
+      if let cardio { applyPhoneOnCourt(cardio.onCourt) }
       // The exercise this watch is standing on was removed from the session on
       // the phone: leave it whatever else this payload said. Deliberately
       // outside the branch above (the phone reports no `setsDoneExerciseIndex`
@@ -1468,6 +1578,9 @@ final class WorkoutManager: NSObject, ObservableObject {
     self.sessionKind = kind ?? self.sessionKind
     self.cardioActivityType = activityType ?? self.cardioActivityType
     self.cardioMetrics = cardio
+    // W-9 — the phone's court/bench state drives this watch's own switch, so
+    // both screens show the same half of the match.
+    if let cardio { applyPhoneOnCourt(cardio.onCourt) }
     notifyStartedOnWatchIfNeeded()
   }
 
@@ -1834,7 +1947,11 @@ final class WorkoutManager: NSObject, ObservableObject {
       // 59-cardio-implementation-plan.md's C5.7a note).
       kind: isCardio ? "CARDIO" : nil,
       activityType: cardioActivityType,
-      cardio: cardioSummaryPayload())
+      cardio: cardioSummaryPayload(),
+      // GAME only — see the field's doc. This is the one family where the
+      // wrist knows something the phone's wall-clock fallback doesn't: which
+      // minutes were played and which were spent on the bench (W-9).
+      movingSeconds: cardioFamily == .game ? localPlayingSeconds : nil)
     StandaloneSessionStore.shared.append(payload)
     StandaloneSessionStore.shared.clearActive()
     PhoneConnector.shared.flushPendingStandaloneSessions()
@@ -2026,6 +2143,11 @@ final class WorkoutManager: NSObject, ObservableObject {
     sessionKind = "STRENGTH"
     cardioActivityType = nil
     cardioMetrics = nil
+    isOnCourt = true
+    localMovingSecondsBase = 0
+    localMovingAnchorUptime = nil
+    pendingOnCourt = nil
+    pendingOnCourtUptime = nil
     lastDistanceMeters = nil
     clearCadenceCollection()
     isStandalone = false
@@ -2071,7 +2193,14 @@ final class WorkoutManager: NSObject, ObservableObject {
         sets: standaloneSets,
         kind: isCardio ? "CARDIO" : nil,
         activityType: cardioActivityType,
-        title: title))
+        title: title,
+        // W-9 — a recovered match comes back on the same side of the switch,
+        // with the minutes it had already played.
+        movingSecondsBase: localMovingSecondsBase,
+        movingSinceEpochMs: localMovingAnchorUptime.map { anchor in
+          Int64((Date().timeIntervalSince1970
+            - (ProcessInfo.processInfo.systemUptime - anchor)) * 1000)
+        }))
   }
 
   /// Reattaches to a still-running standalone `HKWorkoutSession` after a
@@ -2110,6 +2239,18 @@ final class WorkoutManager: NSObject, ObservableObject {
     // …and with the name the picker row gave it, or the header would come
     // back reading "STRENGTH" for a recovered walk (see `startStandalone`).
     title = meta.title
+    // W-9: the playing-time accumulator and which side of the switch this
+    // match was on — an absent `movingSinceEpochMs` *is* the benched state,
+    // exactly as it is on the phone.
+    localMovingSecondsBase = meta.movingSecondsBase ?? 0
+    if let since = meta.movingSinceEpochMs {
+      let elapsedSinceStint = Date().timeIntervalSince1970 - Double(since) / 1000
+      localMovingAnchorUptime = ProcessInfo.processInfo.systemUptime - max(0, elapsedSinceStint)
+      isOnCourt = true
+    } else if meta.movingSecondsBase != nil {
+      localMovingAnchorUptime = nil
+      isOnCourt = false
+    }
     lastDistanceMeters = meta.activityType.flatMap { activityType in
       let family = CardioActivityFamily(activityType: activityType)
       let type: HKQuantityType?

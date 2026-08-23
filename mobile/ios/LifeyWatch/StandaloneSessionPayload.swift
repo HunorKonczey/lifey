@@ -80,6 +80,12 @@ struct StandaloneSessionPayload: Codable, Equatable {
   var kind: String?
   var activityType: String?
   var cardio: CardioSummaryPayload?
+  /// Playing time in seconds, for a GAME session that actually tracked the
+  /// pályán/padon switch on the wrist (W-9) — benched minutes excluded.
+  /// **Absent for every other session**, where the phone's own fallback
+  /// (`endedAtEpochMs - startedAtEpochMs`) is exactly right and this would
+  /// only be a second, weaker way to say the same thing.
+  var movingSeconds: Int?
 }
 
 /// The live-bridging counterpart of `StandaloneSessionPayload` — a snapshot
@@ -170,6 +176,13 @@ struct StandaloneActiveSessionMeta: Codable, Equatable {
   /// take their header from [template] instead. Optional so a snapshot
   /// written by an older build still decodes.
   var title: String?
+  /// The GAME playing-time accumulator (W-9), in the same shape the phone
+  /// persists its own: seconds banked on court, plus the epoch instant the
+  /// current stint began — nil while benched, which is also how a recovered
+  /// session knows which side of the switch it was on. Both nil for every
+  /// non-GAME session, where playing time is simply the elapsed time.
+  var movingSecondsBase: Int?
+  var movingSinceEpochMs: Int64?
 }
 
 /// One exercise of a synced template, exactly as the phone resolved it

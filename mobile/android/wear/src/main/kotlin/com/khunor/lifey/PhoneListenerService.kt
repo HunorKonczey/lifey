@@ -350,8 +350,20 @@ class PhoneListenerService : WearableListenerService() {
             secondaryValue = cardio.optString("secondaryValue").ifEmpty { null },
             tertiaryLabel = cardio.optString("tertiaryLabel").ifEmpty { null },
             tertiaryValue = cardio.optString("tertiaryValue").ifEmpty { null },
+            // Absent for every non-GAME family (and for a phone build that
+            // predates W-9) — "on court" is the state those screens have
+            // always rendered.
+            onCourt = cardio.optBoolean("onCourt", true),
             movingSecondsBase = cardio.optInt("movingSecondsBase"),
-            movingAnchorElapsedRealtimeMs = if (cardio.optBoolean("paused")) {
+            // The phone's own "is the playing clock running" answer: it nulls
+            // `movingSinceEpochMs` whenever the clock is frozen, and
+            // `JSONObject.put` omits a null, so an absent key *is* the frozen
+            // state. `paused` alone was not enough — it only covers a
+            // whole-session pause, so a **benched** GAME session (W-9) kept
+            // ticking on the wrist while it stood still on the phone.
+            movingAnchorElapsedRealtimeMs = if (
+                cardio.optBoolean("paused") || cardio.isNull("movingSinceEpochMs")
+            ) {
                 null
             } else {
                 SystemClock.elapsedRealtime()

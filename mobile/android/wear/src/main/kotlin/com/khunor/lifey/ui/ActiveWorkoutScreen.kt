@@ -318,10 +318,13 @@ private fun CardioActiveScreen() {
 
     var showEffortSelector by remember { mutableStateOf(false) }
     var effortRpe by remember { mutableIntStateOf(5) }
-    // Hoisted out of GameMetricsContent so W 19's edge border — the watch's
-    // answer to the phone's top rail (M07) — can be drawn around the whole
-    // screen, not just around the metrics column.
-    var onCourt by remember { mutableStateOf(true) }
+    // W 19's edge border — the watch's answer to the phone's top rail (M07)
+    // — is drawn around the whole screen, not just the metrics column, so
+    // this is read here rather than inside GameMetricsContent. It lives on
+    // `SessionStateHolder`, not in a `remember`: the phone shows the same
+    // switch and either side can flip it (docs/cardio/55-cardio-watch-plan.md
+    // §7, W-9).
+    val onCourt = metadata.isOnCourt
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = isCompactScreen(maxWidth)
@@ -356,7 +359,21 @@ private fun CardioActiveScreen() {
                 when (page) {
                     0 -> CardioMetricsPage(
                         metadata = metadata, liveMetrics = liveMetrics, isCompact = isCompact, maxWidth = maxWidth,
-                        onCourt = onCourt, onToggleCourt = { onCourt = !onCourt },
+                        onCourt = onCourt,
+                        onToggleCourt = {
+                            // Only a real change goes over the wire — the
+                            // holder answers whether this was one.
+                            if (SessionStateHolder.setOnCourt(!onCourt)) {
+                                val sessionClientId = metadata.sessionClientId
+                                if (sessionClientId != null) {
+                                    scope.launch {
+                                        SummarySender.sendCourtChanged(
+                                            context, sessionClientId, !onCourt,
+                                        )
+                                    }
+                                }
+                            }
+                        },
                     )
                     else -> ControlsPage(
                         exerciseName = display.name,
@@ -435,6 +452,7 @@ private fun CardioActiveScreen() {
  */
 @Composable
 private fun localCardioMetrics(
+    metadata: SessionMetadata,
     family: CardioActivityFamily,
     liveMetrics: LiveMetrics,
 ): CardioActiveMetrics? {
@@ -465,11 +483,18 @@ private fun localCardioMetrics(
             movingSecondsBase = 0,
             movingAnchorElapsedRealtimeMs = startedAt,
         )
+        // The one family whose playing time is *not* the elapsed time:
+        // benched minutes don't count (W-9), so the hero counts from this
+        // watch's own accumulator and the gross box next to it keeps the wall
+        // clock.
         CardioActivityFamily.GAME -> CardioActiveMetrics(
             primaryLabel = playingTimeLabel,
-            primaryValue = duration,
-            movingSecondsBase = 0,
-            movingAnchorElapsedRealtimeMs = startedAt,
+            primaryValue = formatCardioDuration(SessionStateHolder.localPlayingSeconds()),
+            secondaryLabel = stringResource(R.string.cardio_gross_time_label),
+            secondaryValue = duration,
+            onCourt = metadata.isOnCourt,
+            movingSecondsBase = metadata.localMovingSecondsBase,
+            movingAnchorElapsedRealtimeMs = metadata.localMovingAnchorElapsedRealtimeMs,
         )
     }
 }
@@ -518,7 +543,7 @@ private fun CardioMetricsPage(
 ) {
     val activityType = metadata.cardioActivityType ?: "OTHER_CARDIO"
     val family = metadata.cardioFamily ?: CardioActivityFamily.DISTANCE
-    val cardioMetrics = metadata.cardioMetrics ?: localCardioMetrics(family, liveMetrics)
+    val cardioMetrics = metadata.cardioMetrics ?: localCardioMetrics(metadata, family, liveMetrics)
 
     var movingSeconds by remember { mutableLongStateOf(0L) }
     LaunchedEffect(cardioMetrics) {
@@ -653,18 +678,15 @@ private fun DistanceMachineMetricsContent(
  * counterpart's doc — so only `secondaryLabel`/`Value` renders), and the
  * pályán/padon toggle.
  *
- * [onCourt] is **watch-local only** — not sent to the phone, not read from
- * it. This mirrors `CardioSessionScreen._onCourt`'s *own*, already-shipped
- * design on the phone side (C2.4): "Local-only... never synced, never read
- * back" — a benched *phone*-mastered session doesn't actually change
- * anything about what [metadata]'s `cardioMetrics` receives, so toggling this
- * only switches which layout is on screen, not any real gross-vs-playing-time
- * accounting (there is no separate ticking checkpoint for gross time to
- * switch between). Making the toggle **actually** pause this watch's
- * contribution to the session's playing time — and telling the phone about
- * it — is `C5.7`'s "GAME pályán/padon kapcsoló kétirányú szinkronja"
- * (docs/cardio/55-cardio-watch-plan.md §7, W-9). Mirrors iOS's identical
- * `CardioActiveContent`/`onCourt` choice.
+ * [onCourt] is **two-way synced** with the phone (docs/cardio/
+ * 55-cardio-watch-plan.md §7, W-9) and therefore lives on
+ * `SessionStateHolder`, not in a screen-local `remember`: a tap here reaches
+ * the phone (`SummarySender.sendCourtChanged` → `CardioSessionScreen
+ * ._setOnCourt`), and the phone's own switch reaches this screen on its next
+ * state push. It is a real accounting switch on both sides now — benched
+ * minutes stop counting towards playing time while gross time keeps running
+ * — not just a choice between W 19's and W 20's layouts. Mirrors iOS's
+ * identical `CardioActiveContent`/`isOnCourt` choice.
  */
 @Composable
 private fun GameMetricsContent(

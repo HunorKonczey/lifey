@@ -1064,6 +1064,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
           paused: _manuallyPaused,
           movingSecondsBase: _movingSeconds,
           movingSinceEpochMs: _movingSinceEpochMs,
+          // The watch shows the same pályán/padon toggle (W-9) — see
+          // [CardioLiveMetrics.onCourt].
+          onCourt: _onCourt,
         );
     }
   }
@@ -1322,6 +1325,19 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       case WatchEndRequested():
         if (event.sessionClientId != _clientId) return;
         unawaited(_finish());
+      case WatchCourtChanged():
+        // The wrist's own pályán/padon switch (W-9). Routed through the very
+        // same `_setOnCourt` the in-app toggle calls, so the clock arithmetic
+        // and the persistence live in one place regardless of which device
+        // the tap happened on — and its own guards (busy/finished/manually
+        // paused/already-there) apply to the watch too.
+        if (event.sessionClientId != _clientId) return;
+        // GAME only, even though no watch build sends it for anything else:
+        // `_setOnCourt` freezes the *moving* clock, and doing that to a run
+        // or a ride — which have no bench, and no way back to on-court from
+        // their own UI — would strand the session's own timer.
+        if (_family != ActivityFamily.game) return;
+        unawaited(_setOnCourt(event.onCourt));
       case WatchStartedOnWatch():
         if (event.sessionClientId != _clientId || !mounted) return;
         setState(() => _measuringOnWatch = true);

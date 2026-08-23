@@ -244,6 +244,22 @@
         }
       }
     },
+    "cardio_gross_time_label" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GROSS TIME"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BRUTTÓ IDŐ"
+          }
+        }
+      }
+    },
     "cardio_moving_time_label" : {
       "extractionState" : "stale",
       "localizations" : {

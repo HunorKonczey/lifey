@@ -103,6 +103,20 @@ final class PhoneConnector: NSObject {
     sendMessage(message)
   }
 
+  /// The wrist's GAME pályán/padon switch (docs/cardio/55-cardio-watch-plan.md
+  /// §7, W-9) — the phone runs its own `_setOnCourt` for it, which is what
+  /// actually freezes or resumes the session's playing time. Best-effort like
+  /// every `sendMessage` here: a lost one leaves the two screens disagreeing
+  /// until the next tap, which is exactly what it looked like before this
+  /// message existed, and never corrupts the session's own clock (the phone's
+  /// state is authoritative for a phone-mastered session, and the watch's own
+  /// local accounting for a standalone one).
+  func sendCourtChanged(sessionClientId: String, onCourt: Bool) {
+    sendMessage([
+      "type": "courtChanged", "sessionClientId": sessionClientId, "onCourt": onCourt,
+    ])
+  }
+
   /// The exercise picker's own pick in a **phone-mastered** session (F6c §7) —
   /// no set, just "this is the exercise I'm on now", so the phone's next state
   /// push (name, counts, stepper prefill) describes it. Best-effort like every
@@ -415,6 +429,13 @@ extension PhoneConnector: WCSessionDelegate {
       let paused = cardio["paused"] as? Bool,
       let movingSecondsBase = (cardio["movingSecondsBase"] as? NSNumber)?.intValue
     else { return nil }
+    // The phone's own "is the playing clock running" answer: it nulls
+    // `movingSinceEpochMs` whenever the clock is frozen, and the bridge
+    // strips nulls, so an absent key *is* the frozen state. `paused` alone
+    // was not enough — it only covers a whole-session pause, so a **benched**
+    // GAME session (W-9) kept ticking on the wrist while it stood still on
+    // the phone.
+    let isMoving = cardio["movingSinceEpochMs"] != nil
     return CardioActiveMetrics(
       primaryLabel: primaryLabel,
       primaryValue: primaryValue,
@@ -422,8 +443,11 @@ extension PhoneConnector: WCSessionDelegate {
       secondaryValue: cardio["secondaryValue"] as? String,
       tertiaryLabel: cardio["tertiaryLabel"] as? String,
       tertiaryValue: cardio["tertiaryValue"] as? String,
+      // Absent for every non-GAME family (and for a phone build that predates
+      // W-9) — "on court" is the state those screens have always rendered.
+      onCourt: cardio["onCourt"] as? Bool ?? true,
       movingSecondsBase: movingSecondsBase,
-      movingAnchorUptime: paused ? nil : ProcessInfo.processInfo.systemUptime)
+      movingAnchorUptime: (paused || !isMoving) ? nil : ProcessInfo.processInfo.systemUptime)
   }
 
   private func applyState(sessionClientId: String, title: String?, state: [String: Any]?) {

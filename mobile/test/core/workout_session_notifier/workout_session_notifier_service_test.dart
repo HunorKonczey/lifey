@@ -964,6 +964,9 @@ void main() {
           'paused': false,
           'movingSecondsBase': 1694,
           'movingSinceEpochMs': 1783075260000,
+          // GAME only (W-9); null here, and on the wire the native bridges
+          // strip it exactly like every other null above.
+          'onCourt': null,
         },
       });
     });

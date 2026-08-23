@@ -429,6 +429,9 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             "$MESSAGE_PATH_PREFIX/$COMMAND_EXERCISE_SELECTED" -> {
                 emitExerciseSelected(String(messageEvent.data))
             }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_COURT_CHANGED" -> {
+                emitCourtChanged(String(messageEvent.data))
+            }
             "$MESSAGE_PATH_PREFIX/$COMMAND_STANDALONE_SESSION" -> {
                 emitStandaloneSession(String(messageEvent.data))
             }
@@ -537,6 +540,26 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
 
     /** The wrist's exercise picker in a phone-mastered session — no set, just
      * "this is the exercise I'm on now" (F6c §7). */
+    /**
+     * The wrist's GAME pályán/padon switch (docs/cardio/55-cardio-watch-plan.md
+     * §7, W-9) — `CardioSessionScreen` runs its own `_setOnCourt` for it, so
+     * the freeze/resume arithmetic stays in one place no matter which device
+     * was tapped. Defaults to on-court for a malformed payload: the
+     * conservative half of the pair, since it only ever *resumes* a clock
+     * that the phone's own guards can stop again.
+     */
+    private fun emitCourtChanged(json: String) {
+        val payload = JSONObject(json)
+        val sessionClientId = payload.optString("sessionClientId").ifEmpty { return }
+        eventSink?.success(
+            mapOf(
+                "type" to "courtChanged",
+                "sessionClientId" to sessionClientId,
+                "onCourt" to payload.optBoolean("onCourt", true),
+            ),
+        )
+    }
+
     private fun emitExerciseSelected(json: String) {
         val payload = JSONObject(json)
         val exerciseId = payload.optString("exerciseId").ifEmpty { return }
@@ -722,6 +745,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_LOG_SET = "logSet"
         private const val COMMAND_LOG_SET_ACK = "logSetAck"
         private const val COMMAND_EXERCISE_SELECTED = "exerciseSelected"
+        private const val COMMAND_COURT_CHANGED = "courtChanged"
         private const val COMMAND_STANDALONE_SESSION = "standaloneSessionCompleted"
         private const val COMMAND_STANDALONE_ACK = "standaloneSessionAck"
         private const val COMMAND_STANDALONE_ADOPTED = "standaloneSessionAdopted"

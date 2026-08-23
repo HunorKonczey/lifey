@@ -188,6 +188,26 @@ class WatchExerciseSelected {
       );
 }
 
+/// The watch flipped the GAME "pályán/padon" switch (docs/cardio/
+/// 55-cardio-watch-plan.md §7, W-9) — the wrist half of a toggle both screens
+/// show. Handled by [CardioSessionScreen] while its instance for this
+/// [sessionClientId] is mounted, which then runs the *same* `_setOnCourt`
+/// the in-app switch does: benching freezes playing time, gross time keeps
+/// running, and the resulting state syncs straight back out on the next
+/// push. A no-op otherwise — a session with no live screen has no clock to
+/// freeze.
+class WatchCourtChanged {
+  const WatchCourtChanged({required this.sessionClientId, required this.onCourt});
+
+  final String sessionClientId;
+  final bool onCourt;
+
+  factory WatchCourtChanged.fromJson(Map<Object?, Object?> json) => WatchCourtChanged(
+        sessionClientId: json['sessionClientId'] as String,
+        onCourt: json['onCourt'] as bool? ?? true,
+      );
+}
+
 /// One set logged during a standalone (phone-less) session (docs/watch/
 /// 44-watch-f6-standalone-plan.md §4.1) — part of the batch a
 /// [WatchStandaloneSession] carries, unlike [WatchSetLogged]'s one-tap-at-a-time
@@ -454,6 +474,7 @@ class WatchWorkoutService {
   /// Emits [WatchWorkoutSummary], [WatchStartRejected], [WatchEndRequested],
   /// [WatchStartedOnWatch], [WatchReachabilityChanged], [WatchLiveMetrics],
   /// [WatchSetLogged], [WatchStandaloneSession], [WatchStandaloneAdoption],
+  /// [WatchCourtChanged],
   /// or a raw event-name `String` for anything not yet decoded — see
   /// docs/40-watch-app-plan.md §3. A no-op stream (never emits) when
   /// [isAvailable] is false.
@@ -485,6 +506,8 @@ class WatchWorkoutService {
         return WatchStandaloneAdoption.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
       case 'exerciseSelected':
         return WatchExerciseSelected.fromJson(map);
+      case 'courtChanged':
+        return WatchCourtChanged.fromJson(map);
       default:
         return (map['type'] as String?) ?? 'unknown';
     }

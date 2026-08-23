@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:lifey/core/local_db/app_database.dart';
@@ -7,6 +8,8 @@ import 'package:lifey/core/location/location_service_geolocator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/watch/watch_workout_service.dart';
+import 'package:lifey/core/workout_session_notifier/workout_session_notifier_service.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
@@ -157,10 +160,46 @@ AppDatabase _testDatabase() {
   return db;
 }
 
+/// The W-9 counterpart of [_RecordingSessionController]: drives watch events
+/// *into* the screen (the wrist's own pályán/padon tap) and records the state
+/// pushed back out, without touching the real MethodChannel.
+class _FakeWatchService extends WatchWorkoutService {
+  _FakeWatchService() : super(isAvailable: false);
+
+  final _events = StreamController<Object>.broadcast();
+  final updateCalls = <WorkoutSessionState>[];
+
+  @override
+  Stream<Object> get events => _events.stream;
+
+  @override
+  Future<void> startWorkout({
+    required String sessionClientId,
+    required String title,
+    required DateTime startedAt,
+    required WorkoutSessionState state,
+    String? activityType,
+    String? venue,
+  }) async {}
+
+  @override
+  Future<void> updateState({
+    required String sessionClientId,
+    required WorkoutSessionState state,
+  }) async {
+    updateCalls.add(state);
+  }
+
+  void emit(Object event) => _events.add(event);
+
+  void dispose() => _events.close();
+}
+
 Future<_RecordingSessionController> _pump(
   WidgetTester tester,
   WorkoutSession session, {
   _CountingLocationStub? location,
+  _FakeWatchService? watch,
 }) async {
   // Taller than the default 800x600: since C9.2 the GAME body can carry the
   // offer card or the stepper panel *and* the tray below it, and a control
@@ -175,6 +214,7 @@ Future<_RecordingSessionController> _pump(
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         if (location != null) locationServiceProvider.overrideWithValue(location),
         if (location != null) appDatabaseProvider.overrideWithValue(_testDatabase()),
+        if (watch != null) watchWorkoutServiceProvider.overrideWithValue(watch),
       ],
       child: MaterialApp(
         locale: const Locale('en'),
@@ -257,6 +297,47 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.resumeCalls, hasLength(1));
+  });
+
+  testWidgets('the watch\'s own Bench tap freezes playing time here too (W-9)', (tester) async {
+    // The wrist and the phone show the same switch, so a tap on either has to
+    // land in the same place: `_setOnCourt`, freezing playing time while
+    // gross time keeps running.
+    final watch = _FakeWatchService();
+    addTearDown(watch.dispose);
+    final controller = await _pump(tester, _liveOnCourtSession(movingSeconds: 60), watch: watch);
+
+    watch.emit(const WatchCourtChanged(sessionClientId: 'live-1', onCourt: false));
+    await tester.pumpAndSettle();
+
+    expect(controller.pauseCalls, hasLength(1));
+    expect(find.text('On court'), findsOneWidget);
+    // …and the new state goes straight back out to the watch, so the two
+    // screens agree without a second round trip.
+    expect(watch.updateCalls.last.cardio?.onCourt, isFalse);
+  });
+
+  testWidgets('a court change for a different session is ignored', (tester) async {
+    final watch = _FakeWatchService();
+    addTearDown(watch.dispose);
+    final controller = await _pump(tester, _liveOnCourtSession(movingSeconds: 60), watch: watch);
+
+    watch.emit(const WatchCourtChanged(sessionClientId: 'someone-else', onCourt: false));
+    await tester.pumpAndSettle();
+
+    expect(controller.pauseCalls, isEmpty);
+  });
+
+  testWidgets('the state pushed to the watch carries the court/bench flag', (tester) async {
+    final watch = _FakeWatchService();
+    addTearDown(watch.dispose);
+    await _pump(tester, _liveOnCourtSession(movingSeconds: 60), watch: watch);
+
+    await tester.tap(find.text('Bench'));
+    await tester.pumpAndSettle();
+
+    expect(watch.updateCalls, isNotEmpty);
+    expect(watch.updateCalls.last.cardio?.onCourt, isFalse);
   });
 
   testWidgets('Meccs szünet (Pause) disables both toggle buttons', (tester) async {

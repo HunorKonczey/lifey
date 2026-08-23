@@ -476,6 +476,16 @@ extension WatchBridge: WCSessionDelegate {
         "weight": message["weight"],
         "exerciseId": message["exerciseId"],
       ])
+    case "courtChanged":
+      // The wrist's GAME pályán/padon switch (docs/cardio/
+      // 55-cardio-watch-plan.md §7, W-9) — `CardioSessionScreen` runs its own
+      // `_setOnCourt` for it, so the freeze/resume arithmetic stays in one
+      // place no matter which device was tapped.
+      eventSink?([
+        "type": "courtChanged",
+        "sessionClientId": sessionClientId,
+        "onCourt": message["onCourt"],
+      ])
     case "exerciseSelected":
       // The wrist's exercise picker in a phone-mastered session — no set, just
       // "this is the exercise I'm on now" (F6c §7).

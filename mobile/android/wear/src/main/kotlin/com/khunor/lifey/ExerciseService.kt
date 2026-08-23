@@ -723,6 +723,15 @@ class ExerciseService : Service() {
                     put("kind", "CARDIO")
                     put("activityType", activityType)
                     cardioSummaryJson()?.let { put("cardio", it) }
+                    // GAME only, and only since W-9: the wrist now tracks the
+                    // pályán/padon switch itself, so it knows something the
+                    // phone's wall-clock fallback doesn't — which minutes were
+                    // played and which were spent on the bench. Every other
+                    // family still omits it, exactly as the comment above
+                    // says, because there the fallback *is* the right answer.
+                    if (cardioActivityFamily(activityType) == CardioActivityFamily.GAME) {
+                        put("movingSeconds", SessionStateHolder.localPlayingSeconds())
+                    }
                 }
             }
             StandaloneSessionStore.add(this, payload.toString())
@@ -843,6 +852,14 @@ class ExerciseService : Service() {
                 // comes back headed "STRENGTH" (see
                 // `SessionStateHolder.onStandaloneStarted`).
                 metadata.title?.let { put("title", it) }
+                // W-9 — a recovered match comes back on the same side of the
+                // pályán/padon switch, with the minutes it had already
+                // played. Same shape the phone persists its own clock in: an
+                // absent `movingSinceEpochMs` *is* the benched state.
+                put("movingSecondsBase", metadata.localMovingSecondsBase)
+                metadata.localMovingAnchorElapsedRealtimeMs?.let { anchor ->
+                    put("movingSinceEpochMs", nowEpochMs - (nowElapsedRealtimeMs - anchor))
+                }
             }
             metadata.standaloneTemplate?.let { put("template", it.toJson()) }
             // The phone's live plan as it stood at this save (F6c) — restored
@@ -937,6 +954,20 @@ class ExerciseService : Service() {
             sets = sets,
             sessionPlan = sessionPlan,
         )
+        // W-9: the playing-time accumulator and which side of the switch this
+        // match was on. Applied after `onStandaloneRecovered` built the fresh
+        // metadata, so it isn't overwritten by it.
+        if (snapshot.has("movingSecondsBase")) {
+            val since = if (snapshot.isNull("movingSinceEpochMs")) {
+                null
+            } else {
+                nowElapsedRealtimeMs - (nowEpochMs - snapshot.optLong("movingSinceEpochMs"))
+            }
+            SessionStateHolder.restoreCourtState(
+                movingSecondsBase = snapshot.optInt("movingSecondsBase"),
+                sinceElapsedRealtimeMs = since,
+            )
+        }
         // Live bridging picks back up from here too, same as a fresh start —
         // a phone that reconnects after this recovery still adopts the
         // session live rather than only seeing it once it ends.

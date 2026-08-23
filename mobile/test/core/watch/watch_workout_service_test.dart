@@ -866,6 +866,45 @@ void main() {
       expect(adoption.activityType, 'WALKING');
     });
 
+    test('decodes a courtChanged event (the wrist\'s GAME bench switch, W-9)', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({
+              'type': 'courtChanged',
+              'sessionClientId': 'session-9',
+              'onCourt': false,
+            });
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      final event = await service.events.first;
+
+      expect(event, isA<WatchCourtChanged>());
+      final court = event as WatchCourtChanged;
+      expect(court.sessionClientId, 'session-9');
+      expect(court.onCourt, isFalse);
+    });
+
+    test('a courtChanged event with no flag reads as on court', () async {
+      // The conservative half of the pair: it only ever *resumes* a clock the
+      // phone's own guards can stop again.
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (arguments, events) {
+            events.success({'type': 'courtChanged', 'sessionClientId': 'session-9'});
+          },
+        ),
+      );
+      final service = WatchWorkoutService(isAvailable: true);
+
+      expect((await service.events.first as WatchCourtChanged).onCourt, isTrue);
+    });
+
     test('an unknown event type falls back to its raw type string', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockStreamHandler(
         eventChannel,
