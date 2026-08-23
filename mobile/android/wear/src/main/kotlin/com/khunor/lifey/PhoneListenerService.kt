@@ -208,6 +208,9 @@ class PhoneListenerService : WearableListenerService() {
      * D-F6b.2) — this is its own message path, entirely independent of the
      * state-sync branches above (D-F6b.3).
      *
+     * `allCardio` (the picker's "all activity types" screen) rides along in
+     * the same message and is stored the same raw way, under its own key.
+     *
      * `entries` replaces `templates` — C5.3's Dart side has sent
      * `{version: 2, entries: [...]}` since then, never `templates`, which
      * silently broke this handler until this fix: `optJSONArray("templates")`
@@ -223,6 +226,19 @@ class PhoneListenerService : WearableListenerService() {
             val json = JSONObject(String(data))
             val entries = json.optJSONArray("entries") ?: JSONArray()
             StandaloneSessionStore.saveEntries(this, entries.toString())
+            // Written only when the key is actually there — a phone build
+            // that predates the "all activity types" screen sends `entries`
+            // alone, and writing an empty array for it would retire a working
+            // screen on a watch that already holds a good copy.
+            json.optJSONArray("allCardio")?.let {
+                StandaloneSessionStore.saveAllCardio(this, it.toString())
+            }
+            // The phone's unit setting, for the distances this watch measures
+            // itself (`localCardioMetrics` in `ActiveWorkoutScreen`). Same
+            // "only when actually present" rule as `allCardio` above.
+            json.optString("unitSystem").ifEmpty { null }?.let {
+                StandaloneSessionStore.saveUnitSystem(this, it)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "applyTemplateSyncMessage failed to parse payload", e)
         }
@@ -239,6 +255,10 @@ class PhoneListenerService : WearableListenerService() {
         val map = DataMapItem.fromDataItem(dataItem).dataMap
         val entriesJson = map.getString("entriesJson") ?: return
         StandaloneSessionStore.saveEntries(this, entriesJson)
+        // Same "absent means an older phone build, not an empty list" rule as
+        // the message path above.
+        map.getString("allCardioJson")?.let { StandaloneSessionStore.saveAllCardio(this, it) }
+        map.getString("unitSystem")?.let { StandaloneSessionStore.saveUnitSystem(this, it) }
     }
 
     /**
@@ -330,8 +350,20 @@ class PhoneListenerService : WearableListenerService() {
             secondaryValue = cardio.optString("secondaryValue").ifEmpty { null },
             tertiaryLabel = cardio.optString("tertiaryLabel").ifEmpty { null },
             tertiaryValue = cardio.optString("tertiaryValue").ifEmpty { null },
+            // Absent for every non-GAME family (and for a phone build that
+            // predates W-9) — "on court" is the state those screens have
+            // always rendered.
+            onCourt = cardio.optBoolean("onCourt", true),
             movingSecondsBase = cardio.optInt("movingSecondsBase"),
-            movingAnchorElapsedRealtimeMs = if (cardio.optBoolean("paused")) {
+            // The phone's own "is the playing clock running" answer: it nulls
+            // `movingSinceEpochMs` whenever the clock is frozen, and
+            // `JSONObject.put` omits a null, so an absent key *is* the frozen
+            // state. `paused` alone was not enough — it only covers a
+            // whole-session pause, so a **benched** GAME session (W-9) kept
+            // ticking on the wrist while it stood still on the phone.
+            movingAnchorElapsedRealtimeMs = if (
+                cardio.optBoolean("paused") || cardio.isNull("movingSinceEpochMs")
+            ) {
                 null
             } else {
                 SystemClock.elapsedRealtime()

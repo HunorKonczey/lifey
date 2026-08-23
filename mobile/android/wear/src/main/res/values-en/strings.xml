@@ -52,6 +52,12 @@
     <string name="standalone_empty_hint">Plans sync from your phone</string>
     <string name="standalone_plan_exercises">%1$d exercises</string>
     <string name="standalone_badge">Watch only</string>
+    <string name="standalone_all_types">All activity types</string>
+    <string name="cardio_distance_label">DISTANCE</string>
+    <string name="cardio_moving_time_label">MOVING TIME</string>
+    <string name="cardio_gross_time_label">GROSS TIME</string>
+    <string name="cardio_pace_label">PACE</string>
+    <string name="cardio_playing_time_label">PLAYING TIME</string>
     <string name="active_sets_free_format">Set %1$d · %2$d reps total</string>
     <string name="sync_pending">Will sync to phone</string>
     <string name="sync_done">Synced to phone</string>

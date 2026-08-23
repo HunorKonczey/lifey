@@ -26,7 +26,7 @@ import 'log_session_screen.dart';
 ///   then let a duplicate screen be pushed over a live workout — exactly what
 ///   the bool existed to prevent.
 class OpenWorkoutScreen {
-  OpenWorkoutScreen._(this.sessionClientId);
+  OpenWorkoutScreen._(this.sessionClientId, this.onEndedElsewhere);
 
   /// The session this screen is showing, or null while it hasn't persisted
   /// one yet (a template-started workout creates its row on the first edit —
@@ -34,6 +34,11 @@ class OpenWorkoutScreen {
   /// knows, so a `null` here means "not this session" rather than "unknown,
   /// assume it matches".
   String? sessionClientId;
+
+  /// Called when *someone else* finished the session this screen is showing
+  /// — see [notifyWorkoutEndedElsewhere]. Optional: a screen that has
+  /// nothing to stop can leave it null.
+  final VoidCallback? onEndedElsewhere;
 }
 
 final List<OpenWorkoutScreen> _openScreens = [];
@@ -41,10 +46,32 @@ final List<OpenWorkoutScreen> _openScreens = [];
 /// Registers a newly mounted running-session screen. [sessionClientId] may be
 /// null; the caller updates [OpenWorkoutScreen.sessionClientId] once its
 /// session exists.
-OpenWorkoutScreen openWorkoutScreen(String? sessionClientId) {
-  final screen = OpenWorkoutScreen._(sessionClientId);
+OpenWorkoutScreen openWorkoutScreen(
+  String? sessionClientId, {
+  VoidCallback? onEndedElsewhere,
+}) {
+  final screen = OpenWorkoutScreen._(sessionClientId, onEndedElsewhere);
   _openScreens.add(screen);
   return screen;
+}
+
+/// Tells any screen showing [sessionClientId] that the session has been
+/// finished elsewhere — today: a watch-started cardio session the phone
+/// joined ([StandaloneSessionProcessor]), ended on the wrist while the
+/// phone's own live screen was still running it.
+///
+/// The screen is the only one that can react safely (stop its ticker and
+/// its GPS, refuse to write its own finish over the row that now exists), so
+/// this hands it the decision instead of reaching into it. A no-op when
+/// nothing is showing that session, which is the normal case: the usual
+/// ending has the watch ask the phone to finish first, so the screen has
+/// already closed itself by the time the closing payload lands.
+void notifyWorkoutEndedElsewhere(String sessionClientId) {
+  // Iterated over a copy: the callback normally pops the screen, which
+  // unregisters it (`closeWorkoutScreen`) mid-loop.
+  for (final screen in [..._openScreens]) {
+    if (screen.sessionClientId == sessionClientId) screen.onEndedElsewhere?.call();
+  }
 }
 
 /// Unregisters [screen] (from `dispose`). Removes that screen only, never

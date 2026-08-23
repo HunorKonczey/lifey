@@ -315,22 +315,26 @@ class WatchQuickStartCardioEntry extends WatchQuickStartEntryPayload {
 /// quick-start sheet and app-shortcut updater already call; this only adds
 /// the watch-specific resolve/localize/serialize step on top.
 ///
-/// Ranked with `max: watchQuickStartMaxEntries + 1` headroom before the
-/// freeform-strength filter, not `watchQuickStartMaxEntries` itself — the
-/// freeform bucket ([QuickStartEntry.strength] with a null id) is at most
-/// one key in the whole ranking, so the one extra slot guarantees a full
-/// [watchQuickStartMaxEntries] real entries survive the filter whenever that
-/// many actually exist, instead of coming up one short whenever freeform
-/// happened to rank inside the original window.
+/// **The cap is applied to the rows that survive, not to the ranked keys.**
+/// Two things are thrown away between the ranking and the payload — the
+/// freeform-strength bucket (D-C5.3 keeps it as its own pinned card) and any
+/// named template that no longer resolves (deleted since it was ranked;
+/// `rankQuickStartEntries` still returns its id, because its sessions do) —
+/// and both used to be dropped *after* the list had already been truncated
+/// to [maxEntries]. A dead key therefore ate a slot and left the payload one
+/// row shorter, with no backfill from lower ranks: 3 live templates behind 6
+/// since-deleted ones produced **2 rows and no cardio at all**, on a watch
+/// whose only other way to start a cardio session is the phone. So the
+/// ranking is now requested uncapped (`max: null`) and [maxEntries] counts
+/// entries actually built, which is what the watch actually renders.
 ///
-/// A named template that no longer resolves (deleted since it was ranked) is
-/// dropped, not replaced with a generic placeholder — see
-/// [buildWatchTemplateSync]'s own doc for why a template-less row is a dead
-/// end on the watch specifically (unlike the phone's quick-start sheet,
-/// which can still fall back to an empty workout). The result can therefore
-/// be shorter than [watchQuickStartMaxEntries] with no backfill from lower
-/// ranks, matching [buildWatchTemplateSync]'s existing "dropped, not
-/// replaced" convention.
+/// That fixes starvation-by-phantom-template, not starvation as such: with
+/// [maxEntries] or more *live, used* templates the ranked list is genuinely
+/// all strength, and the cold-start cardio defaults still rank below every
+/// one of them (see [_defaultOrder]'s "padding" rule in `activity_ranking`).
+/// The picker's "all activity types" screen — fed by
+/// [buildWatchAllCardioEntries], not by this ranking — is what guarantees
+/// every type stays reachable from the watch regardless.
 List<WatchQuickStartEntryPayload> buildWatchQuickStartEntries({
   required List<WorkoutSession> sessionsDesc,
   required List<WorkoutTemplate> templates,
@@ -342,37 +346,108 @@ List<WatchQuickStartEntryPayload> buildWatchQuickStartEntries({
   int maxExercisesPerTemplate = watchTemplateSyncMaxExercisesPerTemplate,
   int maxPreviousSets = watchTemplateSyncMaxPreviousSets,
 }) {
-  final ranked = rankQuickStartEntries(sessionsDesc, now: now, max: maxEntries + 1)
+  final ranked = rankQuickStartEntries(sessionsDesc, now: now, max: null)
       .where((entry) => entry.isCardio || entry.templateClientId != null)
-      .take(maxEntries)
       .toList();
 
   final templateIds = [
     for (final entry in ranked)
       if (!entry.isCardio) entry.templateClientId!,
   ];
+  // Bounded by [maxEntries], not by `templateIds.length`: the id list is now
+  // the user's *whole* ranked template history, and resolving all of it would
+  // mean a `previousSetsFor` scan per exercise of every template they've ever
+  // trained, on every reactive trigger. `buildWatchTemplateSync` walks the
+  // ids in rank order and skips the dead ones, so stopping at [maxEntries]
+  // successes still resolves every template that could possibly be rendered.
   final resolvedTemplates = buildWatchTemplateSync(
     templateClientIds: templateIds,
     templates: templates,
     exercises: exercises,
     settings: settings,
     sessionsDesc: sessionsDesc,
-    maxTemplates: templateIds.length,
+    maxTemplates: maxEntries,
     maxExercisesPerTemplate: maxExercisesPerTemplate,
     maxPreviousSets: maxPreviousSets,
   );
   final resolvedById = {for (final template in resolvedTemplates) template.templateId: template};
 
-  return [
-    for (final entry in ranked)
-      if (entry.isCardio)
+  final payloads = <WatchQuickStartEntryPayload>[];
+  for (final entry in ranked) {
+    if (payloads.length == maxEntries) break;
+    if (entry.isCardio) {
+      payloads.add(
         WatchQuickStartCardioEntry(
           activityType: entry.activityType!,
           title: activityTypeLabel(l10n, entry.activityType!),
-        )
-      else if (resolvedById[entry.templateClientId] case final template?)
-        WatchQuickStartTemplateEntry(template),
-  ];
+        ),
+      );
+    } else if (resolvedById[entry.templateClientId] case final template?) {
+      payloads.add(WatchQuickStartTemplateEntry(template));
+    }
+  }
+  return payloads;
+}
+
+/// Every cardio activity type, in [kActivityTypes] display order, each
+/// pre-localized the same way a ranked cardio row already is — the watch's
+/// "all activity types" screen, the answer to "a picker only ever offers
+/// what the ranking happened to surface".
+///
+/// Deliberately **not** ranked, filtered or capped: this list is the
+/// complete, stable escape hatch behind the ranked list, so a type that
+/// [buildWatchQuickStartEntries] can't fit (the user has 8+ live templates
+/// they train regularly) is still one extra tap away instead of unreachable
+/// from the watch entirely. It costs ~7 short rows on the wire, which is why
+/// it can simply travel alongside the ranked payload on every push rather
+/// than needing a request/response of its own.
+///
+/// Reuses [WatchQuickStartCardioEntry] rather than a leaner type: the wire
+/// shape a cardio row already has (`type`/`activityType`/`title`) is exactly
+/// what this screen needs, and both watch apps then decode one shape, not
+/// two.
+List<WatchQuickStartCardioEntry> buildWatchAllCardioEntries(AppLocalizations l10n) => [
+      for (final activityType in kActivityTypes)
+        WatchQuickStartCardioEntry(
+          activityType: activityType,
+          title: activityTypeLabel(l10n, activityType),
+        ),
+    ];
+
+/// One `syncTemplates` push, whole (docs/cardio/55-cardio-watch-plan.md §3.2
+/// plus the all-types screen) — the ranked [entries] the picker lists, and
+/// the complete [allCardio] set behind its "all activity types" row.
+///
+/// One object rather than two provider values because they're pushed
+/// together in a single call and deduped as a unit: the two lists change for
+/// different reasons (usage vs. the account's language), and splitting them
+/// would mean either two round trips to the watch or a controller that has
+/// to correlate two streams to build one message.
+class WatchQuickStartPayload {
+  const WatchQuickStartPayload({
+    required this.entries,
+    required this.allCardio,
+    this.unitSystem = 'METRIC',
+  });
+
+  final List<WatchQuickStartEntryPayload> entries;
+  final List<WatchQuickStartCardioEntry> allCardio;
+
+  /// `'METRIC'` or `'IMPERIAL'` — the account's own setting, sent because a
+  /// **watch-started** cardio session formats its distance and pace on the
+  /// watch itself (there's no phone pushing pre-formatted strings into a
+  /// standalone session), and a walk that reads in km on the wrist and miles
+  /// on the phone is worse than either. Rides along with this payload rather
+  /// than getting a channel of its own: it changes for the same reason the
+  /// pre-localized titles here do — the user changed a setting — so one push
+  /// carries both.
+  final String unitSystem;
+
+  Map<String, Object?> toJson() => {
+        'entries': [for (final entry in entries) entry.toJson()],
+        'allCardio': [for (final entry in allCardio) entry.toJson()],
+        'unitSystem': unitSystem,
+      };
 }
 
 // Matches the fallback in step_goal_notifier.dart / widget_snapshot_writer.dart:
@@ -398,7 +473,7 @@ Locale _localeFor(LanguagePreference preference) =>
 /// templates outright. Watching the data beats remembering every call site
 /// that touches it.
 ///
-/// **Null means "don't know yet, push nothing"; an empty list means "the
+/// **Null means "don't know yet, push nothing"; an empty payload means "the
 /// watch should hold nothing".** The distinction matters: at cold start
 /// every source is still loading, and collapsing that to an empty list would
 /// order the watch to wipe a perfectly good cache moments before the real
@@ -406,24 +481,34 @@ Locale _localeFor(LanguagePreference preference) =>
 /// - `watchWorkoutEnabled` is off — the single gate for all watch traffic,
 ///   so leaving stale plans on the watch would be wrong;
 /// - the sources loaded and there genuinely is nothing to offer.
-final watchTemplateSyncPayloadProvider = Provider<List<WatchQuickStartEntryPayload>?>((ref) {
+final watchTemplateSyncPayloadProvider = Provider<WatchQuickStartPayload?>((ref) {
   final settingsState = ref.watch(settingsControllerProvider);
   if (settingsState.isLoading) return null;
   final settings = settingsState.value;
   if (settings == null) return null;
-  if (!settings.watchWorkoutEnabled) return const [];
+  // Both lists cleared together — the all-types screen is as much watch
+  // traffic as the ranked list is, so the one gate covers both.
+  if (!settings.watchWorkoutEnabled) {
+    return const WatchQuickStartPayload(entries: [], allCardio: []);
+  }
+  final unitSystem = settings.unitSystem == UnitSystem.imperial ? 'IMPERIAL' : 'METRIC';
 
   final sessions = ref.watch(workoutSessionControllerProvider).value;
   final templates = ref.watch(workoutTemplateControllerProvider).value;
   final exercises = ref.watch(exerciseControllerProvider).value;
   if (sessions == null || templates == null || exercises == null) return null;
 
-  return buildWatchQuickStartEntries(
-    sessionsDesc: sessions,
-    templates: templates,
-    exercises: exercises,
-    settings: settings,
-    l10n: lookupAppLocalizations(_localeFor(settings.language)),
-    now: DateTime.now(),
+  final l10n = lookupAppLocalizations(_localeFor(settings.language));
+  return WatchQuickStartPayload(
+    entries: buildWatchQuickStartEntries(
+      sessionsDesc: sessions,
+      templates: templates,
+      exercises: exercises,
+      settings: settings,
+      l10n: l10n,
+      now: DateTime.now(),
+    ),
+    allCardio: buildWatchAllCardioEntries(l10n),
+    unitSystem: unitSystem,
   );
 });

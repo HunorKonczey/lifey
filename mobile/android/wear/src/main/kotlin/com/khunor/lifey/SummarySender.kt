@@ -58,6 +58,22 @@ object SummarySender {
         send(context, "$MESSAGE_PATH_PREFIX/endRequested", payload)
     }
 
+    /**
+     * The wrist's GAME pályán/padon switch (docs/cardio/55-cardio-watch-plan.md
+     * §7, W-9) — the phone runs its own `_setOnCourt` for it, which is what
+     * actually freezes or resumes the session's playing time. Best-effort
+     * like every other message here: a lost one leaves the two screens
+     * disagreeing until the next tap (exactly what it looked like before this
+     * existed) and never corrupts either side's clock.
+     */
+    suspend fun sendCourtChanged(context: Context, sessionClientId: String, onCourt: Boolean) {
+        val payload = JSONObject().apply {
+            put("sessionClientId", sessionClientId)
+            put("onCourt", onCourt)
+        }
+        send(context, "$MESSAGE_PATH_PREFIX/courtChanged", payload)
+    }
+
     /** The watch's own exercise session actually started measuring — drives
      * the phone's "Measuring" pill (docs/40-watch-app-plan.md §12.4 B14). */
     suspend fun sendStartedOnWatch(context: Context, sessionClientId: String) {
@@ -232,6 +248,13 @@ object SummarySender {
             // since it survives a mid-session plan change and can name an
             // exercise the template never had (one added on the phone).
             putOpt("currentExerciseId", metadata.standaloneCurrentExerciseId)
+            // Which kind of session the phone should join — without it a
+            // walk started here became a template-less "Quick strength"
+            // workout there, since the phone's adoption handler had only that
+            // one shape. The phone defaults a missing `kind` to
+            // `"STRENGTH"`, same as for a finished session.
+            putOpt("kind", if (metadata.isCardio) "CARDIO" else null)
+            putOpt("activityType", metadata.cardioActivityType)
         }
         send(context, "$MESSAGE_PATH_PREFIX/standaloneSessionAdopted", payload)
     }

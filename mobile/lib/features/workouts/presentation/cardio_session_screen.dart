@@ -42,6 +42,7 @@ import '../domain/route_encoder.dart';
 import '../domain/track_filter.dart';
 import '../domain/workout_session.dart';
 import 'cardio_summary_screen.dart';
+import 'open_workout_screens.dart';
 import 'widgets/box_score_stepper.dart';
 import 'widgets/cardio_session_settings_sheet.dart';
 import 'widgets/prompt_number_dialog.dart';
@@ -406,6 +407,15 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
   bool get _watchEnabled =>
       ref.read(settingsControllerProvider).value?.watchWorkoutEnabled ?? true;
 
+  /// This screen's entry in the open-screen registry while it is showing a
+  /// **running** session (`open_workout_screens.dart`) — two jobs, both of
+  /// which only started to matter once a watch-started cardio session could
+  /// open this screen by itself (`StandaloneSessionProcessor._adoptCardio`):
+  /// it stops `workout_resume_prompt.dart` from pushing a *second* screen for
+  /// the same session (the watch resends its adoption snapshot on every
+  /// reconnect), and it is how [_onEndedElsewhere] is reached.
+  OpenWorkoutScreen? _openScreen;
+
   @override
   void initState() {
     super.initState();
@@ -426,6 +436,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     _scoreAssists = s.cardio?.scoreAssists;
     _scoreRebounds = s.cardio?.scoreRebounds;
     _waypoints = s.waypoints;
+    if (s.finishedAt == null) {
+      _openScreen = openWorkoutScreen(s.clientId, onEndedElsewhere: _onEndedElsewhere);
+    }
 
     // A frozen `movingSinceEpochMs` on a not-yet-finished session means
     // *some* pause was active when this was last persisted — manual pause
@@ -873,6 +886,8 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
 
   @override
   void dispose() {
+    final openScreen = _openScreen;
+    if (openScreen != null) closeWorkoutScreen(openScreen);
     _ticker?.cancel();
     _hrTicker?.cancel();
     _finishProgress.dispose();
@@ -1049,6 +1064,9 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
           paused: _manuallyPaused,
           movingSecondsBase: _movingSeconds,
           movingSinceEpochMs: _movingSinceEpochMs,
+          // The watch shows the same pályán/padon toggle (W-9) — see
+          // [CardioLiveMetrics.onCourt].
+          onCourt: _onCourt,
         );
     }
   }
@@ -1307,6 +1325,19 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       case WatchEndRequested():
         if (event.sessionClientId != _clientId) return;
         unawaited(_finish());
+      case WatchCourtChanged():
+        // The wrist's own pályán/padon switch (W-9). Routed through the very
+        // same `_setOnCourt` the in-app toggle calls, so the clock arithmetic
+        // and the persistence live in one place regardless of which device
+        // the tap happened on — and its own guards (busy/finished/manually
+        // paused/already-there) apply to the watch too.
+        if (event.sessionClientId != _clientId) return;
+        // GAME only, even though no watch build sends it for anything else:
+        // `_setOnCourt` freezes the *moving* clock, and doing that to a run
+        // or a ride — which have no bench, and no way back to on-court from
+        // their own UI — would strand the session's own timer.
+        if (_family != ActivityFamily.game) return;
+        unawaited(_setOnCourt(event.onCourt));
       case WatchStartedOnWatch():
         if (event.sessionClientId != _clientId || !mounted) return;
         setState(() => _measuringOnWatch = true);
@@ -1327,6 +1358,31 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
       default:
         break;
     }
+  }
+
+  /// The session this screen is running was finished **elsewhere** — the
+  /// watch closing a session it started and this phone joined
+  /// (`StandaloneSessionProcessor`), while this screen never got the
+  /// `WatchEndRequested` that normally precedes it (the phone was
+  /// unreachable at that moment, so only the queued closing payload made it).
+  ///
+  /// The row in the database is already the finished, authoritative one. This
+  /// screen must therefore stop measuring **and** never write its own finish
+  /// over it — [_finish] refuses once `_finishedAt` is set, so setting it is
+  /// what makes that safe. Closing the screen is best-effort on top: popping
+  /// something that isn't the current route would dismiss the wrong thing, so
+  /// a screen the user has already navigated away from just stops and waits
+  /// to be popped normally.
+  void _onEndedElsewhere() {
+    if (!mounted || _isFinished) return;
+    _ticker?.cancel();
+    _hrTicker?.cancel();
+    _positionSub?.cancel();
+    _autoPauseDetector?.dispose();
+    _autoPauseDetector = null;
+    setState(() => _finishedAt = DateTime.now());
+    unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
+    if (ModalRoute.of(context)?.isCurrent ?? false) Navigator.of(context).pop();
   }
 
   /// The **only** in-app way a live cardio session ends — reached

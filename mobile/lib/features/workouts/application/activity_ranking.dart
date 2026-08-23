@@ -160,6 +160,15 @@ String _identityTiebreak(QuickStartEntry entry) =>
 ///   ranked) so it's never shorter than the caller asked for while any
 ///   default entries remain.
 ///
+/// A **null [max] means "no cap"**: every ranked key, followed by every
+/// remaining [_defaultOrder] entry. That's for callers that can't know their
+/// own window up front because they drop entries *after* ranking — the watch
+/// payload ([buildWatchQuickStartEntries]) resolves each strength id against
+/// the live template list and drops the ones deleted since, so it has to cap
+/// the surviving rows, not the ranked ones (a `max: 8` here would let 8
+/// since-deleted templates eat the whole payload and leave the watch with
+/// nothing).
+///
 /// [sessionsDesc] order doesn't matter — every session is scored
 /// independently by its own [WorkoutSession.finishedAt], not by list
 /// position. The name matches [WorkoutSessionController]'s existing
@@ -167,7 +176,7 @@ String _identityTiebreak(QuickStartEntry entry) =>
 List<QuickStartEntry> rankQuickStartEntries(
   List<WorkoutSession> sessionsDesc, {
   required DateTime now,
-  int max = 8,
+  int? max = 8,
 }) {
   final scores = <QuickStartEntry, double>{};
   final lastUsed = <QuickStartEntry, DateTime>{};
@@ -197,9 +206,9 @@ List<QuickStartEntry> rankQuickStartEntries(
     });
 
   for (final entry in _defaultOrder) {
-    if (ranked.length >= max) break;
+    if (max != null && ranked.length >= max) break;
     if (!ranked.contains(entry)) ranked.add(entry);
   }
 
-  return ranked.take(max).toList();
+  return max == null ? ranked : ranked.take(max).toList();
 }

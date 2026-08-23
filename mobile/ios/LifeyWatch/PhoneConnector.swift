@@ -103,6 +103,20 @@ final class PhoneConnector: NSObject {
     sendMessage(message)
   }
 
+  /// The wrist's GAME pályán/padon switch (docs/cardio/55-cardio-watch-plan.md
+  /// §7, W-9) — the phone runs its own `_setOnCourt` for it, which is what
+  /// actually freezes or resumes the session's playing time. Best-effort like
+  /// every `sendMessage` here: a lost one leaves the two screens disagreeing
+  /// until the next tap, which is exactly what it looked like before this
+  /// message existed, and never corrupts the session's own clock (the phone's
+  /// state is authoritative for a phone-mastered session, and the watch's own
+  /// local accounting for a standalone one).
+  func sendCourtChanged(sessionClientId: String, onCourt: Bool) {
+    sendMessage([
+      "type": "courtChanged", "sessionClientId": sessionClientId, "onCourt": onCourt,
+    ])
+  }
+
   /// The exercise picker's own pick in a **phone-mastered** session (F6c §7) —
   /// no set, just "this is the exercise I'm on now", so the phone's next state
   /// push (name, counts, stepper prefill) describes it. Best-effort like every
@@ -358,7 +372,10 @@ extension PhoneConnector: WCSessionDelegate {
   /// `sanitizedForPropertyList` before landing in `applicationContext`, so
   /// each element is guaranteed property-list-safe — round-tripping it
   /// through `JSONSerialization` back into `Data` is the simplest way to
-  /// hand it to `JSONDecoder`. Decoded **element by element**, not as one
+  /// hand it to `JSONDecoder`. The context's `allCardio` key — the picker's
+  /// "all activity types" screen, every `kActivityTypes` code pre-localized —
+  /// rides along in the same write and is decoded the same way, into
+  /// [CachedActivityType]. Decoded **element by element**, not as one
   /// `[WatchQuickStartEntry]` array — an unknown/malformed row (a newer
   /// entry type, say) only costs that row, not the whole list, the same
   /// `compactMap`-drops-the-bad-one rule `applyState`'s
@@ -371,6 +388,26 @@ extension PhoneConnector: WCSessionDelegate {
       return try? JSONDecoder().decode(WatchQuickStartEntry.self, from: data)
     }
     StandaloneSessionStore.shared.saveQuickStartEntries(entries)
+
+    // Written only when the key is actually present — a phone build that
+    // predates the "all activity types" screen sends `entries` alone, and
+    // overwriting with an empty list there would retire a working screen on
+    // a watch that already holds a good copy. Same decode-per-row rule as
+    // above, for the same reason.
+    if let rawAllCardio = context["allCardio"] as? [[String: Any]] {
+      let allCardio = rawAllCardio.compactMap { raw -> CachedActivityType? in
+        guard let data = try? JSONSerialization.data(withJSONObject: raw) else { return nil }
+        return try? JSONDecoder().decode(CachedActivityType.self, from: data)
+      }
+      StandaloneSessionStore.shared.saveAllCardio(allCardio)
+    }
+    // The phone's unit setting, for the distances this watch measures itself
+    // (`WorkoutManager.localCardioMetrics`). Same "only when actually
+    // present" rule as `allCardio` above — an older phone build simply
+    // leaves whatever the watch already knew in place.
+    if let unitSystem = context["unitSystem"] as? String {
+      StandaloneSessionStore.shared.saveUnitSystem(unitSystem)
+    }
   }
 
   /// Decodes `state["cardio"]` into a `CardioActiveMetrics` (docs/cardio/
@@ -392,6 +429,13 @@ extension PhoneConnector: WCSessionDelegate {
       let paused = cardio["paused"] as? Bool,
       let movingSecondsBase = (cardio["movingSecondsBase"] as? NSNumber)?.intValue
     else { return nil }
+    // The phone's own "is the playing clock running" answer: it nulls
+    // `movingSinceEpochMs` whenever the clock is frozen, and the bridge
+    // strips nulls, so an absent key *is* the frozen state. `paused` alone
+    // was not enough — it only covers a whole-session pause, so a **benched**
+    // GAME session (W-9) kept ticking on the wrist while it stood still on
+    // the phone.
+    let isMoving = cardio["movingSinceEpochMs"] != nil
     return CardioActiveMetrics(
       primaryLabel: primaryLabel,
       primaryValue: primaryValue,
@@ -399,8 +443,11 @@ extension PhoneConnector: WCSessionDelegate {
       secondaryValue: cardio["secondaryValue"] as? String,
       tertiaryLabel: cardio["tertiaryLabel"] as? String,
       tertiaryValue: cardio["tertiaryValue"] as? String,
+      // Absent for every non-GAME family (and for a phone build that predates
+      // W-9) — "on court" is the state those screens have always rendered.
+      onCourt: cardio["onCourt"] as? Bool ?? true,
       movingSecondsBase: movingSecondsBase,
-      movingAnchorUptime: paused ? nil : ProcessInfo.processInfo.systemUptime)
+      movingAnchorUptime: (paused || !isMoving) ? nil : ProcessInfo.processInfo.systemUptime)
   }
 
   private func applyState(sessionClientId: String, title: String?, state: [String: Any]?) {

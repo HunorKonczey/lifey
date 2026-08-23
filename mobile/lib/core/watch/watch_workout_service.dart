@@ -3,7 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/workouts/application/watch_template_sync.dart' show WatchQuickStartEntryPayload;
+import '../../features/workouts/application/watch_template_sync.dart' show WatchQuickStartPayload;
 import '../../features/workouts/domain/workout_session.dart' show CardioMetrics;
 import '../workout_session_notifier/workout_session_notifier_service.dart' show WorkoutSessionState;
 
@@ -188,6 +188,26 @@ class WatchExerciseSelected {
       );
 }
 
+/// The watch flipped the GAME "pályán/padon" switch (docs/cardio/
+/// 55-cardio-watch-plan.md §7, W-9) — the wrist half of a toggle both screens
+/// show. Handled by [CardioSessionScreen] while its instance for this
+/// [sessionClientId] is mounted, which then runs the *same* `_setOnCourt`
+/// the in-app switch does: benching freezes playing time, gross time keeps
+/// running, and the resulting state syncs straight back out on the next
+/// push. A no-op otherwise — a session with no live screen has no clock to
+/// freeze.
+class WatchCourtChanged {
+  const WatchCourtChanged({required this.sessionClientId, required this.onCourt});
+
+  final String sessionClientId;
+  final bool onCourt;
+
+  factory WatchCourtChanged.fromJson(Map<Object?, Object?> json) => WatchCourtChanged(
+        sessionClientId: json['sessionClientId'] as String,
+        onCourt: json['onCourt'] as bool? ?? true,
+      );
+}
+
 /// One set logged during a standalone (phone-less) session (docs/watch/
 /// 44-watch-f6-standalone-plan.md §4.1) — part of the batch a
 /// [WatchStandaloneSession] carries, unlike [WatchSetLogged]'s one-tap-at-a-time
@@ -281,6 +301,12 @@ class WatchStandaloneSession {
   /// `sessionKind` (C1.4 landed before the mobile UI that sends it, C1.5+).
   final String kind;
 
+  /// True for a watch-started **cardio** session — the one branch that has
+  /// nothing to do with exercises or sets. Mirrors
+  /// [WatchStandaloneAdoption.isCardio] so both halves of the same session
+  /// are asked the same question the same way.
+  bool get isCardio => kind == 'CARDIO';
+
   /// The `ActivityType` code (docs/cardio/52-cardio-domain-backend-plan.md
   /// §1.5) — set exactly when [kind] is `'CARDIO'`, mirroring the invariant
   /// the backend's CHECK constraint enforces server-side (V66).
@@ -350,6 +376,8 @@ class WatchStandaloneAdoption {
     this.averageHeartRate,
     this.currentExerciseIndex,
     this.currentExerciseId,
+    this.kind = 'STRENGTH',
+    this.activityType,
   });
 
   final String standaloneSessionId;
@@ -358,6 +386,23 @@ class WatchStandaloneAdoption {
   final List<WatchStandaloneSet> sets;
   final double? activeCalories;
   final double? averageHeartRate;
+
+  /// `'STRENGTH'` or `'CARDIO'`, exactly like [WatchStandaloneSession.kind]
+  /// — and defaulted to `'STRENGTH'` the same way when the key is absent,
+  /// which is every watch build that predates it.
+  ///
+  /// **This field is what decides which door the snapshot goes through**
+  /// (`StandaloneSessionProcessor.processAdoption`), and its absence is the
+  /// whole bug it was added for: an adoption used to carry no kind, so the
+  /// phone read a watch-started walk as a template-less *strength* session
+  /// and mirrored it as "Quick strength". A cardio snapshot now opens a real
+  /// live cardio session on the phone instead.
+  final String kind;
+
+  /// One of `kActivityTypes`; non-null only alongside `kind == 'CARDIO'`.
+  final String? activityType;
+
+  bool get isCardio => kind == 'CARDIO';
 
   /// Which of [templateId]'s exercises the watch will log its *next* set
   /// against — same index space as [WatchStandaloneSet.exerciseIndex], but
@@ -390,6 +435,8 @@ class WatchStandaloneAdoption {
         averageHeartRate: (json['averageHeartRate'] as num?)?.toDouble(),
         currentExerciseIndex: (json['currentExerciseIndex'] as num?)?.toInt(),
         currentExerciseId: json['currentExerciseId'] as String?,
+        kind: json['kind'] as String? ?? 'STRENGTH',
+        activityType: json['activityType'] as String?,
       );
 }
 
@@ -427,6 +474,7 @@ class WatchWorkoutService {
   /// Emits [WatchWorkoutSummary], [WatchStartRejected], [WatchEndRequested],
   /// [WatchStartedOnWatch], [WatchReachabilityChanged], [WatchLiveMetrics],
   /// [WatchSetLogged], [WatchStandaloneSession], [WatchStandaloneAdoption],
+  /// [WatchCourtChanged],
   /// or a raw event-name `String` for anything not yet decoded — see
   /// docs/40-watch-app-plan.md §3. A no-op stream (never emits) when
   /// [isAvailable] is false.
@@ -458,6 +506,8 @@ class WatchWorkoutService {
         return WatchStandaloneAdoption.fromJson(Map<Object?, Object?>.from(map['payload'] as Map));
       case 'exerciseSelected':
         return WatchExerciseSelected.fromJson(map);
+      case 'courtChanged':
+        return WatchCourtChanged.fromJson(map);
       default:
         return (map['type'] as String?) ?? 'unknown';
     }
@@ -611,14 +661,15 @@ class WatchWorkoutService {
 
   /// Pushes the watch's unified, frequency-ranked quick-start picker
   /// (docs/cardio/55-cardio-watch-plan.md §3, C5.3 — templates only through
-  /// F6b, docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T1.3). Build
-  /// [entries] with `buildWatchQuickStartEntries` — it owns the
-  /// ranking/truncation/rest-resolution rules this method deliberately knows
-  /// nothing about.
+  /// F6b, docs/watch/49-watch-f6b-template-sync-plan.md §4.1, T1.3), plus
+  /// the complete activity-type list behind the picker's "all activity
+  /// types" screen. Build [payload] with `buildWatchQuickStartEntries` /
+  /// `buildWatchAllCardioEntries` — they own the ranking/truncation/
+  /// rest-resolution rules this method deliberately knows nothing about.
   ///
   /// Fire-and-forget, like every other call here: there's no ack, and a
   /// missed push simply leaves the watch on its previous cache until the next
-  /// push point (§4.3). An **empty** [entries] list is still sent rather than
+  /// push point (§4.3). An **empty** payload is still sent rather than
   /// skipped — that's how a watch whose last entry was just deleted gets told
   /// to clear its cache.
   ///
@@ -630,13 +681,17 @@ class WatchWorkoutService {
   /// always sent — nothing here still speaks version 1, so this isn't a
   /// runtime branch, just the stamp a still-unbuilt native T3 handler can
   /// check to refuse an unrecognized shape instead of misrendering it.
-  Future<void> syncTemplates(List<WatchQuickStartEntryPayload> entries) async {
+  Future<void> syncTemplates(WatchQuickStartPayload payload) async {
     if (!isAvailable) return;
     try {
       await _channel.invokeMethod('syncTemplates', {
+        // Still 2, not 3: `allCardio` is purely additive, and both watch
+        // builds ignore keys they don't know — while watchOS's own
+        // `version == 2` guard would reject the *whole* push, ranked list
+        // included, if this bumped ahead of a not-yet-updated watch app.
         'version': 2,
         'syncedAtEpochMs': DateTime.now().millisecondsSinceEpoch,
-        'entries': [for (final entry in entries) entry.toJson()],
+        ...payload.toJson(),
       });
     } catch (_) {
       // Best-effort, see class doc — on iOS/Android alike the native handler

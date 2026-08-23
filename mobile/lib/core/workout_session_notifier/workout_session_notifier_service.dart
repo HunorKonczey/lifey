@@ -218,6 +218,7 @@ class CardioLiveMetrics {
     required this.paused,
     this.movingSecondsBase,
     this.movingSinceEpochMs,
+    this.onCourt,
   });
 
   final String primaryLabel;
@@ -245,6 +246,19 @@ class CardioLiveMetrics {
   final int? movingSecondsBase;
   final int? movingSinceEpochMs;
 
+  /// GAME only — whether the player is on court right now, or on the bench
+  /// (`CardioSessionScreen._onCourt`). Null for every other family, and for
+  /// a STRENGTH session there's no [CardioLiveMetrics] at all.
+  ///
+  /// On the wire purely for the **watch**, which shows the same toggle
+  /// (docs/cardio/55-cardio-watch-plan.md §7, W-9): the two screens have to
+  /// agree about which state the match is in, and the freeze itself is
+  /// already implied by [movingSinceEpochMs] going null. Without it the watch
+  /// could only guess "frozen but not paused = benched", which is exactly the
+  /// kind of inference that breaks the day a third reason to freeze the clock
+  /// appears.
+  final bool? onCourt;
+
   Map<String, dynamic> toJson() => {
         'primaryLabel': primaryLabel,
         'primaryValue': primaryValue,
@@ -255,6 +269,7 @@ class CardioLiveMetrics {
         'paused': paused,
         'movingSecondsBase': movingSecondsBase,
         'movingSinceEpochMs': movingSinceEpochMs,
+        'onCourt': onCourt,
       };
 }
 

@@ -80,6 +80,12 @@ struct StandaloneSessionPayload: Codable, Equatable {
   var kind: String?
   var activityType: String?
   var cardio: CardioSummaryPayload?
+  /// Playing time in seconds, for a GAME session that actually tracked the
+  /// pályán/padon switch on the wrist (W-9) — benched minutes excluded.
+  /// **Absent for every other session**, where the phone's own fallback
+  /// (`endedAtEpochMs - startedAtEpochMs`) is exactly right and this would
+  /// only be a second, weaker way to say the same thing.
+  var movingSeconds: Int?
 }
 
 /// The live-bridging counterpart of `StandaloneSessionPayload` — a snapshot
@@ -114,6 +120,18 @@ struct StandaloneAdoptionPayload: Codable, Equatable {
   /// survives a mid-session plan change and can name an exercise the template
   /// never had (one added to the session on the phone).
   let currentExerciseId: String?
+  /// `'CARDIO'` (+ its activity type) or nil for STRENGTH — the same pair
+  /// `StandaloneSessionPayload` carries, and read the same way on the phone
+  /// (`WatchStandaloneAdoption.kind`, absent = `'STRENGTH'`).
+  ///
+  /// **Load-bearing, not decoration.** The phone's adoption handler used to
+  /// have exactly one shape — resolve a template's exercises, mirror a set
+  /// list — so a snapshot with no kind on it turned a walk started here into
+  /// a template-less "Quick strength" workout there. With these two fields
+  /// the phone opens the *cardio* session instead, live, while the walk is
+  /// still running.
+  var kind: String?
+  var activityType: String?
 }
 
 /// The in-progress standalone session's own metadata, kept up to date on
@@ -152,6 +170,19 @@ struct StandaloneActiveSessionMeta: Codable, Equatable {
   /// own `"STRENGTH"` default.
   var kind: String?
   var activityType: String?
+  /// The session's own display name — a cardio session's pre-localized
+  /// activity title, as the picker row showed it (`WorkoutManager.title`).
+  /// Nil for a Quick strength session and for a template-backed one, which
+  /// take their header from [template] instead. Optional so a snapshot
+  /// written by an older build still decodes.
+  var title: String?
+  /// The GAME playing-time accumulator (W-9), in the same shape the phone
+  /// persists its own: seconds banked on court, plus the epoch instant the
+  /// current stint began — nil while benched, which is also how a recovered
+  /// session knows which side of the switch it was on. Both nil for every
+  /// non-GAME session, where playing time is simply the elapsed time.
+  var movingSecondsBase: Int?
+  var movingSinceEpochMs: Int64?
 }
 
 /// One exercise of a synced template, exactly as the phone resolved it
@@ -210,6 +241,25 @@ struct CachedTemplate: Codable, Equatable {
   let templateId: String
   let title: String
   let exercises: [CachedTemplateExercise]
+}
+
+/// One row of the picker's "all activity types" screen — every
+/// `kActivityTypes` code the phone knows, pre-localized, in display order,
+/// pushed alongside the ranked list (`allCardio`).
+///
+/// The wire shape is a `WatchQuickStartEntry.cardio` row verbatim
+/// (`type`/`activityType`/`title`); this decodes only the two fields it
+/// needs and lets `Codable` ignore the `type` discriminator, so the phone
+/// serializes one cardio shape and the watch reads it two ways instead of
+/// the payload carrying two.
+///
+/// Exists because the ranked list can't promise completeness: it's capped at
+/// 8 rows shared with strength templates, so a user who trains 8 templates
+/// regularly would otherwise have no way at all to start a cardio session
+/// from the watch. This list is the escape hatch behind it.
+struct CachedActivityType: Codable, Equatable {
+  let activityType: String
+  let title: String
 }
 
 /// One row of the unified, frequency-ranked quick-start list

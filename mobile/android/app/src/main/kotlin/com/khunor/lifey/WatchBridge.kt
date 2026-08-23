@@ -212,9 +212,22 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         val entries = args["entries"] as? List<Map<*, *>> ?: return result.success(null)
         val version = (args["version"] as? Number)?.toInt() ?: return result.success(null)
         val syncedAtEpochMs = (args["syncedAtEpochMs"] as? Number)?.toLong() ?: return result.success(null)
+        // The picker's "all activity types" screen — every activity type,
+        // pre-localized, unranked. Defaulted rather than guarded on, so a
+        // Dart build that predates it still syncs its `entries`.
+        @Suppress("UNCHECKED_CAST")
+        val allCardio = args["allCardio"] as? List<Map<*, *>> ?: emptyList()
+        // The account's unit setting, for the distances a *watch-started*
+        // cardio session formats on the watch itself (see
+        // `WatchQuickStartPayload.unitSystem`). Null on an older Dart build;
+        // the watch then keeps whatever it already knew.
+        val unitSystem = args["unitSystem"] as? String
 
-        pushTemplates(version, syncedAtEpochMs, entries)
-        sendMessage(COMMAND_TEMPLATE_SYNC, templateSyncMessagePayload(version, syncedAtEpochMs, entries))
+        pushTemplates(version, syncedAtEpochMs, entries, allCardio, unitSystem)
+        sendMessage(
+            COMMAND_TEMPLATE_SYNC,
+            templateSyncMessagePayload(version, syncedAtEpochMs, entries, allCardio, unitSystem),
+        )
         result.success(null)
     }
 
@@ -264,11 +277,15 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         version: Int,
         syncedAtEpochMs: Long,
         entries: List<Map<*, *>>,
+        allCardio: List<Map<*, *>>,
+        unitSystem: String?,
     ): ByteArray {
         val json = JSONObject().apply {
             put("version", version)
             put("syncedAtEpochMs", syncedAtEpochMs)
             put("entries", entries.toJsonValue())
+            put("allCardio", allCardio.toJsonValue())
+            putOpt("unitSystem", unitSystem)
         }
         return json.toString().toByteArray()
     }
@@ -313,7 +330,13 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
      * Layer's per-path `DataItem`s never collide, so no merge step is needed
      * here — this can freely overwrite its own path on every call.
      */
-    private fun pushTemplates(version: Int, syncedAtEpochMs: Long, entries: List<Map<*, *>>) {
+    private fun pushTemplates(
+        version: Int,
+        syncedAtEpochMs: Long,
+        entries: List<Map<*, *>>,
+        allCardio: List<Map<*, *>>,
+        unitSystem: String?,
+    ) {
         executor.execute {
             val putDataMapRequest =
                 PutDataMapRequest.create(TEMPLATES_PATH).apply {
@@ -325,6 +348,15 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
                     // rather than a native structure (D-F6b.3's one open
                     // implementation choice, now resolved).
                     dataMap.putString("entriesJson", (entries.toJsonValue() as JSONArray).toString())
+                    // Its own key, not nested inside `entriesJson`: the two
+                    // lists feed two different screens, and a Wear build that
+                    // predates the "all activity types" screen simply never
+                    // reads this one.
+                    dataMap.putString(
+                        "allCardioJson",
+                        (allCardio.toJsonValue() as JSONArray).toString(),
+                    )
+                    unitSystem?.let { dataMap.putString("unitSystem", it) }
                 }
             val putDataRequest = putDataMapRequest.asPutDataRequest().setUrgent()
             try {
@@ -396,6 +428,9 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
             }
             "$MESSAGE_PATH_PREFIX/$COMMAND_EXERCISE_SELECTED" -> {
                 emitExerciseSelected(String(messageEvent.data))
+            }
+            "$MESSAGE_PATH_PREFIX/$COMMAND_COURT_CHANGED" -> {
+                emitCourtChanged(String(messageEvent.data))
             }
             "$MESSAGE_PATH_PREFIX/$COMMAND_STANDALONE_SESSION" -> {
                 emitStandaloneSession(String(messageEvent.data))
@@ -505,6 +540,26 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
 
     /** The wrist's exercise picker in a phone-mastered session — no set, just
      * "this is the exercise I'm on now" (F6c §7). */
+    /**
+     * The wrist's GAME pályán/padon switch (docs/cardio/55-cardio-watch-plan.md
+     * §7, W-9) — `CardioSessionScreen` runs its own `_setOnCourt` for it, so
+     * the freeze/resume arithmetic stays in one place no matter which device
+     * was tapped. Defaults to on-court for a malformed payload: the
+     * conservative half of the pair, since it only ever *resumes* a clock
+     * that the phone's own guards can stop again.
+     */
+    private fun emitCourtChanged(json: String) {
+        val payload = JSONObject(json)
+        val sessionClientId = payload.optString("sessionClientId").ifEmpty { return }
+        eventSink?.success(
+            mapOf(
+                "type" to "courtChanged",
+                "sessionClientId" to sessionClientId,
+                "onCourt" to payload.optBoolean("onCourt", true),
+            ),
+        )
+    }
+
     private fun emitExerciseSelected(json: String) {
         val payload = JSONObject(json)
         val exerciseId = payload.optString("exerciseId").ifEmpty { return }
@@ -690,6 +745,7 @@ class WatchBridge(context: Context, messenger: BinaryMessenger) :
         private const val COMMAND_LOG_SET = "logSet"
         private const val COMMAND_LOG_SET_ACK = "logSetAck"
         private const val COMMAND_EXERCISE_SELECTED = "exerciseSelected"
+        private const val COMMAND_COURT_CHANGED = "courtChanged"
         private const val COMMAND_STANDALONE_SESSION = "standaloneSessionCompleted"
         private const val COMMAND_STANDALONE_ACK = "standaloneSessionAck"
         private const val COMMAND_STANDALONE_ADOPTED = "standaloneSessionAdopted"

@@ -107,6 +107,7 @@ import com.khunor.lifey.LogSetState
 import com.khunor.lifey.R
 import com.khunor.lifey.SessionMetadata
 import com.khunor.lifey.SessionStateHolder
+import com.khunor.lifey.StandaloneSessionStore
 import com.khunor.lifey.StandaloneTemplate
 import com.khunor.lifey.StandaloneTemplateExercise
 import com.khunor.lifey.SummarySender
@@ -114,6 +115,7 @@ import com.khunor.lifey.ui.theme.LifeyColors
 import com.khunor.lifey.ui.theme.LifeyShapes
 import java.util.UUID
 import kotlin.math.abs
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.sign
 import java.text.DecimalFormat
@@ -316,10 +318,13 @@ private fun CardioActiveScreen() {
 
     var showEffortSelector by remember { mutableStateOf(false) }
     var effortRpe by remember { mutableIntStateOf(5) }
-    // Hoisted out of GameMetricsContent so W 19's edge border — the watch's
-    // answer to the phone's top rail (M07) — can be drawn around the whole
-    // screen, not just around the metrics column.
-    var onCourt by remember { mutableStateOf(true) }
+    // W 19's edge border — the watch's answer to the phone's top rail (M07)
+    // — is drawn around the whole screen, not just the metrics column, so
+    // this is read here rather than inside GameMetricsContent. It lives on
+    // `SessionStateHolder`, not in a `remember`: the phone shows the same
+    // switch and either side can flip it (docs/cardio/55-cardio-watch-plan.md
+    // §7, W-9).
+    val onCourt = metadata.isOnCourt
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = isCompactScreen(maxWidth)
@@ -354,7 +359,21 @@ private fun CardioActiveScreen() {
                 when (page) {
                     0 -> CardioMetricsPage(
                         metadata = metadata, liveMetrics = liveMetrics, isCompact = isCompact, maxWidth = maxWidth,
-                        onCourt = onCourt, onToggleCourt = { onCourt = !onCourt },
+                        onCourt = onCourt,
+                        onToggleCourt = {
+                            // Only a real change goes over the wire — the
+                            // holder answers whether this was one.
+                            if (SessionStateHolder.setOnCourt(!onCourt)) {
+                                val sessionClientId = metadata.sessionClientId
+                                if (sessionClientId != null) {
+                                    scope.launch {
+                                        SummarySender.sendCourtChanged(
+                                            context, sessionClientId, !onCourt,
+                                        )
+                                    }
+                                }
+                            }
+                        },
                     )
                     else -> ControlsPage(
                         exerciseName = display.name,
@@ -402,6 +421,117 @@ private fun CardioActiveScreen() {
  * just display whatever string the phone last pushed for the moving/game-time
  * slot.
  */
+/**
+ * This watch's own live cardio metrics, for a session **it** started — the
+ * fallback behind `metadata.cardioMetrics`, which only ever arrives from a
+ * phone-mastered session's state sync.
+ *
+ * Without it a watch-started walk had nothing to show at all: no time, no
+ * distance, just the heart-rate row under a header reading "STRENGTH" (the
+ * generic `active_header_label`, since a standalone session had no title
+ * either) — while Health Services was handing [ExerciseService] every number
+ * the page needed.
+ *
+ * Same slots, same order, same rules as the phone fills them with
+ * (`CardioSessionScreen._cardioLiveMetrics`), so the standalone screens are
+ * the *same* screens rather than a second design:
+ * - `DISTANCE`: distance leads once there is one, moving time before that,
+ *   pace third;
+ * - `MACHINE`: moving time alone — the phone's other two slots come from
+ *   cadence/power sensors this watch doesn't have, and a box reading "—" for
+ *   a whole session is worse than no box;
+ * - `GAME`: playing time alone, for the same reason (gross time only differs
+ *   once something pauses the accounting, which standalone can't do — see
+ *   [CardioActiveScreen]'s `onCourt` doc).
+ *
+ * Time is anchored, not stored: `movingSecondsBase = 0` plus the session's
+ * own start mark means the ticking slot counts real elapsed seconds. The
+ * anchor is never dropped for a paused session, matching what a paused
+ * *phone-mastered* one already does — pausing stops the sensors, not the
+ * clock (docs/40-watch-app-plan.md §4.4/§5.3).
+ */
+@Composable
+private fun localCardioMetrics(
+    metadata: SessionMetadata,
+    family: CardioActivityFamily,
+    liveMetrics: LiveMetrics,
+): CardioActiveMetrics? {
+    val startedAt = liveMetrics.startedAtElapsedRealtimeMs ?: return null
+    val imperial = StandaloneSessionStore.isImperial(LocalContext.current)
+    val movingTimeLabel = stringResource(R.string.cardio_moving_time_label)
+    val distanceLabel = stringResource(R.string.cardio_distance_label)
+    val paceLabel = stringResource(R.string.cardio_pace_label)
+    val playingTimeLabel = stringResource(R.string.cardio_playing_time_label)
+    val elapsedSeconds = ((SystemClock.elapsedRealtime() - startedAt) / 1000L).toInt()
+    val duration = formatCardioDuration(elapsedSeconds)
+    val meters = liveMetrics.distanceMeters ?: 0.0
+    val hasDistance = meters > 0
+    return when (family) {
+        CardioActivityFamily.DISTANCE -> CardioActiveMetrics(
+            primaryLabel = if (hasDistance) distanceLabel else movingTimeLabel,
+            primaryValue = if (hasDistance) formatDistance(meters, imperial) else duration,
+            secondaryLabel = if (hasDistance) movingTimeLabel else distanceLabel,
+            secondaryValue = if (hasDistance) duration else "—",
+            tertiaryLabel = paceLabel,
+            tertiaryValue = formatPace(meters, elapsedSeconds, imperial) ?: "—",
+            movingSecondsBase = 0,
+            movingAnchorElapsedRealtimeMs = startedAt,
+        )
+        CardioActivityFamily.MACHINE -> CardioActiveMetrics(
+            primaryLabel = movingTimeLabel,
+            primaryValue = duration,
+            movingSecondsBase = 0,
+            movingAnchorElapsedRealtimeMs = startedAt,
+        )
+        // The one family whose playing time is *not* the elapsed time:
+        // benched minutes don't count (W-9), so the hero counts from this
+        // watch's own accumulator and the gross box next to it keeps the wall
+        // clock.
+        CardioActivityFamily.GAME -> CardioActiveMetrics(
+            primaryLabel = playingTimeLabel,
+            primaryValue = formatCardioDuration(SessionStateHolder.localPlayingSeconds()),
+            secondaryLabel = stringResource(R.string.cardio_gross_time_label),
+            secondaryValue = duration,
+            onCourt = metadata.isOnCourt,
+            movingSecondsBase = metadata.localMovingSecondsBase,
+            movingAnchorElapsedRealtimeMs = metadata.localMovingAnchorElapsedRealtimeMs,
+        )
+    }
+}
+
+/** "5:12" under an hour, "1:05:12" from an hour up — a deliberate
+ * transcription of the phone's `CardioFormatter.duration`
+ * (`mobile/lib/core/format/cardio_formatter.dart`), so the same walk reads
+ * the same on both screens. */
+private fun formatCardioDuration(totalSeconds: Int): String {
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    val ss = seconds.toString().padStart(2, '0')
+    return if (hours > 0) "$hours:${minutes.toString().padStart(2, '0')}:$ss" else "$minutes:$ss"
+}
+
+/** "5.23 km" / "3.25 mi" — `CardioFormatter.distance`, transcribed. */
+private fun formatDistance(meters: Double, imperial: Boolean): String {
+    val unitMeters = if (imperial) 1609.344 else 1000.0
+    val suffix = if (imperial) "mi" else "km"
+    return String.format(Locale.US, "%.2f %s", meters / unitMeters, suffix)
+}
+
+/** "5:12 /km" / "8:22 /mi", or null with no distance to derive one from —
+ * `CardioFormatter.pace`, transcribed (including its "never surface 0:00"
+ * rule). */
+private fun formatPace(meters: Double, seconds: Int, imperial: Boolean): String? {
+    if (meters <= 0 || seconds <= 0) return null
+    val unitMeters = if (imperial) 1609.344 else 1000.0
+    val secondsPerUnit = seconds / (meters / unitMeters)
+    if (!secondsPerUnit.isFinite()) return null
+    val minutes = (secondsPerUnit / 60).toInt()
+    val rest = (secondsPerUnit % 60).roundToInt()
+    val suffix = if (imperial) "/mi" else "/km"
+    return "$minutes:${rest.toString().padStart(2, '0')} $suffix"
+}
+
 @Composable
 private fun CardioMetricsPage(
     metadata: SessionMetadata,
@@ -413,7 +543,7 @@ private fun CardioMetricsPage(
 ) {
     val activityType = metadata.cardioActivityType ?: "OTHER_CARDIO"
     val family = metadata.cardioFamily ?: CardioActivityFamily.DISTANCE
-    val cardioMetrics = metadata.cardioMetrics
+    val cardioMetrics = metadata.cardioMetrics ?: localCardioMetrics(metadata, family, liveMetrics)
 
     var movingSeconds by remember { mutableLongStateOf(0L) }
     LaunchedEffect(cardioMetrics) {
@@ -510,7 +640,7 @@ private fun DistanceMachineMetricsContent(
         text = if (family == CardioActivityFamily.DISTANCE) {
             cardioMetrics.primaryValue
         } else {
-            formatElapsed(movingSeconds * 1000)
+            formatCardioDuration(movingSeconds.toInt())
         },
         style = heroStyle,
         color = tint,
@@ -548,18 +678,15 @@ private fun DistanceMachineMetricsContent(
  * counterpart's doc — so only `secondaryLabel`/`Value` renders), and the
  * pályán/padon toggle.
  *
- * [onCourt] is **watch-local only** — not sent to the phone, not read from
- * it. This mirrors `CardioSessionScreen._onCourt`'s *own*, already-shipped
- * design on the phone side (C2.4): "Local-only... never synced, never read
- * back" — a benched *phone*-mastered session doesn't actually change
- * anything about what [metadata]'s `cardioMetrics` receives, so toggling this
- * only switches which layout is on screen, not any real gross-vs-playing-time
- * accounting (there is no separate ticking checkpoint for gross time to
- * switch between). Making the toggle **actually** pause this watch's
- * contribution to the session's playing time — and telling the phone about
- * it — is `C5.7`'s "GAME pályán/padon kapcsoló kétirányú szinkronja"
- * (docs/cardio/55-cardio-watch-plan.md §7, W-9). Mirrors iOS's identical
- * `CardioActiveContent`/`onCourt` choice.
+ * [onCourt] is **two-way synced** with the phone (docs/cardio/
+ * 55-cardio-watch-plan.md §7, W-9) and therefore lives on
+ * `SessionStateHolder`, not in a screen-local `remember`: a tap here reaches
+ * the phone (`SummarySender.sendCourtChanged` → `CardioSessionScreen
+ * ._setOnCourt`), and the phone's own switch reaches this screen on its next
+ * state push. It is a real accounting switch on both sides now — benched
+ * minutes stop counting towards playing time while gross time keeps running
+ * — not just a choice between W 19's and W 20's layouts. Mirrors iOS's
+ * identical `CardioActiveContent`/`isOnCourt` choice.
  */
 @Composable
 private fun GameMetricsContent(
@@ -599,7 +726,11 @@ private fun GameMetricsContent(
             maxLines = 1,
         )
     }
-    Text(text = formatElapsed(movingSeconds * 1000), style = heroStyle, color = if (onCourt) tint else LifeyColors.onSurfaceVariant)
+    Text(
+        text = formatCardioDuration(movingSeconds.toInt()),
+        style = heroStyle,
+        color = if (onCourt) tint else LifeyColors.onSurfaceVariant,
+    )
     CardioHeartRateRow(liveMetrics = liveMetrics, isCompact = isCompact)
     if (cardioMetrics.secondaryLabel != null) {
         Box(modifier = Modifier.padding(top = if (isCompact) 6.dp else 10.dp)) {
@@ -2120,6 +2251,10 @@ private fun HeaderChip(
             // busywork. Most useful when the phone app simply wasn't running
             // at start — one tap sends the whole snapshot, already-logged sets
             // included, and the phone opens the workout.
+            // A cardio session's badge does the same thing, and means the
+            // same thing: the phone joins the walk/run live (its own
+            // `CardioSessionScreen`, GPS and all) instead of only importing
+            // it once it ends.
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
             var isSyncing by remember { mutableStateOf(false) }
@@ -2419,6 +2554,9 @@ private val weightFormat = DecimalFormat("0.#")
 
 private fun formatWeight(weight: Double): String = weightFormat.format(weight)
 
+/** mm:ss — the **rest timer's** format, and only that: a cardio duration goes
+ * through [formatCardioDuration] instead, which rolls over into hours (a
+ * 90-minute walk reading "90:00" is exactly what that split avoids). */
 private fun formatElapsed(totalMs: Long): String {
     val totalSeconds = totalMs / 1000
     val minutes = totalSeconds / 60

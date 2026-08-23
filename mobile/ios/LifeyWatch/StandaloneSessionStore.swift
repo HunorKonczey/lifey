@@ -1,5 +1,16 @@
 import Foundation
 
+/// Which units the phone's owner reads distances in (`UserSettings.unitSystem`
+/// on the phone) — pushed with the quick-start sync so this watch can format
+/// its **own** measurements (`WorkoutManager.localCardioMetrics`) the way the
+/// phone would. Metric unless the phone has said otherwise: the same default
+/// a fresh account gets, and the safe answer for a watch that has never
+/// synced.
+enum WatchUnitSystem: String {
+  case metric = "METRIC"
+  case imperial = "IMPERIAL"
+}
+
 /// Local persistence for standalone (phone-less) watch sessions
 /// (docs/watch/44-watch-f6-standalone-plan.md §3.2) — two concerns:
 /// - the **pending queue**: closed sessions not yet acked by the phone,
@@ -21,6 +32,7 @@ final class StandaloneSessionStore {
   private let pendingURL: URL
   private let activeURL: URL
   private let templatesURL: URL
+  private let allCardioURL: URL
 
   private init() {
     let directory = FileManager.default.urls(
@@ -30,6 +42,7 @@ final class StandaloneSessionStore {
     pendingURL = directory.appendingPathComponent("standalone_sessions_pending.json")
     activeURL = directory.appendingPathComponent("standalone_session_active.json")
     templatesURL = directory.appendingPathComponent("standalone_templates.json")
+    allCardioURL = directory.appendingPathComponent("standalone_all_cardio.json")
   }
 
   // MARK: - Pending queue (docs/watch/44-watch-f6-standalone-plan.md §3.2, §4.1)
@@ -129,5 +142,52 @@ final class StandaloneSessionStore {
       guard let data = try? Data(contentsOf: templatesURL) else { return [] }
       return (try? JSONDecoder().decode([WatchQuickStartEntry].self, from: data)) ?? []
     }
+  }
+
+  /// Overwrites the "all activity types" cache — a **separate file** from
+  /// [saveQuickStartEntries]'s, though both arrive in the same push: the two
+  /// lists have different lifetimes (this one changes only with the account's
+  /// language, the ranked one on every finished workout), and keeping them
+  /// apart means a decode failure on either can't take the other down with
+  /// it.
+  func saveAllCardio(_ entries: [CachedActivityType]) {
+    queue.sync {
+      guard let data = try? JSONEncoder().encode(entries) else { return }
+      try? data.write(to: allCardioURL, options: .atomic)
+    }
+  }
+
+  /// Every activity type the phone last offered, in display order — empty
+  /// until the first sync of a build that sends it, which is exactly when the
+  /// picker hides its "all activity types" row rather than opening an empty
+  /// screen.
+  func allCardio() -> [CachedActivityType] {
+    queue.sync {
+      guard let data = try? Data(contentsOf: allCardioURL) else { return [] }
+      return (try? JSONDecoder().decode([CachedActivityType].self, from: data)) ?? []
+    }
+  }
+
+  // MARK: - Unit system (docs/cardio/55-cardio-watch-plan.md §5, W-8)
+
+  /// `UserDefaults`, not a file like every cache above it: this is one short
+  /// string read on every standalone cardio render, with none of the
+  /// atomicity or size concerns those JSON caches were built for.
+  private static let unitSystemKey = "lifey.unitSystem"
+
+  /// Remembers the phone's unit setting from the last quick-start sync — see
+  /// [WatchUnitSystem]. An unrecognized value is ignored rather than
+  /// collapsed to metric, so a newer phone build's new unit system can't
+  /// silently reformat a watch that already knows a good one.
+  func saveUnitSystem(_ raw: String) {
+    guard WatchUnitSystem(rawValue: raw) != nil else { return }
+    UserDefaults.standard.set(raw, forKey: Self.unitSystemKey)
+  }
+
+  func unitSystem() -> WatchUnitSystem {
+    guard let raw = UserDefaults.standard.string(forKey: Self.unitSystemKey),
+      let value = WatchUnitSystem(rawValue: raw)
+    else { return .metric }
+    return value
   }
 }

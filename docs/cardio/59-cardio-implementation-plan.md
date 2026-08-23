@@ -4098,3 +4098,335 @@ Adatvédelem és biztonság), hogy a `Runner` cél is ténylegesen lefordíthat�
 `flutter analyze`/`:app:compileDebugKotlin` C5.7a-ból visszamaradt ellenőrzése is lefusson; utána a
 GAME pályán/padon kétirányú szinkron (W-9, mindkét platformon) a logikus folytatás — ezzel zárulna
 le a teljes C5 (Óra) iteráció.
+
+---
+
+## C5 kiegészítés (2026-08-23) — a rangsor nem ehette meg a cardiót, és minden típus elérhető az óráról
+
+**A probléma, élő használatból**: az órán edzésindításkor a strength tervek listázódtak, cardio
+típus viszont egy sem — pedig a [55 §3](55-cardio-watch-plan.md) felhasználói követelménye épp az,
+hogy „ezek az edzések is listázódjanak a templatek mellett".
+
+### A nyomozás — a szállítási lánc végig ép volt
+
+Sorra ellenőrizve, mindegyik jó: a Dart payload-építő (a C5.3-as tesztkészlet zöld), a
+`Runner/WatchBridge.swift` `syncTemplates` ága, a watchOS `WatchQuickStartEntry` dekódolás (a
+valódi Swift modell külön lefordítva és lefuttatva egy vegyes payloaddal: 3/3 sor dekódolódik,
+a cache round-trip is ép), a `StandalonePickerView`/`StandalonePickerScreen` `CARDIO` ága, és a
+Wear OS `entriesJson` út is. **A cardio nem elveszett útközben — el sem indult**: a telefon
+küldte cardio nélkül a listát.
+
+### A gyökérok — a `take(8)` a *rangsorolt kulcsokra* futott, nem a megépült sorokra
+
+`buildWatchQuickStartEntries()` a rangsor és a payload között két dolgot dob el — a freeform
+strength vödröt (D-C5.3: külön kitűzött kártya), és minden olyan nevesített tervet, ami azóta
+törlődött (`rankQuickStartEntries` továbbra is visszaadja az id-jét, mert a sessionjei
+hivatkoznak rá) —, **de mindkettőt a 8-ra vágás *után***. Egy halott kulcs így elfogyasztott egy
+helyet, alacsonyabb rangról nem töltődött vissza semmi, és a `_defaultOrder` cardio-feltöltés
+(ami eleve csak a lista végére fűz) még a `max: 8+1`-es fejtérbe sem fért bele. Mért állapotok a
+javítás előtt:
+
+| Előzmény | Az órára kiment |
+|---|---|
+| 7 használt terv | 7 terv + 1 cardio |
+| 8 használt terv | 8 terv + **0 cardio** |
+| 8 használt terv + 1 hónapos futás | 8 terv + **0 cardio** |
+| 3 élő terv + 6 azóta törölt terv | **2 terv + 0 cardio** |
+
+### 1. javítás — a limit a megépült sorokat számolja
+
+`rankQuickStartEntries()` `max`-ja mostantól nullable, és a **null „nincs plafon"** (minden
+rangsorolt kulcs, utána minden maradék `_defaultOrder` bejegyzés). A watch-payload ezzel kér
+rangsort, és a `maxEntries`-t a ténylegesen megépült sorokra alkalmazza — a fenti utolsó sorból így
+8 elem lesz, mind a 3 élő tervvel és cardióval. A többi hívó (gyorsindító lap, app-shortcut,
+widget) érintetlen: ott a `max: 8` alapérték marad.
+
+A `buildWatchTemplateSync` hívás `maxTemplates`-e szándékosan `maxEntries`, nem
+`templateIds.length`: az id-lista most a felhasználó *teljes* rangsorolt terv-előzménye, és
+mindet feloldani gyakorlatonkénti `previousSetsFor`-pásztázást jelentene minden reaktív
+triggerre. A függvény rangsor-sorrendben halad és a halottakat átlépi, tehát 8 sikeres feloldásnál
+megállva is minden renderelhető terv feloldódik.
+
+### 3. javítás — „Minden edzéstípus" oldal, mert a rangsor nem tud teljességet ígérni
+
+Az 1. javítás a *fantom* kiszorulást szünteti meg, a valódit nem: 8 rendszeresen használt élő terv
+mellett a rangsor jogosan csupa strength, és a cold-start cardio-alapértékek mindegyik alatt
+vannak. Ezért a payload egy **új, additív `allCardio` kulcsot** kap — mind a 7 `kActivityTypes`
+kód, előre lokalizálva, rangsorolatlanul (~7 rövid sor) —, a picker aljára pedig egy csendes sor
+kerül, ami egy második oldalt nyit meg belőle. Onnan indítva a session pontosan úgy viselkedik,
+mintha a rangsorolt listából indult volna (ugyanaz a `CardioRow`, ugyanaz a `cardioTapped` /
+`onCardioTapped`).
+
+**A `version` szándékosan marad 2.** A watchOS `applyTemplateSync` `version == 2` őre a **teljes**
+pusht eldobná — a rangsorolt listával együtt —, ha a telefon 3-mal futna egy még nem frissített
+óra mellett; a plusz kulcsot pedig mindkét óra-build csendben átugorja. Ugyanezért a natív oldalak
+`allCardio` nélkül is szinkronizálnak (`?? []` / `?: emptyList()`), az órák pedig **csak akkor**
+írják felül a saját gyorsítótárukat, ha a kulcs tényleg megérkezett — egy régebbi telefon-build
+nem nyugdíjazhat egy működő oldalt egy üres listával.
+
+A két lista külön fájlban/prefs-kulcson él az órán, és a dedup-kulcs mindkettőt fedi: eltérő
+életciklusuk van (a rangsor minden befejezett edzésre, az all-types csak nyelvváltásra változik),
+és így egyik dekódolási hibája sem viszi magával a másikat.
+
+**Érintett fájlok:** `activity_ranking.dart`, `watch_template_sync.dart`,
+`watch_template_sync_controller.dart`, `watch_workout_service.dart`; `Runner/WatchBridge.swift`,
+`LifeyWatch/{StandaloneSessionPayload,StandaloneSessionStore,PhoneConnector}.swift`,
+`LifeyWatch/Views/StandalonePickerView.swift`, `Localizable.xcstrings`; `app/.../WatchBridge.kt`,
+`wear/.../{StandaloneSessionStore,PhoneListenerService}.kt`, `ui/StandalonePickerScreen.kt`,
+`res/values{,-en}/strings.xml`.
+
+**Tesztek:** `watch_template_sync_test.dart` +2 (a törölt terv már nem eszik helyet — a fenti
+táblázat utolsó sora, fixture-ként; és a teljes all-types lista `kActivityTypes` sorrendben,
+lokalizálva, miközben a rangsor csupa strength), `watch_template_sync_controller_test.dart` +1
+(nyelvváltás — csak az all-types fele változott — is pusht vált ki), plusz a `WatchQuickStartPayload`
+átállás a meglévő service/controller tesztekben.
+
+**Ellenőrzés:** `flutter analyze` tiszta, `flutter test` **1383/1383 zöld**; `xcodebuild -target
+LifeyWatch -sdk watchsimulator` **BUILD SUCCEEDED**; `flutter build ios --no-codesign` (a `Runner`
+cél, tehát a `WatchBridge.swift` módosítása is) **✓ Built**; `:wear:compileDebugKotlin` és
+`:app:compileDebugKotlin` **BUILD SUCCESSFUL**.
+
+**Nem része ennek a lépésnek** (tudatosan, a felhasználó döntése): a cardio-kvóta a rangsorolt 8
+helyen belül (pl. garantált 5 terv + 3 cardio interleave) — a második oldal a teljességet kvóta
+nélkül is megadja.
+
+---
+
+## C5 kiegészítés (2026-08-23) — óráról indított cardio nem lesz többé „Quick strength" a telefonon
+
+**A probléma, élő használatból**: az óráról indított walking/running/bármelyik cardio hatására a
+telefonon **egy quick strength edzés indult el**, és az elindult edzés strengthre váltott.
+
+### A gyökérok — az élő átvétel (adoption) nem ismerte a `kind`-ot
+
+Az F6c élő tükrözés (live bridging) így működik: a standalone session **indulásakor** az óra
+azonnal küld egy `standaloneSessionAdopted` pillanatképet, a telefon pedig létrehoz belőle egy
+*futó* tükör-sort, és rá is nyit a `LogSessionScreen`-nel. A pillanatképnek viszont **egyetlen
+alakja van** — szettlista + `templateId` —, és **se `kind`, se `activityType` mezője nem volt.
+
+Egy óráról indított futás tehát így ért a telefonhoz: `templateId: null`, `sets: []`, kind
+sehol → `processAdoption` → `_createRunningSession` → **terv nélküli STRENGTH sor** = pontosan a
+„Quick strength" edzés, amit a felhasználó lát; utána a phone rányit a strength naplózó
+képernyőre, és onnantól minden állapot-push a strength session nevében megy — ez az „és az
+elindult edzés strengthre váltott" fele.
+
+Mindkét platformon ugyanaz: `WorkoutManager.sendAdoptionRequest()` (watchOS, a `startStandalone`
+végén, reachability-től függetlenül, mert `transferUserInfo` sorbaáll) és
+`SummarySender.sendAdoptionRequestIfNeeded()` (Wear OS) egyaránt kind-vak volt.
+
+Amit végigmértem és **nem** hibás: a záró payload (`StandaloneSessionPayload.kind/activityType/
+cardio`) helyes, a `process()` CARDIO ága (`_processCardio`) teljes és idempotens, és az
+állapot-szinkron standalone ága mindkét órán korrektül kilép, mielőtt a `kind`-hoz nyúlna
+(`applyStateUpdate` / `onStateSynced`) — tehát nem az élő state-push írja át az óra saját
+session-fajtáját.
+
+### A javítás — cardio sessiont nem lehet átvenni, egyik irányból sem
+
+**Óra-oldal (mindkét platform):** a cardio session nem küld adoption pillanatképet. A kapu a
+*közös* küldő-törzsben ül (`sendAdoptionRequest()` / `sendAdoptionRequestIfNeeded()`), nem a
+hívási pontokon — így a négy-öt trigger (indítás, reconnect, szettenkénti újraküldés, jelvény-
+koppintás, `MainActivity` resume) közül egyik sem tudja véletlenül visszahozni. A „csak óra"
+jelvény cardio alatt **állapotjelző marad, gomb nélkül**: nincs mit újrapróbálni, egy semmit nem
+csináló koppintást pedig nem jelzünk vissza pörgő ikonnal.
+
+**Telefon-oldal (fogadó előbb, D-C5.4):** a `WatchStandaloneAdoption` kap `kind`/`activityType`
+mezőt (hiányzó `kind` = `'STRENGTH'`, ugyanaz a szabály, mint a befejezett sessionnél), és
+`processAdoption` **CARDIO esetén nem csinál semmit** — nincs sor, nincs képernyő-nyitás, és
+**nincs ack** sem: az ack az óra `isAdopted`-jét billentené át, vagyis eltüntetné a „csak óra"
+jelvényt egy olyan ígéretért, amit a telefon nem tart be. A `WorkoutResumePrompt` ugyanezt a
+kaput expliciten meglépi a képernyő-nyitás előtt.
+
+Nincs mit tükrözni élőben: a cardio sessionnek nincs szettje, a metrikái az óra sajátjai, a
+telefon cardio-képernyője pedig GPS-**mester**, nem tükör. A session egyben, a **végén** érkezik
+meg a már meglévő CARDIO ágon.
+
+### Ami már elromlott: magától gyógyul
+
+Egy pre-fix build által létrehozott, félrement futó strength sort a záró CARDIO payload
+**helyben átír** (`_createOrElse` → `_updateCardioSession`, azonos `clientId`): a sor CARDIO
+lesz, a helyes `activityType`-pal, szettek nélkül. Csak az az edzés marad fantom strength
+sorként, amit soha nem is fejeztek be az órán — azt kézzel kell törölni.
+
+**Érintett fájlok:** `watch_workout_service.dart`, `standalone_session_processor.dart`,
+`workout_resume_prompt.dart`; `LifeyWatch/{StandaloneSessionPayload,WorkoutManager}.swift`,
+`LifeyWatch/Views/ActiveWorkoutView.swift`; `wear/.../SummarySender.kt`,
+`wear/.../ui/ActiveWorkoutScreen.kt`.
+
+**Tesztek:** `standalone_session_processor_test.dart` +3 (a cardio adoption nem hoz létre sort és
+nem ackol; az így „kihagyott" session a végén teljes értékűen landol; egy pre-fix strength
+tükör-sort a záró CARDIO payload meggyógyít), `watch_workout_service_test.dart` +1 (a `kind`
+huzalon: hiányzó = STRENGTH, `"CARDIO"` felismerve) — plusz a `kind`/`activityType` a meglévő
+adoption-fixture-ökben.
+
+**Ellenőrzés:** `flutter analyze` tiszta, `flutter test` **1386/1386 zöld**; `xcodebuild -target
+LifeyWatch -sdk watchsimulator` **BUILD SUCCEEDED**; `:wear:compileDebugKotlin` **BUILD
+SUCCESSFUL**.
+
+**Nem része ennek a lépésnek:** az élő cardio-tükrözés a telefonon (óráról indított futás
+követése menet közben) — az a [55 §7](55-cardio-watch-plan.md) **W-9** munkája, és valódi
+telefon-oldali képernyő-tervet igényel, nem csak egy payload-mezőt. A `kind` mező a payloadban
+viszont már most is utazik, hogy ez a lépés ne egy némán félreértelmezett üzenettel induljon.
+
+---
+
+## C5 kiegészítés (2026-08-23, 2.) — óráról indított cardio: valódi edzés az órán **és** élőben a telefonon
+
+Az előző kiegészítés a rossz *fajtát* szüntette meg (nem lett többé „Quick strength"), de két
+dolgot nem oldott meg, és a felhasználó pontosan ezt a kettőt jelezte:
+
+1. **„kardio edzés nem indul el telefonon, ha órán indítom"** — az előző lépés úgy javított, hogy a
+   telefon *egyáltalán nem* vette át a cardio sessiont; így az edzés csak lezárás után jelent meg.
+2. **„az órán még mindig fura: strength indult walking helyett"** — és a jogos kérdés: *miért nem
+   ugyanaz az edzés/design indul az órán, mint amikor telóról indítok egy walkingot?*
+
+### A 2. pont gyökéroka — az órai standalone cardio képernyőnek nem volt mit mutatnia
+
+Nem a `kind` volt rossz: `startStandalone(activityType:)` már helyesen `CARDIO`-ra állította, és az
+`ActiveWorkoutView`/`ActiveWorkoutScreen` cardio ágra is ment. A **tartalom** hiányzott, két helyen:
+
+- **A fejléc szó szerint „STRENGTH"-et írt.** `activeHeaderLabel` sorrendje: terv neve → session
+  címe → generikus `active_header_label` („STRENGTH"/„ERŐ"). Egy óráról indított cardiónak nincs
+  terve, a `title` mezőt pedig **kizárólag a telefon állította be** — így minden watch-start a
+  generikus STRENGTH feliratot kapta. Telóról indítva a telefon küld címet, ezért ott „tök jól"
+  látszik: pontosan ez a felhasználó által megfigyelt aszimmetria.
+- **A metrikák teljesen hiányoztak.** `cardioMetrics` (idő, táv, tempó — előre formázott stringek)
+  **csak** telefon-vezérelt session állapot-szinkronjából érkezik. Standalone-nál nincs telefon,
+  így a `if let metrics = cardioMetrics` ág sosem futott: a lap a fejlécre + pulzus sorra
+  degradálódott. Közben a HealthKit / Health Services minden szükséges számot odaadott az órának
+  (`lastDistanceMeters`, `startedAt`, HR, kcal) — csak senki nem rakta a képernyőre.
+
+### Javítás A — az óra a saját méréseiből rajzolja meg ugyanazt a designt
+
+- **Cím**: a picker cardio sora átadja a saját, **telefonon előre lokalizált** címét
+  (`startStandalone(activityType:title:)` / `EXTRA_TITLE`), az lesz a session fejléce, és bekerül a
+  recovery-snapshotba is. Az óra továbbra sem visz aktivitás-szótárt (a [55 §3.2](55-cardio-watch-plan.md)
+  szabálya): a nevet a megkoppintott sor adja.
+- **Metrikák**: `activeCardioMetrics` = a telefon pushja, ha van, **különben** az óra saját mérése
+  ugyanabban a slot-struktúrában, mint amit a telefon tölt
+  (`CardioSessionScreen._cardioLiveMetrics`): DISTANCE → táv / mozgásidő / tempó (táv előtt
+  mozgásidő vezet, ahogy a telefonon is), MACHINE → mozgásidő (nincs kadencia/watt szenzor, üres
+  „—" doboz helyett inkább semmi), GAME → játékidő. Az idő horgonyzott (`movingSecondsBase = 0` +
+  a session indulása), tehát valóban ketyeg.
+- **Formátumok**: a telefon `CardioFormatter`-ének átírása (táv „5.23 km"/„3.25 mi", tempó
+  „5:12 /km", idő „5:12"/„1:05:12"). A cardio idő-slotok mostantól **óra-tudatosak** mindkét órán —
+  eddig a mm:ss-es rest-timer formázót használták, egy 90 perces túra „90:00"-t írt.
+- **Mértékegység**: a quick-start payload új `unitSystem` kulcsot visz (`METRIC`/`IMPERIAL`), az óra
+  eltárolja. Címkék az óra saját katalógusából, a telefon ARB-szövegeivel szó szerint egyezve
+  (`TÁVOLSÁG`/`MOZGÁSIDŐ`/`TEMPÓ`/`JÁTÉKIDŐ`).
+
+### Javítás B — a telefon élőben csatlakozik, nem csak a végén kapja meg
+
+Az adoption pillanatkép `kind`-ja most **útválasztó**: `processAdoption` CARDIO ágon
+`_adoptCardio()` létrehoz egy **futó** cardio sort, pontosan olyan alakban, amilyet a telefon saját
+gyorsindítója (`createCardioSession`) csinálna — `sessionKind: CARDIO`, `activityType`,
+`movingSeconds: 0`, `movingSinceEpochMs` az **óra** indulási idejére —, mert ettől nyílik rá és fut
+tovább a meglévő `CardioSessionScreen`, külön „watch-mastered cardio" képernyőmód nélkül. A
+`WorkoutResumePrompt` ugyanazon az ágon nyitja meg, mint a strength tükröt, csak `watchMastered`
+nélkül: innentől a telefon **valóban méri** az edzést (GPS, útvonal, Live Activity), ahogy egy
+telóról indított walking is.
+
+Ezzel viszont két mester lett egy sessionön, tehát a lezárás is rendezve lett:
+
+| Ki zár le | Mi történik |
+|---|---|
+| **Óra** | a queue-zott záró payload mellé `endRequested` is megy (csak *adoptált cardiónál*) → a telefon a saját `_finish()`-ével zár, a saját GPS-adataival |
+| **Telefon** | a meglévő `endWorkout` → az óra `endStandalone`-ja fut le (adoptált standalone ág) |
+| **Óra, elérhetetlen telefon** | a záró payload később landol; ha közben nyitva maradt egy élő képernyő, a `notifyWorkoutEndedElsewhere` leállítja és bezárja — nem ír felül semmit |
+
+**Ütközés-feloldás (R8, „a telefon saját mérése nyer"):** `_updateCardioSession` már nem cserél,
+hanem **merge-el** (`mergedWithWatchMeasurement`), a már lezárt sort pedig
+`_enrichFinishedCardioSession` egészíti ki azzal, amire a telefonnak nincs válasza (csuklós
+pulzus, aktív kalória, HealthKit workout id, hiányzó cardio mezők) — és nem ír semmit, ha nem
+tudna hozzátenni, hogy az óra „retry-until-acked" kézbesítései no-op-ok maradjanak.
+
+**Mellékesen javult**: a `CardioSessionScreen` mostantól bejelentkezik a nyitott-képernyő
+regiszterbe, ezért egy adoption-újraküldés nem nyit rá második, duplikált élő képernyőt (ez a rés
+eddig is megvolt, csak nem volt, ami kiváltsa).
+
+**Érintett fájlok:** `standalone_session_processor.dart`, `workout_resume_prompt.dart`,
+`watch_workout_service.dart`, `watch_template_sync.dart`, `open_workout_screens.dart`,
+`cardio_session_screen.dart`; `Runner/WatchBridge.swift`,
+`LifeyWatch/{WorkoutManager,PhoneConnector,StandaloneSessionStore,StandaloneSessionPayload}.swift`,
+`LifeyWatch/Views/{ActiveWorkoutView,StandalonePickerView}.swift`, `Localizable.xcstrings`;
+`app/.../WatchBridge.kt`, `wear/.../{ExerciseService,SessionStateHolder,SummarySender,
+StandaloneSessionStore,PhoneListenerService,MainActivity}.kt`, `ui/{ActiveWorkoutScreen,
+StandalonePickerScreen}.kt`, `res/values{,-en}/strings.xml`.
+
+**Tesztek:** `standalone_session_processor_test.dart` +4 (cardio adoption élő cardio sort csinál és
+ackol; újraküldés nem nyúl a futó sorhoz; a záró payload helyben zárja le; a telefon által már
+lezárt sor megtartja a saját mérését és megkapja az óráét), `watch_template_sync_test.dart` +1 és
+`watch_workout_service_test.dart` +1 (`unitSystem` a payloadban és a huzalon).
+
+**Ellenőrzés:** `flutter analyze` tiszta, `flutter test` **1390/1390 zöld**; `xcodebuild -target
+LifeyWatch -sdk watchsimulator` **BUILD SUCCEEDED**; `flutter build ios --no-codesign` (Runner +
+óra) **✓ Built**; `:wear:compileDebugKotlin` + `:app:compileDebugKotlin` **BUILD SUCCESSFUL**.
+
+**Nyitva marad** (tudatosan, eszközös próbát igényel): a GAME „pályán/padon" kapcsoló kétirányú
+szinkronja ([55 §7](55-cardio-watch-plan.md) **W-9**) — standalone cardióban a bruttó és a játékidő
+egyelőre ugyanaz, ezért a bruttó doboz ilyenkor nem is jelenik meg.
+
+---
+
+## C5.8 kész (2026-08-23) — W-9: a `GAME` pályán/padon kapcsoló kétirányú szinkronja
+
+A [55 §7](55-cardio-watch-plan.md) utolsó nyitott C5-ös lépése, felhasználói jelzésre: *„foci/kosárnál
+az, hogy court vagy benchen vagyok, nincs szinkronban az órán és a telón."*
+
+### Miért nem volt szinkronban — két külön hiány
+
+**1. A kapcsoló állapota sehol nem utazott.** Mindkét oldalon képernyő-lokális állapot volt
+(`CardioSessionScreen._onCourt` „Local-only… never synced, never read back", és az órákon egy
+`@State`/`remember`), tehát a két kapcsoló egymástól függetlenül állt.
+
+**2. Az órai játékidő padon is ketyegett tovább** — két okból:
+- *telefon-vezérelt* sessionnél az órák a `paused` mezőt nézték a fagyasztáshoz, az viszont csak a
+  „Meccs szünet"-et jelenti; a padra ülés a telefonon a `movingSinceEpochMs` nullázásával fagyaszt,
+  amit az órák nem olvastak;
+- *óráról indított* (standalone) sessionnél az óra a saját játékidejét egyszerűen az eltelt időből
+  számolta, pad-elszámolás nélkül (a W-8 lépés ezt még nem fedte).
+
+### A javítás
+
+**Telefon → óra.** A `CardioLiveMetrics` új `onCourt` mezőt visz (GAME-nél; máshol null), és az órai
+dekóderek a fagyasztást mostantól a **telefon saját válaszából** olvassák: `paused` **vagy** hiányzó
+`movingSinceEpochMs` → áll az óra. (A hiányzó kulcs *maga* a fagyott állapot: a telefon nullázza, a
+hidak pedig a nullokat eldobják.) Így a telón padra ülve az órán is megáll a játékidő, és a képernyő
+is átvált a padon-elrendezésre.
+
+**Óra → telefon.** Új `courtChanged` üzenet (`sessionClientId` + `onCourt`) mindkét natív hídon
+átvezetve, Dart oldalon `WatchCourtChanged` eseményként, amit a `CardioSessionScreen` ugyanabba a
+`_setOnCourt`-ba fut bele, mint a saját gombja — egy helyen marad a fagyasztás/folytatás aritmetika
+és a perzisztálás, függetlenül attól, melyik eszközön koppintottak. Csak `GAME` családra: egy futás
+mozgás-óráját nem fagyaszthatja meg egy téves üzenet.
+
+**Visszhang-védelem.** Egy lokális koppintás után 5 másodpercig figyelmen kívül marad az azzal
+*ellentétes* telefon-push (a koppintás előtt épült állapot), különben a kapcsoló láthatóan
+visszaugrana egy pillanatra. Az első egyetértő push törli a várakozást — és a timeout is, hogy egy
+telefon által elutasított koppintás (pl. meccs-szünet közben) ne ragassza be az órát.
+
+**Az óra saját pad-elszámolása.** Standalone GAME sessionnél az óra mostantól ugyanolyan
+`base + horgony` párost vezet, mint a telefon (`movingSeconds`/`movingSinceEpochMs`): a padon töltött
+percek nem számítanak játékidőbe, a bruttó doboz viszont a fali órát mutatja tovább. Ez túléli a
+folyamat halálát is (a recovery-snapshot része), és a **záró payload** immár valódi `movingSeconds`-t
+küld GAME-nél — eddig szándékosan kimaradt, és a telefon a bruttó wall-clockra esett vissza, ami egy
+lecserélt játékosnál egyszerűen hamis.
+
+**Érintett fájlok:** `workout_session_notifier_service.dart`, `cardio_session_screen.dart`,
+`watch_workout_service.dart`; `Runner/WatchBridge.swift`, `app/.../WatchBridge.kt`;
+`LifeyWatch/{WorkoutManager,PhoneConnector,StandaloneSessionPayload}.swift`,
+`LifeyWatch/Views/ActiveWorkoutView.swift`, `Localizable.xcstrings`;
+`wear/.../{SessionStateHolder,SummarySender,ExerciseService,PhoneListenerService}.kt`,
+`ui/ActiveWorkoutScreen.kt`, `res/values{,-en}/strings.xml`.
+
+**Tesztek:** `cardio_session_screen_game_test.dart` +3 (az óra Bench-koppintása itt is fagyaszt és
+azonnal vissza is szinkronizál; másik sessionre szóló üzenet nem hat; a kipusholt állapot viszi a
+kapcsoló állását), `watch_workout_service_test.dart` +2 (a `courtChanged` huzalon, hiányzó mezővel is),
+`workout_session_notifier_service_test.dart` payload-alak frissítve.
+
+**Ellenőrzés:** `flutter analyze` tiszta, `flutter test` **1395/1395 zöld**; `xcodebuild -target
+LifeyWatch -sdk watchsimulator` **BUILD SUCCEEDED**; `flutter build ios --no-codesign` **✓ Built**;
+`:wear:compileDebugKotlin` + `:app:compileDebugKotlin` **BUILD SUCCESSFUL**. Eszközös végpróba
+(W-10) hátravan — ez a lépés két készülék együttes viselkedéséről szól, amit szimulátorpáron nem
+lehet érdemben lejátszani.
+
+**Ezzel a C5 (Óra) iteráció W-1…W-9 lépései mind megvannak.**

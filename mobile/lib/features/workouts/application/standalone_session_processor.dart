@@ -109,12 +109,80 @@ class StandaloneSessionProcessor {
   Future<void> _processCardio(WatchStandaloneSession event) async {
     final alreadyFinished =
         await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
-    if (alreadyFinished == true) return;
+    if (alreadyFinished == true) {
+      await _enrichFinishedCardioSession(event);
+      return;
+    }
     await _createOrElse(
       () => _createCardioSession(event),
       () => _updateCardioSession(event),
     );
   }
+
+  /// The phone finished this session itself before the watch's payload
+  /// arrived — which is now the *normal* ending for a watch-started cardio
+  /// session the phone joined ([_adoptCardio]): the watch's End button asks
+  /// the phone to close its own session first, so by the time the closing
+  /// payload lands the row is already finished, with the phone's own GPS
+  /// route, distance and moving time on it.
+  ///
+  /// Those stay untouched — a phone-measured value always wins
+  /// (docs/cardio/51-cardio-overview-plan.md R8) — but everything the phone
+  /// has *no* answer for is worth taking: the watch's wrist heart rate and
+  /// active calories, which no cardio screen writes at finish, plus any
+  /// cardio field the row is missing ([CardioMetrics.mergedWithWatchMeasurement],
+  /// the same merge the phone-mastered `WatchWorkoutSummary` path already
+  /// uses). The STRENGTH counterpart of this is [_enrichFinishedSession].
+  Future<void> _enrichFinishedCardioSession(WatchStandaloneSession event) async {
+    final stored = await _sessionRepository.findByClientId(event.standaloneSessionId);
+    if (stored == null || stored.startedAt == null) return;
+
+    final activeCalories = stored.activeCalories ?? event.activeCalories;
+    final averageHeartRate = stored.averageHeartRate ?? event.averageHeartRate;
+    final healthWorkoutId = stored.healthWorkoutId ?? event.healthWorkoutId;
+    final rpe = stored.rpe ?? event.rpe;
+    final watchCardio = event.cardio;
+    final cardio = watchCardio == null
+        ? stored.cardio
+        : (stored.cardio?.mergedWithWatchMeasurement(watchCardio) ?? watchCardio);
+
+    // Same "write nothing when it would change nothing" rule
+    // [_enrichFinishedSession] follows, so the watch's retry-until-acked
+    // deliveries stay no-ops. `CardioMetrics` has no value equality, so the
+    // merge is judged field by field — over exactly the fields the watch's
+    // closing block can carry (`WorkoutManager.cardioSummaryPayload()` /
+    // `ExerciseService.cardioSummaryJson()`), not the whole class.
+    final gainsCardio = watchCardio != null &&
+        (stored.cardio == null ||
+            _fills(stored.cardio!.distanceMeters, watchCardio.distanceMeters) ||
+            _fills(stored.cardio!.elevationGainMeters, watchCardio.elevationGainMeters) ||
+            _fills(stored.cardio!.elevationLossMeters, watchCardio.elevationLossMeters) ||
+            _fills(stored.cardio!.avgCadence, watchCardio.avgCadence) ||
+            _fills(stored.cardio!.maxCadence, watchCardio.maxCadence));
+    final unchanged = !gainsCardio &&
+        activeCalories == stored.activeCalories &&
+        averageHeartRate == stored.averageHeartRate &&
+        healthWorkoutId == stored.healthWorkoutId &&
+        rpe == stored.rpe;
+    if (unchanged) return;
+
+    await _sessionRepository.update(
+      event.standaloneSessionId,
+      startedAt: stored.startedAt!,
+      finishedAt: stored.finishedAt,
+      exercises: const [],
+      sets: const [],
+      activeCalories: Value(activeCalories),
+      averageHeartRate: Value(averageHeartRate),
+      healthWorkoutId: Value(healthWorkoutId),
+      rpe: Value(rpe),
+      cardio: cardio == null ? const Value.absent() : Value(cardio),
+    );
+  }
+
+  /// Whether [theirs] would fill a blank [mine] — the one direction a merge
+  /// is allowed to move a value (R8).
+  static bool _fills(double? mine, double? theirs) => mine == null && theirs != null;
 
   Future<void> _createCardioSession(WatchStandaloneSession event) {
     final startedAt = DateTime.fromMillisecondsSinceEpoch(event.startedAtEpochMs, isUtc: true);
@@ -146,10 +214,26 @@ class StandaloneSessionProcessor {
     );
   }
 
-  Future<void> _updateCardioSession(WatchStandaloneSession event) {
+  /// The row exists but isn't finished — either an adoption created it
+  /// ([_adoptCardio]) and the phone never closed it itself, or a pre-cardio
+  /// build's strength mirror row is being converted in place.
+  ///
+  /// [existing] is read for one reason: its `cardio` may already hold what
+  /// the *phone* measured live while the session ran (`CardioSessionScreen`
+  /// persists metrics during the workout), and the watch's block must fill
+  /// that in rather than replace it — R8 again, same rule
+  /// [_enrichFinishedCardioSession] follows. The scalar columns are the
+  /// watch's: it is the device that actually closed this session, so its
+  /// end time (and the duration derived from it) is the true one.
+  Future<void> _updateCardioSession(WatchStandaloneSession event) async {
     final startedAt = DateTime.fromMillisecondsSinceEpoch(event.startedAtEpochMs, isUtc: true);
     final endedAt = DateTime.fromMillisecondsSinceEpoch(event.endedAtEpochMs, isUtc: true);
-    return _sessionRepository.update(
+    final existing = await _sessionRepository.findByClientId(event.standaloneSessionId);
+    final watchCardio = event.cardio;
+    final mergedCardio = watchCardio == null
+        ? existing?.cardio
+        : (existing?.cardio?.mergedWithWatchMeasurement(watchCardio) ?? watchCardio);
+    await _sessionRepository.update(
       event.standaloneSessionId,
       startedAt: startedAt,
       finishedAt: endedAt,
@@ -162,7 +246,7 @@ class StandaloneSessionProcessor {
       sessionKind: const Value('CARDIO'),
       activityType: Value(event.activityType),
       movingSeconds: Value(event.movingSeconds ?? endedAt.difference(startedAt).inSeconds),
-      cardio: Value(event.cardio),
+      cardio: Value(mergedCardio),
     );
   }
 
@@ -184,6 +268,16 @@ class StandaloneSessionProcessor {
     required LanguagePreference language,
   }) {
     return _serialized(() async {
+      // A **cardio** session is adopted through a completely different door
+      // ([_adoptCardio]): everything below is strength-shaped — resolve the
+      // template's exercises, mirror a set list — and running a walk through
+      // it is exactly what produced a template-less *strength* session on
+      // the phone ("Quick strength") for a workout started as Walking.
+      if (event.isCardio) {
+        await _adoptCardio(event);
+        await _watchService.ackAdoption(event.standaloneSessionId);
+        return;
+      }
       final alreadyFinished =
           await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
       if (alreadyFinished == null) {
@@ -196,6 +290,53 @@ class StandaloneSessionProcessor {
       }
       await _watchService.ackAdoption(event.standaloneSessionId);
     });
+  }
+
+  /// Gives a watch-started **cardio** session its live row on the phone, so
+  /// the workout runs on both devices instead of only surfacing when it ends
+  /// (docs/cardio/55-cardio-watch-plan.md §5). The row is shaped exactly like
+  /// one `createCardioSession` (the phone's own quick-start) would make —
+  /// same kind/activityType, `movingSeconds: 0` and a `movingSinceEpochMs`
+  /// checkpoint at the watch's start time — because that is precisely what
+  /// makes `CardioSessionScreen` open on it and keep going from there, rather
+  /// than needing a second, watch-specific screen mode.
+  ///
+  /// From that point the phone is the one measuring GPS, and its numbers win
+  /// at the end (R8) — see [_enrichFinishedCardioSession].
+  ///
+  /// **Create-only.** The watch resends this snapshot on every reconnect, and
+  /// a resend has nothing to add: a cardio session carries no set list to
+  /// refresh (that's the whole reason [_refreshRunningSession] exists for
+  /// strength), and rewriting `startedAt`/`movingSinceEpochMs` under a
+  /// running screen would jerk its clock. An already-finished row is left
+  /// alone too — a snapshot that lost a race with the session's own ending
+  /// must not reopen it.
+  Future<void> _adoptCardio(WatchStandaloneAdoption event) async {
+    final alreadyFinished =
+        await _sessionRepository.isFinishedByClientId(event.standaloneSessionId);
+    if (alreadyFinished != null) return;
+    await _createOrElse(() => _createAdoptedCardioSession(event), () async {});
+  }
+
+  Future<void> _createAdoptedCardioSession(WatchStandaloneAdoption event) {
+    final startedAt = DateTime.fromMillisecondsSinceEpoch(event.startedAtEpochMs, isUtc: true);
+    return _sessionRepository.create(
+      clientId: event.standaloneSessionId,
+      startedAt: startedAt,
+      // No template, no exercises, no sets — a cardio session has none
+      // (docs/cardio/51-cardio-overview-plan.md §5), which is also why this
+      // needs no `_resolveExercisesAndSets` pass at all.
+      exercises: const [],
+      sets: const [],
+      // Whatever the watch has measured so far; the phone's own screen takes
+      // over from here and the closing payload reconciles the rest.
+      activeCalories: event.activeCalories,
+      averageHeartRate: event.averageHeartRate,
+      sessionKind: 'CARDIO',
+      activityType: event.activityType,
+      movingSeconds: 0,
+      movingSinceEpochMs: startedAt.millisecondsSinceEpoch,
+    );
   }
 
   /// Tail of the queue every [process]/[processAdoption] call runs on.

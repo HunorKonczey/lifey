@@ -60,6 +60,12 @@ data class CardioActiveMetrics(
     val secondaryValue: String? = null,
     val tertiaryLabel: String? = null,
     val tertiaryValue: String? = null,
+    /** GAME only — whether the phone says the player is on court or on the
+     * bench (`CardioLiveMetrics.onCourt`, docs/cardio/55-cardio-watch-plan.md
+     * §7, W-9). True for every other family and for a phone build that
+     * predates the field, which is what keeps a non-GAME session's screens
+     * exactly as they were. */
+    val onCourt: Boolean = true,
     /** The moving/game-time checkpoint the ticking slot counts up from —
      * plain relative seconds, so (unlike the Dart source's `movingSinceEpochMs`,
      * which this class deliberately drops) it's safe to use directly
@@ -79,6 +85,11 @@ data class CardioActiveMetrics(
  * standalone set uses this fixed value, the user corrects it on the phone
  * later. Carried per-set on the wire already so a future watch-side stepper
  * (F5b/F6b) won't need a protocol change. */
+/** How long a local court/bench tap wins over a contradicting phone push —
+ * see [SessionStateHolder.applyPhoneOnCourt]. Long enough to cover the round
+ * trip, short enough that a tap the phone refused can't strand this watch. */
+private const val PENDING_COURT_ECHO_MS = 5_000L
+
 private const val STANDALONE_DEFAULT_REPS = 10
 /** §3.5 — standalone has no phone-driven rest timer, so the watch starts
  * its own fixed-length one on every logged set. */
@@ -426,6 +437,23 @@ data class SessionMetadata(
      * (and, briefly, for a CARDIO one before its first state sync lands).
      * See [CardioActiveMetrics]. */
     val cardioMetrics: CardioActiveMetrics? = null,
+    /** GAME only — whether the player is on court or on the bench
+     * (docs/cardio/55-cardio-watch-plan.md §7, W-9). **Not** a screen-local
+     * `remember` any more: the same switch exists on the phone and the two
+     * have to agree, so it lives where both directions can reach it — the
+     * wrist's own tap ([SessionStateHolder.setOnCourt]) and the phone's
+     * pushed state ([CardioActiveMetrics.onCourt]). */
+    val isOnCourt: Boolean = true,
+    /** The **standalone** session's own playing-time accumulator: seconds
+     * banked on court, plus (while on court) the time since
+     * [localMovingAnchorElapsedRealtimeMs]. A phone-mastered session takes
+     * both numbers from the phone instead — it owns that session's clock.
+     * The pair mirrors the phone's own `movingSeconds`/`movingSinceEpochMs`
+     * (frozen anchor = benched), which is what lets a benched watch session
+     * report real playing time when it closes instead of the wall-clock
+     * fallback the phone would otherwise compute. */
+    val localMovingSecondsBase: Int = 0,
+    val localMovingAnchorElapsedRealtimeMs: Long? = null,
 ) {
     val isCardio: Boolean get() = kind == "CARDIO"
     val cardioFamily: CardioActivityFamily? get() = cardioActivityType?.let(::cardioActivityFamily)
@@ -659,6 +687,14 @@ data class StandalonePrefill(
 data class LiveMetrics(
     val heartRateBpm: Double? = null,
     val activeCalories: Double? = null,
+    /** Health Services' `DATA_TYPE_DISTANCE_TOTAL` for this session, in
+     * metres — null for a STRENGTH session and for a cardio one that doesn't
+     * request the type at all (GAME), or before the first sample. Published
+     * here, not just kept inside `ExerciseService` for the closing payload,
+     * because a **watch-started** cardio session formats its own metrics
+     * page from it (`localCardioMetrics` in `ActiveWorkoutScreen`): there is
+     * no phone pushing pre-formatted strings into a standalone session. */
+    val distanceMeters: Double? = null,
     val startedAtElapsedRealtimeMs: Long? = null,
     /** Mirrors `ExerciseUpdate.exerciseStateInfo.state.isPaused` — true for
      * both `USER_PAUSED` and `AUTO_PAUSED` (docs/40-watch-app-plan.md §12.1
@@ -694,6 +730,11 @@ object SessionStateHolder {
     /** Set once [onStandaloneEnded] moves [phase] to [SessionPhase.SUMMARY]
      * — see [StandaloneSummary]'s doc comment for why this can't just be an
      * associated value on [phase] itself. Null outside that phase. */
+    /** See [applyPhoneOnCourt] — a local court/bench tap the phone hasn't
+     * echoed back yet, and when it was made. */
+    private var pendingOnCourt: Boolean? = null
+    private var pendingOnCourtAtElapsedRealtimeMs = 0L
+
     private val _standaloneSummary = MutableStateFlow<StandaloneSummary?>(null)
     val standaloneSummary: StateFlow<StandaloneSummary?> = _standaloneSummary
 
@@ -789,6 +830,13 @@ object SessionStateHolder {
             // against. Applied first, so everything below already judges
             // against the new list.
             applySessionPlan(sessionPlan)
+            // The phone's own court/bench state for a session this watch
+            // started and the phone joined (W-9) — deliberately applied
+            // inside the standalone branch, unlike everything else the phone
+            // pushes about a watch-owned session: this one isn't a
+            // measurement the watch already knows better, it's the user's own
+            // switch, and either screen can flip it.
+            cardioMetrics?.let { applyPhoneOnCourt(it.onCourt) }
             // Id-first (F6c): a position only means the same thing on both
             // sides while the list can't change, which is exactly what the
             // session plan undoes. Both sides carry the id whenever they can —
@@ -895,6 +943,10 @@ object SessionStateHolder {
                 cardioMetrics = cardioMetrics,
             )
         }
+        // W-9 — the phone's court/bench state drives this watch's own switch,
+        // so both screens show the same half of the match. After the copy
+        // above, which is what `cardioFamily` is read off.
+        cardioMetrics?.let { applyPhoneOnCourt(it.onCourt) }
     }
 
     /**
@@ -922,6 +974,7 @@ object SessionStateHolder {
         startedAtElapsedRealtimeMs: Long,
         template: StandaloneTemplate? = null,
         activityType: String? = null,
+        title: String? = null,
     ) {
         _phase.value = SessionPhase.ACTIVE
         _metadata.update {
@@ -931,6 +984,22 @@ object SessionStateHolder {
                 standaloneTemplate = template,
                 kind = if (activityType != null) "CARDIO" else "STRENGTH",
                 cardioActivityType = activityType,
+                // The picker row's own pre-localized name ("Walking"/"Séta"),
+                // which is what `activeHeaderLabel` shows. Without it a
+                // watch-started cardio session fell through to the generic
+                // `active_header_label`, so a walk announced itself as
+                // **STRENGTH** in its own header. This watch holds no
+                // activity-type dictionary of its own by design (docs/cardio/
+                // 55-cardio-watch-plan.md §3.2 — the phone pre-localizes
+                // every title it syncs), so the name comes from the tapped
+                // row rather than a lookup here.
+                title = title,
+                // Opens the first on-court stint for a standalone GAME
+                // session's own playing-time accumulator (W-9) — set
+                // directly, not through [applyOnCourt], which is a no-op
+                // while the state already reads "on court". Unread by every
+                // other family.
+                localMovingAnchorElapsedRealtimeMs = startedAtElapsedRealtimeMs,
             )
         }
         _liveMetrics.update { it.copy(startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs) }
@@ -961,8 +1030,9 @@ object SessionStateHolder {
         sets: List<StandaloneSet>,
         sessionPlan: List<StandaloneTemplateExercise>? = null,
         // docs/cardio/55-cardio-watch-plan.md §5/§7 W-8, C5.7a — see
-        // [onStandaloneStarted]'s identical parameter.
+        // [onStandaloneStarted]'s identical parameters.
         activityType: String? = null,
+        title: String? = null,
     ) {
         if (_phase.value != SessionPhase.IDLE) return
         _phase.value = SessionPhase.ACTIVE
@@ -976,6 +1046,13 @@ object SessionStateHolder {
                 sessionPlanExercises = sessionPlan,
                 kind = if (activityType != null) "CARDIO" else "STRENGTH",
                 cardioActivityType = activityType,
+                // …or a recovered walk would come back headed "STRENGTH" —
+                // see [onStandaloneStarted].
+                title = title,
+                // A default open stint, immediately overwritten by
+                // [restoreCourtState] when the snapshot had one — same
+                // reasoning as [onStandaloneStarted]'s.
+                localMovingAnchorElapsedRealtimeMs = startedAtElapsedRealtimeMs,
             )
         }
         _liveMetrics.update { it.copy(startedAtElapsedRealtimeMs = startedAtElapsedRealtimeMs) }
@@ -1194,6 +1271,90 @@ object SessionStateHolder {
         _liveMetrics.update { it.copy(activeCalories = kcal) }
     }
 
+    /** The wrist's own pályán/padon tap (W-9) — moves this watch's state right
+     * away; `ActiveWorkoutScreen` tells the phone, which runs its own
+     * `_setOnCourt` and answers with the same value on its next push. GAME
+     * only, so the toggle can't exist on a screen that has no bench.
+     * Returns whether anything actually changed, so the caller only sends a
+     * message for a real toggle. */
+    fun setOnCourt(onCourt: Boolean): Boolean {
+        val metadata = _metadata.value
+        if (!metadata.isCardio || metadata.cardioFamily != CardioActivityFamily.GAME) return false
+        if (metadata.isOnCourt == onCourt) return false
+        applyOnCourt(onCourt)
+        return true
+    }
+
+    /** The phone's own answer, from a state push. Ignored only while it
+     * contradicts a still-unconfirmed local tap: pushes built *before* the
+     * tap arrived still carry the old value, and applying one would visibly
+     * flip the switch back for a second. The first agreeing push clears the
+     * wait, and so does [PENDING_COURT_ECHO_MS] passing — so a tap the phone
+     * legitimately refused (it guards on paused/finished) can't leave this
+     * watch stuck on a state the session isn't in. */
+    fun applyPhoneOnCourt(onCourt: Boolean) {
+        val pending = pendingOnCourt
+        if (pending != null) {
+            val age = SystemClock.elapsedRealtime() - pendingOnCourtAtElapsedRealtimeMs
+            val stillWaiting = pending != onCourt && age <= PENDING_COURT_ECHO_MS
+            if (!stillWaiting) pendingOnCourt = null
+            if (stillWaiting) return
+        }
+        applyOnCourt(onCourt, local = false)
+    }
+
+    /** Banks or reopens the local playing-time stint. Shared by both
+     * directions so the accumulator can't drift from what the screen shows. */
+    private fun applyOnCourt(onCourt: Boolean, local: Boolean = true) {
+        if (local) {
+            pendingOnCourt = onCourt
+            pendingOnCourtAtElapsedRealtimeMs = SystemClock.elapsedRealtime()
+        }
+        _metadata.update { current ->
+            if (current.isOnCourt == onCourt) return@update current
+            val now = SystemClock.elapsedRealtime()
+            if (onCourt) {
+                current.copy(isOnCourt = true, localMovingAnchorElapsedRealtimeMs = now)
+            } else {
+                val banked = current.localMovingAnchorElapsedRealtimeMs
+                    ?.let { ((now - it) / 1000L).toInt() } ?: 0
+                current.copy(
+                    isOnCourt = false,
+                    localMovingSecondsBase = current.localMovingSecondsBase + banked,
+                    localMovingAnchorElapsedRealtimeMs = null,
+                )
+            }
+        }
+    }
+
+    /** This watch's own playing time so far — banked stints plus the open
+     * one. Read by the standalone metrics page and by the closing payload. */
+    fun localPlayingSeconds(): Int {
+        val metadata = _metadata.value
+        val anchor = metadata.localMovingAnchorElapsedRealtimeMs ?: return metadata.localMovingSecondsBase
+        return metadata.localMovingSecondsBase +
+            ((SystemClock.elapsedRealtime() - anchor) / 1000L).toInt()
+    }
+
+    /** Restores the accumulator after a process death — see
+     * `ExerciseService.recoverStandaloneExercise`. An absent [sinceElapsedRealtimeMs]
+     * *is* the benched state, exactly as it is on the phone. */
+    fun restoreCourtState(movingSecondsBase: Int, sinceElapsedRealtimeMs: Long?) {
+        _metadata.update {
+            it.copy(
+                isOnCourt = sinceElapsedRealtimeMs != null,
+                localMovingSecondsBase = movingSecondsBase,
+                localMovingAnchorElapsedRealtimeMs = sinceElapsedRealtimeMs,
+            )
+        }
+    }
+
+    /** Health Services' running distance total for this session — see
+     * [LiveMetrics.distanceMeters]. */
+    fun onDistanceMeasured(meters: Double) {
+        _liveMetrics.update { it.copy(distanceMeters = meters) }
+    }
+
     fun onPausedChanged(isPaused: Boolean) {
         _liveMetrics.update { it.copy(isPaused = isPaused) }
     }
@@ -1387,6 +1548,7 @@ object SessionStateHolder {
     fun reset() {
         _phase.value = SessionPhase.IDLE
         _metadata.value = SessionMetadata()
+        pendingOnCourt = null
         _liveMetrics.value = LiveMetrics()
         _logSetState.value = LogSetState.Ready
         _logAdjustState.value = null
