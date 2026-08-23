@@ -716,6 +716,7 @@
   "activityTypeRunning": "Futás",
   "activityTypeWalking": "Séta",
   "activityTypeHiking": "Túrázás",
+  "activityTypeCycling": "Kerékpározás",
   "activityTypeIndoorBike": "Szobabicikli",
   "activityTypeBasketball": "Kosárlabda",
   "activityTypeFootball": "Foci",

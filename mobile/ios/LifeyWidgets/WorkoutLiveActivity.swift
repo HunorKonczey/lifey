@@ -209,6 +209,10 @@ private func cardioActivitySymbol(_ activityType: String?) -> String {
   case "RUNNING": return "figure.run"
   case "WALKING": return "figure.walk"
   case "HIKING": return "figure.hiking"
+  // Outdoor cycling (docs/cardio/62-cardio-cycling-plan.md A6) — distinct
+  // from INDOOR_BIKE's "bicycle" below, mirroring the same symbol choice
+  // `LifeyWatch/Views/ActiveWorkoutView.swift`'s `cardioActivityIcon` makes.
+  case "CYCLING": return "figure.outdoor.cycle"
   case "INDOOR_BIKE": return "bicycle"
   case "BASKETBALL": return "basketball.fill"
   case "FOOTBALL": return "soccerball"

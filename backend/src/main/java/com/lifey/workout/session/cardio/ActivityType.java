@@ -16,6 +16,7 @@ public enum ActivityType {
     RUNNING(ActivityFamily.DISTANCE),
     WALKING(ActivityFamily.DISTANCE),
     HIKING(ActivityFamily.DISTANCE),
+    CYCLING(ActivityFamily.DISTANCE),
     INDOOR_BIKE(ActivityFamily.MACHINE),
     BASKETBALL(ActivityFamily.GAME),
     FOOTBALL(ActivityFamily.GAME),

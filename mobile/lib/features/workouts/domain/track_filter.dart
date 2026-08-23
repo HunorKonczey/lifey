@@ -50,6 +50,19 @@ TrackFilterProfile trackFilterProfileFor(String activityType) {
         accuracyThresholdMeters: 30,
         maxSpeedMetersPerSecond: 30 * 1000 / 3600,
       ),
+    // Outdoor cycling (docs/cardio/62-cardio-cycling-plan.md §2.4). Ordinary
+    // road-cycling speed routinely exceeds running's 30 km/h ceiling on
+    // flats, let alone descents — without its own, higher ceiling, CYCLING
+    // would silently fall through to the RUNNING default below and have real
+    // motion rejected as an implausible jump, quietly under-counting
+    // distance the same way an unfiltered stream over-counts it. 70 km/h
+    // covers ordinary descents with headroom without giving up on rejecting
+    // genuine GPS jump artifacts. Same 20 m accuracy threshold as running —
+    // that gate is about the fix's quality, not the activity's speed.
+    'CYCLING' => const TrackFilterProfile(
+        accuracyThresholdMeters: 20,
+        maxSpeedMetersPerSecond: 70 * 1000 / 3600,
+      ),
     // An outdoor GAME (C9.4). Same ceilings as running on purpose: a match is
     // a string of sprints, so a slower speed gate would reject the very
     // motion worth recording, and the accuracy gate is about the fix's
@@ -60,7 +73,8 @@ TrackFilterProfile trackFilterProfileFor(String activityType) {
         accuracyThresholdMeters: 20,
         maxSpeedMetersPerSecond: 30 * 1000 / 3600,
       ),
-    // RUNNING, and any other DISTANCE-family fallback.
+    // RUNNING, and any other unmatched code (not CYCLING — that has its own
+    // case above precisely because this 30 km/h ceiling is wrong for it).
     _ => const TrackFilterProfile(
         accuracyThresholdMeters: 20,
         maxSpeedMetersPerSecond: 30 * 1000 / 3600,

@@ -18,6 +18,7 @@ void main() {
       expect(activityFamilyOf('RUNNING'), ActivityFamily.distance);
       expect(activityFamilyOf('WALKING'), ActivityFamily.distance);
       expect(activityFamilyOf('HIKING'), ActivityFamily.distance);
+      expect(activityFamilyOf('CYCLING'), ActivityFamily.distance);
     });
 
     test('MACHINE family', () {

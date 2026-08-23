@@ -36,7 +36,7 @@ enum class CardioActivityFamily { DISTANCE, MACHINE, GAME }
 fun cardioActivityFamily(activityType: String): CardioActivityFamily = when (activityType) {
     "INDOOR_BIKE" -> CardioActivityFamily.MACHINE
     "BASKETBALL", "FOOTBALL", "OTHER_CARDIO" -> CardioActivityFamily.GAME
-    else -> CardioActivityFamily.DISTANCE // RUNNING, WALKING, HIKING — and any future/unknown code
+    else -> CardioActivityFamily.DISTANCE // RUNNING, WALKING, HIKING, CYCLING — and any future/unknown code
 }
 
 /**

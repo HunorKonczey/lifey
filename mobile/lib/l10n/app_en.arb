@@ -3327,6 +3327,10 @@
   "@activityTypeHiking": {
     "description": "Cardio activity type: hiking (DISTANCE family)"
   },
+  "activityTypeCycling": "Cycling",
+  "@activityTypeCycling": {
+    "description": "Cardio activity type: outdoor cycling (DISTANCE family) — not to be confused with activityTypeIndoorBike, the stationary bike (MACHINE family)"
+  },
   "activityTypeIndoorBike": "Indoor bike",
   "@activityTypeIndoorBike": {
     "description": "Cardio activity type: stationary/indoor bike (MACHINE family)"

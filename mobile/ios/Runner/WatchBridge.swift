@@ -335,7 +335,11 @@ private func sanitizedForPropertyList(_ value: Any) -> Any? {
 /// precedent (docs/cardio/59-cardio-implementation-plan.md) applies here too.
 private func cardioWorkoutActivityType(for activityType: String?) -> HKWorkoutActivityType {
   switch activityType {
-  case "INDOOR_BIKE": return .cycling
+  // HealthKit has one `.cycling` case for both indoor and outdoor riding —
+  // no separate "outdoor cycling" constant exists (docs/cardio/62-cardio-
+  // cycling-plan.md A6) — so CYCLING and INDOOR_BIKE share it and are told
+  // apart only by `cardioLocationType` below (.outdoor vs .indoor).
+  case "INDOOR_BIKE", "CYCLING": return .cycling
   case "RUNNING": return .running
   case "WALKING": return .walking
   case "HIKING": return .hiking
@@ -362,7 +366,7 @@ private func cardioLocationType(for activityType: String?, venue: String?) -> HK
   default: break
   }
   switch activityType {
-  case "RUNNING", "WALKING", "HIKING": return .outdoor
+  case "RUNNING", "WALKING", "HIKING", "CYCLING": return .outdoor
   case "OTHER_CARDIO": return .unknown
   default: return .indoor
   }

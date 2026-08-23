@@ -91,6 +91,28 @@ Future<void> _tapSave(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Selects an activity-type chip by its label. The chip row is a horizontal
+/// `ListView.separated` (`log_cardio_sheet.dart`), which — unlike a `Wrap` —
+/// only builds the chips currently within its viewport/cache extent, so a
+/// chip past the first few (docs/cardio/62-cardio-cycling-plan.md's `CYCLING`
+/// pushed `Basketball` one slot further right) has no `Element` yet and
+/// `ensureVisible` throws "No element" for it. `scrollUntilVisible` scrolls
+/// first and re-queries as it goes, so it works even before the target is
+/// built — but needs the *inner* horizontal `Scrollable` named explicitly,
+/// since the sheet's outer `SingleChildScrollView` is also a `Scrollable`
+/// and the default lookup would find more than one.
+Future<void> _tapActivityChip(WidgetTester tester, String label) async {
+  final chip = find.widgetWithText(ChoiceChip, label);
+  await tester.scrollUntilVisible(
+    chip,
+    100,
+    scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)),
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(chip);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('defaults to the DISTANCE family fields (Running is first)', (tester) async {
     await _pumpSheet(tester);
@@ -118,11 +140,7 @@ void main() {
   testWidgets('selecting a MACHINE type swaps in the machine fields', (tester) async {
     await _pumpSheet(tester);
 
-    final chip = find.widgetWithText(ChoiceChip, 'Indoor bike');
-    await tester.ensureVisible(chip);
-    await tester.pumpAndSettle();
-    await tester.tap(chip);
-    await tester.pumpAndSettle();
+    await _tapActivityChip(tester, 'Indoor bike');
 
     expect(find.text('AVG POWER'), findsOneWidget);
     expect(find.text('CADENCE'), findsOneWidget);
@@ -135,11 +153,7 @@ void main() {
       (tester) async {
     await _pumpSheet(tester);
 
-    final chip = find.widgetWithText(ChoiceChip, 'Basketball');
-    await tester.ensureVisible(chip);
-    await tester.pumpAndSettle();
-    await tester.tap(chip);
-    await tester.pumpAndSettle();
+    await _tapActivityChip(tester, 'Basketball');
 
     expect(find.text('DISTANCE'), findsNothing);
     expect(find.text('AVG POWER'), findsNothing);
@@ -217,11 +231,7 @@ void main() {
       (tester) async {
     final controller = await _pumpSheet(tester);
 
-    final chip = find.widgetWithText(ChoiceChip, 'Basketball');
-    await tester.ensureVisible(chip);
-    await tester.pumpAndSettle();
-    await tester.tap(chip);
-    await tester.pumpAndSettle();
+    await _tapActivityChip(tester, 'Basketball');
 
     await tester.enterText(find.byType(TextField).at(1), '52'); // 52 minutes
 

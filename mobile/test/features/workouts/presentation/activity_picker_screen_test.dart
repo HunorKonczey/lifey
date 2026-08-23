@@ -84,18 +84,19 @@ void main() {
   setUp(resetOpenWorkoutScreens);
   tearDown(resetOpenWorkoutScreens);
 
-  testWidgets('lists all seven cardio types with their modality subtitle', (tester) async {
+  testWidgets('lists all eight cardio types with their modality subtitle', (tester) async {
     await _pump(tester);
 
     expect(find.text('Running'), findsOneWidget);
     expect(find.text('Walking'), findsOneWidget);
     expect(find.text('Hiking'), findsOneWidget);
+    expect(find.text('Cycling'), findsOneWidget);
     expect(find.text('Indoor bike'), findsOneWidget);
     expect(find.text('Basketball'), findsOneWidget);
     expect(find.text('Football'), findsOneWidget);
     expect(find.text('Other'), findsOneWidget);
-    // DISTANCE family (running/walking/hiking) shares one subtitle.
-    expect(find.text('Distance · pace · GPS'), findsNWidgets(3));
+    // DISTANCE family (running/walking/hiking/cycling) shares one subtitle.
+    expect(find.text('Distance · pace · GPS'), findsNWidgets(4));
     expect(find.text('Cadence · power'), findsOneWidget); // MACHINE
     expect(find.text('Playing time · heart-rate zones'), findsNWidgets(3)); // GAME ×3
   });
@@ -117,6 +118,12 @@ void main() {
       ),
       const WorkoutTemplate(clientId: 't2', name: 'Pull day', exercises: []),
     ]);
+    // The cardio section now has eight rows (docs/cardio/62-cardio-cycling-
+    // plan.md's CYCLING), pushing "STRENGTH TEMPLATES" past the ListView's
+    // initial build/cache extent — scrollUntilVisible finds it by scrolling
+    // and re-querying, unlike ensureVisible, which needs the element to
+    // already exist.
+    await tester.scrollUntilVisible(find.text('STRENGTH TEMPLATES'), 200);
 
     expect(find.text('STRENGTH TEMPLATES'), findsOneWidget);
     expect(find.text('Push day'), findsOneWidget);
