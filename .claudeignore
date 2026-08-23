@@ -24,8 +24,10 @@ out/
 *.log
 logs/
 
-# Claude internals
-.claude/
+# Claude internals — only the machine-written local state. The rest of
+# .claude/ (skills and their scripts/reference files, launch.json) is
+# checked in and must stay readable.
+.claude/settings.local.json
 
 # AI generated artifacts
 agent-artifacts/

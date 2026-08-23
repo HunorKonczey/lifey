@@ -716,12 +716,15 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     await _persistCardio(deviceCalories: result, caloriesSource: 'MANUAL');
   }
 
-  /// The bottom "Done" button — reached whether this screen just replaced a
-  /// live [CardioSessionScreen] (`_finish()` pushed it via `pushReplacement`
-  /// onto an imperative `Navigator`, layered on top of the go_router shell —
-  /// its own `context.go('/workouts')` call primes the Sessions tab *behind*
-  /// this screen, but leaves this screen itself on top until it's dismissed)
-  /// or a reopened already-finished session (`open_workout_screens.dart`).
+  /// The header back arrow's handler — reached whether this screen just
+  /// replaced a live [CardioSessionScreen] (`_finish()` pushed it via
+  /// `pushReplacement` onto an imperative `Navigator`, layered on top of the
+  /// go_router shell — its own `context.go('/workouts')` call primes the
+  /// Sessions tab *behind* this screen, but leaves this screen itself on top
+  /// until it's dismissed) or a reopened already-finished session
+  /// (`open_workout_screens.dart`). No separate "Done" button any more — the
+  /// back arrow is the only way out, and it always lands on the completed
+  /// Sessions list rather than wherever it's popped to.
   ///
   /// Both steps below are needed, and `go()` alone was the bug: this screen is
   /// a **pageless** route — pushed straight onto the root `Navigator`, not
@@ -729,7 +732,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   /// Changing the location rebuilds those pages, but the shell page directly
   /// underneath this route stays exactly where it is, so nothing ever pops
   /// this screen. After `_finish()` the location is already `/workouts` on top
-  /// of that, making the call a plain no-op: tapping Done did nothing at all.
+  /// of that, making the call a plain no-op: tapping back did nothing at all.
   /// So `go()` for the destination *behind* us, and a pop to actually leave.
   void _done() {
     ref.read(workoutsSessionsTabRequestProvider.notifier).request();
@@ -768,7 +771,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
               child: _SummaryHeaderBar(
                 title: activityTypeLabel(l10n, _activityType),
-                onBack: () => Navigator.of(context).maybePop(),
+                onBack: _done,
               ),
             ),
             Expanded(
@@ -817,23 +820,6 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                     onRpeChanged: _busy ? (_) {} : _setRpe,
                   ),
                 ],
-              ),
-            ),
-            // M13–M16 all end the same way: one primary block, pinned, never
-            // scrolled away.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
-              child: SizedBox(
-                height: 56,
-                child: FilledButton.icon(
-                  onPressed: _done,
-                  icon: const Icon(Icons.check, size: 22),
-                  label: Text(l10n.cardioSummaryDoneButton),
-                  style: FilledButton.styleFrom(
-                    textStyle: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                ),
               ),
             ),
           ],

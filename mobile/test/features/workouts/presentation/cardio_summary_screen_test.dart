@@ -957,7 +957,7 @@ void main() {
     });
   });
 
-  group('Done button', () {
+  group('header back arrow', () {
     testWidgets('requests the Sessions tab (no GoRouter ancestor: falls back to a no-op pop)',
         (tester) async {
       final container = ProviderContainer(overrides: [
@@ -982,7 +982,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(container.read(workoutsSessionsTabRequestProvider), 0);
-      await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+      await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
 
       expect(container.read(workoutsSessionsTabRequestProvider), 1);
@@ -992,10 +992,10 @@ void main() {
       // The real shape of both entry points: this screen is pushed straight
       // onto the navigator (by `CardioSessionScreen._finish`'s
       // `pushReplacement`, or by `open_workout_screens.dart`), so it is a
-      // *pageless* route sitting above go_router's own pages. Done used to
-      // only call `context.go('/workouts')`, which rebuilds those pages but
-      // never pops a route on top of them — and after finishing, the location
-      // already *was* `/workouts`, so the button did nothing whatsoever.
+      // *pageless* route sitting above go_router's own pages. The back arrow
+      // used to only call `context.go('/workouts')`, which rebuilds those
+      // pages but never pops a route on top of them — and after finishing,
+      // the location already *was* `/workouts`, so it did nothing whatsoever.
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -1023,7 +1023,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(CardioSummaryScreen), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+      await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
 
       expect(find.byType(CardioSummaryScreen), findsNothing);

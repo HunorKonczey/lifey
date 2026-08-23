@@ -707,13 +707,6 @@
   "chatMuteAction": "Némítás",
   "chatUnmuteAction": "Némítás feloldása",
   "chatMuteForHours": "Némítás {hours} órára",
-  "@chatMuteForHours": {
-    "placeholders": {
-      "hours": {
-        "type": "int"
-      }
-    }
-  },
   "chatMuteUntilFurtherNotice": "Némítás visszavonásig",
   "chatMutedMessage": "A beszélgetés némítva",
   "chatUnmutedMessage": "A némítás feloldva",
@@ -756,7 +749,6 @@
   "finishButtonLabel": "Befejezés",
   "finishCardioConfirmTitle": "Befejezed az edzést?",
   "finishCardioConfirmMessage": "Ez lezárja az edzést, és elmenti a mozgásidőt.",
-  "cardioSummaryDoneButton": "Kész",
   "manualPauseCardTitle": "Szüneteltetve",
   "manualPauseCardSubtitle": "Te állítottad meg · {duration} óta",
   "autoPauseCardTitle": "Automatikus szünet",
