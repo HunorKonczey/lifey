@@ -858,8 +858,13 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
       // M13: no single hero number here — the route is the hero, and the
       // numbers below it form one even six-cell grid.
       case ActivityFamily.distance:
+        // Cycling shows speed (km/h), not pace (min/km) — docs/cardio/
+        // 62-cardio-cycling-plan.md §2.2. Every other DISTANCE type unchanged.
+        final isCycling = _activityType == 'CYCLING';
         final pace = hasDistance && _duration != null
-            ? CardioFormatter.pace(_distanceMeters!, _duration, unitSystem)
+            ? (isCycling
+                ? CardioFormatter.speed(_distanceMeters!, _duration, unitSystem)
+                : CardioFormatter.pace(_distanceMeters!, _duration, unitSystem))
             : null;
         return [
           _MetricGrid(
@@ -883,7 +888,7 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
                 _MetricTile(
                   icon: Icons.speed,
                   iconColor: metrics?.calories,
-                  label: l10n.paceLabel,
+                  label: isCycling ? l10n.speedLabel : l10n.paceLabel,
                   value: pace,
                 ),
               if (_elevationGainMeters != null)
@@ -1259,6 +1264,9 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
   ) {
     final cardio = widget.session.cardio;
     if (cardio == null) return const [];
+    // Cycling shows speed (km/h), not pace (min/km) — docs/cardio/
+    // 62-cardio-cycling-plan.md §2.2. Every other DISTANCE type unchanged.
+    final isCycling = _activityType == 'CYCLING';
     final rows = <_BestEffortRow>[
       for (final (type, seconds, meters) in [
         (CardioPrType.fastest1k, cardio.best1kSeconds, 1000.0),
@@ -1271,7 +1279,9 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
             duration: Duration(seconds: seconds),
             // Only this is comparable across the three rows — a longer
             // distance always takes more absolute time (M34).
-            pace: CardioFormatter.pace(meters, Duration(seconds: seconds), unitSystem),
+            pace: isCycling
+                ? CardioFormatter.speed(meters, Duration(seconds: seconds), unitSystem)
+                : CardioFormatter.pace(meters, Duration(seconds: seconds), unitSystem),
             isRecord: widget.newRecords.contains(type),
           ),
     ];
@@ -1488,7 +1498,10 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
         sections.addAll([
           const SizedBox(height: 12),
           _SectionCard(
-            label: l10n.paceSectionLabel,
+            // Cycling shows speed, not pace (docs/cardio/62-cardio-cycling-
+            // plan.md §2.2) — the chart itself (bar = split duration) is
+            // unchanged, only the header and the average-line value below it.
+            label: _activityType == 'CYCLING' ? l10n.speedSectionLabel : l10n.paceSectionLabel,
             trailingWidget: _FasterPill(label: l10n.paceChartFasterLabel),
             child: Column(
               children: [
@@ -1556,7 +1569,8 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     return sections;
   }
 
-  /// The dashed average line's value, in pace terms — computed over the full
+  /// The dashed average line's value, in pace terms (speed for CYCLING —
+  /// docs/cardio/62-cardio-cycling-plan.md §2.2) — computed over the full
   /// splits only, for the same reason the chart excludes the partial tail
   /// from its scale.
   String? _averagePaceLabel(
@@ -1567,7 +1581,10 @@ class _CardioSummaryScreenState extends ConsumerState<CardioSummaryScreen> {
     if (fullSplits.isEmpty) return null;
     final meters = fullSplits.fold<double>(0, (sum, s) => sum + (s.distanceMeters ?? 0));
     final seconds = fullSplits.fold<int>(0, (sum, s) => sum + s.durationSeconds);
-    final pace = CardioFormatter.pace(meters, Duration(seconds: seconds), unitSystem);
+    final duration = Duration(seconds: seconds);
+    final pace = _activityType == 'CYCLING'
+        ? CardioFormatter.speed(meters, duration, unitSystem)
+        : CardioFormatter.pace(meters, duration, unitSystem);
     return pace == null ? null : l10n.paceChartAverageLabel(pace);
   }
 }
@@ -2159,8 +2176,10 @@ class _BestEffortRow {
   final String label;
   final Duration duration;
 
-  /// Null only when the pace can't be derived — never in practice here,
-  /// since every row has both a distance and a time by construction.
+  /// Speed (km/h) for CYCLING, pace (min/km) otherwise (docs/cardio/
+  /// 62-cardio-cycling-plan.md §2.2). Null only when the value can't be
+  /// derived — never in practice here, since every row has both a distance
+  /// and a time by construction.
   final String? pace;
   final bool isRecord;
 }

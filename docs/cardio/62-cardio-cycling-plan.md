@@ -1,6 +1,6 @@
 # 62 – Cardio: Outdoor Cycling
 
-Status: **A1–A6 done — Milestone Cyc-A complete.**
+Status: **A1–A6 and B1–B3 done — both milestones complete.**
 Scope: backend · mobile · watch (Wear OS + watchOS)
 Depends on: [51-cardio-overview-plan.md](51-cardio-overview-plan.md) (the `DISTANCE`/`MACHINE`/`GAME`
 family model — shipped), [52](52-cardio-domain-backend-plan.md)/[53](53-cardio-mobile-plan.md)/
@@ -144,9 +144,9 @@ just display pace (an odd number, not a broken one) until Cyc-B lands.
 
 | # | Step | Files | Done-when |
 |---|---|---|---|
-| **B1** | Wire `CardioFormatter.speed()` into the live session screen, `CYCLING`-only | `mobile/lib/features/workouts/presentation/cardio_session_screen.dart:1024-1043` (`_cardioLiveMetrics`'s `ActivityFamily.distance` case), `:1812`, `:2360` | A `CYCLING` live session's pace/tertiary tile reads "km/h"; a `RUNNING`/`WALKING`/`HIKING` session's is pixel-identical to today (regression-tested, not just eyeballed). |
-| **B2** | Same swap on the summary screen | `mobile/lib/features/workouts/presentation/cardio_summary_screen.dart:862`, `:886`, `:1274`, `:1570` | Widget test: a closed `CYCLING` session's summary shows speed, not pace; a closed `RUNNING` session's is unchanged. |
-| **B3** | Extend PR eligibility to `CYCLING` (§2.3) | `mobile/lib/features/workouts/domain/cardio_personal_record.dart:68` | `cardio_personal_record_test.dart`: a qualifying `CYCLING` best effort produces a PR; a `WALKING`/`HIKING` session with identical numbers still does not. |
+| **B1** ✅ | Wire `CardioFormatter.speed()` into the live session screen, `CYCLING`-only | `mobile/lib/features/workouts/presentation/cardio_session_screen.dart` — `_cardioLiveMetrics`'s `ActivityFamily.distance` case (Live Activity payload), `_distanceBody` (the on-screen pace/speed tile, weak-signal blanking kept for both), `_finishSummaryLine` (the M12 finish-confirmation line) | **Done.** New ARB key `speedLabel` ("SPEED"/"SEBESSÉG"). Widget test added to `cardio_session_screen_distance_test.dart`: a `CYCLING` session shows "SPEED"/"30.0 km/h", never "PACE"/"/km"; every existing `RUNNING`/`WALKING`/`HIKING` assertion in the file still passes unchanged. |
+| **B2** ✅ | Same swap on the summary screen | `mobile/lib/features/workouts/presentation/cardio_summary_screen.dart` — the metric-grid pace tile, the best-effort section's per-row value, **and** the km-split chart's section header + average-line (`_averagePaceLabel`) — a fourth site the original plan's four line numbers pointed at but didn't fully account for: swapping the value alone would have left a "PACE PER SPLIT" header captioning a chart full of km/h numbers | **Done.** New ARB key `speedSectionLabel` ("SPEED PER SPLIT"/"SEBESSÉG SZAKASZONKÉNT") alongside `speedLabel`. Three widget tests added to `cardio_summary_screen_test.dart`: metric-grid speed display, split-chart header + `"avg 18.0 km/h"` average line, both with an explicit `findsNothing` check against the pace wording they replace. |
+| **B3** ✅ | Extend PR eligibility to `CYCLING` (§2.3) | `mobile/lib/features/workouts/domain/cardio_personal_record.dart:68` | **Done.** Traced the full call graph first (`detectCardioPrs`, `CardioPrBaseline.fromSessions`/`.extend`) to confirm this one-line `appliesTo` gate is the *only* place eligibility is decided — the PR-celebration value formatter already showed `fastest1k/5k/10k` as a plain duration ("3:12"), not a pace string, so it needed no change at all. `cardio_personal_record_test.dart` got a positive case ("cycling sets these records too... unlike walking/hiking above") placed right next to the existing walk/hike negative cases it's meant to contrast with. |
 
 ---
 

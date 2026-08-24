@@ -161,6 +161,24 @@ void main() {
     expect(find.text('5:00 /km'), findsOneWidget);
   });
 
+  testWidgets(
+      'a CYCLING session shows speed (km/h), not pace (docs/cardio/62-cardio-cycling-plan.md §2.2)',
+      (tester) async {
+    await _pump(
+      tester,
+      _distanceSession(
+        distanceMeters: 5000,
+        movingSeconds: 600, // 10:00 -> 30.0 km/h
+        activityType: 'CYCLING',
+      ),
+    );
+
+    expect(find.text('SPEED'), findsOneWidget);
+    expect(find.text('30.0 km/h'), findsOneWidget);
+    expect(find.text('PACE'), findsNothing);
+    expect(find.textContaining('/km'), findsNothing);
+  });
+
   testWidgets('a zero distance is treated the same as no distance (still falls back)',
       (tester) async {
     await _pump(tester, _distanceSession(distanceMeters: 0, movingSeconds: 60));

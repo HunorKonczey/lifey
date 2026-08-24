@@ -3443,6 +3443,10 @@
   "@paceLabel": {
     "description": "Secondary-metric label for a DISTANCE-family cardio session"
   },
+  "speedLabel": "SPEED",
+  "@speedLabel": {
+    "description": "Secondary-metric label shown instead of paceLabel for CYCLING sessions (docs/cardio/62-cardio-cycling-plan.md §2.2) — pairs with CardioFormatter.speed's km/h value, not paceLabel's min/km one"
+  },
   "pauseButtonLabel": "Pause",
   "@pauseButtonLabel": {
     "description": "Button that pauses a running cardio session"
@@ -3966,6 +3970,10 @@
   "paceSectionLabel": "PACE PER SPLIT",
   "@paceSectionLabel": {
     "description": "Section header above the per-split pace bar chart on the cardio summary screen (C6.4, M33). Deliberately not just 'PACE' — the metric grid higher up the same screen already labels the session's average pace that way, and two identical headers on one screen would read as the same number twice. The unit (min/km vs min/mi) shows in the average label directly under the chart."
+  },
+  "speedSectionLabel": "SPEED PER SPLIT",
+  "@speedSectionLabel": {
+    "description": "Same header as paceSectionLabel, shown instead of it for CYCLING sessions (docs/cardio/62-cardio-cycling-plan.md §2.2) — the split bar chart itself is unchanged, only pace vs. speed wording"
   },
   "paceChartFasterLabel": "faster",
   "@paceChartFasterLabel": {

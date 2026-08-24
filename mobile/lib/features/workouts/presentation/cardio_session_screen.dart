@@ -1026,6 +1026,10 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     switch (_family) {
       case ActivityFamily.distance:
         final hasDistance = (_distanceMeters ?? 0) > 0;
+        // Cycling shows speed (km/h), not pace (min/km) — docs/cardio/
+        // 62-cardio-cycling-plan.md §2.2: at cycling speeds pace reads as a
+        // nonsensical small number. Every other DISTANCE type is unchanged.
+        final isCycling = _activityType == 'CYCLING';
         return CardioLiveMetrics(
           primaryLabel: hasDistance ? l10n.distanceFieldLabel : l10n.movingTimeLabel,
           primaryValue: hasDistance
@@ -1033,9 +1037,12 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
               : CardioFormatter.duration(movingDuration),
           secondaryLabel: hasDistance ? l10n.movingTimeLabel : l10n.distanceFieldLabel,
           secondaryValue: hasDistance ? CardioFormatter.duration(movingDuration) : '—',
-          tertiaryLabel: l10n.paceLabel,
+          tertiaryLabel: isCycling ? l10n.speedLabel : l10n.paceLabel,
           tertiaryValue: hasDistance
-              ? (CardioFormatter.pace(_distanceMeters!, movingDuration, unitSystem) ?? '—')
+              ? ((isCycling
+                      ? CardioFormatter.speed(_distanceMeters!, movingDuration, unitSystem)
+                      : CardioFormatter.pace(_distanceMeters!, movingDuration, unitSystem)) ??
+                  '—')
               : '—',
           paused: _manuallyPaused,
           movingSecondsBase: _movingSeconds,
@@ -1800,16 +1807,25 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
     final secondaryLabel = hasDistance ? l10n.movingTimeLabel : l10n.distanceFieldLabel;
     final secondaryValue = hasDistance ? CardioFormatter.duration(duration) : '—';
 
-    // M10: while the signal's weak, pace is blanked rather than showing a
-    // stale average — "a tempó nem hazudik" — and the distance number (still
-    // shown, since it's a monotonic total that stays meaningful even through
-    // a gap) is labelled "estimated" instead. M04's healthy state shows
-    // neither: a plain "GPS" chip is enough there.
+    // M10: while the signal's weak, pace/speed is blanked rather than
+    // showing a stale average — "a tempó nem hazudik" — and the distance
+    // number (still shown, since it's a monotonic total that stays
+    // meaningful even through a gap) is labelled "estimated" instead. M04's
+    // healthy state shows neither: a plain "GPS" chip is enough there.
     final weakSignal = _weakSignal;
-    final paceLabel = weakSignal ? l10n.noSignalLabel : l10n.paceLabel;
+    // Cycling shows speed (km/h), not pace (min/km) — docs/cardio/
+    // 62-cardio-cycling-plan.md §2.2. Every other DISTANCE type unchanged.
+    final isCycling = _activityType == 'CYCLING';
+    final paceLabel =
+        weakSignal ? l10n.noSignalLabel : (isCycling ? l10n.speedLabel : l10n.paceLabel);
     final paceValue = weakSignal
-        ? '—:—'
-        : (hasDistance ? (CardioFormatter.pace(_distanceMeters!, duration, unitSystem) ?? '—') : '—');
+        ? (isCycling ? '—' : '—:—') // speed has no M:SS shape to blank into
+        : (hasDistance
+            ? ((isCycling
+                    ? CardioFormatter.speed(_distanceMeters!, duration, unitSystem)
+                    : CardioFormatter.pace(_distanceMeters!, duration, unitSystem)) ??
+                '—')
+            : '—');
 
     final metrics = Theme.of(context).extension<AppMetricColors>();
     final accent = activityTypeColor(_activityType, context);
@@ -2356,13 +2372,17 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
         (ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults()).unitSystem;
     final duration = Duration(seconds: _liveMovingSeconds);
     final hasDistance = (_distanceMeters ?? 0) > 0;
-    final pace = hasDistance && _family == ActivityFamily.distance
-        ? CardioFormatter.pace(_distanceMeters!, duration, unitSystem)
+    // Cycling shows speed (km/h), not pace (min/km) — docs/cardio/
+    // 62-cardio-cycling-plan.md §2.2. Every other DISTANCE type unchanged.
+    final paceOrSpeed = hasDistance && _family == ActivityFamily.distance
+        ? (_activityType == 'CYCLING'
+            ? CardioFormatter.speed(_distanceMeters!, duration, unitSystem)
+            : CardioFormatter.pace(_distanceMeters!, duration, unitSystem))
         : null;
     final parts = <String>[
       if (hasDistance) CardioFormatter.distance(_distanceMeters!, unitSystem),
       CardioFormatter.duration(duration),
-      if (pace != null) pace,
+      if (paceOrSpeed != null) paceOrSpeed,
     ];
     return parts.join(' · ');
   }

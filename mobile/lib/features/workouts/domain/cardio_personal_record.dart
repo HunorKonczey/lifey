@@ -26,10 +26,14 @@ enum CardioPrType {
   /// `stat_chart_data.dart`'s `StatMetric.cardioElevationGain` gating.
   greatestElevationGain,
 
-  /// The fastest continuous 1/5/10 km inside a single run (C6.1–C6.3's
-  /// `best1kSeconds` … columns). **Running only** — see [appliesTo]: a walk
-  /// or a hike would take the whole board with times nobody set out to beat,
-  /// and 56 §5.2 keeps these to the one activity they mean something for.
+  /// The fastest continuous 1/5/10 km inside a single run or ride (C6.1–
+  /// C6.3's `best1kSeconds` … columns). **Running and cycling only** — see
+  /// [appliesTo]: a walk or a hike would take the whole board with times
+  /// nobody set out to beat, and 56 §5.2 keeps these to the activities they
+  /// mean something for. Cycling joined running here in docs/cardio/
+  /// 62-cardio-cycling-plan.md §2.3 — a 1/5/10 km best effort is a real
+  /// number for a casual/commuter cyclist too, and the columns already store
+  /// it for every DISTANCE session regardless of eligibility here.
   fastest1k,
   fastest5k,
   fastest10k,
@@ -65,7 +69,8 @@ enum CardioPrType {
         family == ActivityFamily.distance || family == ActivityFamily.machine,
       longestMovingTime => true,
       greatestElevationGain => family == ActivityFamily.distance,
-      fastest1k || fastest5k || fastest10k => session.activityType == 'RUNNING',
+      fastest1k || fastest5k || fastest10k =>
+        session.activityType == 'RUNNING' || session.activityType == 'CYCLING',
       greatestTotalWork => family == ActivityFamily.machine,
       greatestMaxAltitude => family == ActivityFamily.distance,
     };

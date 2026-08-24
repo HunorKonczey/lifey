@@ -159,6 +159,7 @@ WorkoutSession _session({
 WorkoutSession _routedSession(
   ({String polyline, List<CardioSplit> splits}) route, {
   List<CardioSplit>? splits,
+  String activityType = 'RUNNING',
 }) {
   return WorkoutSession(
     clientId: 'c1',
@@ -167,7 +168,7 @@ WorkoutSession _routedSession(
     startedAt: DateTime(2026, 8, 10, 7),
     finishedAt: DateTime(2026, 8, 10, 7, 30),
     sessionKind: 'CARDIO',
-    activityType: 'RUNNING',
+    activityType: activityType,
     movingSeconds: 1800,
     cardio: CardioMetrics(
       distanceMeters: 5000,
@@ -261,6 +262,23 @@ void main() {
       // The 200 m remainder is the only one marked partial — it must not be
       // scored as the fastest split of the run.
       expect([for (final b in bars) b.partial], [false, false, true]);
+    });
+
+    testWidgets(
+        'a CYCLING session shows a speed chart, not a pace one '
+        '(docs/cardio/62-cardio-cycling-plan.md §2.2)', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final route = _testRoute();
+      await _pump(tester, _routedSession(route, activityType: 'CYCLING'));
+
+      expect(find.text('SPEED PER SPLIT'), findsOneWidget);
+      expect(find.text('PACE PER SPLIT'), findsNothing);
+      // The chart itself (bar = split duration) is unchanged — only the
+      // header and the average-line value below it swap to speed.
+      expect(find.byType(PaceBarChart), findsOneWidget);
+      // Full splits: 1000 m/200 s each -> 2 km / 400 s = 18.0 km/h.
+      expect(find.text('avg 18.0 km/h'), findsOneWidget);
     });
 
     testWidgets('a single split gets a list but no chart', (tester) async {
@@ -431,6 +449,24 @@ void main() {
     expect(find.text('42 m'), findsOneWidget);
     // Never entered by hand, no badge.
     expect(find.text('Edited'), findsNothing);
+  });
+
+  testWidgets(
+      'CYCLING shows speed (km/h), not pace, on the summary metric grid '
+      '(docs/cardio/62-cardio-cycling-plan.md §2.2)', (tester) async {
+    await _pump(
+      tester,
+      _session(
+        activityType: 'CYCLING',
+        cardio: const CardioMetrics(distanceMeters: 5000),
+        movingSeconds: 600, // 10:00 -> 30.0 km/h
+      ),
+    );
+
+    expect(find.text('SPEED'), findsOneWidget);
+    expect(find.text('30.0 km/h'), findsOneWidget);
+    expect(find.text('PACE'), findsNothing);
+    expect(find.textContaining('/km'), findsNothing);
   });
 
   group('running cadence (C6.5)', () {
