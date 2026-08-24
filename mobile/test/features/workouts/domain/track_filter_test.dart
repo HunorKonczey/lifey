@@ -48,6 +48,12 @@ void main() {
       expect(profile.accuracyThresholdMeters, 20);
       expect(profile.maxSpeedMetersPerSecond, closeTo(8.333, 0.001));
     });
+
+    test('CYCLING: 20 m accuracy, 70 km/h speed ceiling (docs/cardio/62 §2.4)', () {
+      final profile = trackFilterProfileFor('CYCLING');
+      expect(profile.accuracyThresholdMeters, 20);
+      expect(profile.maxSpeedMetersPerSecond, closeTo(19.444, 0.001));
+    });
   });
 
   group('haversineMeters', () {
@@ -131,6 +137,36 @@ void main() {
       acc.addFix(_fix(lat: 47.5, lng: 19.05, recordedAt: t0));
       final passed = acc.addFix(_fix(lat: 47.5001, lng: 19.05, recordedAt: t0)); // same timestamp
       expect(passed, isTrue); // still "a signal" — just not usable for distance
+      expect(acc.distanceMeters, 0);
+    });
+
+    test(
+        'a ~45 km/h segment — real road-cycling speed, above RUNNING/HIKING\'s 30 km/h ceiling — '
+        'is retained under the CYCLING profile (docs/cardio/62 §2.4, the regression this profile '
+        'exists to prevent)', () {
+      final acc = TrackFilterAccumulator(trackFilterProfileFor('CYCLING'));
+      final t0 = DateTime.utc(2026, 8, 13, 7, 0, 0);
+      acc.addFix(_fix(lat: 47.5, lng: 19.05, recordedAt: t0));
+      // 50 m / 4 s = 12.5 m/s = 45 km/h.
+      acc.addFix(_fix(
+        lat: 47.5 + 50 / _metersPerDegreeLat,
+        lng: 19.05,
+        recordedAt: t0.add(const Duration(seconds: 4)),
+      ));
+      expect(acc.distanceMeters, closeTo(50, 0.5));
+    });
+
+    test('the same ~45 km/h segment is rejected under RUNNING\'s ceiling — without a CYCLING-'
+        'specific profile, this is exactly how a bike ride would silently under-count distance',
+        () {
+      final acc = TrackFilterAccumulator(trackFilterProfileFor('RUNNING'));
+      final t0 = DateTime.utc(2026, 8, 13, 7, 0, 0);
+      acc.addFix(_fix(lat: 47.5, lng: 19.05, recordedAt: t0));
+      acc.addFix(_fix(
+        lat: 47.5 + 50 / _metersPerDegreeLat,
+        lng: 19.05,
+        recordedAt: t0.add(const Duration(seconds: 4)),
+      ));
       expect(acc.distanceMeters, 0);
     });
   });

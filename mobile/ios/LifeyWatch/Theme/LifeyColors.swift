@@ -78,10 +78,13 @@ enum LifeyColors {
   // picker rows — C5.4) — the same hex the mobile app's `MetricColors` uses
   // for the matching activity (`activity_type.dart`'s `activityTypeColor`),
   // kept identical across platforms like every other token in this file.
-  // `RUNNING` reuses `calories` (`0xE0915A` on both), and `HIKING` reuses
-  // `tertiary` (`0x6E9A6A`) rather than duplicating the same hex under a
-  // second name — only the three colors this file didn't already have get
-  // their own constant.
+  // `RUNNING` reuses `calories` (`0xE0915A` on both), `HIKING` reuses
+  // `tertiary` (`0x6E9A6A`), and `CYCLING` (docs/cardio/62-cardio-cycling-
+  // plan.md A6) reuses `secondary` (`0xC49A6C`) — the mobile app's
+  // `colorScheme.secondary`, for the same "every AppMetricColors slot
+  // already claimed" reason documented there — rather than duplicating any
+  // of these three hexes under a second name. Only the four colors this
+  // file didn't already have get their own constant.
   /// `WALKING` — mirrors mobile's `MetricColors.steps`.
   static let cardioWalking = Color(hex: 0xB0_8A_C8)
   /// `INDOOR_BIKE` — mirrors mobile's `MetricColors.carbs`.

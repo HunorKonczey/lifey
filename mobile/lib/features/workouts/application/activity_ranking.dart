@@ -56,8 +56,11 @@ const _halfLifeDays = 21.0;
 /// lehet utólag rekonstruálni" (the two GPS types come first, because they
 /// can't be reconstructed after the fact). The remaining cardio types
 /// (never shown in the M02 mockup — it only has 4 tiles) fill in after,
-/// in the same GPS-first spirit: hiking is still a DISTANCE/GPS type, the
-/// GAME types least so.
+/// in the same GPS-first spirit: hiking and cycling are still DISTANCE/GPS
+/// types (docs/cardio/62-cardio-cycling-plan.md A4 added cycling, right
+/// after hiking — the two are equally "still GPS", and this keeps the same
+/// DISTANCE-family grouping `kActivityTypes` already uses), the GAME types
+/// least so.
 ///
 /// This is a **different** list from [_cardioTiebreakIndex] on purpose:
 /// this one is what the UI shows when there's no real usage to rank yet;
@@ -71,6 +74,7 @@ final List<QuickStartEntry> _defaultOrder = [
   const QuickStartEntry.strength(),
   const QuickStartEntry.cardio('INDOOR_BIKE'),
   const QuickStartEntry.cardio('HIKING'),
+  const QuickStartEntry.cardio('CYCLING'),
   const QuickStartEntry.cardio('BASKETBALL'),
   const QuickStartEntry.cardio('FOOTBALL'),
   const QuickStartEntry.cardio('OTHER_CARDIO'),

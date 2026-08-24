@@ -19,6 +19,7 @@ támogatásának tervét tartalmazza. Státusz: **teljes egészében terv, nem i
 | [60-cardio-sport-specifics-plan.md](60-cardio-sport-specifics-plan.md) | **Fejlesztési terv C6–C9-re: 30 lépés** (futás · játék · bicikli · túra), iterációnkénti mérföldkövekkel és a nyitott döntésekkel | Fejlesztés — a C5 után |
 | [61-cardio-sport-specifics-design-prompts.md](61-cardio-sport-specifics-design-prompts.md) | **A C6–C9 kész designja frame-enként** (M33–M45): elrendezés, tokenek, állapotok, indoklás + a 8 visszaadott termékdöntés · a lefuttatott promptok a végén | **Design + fejlesztés — a C6–C9 UI innen dolgozik** |
 | [`design/`](design) | A három kész design-canvas: mobil + web · óra · **sport-specifikumok (M33–M45)** | Mind |
+| [62-cardio-cycling-plan.md](62-cardio-cycling-plan.md) | **Új, hetedik `ActivityType`: szabadtéri kerékpározás** a `DISTANCE` családban — nem a C7 szobabiciklije. Sebesség vs. tempó, GPS-sebességhatár, PR-jogosultság | Backend + Flutter + Watch |
 
 ## Iterációk egy pillantásra
 
@@ -33,6 +34,7 @@ támogatásának tervét tartalmazza. Státusz: **teljes egészében terv, nem i
 | C4a / C4b | GPS-nyomvonal / *(opcionális)* valódi térkép | 54 |
 | C5 | Óra-integráció | 55 |
 | C6–C9 | Sport-specifikumok: futás · szobabicikli · túra · játék | 51 §4, **60** |
+| C10 | **Új típus: szabadtéri kerékpározás** (`DISTANCE` család) | **62** |
 
 **Felületi lefedettség:** mobil (teljes: indítás, élő mérés, összegzés) · óra (teljes: indítás,
 élő mérés, standalone) · **web: csak megjelenítés** — onnan cardio nem indítható

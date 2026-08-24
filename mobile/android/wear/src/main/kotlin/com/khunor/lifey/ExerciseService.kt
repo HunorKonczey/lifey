@@ -526,6 +526,9 @@ class ExerciseService : Service() {
         "RUNNING" -> ExerciseType.RUNNING
         "WALKING" -> ExerciseType.WALKING
         "HIKING" -> ExerciseType.HIKING
+        // Outdoor cycling (docs/cardio/62-cardio-cycling-plan.md A5) — distinct
+        // from INDOOR_BIKE's BIKING_STATIONARY below; Health Services has both.
+        "CYCLING" -> ExerciseType.BIKING
         "INDOOR_BIKE" -> ExerciseType.BIKING_STATIONARY
         "BASKETBALL" -> ExerciseType.BASKETBALL
         "FOOTBALL" -> ExerciseType.SOCCER

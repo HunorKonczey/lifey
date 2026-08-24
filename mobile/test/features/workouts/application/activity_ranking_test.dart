@@ -72,6 +72,19 @@ void main() {
       ]);
     });
 
+    test('padded further, CYCLING appears right after hiking (docs/cardio/62 A4)', () {
+      final result = rankQuickStartEntries(const [], now: now, max: 6);
+
+      expect(result, [
+        const QuickStartEntry.cardio('RUNNING'),
+        const QuickStartEntry.cardio('WALKING'),
+        const QuickStartEntry.strength(),
+        const QuickStartEntry.cardio('INDOOR_BIKE'),
+        const QuickStartEntry.cardio('HIKING'),
+        const QuickStartEntry.cardio('CYCLING'),
+      ]);
+    });
+
     test('padding never duplicates an entry that already ranked from real usage', () {
       final sessions = [_strength(clientId: 'c1', finishedAt: now)]; // freeform strength
 
@@ -212,8 +225,8 @@ void main() {
       final sessions = [_inProgressCardio(clientId: 'c1', activityType: 'BASKETBALL', startedAt: now)];
 
       // max is small enough that BASKETBALL would only appear here via real
-      // usage — it's 6th in the default padding order (after RUNNING,
-      // WALKING, strength, INDOOR_BIKE, HIKING).
+      // usage — it's 7th in the default padding order (after RUNNING,
+      // WALKING, strength, INDOOR_BIKE, HIKING, CYCLING).
       final result = rankQuickStartEntries(sessions, now: now, max: 2);
 
       expect(result, [const QuickStartEntry.cardio('RUNNING'), const QuickStartEntry.cardio('WALKING')]);

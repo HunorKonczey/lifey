@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AirlineSeatReclineNormal
@@ -276,6 +277,13 @@ fun cardioActivityIcon(activityType: String): ImageVector = when (activityType) 
     "RUNNING" -> Icons.Filled.DirectionsRun
     "WALKING" -> Icons.Filled.DirectionsWalk
     "HIKING" -> Icons.Filled.Hiking
+    // Outdoor cycling (docs/cardio/62-cardio-cycling-plan.md A5) — distinct
+    // from INDOOR_BIKE's PedalBike below, mirroring the mobile app's same
+    // DirectionsBike-vs-PedalBike split (`activity_type.dart`).
+    // `Icons.Filled.DirectionsBike` is deprecated/hidden in this
+    // material-icons-extended version (1.7.8) in favor of the AutoMirrored
+    // one — same family `ArrowBack`/`List` already use in this file.
+    "CYCLING" -> Icons.AutoMirrored.Filled.DirectionsBike
     "INDOOR_BIKE" -> Icons.Filled.PedalBike
     "BASKETBALL" -> Icons.Filled.SportsBasketball
     "FOOTBALL" -> Icons.Filled.SportsSoccer
@@ -289,6 +297,7 @@ fun cardioActivityTint(activityType: String): Color = when (activityType) {
     "RUNNING" -> LifeyColors.calories
     "WALKING" -> LifeyColors.cardioWalking
     "HIKING" -> LifeyColors.tertiary
+    "CYCLING" -> LifeyColors.secondary // mirrors mobile's colorScheme.secondary
     "INDOOR_BIKE" -> LifeyColors.cardioIndoorBike
     "BASKETBALL" -> LifeyColors.cardioBasketball
     "FOOTBALL" -> LifeyColors.cardioFootball

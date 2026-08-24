@@ -12,6 +12,7 @@ import com.lifey.workout.session.SessionKind;
 import com.lifey.workout.session.WorkoutSession;
 import com.lifey.workout.session.WorkoutSessionExercise;
 import com.lifey.workout.session.WorkoutSessionRepository;
+import com.lifey.workout.session.cardio.ActivityFamily;
 import com.lifey.workout.session.cardio.ActivityType;
 import com.lifey.workout.session.cardio.CardioDetails;
 import com.lifey.workout.session.cardio.CardioSplit;
@@ -535,6 +536,28 @@ class WorkoutSessionServiceImplTest {
         // Empty, never null — a cardio session has no exercises/sets (docs/cardio/52 §3.3).
         assertThat(result.exercises()).isEmpty();
         assertThat(result.sets()).isEmpty();
+    }
+
+    @Test
+    void create_cyclingSession_persistsActivityTypeAsCyclingInDistanceFamily() {
+        // docs/cardio/62-cardio-cycling-plan.md A1: CYCLING is a new DISTANCE-family
+        // ActivityType, exercised the same way RUNNING is above — no cardio_details
+        // shape changes, no migration, just a new enum value flowing through create.
+        when(sessionRepository.save(any(WorkoutSession.class))).thenAnswer(inv -> withId(inv.getArgument(0), 40L));
+        Instant started = Instant.parse("2026-08-23T06:00:00Z");
+        WorkoutSessionRequest request = new WorkoutSessionRequest(started, null, List.of(), List.of(),
+                null, null, null, null, null, null, null,
+                SessionKind.CARDIO, ActivityType.CYCLING, 3600,
+                cardioDetails(18500.0, 3), List.of(), null);
+
+        WorkoutSessionResponse result = service.create(request);
+
+        assertThat(result.sessionKind()).isEqualTo(SessionKind.CARDIO);
+        assertThat(result.activityType()).isEqualTo(ActivityType.CYCLING);
+        assertThat(result.activityType().getFamily()).isEqualTo(ActivityFamily.DISTANCE);
+        assertThat(result.movingSeconds()).isEqualTo(3600);
+        assertThat(result.cardio()).isNotNull();
+        assertThat(result.cardio().distanceMeters()).isEqualTo(18500.0);
     }
 
     @Test

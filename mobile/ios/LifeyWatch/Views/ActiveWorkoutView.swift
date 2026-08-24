@@ -162,6 +162,11 @@ func cardioActivityIcon(for activityType: String) -> String {
   case "RUNNING": return "figure.run"
   case "WALKING": return "figure.walk"
   case "HIKING": return "figure.hiking"
+  // Outdoor cycling (docs/cardio/62-cardio-cycling-plan.md A6) — distinct
+  // from INDOOR_BIKE's "bicycle" below. Apple's own Fitness app uses this
+  // exact symbol for outdoor cycling workouts (verified to resolve via
+  // `NSImage(systemSymbolName:)`, not guessed).
+  case "CYCLING": return "figure.outdoor.cycle"
   case "INDOOR_BIKE": return "bicycle"
   case "BASKETBALL": return "basketball.fill"
   case "FOOTBALL": return "soccerball"
@@ -177,6 +182,7 @@ func cardioActivityTint(for activityType: String) -> Color {
   case "RUNNING": return LifeyColors.calories
   case "WALKING": return LifeyColors.cardioWalking
   case "HIKING": return LifeyColors.tertiary
+  case "CYCLING": return LifeyColors.secondary // mirrors mobile's colorScheme.secondary
   case "INDOOR_BIKE": return LifeyColors.cardioIndoorBike
   case "BASKETBALL": return LifeyColors.cardioBasketball
   case "FOOTBALL": return LifeyColors.cardioFootball

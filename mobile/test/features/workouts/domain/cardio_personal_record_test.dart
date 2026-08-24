@@ -245,6 +245,13 @@ void main() {
       expect(detectCardioPrs(_baseline(best5kSeconds: 1400), hike), isEmpty);
     });
 
+    test('cycling sets these records too (docs/cardio/62 §2.3), unlike walking/hiking above', () {
+      final ride = cardioSession(day2, activityType: 'CYCLING', best5kSeconds: 500);
+
+      expect(CardioPrBaseline.fromSessions([ride]).best5kSeconds, 500);
+      expect(detectCardioPrs(_baseline(best5kSeconds: 1400), ride), [CardioPrType.fastest5k]);
+    });
+
     test('a run without that sub-distance breaks nothing', () {
       // A 3 km run has no 5 km inside it: `best5kSeconds` is null, which is
       // "this distance does not exist here", not "a slow time".

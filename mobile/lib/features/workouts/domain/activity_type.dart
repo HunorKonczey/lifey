@@ -28,6 +28,7 @@ const List<String> kActivityTypes = [
   'RUNNING',
   'WALKING',
   'HIKING',
+  'CYCLING',
   'INDOOR_BIKE',
   'BASKETBALL',
   'FOOTBALL',
@@ -41,7 +42,7 @@ const List<String> kActivityTypes = [
 /// this call).
 ActivityFamily activityFamilyOf(String activityType) {
   return switch (activityType) {
-    'RUNNING' || 'WALKING' || 'HIKING' => ActivityFamily.distance,
+    'RUNNING' || 'WALKING' || 'HIKING' || 'CYCLING' => ActivityFamily.distance,
     'INDOOR_BIKE' => ActivityFamily.machine,
     'BASKETBALL' || 'FOOTBALL' || 'OTHER_CARDIO' => ActivityFamily.game,
     _ => throw ArgumentError.value(activityType, 'activityType', 'Unknown ActivityType code'),
@@ -49,10 +50,11 @@ ActivityFamily activityFamilyOf(String activityType) {
 }
 
 /// The GPS accuracy/power tradeoff to record a DISTANCE-family activity type
-/// at (docs/cardio/54-cardio-gps-route-plan.md §4.1) — running/hiking want
-/// the tightest fix; walking tolerates a coarser, more battery-friendly one.
-/// Only meaningful for `activityFamilyOf(activityType) == ActivityFamily.distance`
-/// — callers outside that family never call `positionStream` at all.
+/// at (docs/cardio/54-cardio-gps-route-plan.md §4.1) — running/hiking/cycling
+/// want the tightest fix; walking tolerates a coarser, more battery-friendly
+/// one. Only meaningful for `activityFamilyOf(activityType) ==
+/// ActivityFamily.distance` — callers outside that family never call
+/// `positionStream` at all.
 LocationTrackingProfile locationTrackingProfileFor(String activityType) {
   return activityType == 'WALKING'
       ? LocationTrackingProfile.relaxed
@@ -68,6 +70,7 @@ String activityTypeLabel(AppLocalizations l10n, String code) {
     'RUNNING' => l10n.activityTypeRunning,
     'WALKING' => l10n.activityTypeWalking,
     'HIKING' => l10n.activityTypeHiking,
+    'CYCLING' => l10n.activityTypeCycling,
     'INDOOR_BIKE' => l10n.activityTypeIndoorBike,
     'BASKETBALL' => l10n.activityTypeBasketball,
     'FOOTBALL' => l10n.activityTypeFootball,
@@ -77,12 +80,16 @@ String activityTypeLabel(AppLocalizations l10n, String code) {
 }
 
 /// Material icon for a cardio activity type code, or for `'STRENGTH'`.
-/// Matches `design/Lifey Cardio Design.dc.html` M01 exactly.
+/// Matches `design/Lifey Cardio Design.dc.html` M01 exactly, plus `CYCLING`
+/// (docs/cardio/62-cardio-cycling-plan.md §3), which deliberately uses
+/// `directions_bike` rather than `INDOOR_BIKE`'s `pedal_bike` — the two must
+/// stay visually distinct since they're both "bicikli" in Hungarian.
 IconData activityTypeIcon(String code) {
   return switch (code) {
     'RUNNING' => Icons.directions_run,
     'WALKING' => Icons.directions_walk,
     'HIKING' => Icons.hiking,
+    'CYCLING' => Icons.directions_bike,
     'INDOOR_BIKE' => Icons.pedal_bike,
     'BASKETBALL' => Icons.sports_basketball,
     'FOOTBALL' => Icons.sports_soccer,
@@ -93,14 +100,19 @@ IconData activityTypeIcon(String code) {
 
 /// Accent color for a cardio activity type code, or for `'STRENGTH'` —
 /// matches `design/Lifey Cardio Design.dc.html` M01 §1 exactly, including
-/// the two deliberate departures from the raw metric-color mapping:
+/// the deliberate departures from the raw metric-color mapping:
 /// - Hiking uses `colorScheme.tertiary` (forest green), not
 ///   `metricColors.protein` — the suggested protein-green *is* the app's
-///   primary accent, so a hiking chip would look like every primary action
-///   button instead of standing out.
+///   primary accent (`app_theme.dart`'s `inversePrimary` is the same hex as
+///   `AppMetricColors.light.protein`), so a hiking chip would look like every
+///   primary action button instead of standing out.
+/// - Cycling (docs/cardio/62-cardio-cycling-plan.md §3) uses
+///   `colorScheme.secondary` (warm brown) for the same reason — every
+///   `AppMetricColors` slot is already claimed by another activity type or,
+///   like `protein`, collides with the primary accent.
 /// - `OTHER_CARDIO` uses `colorScheme.onSurfaceVariant` (neutral grey) —
 ///   deliberately colorless, so the escape-hatch type never competes
-///   visually with the six real types in a mixed list.
+///   visually with the other types in a mixed list.
 Color activityTypeColor(String code, BuildContext context) {
   final mc = context.metricColors;
   final scheme = Theme.of(context).colorScheme;
@@ -108,6 +120,7 @@ Color activityTypeColor(String code, BuildContext context) {
     'RUNNING' => mc.calories,
     'WALKING' => mc.steps,
     'HIKING' => scheme.tertiary,
+    'CYCLING' => scheme.secondary,
     'INDOOR_BIKE' => mc.carbs,
     'BASKETBALL' => mc.fat,
     'FOOTBALL' => mc.water,
