@@ -5,7 +5,7 @@ the code cites those plans by section — migrations, entity javadoc and Dart
 comments all refer back to them.
 
 **Numbering.** Root docs and most topic folders share one global sequence
-(currently up to `61`, in `cardio/`). Take the next free number, never reuse a
+(currently up to `71`, in `landing_page/`). Take the next free number, never reuse a
 gap, and keep the `NN-<kebab-topic>-plan.md` shape. Two exceptions exist for
 historical reasons: `web/` runs its own `01–09` series, and a few early numbers
 are duplicated at the root (`05`, `06`, `15`, `16`).
@@ -52,6 +52,7 @@ iterations.
 | [`watch/`](watch) | Apple Watch + Wear OS app (40–50): set logging, standalone sessions, template and session sync |
 | [`design/`](design) | Design system prompt, design implementation tasks, workout-tab redesigns |
 | [`music/`](music) | In-workout music controls (46–47) |
+| [`landing_page/`](landing_page) | Monetization and the public marketing surface (63–71): trainer subscriptions, mobile free/Pro, ads, the landing page, and the design specs for both — has its own README with a reading order |
 | [`postman/`](postman) | Postman collection for the API |
 
 ## Numbered plans
@@ -90,7 +91,7 @@ iterations.
 | 38 | [Personal records (roadmap #3)](38-personal-records-plan.md) | |
 | 39 | [Rest timer](39-rest-timer-plan.md) | done |
 
-Plans 40–61 live in the topic folders above.
+Plans 40–71 live in the topic folders above.
 
 A blank status means the doc does not state one. When you finish work described
 by a plan, set its `Status:` line — a plan that still reads "proposed" after
