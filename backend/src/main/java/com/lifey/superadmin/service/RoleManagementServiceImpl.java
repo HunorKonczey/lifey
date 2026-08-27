@@ -5,6 +5,7 @@ import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.superadmin.RoleAuditAction;
 import com.lifey.superadmin.RoleAuditLog;
 import com.lifey.superadmin.RoleAuditLogRepository;
+import com.lifey.superadmin.TrainerRoleGrantedEvent;
 import com.lifey.superadmin.dto.RoleAuditLogResponse;
 import com.lifey.superadmin.dto.SuperAdminUserResponse;
 import com.lifey.superadmin.exception.CannotModifySelfException;
@@ -15,6 +16,7 @@ import com.lifey.user.UserAvatar;
 import com.lifey.user.UserAvatarRepository;
 import com.lifey.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,7 @@ public class RoleManagementServiceImpl implements RoleManagementService {
     private final RoleAuditLogRepository roleAuditLogRepository;
     private final UserAvatarRepository userAvatarRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -75,6 +78,12 @@ public class RoleManagementServiceImpl implements RoleManagementService {
         }
         target.getRoles().add(role);
         writeAudit(actorId, targetUserId, role, RoleAuditAction.GRANT);
+        // Trial starts at grant, not registration (64 §4.1) — guarded on the
+        // role itself, not just MANAGEABLE_ROLES, so growing that whitelist
+        // later can't accidentally start a trial for an unrelated role.
+        if (role == Role.ROLE_TRAINER) {
+            eventPublisher.publishEvent(new TrainerRoleGrantedEvent(targetUserId));
+        }
     }
 
     @Override

@@ -1,6 +1,9 @@
 package com.lifey.common.exception;
 
 import com.lifey.auth.exception.*;
+import com.lifey.billing.exception.InvalidReceiptException;
+import com.lifey.billing.exception.SeatLimitExceededException;
+import com.lifey.billing.exception.SubscriptionAlreadyLinkedException;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.trainer.exception.AlreadyClientException;
@@ -34,7 +37,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -131,6 +133,24 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InviteRateLimitedException.class)
     public ResponseEntity<ApiError> handleInviteRateLimited(InviteRateLimitedException ex, HttpServletRequest request) {
         return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request, List.of(), ex);
+    }
+
+    /** 64 §4.3, 63 §7.6 — SEAT_LIMIT_EXCEEDED: over the seat limit, or billing isn't in an entitling state. */
+    @ExceptionHandler(SeatLimitExceededException.class)
+    public ResponseEntity<ApiError> handleSeatLimitExceeded(SeatLimitExceededException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
+    }
+
+    /** 64 §6.1, 63 §7.7: SUBSCRIPTION_ALREADY_LINKED — a store purchase's identity already belongs to another account. */
+    @ExceptionHandler(SubscriptionAlreadyLinkedException.class)
+    public ResponseEntity<ApiError> handleSubscriptionAlreadyLinked(SubscriptionAlreadyLinkedException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
+    }
+
+    /** 64 §6.1: INVALID_RECEIPT — a store purchase's signature could not be verified. */
+    @ExceptionHandler(InvalidReceiptException.class)
+    public ResponseEntity<ApiError> handleInvalidReceipt(InvalidReceiptException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler(NotYourClientException.class)

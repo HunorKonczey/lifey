@@ -521,6 +521,17 @@ value blocks and mobile fallback swap correctly (computed `display: none`/`block
 assumed), the light theme's `--bg`/`--primary` resolve to the documented hex values, the header
 nav highlights "Edzőknek" as active, and every `?src=` link carries the right page prefix.
 
+**Post-launch fix, found in a user design review after all 11 prompts had landed**:
+`PlanParityMock.tsx`'s three-checkmark comparison (block 4, "the seat count matters, not the
+feature set") had the plan chips in one 3-column grid and each feature's three checkmarks in a
+separate, unrelated flex row below — the two were never actually column-aligned, so a
+checkmark's plan was only inferable by counting position, which read as an "uninterpretable
+3×3 matrix" on a fresh look. Rebuilt as one grid (`grid-cols-[1fr_auto_auto_auto]`) spanning
+both the header chips and every feature row, so a plan's chip and its checkmarks now share a
+real column, not just visual proximity — confirmed with `getBoundingClientRect()` in a browser,
+not just eyeballed: every checkmark's horizontal center matches its column's chip center
+exactly (469 / 537 / 622 px), for all three feature rows.
+
 **Prompt 6 — Web: pricing page — ✅ done** — frames **L19–L20**
 Plan constants in one module shared with the JSON-LD and (later) with the checkout call;
 monthly/yearly toggle; trial terms; the mobile Pro block. **Fix `68` §12.2 DV-5 while

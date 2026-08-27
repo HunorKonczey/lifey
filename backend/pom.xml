@@ -21,6 +21,10 @@
         <java.version>24</java.version>
         <springdoc.version>3.0.3</springdoc.version>
         <jjwt.version>0.12.6</jjwt.version>
+        <stripe.version>33.4.0</stripe.version>
+        <app-store-server-library.version>5.2.0</app-store-server-library.version>
+        <bouncycastle.version>1.84</bouncycastle.version>
+        <android-publisher.version>v3-rev20260825-2.0.0</android-publisher.version>
     </properties>
 
     <dependencies>
@@ -110,6 +114,33 @@
             <version>9.4.1</version>
         </dependency>
 
+        <!-- Stripe Checkout + billing-portal sessions for trainer subscriptions
+             (docs/landing_page/64-billing-backend-plan.md §5). -->
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>${stripe.version}</version>
+        </dependency>
+
+        <!-- StoreKit 2 JWS verification + App Store Server API client for mobile Pro
+             purchases (docs/landing_page/64-billing-backend-plan.md §6). -->
+        <dependency>
+            <groupId>com.apple.itunes.storekit</groupId>
+            <artifactId>app-store-server-library</artifactId>
+            <version>${app-store-server-library.version}</version>
+        </dependency>
+
+        <!-- Play Developer API client for Android Pro purchase verification
+             (docs/landing_page/64-billing-backend-plan.md §6). Pulls in
+             google-api-client, which itself pulls in google-auth-library-oauth2-http
+             (GoogleCredentials/HttpCredentialsAdapter) and google-http-client-gson
+             (GsonFactory) transitively — nothing else to add by hand. -->
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-androidpublisher</artifactId>
+            <version>${android-publisher.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -156,6 +187,16 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- Builds a real, self-signed X.509 chain (root -> WWDR intermediate -> leaf)
+             for StoreBillingServiceImplTest, so JWS verification is exercised against
+             genuine cryptography rather than skipped — no real Apple credentials
+             exist in this environment. -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

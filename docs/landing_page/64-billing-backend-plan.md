@@ -310,13 +310,25 @@ Each step is one surface, one session, independently mergeable, with its own ver
 
 ### Milestone M1a — the resolver, with nothing to resolve
 
-**Prompt 1 — Backend: `subscription` schema and entity**
+**Prompt 1 — Backend: `subscription` schema and entity — ✅ done**
 `V72` + `V73`, `Subscription`, `SubscriptionStatus`, `SubscriptionProvider`, `TrainerPlan`
 (with `maxClients`), repositories. No service, no endpoint.
 *Verify:* `mvn -pl backend test` — repository slice test that saves and reads back a row of
 each provider, and that the unique constraints reject duplicates.
 
-**Prompt 2 — Backend: `EntitlementService` + `GET /api/v1/me/entitlements`**
+Landed as `V73__subscription.sql` + `V74__processed_billing_event.sql` — `V72` was already
+taken by `65` Prompt 10's `signup_source` column by the time this ran, so the pair shifted up
+by one, keeping the order this doc specifies. `com.lifey.billing.entity` gained `Subscription`,
+`SubscriptionStatus`, `SubscriptionProvider`, `TrainerPlan` (`STARTER`=5, `PRO`=25, `STUDIO`=100,
+per `63` D-M2's fair-use ceiling) and `ProcessedBillingEvent` (not explicitly named in this
+prompt's bullet, but its migration is — adding the entity alongside its table now avoids an
+unmapped table sitting around until Prompt 5). `com.lifey.billing.repository` gained
+`SubscriptionRepository` and `ProcessedBillingEventRepository`. Repository-slice tests cover a
+round trip for every `SubscriptionProvider` and both unique constraints
+(`user_id, provider` and `provider_subscription_id`). Full `mvn verify` (805 tests) and
+`check-schema-ownership.sh` both clean.
+
+**Prompt 2 — Backend: `EntitlementService` + `GET /api/v1/me/entitlements` — ✅ done**
 The resolver from 63 §3, the DTO from §3.2, the controller, `BillingProperties`. With no
 subscription rows anywhere, every user resolves `FREE` — except that `lifey.billing.enabled`
 defaults to `false`, which forces `COMP`/open. That flag is what makes this deployable on
@@ -324,64 +336,504 @@ day one.
 *Verify:* a table-driven test over 63 §3 and §7.1–7.4; an integration test hitting the
 endpoint as a plain user, a trainer, and a sponsored client.
 
-**Prompt 3 — Backend: `SeatLimitService` and the trainer state machine**
+Landed as specified. `EntitlementServiceImpl.resolve(userId)` reads at most two queries —
+`SubscriptionRepository.findByUserId` for the user's own rows, and a new
+`findSponsoringSubscriptionsForActiveClient` (an actual SQL `join` against `TrainerClient`,
+one round trip) for sponsors — then walks the five branches from 63 §3 in order, wrapped in a
+try/catch that fails open with `degraded: true` per §3.1. The trainer block is built
+independently of the resolved tier (so a trainer with a lapsed trial still sees their own
+plan/status) from a new `TrainerClientRepository.countByTrainerIdAndStatus`, called out in its
+own Javadoc as the one canonical active-client count both this resolver and `64` Prompt 3's
+`SeatLimitService` must share (63 §8.1). `lifey.billing.*` (`enabled` defaulting to `false`,
+`free-history-days`, `free-ai-credits-per-month`, `offline-grace-days`) landed in
+`application.yml` alongside `BillingProperties`/`BillingConfig`. `aiCreditsRemaining` for the
+free tier currently just echoes the configured monthly allowance — there is no usage counter
+yet (`64` Prompt 12 wires `ai_usage_counter` and real decrementing).
+
+Test coverage: an 18-case table-driven `EntitlementServiceImplTest` (Mockito) over every 63 §3
+branch plus edge cases 7.1 (trainer-who-is-also-a-client precedence, asserted with
+`verify(..., never())` that the sponsor query isn't even run), 7.2 (any single active sponsor
+is enough), 7.5 (`PAST_DUE` still sponsors/still grants through dunning), the disabled-flag
+open path, the unknown-user fallback, and the fail-open path; a 3-scenario
+`EntitlementControllerIntegrationTest` over the real security filter chain and schema
+(Testcontainers), covering a plain user, a trainer on trial, and a sponsored client. Full `mvn
+verify` and `check-schema-ownership.sh` both clean.
+
+**Prompt 3 — Backend: `SeatLimitService` and the trainer state machine — ✅ done**
 `activeClientCount` on `TrainerClientRepository`, `TrainerBillingState`, `trainer` block in
 the response. Nothing enforced yet — the numbers just become visible.
 *Verify:* a test that walks a `TrainerClient` through `PENDING → ACTIVE → REVOKED → EXPIRED`
 and asserts the count at each step (63 §8.1).
 
+Landed as specified — `activeClientCount` was already added to `TrainerClientRepository` in
+Prompt 2 (reused here, not duplicated: 63 §8.1's "one shared repository method" now literally
+backs both `EntitlementService`'s trainer block and this service). New: `TrainerBillingState`
+(`OK`/`OVER_LIMIT`/`RESTRICTED`), `SeatLimitExceededException`, and `SeatLimitService`/`Impl`
+implementing all four §4.2 methods. `state()`/`canAcquireClient()`
+both gate on the trainer's own Stripe subscription being in one of §4.4's "can invite/assign"
+statuses (`TRIALING`/`ACTIVE`/`PAST_DUE`) before looking at the seat count at all — a
+`CANCELED`/`EXPIRED`/no-subscription trainer is `RESTRICTED` regardless of how few clients
+they have. The `OVER_LIMIT`/at-capacity boundary is deliberately asymmetric:
+`activeClientCount == maxClients` is still `state() == OK` (full, not over) but
+`canAcquireClient()` is already `false` — the count has to become strictly greater than the
+limit (a downgrade, 63 §7.6) before `state()` flips to `OVER_LIMIT`. Nothing calls
+`assertCanAcquireClient` or gates on `state()` yet; that wiring is Prompt 6.
+
+Test coverage: a 13-case table-driven `SeatLimitServiceImplTest` (Mockito) over every §4.4
+status, the disabled-flag bypass (asserting the subscription repository isn't even queried),
+and the `OK`/`OVER_LIMIT` boundary; a real-DB `SeatLimitServiceActiveClientCountTest`
+(Testcontainers) walking one `TrainerClient` through `PENDING → ACTIVE → REVOKED → EXPIRED`
+plus a second test proving the count isn't thrown off by another trainer's or another client's
+row. Full `mvn verify` (841 tests) and `check-schema-ownership.sh` both clean.
+
 ### Milestone M1b — money in
 
-**Prompt 4 — Backend: Stripe checkout + portal endpoints**
+**Prompt 4 — Backend: Stripe checkout + portal endpoints — ✅ done** (automated verify only —
+see note below)
 Stripe Java SDK, `BillingProperties` price ids, `BillingCheckoutController`. No webhook yet;
 the session is created and the URL returned.
 *Verify:* an integration test with the Stripe SDK stubbed, asserting `client_reference_id`
 and the price id; plus one manual run against Stripe test mode.
 
-**Prompt 5 — Backend: Stripe webhook + `SubscriptionWriter`**
+Landed as `stripe-java` `33.4.0`, a new `StripeProperties` (`lifey.billing.stripe.*` — secret
+key, success/cancel/portal-return URLs, the six price ids, all empty-by-default so the app
+still starts with no Stripe account configured), `StripeBillingService`/`Impl`, and
+`BillingCheckoutController` (`POST /api/v1/billing/checkout-session`, `POST
+/api/v1/billing/portal-session`), both new `SecurityConfig` matchers scoped to `ROLE_TRAINER`
+rather than folded into `/api/v1/trainer/**` (that prefix will also carry `ROLE_USER`-only
+billing endpoints later, e.g. mobile store-purchase). Checkout sets `client_reference_id` to
+the trainer's own user id (that's how the Prompt 5 webhook finds them back), turns on Stripe
+Tax and promotion codes, and collects the EU 14-day withdrawal-right waiver as a real
+`consent_collection.terms_of_service` checkbox with custom text (63 §5) rather than just fine
+print. Neither endpoint writes `subscription` — no `SubscriptionWriter` exists yet (that's
+Prompt 5); a Checkout call reuses an existing `provider_customer_id` if one is already on file
+so retrying after a Prompt-5 webhook doesn't mint a duplicate Stripe Customer, and Portal
+throws a 404 (`ResourceNotFoundException`) if a trainer has no linked customer yet — expected
+until Prompt 5 lands, since nothing writes that column before then.
+
+Test coverage: 6 cases in `StripeBillingServiceImplTest`, stubbing the actual Stripe SDK via
+`Mockito.mockStatic` (not a hand-rolled wrapper) and capturing the real `SessionCreateParams`
+sent to `Session.create` — asserts `client_reference_id`, the resolved price id per
+plan/interval, the customer-reuse-vs-email branch, the 404 on an unknown trainer, and a
+`StripeException` wrapped as `StripeApiException`. **The "one manual run against Stripe test
+mode" half of this prompt's *Verify* line has not been done** — this environment has no Stripe
+test-mode account/keys — so real API-shape correctness (price id formats, the actual redirect
+URL, the consent checkbox rendering) is unverified beyond what the stubbed SDK call proves.
+Flagged as open until someone runs it against a real Stripe test account. Full `mvn verify`
+(847 tests) and `check-schema-ownership.sh` both clean.
+
+**Prompt 5 — Backend: Stripe webhook + `SubscriptionWriter` — ✅ done**
 Signature verification, raw-body handling, the six event types, the idempotency ledger,
 `SecurityConfig` public rule.
 *Verify:* replay a captured event fixture twice → one state change; an unsigned request →
 400; an unknown event type → 200 and no write.
 
-**Prompt 6 — Backend: seat enforcement on the invite and assignment paths**
+Landed as `StripeWebhookController` (`controller/webhook/`, reads the raw body off
+`HttpServletRequest` rather than `@RequestBody` since the signature is computed over Stripe's
+exact bytes) and `SubscriptionWriter` — the only class that now writes `subscription`,
+matching D-B2. `/api/v1/webhooks/stripe` is public in `SecurityConfig`, authenticated by
+`Webhook.constructEvent`'s own signature check. Idempotency: only one of the six *handled*
+types reaches `processed_billing_event` — an unknown type is acknowledged but leaves no
+trace, which is what the *Verify* line's "no write" turned out to mean once `charge.refunded`
+et al. needed a place to record themselves; the check is a plain `existsBy` done before
+dispatch, not an insert-first race guard, since the *Verify* line only asks for correctness
+under sequential replay and a true concurrent double-delivery would just apply the same
+idempotent-in-effect mutation twice — the reconciliation job (Prompt 11) is the intended
+backstop for anything that races.
+
+Two real Stripe API surface facts, discovered by extracting the `stripe-java` `33.4.0`
+sources rather than assuming an older shape, that shaped the event handlers: (1)
+`current_period_end` and `price` live on `subscription.items.data[0]`, not on `Subscription`
+itself anymore, so plan/period-end come from the first line item; (2) `Charge` no longer
+carries an `invoice`/`subscription` reference at all, and `Invoice`'s subscription id moved to
+the nested `invoice.parent.subscription_details.subscription`. Given that, `charge.refunded`
+resolves the row by `provider_customer_id` (a new `SubscriptionRepository` method) rather than
+chasing a subscription id through an extra API call — correct for this system specifically
+since Stripe is trainer-subscription-only (D-M1), so a charge's customer has exactly one
+Stripe subscription to refund. `checkout.session.completed` is the only event carrying
+`client_reference_id` (= the user id), so it links the (userId, provider) row to its
+customer/subscription id; a brand-new row defaults to `ACTIVE` since the coincident
+`customer.subscription.created` event corrects it in virtually every real case (63 §11.1's
+missing-user race: log a WARN and skip rather than 4xx-ing Stripe into a retry storm).
+`customer.subscription.created`/`.updated` are found by `provider_subscription_id`; if that
+row doesn't exist yet (an ordering race with `checkout.session.completed`), same treatment —
+WARN and skip, left for a later event or Prompt 11's job to settle.
+
+Test coverage: a 10-case `StripeWebhookControllerIntegrationTest` (Testcontainers, real
+signatures via `Webhook.Signature.generateSignatureHeader` — the SDK's own test helper) —
+unsigned and badly-signed requests both 400, an unknown type 200-and-no-write, the replay
+case, all six event types individually, and the unknown-user checkout race. Full `mvn verify`
+(857 tests) and `check-schema-ownership.sh` both clean. Not verified: an actual Stripe CLI
+`stripe trigger`/dashboard-resend run against a live endpoint — same "no test-mode account in
+this environment" gap noted in Prompt 4.
+
+**Prompt 6 — Backend: seat enforcement on the invite and assignment paths — ✅ done**
 `assertCanAcquireClient` in the four controllers from §4.3, the locking re-check on accept,
 `SeatLimitExceededException` → `409` in `GlobalExceptionHandler`.
 *Verify:* integration tests for send-over-limit, accept-over-limit, the concurrent accept
 race, and — importantly — that chat and every read path still work at `CANCELED`.
 
-**Prompt 7 — Backend: trial lifecycle**
+Landed as specified, behind `lifey.billing.enabled` as its own PR per §13. `SeatLimitService`
+gained three purpose-built assertions beyond the four §4.2 methods, each still one explicit
+call at its call site (D-B4): `assertCanSendInvite` (status gate + active **and pending**
+count vs. `maxClients` — a new `TrainerClientRepository.countByTrainerIdAndStatusAndExpiresAtAfter`,
+wired into `TrainerInviteServiceImpl.invite`), `assertCanAcquireClientForAccept` (a new
+`SubscriptionRepository.lockTrainerSubscriptionForUpdate`, `SELECT … FOR UPDATE` — wired into
+a shared `TrainerInviteServiceImpl.applyResponse` private method so both accept paths,
+`respond` and the email-token `respondViaEmailToken`, get the same locked re-check inside the
+same transaction that then mutates the row, per 63 §7.6), and `assertActiveState` (blocks
+whenever `state() != OK`, i.e. `RESTRICTED` **or** `OVER_LIMIT` — wired into
+`ContentAssignmentServiceImpl.assign`, `ProgramAssignmentServiceImpl.assign`,
+`WorkoutScheduleServiceImpl.create`). `SeatLimitExceededException` → `409` landed in
+`GlobalExceptionHandler`.
+
+Two interpretive calls the plan text didn't spell out, made and documented rather than left
+implicit: (1) "blocked when `state != OK`" is read as gating only the **create** endpoints in
+those three controllers — `unassign`/`cancel`/`revoke` and every `GET` stay ungated, matching
+the "block acquiring, not managing what you have" principle used everywhere else in `63`/`64`
+(a restricted trainer who couldn't even unassign their own content would be actively worse
+off). (2) declining an invite is never seat-checked — only `respond(..., accept=true)` and the
+email accept link call the assertion; decline only ever shrinks a trainer's footprint. "Chat…
+never blocked" needed no code change to verify: chat lives entirely in the separate
+`lifey-chat` service (`backend/CLAUDE.md`) with no dependency on this billing package, so
+there is nothing in this repo that could regress it.
+
+Test coverage: `SeatLimitServiceImplTest` grew from 13 to 22 cases covering the three new
+methods (including that `assertCanSendInvite` never even queries pending invites once the
+status gate alone rejects, and that `assertCanAcquireClientForAccept` locks rather than
+plain-reads); a new `SeatEnforcementIntegrationTest` (Testcontainers, real JWTs, real security
+chain) covers send-over-limit, send-under-limit-still-succeeds, accept-over-limit (queued
+while under the limit, still caught at accept time), decline-is-never-blocked,
+a real two-thread concurrent-accept race for the last seat (asserts exactly one 204 and one
+409, and that the final active count is exactly the plan's limit — never a 6th seat), and
+three CANCELED-state checks (`GET /api/v1/trainer/clients` still 200, `DELETE .../clients/{id}`
+still 204, sending an invite still 409). All four pre-existing `@InjectMocks`-based service
+tests this prompt touches (`TrainerInviteServiceImplTest`, `ContentAssignmentServiceImplTest`,
+`ProgramAssignmentServiceImplTest`, `WorkoutScheduleServiceImplTest`) needed an added
+`@Mock SeatLimitService` field to keep passing — an unstubbed mock's `void` methods are already
+no-ops, so no other change to those files was needed. Full `mvn verify` (874 tests) and
+`check-schema-ownership.sh` both clean.
+
+**Prompt 7 — Backend: trial lifecycle — ✅ done**
 `TrainerRoleGrantedEvent` → `TRIALING` row, `V75` backfill, trial expiry in the job skeleton.
 *Verify:* granting the role in a test creates a 14-day trial; the backfill migration test
 asserts every pre-existing trainer got 30 days.
 
+Landed as specified. `RoleManagementServiceImpl` didn't publish any event before this — added
+a new `TrainerRoleGrantedEvent` (record, publisher-side package `com.lifey.superadmin`,
+matching `TrainerClientRevokedEvent`'s convention) fired only on the branch that actually adds
+the role (not the idempotent no-op), and guarded on `role == ROLE_TRAINER` even though
+`MANAGEABLE_ROLES` only contains that role today. A new package-private `TrainerTrialListener`
+(`com.lifey.billing`) consumes it with a plain `@EventListener` — not `AFTER_COMMIT` — so the
+trial row is created atomically with the grant, matching `ScheduleCancellationListener`'s
+precedent and directly serving "a trainer who waits three days for approval gets the full 14
+days" (63 §8.10): the clock starts at grant, not at whenever a later request happens to
+notice the missing row. `SubscriptionWriter` gained `startTrainerTrial` (no-ops if the trainer
+already has a Stripe-provider row — re-granting after a revoke must never reset an existing
+paid subscription back to a fresh trial, since history is kept) and `expireTrial` (found by
+our own row id, not `providerSubscriptionId`, since a trial that never converted may not have
+one yet).
+
+`BillingReconciliationJob` (`com.lifey.billing.service`) is genuinely the skeleton of the §7
+job named in the package layout, not a differently-named placeholder — Prompt 11 adds more
+steps to this same class rather than replacing it. Scheduled 03:30 **Europe/Budapest**
+explicitly (`@Scheduled(..., zone = "Europe/Budapest")`) per §7's literal spec, breaking from
+every other job's plain-UTC-cron convention deliberately: a daily sweep is more exposed to DST
+drift than `TrainerWeeklyReportJob`'s once-a-week 05:00 UTC, which the job's own Javadoc
+argues is already positioned hours inside every relevant timezone's day regardless of zone.
+
+`V75__backfill_trainer_trials.sql` (the version the plan predicted was in fact still free)
+backfills a 30-day `TRIALING`/`PRO` row for every `ROLE_TRAINER` user with no existing
+Stripe-provider row — the `not exists` guard means it's also safe to have landed after Prompt
+1's `subscription` table rather than needing careful sequencing.
+
+Test coverage: a real end-to-end `TrainerTrialIntegrationTest` (Testcontainers, real JWTs,
+`SuperAdminUserController` → `RoleManagementServiceImpl` → event → listener → `SubscriptionWriter`
+→ DB) for both "granting the role creates a 14-day trial" and "re-granting after a revoke
+doesn't reset an existing subscription"; a `TrainerTrialListenerTest` and `SubscriptionWriterTest`
+(new — its first dedicated test file) at the unit level; a `BillingReconciliationJobTest`
+(`Clock.fixed`, matching `WorkoutReminderJobTest`'s convention); and a
+`BackfillTrainerTrialsMigrationTest` following `FoodsExercisesOwnershipMigrationTest`'s
+two-phase-Flyway pattern (migrate to V74, seed pre-existing trainer/user rows via raw JDBC,
+migrate to latest, assert on the result) — the only way to actually test a backfill's effect
+on pre-existing data, since a normal `@SpringBootTest` would apply V75 before a test method
+ever got to seed anything for it to backfill. `RoleManagementServiceImplTest` gained an
+`@Mock ApplicationEventPublisher` field plus two new cases (event published on real grant,
+not published on the idempotent no-op). Full `mvn verify` (888 tests) and
+`check-schema-ownership.sh` both clean.
+
 ### Milestone M3a — store purchases
 
-**Prompt 8 — Backend: iOS purchase verification**
+**Prompt 8 — Backend: iOS purchase verification — ✅ done**
 StoreKit 2 JWS verification, App Store Server API client, `POST /billing/store-purchase` for
 `IOS`.
 *Verify:* fixture-based test with a signed sandbox transaction; a tampered JWS → 422; the
 same `originalTransactionId` for a second user → 409.
 
-**Prompt 9 — Backend: Android purchase verification**
+Landed on Apple's own `app-store-server-library` `5.2.0` (`SignedDataVerifier` for local JWS
+verification, `AppStoreServerAPIClient` for the confirmation call) rather than hand-rolling
+JWS/X.509 chain verification — the same "use the vendor SDK, not our own crypto" choice as
+Stripe in Prompt 4. `apple/AppleRootCA-G3.cer`, Apple's own published production root, is
+bundled as a real classpath resource (`BillingConfig`'s `SignedDataVerifier` bean — safe to
+build eagerly, unlike the API client, since it never touches a secret). New `AppleProperties`
+(`lifey.billing.apple.*`); `environment` defaults to `SANDBOX` so a fresh deploy can't
+accidentally accept production receipts, which is also the concrete mechanism behind 63
+§11.5's "the environment must be asserted, not assumed" — `SignedDataVerifier` rejects any
+transaction whose own embedded environment doesn't match what's configured.
+
+`AppStoreServerAPIClient` is built fresh per call inside `StoreBillingServiceImpl`, not as a
+Spring bean — its `BearerTokenAuthenticator` eagerly parses the configured private key at
+construction, which would crash application startup with an empty/placeholder key otherwise.
+Wrapping construction *and* the call in one broad catch turned out to double as the "local
+verification first means a working purchase even during an Apple API blip" resilience the
+plan asks for: an unconfigured Apple key in dev degrades identically to a live outage — logged
+as a WARN, swallowed, the purchase still succeeds on local verification alone. `StoreBillingServiceImpl`
+also folds in D-B6/63 §7.7 (409 only when the `originalTransactionId` belongs to a *different*
+user — the same user re-verifying their own token is treated as an idempotent refresh) and a
+small status inference from the decoded transaction (`revocationDate` present → `REFUNDED`,
+`expiresDate` in the past → `EXPIRED`, else `ACTIVE`) — the App Store Server API's richer
+status (`getAllSubscriptionStatuses`) is left for the reconciliation job (Prompt 11) rather
+than fetched synchronously on every purchase call. `StorePurchasePlatform` intentionally has
+only the `IOS` value — `ANDROID` lands in Prompt 9 alongside its own verification branch,
+rather than sitting here half-wired.
+
+The genuinely hard part was testing real cryptography without real Apple credentials.
+Apple's `ChainVerifier` requires an exact 3-certificate x5c chain and a specific non-critical
+X.509 OID on the leaf and intermediate (`AppleExtensionCertPathChecker`), discovered by
+reading `ChainVerifier`/`AppleExtensionCertPathChecker` source directly rather than assuming a
+shape. `AppleTestChain` (test-only, via a new `bcpkix-jdk18on` test dependency) builds a real,
+self-signed root → WWDR-shaped intermediate → receipt-signer-shaped leaf chain with those
+exact OIDs present, so `StoreBillingServiceImplTest` exercises genuine ECDSA chain and
+signature verification — not a stub — against a locally-generated root passed directly to a
+test-scoped `SignedDataVerifier` instance (the production bean, trusting the real Apple root,
+is never used in tests). The chain's validity window is fixed and wide (2020–2035) rather than
+relative to `Instant.now()`, since `ChainVerifier` validates against the JWS payload's own
+`signedDate` field (online checks are off), not wall-clock time.
+
+Test coverage: an 8-case `StoreBillingServiceImplTest` (real crypto: valid/expired/revoked
+transactions, a tampered signature, a malformed token, a wrong bundle id, the second-user 409,
+the same-user idempotent-refresh allow); a 4-case `StorePurchaseControllerTest` (`@WebMvcTest`,
+mocked service — the HTTP/`GlobalExceptionHandler` layer only, since the crypto is already
+covered). Full `mvn verify` (900 tests) and `check-schema-ownership.sh` both clean. Not
+verified: an actual device/sandbox-tester purchase against Apple's real sandbox — same
+"no real vendor account in this environment" gap as Stripe (Prompts 4–5).
+
+**Prompt 9 — Backend: Android purchase verification — ✅ done**
 Play Developer API client, acknowledgement, the `ANDROID` branch.
 *Verify:* as above, plus an explicit assertion that `acknowledge` is called (§6.1).
 
-**Prompt 10 — Backend: store server notifications**
+Landed on Google's official `google-api-services-androidpublisher` (`v3-rev20260825-2.0.0`) —
+pulling in `google-api-client`, which transitively brings `google-auth-library-oauth2-http`
+(`GoogleCredentials`/`HttpCredentialsAdapter`) and `google-http-client-gson` (`GsonFactory`),
+so no dependency beyond the one artifact was needed. Unlike Apple's SDK, Google's generated
+client has no clean, directly-injectable verifier object — `AndroidPublisher.Purchases
+.subscriptionsv2().get(...)`/`.subscriptions().acknowledge(...)` are concrete, deeply nested
+builder classes with no seam for a unit test. Wrote one: a new `PlayPurchaseClient` interface
+(`getSubscription`, `acknowledge`), implemented by `PlayPurchaseClientImpl`, which builds the
+real `AndroidPublisher` fresh on every call — same reason as `AppStoreServerAPIClient` in
+Prompt 8: `GoogleCredentials.fromStream` parses the service-account key eagerly, so holding one
+as a field would fail application startup with no key configured. New `GoogleProperties`
+(`lifey.billing.google.*`), empty by default.
+
+The critical asymmetry from iOS, called out explicitly in code comments and tests: Android has
+**no local verification at all** — the `subscriptionsv2.get` call *is* the entire proof of
+purchase, so unlike Apple's best-effort confirmation step (swallowed on failure),
+`StoreBillingServiceImpl` lets both the `getSubscription` call and the `acknowledge` call
+propagate as `InvalidReceiptException` (422) on any failure. Acknowledge is skipped only when
+`acknowledgementState` is already `ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED` (idempotent re-verification,
+e.g. the app re-sending the same purchase on every launch) — otherwise it's always attempted
+and its failure is never swallowed, since an unacknowledged Play purchase auto-refunds after 3
+days (§6.1) and silently eating that failure is exactly the "silent revenue loss" the plan
+calls out. D-B6's identity for Android is the purchase token itself — Play's v2 API returns no
+separate "subscription id" distinct from the token that was verified, unlike Apple's
+`originalTransactionId`. Play's five relevant `subscriptionState` values were mapped onto the
+existing `SubscriptionStatus` enum (`ACTIVE`/`IN_GRACE_PERIOD` → `ACTIVE`,
+`ON_HOLD`/`PAUSED` → `PAST_DUE`, `CANCELED` → `CANCELED`, everything else including
+`PENDING`/`UNSPECIFIED`/absent → `EXPIRED`, a fail-safe default) — a judgment call, since the
+plan doesn't spell out this mapping and Play's states don't line up 1:1 with Stripe's/Apple's.
+
+Test coverage: `StoreBillingServiceImplTest` grew from 8 to 14 cases (the file now covers both
+platforms) — a valid Play purchase that acknowledges and links, the explicit "acknowledge is
+called" assertion the *Verify* line asks for, an idempotency case proving acknowledge is
+*not* called a second time once already acknowledged, a failed-acknowledge case proving it
+surfaces as 422 rather than being swallowed, a Play API failure on the initial fetch, the
+`ON_HOLD` → `PAST_DUE` mapping, and the second-user 409 keyed by purchase token. Unlike
+Prompt 8, no real cryptography was needed here — `PlayPurchaseClient` is a plain Mockito mock,
+which is the whole point of having introduced that seam. Full `mvn verify` (906 tests) and
+`check-schema-ownership.sh` both clean. Not verified: an actual Play Console test-track
+purchase against a real service account — same "no vendor account in this environment" gap as
+Prompts 4, 5 and 8.
+
+**Prompt 10 — Backend: store server notifications — ✅ done**
 The two webhook controllers, notification-type mapping, idempotency.
 *Verify:* fixture replay per notification type; duplicate delivery → one write.
 
+Both webhooks are public endpoints (`SecurityConfig.PUBLIC_ENDPOINTS`), each authenticated by
+its own scheme rather than a JWT — App Store notifications by the same `SignedDataVerifier`
+StoreKit 2 JWS verification Prompt 8 already wired as a bean; Play RTDN by a brand-new
+`PubSubTokenVerifier` checking the Pub/Sub push subscription's OIDC bearer token against
+Google's live JWKS. `PubSubTokenVerifier` deliberately does *not* reuse
+`com.lifey.auth.GoogleIdTokenVerifier` despite the identical shape (decode, check `iss`,
+check `aud`, check a verified identity claim) — it's a different trust domain (a Pub/Sub push
+audience/service-account email, not an OAuth client id audience), so collapsing them would
+couple two things that change for unrelated reasons. `GoogleProperties` grew two fields
+(`pubsubAudience`, `pubsubServiceAccountEmail`), both empty by default so the verifier rejects
+every push until the Cloud Pub/Sub subscription is actually configured.
+
+`AppStoreWebhookController` takes the notification as an ordinary `@RequestBody` rather than
+reading the raw body — unlike Stripe (Prompt 5), the signature is over the JWS's own
+`signedPayload` content, not the HTTP body bytes, so there's nothing raw-byte handling would
+buy here. `PlayWebhookController` does read the raw body, matching Stripe's reasoning: simpler
+to parse the two-layer, partly-base64 Pub/Sub envelope once with the one Jackson 2
+`ObjectMapper` `SecurityConfig` already defines than fight Spring Boot 4's default Jackson 3
+converter over it. Google ships no Java model for the RTDN payload shape (unlike the Play
+Developer API's generated classes used in Prompt 9) — `PubSubPushEnvelope`, `PubSubMessage`,
+`PlayDeveloperNotification`, `PlaySubscriptionNotification`, and a from-scratch
+`PlayNotificationType` enum (Google documents only the raw integer codes) were all written by
+hand, package-private, `@JsonIgnoreProperties(ignoreUnknown = true)`.
+
+Both controllers follow the exact idempotency shape Prompt 5 established for Stripe:
+`SubscriptionWriter.isAlreadyProcessed` short-circuits to 200 before doing any work, and
+`markProcessed` is called only after a successful apply — keyed by `notificationUUID` for
+Apple, `messageId` for Play. An unhandled notification type is acknowledged with 200 and
+never written or marked processed, same reasoning as Stripe: a 4xx just buys endless retries
+from a vendor that can't fix the type mismatch itself. One asymmetry between the two vendors,
+called out explicitly in code comments: Apple's `REVOKE` (Family Sharing access loss) maps to
+`CANCELED`, since `REFUND` is Apple's own separate, distinct type — but Play has no dedicated
+refund RTDN type at all, so `SUBSCRIPTION_REVOKED` maps to `REFUNDED` as the closest available
+signal, a deliberate judgment call the plan doesn't spell out. `DID_RENEW` is the one Apple
+type that gets a full `syncSubscriptionState` (a fresh `currentPeriodEnd`, extracted from the
+re-verified `signedTransactionInfo`) rather than a bare `markStatus` — every other handled type
+on both sides is status-only, since Play's push payload carries no expiry itself.
+
+Both controllers were tested as plain unit tests — no MockMvc, no Spring context, no real
+HTTP — since neither needs raw-signature-over-HTTP-body verification (unlike Stripe's webhook):
+`AppStoreWebhookController` is called directly with a hand-built `AppStoreServerNotificationRequest`,
+`PlayWebhookController` with a `MockHttpServletRequest` carrying just the raw body. Apple's side
+reuses `AppleTestChain` (Prompt 8's self-signed 3-certificate chain builder), widened from
+package-private to `public` so `com.lifey.billing.controller.webhook`'s tests can share the same
+real StoreKit 2 cryptography rather than building a second, divergent fixture generator.
+`AppStoreWebhookControllerTest` (9 cases) covers `DID_RENEW`'s full-sync path, all five
+status-only types via a parameterized test, an unhandled type writing nothing, a duplicate
+`notificationUUID` writing only once, and a tampered signature returning 400.
+`PubSubTokenVerifierTest` (7 cases) mirrors `GoogleIdTokenVerifierTest`'s exact pattern — a
+locally RSA-signed JWT plus an in-memory Nimbus `JWKSet` standing in for Google's real JWKS —
+covering the valid case, both issuer string variants, wrong audience, wrong/unverified service
+account email, and a malformed token. `PlayWebhookControllerTest` (10 cases) covers all four
+handled notification-type codes via a parameterized test, an unhandled code, a missing/non-Bearer/
+invalid OIDC token (three separate 401 cases), a malformed envelope (400), and a duplicate
+`messageId`. Full `mvn verify` (932 tests) and `check-schema-ownership.sh` both clean. Not
+verified, same standing gap as every other webhook/vendor-integration prompt in this plan: no
+real Apple/Google delivery in this environment, so the actual production JWKS endpoint, the
+real Apple root certificates, and Google's real push-subscription behavior are all unexercised.
+
 ### Milestone M5a — the safety net
 
-**Prompt 11 — Backend: `BillingReconciliationJob` + metrics**
+**Prompt 11 — Backend: `BillingReconciliationJob` + metrics — ✅ done**
 *Verify:* a test where the local row says `ACTIVE` and the provider says `CANCELED` → the
 job corrects it and logs a WARN; a test that the per-run cap is honoured.
 
-**Prompt 12 — Backend: AI credit counter**
+Landed as three new steps on the same `BillingReconciliationJob` class Prompt 7 started (§7
+points 1, 2, 4 — point 3, trial expiry, was already there). `reconcileProviderTruth()` reads
+every non-terminal (`TRIALING`/`ACTIVE`/`PAST_DUE`) row that actually has a
+`providerSubscriptionId` — a new repository method, `findByStatusInAndProviderSubscriptionIdIsNotNull`,
+capped by a new `Pageable` built from a new `BillingProperties.reconciliationBatchSize`
+(`lifey.billing.reconciliation-batch-size`, default 200) — that's §7's per-run rate limit.
+`COMP` rows are skipped outright (no vendor to check). For each candidate, the job re-fetches
+the provider's own status — Stripe via `Subscription.retrieve` (mirroring `StripeWebhookController`'s
+status-string mapping), Apple via `AppStoreServerAPIClient.getAllSubscriptionStatuses`, Play via
+the existing `PlayPurchaseClient` seam — and calls `SubscriptionWriter.markStatus` plus a WARN
+log only when the provider's status actually differs from the local row. Metrics are per-provider
+Micrometer counters, `billing.reconciliation.rows_checked`/`rows_corrected` tagged by `provider`,
+emitted once at the end of the run rather than per-row — this is the first place in the whole
+backend that emits a custom Micrometer counter directly (the codebase's existing `/actuator/metrics`
+exposure was previously unused; `lifey-chat`'s counters live in that separate service).
+
+Two judgment calls worth flagging. First, the Apple re-fetch deliberately uses a *different*
+signal than Prompt 8's per-transaction `revocationDate`/`expiresDate` check: `getAllSubscriptionStatuses`
+returns Apple's own coarse status enum (`ACTIVE`/`EXPIRED`/`BILLING_RETRY`/`BILLING_GRACE_PERIOD`/`REVOKED`)
+for the whole subscription group, which is the actual "ask the provider for the truth" call §7
+wants, not a re-verification of one already-trusted receipt. `REVOKED` maps to `CANCELED`, not
+`REFUNDED` — consistent with `AppStoreWebhookController`'s own `REVOKE` judgment call (`64`
+Prompt 10), since Apple's enum doesn't distinguish a refund from a Family Sharing access loss at
+this granularity either. Second, `run()` lost its `@Transactional` annotation: Prompt 7's version
+had it (fine, no external calls), but this job now makes up to `reconciliationBatchSize` blocking
+HTTP calls to three vendors per run, and holding a database connection open across all of them
+risked pool exhaustion; every actual write already goes through `SubscriptionWriter`, which is
+`@Transactional` on its own, so each row's correction still commits atomically — just not as one
+big transaction spanning the whole sweep, which is fine for a nightly best-effort job.
+
+Test coverage in the same `BillingReconciliationJobTest`: Stripe status mismatch → correction +
+both metrics via `MockedStatic<com.stripe.model.Subscription>` (mirroring `StripeBillingServiceImplTest`'s
+precedent); matching status → no correction; a Play status mismatch → correction (via the
+already-mockable `PlayPurchaseClient`); a provider fetch failure (Play throwing `IOException`) →
+swallowed, row skipped, not corrected, still counted as checked; a `COMP` row never reaching a
+vendor call; and the per-run cap test, asserting the `Pageable` passed to the repository carries
+the configured page size. Apple's own fetch path isn't separately unit-tested here — exercising
+it meaningfully needs a real signing key the way `AppleTestChain` supplies one for JWS
+verification (`64` Prompt 8), and the swallowed-failure path is already covered via Play — so
+this is a deliberate, documented coverage gap rather than a missed case. `BillingProperties`
+gained its fifth field (`reconciliationBatchSize`), so two existing test files
+(`SeatLimitServiceImplTest`, `EntitlementServiceImplTest`) needed their positional-constructor
+calls updated. Full `mvn verify` (938 tests) and `check-schema-ownership.sh` (no migration in
+this prompt) both clean.
+
+**Prompt 12 — Backend: AI credit counter — ⚠️ partially done (counter infra only)**
 `V74`, `AiUsageCounter`, the increment inside the AI call path, `aiCreditsRemaining` in the
 response.
 *Verify:* a free user's 4th call in a month → 402/`AI_CREDITS_EXHAUSTED`; a failed LLM call
 does not increment (§3.4).
+
+**Scope cut, made explicitly with the user before starting:** this prompt assumes an AI call
+path already exists to increment inside of. It doesn't — `docs/23-ai-calorie-estimation-plan.md`'s
+meal-photo estimation feature (`com.lifey.ai`, `com.lifey.nutrition.estimation`,
+`MealEstimationController`/`Service`, `AiFeatureGate`) is a separate, explicitly-deferred plan
+("later, designed now") with no code in this repo yet. Given three options — build the counter
+infra only, skip the prompt entirely, or also build the whole AI feature just to have a real
+call site — the user chose the first. So this prompt landed the counter side in full, and
+everything downstream of an actual AI call (the 402/`AI_CREDITS_EXHAUSTED` gate, the
+"failed call doesn't increment" guarantee, the *Verify* line above) is **not done** and cannot
+be until `docs/23`'s feature lands and calls into what's built here.
+
+Landed as `V76__ai_usage_counter.sql` — `V74`/`V75` were already taken by `processed_billing_event`
+and the trainer-trial backfill (Prompts 1 and 7), so this is the next free version, same shifting
+pattern Prompt 1 flagged for `V72`. `com.lifey.billing.entity.AiUsageCounter` (extends `BaseEntity`,
+not `SyncableEntity` — server-only bookkeeping, never synced to the mobile client) plus
+`AiUsageCounterRepository`, with an `incrementUsage(userId, yearMonth)` atomic Postgres upsert
+(`insert … on conflict (user_id, year_month) do update set used_count = used_count + 1`) rather
+than JPA's usual load-mutate-save, since two AI calls landing in the same user's same month at
+the same time must not race and silently lose one. `AiUsageCounterService`/`Impl` wraps it with
+`usedThisMonth(userId)` (read) and `recordUsage(userId)` (the increment) — the interface's
+javadoc is explicit that callers must only call `recordUsage` after a successful call, since this
+class has no way to verify that itself. `EntitlementServiceImpl.freeResponse` now computes
+`aiCreditsRemaining` as `max(0, freeAiCreditsPerMonth - usedThisMonth(userId))` instead of always
+returning the flat monthly allowance — the placeholder Prompt 2's landed notes flagged. `PRO`'s
+`aiCreditsRemaining` stays `null` (unlimited-looking) as before; the fair-use ceiling for Pro
+(63 D-M5, 100/month) is deliberately not wired to anything here, since enforcing it is squarely
+`AiFeatureGate`'s future job, not the counter's or the resolver's.
+
+Two real bugs surfaced and fixed during verification, both worth flagging since they're the kind
+that only show up under a real Testcontainers Postgres run, not at compile time. First, the
+migration originally declared `year_month char(7)`, but the entity maps it as a plain `String`
+field — Hibernate maps that to `varchar`, and `ddl-auto=validate` failed application startup with
+a `SchemaManagementException` at the *next* test class after this one, not this one, which took
+a moment to trace back. Fixed by changing the column to `varchar(7)`. Second,
+`incrementUsage_existingRow_incrementsInPlace` initially asserted 4+1+1=6 but read back 4: the
+native `@Modifying` query bypasses Hibernate's persistence context entirely, so a
+`findByUserIdAndYearMonth` call in the same transaction was returning the stale first-level-cached
+entity from before the native update ran. Fixed with `@Modifying(clearAutomatically = true)`.
+
+Test coverage: `AiUsageCounterRepositoryTest` (6 cases — round trip, no-row-yet, the
+`(user_id, year_month)` unique constraint, same user across two different months, and the
+upsert's both branches, insert and conflict-update); `AiUsageCounterServiceImplTest` (3 cases,
+plain Mockito); two new `EntitlementServiceImplTest` cases proving `aiCreditsRemaining` actually
+subtracts real usage and clamps at 0 rather than going negative. `BillingProperties` was
+unaffected (no new config field this prompt), but `EntitlementServiceImpl`'s constructor gained
+the new `AiUsageCounterService` dependency, so its one direct instantiation
+(`EntitlementServiceImplTest`) needed updating — existing FREE-tier assertions kept passing
+unmodified since an unstubbed mock's `usedThisMonth` returns 0 by default, which is exactly the
+"no usage yet" case those tests were already implicitly asserting. Full `mvn verify` (949 tests)
+and `check-schema-ownership.sh` both clean.
 
 ---
 

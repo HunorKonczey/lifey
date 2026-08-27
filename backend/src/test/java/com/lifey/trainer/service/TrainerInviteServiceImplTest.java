@@ -1,6 +1,7 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.billing.service.SeatLimitService;
 import com.lifey.common.domain.BaseEntity;
 import com.lifey.mail.service.MailService;
 import com.lifey.trainer.TrainerClientRepository;
@@ -57,6 +58,10 @@ class TrainerInviteServiceImplTest {
     /** Unstubbed: {@code emailEnabled()} defaults to {@code false}, matching the feature's off-by-default setting. */
     @Mock
     TrainerInviteProperties trainerInviteProperties;
+
+    /** Unstubbed: void, so every seat check is a no-op — these tests aren't about billing enforcement. */
+    @Mock
+    SeatLimitService seatLimitService;
 
     @InjectMocks
     TrainerInviteServiceImpl service;
@@ -246,6 +251,7 @@ class TrainerInviteServiceImplTest {
         TrainerClient invite = new TrainerClient();
         invite.setStatus(TrainerClientStatus.PENDING);
         invite.setExpiresAt(Instant.now().plusSeconds(3600));
+        invite.setTrainer(withId(new User(), TRAINER_ID));
         when(trainerClientRepository.findByIdAndClientIdAndStatus(4L, CLIENT_ID, TrainerClientStatus.PENDING))
                 .thenReturn(Optional.of(invite));
 
@@ -326,6 +332,7 @@ class TrainerInviteServiceImplTest {
         TrainerClient invite = new TrainerClient();
         invite.setStatus(TrainerClientStatus.PENDING);
         invite.setExpiresAt(Instant.now().plusSeconds(3600));
+        invite.setTrainer(withId(new User(), TRAINER_ID));
         when(trainerClientRepository.findByEmailTokenHashAndStatus(any(), eq(TrainerClientStatus.PENDING)))
                 .thenReturn(Optional.of(invite));
 

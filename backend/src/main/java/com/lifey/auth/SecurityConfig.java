@@ -44,6 +44,17 @@ public class SecurityConfig {
             // The marketing site's contact form (docs/landing_page/65 Prompt 8) — an
             // anonymous visitor, no account to authenticate as.
             "/api/v1/contact",
+            // Stripe's webhook (docs/landing_page/64-billing-backend-plan.md §5.3) —
+            // authenticated by its own signature header (StripeWebhookController),
+            // not a JWT. Stripe cannot carry a bearer token.
+            "/api/v1/webhooks/stripe",
+            // App Store Server Notifications V2 (64 §6.2) — authenticated by its own
+            // signed JWS payload (AppStoreWebhookController), not a JWT.
+            "/api/v1/webhooks/app-store",
+            // Play RTDN via a Pub/Sub push subscription (64 §6.2) — authenticated by
+            // its own OIDC bearer token (PlayWebhookController/PubSubTokenVerifier),
+            // never our own JWT, so this must stay off the normal auth filter.
+            "/api/v1/webhooks/play",
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",
@@ -99,6 +110,11 @@ public class SecurityConfig {
                         // /api/v1/trainer-invites/** and /api/v1/my-trainers/** are the client-side
                         // (mobile) counterparts and stay on the plain ROLE_USER `authenticated()` rule.
                         .requestMatchers("/api/v1/trainer/**").hasRole("TRAINER")
+                        // Trainer-only billing actions (docs/landing_page/64-billing-backend-plan.md
+                        // §5.2) — not under /api/v1/trainer/** because that prefix will also carry
+                        // ROLE_USER-only billing endpoints later (e.g. the mobile store-purchase path).
+                        .requestMatchers("/api/v1/billing/checkout-session", "/api/v1/billing/portal-session")
+                        .hasRole("TRAINER")
                         .requestMatchers("/api/v1/superadmin/**").hasRole("SUPER_ADMIN")
                         // /actuator/health stays public above (the deploy probe
                         // needs it); everything else actuator exposes is
