@@ -12,6 +12,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record MailProperties(
         String from,
         boolean enabled,
-        String resendApiKey
+        String resendApiKey,
+        /** Team inbox the marketing site's contact form (docs/landing_page/65 Prompt 8) delivers to. */
+        String contactTo
 ) {
 }

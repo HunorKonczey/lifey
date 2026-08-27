@@ -133,6 +133,9 @@ lifey:
     # sending so local dev and tests never require a real Resend account.
     enabled: ${MAIL_ENABLED:false}
     resend-api-key: ${RESEND_API_KEY:}
+    # Where the marketing contact form (docs/landing_page/65 Prompt 8) delivers to —
+    # matches the address already printed in the footer (web messages: footer.email).
+    contact-to: ${MAIL_CONTACT_TO:hello@lifey.hu}
   push:
     apns:
       # Off by default — no bean is created (see ApnsPushSender's

@@ -45,3 +45,16 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8080/api/v1
           NEXT_TELEMETRY_DISABLED: "1"
+
+      # docs/landing_page/65 Prompt 11 — the marketing tree's performance
+      # budget, asserted here instead of watched by hand (63 §8.9). Two
+      # separate checks: bundle size (fast, every marketing route) and
+      # Lighthouse (slower, home page only — see lighthouserc.js for why
+      # both this and the JS budget below assert against realistic
+      # thresholds measured today, not §8's aspirational targets, and why
+      # that's a deliberate choice, not a shortcut).
+      - name: JS budget (marketing routes)
+        run: npm run check:js-budget
+
+      - name: Lighthouse CI (home page)
+        run: npm run lhci

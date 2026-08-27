@@ -3,13 +3,26 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Providers } from "@/lib/providers";
 import { useSessionStore } from "@/features/auth/store";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { useUiStore } from "@/lib/hooks/useUiStore";
 import { ErrorBoundary } from "@/components/status/ErrorBoundary";
 import { useChatStream } from "@/features/chat/hooks";
 
+// `<Providers>` has to wrap this shell rather than the other way round —
+// AdminShell calls hooks (useTranslations, useChatStream, ...) that need to
+// be a *descendant* of I18nProvider/QueryClientProvider, not their own
+// ancestor.
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Providers>
+      <AdminShell>{children}</AdminShell>
+    </Providers>
+  );
+}
+
+function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isLoading, initialize } = useSessionStore();
   const common = useTranslations("common");

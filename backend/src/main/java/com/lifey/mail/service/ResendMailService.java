@@ -101,6 +101,19 @@ class ResendMailService implements MailService {
         send(trainer, "weekly_report", "weekly_report", language, subject, htmlPlaceholders, textPlaceholders);
     }
 
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendContactMessage(String name, String email, String message, MailLanguage language) {
+        String subject = messages.get("mail.contact.subject", language, name);
+        Map<String, String> htmlPlaceholders = Map.of(
+                "name", WeeklyReportFormatting.escapeHtml(name),
+                "email", WeeklyReportFormatting.escapeHtml(email),
+                "message", WeeklyReportFormatting.escapeHtml(message)
+        );
+        Map<String, String> textPlaceholders = Map.of("name", name, "email", email, "message", message);
+        sendToInbox("contact", "contact", language, subject, htmlPlaceholders, textPlaceholders, email);
+    }
+
     private String renderRow(WeeklyTrainerReport.ClientWeekSummary client, MailLanguage language, boolean html) {
         String summary = weeklyReportFormatting.summarize(client, language, html);
         String clientName = html ? WeeklyReportFormatting.escapeHtml(client.clientName()) : client.clientName();
@@ -142,6 +155,42 @@ class ResendMailService implements MailService {
                     .toBodilessEntity();
         } catch (RuntimeException e) {
             log.error("Failed to send '{}' email to {}", mailType, user.getEmail(), e);
+        }
+    }
+
+    /**
+     * The non-{@link User} counterpart of {@link #send} — delivers to the fixed
+     * {@code mailProperties.contactTo()} inbox instead of a recipient's own address, with
+     * {@code replyTo} set so the team can just hit reply to answer the visitor directly.
+     */
+    private void sendToInbox(String templateName, String mailType, MailLanguage language, String subject,
+                             Map<String, String> htmlPlaceholders, Map<String, String> textPlaceholders, String replyTo) {
+        if (!mailProperties.enabled()) {
+            log.info("Mail disabled, would have sent '{}' email to {} (reply-to {})", mailType, mailProperties.contactTo(), replyTo);
+            return;
+        }
+        try {
+            String html = templateRenderer.renderHtml(templateName, language, htmlPlaceholders);
+            String text = templateRenderer.renderText(templateName, language, textPlaceholders);
+
+            Map<String, Object> body = Map.of(
+                    "from", mailProperties.from(),
+                    "to", mailProperties.contactTo(),
+                    "reply_to", replyTo,
+                    "subject", subject,
+                    "html", html,
+                    "text", text
+            );
+
+            restClient.post()
+                    .uri(RESEND_API_URL)
+                    .header("Authorization", "Bearer " + mailProperties.resendApiKey())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RuntimeException e) {
+            log.error("Failed to send '{}' email to {}", mailType, mailProperties.contactTo(), e);
         }
     }
 

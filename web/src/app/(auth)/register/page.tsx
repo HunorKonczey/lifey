@@ -5,11 +5,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { track } from "@vercel/analytics";
 import { registerSchema, type RegisterFormValues } from "@/features/auth/schemas";
 import { authApi } from "@/features/auth/api";
 import { useSessionStore } from "@/features/auth/store";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { ApiError } from "@/lib/api/client";
+import { extractAttribution, readAttributionCookie } from "@/lib/attribution";
 
 export default function RegisterPage() {
   const t = useTranslations("auth");
@@ -26,6 +28,14 @@ export default function RegisterPage() {
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
+    // First-touch (65 D-W8): the lifey_attrib cookie a marketing page wrote
+    // on the visitor's *original* touch, days or clicks before this one.
+    // Falls back to this page's own current `?src=` — last-touch — only if
+    // the cookie is missing entirely (e.g. cookies blocked), so a signup
+    // still carries *some* attribution rather than none.
+    const signupSource =
+      readAttributionCookie(document.cookie) ?? extractAttribution(window.location.search) ?? undefined;
+
     try {
       // Register returns no tokens — log in immediately afterwards.
       await authApi.register({
@@ -33,7 +43,9 @@ export default function RegisterPage() {
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
+        signupSource,
       });
+      track("trainer_request_submitted", { src: signupSource ?? "none" });
       const res = await authApi.login({ email: data.email, password: data.password });
       applyAccessToken(res.accessToken);
       router.push("/onboarding");

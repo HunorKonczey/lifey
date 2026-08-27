@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // Derive the backend origins (scheme + host) from the configured base URLs so
 // the CSP connect-src allows calls to them (and nothing else).
@@ -65,4 +66,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Wires up src/i18n/request.ts — used only by the marketing tree's server
+// components (getTranslations/getFormatter); the authenticated app's
+// client-side i18n (I18nProvider) is untouched by this.
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+export default withNextIntl(nextConfig);

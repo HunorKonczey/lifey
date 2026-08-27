@@ -278,8 +278,9 @@ onboarding checklist in `/admin` have to push toward it (`66` §4). A trial that
 zero accepted invites converts at approximately zero, so that number is worth measuring
 above all others.
 
-**Client.** Invite email / QR → `download` page → store → install → accept invite →
-sponsored Pro, silently. The client is never sold anything, ever.
+**Client.** Invite email → `download` page → store → install → accept invite →
+sponsored Pro, silently. The client is never sold anything, ever. No QR anywhere in this
+path — an invite is bound to an e-mail address, not a scannable token (`69` §6.3, DV-4).
 
 **Individual user.** Store search / landing `app` page → install → free with ads → history
 window or AI limit hit → paywall.
@@ -301,8 +302,15 @@ Not optional, and each one blocks either a store release or a Stripe account rev
   avoid a consent banner sitting on top of the landing page (`65` §7).
 - **Right of withdrawal**: the 14-day EU withdrawal right for digital services, with the
   standard "I request immediate performance and waive my withdrawal right" checkbox at
-  Stripe Checkout. Store purchases are governed by Apple/Google's own refund flows —
-  support must never promise a refund it cannot issue.
+  Stripe Checkout, **and** a standalone "Elállási tájékoztató" page
+  (`/legal/withdrawal` — the checkbox alone is not sufficient under Korm. rendelet 45/2014;
+  the page must exist and be linkable, which it now is, footer-linked from `65` Prompt 3).
+  Store purchases are governed by Apple/Google's own refund flows — support must never
+  promise a refund it cannot issue.
+- **Impresszum**: a company-details page (`/legal/imprint`) — name, registration number,
+  registered address, contact — required for any commercial website operating in Hungary.
+  Easy to forget because it has no billing-flow trigger the way the others do; already
+  footer-linked (`65` Prompt 3), the page content itself is still `65` Prompt 8 scope.
 - **VAT**: Stripe Tax for EU B2C/B2B VAT and reverse charge; the trainer's tax number is
   collected at Checkout. Hungarian e-invoicing (Számlázz.hu / Billingo + NAV) is a
   documented follow-up, not in the first release — Stripe's invoice is enough to transact,

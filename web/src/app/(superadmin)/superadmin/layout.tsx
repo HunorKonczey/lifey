@@ -5,13 +5,26 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { Providers } from "@/lib/providers";
 import { useSessionStore } from "@/features/auth/store";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { ErrorBoundary } from "@/components/status/ErrorBoundary";
 import { avatarApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 
+// `<Providers>` has to wrap this shell rather than the other way round —
+// SuperAdminShell calls hooks (useQuery, useTranslations, ...) that need to
+// be a *descendant* of QueryClientProvider/I18nProvider, not their own
+// ancestor.
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Providers>
+      <SuperAdminShell>{children}</SuperAdminShell>
+    </Providers>
+  );
+}
+
+function SuperAdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isLoading, initialize } = useSessionStore();
   const superadmin = useTranslations("superadmin");

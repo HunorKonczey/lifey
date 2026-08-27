@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { Providers } from "@/lib/providers";
 import { useSessionStore } from "@/features/auth/store";
 import { settingsApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
@@ -12,7 +13,18 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { ErrorBoundary } from "@/components/status/ErrorBoundary";
 
+// `<Providers>` has to wrap this shell rather than the other way round —
+// AppShell calls hooks (useQuery, useLocale, ...) that need to be a
+// *descendant* of QueryClientProvider/I18nProvider, not their own ancestor.
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Providers>
+      <AppShell>{children}</AppShell>
+    </Providers>
+  );
+}
+
+function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isLoading, initialize } = useSessionStore();
   const { setLanguage } = useLocale();

@@ -37,6 +37,8 @@ export interface RegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
+  /** First-touch marketing attribution (docs/landing_page/65 D-W8) — the `lifey_attrib` cookie's value, if any. */
+  signupSource?: string;
 }
 
 export interface ForgotPasswordRequest {

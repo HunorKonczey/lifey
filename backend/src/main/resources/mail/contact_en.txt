@@ -1,0 +1,7 @@
+Name: {{name}}
+Email: {{email}}
+
+Message:
+{{message}}
+
+— Sent via the lifey.hu contact form. Replying goes straight to the sender.

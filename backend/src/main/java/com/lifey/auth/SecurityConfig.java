@@ -41,6 +41,9 @@ public class SecurityConfig {
             // TrainerInviteEmailController) — protected by an opaque, single-use,
             // per-invite token instead of a session.
             "/api/v1/trainer-invites/email/**",
+            // The marketing site's contact form (docs/landing_page/65 Prompt 8) — an
+            // anonymous visitor, no account to authenticate as.
+            "/api/v1/contact",
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",

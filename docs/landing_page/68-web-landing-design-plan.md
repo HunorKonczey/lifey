@@ -150,6 +150,10 @@ Four columns desktop (Termék · Edzőknek · Cég · Jogi), stacked accordion-f
 Includes: both store badges, the language switch again, `© Lifey`, and the three legal links
 (63 §5). Background `--surface`, top hairline.
 
+*Delivered as (L02, DV-9 below): brand/tagline+badges · Termék (Edzőknek, Az app, Árak,
+Letöltés) · Jogi · Kapcsolat+language-switch — four columns, but not the four named above; "Az
+app"/"Edzőknek" are Termék links, not their own column, and there is no "Cég" column.*
+
 ### 3.3 Mobile sticky CTA bar
 
 Below 768 px, after the hero scrolls out of view, a 64 px bar pins to the bottom:
@@ -444,7 +448,7 @@ say which won and why.
 The home page's pricing preview (§4.10) has no frame of its own by design — it reuses L19's
 cards with the fine print dropped, which is what §4.10 asked for.
 
-### 12.2 Deviations from §1–§11 — all accepted except one
+### 12.2 Deviations from §1–§11 — all accepted; DV-5 was a defect, now fixed in code
 
 **DV-1 The recommended plan's pill reads "AJÁNLOTT", not "Legnépszerűbb" (L19).** Accepted, and
 better: there is no popularity data yet, so "most popular" would be an invented claim on the one
@@ -479,11 +483,55 @@ aktív kliens"* or *"Prioritásos támogatás"* (the latter only if we will actu
 Whoever implements `65` Prompt 6 owns this; the canvas frame should be corrected in the same
 change so the two do not drift.
 
+**✅ Fixed, `65` Prompt 6** — went with *"Korlátlan program és időpont"*, identical to Starter
+and Pro's own third bullet rather than a new Studio-only line, so all three cards' feature lists
+are now provably the same by construction (`lib/pricing.ts`'s `PLANS`, one shared array). Landed
+one prompt early, in Prompt 4's home-page pricing preview, which already reused the same
+constant — Prompt 6 inherited the fix rather than having to make it. The canvas frame itself
+(`design/Lifey Landing.dc.html` L19) has not been redrawn; this note is the correction record.
+
 **DV-6 The sponsored band (L13/L14) also delivers a mobile surface.** It renders the dashboard
 twice — free with a labelled 320 × 50 banner slot, and sponsored with the slot absent and the
 absence *called out in the frame* (*"— nincs reklámhely, nincs hajszálvonal —"*). That is `69`
 §4.4 and DD-4 satisfied ahead of the mobile canvas; `69` §11 records it so the work is not
 redone.
+
+**DV-7 The header (L02) has no language switch and no theme toggle at all — not "moved
+elsewhere", genuinely absent.** §3.1 above asks for both in the header (a two-item segmented
+HU/EN control plus a theme-toggle icon). The delivered frame has neither, in any of its three
+states (signed-out, signed-in, mobile open) — confirmed by grepping the frame's own markup for
+`HU`/`EN`/`toggle`/`dark_mode`/`light_mode`, not just eyeballing it. The **only** language
+switch anywhere in L02 lives in the footer (a HU/EN pill pair), and there is no theme control
+anywhere in the canvas at all — the marketing site follows the system preference only, via the
+existing FOUC script.
+
+Not silently decided either way: confirmed explicitly with the user during `65` Prompt 3's
+implementation (65-web-landing-page-plan.md, Prompt 3 notes) rather than assumed, since it is
+a real, user-visible product choice (changing language requires scrolling to the footer; there
+is no manual light/dark override on marketing pages even though the authenticated app has
+one). Answer both times: **follow the canvas exactly.** §3.1's text above is left as originally
+written, for the historical record of what was asked for; the canvas is what shipped.
+
+**DV-9 The footer (L02) has four legal links, not three, and its columns aren't the ones §3.2
+names.** §63 §5 lists two legal documents (terms, privacy) and §3.2 above says "Termék ·
+Edzőknek · Cég · Jogi". The frame's Jogi column has **four** links — ÁSZF, Adatvédelem,
+**Elállási jog**, **Impresszum** — and there is no separate "Edzőknek" or "Cég" column; the
+actual four columns are brand/badges, Termék (which itself contains "Edzőknek"), Jogi,
+Kapcsolat+language.
+
+Accepted, and correctly so on the legal side: a standalone right-of-withdrawal notice and a
+company-details "Impresszum" page are both real, separately required documents for a
+Hungarian/EU consumer-facing site (Korm. rendelet 45/2014 for the former; standard e-commerce
+disclosure practice for the latter), not decoration the designer added. `63` §5 should gain
+both — it currently only names ÁSZF and Adatkezelés. Landed in `65` Prompt 3: `src/i18n/
+routing.ts` gained `/legal/withdrawal` and `/legal/imprint` pathname keys alongside the
+original two.
+
+**DV-10 §5.4's billing FAQ has no frame at all.** The frame map (§12.1) points all of §5 —
+including §5.4, "six `<details>` items" — at L19, but the delivered frame has no FAQ block; it
+stops after the fine print and the "already have a plan" notice. Accepted as an omission, not a
+contradiction: implemented from the spec's own six named topics in `65` Prompt 6, reusing
+`FaqPreview.tsx`'s `<details>` vocabulary rather than waiting on a redraw.
 
 ---
 
@@ -493,10 +541,21 @@ The rerun brief. Everything here was in `70` §0/§5/§7 and is not in the canva
 
 1. **For-trainers page** (§6) — six value blocks reusing L10–L12's vocabulary, the "day in the
    life" strip, and the pricing preview. No new components, so this is composition, not design.
+   **Implemented without a frame, `65` Prompt 5.** Still worth a real frame later, specifically
+   to check two calls made without one: a text-only hero (home's hero spends a mockup on
+   itself; this page needed all three for the value blocks) and a copy-only mobile fallback for
+   the six blocks (no compact visual, unlike the home page's per-section mobile mockups) — see
+   `65` Prompt 5's landed notes 2 and 6 for the reasoning.
 2. **The app page** (§6) — tan accent throughout, phone-first hero, feature grid, screenshot
-   scroll-snap row, store badges.
+   scroll-snap row, store badges. **Implemented without a frame, `65` Prompt 7** — one phone in
+   the hero, not three (no frame to check a second/third against); see `65` Prompt 7's landed
+   note 4.
 3. **Download page** (§6, `69` §6) — wordmark, one line, two store badges, legal links. **No QR
-   card** (DV-4). It needs the deep-link-attempt and fallback states.
+   card** (DV-4). It needs the deep-link-attempt and fallback states. **Implemented without a
+   frame, `65` Prompt 7** — required its own route group (`(marketing-bare)`) since 69 §6.1's
+   "no header nav, no footer nav" conflicts with every other marketing page's shared layout;
+   see `65` Prompt 7's landed note 1. Store badges are visually complete but inert (no real
+   store listing exists yet, "Hamarosan"/"Coming soon") — landed note 3.
 4. **State frames** (§7) — form submitting / success / error; failed image (frame with alt text);
    404 in both locales. The signed-in header and the "Csomag kezelése" pricing CTA are already
    done (L02, L19).
@@ -505,5 +564,7 @@ The rerun brief. Everything here was in `70` §0/§5/§7 and is not in the canva
    list is the part worth asking for: it is where the designer's unresolved product questions
    would have surfaced.
 
-Items 1–3 block `65` Prompts 5 and 7. Item 4 blocks nothing but will be improvised at
-implementation time if it is not drawn. Item 5 blocks nothing.
+Items 1–3 no longer block anything — `65` Prompts 5 and 7 implemented all three without a
+frame, each documenting the specific calls made in its own landed notes. A real frame for any
+of them is still worth having to check those calls against. Item 4 blocks nothing but will be
+improvised at implementation time if it is not drawn. Item 5 blocks nothing.
