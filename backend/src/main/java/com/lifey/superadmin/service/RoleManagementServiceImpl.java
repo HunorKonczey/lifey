@@ -82,7 +82,7 @@ public class RoleManagementServiceImpl implements RoleManagementService {
         // role itself, not just MANAGEABLE_ROLES, so growing that whitelist
         // later can't accidentally start a trial for an unrelated role.
         if (role == Role.ROLE_TRAINER) {
-            eventPublisher.publishEvent(new TrainerRoleGrantedEvent(targetUserId));
+            eventPublisher.publishEvent(new TrainerRoleGrantedEvent(targetUserId, actorId));
         }
     }
 

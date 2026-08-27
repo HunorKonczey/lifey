@@ -147,7 +147,7 @@ class RoleManagementServiceImplTest {
 
         service.grant(TARGET_ID, Role.ROLE_TRAINER);
 
-        verify(eventPublisher).publishEvent(new TrainerRoleGrantedEvent(TARGET_ID));
+        verify(eventPublisher).publishEvent(new TrainerRoleGrantedEvent(TARGET_ID, ACTOR_ID));
     }
 
     @Test

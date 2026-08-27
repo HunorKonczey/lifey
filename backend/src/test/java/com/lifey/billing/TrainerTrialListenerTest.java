@@ -19,6 +19,7 @@ import static org.mockito.Mockito.verify;
 class TrainerTrialListenerTest {
 
     private static final Long USER_ID = 42L;
+    private static final Long ACTOR_ID = 7L;
     private static final Instant NOW = Instant.parse("2026-06-01T09:00:00Z");
 
     @Mock
@@ -28,7 +29,7 @@ class TrainerTrialListenerTest {
     void onTrainerRoleGranted_startsA14DayProTrial() {
         TrainerTrialListener listener = new TrainerTrialListener(subscriptionWriter, Clock.fixed(NOW, ZoneOffset.UTC));
 
-        listener.onTrainerRoleGranted(new TrainerRoleGrantedEvent(USER_ID));
+        listener.onTrainerRoleGranted(new TrainerRoleGrantedEvent(USER_ID, ACTOR_ID));
 
         verify(subscriptionWriter).startTrainerTrial(USER_ID, TrainerPlan.PRO, Instant.parse("2026-06-15T09:00:00Z"));
     }

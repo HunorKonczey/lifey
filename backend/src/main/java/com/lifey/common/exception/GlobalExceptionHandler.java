@@ -22,6 +22,7 @@ import com.lifey.trainer.exception.ScheduleInPastException;
 import com.lifey.trainer.exception.ScheduleNotFoundException;
 import com.lifey.trainer.exception.SelfInviteException;
 import com.lifey.trainer.exception.UserNotFoundForInviteException;
+import com.lifey.trainer.request.exception.TrainerRequestAlreadyDecidedException;
 import com.lifey.workout.session.cardio.InvalidCardioRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -201,6 +202,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({RoleNotManageableException.class, CannotModifySelfException.class})
     public ResponseEntity<ApiError> handleRoleManagementRejection(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
+    }
+
+    /** 66 §2 — a decision (approve/reject) was attempted on a request that isn't PENDING any more. */
+    @ExceptionHandler(TrainerRequestAlreadyDecidedException.class)
+    public ResponseEntity<ApiError> handleTrainerRequestAlreadyDecided(TrainerRequestAlreadyDecidedException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

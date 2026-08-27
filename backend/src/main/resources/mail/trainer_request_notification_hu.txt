@@ -1,0 +1,9 @@
+Új edzői hozzáférés kérelem érkezett.
+
+Email: {{email}}
+Várható ügyfélszám: {{clientCount}}
+
+Indoklás:
+{{motivation}}
+
+Bíráld el a superadmin edzői kérelmek várólistáján.

@@ -185,11 +185,81 @@ Missing one of those invalidations is a stale seat meter that nothing reports (�
 
 ## 7. Order of work
 
-**Prompt 1 — Backend: trainer access requests**
+**Prompt 1 — Backend: trainer access requests — ✅ done**
 `V76`, `com.lifey.trainer.request`, the three endpoints, the mail notification, resolution on
 role grant.
 *Verify:* integration tests — one open request per user, super-admin list, approval both
 grants the role and resolves the request, approval starts the trial (`64` §4.1).
+
+Landed as `V77__trainer_request.sql` — `V76` was already taken by `64` Prompt 12's
+`ai_usage_counter`, so this is the next free version, the same shifting pattern every earlier
+prompt in `64` also hit. `trainer_request (id, user_id, status, motivation, client_count,
+signup_source, created_at, decided_at, decided_by)`, with a partial unique index on `user_id
+where status = 'PENDING'` doing the actual "one open request per user" enforcement, not
+application code. `com.lifey.trainer.request` came together exactly as laid out: `TrainerRequest`
++ `TrainerRequestStatus` flat at the package root, `TrainerRequestRepository`, `dto/` (request +
+two response shapes — a self-facing one and a richer superadmin one carrying the requester's
+email), `service/TrainerRequestService(+Impl)`, `controller/` (`TrainerRequestController` for
+`POST /api/v1/trainer-requests` + `GET /me`, `SuperAdminTrainerRequestController` for the queue
+under `/api/v1/superadmin/trainer-requests` — already `ROLE_SUPER_ADMIN`-gated by `SecurityConfig`'s
+existing wildcard, no changes needed there). One new exception, `TrainerRequestAlreadyDecidedException`
+(409); everything else reuses `ResourceNotFoundException`/`DuplicateResourceException` rather than
+inventing narrower ones.
+
+The one real design decision this prompt required: the doc's own text has two claims that look
+like they could conflict — "a decision endpoint that reuses `RoleManagementService`" (implying a
+dedicated approve/reject action in this queue) versus "the super admin's existing grant action
+(`SuperAdminUserController`) also resolves the request" (implying resolution has to work no
+matter which endpoint granted the role). Built both, reconciled: `POST
+/api/v1/superadmin/trainer-requests/{id}/approve` calls `RoleManagementService.grant(...)`
+directly (the "reuse" part), but resolving the row to `APPROVED` + sending the "you're in" email
+happens in a new `TrainerRequestResolutionListener`, a second `@EventListener` on the *same*
+`TrainerRoleGrantedEvent` `64` Prompt 7's `TrainerTrialListener` already consumes — plain
+(synchronous, same-transaction), not `@TransactionalEventListener`, for the identical reason
+Prompt 7 gave: the request row and the role must never be observably out of sync. This means a
+super admin granting `ROLE_TRAINER` through the *plain* `/api/v1/superadmin/users/{id}/roles`
+endpoint also resolves a pending request — exactly what the doc's other sentence asks for — with
+no special-casing in that endpoint at all. Doing this required widening `TrainerRoleGrantedEvent`
+from `(userId)` to `(userId, actorId)`, since the listener needs the granting admin's id for
+`decided_by` and had no other way to recover it; `TrainerTrialListener` ignores the new field.
+Reject has no such indirection — it never touches `RoleManagementService`, so it just marks the
+row `REJECTED` inline with the current-request actor id.
+
+One subtle correctness bug caught before it shipped: the listener originally passed
+`request.getUser()` (a lazy `@ManyToOne` proxy) straight into `MailService.sendTrainerRequestApproved`,
+whose implementation is `@Async` — meaning the actual field access happens on a different thread,
+after the listener's own method (and the Hibernate session with it) has already returned. An
+uninitialized proxy crossing that boundary would throw `LazyInitializationException` intermittently,
+not on every run. Fixed by re-fetching a real `User` via `UserRepository` inside the listener
+before handing it to `MailService` — the exact reasoning `WelcomeEmailListener`'s own javadoc
+already documents for a related but not identical reason (that one re-fetches because
+`AFTER_COMMIT` runs outside the original transaction entirely; this one re-fetches to avoid
+handing an uninitialized proxy across an `@Async` thread boundary within the *same* transaction).
+
+Two new `MailService` methods reuse the exact "team inbox" delivery path `65` Prompt 8's contact
+form established (`sendToInbox`, `mailProperties.contactTo()`) rather than emailing every
+`ROLE_SUPER_ADMIN` account individually — the admin-facing notification is hardcoded to English
+(an internal-facing message, not user-facing copy), while the "you're in" email to the newly
+approved trainer resolves the recipient's own language normally, matching every other
+`User`-addressed email in `ResendMailService`.
+
+Test coverage: `TrainerRequestRepositoryTest` (7 cases — round trip, the partial-unique-index
+rejection, that a *decided* row doesn't block a new `PENDING` one, `existsByUserIdAndStatus`,
+`findFirstByUserIdOrderByCreatedAtDesc` across statuses, `findFirstByUserIdAndStatus`, and
+`findByStatus`'s join-fetch — the last one deliberately scoped to specific synthetic users rather
+than a total-row-count, since JUnit doesn't guarantee method order and this table is shared
+across the whole test class); `TrainerRequestServiceImplTest` (12 cases) and
+`TrainerRequestResolutionListenerTest` (3, including the "user missing after resolve" edge case)
+at the unit level; `@WebMvcTest` controller tests for both controllers (9 cases total, HTTP-layer
+only); and `TrainerRequestIntegrationTest` (6 cases, real JWTs, Testcontainers, mirroring
+`TrainerTrialIntegrationTest`'s pattern) covering every clause of this prompt's own *Verify*
+line plus the direct-grant-bypasses-the-queue case the design reconciliation above was built to
+handle. `RoleManagementServiceImplTest` and `TrainerTrialListenerTest` needed their
+`TrainerRoleGrantedEvent` construction calls updated for the new `actorId` field; no other
+production behavior in `64`'s billing feature changed. Full `mvn verify` (986 tests) and
+`check-schema-ownership.sh` both clean. Not verified: an actual Resend delivery of either new
+email type (same standing gap as every other `MailService` addition in this codebase — mail
+sending is only exercised as "would have sent X" log lines with `lifey.mail.enabled=false`).
 
 **Prompt 2 — Web: request + pending pages**
 `/admin/pending`, the request form reachable from the landing CTA, status polling.

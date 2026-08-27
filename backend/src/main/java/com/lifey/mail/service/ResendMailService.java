@@ -114,6 +114,32 @@ class ResendMailService implements MailService {
         sendToInbox("contact", "contact", language, subject, htmlPlaceholders, textPlaceholders, email);
     }
 
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendTrainerRequestNotification(User requester, String motivation, Integer clientCount) {
+        String subject = messages.get("mail.trainer-request-notification.subject", MailLanguage.EN, requester.getEmail());
+        String motivationText = motivation == null || motivation.isBlank() ? "—" : motivation;
+        String clientCountText = clientCount == null ? "—" : clientCount.toString();
+        Map<String, String> htmlPlaceholders = Map.of(
+                "email", WeeklyReportFormatting.escapeHtml(requester.getEmail()),
+                "motivation", WeeklyReportFormatting.escapeHtml(motivationText),
+                "clientCount", clientCountText
+        );
+        Map<String, String> textPlaceholders = Map.of(
+                "email", requester.getEmail(), "motivation", motivationText, "clientCount", clientCountText);
+        sendToInbox("trainer_request_notification", "trainer_request_notification", MailLanguage.EN, subject,
+                htmlPlaceholders, textPlaceholders, requester.getEmail());
+    }
+
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendTrainerRequestApproved(User user) {
+        MailLanguage language = languageResolver.resolve(user);
+        Map<String, String> placeholders = Map.of("name", displayName(user));
+        String subject = messages.get("mail.trainer-request-approved.subject", language);
+        send(user, "trainer_request_approved", "trainer_request_approved", language, subject, placeholders);
+    }
+
     private String renderRow(WeeklyTrainerReport.ClientWeekSummary client, MailLanguage language, boolean html) {
         String summary = weeklyReportFormatting.summarize(client, language, html);
         String clientName = html ? WeeklyReportFormatting.escapeHtml(client.clientName()) : client.clientName();

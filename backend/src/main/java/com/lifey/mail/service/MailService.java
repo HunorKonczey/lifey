@@ -28,4 +28,15 @@ public interface MailService {
      * preference — there is no account to store one against.
      */
     void sendContactMessage(String name, String email, String message, MailLanguage language);
+
+    /**
+     * A new trainer access request (docs/landing_page/66-trainer-billing-web-plan.md §2,
+     * D-T1) — delivered to the team inbox, same path as {@link #sendContactMessage}, with
+     * the requester's own address as reply-to. Always sent in English (an internal-facing
+     * notification, not user-facing copy), unlike every other method here.
+     */
+    void sendTrainerRequestNotification(User requester, String motivation, Integer clientCount);
+
+    /** The "you're in" email sent when a pending trainer request is approved (66 §2). */
+    void sendTrainerRequestApproved(User user);
 }
