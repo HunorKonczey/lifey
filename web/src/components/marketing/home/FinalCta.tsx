@@ -7,10 +7,14 @@ import { TrackedCta } from "../TrackedCta";
  * el a táblázat nélkül") is generic enough to work on both. `page` keeps
  * `?src=`/`cta_click` attribution honest about which page the click came
  * from (65 Prompt 10 — previously a single hand-typed `src` string, now
- * `page`/`slot` like every other TrackedCta call site).
+ * `page`/`slot` like every other TrackedCta call site) — and, on for-trainers
+ * specifically, also routes the click into the trainer-request flow (66 D-T1)
+ * rather than a plain signup; the home page's own instance stays a plain
+ * `/register`, since a home-page visitor hasn't signaled trainer intent.
  */
 export async function FinalCta({ page = "home" }: { page?: string }) {
   const t = await getTranslations("home.finalCta");
+  const href = page === "for-trainers" ? "/register?next=/admin/pending" : "/register";
 
   return (
     <section className="py-16 md:py-24" style={{ background: "var(--surface-container)" }}>
@@ -19,7 +23,7 @@ export async function FinalCta({ page = "home" }: { page?: string }) {
           {t("title")}
         </h2>
         <TrackedCta
-          href="/register"
+          href={href}
           page={page}
           slot="final-cta"
           audience="trainer"

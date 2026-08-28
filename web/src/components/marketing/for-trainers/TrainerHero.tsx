@@ -45,7 +45,7 @@ export async function TrainerHero() {
 
         <div className="flex flex-col md:flex-row gap-3.5 mt-7 md:mt-8 md:justify-center">
           <TrackedCta
-            href="/register"
+            href="/register?next=/admin/pending"
             page="for-trainers"
             slot="hero-primary"
             audience="trainer"

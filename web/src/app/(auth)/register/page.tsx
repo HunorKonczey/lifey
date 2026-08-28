@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { track } from "@vercel/analytics";
@@ -13,9 +13,16 @@ import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButto
 import { ApiError } from "@/lib/api/client";
 import { extractAttribution, readAttributionCookie } from "@/lib/attribution";
 
+/** A relative, same-origin path only — guards against an open-redirect via `?next=`. */
+function safeNextPath(value: string | null): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
 export default function RegisterPage() {
   const t = useTranslations("auth");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const applyAccessToken = useSessionStore((s) => s.applyAccessToken);
 
   const {
@@ -48,7 +55,10 @@ export default function RegisterPage() {
       track("trainer_request_submitted", { src: signupSource ?? "none" });
       const res = await authApi.login({ email: data.email, password: data.password });
       applyAccessToken(res.accessToken);
-      router.push("/onboarding");
+      // 66 D-T1: the trainer-request CTA sends visitors here with
+      // ?next=/admin/pending so they land straight on the request form
+      // instead of the regular onboarding flow.
+      router.push(safeNextPath(searchParams.get("next")) ?? "/onboarding");
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : t("registrationFailed");

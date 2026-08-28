@@ -74,10 +74,11 @@ export function HeaderAuthActions({
         >
           {labels.login}
         </Link>
-        {/* Eventually the trainer-request flow (docs/landing_page/66 D-T1),
-            once it exists — /register is the working placeholder target. */}
+        {/* This CTA is always the trainer free trial (63 D-M5/D-M6 — the
+            consumer Pro tier is a mobile store purchase, not a web signup),
+            so it always routes into the trainer-request flow (66 D-T1). */}
         <Link
-          href="/register"
+          href="/register?next=/admin/pending"
           onClick={onNavigate}
           className="h-14 rounded-pill flex items-center justify-center text-base font-extrabold mt-3"
           style={{ background: "var(--primary)", color: "var(--bg)" }}
@@ -98,7 +99,7 @@ export function HeaderAuthActions({
         {labels.login}
       </Link>
       <Link
-        href="/register"
+        href="/register?next=/admin/pending"
         className="h-12 rounded-pill flex items-center px-5.5 text-[15px] font-extrabold"
         style={{ background: "var(--primary)", color: "var(--bg)" }}
       >

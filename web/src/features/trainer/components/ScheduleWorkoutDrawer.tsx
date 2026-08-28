@@ -13,6 +13,8 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { TimePicker } from "@/components/ui/TimePicker";
 import { ErrorState } from "@/components/status/ErrorState";
+import { useTrainerBillingGate } from "@/features/billing/hooks";
+import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import { DAYS_OF_WEEK, type DayOfWeek, type Recurrence } from "../types";
 
@@ -55,6 +57,7 @@ export function ScheduleWorkoutDrawer({
   const t = useTranslations("admin.schedule");
   const queryClient = useQueryClient();
   const { show } = useToast();
+  const gate = useTrainerBillingGate();
 
   const [templateSearch, setTemplateSearch] = useState("");
   const [clientSearch, setClientSearch] = useState("");
@@ -139,6 +142,22 @@ export function ScheduleWorkoutDrawer({
       }
     },
   });
+
+  // D-T5: the trigger button that opens this drawer stays visible and
+  // enabled-looking; a blocked trainer sees this dialog the moment it would
+  // have opened, instead of filling out a form that can only fail.
+  if (gate.state !== "OK") {
+    return (
+      <BillingBlockedDialog
+        open
+        onClose={onClose}
+        reason={gate.state === "RESTRICTED" ? "restricted" : "overLimit"}
+        currentPlan={gate.currentPlan}
+        activeClients={gate.activeClients}
+        maxClients={gate.maxClients}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" data-testid="schedule-workout-drawer">

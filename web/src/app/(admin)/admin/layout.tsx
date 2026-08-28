@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Providers } from "@/lib/providers";
 import { useSessionStore } from "@/features/auth/store";
@@ -9,6 +9,7 @@ import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { useUiStore } from "@/lib/hooks/useUiStore";
 import { ErrorBoundary } from "@/components/status/ErrorBoundary";
 import { useChatStream } from "@/features/chat/hooks";
+import { AdminBillingBanner } from "@/features/billing/components/AdminBillingBanner";
 
 // `<Providers>` has to wrap this shell rather than the other way round —
 // AdminShell calls hooks (useTranslations, useChatStream, ...) that need to
@@ -22,8 +23,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 }
 
+// /admin/pending is reachable by any ROLE_USER, not just trainers — it's the
+// waiting room a trainer request lands in before the role is granted
+// (docs/landing_page/66-trainer-billing-web-plan.md §2, D-T1). It also skips
+// the trainer chrome below (AdminSidebar assumes a trainer's nav items).
+const PENDING_PATH = "/admin/pending";
+
 function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isPendingRoute = pathname === PENDING_PATH;
   const { user, isLoading, initialize } = useSessionStore();
   const common = useTranslations("common");
   const toggleDrawer = useUiStore((s) => s.toggleDrawer);
@@ -42,10 +51,10 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       router.push("/login");
       return;
     }
-    if (!user.roles.includes("ROLE_TRAINER")) {
+    if (!user.roles.includes("ROLE_TRAINER") && !isPendingRoute) {
       router.push("/dashboard");
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, user, router, isPendingRoute]);
 
   if (isLoading) {
     return (
@@ -60,7 +69,13 @@ function AdminShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user || !user.roles.includes("ROLE_TRAINER")) return null;
+  if (!user) return null;
+  if (!user.roles.includes("ROLE_TRAINER") && !isPendingRoute) return null;
+
+  if (isPendingRoute) {
+    // No sidebar/chrome — a full-bleed waiting screen, not a trainer nav page.
+    return <ErrorBoundary>{children}</ErrorBoundary>;
+  }
 
   return (
     <div className="flex min-h-screen bg-bg">
@@ -75,6 +90,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           <span className="material-symbols-rounded text-xl">menu</span>
         </button>
         <main className="flex-1 p-3.5 pt-0 md:pt-3.5 overflow-auto">
+          <AdminBillingBanner />
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>

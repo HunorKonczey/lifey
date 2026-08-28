@@ -42,6 +42,15 @@ interface SessionState {
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
   initialize: () => Promise<void>;
+  /**
+   * Unlike `initialize()`, always re-exchanges the refresh token even when a
+   * user is already set — for when the server-side role set just changed
+   * (docs/landing_page/66-trainer-billing-web-plan.md §2: a trainer request
+   * was approved) and the current access token's `roles` claim is stale.
+   * JWTs aren't re-issued retroactively, so the only way to pick up the new
+   * role client-side is a fresh token. Returns whether it succeeded.
+   */
+  refreshUser: () => Promise<boolean>;
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -99,6 +108,20 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       setAccessToken(null);
       clearRefreshToken();
       set({ user: null, isLoading: false, initFailed: true });
+    }
+  },
+
+  refreshUser: async () => {
+    const stored = getStoredRefreshToken();
+    if (!stored) return false;
+    try {
+      const res = await authApi.refresh(stored);
+      setAccessToken(res.accessToken);
+      saveRefreshToken(res.refreshToken);
+      set({ user: userFromAccessToken(res.accessToken), isLoading: false, initFailed: false });
+      return true;
+    } catch {
+      return false;
     }
   },
 }));

@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/admin/calendar", icon: "calendar_month", key: "calendar" },
   { href: "/admin/chat", icon: "chat_bubble", key: "chat" },
   { href: "/admin/invites", icon: "mail", key: "invites" },
+  { href: "/admin/billing", icon: "credit_card", key: "billing" },
   { href: "/admin/workouts", icon: "fitness_center", key: "workouts" },
   { href: "/admin/programs", icon: "event_repeat", key: "programs" },
   { href: "/admin/nutrition", icon: "restaurant", key: "nutrition" },

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { trainerApi } from "@/features/trainer/api";
-import { queryKeys } from "@/lib/api/queryKeys";
+import { queryKeys, invalidationMap } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { useSessionStore } from "@/features/auth/store";
 import { ClientCard } from "@/features/trainer/components/ClientCard";
@@ -13,6 +13,8 @@ import { ClientListModal } from "@/features/trainer/components/ClientListModal";
 import { ClientSortSelect } from "@/features/trainer/components/ClientSortSelect";
 import { NeedsAttentionSection } from "@/features/trainer/components/NeedsAttentionSection";
 import { sortClients, type ClientSortOption } from "@/features/trainer/compliance";
+import { useTrainerBillingGate } from "@/features/billing/hooks";
+import { TrainerOnboardingChecklist } from "@/features/billing/components/TrainerOnboardingChecklist";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
 
@@ -28,6 +30,7 @@ export default function AdminDashboardPage() {
   const queryClient = useQueryClient();
   const { show } = useToast();
   const { user } = useSessionStore();
+  const gate = useTrainerBillingGate();
   const [modalDismissed, setModalDismissed] = useState(
     () => typeof window !== "undefined" && sessionStorage.getItem(MODAL_SEEN_KEY) === "1",
   );
@@ -54,7 +57,9 @@ export default function AdminDashboardPage() {
   const revokeMutation = useMutation({
     mutationFn: (clientId: number) => trainerApi.revokeClient(clientId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.trainerClients.all() });
+      // Ending a relationship frees a seat — the entitlement's activeClients
+      // count (and therefore OVER_LIMIT state) can change (64 §4.3).
+      invalidationMap.trainerClient.forEach((key) => queryClient.invalidateQueries({ queryKey: key }));
       show(t("relationshipEnded"), "success");
     },
     onError: () => show(t("relationshipEndFailed"), "error"),
@@ -102,6 +107,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      <TrainerOnboardingChecklist />
+
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -143,6 +150,7 @@ export default function AdminDashboardPage() {
                 client={c}
                 onRevoke={(id) => revokeMutation.mutate(id)}
                 revoking={revokeMutation.isPending}
+                overLimit={gate.state === "OVER_LIMIT"}
               />
             ))}
           </div>

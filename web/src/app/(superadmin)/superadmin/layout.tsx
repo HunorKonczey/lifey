@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -24,8 +24,14 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   );
 }
 
+const TABS = [
+  { href: "/superadmin/users", labelKey: "usersTitle" as const, icon: "group" },
+  { href: "/superadmin/trainer-requests", labelKey: "trainerRequestsTitle" as const, icon: "how_to_reg" },
+];
+
 function SuperAdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isLoading, initialize } = useSessionStore();
   const superadmin = useTranslations("superadmin");
 
@@ -118,6 +124,27 @@ function SuperAdminShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
+      <nav className="flex gap-1 mb-4" role="tablist">
+        {TABS.map((tab) => {
+          const active = pathname === tab.href;
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              role="tab"
+              aria-selected={active}
+              className="flex items-center gap-1.5 rounded-[var(--r-pill)] px-4 py-1.5 text-sm font-semibold transition-colors"
+              style={{
+                background: active ? "var(--surface-high)" : "transparent",
+                color: active ? "var(--on-surface)" : "var(--on-surface-variant)",
+              }}
+            >
+              <span className="material-symbols-rounded text-base">{tab.icon}</span>
+              {superadmin(tab.labelKey)}
+            </Link>
+          );
+        })}
+      </nav>
       <main>
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
