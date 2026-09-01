@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
+import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/core/local_db/app_database.dart';
 import 'package:lifey/core/local_db/database_provider.dart';
 import 'package:lifey/core/location/location_service.dart';
@@ -210,6 +211,9 @@ Future<_RecordingSessionController> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // See cardio_session_screen_machine_test.dart's own comment on this
+        // override — InterstitialManager (67 Prompt 10) needs it here too.
+        adsEnabledProvider.overrideWithValue(false),
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         if (location != null) locationServiceProvider.overrideWithValue(location),

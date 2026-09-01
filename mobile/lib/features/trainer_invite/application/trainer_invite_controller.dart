@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/entitlements/entitlement_refresher.dart';
 import '../data/trainer_invite_repository.dart';
 import '../domain/trainer_invite.dart';
 
@@ -41,6 +42,10 @@ class TrainerInviteController extends AsyncNotifier<List<TrainerInvite>>
     await _repo.respond(inviteId, accept: accept);
     final current = state.value ?? [];
     state = AsyncData(current.where((invite) => invite.id != inviteId).toList());
+    // Accepting or declining is a D-M4 sponsorship transition — refresh
+    // immediately rather than waiting for the next stale app-resume check
+    // (D-P3).
+    unawaited(ref.read(entitlementRefresherProvider).refreshNow());
   }
 }
 

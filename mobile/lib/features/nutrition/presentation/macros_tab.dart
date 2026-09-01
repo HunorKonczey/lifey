@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/history_boundary_row.dart';
 import '../../settings/application/settings_controller.dart';
 import '../application/daily_macros_controller.dart';
 import '../application/meal_controller.dart';
@@ -39,11 +41,20 @@ class _MacrosTabState extends ConsumerState<MacrosTab> {
     final settings = ref.watch(settingsControllerProvider).value;
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final cutoff = ref.watch(historyCutoffProvider);
 
     return state.when(
       data: (days) {
         final filtered =
             days.where((d) => widget.filter.matches(d.day)).toList();
+        // The free history window (`67` §3.2, D-P6) — layered on top of the
+        // date-range filter above, never a change to [dailyMacrosProvider]
+        // itself. `filtered` is newest-first, so anything cut off is a
+        // contiguous tail.
+        final visible = cutoff == null
+            ? filtered
+            : filtered.where((d) => !d.day.toLocal().isBefore(cutoff)).toList();
+        final truncated = visible.length < filtered.length;
 
         if (days.isEmpty || filtered.isEmpty) {
           return RefreshIndicator(
@@ -64,9 +75,10 @@ class _MacrosTabState extends ConsumerState<MacrosTab> {
           onRefresh: () => ref.read(mealControllerProvider.notifier).refresh(),
           child: ListView.builder(
             padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
-            itemCount: filtered.length,
+            itemCount: visible.length + (truncated ? 1 : 0),
             itemBuilder: (context, index) {
-              final day = filtered[index];
+              if (index >= visible.length) return const HistoryBoundaryRow();
+              final day = visible[index];
               final now = DateTime.now();
               final today = DateTime(now.year, now.month, now.day);
               if (day.day == today) {

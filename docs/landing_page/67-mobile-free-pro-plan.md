@@ -1,6 +1,6 @@
 # 67 – Mobile Free / Pro
 
-Status: proposed
+Status: done
 Scope: mobile (Flutter) — entitlement client, feature gates, in-app purchase, ads, settings
 Depends on: `docs/landing_page/63-monetization-strategy-plan.md` (D-M4–D-M10),
 `docs/landing_page/64-billing-backend-plan.md` (`/me/entitlements`, `/billing/store-purchase`),

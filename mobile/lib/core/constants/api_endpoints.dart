@@ -15,6 +15,12 @@ class ApiEndpoints {
   static const myTrainers = '/my-trainers';
   static String myTrainer(int trainerId) => '/my-trainers/$trainerId';
 
+  /// `docs/landing_page/64-billing-backend-plan.md` §3.1.
+  static const entitlements = '/me/entitlements';
+
+  /// `docs/landing_page/64-billing-backend-plan.md` §6.1.
+  static const storePurchase = '/billing/store-purchase';
+
   /// The trainer's own client list — used by the chat "new conversation"
   /// picker. Requires ROLE_TRAINER, unlike everything under `/chat`.
   static const trainerClients = '/trainer/clients';

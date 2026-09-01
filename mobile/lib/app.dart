@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/ads/ads_service.dart';
+import 'core/ads/interstitial_manager.dart';
+import 'core/entitlements/entitlement_refresher.dart';
 import 'core/health/step_goal_notifier.dart';
 import 'core/health/step_history_importer.dart';
 import 'core/health/weight_health_importer.dart';
@@ -38,6 +41,17 @@ class LifeyApp extends ConsumerWidget {
 
     // Keeps itself alive for the app's lifetime; the return value is unused.
     ref.watch(connectivitySyncControllerProvider);
+    // Holds the app-resume/gate-rejection listeners for the entitlement
+    // cache (`docs/landing_page/67-mobile-free-pro-plan.md` D-P3); every
+    // other refresh trigger is called explicitly from its own call site.
+    ref.watch(entitlementRefresherProvider);
+    // Runs UMP consent + AdMob init once entitlements resolve free
+    // (`67` §5.1) — never for a Pro account. No ad is requested here.
+    ref.watch(adsServiceProvider);
+    // Holds the app-lifecycle observer behind the interstitial's
+    // "foregrounded ≥ 60s" / push-origin conditions (`67` §5.3); the ad
+    // itself is only ever requested from `maybeShow`'s two call sites.
+    ref.watch(interstitialManagerProvider);
     // Holds the chat SSE stream open while the app is in the foreground (I4).
     ref.watch(chatStreamControllerProvider);
     // Same — fires the Phase 3 Apple Health weight import on app resume.

@@ -71,6 +71,22 @@ dependencies:
   # config handling). No `permission_handler` alongside it — geolocator's own
   # permission API is enough.
   geolocator: ^14.0.2
+  # StoreKit 2 (iOS) / Play Billing (Android) purchases for mobile Pro
+  # (docs/landing_page/67-mobile-free-pro-plan.md §4, `64` §6.1) — the
+  # Flutter team's own plugin, one API over both stores. Prices are read
+  # from the platform `ProductDetails` at purchase time, never hardcoded
+  # (63 D-M1: only IAP is allowed on mobile; the trainer side never touches
+  # a store).
+  in_app_purchase: ^3.3.0
+  # Opens the paywall's legal links (ÁSZF/Adatkezelés) in the system browser,
+  # never an in-app webview (docs/landing_page/69-mobile-paywall-design-plan.md
+  # §12.7) — no webview to maintain, no back-navigation edge cases.
+  url_launcher: ^6.3.2
+  # AdMob banners + a rate-limited interstitial for free-tier mobile users
+  # (docs/landing_page/67-mobile-free-pro-plan.md §5, 63 D-M7). Google's own
+  # plugin — it also ships the UMP SDK used for GDPR/TCF (EU) and ATT (iOS)
+  # consent, so this one dependency covers both.
+  google_mobile_ads: ^9.1.0
 
 dev_dependencies:
   flutter_test:

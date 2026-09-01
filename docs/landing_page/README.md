@@ -1,9 +1,8 @@
 # Landing page & monetization — documentation
 
 This folder plans how Lifey **makes money** and how it **presents itself in public**. Status:
-**plans written, both designs done, no code started.** No billing, subscription, entitlement,
-ad or marketing code exists in the repo today, and `web/src/app/page.tsx` still redirects `/`
-straight to `/dashboard`.
+**both designs done; the marketing web app (`65`) and the mobile free/Pro app (`67`) are both
+fully implemented** — see each plan's own reading-order row below for what that covers.
 
 **Design status: both canvases are done — implementation is unblocked.** The mobile canvas is
 delivered ([`design/Lifey Paywall.dc.html`](design/Lifey%20Paywall.dc.html), **P01–P27**), with
@@ -84,6 +83,25 @@ documented in `lib/ogImage.tsx` and `65` Prompt 9's landed notes) and one still-
 Results / structured-data validation needs Google's actual tool against a deployed URL, not
 available in this environment).
 
+**Mobile implementation status: all 11 prompts of `67` are done** — the entitlement layer
+(Drift cache, D-P4's fail-open/grace ladder, `EntitlementRefresher`'s five refresh points), the
+three gates (history window with the `69` DV-9 fix landed in the same change, the AI credit
+counter), the `in_app_purchase` purchase flow and paywall screen (five triggers, the D-P9
+sponsored state), the Settings subscription tile, AdMob init behind UMP consent, `BannerAdSlot`
+on the four tab roots, `InterstitialManager`'s six eligibility conditions, and the two D-P7/D-P10
+structural tests (`gated_surfaces_test.dart`, the watch/widget-has-no-path-to-ads test) all work
+against the real provider graph, not just in isolation. The full `flutter test` suite passes
+except three pre-existing chat-attachment failures unrelated to this work (Windows-only, see
+`67` §11). Two things are still open: the banner/interstitial ad unit IDs and the AdMob App IDs
+in `Info.plist`/`AndroidManifest.xml` are Google's public **test** identifiers, not the real ones
+from the AdMob console (each site carries a "swap before release" comment); and `AiCreditChip`/
+`requireAiCredits` (Prompt 4) exist and are tested but aren't embedded in any screen yet, because
+mobile has no AI meal-photo-estimation UI built (`docs/23-ai-calorie-estimation-plan.md` is still
+backend-only here) — flagged as its own follow-up rather than built as a side effect. `67` §11's
+manual row (sandbox purchase on both stores, restore on a second device, UMP consent in an EU
+locale, a full offline→grace-expiry cycle with the clock moved forward) needs a real device and
+store sandbox neither available in this environment, so none of it has run yet.
+
 The business model in one paragraph: **trainers pay, clients don't.** The revenue product is
 the trainer workspace (`/admin`), sold as three tiers keyed to active client count, on the
 web, through Stripe, after a 14-day card-free trial. A client keeps using the mobile app for
@@ -98,7 +116,7 @@ trainer uses the app free with ads and can buy Pro through the App Store or Play
 | [64-billing-backend-plan.md](64-billing-backend-plan.md) | `com.lifey.billing`: subscription domain, migrations V72–V75, the entitlement resolver, Stripe adapter, StoreKit/Play adapter, seat enforcement, reconciliation, 12 prompt-sized steps | Backend |
 | [65-web-landing-page-plan.md](65-web-landing-page-plan.md) | The `(marketing)` route group, `/[locale]` routing + the project's **first proxy** (`src/proxy.ts`), moving `<Providers>` out of the root layout, the marketing shell, the full home page (12 sections), the for-trainers page, the pricing page, the app + download pages, the FAQ/contact/legal pages, SEO plumbing, attribution + analytics events, performance budgets in CI, 11 steps — **all 11 done** | Web (Next.js) |
 | [66-trainer-billing-web-plan.md](66-trainer-billing-web-plan.md) | Trainer access requests, `/admin/billing`, checkout round trip, trial banner escalation, blocked-action UX, over-limit archiving, 10 steps | Web + a small backend annex (V76) |
-| [67-mobile-free-pro-plan.md](67-mobile-free-pro-plan.md) | `core/entitlements/`, the three gates, the paywall and its triggers, `in_app_purchase`, AdMob + UMP consent, 11 steps | Flutter |
+| [67-mobile-free-pro-plan.md](67-mobile-free-pro-plan.md) | `core/entitlements/`, the three gates, the paywall and its triggers, `in_app_purchase`, AdMob + UMP consent, 11 steps — **all 11 done** | Flutter |
 | [68-web-landing-design-plan.md](68-web-landing-design-plan.md) | Web design spec: marketing type scale, grid, the home page section by section, pricing cards, states, assets — desktop **and** mobile, dark **and** light | Design + Web |
 | [69-mobile-paywall-design-plan.md](69-mobile-paywall-design-plan.md) | Mobile design spec: the paywall layout and its 5 headlines + 4 special states, gated surfaces, the ad slot, store listings and ASO, the invite → download bridge | Design + Flutter |
 | [70-landing-design-prompt.md](70-landing-design-prompt.md) | The original design prompt for both canvases + decision log. **The web half has run; its mobile half is superseded by `71`** | Design (historical) |

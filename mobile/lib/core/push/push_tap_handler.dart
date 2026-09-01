@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/workouts/data/workout_session_repository.dart';
 import '../../features/workouts/presentation/open_workout_screens.dart';
+import '../ads/interstitial_manager.dart';
 import '../notifications/notification_service.dart';
 import '../router/app_router.dart';
 import 'firebase_bootstrap.dart';
@@ -104,6 +105,12 @@ class PushTapHandler {
   }
 
   void _route(Map<String, dynamic> data) {
+    // `67` §5.3's sixth interstitial condition — not on a route opened from
+    // a push notification. Cleared on the next app-foreground transition
+    // (see InterstitialManager.didChangeAppLifecycleState), so this only
+    // suppresses the interstitial for the remainder of the session the tap
+    // itself opened.
+    _ref.read(interstitialManagerProvider).markOpenedFromPush();
     if (data['type'] == 'trainer_comment') {
       unawaited(_routeToCommentedSession(data));
       return;

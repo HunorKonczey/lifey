@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/features/nutrition/application/meal_controller.dart';
 import 'package:lifey/features/nutrition/domain/meal.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
@@ -79,6 +80,14 @@ Future<void> _pumpStatisticsScreen(WidgetTester tester, MealController Function(
         allWaterEntriesProvider.overrideWith((ref) => Stream.value(const [])),
         allStepCountsProvider.overrideWith((ref) => Stream.value(const [])),
         settingsControllerProvider.overrideWith(_FakeSettingsController.new),
+        // The range popup and chart data now read the entitlement's history
+        // cutoff (`67` §3.2) — unrelated to this file's own assertions, and
+        // `null` (unlimited) keeps every range unlocked as before that
+        // existed, without needing a real/fake database here.
+        historyCutoffProvider.overrideWithValue(null),
+        // BannerAdSlot (67 Prompt 9) is embedded on this screen — see the
+        // matching override in statistics_screen_history_window_test.dart.
+        adsEnabledProvider.overrideWithValue(false),
       ],
       child: const MaterialApp(
         locale: Locale('en'),

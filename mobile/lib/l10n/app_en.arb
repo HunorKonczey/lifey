@@ -1336,6 +1336,201 @@
   "@statRangeAllLabel": {
     "description": "Statistics chart range selector: all entries"
   },
+  "statRangeLockedSemanticsLabel": "{range} — Pro required",
+  "@statRangeLockedSemanticsLabel": {
+    "description": "Screen-reader label for a range beyond the free history window in the statistics range popup (docs/landing_page/67-mobile-free-pro-plan.md §3.3, 69 §8) — states the reason rather than just \"locked\"",
+    "placeholders": {"range": {"type": "String"}}
+  },
+  "historyBoundaryRowMessage": "Your older entries are still there — Pro unlocks them",
+  "@historyBoundaryRowMessage": {
+    "description": "Row shown at the free history window's cutoff in a history list (workout sessions, meals, macros, weight) — tapping it opens the paywall (docs/landing_page/67-mobile-free-pro-plan.md §3.2, 69 §4.2)"
+  },
+  "lifeyProLabel": "Lifey Pro",
+  "@lifeyProLabel": {
+    "description": "The product name for the paid mobile tier, used as a headline/title wherever Pro is being sold (docs/landing_page/67-mobile-free-pro-plan.md, 69 §3.2)"
+  },
+  "aiCreditsRemainingSemanticsLabel": "{count, plural, =0{No AI credits left this month} one{1 AI credit left this month} other{{count} AI credits left this month}}",
+  "@aiCreditsRemainingSemanticsLabel": {
+    "description": "Screen-reader label for the AI credit counter chip beside an AI action (docs/landing_page/67-mobile-free-pro-plan.md §3.4, 69 §4.3)",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "aiCreditsRefillDateMessage": "Refills {date}",
+  "@aiCreditsRefillDateMessage": {
+    "description": "Shown in the AI credit chip once credits are exhausted, naming the calendar-month refill date (69 DV-11); {date} is already formatted (e.g. \"September 1\")",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "paywallCloseTooltip": "Close",
+  "@paywallCloseTooltip": {
+    "description": "Accessibility tooltip for the paywall's top-left close button (69 §3.1)"
+  },
+  "paywallHeadlineHistoryRange": "See your full history",
+  "@paywallHeadlineHistoryRange": {
+    "description": "Paywall headline when opened from a locked statistics range or the history boundary row (67 §4.3, 69 §3.2)"
+  },
+  "paywallSubHistoryRange": "Your data older than 30 days is only visible with Pro.",
+  "@paywallSubHistoryRange": {
+    "description": "Paywall sub-line under paywallHeadlineHistoryRange (69 §3.1)"
+  },
+  "paywallHeadlineAiCredits": "You're out of AI credit",
+  "@paywallHeadlineAiCredits": {
+    "description": "Paywall headline when opened from a zero AI-credit action or a 402 (67 §4.3, 69 §3.2)"
+  },
+  "paywallSubAiCredits": "Pro gives you unlimited AI meal estimates.",
+  "@paywallSubAiCredits": {
+    "description": "Paywall sub-line under paywallHeadlineAiCredits (69 §3.1)"
+  },
+  "paywallHeadlineAdRemoval": "Train without ads",
+  "@paywallHeadlineAdRemoval": {
+    "description": "Paywall headline when opened from the banner ad's \"Remove ads\" affix (67 §4.3, 69 §3.2)"
+  },
+  "paywallSubAdRemoval": "Pro removes every ad from the app.",
+  "@paywallSubAdRemoval": {
+    "description": "Paywall sub-line under paywallHeadlineAdRemoval (69 §3.1)"
+  },
+  "paywallHeadlineOnboarding": "Try Pro",
+  "@paywallHeadlineOnboarding": {
+    "description": "Paywall headline when opened from the end-of-onboarding card (67 §4.3, 69 §3.2)"
+  },
+  "paywallSubNeutral": "Ad-free training, full history and unlimited AI — in one subscription.",
+  "@paywallSubNeutral": {
+    "description": "Paywall sub-line for the two triggers with no single highlighted benefit — settings and onboarding (69 §3.2, \"none (all three neutral)\")"
+  },
+  "paywallBenefitNoAdsTitle": "No ads",
+  "@paywallBenefitNoAdsTitle": {
+    "description": "First paywall benefit row title, fixed order (69 §3.1)"
+  },
+  "paywallBenefitNoAdsDescription": "Train and eat without interruptions",
+  "@paywallBenefitNoAdsDescription": {
+    "description": "First paywall benefit row description line"
+  },
+  "paywallBenefitFullHistoryTitle": "Full history",
+  "@paywallBenefitFullHistoryTitle": {
+    "description": "Second paywall benefit row title, fixed order (69 §3.1)"
+  },
+  "paywallBenefitFullHistoryDescription": "See every day you've ever logged",
+  "@paywallBenefitFullHistoryDescription": {
+    "description": "Second paywall benefit row description line"
+  },
+  "paywallBenefitUnlimitedAiTitle": "Unlimited AI",
+  "@paywallBenefitUnlimitedAiTitle": {
+    "description": "Third paywall benefit row title, fixed order (69 §3.1)"
+  },
+  "paywallBenefitUnlimitedAiDescription": "No monthly cap on AI meal estimates",
+  "@paywallBenefitUnlimitedAiDescription": {
+    "description": "Third paywall benefit row description line"
+  },
+  "paywallPlanMonthlyLabel": "Monthly",
+  "@paywallPlanMonthlyLabel": {
+    "description": "Label on the monthly plan card (69 §3.1)"
+  },
+  "paywallPlanYearlyLabel": "Yearly",
+  "@paywallPlanYearlyLabel": {
+    "description": "Label on the yearly plan card (69 §3.1)"
+  },
+  "paywallYearlyDiscountBadge": "2 months free",
+  "@paywallYearlyDiscountBadge": {
+    "description": "Badge pill on the pre-selected yearly plan card (69 §3.1)"
+  },
+  "paywallPerMonthEquivalent": "{amount}/mo",
+  "@paywallPerMonthEquivalent": {
+    "description": "Per-month equivalent shown under the yearly plan's price, computed from the store's own yearly price (69 §3.1); {amount} is already formatted",
+    "placeholders": {"amount": {"type": "String"}}
+  },
+  "paywallCtaLabel": "Subscribe — {price}",
+  "@paywallCtaLabel": {
+    "description": "The paywall's main CTA, once a real store price has loaded (69 §3.1); {price} is the store's own formatted price string",
+    "placeholders": {"price": {"type": "String"}}
+  },
+  "paywallCtaLabelLoading": "Subscribe",
+  "@paywallCtaLabelLoading": {
+    "description": "The paywall's main CTA before store prices have loaded — no amount, never a fabricated price (69 §12.8)"
+  },
+  "paywallLegalDisclaimer": "Renews monthly. Cancel anytime.",
+  "@paywallLegalDisclaimer": {
+    "description": "Legal line above the terms/privacy links (69 §3.1) — required by both app stores"
+  },
+  "paywallTermsLinkLabel": "Terms",
+  "@paywallTermsLinkLabel": {
+    "description": "Tappable legal link opening the terms of service in the system browser (69 §12.7)"
+  },
+  "paywallPrivacyLinkLabel": "Privacy",
+  "@paywallPrivacyLinkLabel": {
+    "description": "Tappable legal link opening the privacy policy in the system browser (69 §12.7)"
+  },
+  "paywallRestoreButton": "Restore purchases",
+  "@paywallRestoreButton": {
+    "description": "Text button below the legal line — required by App Review (69 §3.1)"
+  },
+  "paywallUnavailableMessage": "Plans are temporarily unavailable.",
+  "@paywallUnavailableMessage": {
+    "description": "Shown when the store returns no products or the query fails — never a fabricated price (69 §3.3)"
+  },
+  "paywallRetryButton": "Try again",
+  "@paywallRetryButton": {
+    "description": "Secondary button on the products-unavailable state (69 §3.3)"
+  },
+  "paywallPendingMessage": "Your purchase is processing. We'll activate it as soon as you're online.",
+  "@paywallPendingMessage": {
+    "description": "Info card shown above the CTA while a purchase is pending offline (67 §9.4, 69 §3.3)"
+  },
+  "paywallSuccessMessage": "Subscription active!",
+  "@paywallSuccessMessage": {
+    "description": "Shown briefly after a successful purchase, before the paywall closes (67 §4.1 step 5)"
+  },
+  "paywallPurchaseFailedMessage": "The purchase didn't go through. Please try again.",
+  "@paywallPurchaseFailedMessage": {
+    "description": "Shown when the store itself declines a purchase, or the backend verification call fails (offline/5xx)"
+  },
+  "paywallTerminalRejectionMessage": "This purchase is already linked to another account, or isn't valid.",
+  "@paywallTerminalRejectionMessage": {
+    "description": "Shown on a 409/422 from the backend's purchase verification (64 §6.1) — a rejection that will never change on retry"
+  },
+  "paywallSponsoredHeadline": "Your coach covers Pro",
+  "@paywallSponsoredHeadline": {
+    "description": "Headline for the sponsored special state (67 D-P9, 69 §3.3) — no plan selector, no CTA"
+  },
+  "paywallSponsoredOkButton": "Got it",
+  "@paywallSponsoredOkButton": {
+    "description": "The sponsored state's single button, closes the paywall (69 §3.3)"
+  },
+  "paywallAlreadyProHeadline": "You have an active subscription",
+  "@paywallAlreadyProHeadline": {
+    "description": "Headline when the paywall is reached (e.g. by deep link) while already Pro through a purchase (69 §3.3)"
+  },
+  "paywallManageSubscriptionButton": "Manage",
+  "@paywallManageSubscriptionButton": {
+    "description": "Opens the store's subscription-management page, on the already-Pro state (69 §3.3)"
+  },
+  "settingsSubscriptionSectionLabel": "Subscription",
+  "@settingsSubscriptionSectionLabel": {
+    "description": "Section label above the Settings subscription tile, right above Account (67 §4.4, 69 frame P14)"
+  },
+  "settingsSubscriptionFreeSubtitle": "Remove ads, full history, unlimited AI",
+  "@settingsSubscriptionFreeSubtitle": {
+    "description": "Subtitle under the Lifey Pro title on the Settings subscription tile's free state — tapping opens the paywall (67 §4.4)"
+  },
+  "settingsSubscriptionProTitle": "Pro",
+  "@settingsSubscriptionProTitle": {
+    "description": "Title on the Settings subscription tile once the user is Pro, any source (67 §4.4)"
+  },
+  "settingsSubscriptionRenewsSubtitle": "Renews {date}",
+  "@settingsSubscriptionRenewsSubtitle": {
+    "description": "Subtitle on the Settings subscription tile for a Pro user's own purchase (67 §4.4); {date} is already formatted",
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "settingsSubscriptionSponsoredSubtitle": "Included by your trainer",
+  "@settingsSubscriptionSponsoredSubtitle": {
+    "description": "Subtitle on the Settings subscription tile when Pro comes from trainer sponsorship — no CTA (67 §4.4, D-P9)"
+  },
+  "settingsSubscriptionTrialTitle": "Trainer trial",
+  "@settingsSubscriptionTrialTitle": {
+    "description": "Title on the Settings subscription tile for a trainer's own trial (67 §4.4) — the resolved source, never merged with another (69 §12.6)"
+  },
+  "settingsSubscriptionTrialDaysLeft": "{days, plural, =0{Last day} one{1 day left} other{{days} days left}}",
+  "@settingsSubscriptionTrialDaysLeft": {
+    "description": "Subtitle on the Settings subscription tile's trainer-trial state (67 §4.4)",
+    "placeholders": {"days": {"type": "int"}}
+  },
   "noStatsDataForRangeTitle": "No data in this range",
   "@noStatsDataForRangeTitle": {
     "description": "Empty state on the statistics chart when the selected metric has no data in the selected range"
@@ -4520,5 +4715,13 @@
   "editWeatherDialogTitle": "Weather at start",
   "@editWeatherDialogTitle": {
     "description": "Title of the bottom sheet that sets a hike's weather snapshot on the summary screen (docs/cardio/60 C8.6)"
+  },
+  "bannerAdSemanticsLabel": "Advertisement",
+  "@bannerAdSemanticsLabel": {
+    "description": "Screen-reader label identifying BannerAdSlot as an advertisement, distinct from the surrounding content (docs/landing_page/67-mobile-free-pro-plan.md §7)"
+  },
+  "bannerRemoveAdsTooltip": "Remove ads",
+  "@bannerRemoveAdsTooltip": {
+    "description": "Tooltip/semantics label for the small affix on BannerAdSlot that opens the paywall with the adRemoval trigger (67 §5.2)"
   }
 }

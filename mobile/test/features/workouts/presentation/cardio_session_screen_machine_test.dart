@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
 import 'package:lifey/features/workouts/application/workout_session_controller.dart';
@@ -88,6 +89,11 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // CardioSessionScreen._finish() now touches InterstitialManager
+        // (67 Prompt 10) — without this, its real adsEnabledProvider chain
+        // reaches the real (unmocked) entitlement repository and leaves a
+        // pending Drift stream at teardown.
+        adsEnabledProvider.overrideWithValue(false),
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
       ],

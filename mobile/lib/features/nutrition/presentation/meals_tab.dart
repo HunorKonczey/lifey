@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/ads/banner_ad_slot.dart';
+import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -9,6 +11,7 @@ import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/date_range_filter_bar.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/history_boundary_row.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
 import '../application/meal_controller.dart';
 import '../domain/meal.dart';
@@ -127,12 +130,23 @@ class _MealsTabState extends ConsumerState<MealsTab> {
     final state = ref.watch(mealControllerProvider);
     final l10n = AppLocalizations.of(context)!;
     final hasMore = ref.read(mealControllerProvider.notifier).hasMore;
-    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final bottomPad =
+        MediaQuery.paddingOf(context).bottom + ref.watch(bannerAdSlotHeightProvider(1));
+
+    final cutoff = ref.watch(historyCutoffProvider);
 
     return state.when(
       data: (meals) {
         final filtered =
             meals.where((m) => widget.filter.matches(m.dateTime)).toList();
+        // The free history window (`67` §3.2, D-P6) — layered on top of the
+        // date-range filter above, never a change to `mealControllerProvider`
+        // itself. `filtered` is newest-first, so anything cut off is a
+        // contiguous tail.
+        final visible = cutoff == null
+            ? filtered
+            : filtered.where((m) => !m.dateTime.toLocal().isBefore(cutoff)).toList();
+        final truncated = visible.length < filtered.length;
 
         if (meals.isEmpty || filtered.isEmpty) {
           // Only today's empty view offers "copy yesterday" — a widened
@@ -164,8 +178,11 @@ class _MealsTabState extends ConsumerState<MealsTab> {
 
         // Only offer "load more" when the filter isn't hiding meals from the
         // current page. If filtered < meals, the extra DB rows are from other
-        // date ranges and loading more won't help the current view.
-        final canLoadMore = hasMore && filtered.length == meals.length;
+        // date ranges and loading more won't help the current view. Once the
+        // history window has already truncated what's shown, loading another
+        // page would only ever fetch rows *older* than the cutoff — never
+        // rendered, so there's nothing to gain from asking for them.
+        final canLoadMore = hasMore && filtered.length == meals.length && !truncated;
 
         return RefreshIndicator(
           displacement: widget.topPadding,
@@ -174,27 +191,28 @@ class _MealsTabState extends ConsumerState<MealsTab> {
             onNotification: (n) => _handleScrollNotification(n, canLoadMore),
             child: ListView.builder(
               padding: EdgeInsets.fromLTRB(12, widget.topPadding, 12, bottomPad + 88),
-              itemCount: filtered.length + (canLoadMore ? 1 : 0),
+              itemCount: visible.length + (canLoadMore ? 1 : 0) + (truncated ? 1 : 0),
               itemBuilder: (context, index) {
-                if (index >= filtered.length) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
+                if (index < visible.length) {
+                  final meal = visible[index];
+                  return _MealCard(
+                    meal: meal,
+                    dateLabel: _dateLabel,
+                    onDelete: () => _delete(context, ref, meal),
+                    onEdit: () => _edit(context, meal),
+                    onDuplicate: () => _duplicate(context, ref, meal),
                   );
                 }
-                final meal = filtered[index];
-                return _MealCard(
-                  meal: meal,
-                  dateLabel: _dateLabel,
-                  onDelete: () => _delete(context, ref, meal),
-                  onEdit: () => _edit(context, meal),
-                  onDuplicate: () => _duplicate(context, ref, meal),
+                if (truncated) return const HistoryBoundaryRow();
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
                 );
               },
             ),

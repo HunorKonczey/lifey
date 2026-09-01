@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/entitlements/entitlement_refresher.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_preferences.dart';
 import '../../../core/local_db/database_provider.dart';
@@ -45,6 +46,8 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     // Cold start while already signed in — (re-)registers the push token,
     // e.g. after an APNs/FCM rotation that happened while the app was closed.
     unawaited(ref.read(pushTokenRegistrarProvider).register());
+    // "App start after auth" (D-P3) for the already-signed-in case.
+    unawaited(ref.read(entitlementRefresherProvider).refreshNow());
     return AuthUser.fromAccessToken(accessToken);
   }
 
@@ -67,6 +70,8 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     // event, so kick off the initial pull explicitly instead of waiting for
     // one of those triggers (or the 60s timer) to happen to fire.
     unawaited(ref.read(connectivitySyncControllerProvider).refreshNow());
+    // "App start after auth" (D-P3) for a fresh login.
+    unawaited(ref.read(entitlementRefresherProvider).refreshNow());
   }
 
   /// Runs the native Google sign-in flow and exchanges the ID token for our
@@ -81,6 +86,8 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     state = AsyncValue.data(AuthUser.fromAccessToken(tokens.accessToken));
     unawaited(ref.read(pushTokenRegistrarProvider).register());
     unawaited(ref.read(connectivitySyncControllerProvider).refreshNow());
+    // "App start after auth" (D-P3) for a fresh Google sign-in.
+    unawaited(ref.read(entitlementRefresherProvider).refreshNow());
     // The backend imports the Google picture asynchronously after this call
     // already returned, so an immediate refetch can still race it and cache
     // a "no avatar" result. Refetch once now and once more after a delay to

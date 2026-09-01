@@ -1,21 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/entitlements/entitlement_providers.dart';
+import '../../../core/entitlements/history_cutoff.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../domain/weight_entry.dart';
 import 'weight_controller.dart';
 import 'weight_range.dart';
 
 /// Derives the chart-ready series from the live weight entries: filtered to
-/// the selected [WeightRange] and collapsed to one point per calendar day
-/// (the most recently recorded entry that day), oldest first.
+/// the selected [WeightRange] (intersected with the free history window,
+/// `67` §3.2, D-P6) and collapsed to one point per calendar day (the most
+/// recently recorded entry that day), oldest first.
 final weightChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) {
   final entries = ref.watch(weightControllerProvider);
   final range = ref.watch(weightRangeControllerProvider);
-  return entries.whenData((all) => _toChartPoints(all, range));
+  final cutoff = combineHistoryCutoffs(range.cutoff(), ref.watch(historyCutoffProvider));
+  return entries.whenData((all) => _toChartPoints(all, cutoff));
 });
 
-List<TimeSeriesPoint> _toChartPoints(List<WeightEntry> entries, WeightRange range) {
-  final cutoff = range.cutoff();
+List<TimeSeriesPoint> _toChartPoints(List<WeightEntry> entries, DateTime? cutoff) {
   final inRange =
       cutoff == null ? entries : entries.where((e) => !e.date.isBefore(cutoff)).toList();
 

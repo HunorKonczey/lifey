@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/local_db/app_database.dart';
+import 'package:lifey/core/local_db/database_provider.dart';
 import 'package:lifey/core/network/dio_client.dart';
 import 'package:lifey/features/trainer_invite/application/trainer_invite_controller.dart';
 
@@ -45,6 +48,27 @@ class _FakeAdapter implements HttpClientAdapter {
         },
       );
     }
+    if (options.path == '/me/entitlements') {
+      final now = DateTime.now().toUtc();
+      return ResponseBody.fromString(
+        jsonEncode({
+          'tier': 'FREE',
+          'source': 'NONE',
+          'adsEnabled': true,
+          'historyDays': 30,
+          'aiCreditsRemaining': 3,
+          'trainer': null,
+          'expiresAt': null,
+          'checkedAt': now.toIso8601String(),
+          'graceUntil': now.add(const Duration(days: 7)).toIso8601String(),
+          'degraded': false,
+        }),
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
     return ResponseBody.fromString('', respondStatusCode);
   }
 }
@@ -65,10 +89,20 @@ void main() {
   setUp(() {
     adapter = _FakeAdapter();
     final dio = Dio(BaseOptions(baseUrl: 'http://test'))..httpClientAdapter = adapter;
+    final db = AppDatabase(NativeDatabase.memory());
     container = ProviderContainer(
-      overrides: [dioClientProvider.overrideWithValue(dio)],
+      overrides: [
+        dioClientProvider.overrideWithValue(dio),
+        // respond() fires a fire-and-forget entitlement refresh (D-P3),
+        // which needs a real (if empty) database to write its cache to —
+        // without this override it would fall through to the production
+        // AppDatabase(), whose lazy connection hits path_provider the first
+        // time a query actually runs.
+        appDatabaseProvider.overrideWithValue(db),
+      ],
     );
     addTearDown(container.dispose);
+    addTearDown(db.close);
   });
 
   test('build() fetches pending invites on first read', () async {
@@ -134,5 +168,16 @@ void main() {
 
     final invites = container.read(trainerInviteControllerProvider).value!;
     expect(invites.map((i) => i.id), [2]);
+  });
+
+  test('respond() triggers an entitlement refresh (D-P3, D-M4)', () async {
+    adapter.pendingBody = [_invite(1)];
+    await container.read(trainerInviteControllerProvider.future);
+
+    await container.read(trainerInviteControllerProvider.notifier).respond(1, accept: true);
+    // The refresh is fire-and-forget (unawaited) — wait for it to settle.
+    await Future.delayed(const Duration(milliseconds: 50));
+
+    expect(adapter.paths, contains('/me/entitlements'));
   });
 }
