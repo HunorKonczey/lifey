@@ -29,7 +29,13 @@ module.exports = {
       startServerReadyPattern: "Ready in",
       startServerReadyTimeout: 30_000,
       url: ["http://localhost:4174/hu"],
-      numberOfRuns: 1,
+      // A single run on a shared GitHub Actions runner is noisy enough to
+      // fail outright on a bad sample (seen: performance 0.55, LCP ~29.6s,
+      // against a clean local `next build && next start` measuring 0.97 and
+      // ~1.6s for the identical build) — 3 runs lets lhci assert against the
+      // median instead of gambling on whichever run the runner was busiest
+      // for.
+      numberOfRuns: 3,
     },
     assert: {
       assertions: {
