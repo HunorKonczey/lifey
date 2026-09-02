@@ -463,7 +463,7 @@ class _DashboardBody extends ConsumerWidget {
             '${stats.strengthWorkoutCount} ${l10n.activityTypeStrength} · '
             '${stats.cardioWorkoutCount} ${l10n.sessionKindCardioLabel}',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
           ),
         ],
@@ -589,7 +589,7 @@ class _WorkoutTile extends StatelessWidget {
                       Text(
                         statsLine,
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],

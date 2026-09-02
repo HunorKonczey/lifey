@@ -54,7 +54,7 @@ export function HeaderAuthActions({
         {variant === "desktop" && (
           <span
             className="w-11 h-11 rounded-pill flex items-center justify-center text-[15px] font-extrabold"
-            style={{ background: "var(--secondary)", color: "#161611" }}
+            style={{ background: "var(--secondary)", color: "var(--bg)" }}
           >
             {initials}
           </span>

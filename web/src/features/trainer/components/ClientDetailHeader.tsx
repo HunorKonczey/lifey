@@ -84,7 +84,7 @@ export function ClientDetailHeader({ client, tab, onTabChange, onScheduleWorkout
           <button
             onClick={onScheduleWorkout}
             className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-xs font-bold px-3.5 py-2 whitespace-nowrap"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-base">add</span>
             {t("scheduleWorkoutCta")}
@@ -108,7 +108,7 @@ export function ClientDetailHeader({ client, tab, onTabChange, onScheduleWorkout
               key={key}
               onClick={() => onTabChange(key)}
               className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[13px] font-bold px-5 py-2.5 transition-colors"
-              style={{ background: active ? "var(--tertiary)" : "transparent", color: active ? "#161611" : "var(--on-surface-variant)" }}
+              style={{ background: active ? "var(--tertiary)" : "transparent", color: active ? "var(--bg)" : "var(--on-surface-variant)" }}
             >
               <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}>
                 {icon}

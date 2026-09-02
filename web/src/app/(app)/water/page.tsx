@@ -238,7 +238,7 @@ export default function WaterPage() {
                 style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
               <button onClick={() => createSource.mutate()} disabled={!newName || !newVol || createSource.isPending}
                 className="h-9 rounded-[var(--r-md)] font-semibold text-sm transition-opacity disabled:opacity-50"
-                style={{ background: "var(--primary)", color: "#1E1F18" }}>
+                style={{ background: "var(--primary)", color: "var(--bg)" }}>
                 {t("addSource")}
               </button>
             </div>

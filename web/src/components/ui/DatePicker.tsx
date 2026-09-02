@@ -215,7 +215,7 @@ export function DatePicker({ value, onChange, min, max, placeholder, hasError, i
                   className="h-8 w-8 flex items-center justify-center rounded-full text-sm tabular transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{
                     background: isSelected ? "var(--primary)" : "transparent",
-                    color: isSelected ? "#1E1F18" : inMonth ? "var(--on-surface)" : "var(--on-surface-variant)",
+                    color: isSelected ? "var(--bg)" : inMonth ? "var(--on-surface)" : "var(--on-surface-variant)",
                     fontWeight: isSelected ? 600 : 400,
                   }}
                 >

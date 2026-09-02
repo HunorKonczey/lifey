@@ -36,6 +36,18 @@ module.exports = {
       // median instead of gambling on whichever run the runner was busiest
       // for.
       numberOfRuns: 3,
+      settings: {
+        // The page picks its theme from `prefers-color-scheme` (the inline
+        // script in app/layout.tsx: light only when light is *explicitly*
+        // preferred, dark otherwise), so without this flag the audited
+        // theme is whatever the machine happens to prefer — a Linux CI
+        // runner audits light, a developer on a dark-mode desktop audits
+        // dark, and the two disagree about accessibility. Pinned to light
+        // because that is what CI has always measured; the dark theme is
+        // the same tokens and was verified at 100 alongside every change
+        // here.
+        chromeFlags: "--blink-settings=preferredColorScheme=1",
+      },
     },
     assert: {
       assertions: {
@@ -46,11 +58,13 @@ module.exports = {
         // for run-to-run noise while easily catching a real regression —
         // importing `recharts` alone dropped this to 89.
         "categories:performance": ["error", { minScore: 0.85 }],
-        // Accessibility: measured 100 today, after this prompt fixed two
-        // real contrast failures Lighthouse surfaced (ChatMock.tsx's
-        // timestamp opacity, SponsoredBand.tsx's ad-slot label color) —
-        // §8's own ≥ 100 target, now genuinely met, asserted at the real
-        // target rather than a softened one.
+        // Accessibility: measured 100 today in both themes — §8's own
+        // ≥ 100 target, genuinely met, asserted at the real target rather
+        // than a softened one. Reaching it in the light theme took
+        // darkening --secondary/--tertiary to AA and replacing the
+        // hardcoded near-black text on accent-coloured backgrounds with
+        // var(--bg); see the `chromeFlags` note above for why CI saw those
+        // failures and local runs on a dark-mode machine did not.
         "categories:accessibility": ["error", { minScore: 1 }],
         // SEO: measured 92 today, capped by one specific audit —
         // `canonical` — that fails only because this runs against

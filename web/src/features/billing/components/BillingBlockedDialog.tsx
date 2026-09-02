@@ -56,7 +56,7 @@ export function BillingBlockedDialog({ open, onClose, reason, activeClients, max
           <Link
             href="/admin/billing"
             className="h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm flex items-center justify-center"
-            style={{ background: "var(--primary)", color: "#1E1F18" }}
+            style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
             {t("bannerCta")}
           </Link>

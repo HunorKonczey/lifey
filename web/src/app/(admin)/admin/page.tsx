@@ -93,14 +93,14 @@ export default function AdminDashboardPage() {
           <Link
             href="/admin/invites"
             className="flex items-center gap-2 rounded-2xl px-4 py-2.5 text-[13px] font-extrabold"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-[19px]">person_add</span>
             {t("inviteClient")}
           </Link>
           <div
             className="w-[42px] h-[42px] rounded-2xl flex items-center justify-center text-[15px] font-extrabold"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             {user?.email.charAt(0).toUpperCase()}
           </div>
@@ -134,7 +134,7 @@ export default function AdminDashboardPage() {
           <Link
             href="/admin/invites"
             className="inline-flex items-center gap-2 rounded-2xl px-4.5 py-2.5 text-[13px] font-extrabold mt-4"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-lg">person_add</span>
             {t("inviteFirst")}

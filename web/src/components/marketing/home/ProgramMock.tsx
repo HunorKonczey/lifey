@@ -30,7 +30,7 @@ export async function ProgramMock() {
             </div>
             <div
               className="h-7.5 flex items-center px-3.5 rounded-pill text-[11.5px] font-extrabold"
-              style={{ background: "var(--primary)", color: "#161611" }}
+              style={{ background: "var(--primary)", color: "var(--bg)" }}
             >
               {t("mockAssign")}
             </div>
@@ -43,7 +43,7 @@ export async function ProgramMock() {
                 className="h-7 flex items-center px-3 rounded-pill text-[11px]"
                 style={
                   w.active
-                    ? { background: "var(--primary)", color: "#161611", fontWeight: 800 }
+                    ? { background: "var(--primary)", color: "var(--bg)", fontWeight: 800 }
                     : { background: "var(--surface-high)", color: "var(--on-surface-variant)", fontWeight: 700 }
                 }
               >
@@ -108,7 +108,7 @@ export async function ProgramMock() {
           </div>
           <div
             className="h-11 rounded-pill flex items-center justify-center text-[13px] font-extrabold mt-3"
-            style={{ background: "var(--primary)", color: "#161611" }}
+            style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
             {t("mockSave")}
           </div>

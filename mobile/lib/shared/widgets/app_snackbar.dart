@@ -7,7 +7,10 @@ const _kBlue = Color(0xFF6FA8C4);
 const _kBg = Color(0xFF2A2C20);
 const _kTitle = Color(0xFFF1F0E4);
 const _kSubtitle = Color(0xFFA8A899);
-const _kIconDim = Color(0xFF777264);
+// Was 0xFF777264 — 2.96:1 against [_kBg], under the 3:1 WCAG asks of an
+// interactive control's icon (this is the dismiss button). Lightened to the
+// same tone the theme's muted tier uses.
+const _kIconDim = Color(0xFF918B7A);
 
 /// Styled snackbar helper matching the Lifey Snackbar & Dialog design.
 ///

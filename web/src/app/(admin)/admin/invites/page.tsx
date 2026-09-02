@@ -81,7 +81,7 @@ export default function AdminInvitesPage() {
         </div>
         <span
           className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[10px] font-extrabold tracking-wide px-2.5 py-1"
-          style={{ background: "var(--tertiary)", color: "#161611" }}
+          style={{ background: "var(--tertiary)", color: "var(--bg)" }}
         >
           <span className="material-symbols-rounded text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>
             fitness_center
@@ -124,7 +124,7 @@ export default function AdminInvitesPage() {
             }}
             disabled={!email || inviteMutation.isPending}
             className="shrink-0 flex items-center gap-2 rounded-2xl h-[52px] px-6 text-[14.5px] font-extrabold disabled:opacity-50"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-xl">send</span>
             {t("send")}

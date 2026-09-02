@@ -216,7 +216,7 @@ export default function OnboardingPage() {
             <button
               onClick={next}
               className="h-10 px-6 rounded-[var(--r-input)] font-semibold text-sm"
-              style={{ background: "var(--primary)", color: "#1E1F18" }}
+              style={{ background: "var(--primary)", color: "var(--bg)" }}
             >
               {step === 0 ? t("getStarted") : t("next")}
             </button>
@@ -234,7 +234,7 @@ export default function OnboardingPage() {
                 onClick={() => finish(true)}
                 disabled={finishing || !suggestion}
                 className="h-10 px-6 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-                style={{ background: "var(--primary)", color: "#1E1F18" }}
+                style={{ background: "var(--primary)", color: "var(--bg)" }}
               >
                 {finishing ? t("saving") : t("applyGoals")}
               </button>

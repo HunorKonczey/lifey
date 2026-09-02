@@ -76,7 +76,7 @@ export default function SuperAdminTrainerRequestsPage() {
                 <div className="flex items-center gap-3.5">
                   <div
                     className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-extrabold"
-                    style={{ background: "var(--tertiary)", color: "#161611" }}
+                    style={{ background: "var(--tertiary)", color: "var(--bg)" }}
                   >
                     {req.userEmail.charAt(0).toUpperCase()}
                   </div>
@@ -109,7 +109,7 @@ export default function SuperAdminTrainerRequestsPage() {
                     <button
                       onClick={() => setConfirmTarget({ request: req, approve: true })}
                       className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold"
-                      style={{ background: "var(--primary)", color: "#161611" }}
+                      style={{ background: "var(--primary)", color: "var(--bg)" }}
                     >
                       <span className="material-symbols-rounded text-base">check</span>
                       {t("approve")}

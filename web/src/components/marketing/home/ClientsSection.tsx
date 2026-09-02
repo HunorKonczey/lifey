@@ -47,7 +47,7 @@ export async function ClientsSection() {
               >
                 <span
                   className="w-6 h-6 rounded-pill flex items-center justify-center text-[9.5px] font-extrabold"
-                  style={{ background: row.bg, color: "#161611" }}
+                  style={{ background: row.bg, color: "var(--bg)" }}
                 >
                   {row.name.split(" ").map((p) => p[0]).join("")}
                 </span>

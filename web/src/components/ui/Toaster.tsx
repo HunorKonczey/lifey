@@ -3,11 +3,15 @@
 import { useTranslations } from "next-intl";
 import { useToast, type ToastVariant } from "@/lib/hooks/useToast";
 
-const VARIANT_STYLES: Record<ToastVariant, { bg: string; icon: string }> = {
-  default: { bg: "var(--surface-high)", icon: "info" },
-  success: { bg: "var(--goal-positive)", icon: "check_circle" },
-  error: { bg: "var(--error)", icon: "error" },
-  warning: { bg: "var(--metric-kcal)", icon: "warning" },
+// `fg` only where the background flips with the theme: --goal-positive is a
+// pale green in the dark theme but a dark one in the light theme, so a fixed
+// near-black on it drops to ~3:1 there. --error and --metric-kcal are the
+// same light tones in both themes and keep the near-black.
+const VARIANT_STYLES: Record<ToastVariant, { bg: string; fg: string; icon: string }> = {
+  default: { bg: "var(--surface-high)", fg: "var(--on-surface)", icon: "info" },
+  success: { bg: "var(--goal-positive)", fg: "var(--bg)", icon: "check_circle" },
+  error: { bg: "var(--error)", fg: "#1E1F18", icon: "error" },
+  warning: { bg: "var(--metric-kcal)", fg: "#1E1F18", icon: "warning" },
 };
 
 export function Toaster() {
@@ -22,7 +26,7 @@ export function Toaster() {
       aria-live="polite"
     >
       {toasts.map((toast) => {
-        const { bg, icon } = VARIANT_STYLES[toast.variant];
+        const { bg, fg, icon } = VARIANT_STYLES[toast.variant];
         const isColored = toast.variant !== "default";
         return (
           <div
@@ -30,7 +34,7 @@ export function Toaster() {
             className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-[var(--r-card)] shadow-lg text-sm font-semibold max-w-sm"
             style={{
               background: bg,
-              color: isColored ? "#1E1F18" : "var(--on-surface)",
+              color: fg,
               border: isColored ? "none" : "1px solid var(--outline)",
               animation: "slideIn var(--dur-base) var(--ease)",
             }}

@@ -33,7 +33,7 @@ export async function HowItWorks() {
             >
               <div
                 className="w-11 h-11 rounded-pill flex items-center justify-center text-lg font-extrabold tabular-nums relative"
-                style={{ background: "var(--primary)", color: "#161611" }}
+                style={{ background: "var(--primary)", color: "var(--bg)" }}
               >
                 {i + 1}
               </div>

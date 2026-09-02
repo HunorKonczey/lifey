@@ -133,7 +133,7 @@ export function TrainerOnboardingChecklist() {
                   }}
                 >
                   {step.done && (
-                    <span className="material-symbols-rounded text-[13px]" style={{ color: "#161611" }}>
+                    <span className="material-symbols-rounded text-[13px]" style={{ color: "var(--bg)" }}>
                       check
                     </span>
                   )}
@@ -147,7 +147,7 @@ export function TrainerOnboardingChecklist() {
                   }}
                 >
                   {step.done && (
-                    <span className="material-symbols-rounded text-[13px]" style={{ color: "#161611" }}>
+                    <span className="material-symbols-rounded text-[13px]" style={{ color: "var(--bg)" }}>
                       check
                     </span>
                   )}

@@ -65,7 +65,7 @@ export function MobileMenu({
             >
               <span
                 className="w-[30px] h-[30px] rounded-[9px] flex items-center justify-center"
-                style={{ background: "var(--primary)", color: "#161611" }}
+                style={{ background: "var(--primary)", color: "var(--bg)" }}
               >
                 <span
                 className="material-symbols-rounded text-[18px]"

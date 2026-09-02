@@ -3,11 +3,15 @@ import { getPathname } from "@/i18n/navigation";
 import { TrackedCta } from "../TrackedCta";
 import { BrowserWindowFrame } from "./BrowserWindowFrame";
 
+// `fg` is per-entry because the palette is mixed: --secondary/--tertiary
+// flip with the theme (dark in light mode, so they need the light --bg on
+// top), while the two literal pastels are the same in both themes and keep
+// the near-black they were picked against.
 const AVATARS = [
-  { initials: "SZ", bg: "var(--secondary)" },
-  { initials: "TM", bg: "var(--tertiary)" },
-  { initials: "NR", bg: "#8AA0B4" },
-  { initials: "KD", bg: "#B08AC8" },
+  { initials: "SZ", bg: "var(--secondary)", fg: "var(--bg)" },
+  { initials: "TM", bg: "var(--tertiary)", fg: "var(--bg)" },
+  { initials: "NR", bg: "#8AA0B4", fg: "#161611" },
+  { initials: "KD", bg: "#B08AC8", fg: "#161611" },
 ];
 
 /**
@@ -104,7 +108,7 @@ export async function Hero() {
                   >
                     <span
                       className="w-[30px] h-[30px] rounded-md flex items-center justify-center"
-                      style={{ background: "var(--primary)", color: "#161611" }}
+                      style={{ background: "var(--primary)", color: "var(--bg)" }}
                     >
                       <span className="material-symbols-rounded text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
                         eco
@@ -124,7 +128,7 @@ export async function Hero() {
                       </div>
                       <div
                         className="h-[26px] flex items-center px-3 rounded-pill text-[11px] font-extrabold"
-                        style={{ background: "var(--primary)", color: "#161611" }}
+                        style={{ background: "var(--primary)", color: "var(--bg)" }}
                       >
                         {t("mockInvite")}
                       </div>
@@ -143,7 +147,7 @@ export async function Hero() {
                         >
                           <span
                             className="w-[30px] h-[30px] rounded-pill flex items-center justify-center text-[11px] font-extrabold"
-                            style={{ background: AVATARS[i].bg, color: "#161611" }}
+                            style={{ background: AVATARS[i].bg, color: AVATARS[i].fg }}
                           >
                             {AVATARS[i].initials}
                           </span>
@@ -185,7 +189,7 @@ export async function Hero() {
                 </div>
                 <div
                   className="h-7.5 rounded-pill flex items-center justify-center text-[11px] font-extrabold"
-                  style={{ background: "var(--primary)", color: "#161611" }}
+                  style={{ background: "var(--primary)", color: "var(--bg)" }}
                 >
                   {t("mockWatchStart")}
                 </div>
@@ -211,7 +215,7 @@ export async function Hero() {
                 </div>
                 <div
                   className="h-9 rounded-pill flex items-center justify-center text-xs font-extrabold"
-                  style={{ background: "var(--primary)", color: "#161611" }}
+                  style={{ background: "var(--primary)", color: "var(--bg)" }}
                 >
                   {t("mockWatchStart")}
                 </div>

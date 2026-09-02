@@ -86,7 +86,7 @@ export function TimePicker({ value, onChange, placeholder, hasError, id }: TimeP
                   className="h-8 rounded-lg text-sm tabular transition-colors"
                   style={{
                     background: selected ? "var(--primary)" : "transparent",
-                    color: selected ? "#1E1F18" : "var(--on-surface)",
+                    color: selected ? "var(--bg)" : "var(--on-surface)",
                     fontWeight: selected ? 600 : 400,
                   }}
                 >
@@ -106,7 +106,7 @@ export function TimePicker({ value, onChange, placeholder, hasError, id }: TimeP
                   className="h-8 rounded-lg text-sm tabular transition-colors"
                   style={{
                     background: selected ? "var(--primary)" : "transparent",
-                    color: selected ? "#1E1F18" : "var(--on-surface)",
+                    color: selected ? "var(--bg)" : "var(--on-surface)",
                     fontWeight: selected ? 600 : 400,
                   }}
                 >

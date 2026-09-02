@@ -385,7 +385,7 @@ class _MealCard extends StatelessWidget {
                         Text(
                           meal.entries.map((e) => e.foodName).join(', '),
                           style: theme.textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            color: scheme.onSurfaceVariant,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

@@ -165,7 +165,7 @@ export function WorkoutSuccessDialog({ open, result, onClose }: WorkoutSuccessDi
         <button
           onClick={onClose}
           className="w-full h-12 rounded-[var(--r-md)] font-extrabold text-[14.5px]"
-          style={{ background: "var(--primary)", color: "#1E1F18" }}
+          style={{ background: "var(--primary)", color: "var(--bg)" }}
         >
           {t("workoutSuccessContinueButton")}
         </button>

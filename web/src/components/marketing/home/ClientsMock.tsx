@@ -7,11 +7,13 @@ export async function ClientsMock() {
   const demo = await getTranslations("home.demo");
 
   const rows = [
-    { name: "Szabó Anna", meta: demo("strength"), bg: "var(--secondary)", active: true },
-    { name: "Tóth Márk", meta: demo("fatLoss"), bg: "var(--tertiary)", active: false },
-    { name: "Nagy Réka", meta: demo("hypertrophy"), bg: "#8AA0B4", active: false },
-    { name: "Kiss Dávid", meta: t("mockInvited"), bg: "#B08AC8", active: false },
-    { name: "Horváth Lilla", meta: demo("cardio"), bg: "#E0915A", active: false },
+    // `fg` per entry for the same reason as Hero's AVATARS — the two theme
+    // tokens need the light --bg on top, the literal pastels keep #161611.
+    { name: "Szabó Anna", meta: demo("strength"), bg: "var(--secondary)", fg: "var(--bg)", active: true },
+    { name: "Tóth Márk", meta: demo("fatLoss"), bg: "var(--tertiary)", fg: "var(--bg)", active: false },
+    { name: "Nagy Réka", meta: demo("hypertrophy"), bg: "#8AA0B4", fg: "#161611", active: false },
+    { name: "Kiss Dávid", meta: t("mockInvited"), bg: "#B08AC8", fg: "#161611", active: false },
+    { name: "Horváth Lilla", meta: demo("cardio"), bg: "#E0915A", fg: "#161611", active: false },
   ];
 
   const tabs = [t("mockOverview"), t("mockWorkouts"), t("mockNutrition"), t("mockWeight"), t("mockNotes")];
@@ -35,19 +37,24 @@ export async function ClientsMock() {
               <div
                 key={row.name}
                 className="flex items-center gap-2.5 rounded-md px-2.5 py-2"
-                style={row.active ? { background: "var(--primary)", color: "#161611" } : {}}
+                style={row.active ? { background: "var(--primary)", color: "var(--bg)" } : {}}
               >
                 <span
                   className="w-7 h-7 rounded-pill flex items-center justify-center text-[10.5px] font-extrabold"
-                  style={{ background: row.active ? "#161611" : row.bg, color: row.active ? "var(--secondary)" : "#161611" }}
+                  style={{ background: row.active ? "var(--bg)" : row.bg, color: row.active ? "var(--secondary)" : row.fg }}
                 >
                   {row.name.split(" ").map((p) => p[0]).join("")}
                 </span>
                 <div className="flex-1">
                   <div className="text-xs font-extrabold">{row.name}</div>
+                  {/* No opacity on the active row (the same fix ChatMock's
+                      timestamp needed): 75% of --bg over --primary measures
+                      3.62:1 in the light theme, and even 90% only reaches
+                      4.45:1 — under AA. The smaller size and lighter weight
+                      already separate this line from the name above it. */}
                   <div
                     className="text-[10px] font-semibold"
-                    style={{ opacity: row.active ? 0.75 : 1, color: row.active ? undefined : "var(--muted)" }}
+                    style={{ color: row.active ? undefined : "var(--muted)" }}
                   >
                     {row.meta}
                   </div>
@@ -61,7 +68,7 @@ export async function ClientsMock() {
           <div className="flex items-center gap-3">
             <span
               className="w-11 h-11 rounded-pill flex items-center justify-center text-[15px] font-extrabold"
-              style={{ background: "var(--secondary)", color: "#161611" }}
+              style={{ background: "var(--secondary)", color: "var(--bg)" }}
             >
               SZ
             </span>
@@ -77,7 +84,7 @@ export async function ClientsMock() {
               </div>
               <div
                 className="h-8 flex items-center px-3.5 rounded-pill text-xs font-extrabold"
-                style={{ background: "var(--primary)", color: "#161611" }}
+                style={{ background: "var(--primary)", color: "var(--bg)" }}
               >
                 {t("mockProgram")}
               </div>

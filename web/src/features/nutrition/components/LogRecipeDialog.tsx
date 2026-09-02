@@ -110,7 +110,7 @@ export function LogRecipeDialog({
                 className="px-3 h-8 rounded-[var(--r-pill)] text-xs font-semibold transition-colors"
                 style={{
                   background: mealType === m.value ? "var(--primary)" : "var(--surface-container)",
-                  color: mealType === m.value ? "#1E1F18" : "var(--on-surface-variant)",
+                  color: mealType === m.value ? "var(--bg)" : "var(--on-surface-variant)",
                   border: "1px solid var(--outline)",
                 }}>
                 {m.label}
@@ -195,7 +195,7 @@ export function LogRecipeDialog({
 
         <button onClick={() => mutation.mutate()} disabled={mutation.isPending || entries.length === 0}
           className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-          style={{ background: "var(--primary)", color: "#1E1F18" }}>
+          style={{ background: "var(--primary)", color: "var(--bg)" }}>
           {mutation.isPending ? t("logging") : t("logMeal")}
         </button>
       </div>

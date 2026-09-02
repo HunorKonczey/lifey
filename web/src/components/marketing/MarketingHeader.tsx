@@ -37,7 +37,7 @@ export async function MarketingHeader() {
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <span
             className="w-[34px] h-[34px] rounded-md flex items-center justify-center"
-            style={{ background: "var(--primary)", color: "#161611" }}
+            style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
             <span
               className="material-symbols-rounded text-[21px]"

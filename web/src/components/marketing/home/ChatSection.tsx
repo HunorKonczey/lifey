@@ -40,7 +40,7 @@ export async function ChatSection() {
           </div>
           <div
             className="self-end rounded-lg rounded-tr-sm px-2.5 py-2 text-[11.5px] font-semibold leading-[1.5]"
-            style={{ background: "var(--primary)", color: "#161611" }}
+            style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
             {t("mockTrainerMsgShort")}
           </div>

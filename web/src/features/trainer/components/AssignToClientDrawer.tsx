@@ -215,7 +215,7 @@ export function AssignToClientDrawer({
             disabled={newClientIds.length === 0 || assignMutation.isPending}
             data-testid="assign-drawer-submit"
             className="flex-[2] text-center rounded-2xl py-3 text-[13.5px] font-extrabold disabled:opacity-40"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             {assignMutation.isPending
               ? t("assigning")

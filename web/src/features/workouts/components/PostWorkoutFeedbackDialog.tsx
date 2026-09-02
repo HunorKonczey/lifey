@@ -57,7 +57,7 @@ export function PostWorkoutFeedbackDialog({
                 className="h-9 rounded-[var(--r-sm)] text-xs font-extrabold flex items-center justify-center transition-colors"
                 style={{
                   background: rpe === v ? "var(--primary)" : "var(--surface-container)",
-                  color: rpe === v ? "#1E1F18" : "var(--on-surface-variant)",
+                  color: rpe === v ? "var(--bg)" : "var(--on-surface-variant)",
                 }}
               >
                 {v}
@@ -94,7 +94,7 @@ export function PostWorkoutFeedbackDialog({
             onClick={() => rpe != null && onSave(rpe, note.trim() || null)}
             disabled={rpe == null}
             className="flex-1 h-11 rounded-[var(--r-input)] font-semibold text-sm disabled:opacity-40"
-            style={{ background: "var(--primary)", color: "#1E1F18" }}
+            style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
             {common("save")}
           </button>

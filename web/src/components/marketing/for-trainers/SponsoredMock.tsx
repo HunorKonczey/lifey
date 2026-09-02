@@ -22,7 +22,7 @@ export async function SponsoredMock() {
       <div className="rounded-md p-3.5 mt-2.5 flex items-center gap-3" style={{ background: "var(--surface-container)" }}>
         <span
           className="w-10 h-10 rounded-md flex items-center justify-center shrink-0"
-          style={{ background: "var(--secondary)", color: "#161611" }}
+          style={{ background: "var(--secondary)", color: "var(--bg)" }}
         >
           <span className="material-symbols-rounded text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
             workspace_premium

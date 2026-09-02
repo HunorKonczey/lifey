@@ -31,7 +31,7 @@ export async function DayInLifeStrip() {
             <div key={item.time} className="rounded-lg p-5 md:p-6 relative" style={{ background: "var(--bg)" }}>
               <div
                 className="h-11 px-3.5 rounded-pill flex items-center justify-center text-sm font-extrabold tabular-nums relative w-fit"
-                style={{ background: "var(--primary)", color: "#161611" }}
+                style={{ background: "var(--primary)", color: "var(--bg)" }}
               >
                 {item.time}
               </div>

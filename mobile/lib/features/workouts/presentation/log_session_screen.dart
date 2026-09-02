@@ -1932,7 +1932,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           fontSize: 11.5,
-                          color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -1991,7 +1991,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
                       fontSize: 11.5,
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -2003,7 +2003,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
                         fontSize: 10.5,
-                        color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -2861,7 +2861,7 @@ class _HealthStatCard extends StatelessWidget {
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             ],

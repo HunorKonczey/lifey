@@ -16,7 +16,7 @@ export async function MarketingFooter() {
             <div className="flex items-center gap-2.5 mb-3">
               <span
                 className="w-8 h-8 rounded-md flex items-center justify-center"
-                style={{ background: "var(--primary)", color: "#161611" }}
+                style={{ background: "var(--primary)", color: "var(--bg)" }}
               >
                 <span
                   className="material-symbols-rounded text-xl"

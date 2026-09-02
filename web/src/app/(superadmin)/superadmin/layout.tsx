@@ -84,7 +84,7 @@ function SuperAdminShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2.5">
           <div
             className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center"
-            style={{ background: "var(--primary)", color: "#161611" }}
+            style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
               eco
@@ -112,7 +112,7 @@ function SuperAdminShell({ children }: { children: React.ReactNode }) {
           <ThemeToggle />
           <div
             className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-sm font-extrabold overflow-hidden"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             {avatarUrl ? (
               // Blob object URLs aren't compatible with next/image's optimizer.

@@ -171,7 +171,7 @@ export function FoodsView() {
           <button
             onClick={() => { setCreating(true); setSelected(null); setPrefill(undefined); }}
             className="flex items-center gap-1 px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
-            style={{ background: "var(--primary)", color: "#1E1F18" }}
+            style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-lg">add</span> {t("newFood")}
           </button>

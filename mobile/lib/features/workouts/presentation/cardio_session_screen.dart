@@ -2078,7 +2078,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                 ),
           labelColor: benched ? _kAutoAccent : scheme.primary,
           value: CardioFormatter.duration(playingDuration),
-          valueColor: benched ? scheme.onSurfaceVariant.withValues(alpha: 0.7) : null,
+          valueColor: benched ? scheme.onSurfaceVariant : null,
         ),
         const SizedBox(height: 18),
         _MetricRow(
