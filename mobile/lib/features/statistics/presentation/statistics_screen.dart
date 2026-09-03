@@ -286,25 +286,39 @@ class _RangeMenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+
+    final row = Row(
+      children: [
+        SizedBox(
+          width: 20,
+          child: selected
+              ? Icon(Icons.check, size: 16, color: scheme.primary)
+              : locked
+                  ? Icon(Icons.lock, size: 16, color: scheme.secondary)
+                  : null,
+        ),
+        const SizedBox(width: 4),
+        // Full alpha, locked or not. `69` §4.1 asks for the locked label at
+        // 60 % opacity, but that is the exact pattern commit 1c252fd removed
+        // from 15 other places in this app after measuring 0.6–0.8 alpha
+        // secondary text at 2.9–3.9:1 — below WCAG AA. This row escaped that
+        // sweep only because it dimmed with `Opacity()` around a subtree
+        // instead of an alpha'd colour. The `lock` glyph in the slot on the
+        // left and the row's own semantics label already say "locked"
+        // without leaning on contrast (`69` §8: no gate by colour alone).
+        // Deviation recorded in `72` D-F4.
+        Text(label),
+      ],
+    );
+
+    if (!locked) return row;
+
+    // The reason *replaces* what the row would otherwise read out: without
+    // `ExcludeSemantics` the child `Text` merges into the node and a screen
+    // reader says "90 days — Pro required, 90 days" (`69` §8).
     return Semantics(
-      label: locked ? l10n.statRangeLockedSemanticsLabel(label) : null,
-      child: Row(
-        children: [
-          SizedBox(
-            width: 20,
-            child: selected
-                ? Icon(Icons.check, size: 16, color: scheme.primary)
-                : locked
-                    ? Icon(Icons.lock, size: 16, color: scheme.secondary)
-                    : null,
-          ),
-          const SizedBox(width: 4),
-          Opacity(
-            opacity: locked ? 0.6 : 1.0,
-            child: Text(label),
-          ),
-        ],
-      ),
+      label: l10n.statRangeLockedSemanticsLabel(label),
+      child: ExcludeSemantics(child: row),
     );
   }
 }

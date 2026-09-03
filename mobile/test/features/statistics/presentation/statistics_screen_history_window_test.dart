@@ -168,4 +168,29 @@ void main() {
     expect(container.read(statsRangeControllerProvider), StatsRange.week);
     expect(find.text('paywall'), findsNothing);
   });
+
+  testWidgets("a locked row's label is drawn at full alpha (`72` D-F4)", (tester) async {
+    await _pumpStatisticsScreen(tester, historyCutoff: cutoff30Days);
+    await _openRangeMenu(tester);
+
+    // `69` §4.1 asked for 60 % opacity here; that is the pattern commit
+    // 1c252fd removed app-wide for failing WCAG AA, and the `lock` glyph
+    // plus the row's semantics label already carry the state. No `Opacity`
+    // may reappear inside the menu rows.
+    expect(
+      find.descendant(of: find.byType(PopupMenuItem<StatsRange>), matching: find.byType(Opacity)),
+      findsNothing,
+    );
+  });
+
+  testWidgets('a locked row explains *why* it is locked to a screen reader', (tester) async {
+    final handle = tester.ensureSemantics();
+    await _pumpStatisticsScreen(tester, historyCutoff: cutoff30Days);
+    await _openRangeMenu(tester);
+
+    // `69` §8: "states the reason, not just 'locked'".
+    expect(find.bySemanticsLabel('All — Pro required'), findsOneWidget);
+    expect(find.bySemanticsLabel('90 days — Pro required'), findsOneWidget);
+    handle.dispose();
+  });
 }

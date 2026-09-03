@@ -1035,5 +1035,9 @@
   "weatherNoDataMessage": "Nincs időjárás-adat — add meg kézzel",
   "editWeatherDialogTitle": "Időjárás induláskor",
   "bannerAdSemanticsLabel": "Hirdetés",
+  "sponsorshipEndedCardTitle": "Az edződ Pro-ja lejárt",
+  "sponsorshipEndedCardMessage": "Az edződdel való kapcsolat lezárult, így a Pro funkciók kikapcsoltak. Az adataid megvannak.",
+  "sponsorshipEndedCardDismissTooltip": "Bezárás",
+  "bannerAdLabel": "Reklám",
   "bannerRemoveAdsTooltip": "Hirdetések eltávolítása"
 }

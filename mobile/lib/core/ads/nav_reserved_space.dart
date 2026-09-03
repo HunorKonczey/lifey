@@ -18,6 +18,21 @@ const double fabGap = 16.0;
 /// "anchored" variant).
 double bannerBottom(double safeAreaBottom) => navSlotHeight + safeAreaBottom;
 
+/// Height of [BannerAdSlot]'s chrome row — the "Reklám" label and the
+/// remove-ads button that sit **above** the creative (`69` §4.4, drawn that
+/// way in frame P15: a 28 dp row with 4 dp of padding above it).
+///
+/// It is a constant rather than a measured height because the slot's total
+/// height has to be reported to `main_shell.dart` and the tab bodies the
+/// moment an ad loads — see [bannerSlotHeight].
+const double bannerAdChromeHeight = 32.0;
+
+/// The slot's full reserved height for a creative of [adHeight]: the ad plus
+/// its chrome row. Everything that pads content or positions a FAB reads this
+/// number (via `bannerAdSlotHeightProvider`), so the chrome row can never be
+/// the thing that makes a FAB sit on top of an ad.
+double bannerSlotHeight(double adHeight) => adHeight + bannerAdChromeHeight;
+
 /// Where the FAB (and `TrainerInviteCard`/`UpcomingWorkoutCard`) sit,
 /// measured from the screen's bottom edge — above the nav, and above the
 /// banner too whenever [bannerHeight] is non-zero, so a shown banner is

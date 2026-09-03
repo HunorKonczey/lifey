@@ -237,10 +237,24 @@ class _PaywallBody extends ConsumerWidget {
     final flowState = ref.watch(subscriptionControllerProvider);
     final isPurchasing = flowState.purchasingProductId != null;
 
-    // 320 pt is the narrowest device this screen is specified for (69
-    // §3.1) — the crest shrinks and each benefit's description line drops,
-    // rather than letting the column overflow.
-    final compact = MediaQuery.sizeOf(context).width <= 320;
+    // Two independent squeezes, both from `69` §3.1/§8 and frame P10 — and
+    // until `72` Prompt 9 only the first was implemented, so the 200 % case
+    // rendered at full size and simply scrolled further:
+    //
+    //  * **width** — 320 pt is the narrowest device this screen is specified
+    //    for: the crest shrinks and each benefit's description line drops;
+    //  * **text scale** — at ~1.6× and up the same two things happen for the
+    //    same reason (there is no room), and past ~2× the crest goes entirely,
+    //    since a decorative 96 dp circle is the first thing a user who needs
+    //    double-size text can spare.
+    //
+    // Measured off `textScaler.scale(15)` — the sub-line's own size — rather
+    // than a raw factor, because that is the number that actually decides
+    // whether the column fits.
+    final textScaler = MediaQuery.textScalerOf(context);
+    final scaledBodySize = textScaler.scale(15);
+    final compact = MediaQuery.sizeOf(context).width <= 320 || scaledBodySize >= 24;
+    final hideCrest = scaledBodySize >= 30;
 
     final monthly = _byPeriod(SubscriptionPeriod.monthly);
     final yearly = _byPeriod(SubscriptionPeriod.yearly);
@@ -251,8 +265,10 @@ class _PaywallBody extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(child: _Crest(size: compact ? 56 : 72)),
-          const SizedBox(height: 16),
+          if (!hideCrest) ...[
+            Center(child: _Crest(size: compact ? 56 : 72)),
+            const SizedBox(height: 16),
+          ],
           Text(
             _headline(l10n, trigger),
             textAlign: TextAlign.center,
@@ -512,96 +528,106 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: selected ? scheme.tertiaryContainer : scheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(
-              color: selected ? scheme.primary : Colors.transparent,
-              width: 2,
-            ),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(
-                selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                color: selected ? scheme.primary : scheme.onSurfaceVariant,
+    // "Every plan card is a single semantic radio" (`69` §8). The visual
+    // already carries the state twice over (a `radio_button_checked` glyph and
+    // a 2 px border, never colour alone), but to a screen reader the card was
+    // just a tappable box: nothing said the two cards are alternatives, or
+    // which one is currently chosen. `72` Prompt 8.
+    return Semantics(
+      container: true,
+      inMutuallyExclusiveGroup: true,
+      checked: selected,
+      child: Material(
+        color: selected ? scheme.tertiaryContainer : scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.card),
+              border: Border.all(
+                color: selected ? scheme.primary : Colors.transparent,
+                width: 2,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Wrap, not Row: at narrow widths the label + badge
-                    // together can be wider than the card, and a Row would
-                    // overflow rather than drop the badge to its own line.
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        Text(
-                          label,
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (discountBadge != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: scheme.secondary,
-                              borderRadius: BorderRadius.circular(99),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(
+                  selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Wrap, not Row: at narrow widths the label + badge
+                      // together can be wider than the card, and a Row would
+                      // overflow rather than drop the badge to its own line.
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
                             ),
-                            child: Text(
-                              discountBadge!,
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: scheme.onSecondary,
+                          ),
+                          if (discountBadge != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: scheme.secondary,
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                              child: Text(
+                                discountBadge!,
+                                style: TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: scheme.onSecondary,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                    if (perMonthLabel != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        perMonthLabel!,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                        ],
                       ),
+                      if (perMonthLabel != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          perMonthLabel!,
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  product.formattedPrice,
-                  textAlign: TextAlign.right,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    product.formattedPrice,
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -641,8 +667,12 @@ class _CtaButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 56,
+    // `constraints`, not a fixed `height`: at a large text scale the label —
+    // which carries the store's own price string — needs more than 56 dp, and
+    // `69` §8 is explicit that the CTA never truncates (`72` Prompt 9). The
+    // button grows instead, and the label wraps rather than ellipsing.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 56),
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
@@ -663,7 +693,7 @@ class _CtaButton extends StatelessWidget {
                 height: 22,
                 child: CircularProgressIndicator(strokeWidth: 2.5, color: scheme.onPrimary),
               )
-            : Text(label),
+            : Text(label, textAlign: TextAlign.center),
       ),
     );
   }

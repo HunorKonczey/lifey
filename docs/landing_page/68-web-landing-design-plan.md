@@ -533,6 +533,21 @@ stops after the fine print and the "already have a plan" notice. Accepted as an 
 contradiction: implemented from the spec's own six named topics in `65` Prompt 6, reusing
 `FaqPreview.tsx`'s `<details>` vocabulary rather than waiting on a redraw.
 
+**DV-11 ⚠ L02's App Store badge asks for a Material Symbol that does not exist.** The frame
+draws the store badge pair as `<span class="mi">apple</span>App Store` — but **Material Symbols
+has no `apple` glyph**, so the ligature fails and the icon font renders the literal string
+"APPLE" in a stretched wide face, with the label wrapping to a second line. The canvas itself
+shows this (it uses the same font), and `65` Prompt 3 implemented it faithfully, which put a
+broken badge in the footer of every marketing page, on the app page hero and on the download
+page — the one page an invited client lands on.
+
+**✅ Fixed in code, `72` Prompt 2** — `StoreBadges.tsx` now uses `phone_iphone`, a real glyph,
+paired with the already-real `shop`. Deliberately not an inline Apple-logo path: Apple's
+identity guidelines only permit their mark inside the official "Download on the App Store"
+badge lockup, which is the artwork `63` M5 will bring once a listing exists. **The frame has not
+been redrawn**; this note is the correction record, and it joins DV-5 and `69` DV-9 in `72`
+Prompt 17's redraw list.
+
 ---
 
 ## 13. What still has to be designed (web)

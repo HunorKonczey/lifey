@@ -22,6 +22,16 @@ void main() {
     });
   });
 
+  group('bannerSlotHeight', () {
+    test('reserves the chrome row on top of the creative (`72` Prompt 7)', () {
+      // The number every content padding and FAB offset reads. If it went
+      // back to reporting only the ad's own height, the FAB would sit on the
+      // "Reklám" row — the silent failure `72` §9 risk 1 describes.
+      expect(bannerSlotHeight(50), 50 + bannerAdChromeHeight);
+      expect(bannerSlotHeight(0), bannerAdChromeHeight);
+    });
+  });
+
   group('fabBottom', () {
     test('with no banner showing, keeps the pre-existing 16dp gap above the nav', () {
       const safeBottom = 20.0;

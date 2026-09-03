@@ -35,10 +35,21 @@ export async function AppScreenshotRow() {
   return (
     <section className="py-16 md:py-20" style={{ background: "var(--bg)" }}>
       <div className="max-w-[1200px] mx-auto px-4 md:px-8">
-        <h2 className="text-[28px] md:text-[44px] font-bold tracking-[-0.02em] max-w-[18ch]">{t("title")}</h2>
+        <h2 id="app-screenshots-heading" className="text-[28px] md:text-[44px] font-bold tracking-[-0.02em] max-w-[18ch]">
+          {t("title")}
+        </h2>
       </div>
 
+      {/* `tabIndex`/`role`/`aria-labelledby`: a horizontally scrollable region
+          with no focusable children can only be scrolled with a pointer, which
+          is axe's `scrollable-region-focusable` (WCAG 2.1.1) — the phones in
+          this row are static markup, so without this a keyboard user reaches
+          the first frame and no further (docs/landing_page/72 W4). Labelled by
+          the section's own heading rather than a new string. */}
       <div
+        tabIndex={0}
+        role="group"
+        aria-labelledby="app-screenshots-heading"
         className="flex gap-6 md:gap-8 overflow-x-auto pt-8 pb-4 px-4 md:px-8 mt-2"
         style={{ scrollSnapType: "x mandatory" }}
       >

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui' show CheckedState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -94,6 +95,7 @@ Future<void> _pumpPaywall(
   required PaywallTrigger trigger,
   Entitlement? entitlement,
   List<ProductDetails>? products,
+  double textScale = 1.0,
 }) async {
   final client = _FakeStorePurchaseClient(products: products ?? _defaultProducts);
   final dio = Dio(BaseOptions(baseUrl: 'http://test'));
@@ -123,6 +125,11 @@ Future<void> _pumpPaywall(
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery.withClampedTextScaling(
+          minScaleFactor: textScale,
+          maxScaleFactor: textScale,
+          child: child!,
+        ),
       ),
     ),
   );
@@ -272,6 +279,69 @@ void main() {
       expect(find.text(l10n.paywallBenefitNoAdsDescription), findsNothing);
       expect(find.text(l10n.paywallBenefitFullHistoryDescription), findsNothing);
       expect(find.text(l10n.paywallBenefitUnlimitedAiDescription), findsNothing);
+    });
+  });
+
+  // `72` Prompt 9 — `69` §8 and frame P10 ask for a large-text adaptation
+  // that the width-only `compact` branch never delivered.
+  group('large text scale', () {
+    testWidgets('at 1x the crest and the benefit descriptions are both there', (tester) async {
+      await _pumpPaywall(tester, trigger: PaywallTrigger.settings);
+
+      expect(find.byIcon(Icons.workspace_premium), findsOneWidget);
+      expect(find.text('Train and eat without interruptions'), findsOneWidget);
+    });
+
+    testWidgets('at 2x the crest is gone and the benefits collapse to their titles',
+        (tester) async {
+      await _pumpPaywall(tester, trigger: PaywallTrigger.settings, textScale: 2.0);
+
+      expect(find.byIcon(Icons.workspace_premium), findsNothing);
+      expect(find.text('Train and eat without interruptions'), findsNothing);
+      // Still a working paywall, not a stub: the benefit titles and the CTA
+      // survive.
+      expect(find.text('No ads'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the CTA grows instead of truncating its price (69 §8)', (tester) async {
+      // The worst case the spec names: the narrowest supported screen *and* a
+      // large scale together. The old fixed 56 dp `SizedBox` clipped here.
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await _pumpPaywall(tester, trigger: PaywallTrigger.settings, textScale: 2.5);
+
+      final button = find.widgetWithText(FilledButton, 'Subscribe — \$39.99');
+      expect(button, findsOneWidget);
+      // Grown past the base height to fit the wrapped label, and nothing
+      // overflowed while doing it.
+      expect(tester.getSize(button).height, greaterThan(56));
+      expect(tester.takeException(), isNull);
+      final text = tester.widget<Text>(find.text('Subscribe — \$39.99'));
+      expect(text.overflow, isNot(TextOverflow.ellipsis));
+    });
+  });
+
+  group('plan cards are semantic radios (69 §8)', () {
+    testWidgets('each card is one mutually-exclusive node, and only the selected one is checked',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pumpPaywall(tester, trigger: PaywallTrigger.settings);
+
+      // `container: true` on the card means the whole card is one node — the
+      // finder below lands on it via any of its own texts.
+      final yearly = tester.getSemantics(find.text('Yearly'));
+      final monthly = tester.getSemantics(find.text('Monthly'));
+
+      expect(yearly.flagsCollection.isInMutuallyExclusiveGroup, isTrue);
+      expect(monthly.flagsCollection.isInMutuallyExclusiveGroup, isTrue);
+      // Yearly is pre-selected (63 D-M6), and exactly one is checked — the
+      // state the icon and the border were already showing sighted users.
+      expect(yearly.flagsCollection.isChecked, CheckedState.isTrue);
+      expect(monthly.flagsCollection.isChecked, CheckedState.isFalse);
+      handle.dispose();
     });
   });
 

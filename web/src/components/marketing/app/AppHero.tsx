@@ -83,10 +83,16 @@ export async function AppHero() {
                   <div className="text-lg font-extrabold tabular-nums mt-0.5">7 240</div>
                 </div>
               </div>
+              {/* No `opacity-80` on these two lines: at 10.5/11 px over
+                  `--secondary` it measured 3.92:1 in the light theme (axe
+                  `color-contrast`, docs/landing_page/72 W3). Size and weight
+                  already carry the hierarchy against the 15 px name — the same
+                  call commit 1c252fd made for the 15 mobile sites that drew
+                  small text at 0.6–0.8 alpha. */}
               <div className="rounded-md p-3 mt-2.5" style={{ background: "var(--secondary)", color: "var(--bg)" }}>
-                <div className="text-[10.5px] font-bold opacity-80">{t("mockWorkoutLabel").toUpperCase()}</div>
+                <div className="text-[10.5px] font-bold">{t("mockWorkoutLabel").toUpperCase()}</div>
                 <div className="text-[15px] font-extrabold mt-0.5">{t("mockWorkoutName")}</div>
-                <div className="text-[11px] font-semibold opacity-80 mt-0.5">{t("mockWorkoutMeta")}</div>
+                <div className="text-[11px] font-semibold mt-0.5">{t("mockWorkoutMeta")}</div>
               </div>
             </div>
           </div>

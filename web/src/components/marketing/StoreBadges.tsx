@@ -33,8 +33,22 @@ export async function StoreBadges({
   const sizeClasses = size === "lg" ? "h-14 px-5 text-sm gap-2.5" : "h-10 px-3.5 text-[13px] gap-2";
   const iconSize = size === "lg" ? "text-xl" : "text-lg";
 
+  // `phone_iphone`, not `apple`: **Material Symbols has no `apple` glyph**, so
+  // the ligature failed and the icon font fell back to rendering the literal
+  // string "APPLE" in a stretched wide face, next to a label that then wrapped
+  // onto two lines — in the footer of every marketing page, on the app page and
+  // on the download page (docs/landing_page/72 D-F2). The delivered canvas has
+  // the same bug (`design/Lifey Landing.dc.html` L02 draws `<span class="mi">
+  // apple</span>`), which is where it came from; see `68` §12.2 DV-11.
+  //
+  // Deliberately *not* an inline Apple-logo path either: Apple's identity
+  // guidelines only permit their mark inside the official "Download on the App
+  // Store" badge lockup, which is exactly the artwork this component's header
+  // comment explains we can't ship until a real listing exists. A neutral,
+  // real glyph is the honest placeholder until `63` M5 swaps in both official
+  // badges.
   const badges = [
-    { icon: "apple", platform: "apple" as const, label: t("appStore") },
+    { icon: "phone_iphone", platform: "apple" as const, label: t("appStore") },
     { icon: "shop", platform: "google" as const, label: t("googlePlay") },
   ];
 

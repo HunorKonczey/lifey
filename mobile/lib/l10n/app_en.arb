@@ -4720,6 +4720,22 @@
   "@bannerAdSemanticsLabel": {
     "description": "Screen-reader label identifying BannerAdSlot as an advertisement, distinct from the surrounding content (docs/landing_page/67-mobile-free-pro-plan.md §7)"
   },
+  "sponsorshipEndedCardTitle": "Your coach's Pro has ended",
+  "@sponsorshipEndedCardTitle": {
+    "description": "Title of the dismissible dashboard card shown once, after a trainer-sponsored Pro entitlement lapses and the user drops back to the free tier (docs/landing_page/69 §12.1)"
+  },
+  "sponsorshipEndedCardMessage": "Your coaching relationship has ended, so the Pro features are switched off. Your data is all still here.",
+  "@sponsorshipEndedCardMessage": {
+    "description": "Body of the sponsorship-ended dashboard card. The reassurance that no data was lost is the important half — a shortened history looks exactly like deleted data (docs/landing_page/69 §12.1)"
+  },
+  "sponsorshipEndedCardDismissTooltip": "Dismiss",
+  "@sponsorshipEndedCardDismissTooltip": {
+    "description": "Tooltip on the close button of the sponsorship-ended dashboard card"
+  },
+  "bannerAdLabel": "Ad",
+  "@bannerAdLabel": {
+    "description": "Visible label at the top-left of the banner ad slot, marking the area below it as an advertisement rather than product UI (docs/landing_page/69 §4.4, frame P15)"
+  },
   "bannerRemoveAdsTooltip": "Remove ads",
   "@bannerRemoveAdsTooltip": {
     "description": "Tooltip/semantics label for the small affix on BannerAdSlot that opens the paywall with the adRemoval trigger (67 §5.2)"

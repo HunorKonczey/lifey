@@ -44,6 +44,7 @@ import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
 import '../domain/today_meal_group.dart';
 import 'widgets/calorie_sparkline_card.dart';
+import 'widgets/sponsorship_ended_card.dart';
 import 'widgets/stat_card.dart';
 
 // Vertical layout constants shared between DashboardScreen and _DashboardBody.
@@ -318,6 +319,11 @@ class _DashboardBody extends ConsumerWidget {
 
         // ── Onboarding banner (hidden once onboarded or dismissed) ─────────
         const OnboardingBanner(),
+
+        // ── "Your coach's Pro has ended" — shown once, then never again
+        // (`69` §12.1). Above the fold on purpose: it explains why features
+        // the user had yesterday are gone today. ─────────────────────────
+        const SponsorshipEndedCard(),
 
         // ── Water ────────────────────────────────────────────────────────
         WaterCard(

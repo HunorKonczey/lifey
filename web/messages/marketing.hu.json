@@ -468,6 +468,13 @@
     "error": "Nem sikerült elküldeni. Próbáld újra, vagy írj e-mailt közvetlenül.",
     "directEmailPrefix": "Vagy írj közvetlenül:"
   },
+  "notFound": {
+    "eyebrow": "404",
+    "title": "Ez az oldal nincs meg",
+    "body": "Lehet, hogy elírtad a címet, vagy az oldal azóta átkerült máshová.",
+    "home": "Vissza a főoldalra",
+    "pricing": "Árak megtekintése"
+  },
   "legal": {
     "terms": {
       "title": "Általános Szerződési Feltételek",

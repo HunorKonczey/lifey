@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -10,15 +8,10 @@ import '../entitlements/entitlement_providers.dart';
 import '../entitlements/paywall_navigation.dart';
 import '../entitlements/paywall_trigger.dart';
 import '../theme/app_tokens.dart';
+import 'ad_ids.dart';
 import 'ads_service.dart';
 import 'banner_ad_loader.dart';
-
-/// Google's public **test** banner ad unit ids — distinct from the test app
-/// ids already in `Info.plist`/`AndroidManifest.xml` (`67` Prompt 8). Swap
-/// for the real per-platform ids from the AdMob console before release.
-String bannerAdUnitId() => Platform.isIOS
-    ? 'ca-app-pub-3940256099942544/2934735716'
-    : 'ca-app-pub-3940256099942544/6300978111';
+import 'nav_reserved_space.dart';
 
 /// Overridden with a fake in tests — see [BannerAdLoader]'s doc.
 final bannerAdLoaderProvider = Provider<BannerAdLoader>((ref) => PlatformBannerAdLoader());
@@ -93,7 +86,11 @@ class _BannerAdSlotState extends ConsumerState<BannerAdSlot> {
             return;
           }
           setState(() => _ad = ad as BannerAd);
-          ref.read(bannerAdSlotHeightProvider(widget.tabIndex).notifier).set(size.height.toDouble());
+          // The chrome row counts: everything that pads content or places a
+          // FAB reads this number (`nav_reserved_space.dart`).
+          ref
+              .read(bannerAdSlotHeightProvider(widget.tabIndex).notifier)
+              .set(bannerSlotHeight(size.height.toDouble()));
         },
         onAdFailedToLoad: (ad, error) => ad.dispose(),
       ),
@@ -117,35 +114,89 @@ class _BannerAdSlotState extends ConsumerState<BannerAdSlot> {
     final scheme = Theme.of(context).colorScheme;
 
     return Semantics(
+      container: true,
       label: l10n.bannerAdSemanticsLabel,
       child: Container(
-        height: ad.size.height.toDouble(),
         decoration: BoxDecoration(
           color: scheme.surfaceContainer,
           border: Border(top: BorderSide(color: scheme.outlineVariant)),
         ),
-        child: Stack(
-          alignment: Alignment.center,
+        // A Column, not a Stack: nothing of ours may be painted on top of a
+        // served creative (`72` D-F3). The earlier version overlaid the
+        // remove-ads button on the ad's top-right corner, which is both an
+        // obscured ad and an accidental-click generator under AdMob's
+        // policies — and it dropped the "Reklám" label entirely, which
+        // `69` §4.4 and §9 both require.
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            AdWidget(ad: ad),
-            Positioned(
-              top: 0,
-              right: 0,
-              child: SizedBox(
-                width: 44,
-                height: 44,
-                child: IconButton(
-                  icon: const Icon(Icons.block, size: 24),
-                  tooltip: l10n.bannerRemoveAdsTooltip,
-                  style: IconButton.styleFrom(
-                    backgroundColor: scheme.surfaceContainer.withValues(alpha: 0.85),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.card),
-                    ),
-                  ),
-                  onPressed: () => openPaywall(context, PaywallTrigger.adRemoval),
+            const BannerAdChrome(),
+            SizedBox(
+              height: ad.size.height.toDouble(),
+              width: ad.size.width.toDouble(),
+              child: AdWidget(ad: ad),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The slot's own furniture: the "Reklám" label and the remove-ads button,
+/// in a row **above** the creative (`69` §4.4, frame P15 — which draws exactly
+/// this: a 12 px muted label left, a 24 px `block` glyph in a 44 × 28 target
+/// right).
+///
+/// Public and separate from [BannerAdSlot] so it can be widget-tested on its
+/// own: the slot's loaded state contains a real platform-view [AdWidget] and
+/// cannot be pumped in a widget test (see `banner_ad_slot_test.dart`).
+class BannerAdChrome extends StatelessWidget {
+  const BannerAdChrome({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      height: bannerAdChromeHeight,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 4, 6, 0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // The visible label is what makes the ad honest; the slot's
+            // Semantics container already says "Hirdetés" to a screen
+            // reader, so reading both would be a stutter.
+            ExcludeSemantics(
+              child: Text(
+                l10n.bannerAdLabel,
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.block, size: 20),
+              tooltip: l10n.bannerRemoveAdsTooltip,
+              color: scheme.onSurfaceVariant,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 28),
+              // `shrinkWrap`, or Material's default 48 dp minimum tap target
+              // would silently grow the touch area past the visible control
+              // and back down over the creative — the same accidental-click
+              // problem this row exists to remove, just invisible.
+              style: IconButton.styleFrom(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+              ),
+              onPressed: () => openPaywall(context, PaywallTrigger.adRemoval),
             ),
           ],
         ),

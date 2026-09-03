@@ -468,6 +468,13 @@
     "error": "Couldn't send that. Try again, or email us directly.",
     "directEmailPrefix": "Or email us directly:"
   },
+  "notFound": {
+    "eyebrow": "404",
+    "title": "This page doesn't exist",
+    "body": "The address may be mistyped, or the page has moved since.",
+    "home": "Back to the home page",
+    "pricing": "See pricing"
+  },
   "legal": {
     "terms": {
       "title": "Terms of Service",

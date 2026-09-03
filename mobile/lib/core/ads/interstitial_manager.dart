@@ -1,21 +1,12 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../../features/workouts/application/workout_session_controller.dart';
 import '../entitlements/entitlement_providers.dart';
+import 'ad_ids.dart';
 import 'interstitial_ad_loader.dart';
 import 'interstitial_preferences.dart';
-
-/// Google's public **test** interstitial ad unit ids — distinct from the
-/// banner ones in `banner_ad_slot.dart` and the app ids in `Info.plist`/
-/// `AndroidManifest.xml` (`67` Prompt 8). Swap for the real per-platform ids
-/// from the AdMob console before release.
-String interstitialAdUnitId() => Platform.isIOS
-    ? 'ca-app-pub-3940256099942544/4411468910'
-    : 'ca-app-pub-3940256099942544/1033173712';
 
 /// Where [InterstitialManager.maybeShow] is called from (`67` §5.3) —
 /// "exactly two places", and only these.

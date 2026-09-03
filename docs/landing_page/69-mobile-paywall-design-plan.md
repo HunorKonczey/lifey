@@ -401,6 +401,23 @@ B were ever chosen — the last thing in the list is the explanation of where th
 ad wedged between the user's data and that explanation. Moot under DV-10; kept in case the
 placement is revisited.
 
+**DV-14 §4.1's "60 % opacity" on a locked range row is dropped — the spec yields to WCAG AA.**
+`_RangeMenuRow` implemented it literally, and it is the same pattern commit `1c252fd` removed
+from 15 other places in the app after measuring 0.6–0.8 alpha secondary text at 2.9–3.9:1. That
+sweep missed this one because it dims with `Opacity()` around a subtree rather than an alpha'd
+colour. Locked rows now draw at full alpha; the `lock` glyph in the check mark's own slot and the
+row's semantics label carry the state, which is what §8 ("no gate communicated by colour alone")
+wants anyway. Fixed in `72` Prompt 8, along with a second defect found there: the row's semantics
+label *merged* with its own text, so a screen reader read "90 days — Pro required, 90 days" — it
+now replaces it (`ExcludeSemantics`).
+
+**DV-15 P15's slot chrome was drawn correctly and implemented wrongly — now corrected in code.**
+The frame draws a 12 px muted "Reklám" label and the `block` glyph in a 44 × 28 target in a row
+**above** the creative. `67` Prompt 9 shipped a `Stack` instead: the button painted on top of the
+`AdWidget`, and no label at all — failing §4.4, failing §9's acceptance criterion, and putting a
+control over a served ad, which AdMob treats as obscuring it. Rebuilt as the frame draws it in
+`72` Prompt 7; no design change, so nothing to redraw.
+
 ---
 
 ## 12. The eight open questions from P27 — answered
@@ -477,9 +494,14 @@ real (`67` §4.1 — never a fabricated price). Needs one sub-frame on P08 (§13
 
 Small, and none of it blocks `67`'s prompts:
 
-1. **DV-9 fix in P11** — one check mark, not two. Do it alongside `67` Prompt 3.
-2. **Sponsorship-ended card** (§12.1) — one dismissible dashboard card, both themes.
-3. **Price-loading skeleton** (§12.8) — one sub-frame on P08.
+1. **DV-9 fix in P11** — one check mark, not two. Fixed in code (`67` Prompt 3); the frame itself
+   is still undrawn, and is now `72` Prompt 17's job.
+2. **Sponsorship-ended card** (§12.1) — one dismissible dashboard card, both themes. **Built
+   without a frame** in `72` Prompt 10, from §12.1's own copy: `surfaceContainer` card, info
+   glyph, title + reassurance line, close button, no CTA. A frame is still worth having to check
+   that call against.
+3. **Price-loading skeleton** (§12.8) — one sub-frame on P08. **Built without a frame** in `67`
+   Prompt 6 (two skeleton plan cards, CTA reading "Előfizetés" with no amount), same note.
 4. **Download page frames** — still on the web side (`68` §13.3), unchanged by this canvas.
 
 Everything else `71` asked for was delivered.

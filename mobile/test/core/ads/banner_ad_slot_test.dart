@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lifey/core/ads/banner_ad_loader.dart';
 import 'package:lifey/core/ads/banner_ad_slot.dart';
+import 'package:lifey/core/ads/nav_reserved_space.dart';
 import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/l10n/app_localizations.dart';
 import 'package:lifey/shared/widgets/shell_fab.dart';
@@ -102,4 +104,71 @@ void main() {
     expect(loader.getAdaptiveSizeCallCount, 1);
     expect(tester.getSize(find.byType(BannerAdSlot)), Size.zero);
   });
+
+  // `72` Prompt 7 / D-F3: the slot's own furniture. Tested through
+  // [BannerAdChrome] directly because the loaded slot contains a real
+  // platform-view AdWidget (see this file's header).
+  group('BannerAdChrome', () {
+    testWidgets('shows the visible "Ad" label the ad policy and `69` §4.4 require',
+        (tester) async {
+      await _pumpChrome(tester);
+
+      expect(find.text('Ad'), findsOneWidget);
+    });
+
+    testWidgets('is exactly bannerAdChromeHeight tall, so the reserved height stays honest',
+        (tester) async {
+      await _pumpChrome(tester);
+
+      expect(tester.getSize(find.byType(BannerAdChrome)).height, bannerAdChromeHeight);
+    });
+
+    testWidgets('its remove-ads button opens the paywall with the adRemoval trigger',
+        (tester) async {
+      await _pumpChrome(tester);
+
+      await tester.tap(find.byIcon(Icons.block));
+      await tester.pumpAndSettle();
+
+      expect(find.text('paywall'), findsOneWidget);
+    });
+
+    testWidgets('the button never reaches below its own row — nothing may overlap the creative',
+        (tester) async {
+      await _pumpChrome(tester);
+
+      // A default IconButton would claim a 48 dp tap target and hang below
+      // the 32 dp chrome row, back over the ad. `shrinkWrap` is what stops
+      // that, and it is invisible without this assertion.
+      final button = tester.getRect(find.byType(IconButton));
+      final chrome = tester.getRect(find.byType(BannerAdChrome));
+      expect(button.bottom, lessThanOrEqualTo(chrome.bottom));
+      expect(button.height, lessThanOrEqualTo(bannerAdChromeHeight));
+    });
+  });
+}
+
+Future<void> _pumpChrome(WidgetTester tester) async {
+  final router = GoRouter(
+    initialLocation: '/host',
+    routes: [
+      GoRoute(
+        path: '/host',
+        builder: (context, state) => const Scaffold(body: Column(children: [BannerAdChrome()])),
+      ),
+      GoRoute(path: '/paywall', builder: (context, state) => const Text('paywall')),
+    ],
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      child: MaterialApp.router(
+        routerConfig: router,
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
