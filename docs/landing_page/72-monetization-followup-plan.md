@@ -1,6 +1,8 @@
 # 72 – Landing Page & Monetization — Follow-up
 
-Status: **F1 done bar Prompt 6 (blocked on company data) · F2 done**; F3–F6 proposed
+Status: **F1 done bar Prompt 6 (blocked on company data) · F2 done · F3 done as far as this
+environment reaches** (Prompt 14 complete; Prompts 12–13 automated where possible, the rest
+handed to [`73`](73-billing-verification-runbook.md)); F4–F6 proposed
 Scope: web · mobile · backend · design · docs — the closing pass over `63`–`71`
 Depends on: `63`–`71` (all implemented; `64` Prompt 12 partial, see §1)
 
@@ -210,18 +212,18 @@ the first paying customer · **S3** = correctness of the record, or polish.
 | M6 | ✅ **Fixed (Prompt 8).** Plan cards were not semantic radios | `_PlanCard` drew the icons but carried no `Semantics(inMutuallyExclusiveGroup:, checked:)`; `69` §8 asks for "a single semantic radio" | S2 |
 | M7 | `AiCreditChip` / `requireAiCredits` are built, tested and mounted nowhere | recorded deliberately in `gated_surfaces_test.dart`; blocked on `docs/23` | S3 |
 | M8 | `PaywallTrigger.onboarding` is unreachable | see D-F7 — a decision once recorded, not a defect | S3 |
-| M9 | `67` §11's manual row has never run: sandbox purchase on both stores, restore on a second device, UMP consent in an EU locale, a full offline→grace-expiry cycle | needs devices + store sandboxes | S1 |
+| M9 | ⏸ **Written up, not run (Prompt 13).** `67` §11's manual row still needs two physical devices and both store sandboxes; it is now a 15-row matrix in [`73`](73-billing-verification-runbook.md) §2 rather than a one-line reminder | needs devices + store sandboxes | S1 |
 | M10 | Chat-attachment tests fail on Windows — 2 to 4 per run, not a fixed 3: it is a file-lock race (`PathAccessException`), so the count varies | pre-existing, unrelated, documented in `67` §11 | S3 |
 
 ### 3.3 Backend (`64`, `66`)
 
 | # | Finding | Evidence | Sev |
 |---|---|---|---|
-| B1 | `64` Prompt 12's gate half is unbuilt: no 402/`AI_CREDITS_EXHAUSTED`, no "a failed call doesn't burn a credit" guarantee | there is no AI call path to increment inside; `docs/23` is plan-only | S2 |
-| B2 | Free AI allowance config default is 5, strategy says 3 | `application.yml` vs `63` D-M5 | S2 |
-| B3 | Stripe has never been exercised against a real test-mode account — checkout, the consent checkbox, the portal, the webhook, a cancellation | `64` Prompt 4 and `66` §11's manual rows | S1 |
+| B1 | ⏸ **Specified, still unbuilt (Prompt 14).** The gate half has no AI call path to sit in; `docs/23` now carries the exact call site, transaction boundary and status code it must use when that feature lands | `docs/23` §"The credit counter already exists" | S2 |
+| B2 | ✅ **Fixed (Prompt 14).** Free AI allowance config default was 5 while the strategy and the paywall design both say 3 | `application.yml`; now pinned end to end by `EntitlementControllerIntegrationTest` against the real config file | S2 |
+| B3 | ⚠️ **Half closed (Prompt 12).** Every Checkout/Portal call is now validated against Stripe's own API schema via `stripe-mock` — no account needed, runs in CI. The half that needs a real test-mode account (do our price ids exist, does the consent checkbox render, a real cancellation) is a 12-step runbook in [`73`](73-billing-verification-runbook.md) §1 | `StripeBillingServiceStripeMockIntegrationTest`; `64` Prompt 4 and `66` §11's manual rows | S1 |
 | B4 | Pro's 100/month fair-use ceiling (`63` D-M5 note 2) is enforced nowhere | deliberate — belongs to `AiFeatureGate`; tracked here so it is not forgotten | S3 |
-| B5 | No runbook for `BillingReconciliationJob` corrections | `64` §15 asks for one | S2 |
+| B5 | No runbook for `BillingReconciliationJob` corrections | `64` §15 asks for one. [`73`](73-billing-verification-runbook.md) covers the verification passes, not this — it is still open | S2 |
 
 ### 3.4 Design canvases (`68`, `69`)
 
@@ -495,18 +497,53 @@ The script is what Prompt 20 runs when the real ids arrive.
 Nothing here can be done in this repo; each step is a scripted manual run whose output is pasted
 back into the plan it verifies.
 
-**Prompt 12 — Backend: one Stripe test-mode round trip**
+**Prompt 12 — Backend: one Stripe test-mode round trip — ⚠️ half done, and the half that could
+be automated now is**
 Real test keys in a local profile, the six Prices created in the dashboard, then: checkout
 (assert `client_reference_id` and that the consent checkbox renders), the webhook via the Stripe
 CLI, the portal, a cancellation, and an over-limit downgrade.
 *Verify:* the `subscription` row at each step; `64` Prompt 4's and `66` §11's manual rows tick.
 
-**Prompt 13 — Mobile: the store sandbox matrix (`67` §11)**
+Writing the runbook surfaced something the plan had missed: **part of what "needs a real Stripe
+account" does not.** `64` Prompt 4's gap was that checkout and portal had only ever been
+exercised through `Mockito.mockStatic`, which proves the params we *intended* to send and
+nothing about whether Stripe would accept them. That is fixable without an account —
+`stripe-mock` is Stripe's own mock server, validating requests against the published OpenAPI
+spec — so `StripeBillingServiceStripeMockIntegrationTest` now runs the real `stripe-java` SDK
+over real HTTP against it in a Testcontainer, covering checkout in both customer branches
+(`customer` vs `customer_email`, which Stripe rejects if both are sent) and the portal.
+
+**Its limits were measured, not assumed**, because a test that cannot fail is worse than no
+test. Probing the container directly: a missing required param is rejected, an illegal enum
+value is rejected (`mode=bogus` → 400, "value is not in enumeration") — but **values are not
+checked at all**, and blanking `pro-monthly-price-id` left all three tests passing. So it proves
+the *shape* of every call is legal and nothing about the values, which is written into the
+test's own javadoc so the next reader does not over-trust it.
+
+What still needs the account is therefore precisely: that our price ids exist (S1), that the
+hosted page renders the withdrawal-waiver checkbox (S2 — a legal requirement, `63` §5, and the
+only place it can be seen), and the real subscription lifecycle through the portal to
+cancellation and downgrade (S8–S12). Those are [`73`](73-billing-verification-runbook.md) §1's
+twelve steps, with the SQL to run at each one.
+
+**Prompt 13 — Mobile: the store sandbox matrix (`67` §11) — ⏸ written up, cannot be run here**
 Sandbox purchase on both stores; restore on a second device; UMP consent in an EU locale; an
 offline → grace-expiry cycle with the device clock moved forward.
 *Verify:* the four rows in `67` §11 stop being aspirational.
 
-**Prompt 14 — Backend: AI credit default + the gate's other half**
+Nothing here is automatable: it needs two physical devices, an Apple sandbox tester, a Play
+licence tester and a service-account key. What it *did* need was to stop being four words in a
+test-plan table, so it is now [`73`](73-billing-verification-runbook.md) §2 — fifteen rows with
+a column per platform, naming the endpoint to watch (`POST /api/v1/billing/store-purchase`,
+which the app calls **before** the store's `completePurchase`, D-P8) and what each failure would
+look like.
+
+Two rows are called out as the ones worth doing even when time is short, because both fail
+**silently**: a second-device restore that quietly creates a second `subscription` row surfaces
+as a support ticket weeks later, and an unacknowledged Play purchase auto-refunds after three
+days with no error anywhere (`67` §13 risk 5).
+
+**Prompt 14 — Backend: AI credit default + the gate's other half — ✅ done**
 Default `free-ai-credits-per-month` to 3 (D-F6). The 402/`AI_CREDITS_EXHAUSTED` gate and the
 "a failed call doesn't increment" guarantee land with `docs/23`'s meal-estimation feature, not
 before — this step's deliverable is the config change plus a section in `docs/23` naming exactly
@@ -514,6 +551,19 @@ where `AiUsageCounterService.recordUsage` must be called and what must happen on
 call.
 *Verify:* the existing `EntitlementServiceImplTest` cases pass against the new default; the
 `docs/23` section names the class and the transaction boundary.
+
+The config change is one character; the part worth doing carefully was making sure it cannot
+drift again. `EntitlementServiceImplTest` builds `BillingProperties` by hand, so it would have
+kept passing against a fixture nobody ships — the assertion that actually pins the number is now
+in `EntitlementControllerIntegrationTest`, which loads the real `application.yml` and asserts
+`aiCreditsRemaining` is 3 next to the existing `historyDays` is 30. Both free-tier numbers
+`63` D-M5 promises are now checked against the file that ships them.
+
+`docs/23` gained "The credit counter already exists — wire into it, do not re-invent it": the
+five pieces `64` Prompt 12 built, the exact three-line call order (gate → LLM call →
+`recordUsage`), why `recordUsage` must not sit in a transaction that can still roll back or be
+reached from a `finally`, and the 402-vs-403 distinction (out of credits vs. plan does not
+include the feature) with the mobile trigger each maps to.
 
 ### Milestone F4 — the record matches reality
 
@@ -608,8 +658,9 @@ in `lighthouserc.js` and `check-js-budget.mjs` tighten in the same commit.
 | Vitest | none new — F1's fixes are markup-level |
 | Flutter widget | banner chrome row + no-overlap assertion; locked-row semantics and alpha; plan-card radio semantics; paywall at 1× and 2× text scale; the sponsorship-ended card's once-only behaviour |
 | Flutter structural | `gated_surfaces_test.dart` unchanged (no new gate); the release-id assertion from Prompt 11 |
-| Backend | `EntitlementServiceImplTest` against the new default of 3 |
-| Manual | Stripe test-mode round trip (Prompt 12); the store sandbox matrix (Prompt 13); the invite deep link on a real device (Prompt 20); Rich Results against a deployed URL |
+| Backend | `EntitlementControllerIntegrationTest` pins **both** free-tier numbers against the real `application.yml` (30 days, 3 AI calls); `EntitlementServiceImplTest`'s fixture updated to match |
+| Backend (Stripe) | `StripeBillingServiceStripeMockIntegrationTest` — the real SDK over HTTP against `stripe-mock`, validating checkout (both customer branches) and portal against Stripe's own OpenAPI schema. Proves request *shape*, not values (measured: enums and required fields are enforced, a blank price id is not) |
+| Manual | [`73`](73-billing-verification-runbook.md) §1 (Stripe test-mode round trip, 12 steps) and §2 (store sandbox matrix, 15 rows × 2 platforms); the invite deep link on a real device (Prompt 20); Rich Results against a deployed URL |
 
 ---
 

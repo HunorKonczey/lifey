@@ -197,8 +197,12 @@ lifey:
     # Free-tier history window shown to the mobile app (64 §3.3) — a display
     # limit, so changing it is a config change, not a store release.
     free-history-days: ${BILLING_FREE_HISTORY_DAYS:30}
-    # Free-tier monthly AI call allowance (64 §3.4); null-equivalent (unlimited) on Pro.
-    free-ai-credits-per-month: ${BILLING_FREE_AI_CREDITS_PER_MONTH:5}
+    # Free-tier monthly AI call allowance (64 §3.4); null-equivalent (unlimited)
+    # on Pro. **3, because that is the number the product promises**: 63 D-M5's
+    # table and the paywall design's own chip (69 §4.3, frame P13 — "3/3") both
+    # say three. It defaulted to 5 until docs/landing_page/72 D-F6, which was
+    # invisible only because no AI action screen exists yet to display it.
+    free-ai-credits-per-month: ${BILLING_FREE_AI_CREDITS_PER_MONTH:3}
     # How long a cached entitlement snapshot stays valid offline (63 D-M10).
     offline-grace-days: ${BILLING_OFFLINE_GRACE_DAYS:7}
     # Per-run cap on BillingReconciliationJob's provider re-fetch (64 §7) — keeps a

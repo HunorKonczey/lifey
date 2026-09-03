@@ -49,8 +49,12 @@ class EntitlementServiceImplTest {
     private static final Long USER_ID = 1L;
     private static final Long TRAINER_ID = 2L;
 
-    private static final BillingProperties ENABLED = new BillingProperties(true, 30, 5, 7, 200);
-    private static final BillingProperties DISABLED = new BillingProperties(false, 30, 5, 7, 200);
+    // 30 days / 3 AI calls / 7 days grace — the real `application.yml` defaults
+    // (63 D-M5). The AI number was 5 here and in config until
+    // docs/landing_page/72 D-F6; `EntitlementControllerIntegrationTest` pins it
+    // against the actual config file so this fixture cannot drift again.
+    private static final BillingProperties ENABLED = new BillingProperties(true, 30, 3, 7, 200);
+    private static final BillingProperties DISABLED = new BillingProperties(false, 30, 3, 7, 200);
 
     @Mock
     UserRepository userRepository;
@@ -190,7 +194,7 @@ class EntitlementServiceImplTest {
         assertThat(response.tier()).isEqualTo(EntitlementTier.FREE);
         assertThat(response.source()).isEqualTo(EntitlementSource.NONE);
         assertThat(response.historyDays()).isEqualTo(30);
-        assertThat(response.aiCreditsRemaining()).isEqualTo(5);
+        assertThat(response.aiCreditsRemaining()).isEqualTo(3);
         assertThat(response.adsEnabled()).isTrue();
     }
 
@@ -205,7 +209,7 @@ class EntitlementServiceImplTest {
 
         EntitlementResponse response = service(ENABLED).resolve(USER_ID);
 
-        assertThat(response.aiCreditsRemaining()).isEqualTo(3);
+        assertThat(response.aiCreditsRemaining()).isEqualTo(1);
     }
 
     @Test

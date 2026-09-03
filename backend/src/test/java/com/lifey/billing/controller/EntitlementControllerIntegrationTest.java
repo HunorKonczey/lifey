@@ -77,6 +77,13 @@ class EntitlementControllerIntegrationTest {
                 .andExpect(jsonPath("$.source").value("NONE"))
                 .andExpect(jsonPath("$.adsEnabled").value(true))
                 .andExpect(jsonPath("$.historyDays").value(30))
+                // Both free-tier numbers are asserted against the *real*
+                // `application.yml`, not a fixture: 63 D-M5 promises 30 days and
+                // 3 AI calls, the paywall design draws "3/3" (69 §4.3, P13), and
+                // the config had drifted to 5 unnoticed until
+                // docs/landing_page/72 D-F6. This is the assertion that catches
+                // it next time.
+                .andExpect(jsonPath("$.aiCreditsRemaining").value(3))
                 .andExpect(jsonPath("$.trainer").doesNotExist())
                 .andExpect(jsonPath("$.degraded").value(false));
     }
