@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/ads/interstitial_manager.dart';
 import '../../../core/format/cardio_formatter.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_service.dart';
@@ -1505,6 +1506,11 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
           );
       if (!mounted) return;
       _ticker?.cancel();
+      // `67` §5.3: fired here, not blocking the summary navigation below —
+      // same fire-and-forget timing as `LogMealScreen`'s own call site.
+      unawaited(
+        ref.read(interstitialManagerProvider).maybeShow(context, InterstitialReason.workoutSaved),
+      );
       unawaited(ref.read(workoutSessionNotifierServiceProvider).end());
       // Keyed on the push having happened, not on whether the watch is
       // actually available/paired — same reasoning as `LogSessionScreen`'s
@@ -2072,7 +2078,7 @@ class CardioSessionScreenState extends ConsumerState<CardioSessionScreen>
                 ),
           labelColor: benched ? _kAutoAccent : scheme.primary,
           value: CardioFormatter.duration(playingDuration),
-          valueColor: benched ? scheme.onSurfaceVariant.withValues(alpha: 0.7) : null,
+          valueColor: benched ? scheme.onSurfaceVariant : null,
         ),
         const SizedBox(height: 18),
         _MetricRow(

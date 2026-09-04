@@ -445,17 +445,25 @@ class _WorkoutSuccessDialogState extends State<WorkoutSuccessDialog>
     final subtitleColor =
         isDark ? const Color(0xFFA8A899) : const Color(0xFF6A6A60);
     final rowBg = isDark ? const Color(0xFF161611) : const Color(0xFFECEBDE);
+    // Was 0xFF777264 / 0xFF8A8A7E — 2.91-3.78:1 against the surfaces they
+    // sit on, below WCAG AA. These are the same two hexes the web theme
+    // already replaced in its `--muted` token; reusing its corrected pair
+    // keeps the two products' muted tier identical.
     final moreColor =
-        isDark ? const Color(0xFF777264) : const Color(0xFF8A8A7E);
+        isDark ? const Color(0xFF918B7A) : const Color(0xFF696960);
     final chipBg = isDark
         ? const Color(0xFF4CAF50).withValues(alpha: 0.15)
         : const Color(0xFF4CAF50).withValues(alpha: 0.16);
-    final chipText = isDark ? const Color(0xFF4CAF50) : const Color(0xFF388E3C);
+    // Both were below AA against their own 15-16% tint (4.44:1 dark,
+    // 3.54:1 light) — one step darker/lighter clears it at 5.23 / 4.95.
+    final chipText = isDark ? const Color(0xFF66BB6A) : const Color(0xFF2C7430);
+    // Light was 0xFFB8933A at 2.49:1 on its own tint — amber is the worst
+    // hue for this, so it needs a much deeper tone (4.66:1). The dark value
+    // already measures 5.38:1 and is unchanged.
     final prChipText =
-        isDark ? const Color(0xFFD8B35A) : const Color(0xFFB8933A);
+        isDark ? const Color(0xFFD8B35A) : const Color(0xFF7E6119);
     final prChipBg = prChipText.withValues(alpha: isDark ? 0.18 : 0.16);
-    final sectionLabelColor =
-        isDark ? const Color(0xFF777264) : const Color(0xFF8A8A7E);
+    final sectionLabelColor = moreColor;
     final buttonBg = isDark ? const Color(0xFF9DAE6B) : const Color(0xFF586E38);
     final buttonText =
         isDark ? const Color(0xFF1E1F18) : const Color(0xFFFFFFFF);

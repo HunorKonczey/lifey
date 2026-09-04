@@ -89,7 +89,7 @@ export default function StepsPage() {
                 style={{ background: "var(--surface-container)", border: "1px solid var(--outline)" }} />
               <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
                 className="h-9 px-4 rounded-[var(--r-input)] font-semibold text-sm"
-                style={{ background: "var(--primary)", color: "#1E1F18" }}>{common("save")}</button>
+                style={{ background: "var(--primary)", color: "var(--bg)" }}>{common("save")}</button>
               <button onClick={() => setEditing(false)} className="h-9 px-3 text-sm" style={{ color: "var(--on-surface-variant)" }}>{common("cancel")}</button>
             </div>
           )}

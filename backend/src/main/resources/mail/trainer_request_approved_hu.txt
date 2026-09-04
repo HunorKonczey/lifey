@@ -1,0 +1,6 @@
+Szia {{name}}!
+
+Az edzői hozzáférés kérelmedet jóváhagytuk. Mehet a munka — lépj be az admin
+felületre, hívd meg az első ügyfeledet, és indul a 14 napos próbaidőszakod.
+
+— A Lifey csapata

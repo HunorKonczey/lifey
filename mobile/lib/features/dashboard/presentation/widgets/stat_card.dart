@@ -262,7 +262,7 @@ class _StandardLayout extends StatelessWidget {
           Text(
             subtitle!,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -374,7 +374,7 @@ class _CompactLayout extends StatelessWidget {
           Text(
             subtitle!,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              color: theme.colorScheme.onSurfaceVariant,
               fontSize: 10.5,
             ),
           ),

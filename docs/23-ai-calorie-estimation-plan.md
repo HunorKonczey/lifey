@@ -189,6 +189,55 @@ public interface AiFeatureGate {
 - Mobile handles 403 from day one by hiding/upselling the feature — so shipping the paid gate
   later is backend-only work plus a paywall screen.
 
+### The credit counter already exists — wire into it, do not re-invent it
+
+`docs/landing_page/64-billing-backend-plan.md` Prompt 12 built the counting half of this gate
+before there was any AI call to count, and `docs/landing_page/72` Prompt 14 is where that
+half-built state was written down rather than left to be rediscovered. What exists today, in
+`com.lifey.billing`:
+
+| Piece | What it does |
+|---|---|
+| `ai_usage_counter (user_id, year_month, used_count)` | `V76`; `year_month` is a **calendar** month, `char(7)` → `varchar(7)` |
+| `AiUsageCounterService.usedThisMonth(userId)` | read |
+| `AiUsageCounterService.recordUsage(userId)` | atomic `insert … on conflict … used_count + 1` |
+| `BillingProperties.freeAiCreditsPerMonth()` | **3** (63 D-M5), config-driven — never a constant in code |
+| `EntitlementService` → `aiCreditsRemaining` | `max(0, limit − usedThisMonth)`; `null` on Pro |
+
+So the mobile app already shows a real remaining count (`69` §4.3's "3/3" chip), fed by a
+counter that nothing increments yet. Two rules for whoever builds `MealEstimationService`:
+
+**1. The gate is a check *before* the call, and the increment is *after a successful* one.**
+
+```java
+// MealEstimationServiceImpl.estimate(...)
+aiFeatureGate.checkMealEstimation(userId);   // throws → 403 / 402, see below
+MealEstimate estimate = anthropicClient.estimate(image);   // may throw
+aiUsageCounterService.recordUsage(userId);   // only reached on success
+```
+
+`recordUsage` is deliberately dumb — its javadoc says so — because it cannot tell whether the
+call it is being told about succeeded. That judgement belongs at this one call site.
+
+**2. A failed call must not burn a credit** (`64` §3.4). This is the requirement that decides
+the transaction boundary: `recordUsage` must **not** sit in the same transaction as anything
+that could still roll back after the LLM answered, and it must not be reached from a `finally`
+or an exception path. A 502 from the model, a timeout, an `InvalidImageException`, a
+schema-validation failure — none of them decrement anything. Users notice this one, and it is
+the kind of bug that reads as dishonesty rather than as a defect.
+
+**Status code:** `64` §3.4 specifies **402** with `AI_CREDITS_EXHAUSTED` for the
+out-of-credits case, distinct from the 403/`AI_FEATURE_REQUIRES_SUBSCRIPTION` above. They are
+different situations: 403 is "your plan does not include this feature", 402 is "your plan
+includes it and you have used this month's allowance". The mobile client routes the second to
+the paywall with the `aiCredits` trigger (`67` §3.4); the chip at 0/3 stays tappable and
+explains rather than fails (`69` DV-12).
+
+**Pro is not unlimited-unlimited.** `63` D-M5 note 2 sets a fair-use ceiling of 100/month.
+Nothing enforces it today, and the entitlement resolver deliberately reports `null` (unlimited)
+for Pro rather than a number — enforcing that ceiling is this gate's job when it is built, not
+the resolver's or the counter's.
+
 ---
 
 ## Mobile (Flutter)

@@ -45,3 +45,34 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8080/api/v1
           NEXT_TELEMETRY_DISABLED: "1"
+
+      # docs/landing_page/65 Prompt 11 — the marketing tree's performance
+      # budget, asserted here instead of watched by hand (63 §8.9). Two
+      # separate checks: bundle size (fast, every marketing route) and
+      # Lighthouse (slower, home page only — see lighthouserc.js for why
+      # both this and the JS budget below assert against realistic
+      # thresholds measured today, not §8's aspirational targets, and why
+      # that's a deliberate choice, not a shortcut).
+      - name: JS budget (marketing routes)
+        run: npm run check:js-budget
+
+      - name: Lighthouse CI (home page)
+        run: npm run lhci
+
+      # docs/landing_page/72 Prompt 4 — the marketing tree's own e2e suite:
+      # WCAG 2.1 AA (axe) over every marketing route in *both* colour schemes,
+      # plus locale routing, the 404s, the CTAs' attribution, the contact form
+      # and the signed-in states. It is the only Playwright project that can
+      # run here: `--project=marketing` excludes every backend-dependent spec
+      # in `e2e/` (see playwright.config.ts). Lighthouse's own accessibility
+      # score above covers one page in one theme; this covers all of them in
+      # both, which is where the two failures that motivated it were hiding
+      # (72 W3/W6).
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Marketing e2e + accessibility
+        run: npm run test:e2e:marketing
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8080/api/v1
+          NEXT_TELEMETRY_DISABLED: "1"

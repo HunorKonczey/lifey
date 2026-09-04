@@ -100,7 +100,7 @@ export function TemplatesView({ onAssign, onSchedule }: TemplatesViewProps = {})
       <div className="w-[280px] shrink-0 flex flex-col gap-2">
         <button onClick={() => setSelectedId("new")}
           className="flex items-center gap-1 px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm justify-center"
-          style={{ background: "var(--primary)", color: "#1E1F18" }}>
+          style={{ background: "var(--primary)", color: "var(--bg)" }}>
           <span className="material-symbols-rounded text-lg">add</span> {t("newTemplate")}
         </button>
 
@@ -315,7 +315,7 @@ function TemplateEditor({
       <div className="flex gap-2 mt-1">
         <button onClick={() => mutation.mutate()} disabled={!name.trim() || rows.length === 0 || mutation.isPending}
           className="flex-1 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
-          style={{ background: "var(--primary)", color: "#1E1F18" }}>
+          style={{ background: "var(--primary)", color: "var(--bg)" }}>
           {mutation.isPending ? common("saving") : t("saveTemplate")}
         </button>
         {template && (

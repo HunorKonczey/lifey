@@ -84,7 +84,7 @@ export function ExercisesView() {
           ))}
           <button onClick={() => { setCreating(true); setEditing(null); }}
             className="ml-auto flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
-            style={{ background: "var(--primary)", color: "#1E1F18" }}>
+            style={{ background: "var(--primary)", color: "var(--bg)" }}>
             <span className="material-symbols-rounded text-lg">add</span> {t("newExercise")}
           </button>
         </div>
@@ -159,7 +159,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
       className="px-3 h-8 rounded-[var(--r-pill)] text-xs font-semibold transition-colors"
       style={{
         background: active ? "var(--primary)" : "var(--surface)",
-        color: active ? "#1E1F18" : "var(--on-surface-variant)",
+        color: active ? "var(--bg)" : "var(--on-surface-variant)",
         border: "1px solid var(--outline)",
       }}>
       {label}
@@ -252,7 +252,7 @@ function ExerciseEditor({
       <div className="flex gap-2">
         <button onClick={() => mutation.mutate()} disabled={!name.trim() || mutation.isPending}
           className="flex-1 h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
-          style={{ background: "var(--primary)", color: "#1E1F18" }}>
+          style={{ background: "var(--primary)", color: "var(--bg)" }}>
           {mutation.isPending ? common("saving") : common("save")}
         </button>
         {exercise && (

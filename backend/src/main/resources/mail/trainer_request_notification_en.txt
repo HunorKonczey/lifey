@@ -1,0 +1,9 @@
+A new trainer access request was submitted.
+
+Email: {{email}}
+Expected client count: {{clientCount}}
+
+Motivation:
+{{motivation}}
+
+Review it in the superadmin trainer-requests queue.

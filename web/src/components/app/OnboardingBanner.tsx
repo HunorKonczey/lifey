@@ -64,7 +64,7 @@ export function OnboardingBanner() {
         <button
           onClick={() => router.push("/onboarding")}
           className="h-9 px-4 rounded-[var(--r-input)] font-semibold text-sm"
-          style={{ background: "var(--primary)", color: "#1E1F18" }}
+          style={{ background: "var(--primary)", color: "var(--bg)" }}
         >
           {t("bannerCta")}
         </button>

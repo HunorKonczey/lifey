@@ -201,7 +201,7 @@ export function TrainerCalendar() {
           <Link
             href="/admin/invites"
             className="inline-flex items-center gap-2 rounded-2xl px-4.5 py-2.5 text-[13px] font-extrabold mt-4"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-lg">person_add</span>
             {tDashboard("inviteFirst")}
@@ -225,7 +225,7 @@ export function TrainerCalendar() {
               <button
                 onClick={openScheduleDrawer}
                 className="flex items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[13px] font-extrabold"
-                style={{ background: "var(--tertiary)", color: "#161611" }}
+                style={{ background: "var(--tertiary)", color: "var(--bg)" }}
               >
                 <span className="material-symbols-rounded text-lg">add</span>
                 {tSchedule("scheduleWorkout")}

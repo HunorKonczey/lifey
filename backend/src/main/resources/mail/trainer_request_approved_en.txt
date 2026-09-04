@@ -1,0 +1,6 @@
+Hi {{name}},
+
+Your trainer access request has been approved. You're in — head over to your admin
+dashboard to invite your first client and start your 14-day trial.
+
+— The Lifey team

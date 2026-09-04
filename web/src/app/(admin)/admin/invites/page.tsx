@@ -6,12 +6,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, hu } from "date-fns/locale";
 import { trainerApi } from "@/features/trainer/api";
-import { queryKeys } from "@/lib/api/queryKeys";
+import { queryKeys, invalidationMap } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { useLocale } from "@/lib/hooks/useLocale";
 import { ApiError } from "@/lib/api/client";
 import { ErrorState } from "@/components/status/ErrorState";
 import { Skeleton } from "@/components/status/Skeleton";
+import { useTrainerBillingGate } from "@/features/billing/hooks";
+import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
 
 const DATE_LOCALES = { en: enUS, hu } as const;
 
@@ -28,6 +30,8 @@ export default function AdminInvitesPage() {
   const dateLocale = DATE_LOCALES[locale];
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [blockedOpen, setBlockedOpen] = useState(false);
+  const gate = useTrainerBillingGate();
 
   const { data: invites, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.trainerInvites.all(),
@@ -37,7 +41,10 @@ export default function AdminInvitesPage() {
   const inviteMutation = useMutation({
     mutationFn: () => trainerApi.invite({ email }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.trainerInvites.all() });
+      // Pending invites count toward the seat limit (64 §4.3), so sending
+      // one can push the trainer's entitlement into OVER_LIMIT — the seat
+      // meter (`66` Prompt 5+) must never show a stale count.
+      invalidationMap.trainerInvite.forEach((key) => queryClient.invalidateQueries({ queryKey: key }));
       show(t("sent"), "success");
       setEmail("");
       setError(null);
@@ -55,7 +62,7 @@ export default function AdminInvitesPage() {
   const revokeMutation = useMutation({
     mutationFn: (id: number) => trainerApi.cancelInvite(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.trainerInvites.all() });
+      invalidationMap.trainerInvite.forEach((key) => queryClient.invalidateQueries({ queryKey: key }));
       show(t("revoked"), "success");
     },
     onError: () => show(t("revokeFailed"), "error"),
@@ -74,7 +81,7 @@ export default function AdminInvitesPage() {
         </div>
         <span
           className="flex items-center gap-1.5 rounded-[var(--r-pill)] text-[10px] font-extrabold tracking-wide px-2.5 py-1"
-          style={{ background: "var(--tertiary)", color: "#161611" }}
+          style={{ background: "var(--tertiary)", color: "var(--bg)" }}
         >
           <span className="material-symbols-rounded text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>
             fitness_center
@@ -106,10 +113,18 @@ export default function AdminInvitesPage() {
             />
           </div>
           <button
-            onClick={() => inviteMutation.mutate()}
+            onClick={() => {
+              // D-T5: a blocked "Send" stays clickable and explains itself,
+              // rather than silently disabling — the mutation never fires.
+              if (gate.state !== "OK") {
+                setBlockedOpen(true);
+                return;
+              }
+              inviteMutation.mutate();
+            }}
             disabled={!email || inviteMutation.isPending}
             className="shrink-0 flex items-center gap-2 rounded-2xl h-[52px] px-6 text-[14.5px] font-extrabold disabled:opacity-50"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-xl">send</span>
             {t("send")}
@@ -196,6 +211,15 @@ export default function AdminInvitesPage() {
           )}
         </>
       )}
+
+      <BillingBlockedDialog
+        open={blockedOpen}
+        onClose={() => setBlockedOpen(false)}
+        reason={gate.state === "RESTRICTED" ? "restricted" : "overLimit"}
+        currentPlan={gate.currentPlan}
+        activeClients={gate.activeClients}
+        maxClients={gate.maxClients}
+      />
     </div>
   );
 }

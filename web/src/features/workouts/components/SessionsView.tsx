@@ -126,7 +126,7 @@ export function SessionsView({
         <p className="text-sm font-bold">{t("history")}</p>
         <button onClick={() => setStarting(true)}
           className="flex items-center gap-1 px-4 h-9 rounded-[var(--r-input)] font-semibold text-sm"
-          style={{ background: "var(--primary)", color: "#1E1F18" }}>
+          style={{ background: "var(--primary)", color: "var(--bg)" }}>
           <span className="material-symbols-rounded text-lg">play_arrow</span> {t("startWorkout")}
         </button>
       </div>

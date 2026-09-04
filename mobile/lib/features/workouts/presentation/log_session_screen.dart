@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/ads/interstitial_manager.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_service.dart';
 import '../../../core/music/music_controller.dart';
@@ -748,6 +749,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     }
     if (!mounted) return;
     await _maybeShowWorkoutSuccess();
+    if (!mounted) return;
+    await _maybeShowInterstitial();
     if (!mounted) return;
     _navigateToDashboard();
   }
@@ -1807,6 +1810,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       if (!mounted) return;
       await _maybeShowWorkoutSuccess();
       if (!mounted) return;
+      await _maybeShowInterstitial();
+      if (!mounted) return;
       _navigateToDashboard();
     } catch (_) {
       if (mounted) {
@@ -1835,6 +1840,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
       if (!mounted) return;
       await _maybeShowWorkoutSuccess();
       if (!mounted) return;
+      await _maybeShowInterstitial();
+      if (!mounted) return;
       _navigateToDashboard();
     } catch (_) {
       if (mounted) {
@@ -1843,6 +1850,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// `67` §5.3: fired after a workout session is successfully saved,
+  /// regardless of how the Finish action was reached.
+  Future<void> _maybeShowInterstitial() {
+    return ref
+        .read(interstitialManagerProvider)
+        .maybeShow(context, InterstitialReason.workoutSaved);
   }
 
   // ---------------------------------------------------------------------------
@@ -1917,7 +1932,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           fontSize: 11.5,
-                          color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -1976,7 +1991,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
                       fontSize: 11.5,
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -1988,7 +2003,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen>
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
                         fontSize: 10.5,
-                        color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -2846,7 +2861,7 @@ class _HealthStatCard extends StatelessWidget {
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             ],

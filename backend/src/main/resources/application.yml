@@ -133,6 +133,9 @@ lifey:
     # sending so local dev and tests never require a real Resend account.
     enabled: ${MAIL_ENABLED:false}
     resend-api-key: ${RESEND_API_KEY:}
+    # Where the marketing contact form (docs/landing_page/65 Prompt 8) delivers to —
+    # matches the address already printed in the footer (web messages: footer.email).
+    contact-to: ${MAIL_CONTACT_TO:hello@lifey.hu}
   push:
     apns:
       # Off by default — no bean is created (see ApnsPushSender's
@@ -184,6 +187,72 @@ lifey:
     # How long clients may cache the answer. Drop this to 300 around a rollout
     # so a change — or a rollback — propagates in minutes.
     ttl-seconds: ${CLIENT_CONFIG_TTL_SECONDS:21600}
+  billing:
+    # The billing feature's own rollback switch (docs/landing_page/64-billing-backend-plan.md
+    # §1 point 6, §14 risk 1). MUST default to false: with it off, every user
+    # resolves an open PRO/COMP entitlement and every seat check passes, which
+    # is what makes this deployable before any client understands billing.
+    # Flip to true per environment, explicitly, once the paid rails are wired.
+    enabled: ${BILLING_ENABLED:false}
+    # Free-tier history window shown to the mobile app (64 §3.3) — a display
+    # limit, so changing it is a config change, not a store release.
+    free-history-days: ${BILLING_FREE_HISTORY_DAYS:30}
+    # Free-tier monthly AI call allowance (64 §3.4); null-equivalent (unlimited)
+    # on Pro. **3, because that is the number the product promises**: 63 D-M5's
+    # table and the paywall design's own chip (69 §4.3, frame P13 — "3/3") both
+    # say three. It defaulted to 5 until docs/landing_page/72 D-F6, which was
+    # invisible only because no AI action screen exists yet to display it.
+    free-ai-credits-per-month: ${BILLING_FREE_AI_CREDITS_PER_MONTH:3}
+    # How long a cached entitlement snapshot stays valid offline (63 D-M10).
+    offline-grace-days: ${BILLING_OFFLINE_GRACE_DAYS:7}
+    # Per-run cap on BillingReconciliationJob's provider re-fetch (64 §7) — keeps a
+    # large account base from blowing Stripe/Apple/Google's rate limits every night.
+    reconciliation-batch-size: ${BILLING_RECONCILIATION_BATCH_SIZE:200}
+    stripe:
+      # Empty by default — StripeBillingService is only ever reached from a
+      # ROLE_TRAINER checkout/portal request, so an empty key just means those
+      # two endpoints fail loudly instead of the app failing to start.
+      secret-key: ${STRIPE_SECRET_KEY:}
+      # Empty by default — an empty secret makes Webhook.constructEvent fail
+      # signature verification for every request, i.e. fails closed (64 §5.3).
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      # Where Checkout sends the browser back; a UI convenience only — the
+      # webhook (64 Prompt 5), not this redirect, is the source of truth (D-B5).
+      success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/admin/billing?checkout=success}
+      cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/admin/billing?checkout=cancel}
+      portal-return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:3000/admin/billing}
+      # The six Prices (3 plans x monthly/yearly), created once in the Stripe
+      # dashboard and referenced by id — never created from code (64 §5.1).
+      starter-monthly-price-id: ${STRIPE_PRICE_STARTER_MONTHLY:}
+      starter-yearly-price-id: ${STRIPE_PRICE_STARTER_YEARLY:}
+      pro-monthly-price-id: ${STRIPE_PRICE_PRO_MONTHLY:}
+      pro-yearly-price-id: ${STRIPE_PRICE_PRO_YEARLY:}
+      studio-monthly-price-id: ${STRIPE_PRICE_STUDIO_MONTHLY:}
+      studio-yearly-price-id: ${STRIPE_PRICE_STUDIO_YEARLY:}
+    apple:
+      bundle-id: ${APPLE_BUNDLE_ID:}
+      app-apple-id: ${APPLE_APP_APPLE_ID:}
+      # SANDBOX by default so a fresh environment can't accidentally accept
+      # production receipts, or vice versa — SignedDataVerifier rejects any
+      # transaction whose own embedded environment doesn't match this (64 §11.5).
+      environment: ${APPLE_ENVIRONMENT:SANDBOX}
+      # Empty by default — the App Store Server API confirmation step
+      # (StoreBillingServiceImpl) treats a missing/invalid key exactly like a
+      # real API outage: logged and swallowed, since local JWS verification
+      # alone already grants Pro (64 §6.1).
+      issuer-id: ${APPLE_ISSUER_ID:}
+      key-id: ${APPLE_KEY_ID:}
+      private-key: ${APPLE_PRIVATE_KEY:}
+    google:
+      package-name: ${GOOGLE_PLAY_PACKAGE_NAME:}
+      # Empty by default — the whole Play verification call fails closed with
+      # no key configured (unlike Apple's confirmation step, this one isn't
+      # optional: it's the only verification Android purchases get, 64 §6.1).
+      service-account-json: ${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:}
+      # Play RTDN webhook (64 §6.2) — both empty by default, so PubSubTokenVerifier
+      # rejects every push delivery until the Pub/Sub subscription is actually configured.
+      pubsub-audience: ${GOOGLE_PUBSUB_AUDIENCE:}
+      pubsub-service-account-email: ${GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL:}
   jobs:
     password-reset-cleanup:
       # Daily sweep removing expired/used password reset tokens (PasswordResetTokenCleanupJob).
@@ -197,3 +266,7 @@ lifey:
     workout-reminder:
       # Per-user-local-time workout reminder tick, every 15 minutes (WorkoutReminderJob).
       cron: ${JOB_WORKOUT_REMINDER_CRON:0 0 * * * *}
+    billing-reconciliation:
+      # Daily billing safety net, 03:30 Europe/Budapest — trial expiry (64
+      # Prompt 7) plus the provider re-fetch/diff/metrics sweep (64 Prompt 11).
+      cron: ${JOB_BILLING_RECONCILIATION_CRON:0 30 3 * * *}

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/entitlements/entitlement_providers.dart';
+import '../../../core/entitlements/history_cutoff.dart';
 import '../../../core/health/health_controller.dart';
 import '../../../core/health/health_service.dart';
 import '../../../core/health/weight_health_backfill_service.dart';
@@ -12,6 +14,7 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/history_boundary_row.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
 import '../../../shared/widgets/shell_fab.dart';
 import '../application/weight_chart_data.dart';
@@ -250,13 +253,26 @@ class _WeightBody extends ConsumerWidget {
               ),
             ),
           ),
-          Builder(builder: (context) {
-            final cutoff = range.cutoff();
+          Consumer(builder: (context, ref, _) {
+            // Intersected with the free history window (`67` §3.2, D-P6),
+            // same as [weightChartDataProvider] — this list re-filters
+            // `entries` independently rather than reading that provider, so
+            // it needs the same combination applied here too. `truncated`
+            // compares against the *range-only* result, not raw `entries` —
+            // otherwise a Pro user who simply picked "week" would also see
+            // the boundary row, which isn't the gate firing at all.
+            final rangeCutoff = range.cutoff();
+            final withinRange = rangeCutoff == null
+                ? entries
+                : entries.where((e) => !e.date.toLocal().isBefore(rangeCutoff)).toList();
+            final cutoff =
+                combineHistoryCutoffs(rangeCutoff, ref.watch(historyCutoffProvider));
             final filtered = cutoff == null
                 ? entries
                 : entries
                     .where((e) => !e.date.toLocal().isBefore(cutoff))
                     .toList();
+            final truncated = filtered.length < withinRange.length;
             return Column(
               children: [
                 for (var i = 0; i < filtered.length; i++) ...[
@@ -267,6 +283,10 @@ class _WeightBody extends ConsumerWidget {
                         : null,
                   ),
                   if (i < filtered.length - 1) const SizedBox(height: 8),
+                ],
+                if (truncated) ...[
+                  if (filtered.isNotEmpty) const SizedBox(height: 8),
+                  const HistoryBoundaryRow(),
                 ],
               ],
             );

@@ -20,6 +20,18 @@ public interface TrainerClientRepository extends JpaRepository<TrainerClient, Lo
     /** Global per-trainer cap on invites sent, counted over the same rolling window as the rate limit. */
     long countByTrainerIdAndCreatedAtAfter(Long trainerId, Instant since);
 
+    /**
+     * The one canonical active-client count (63 §8.1) — read by both the
+     * entitlement resolver's trainer block and, from `64` Prompt 3 on,
+     * {@code SeatLimitService}'s enforcement. A trainer count that disagrees
+     * with the display is exactly the silent failure that risk checkpoint
+     * warns about, so nothing else may re-implement this query.
+     */
+    long countByTrainerIdAndStatus(Long trainerId, TrainerClientStatus status);
+
+    /** Non-expired pending invites — counted toward the seat limit on send (docs/landing_page/64-billing-backend-plan.md §4.3). */
+    long countByTrainerIdAndStatusAndExpiresAtAfter(Long trainerId, TrainerClientStatus status, Instant now);
+
     List<TrainerClient> findByTrainerIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
             Long trainerId, TrainerClientStatus status, Instant now);
 

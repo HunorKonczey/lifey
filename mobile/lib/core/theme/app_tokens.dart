@@ -128,7 +128,10 @@ class AppMetricColors extends ThemeExtension<AppMetricColors> {
     weight: Color(0xFF5E7A92),
     water: Color(0xFF4E8AA8),
     heart: Color(0xFFC46A6A),
-    positive: Color(0xFF4A7A52),
+    // Same darkening as the light `tertiary` in app_theme.dart — `positive`
+    // is drawn as text and as small tone icons, so it needs AA on the light
+    // surfaces.
+    positive: Color(0xFF44704C),
     negative: Color(0xFFE08A52),
   );
 

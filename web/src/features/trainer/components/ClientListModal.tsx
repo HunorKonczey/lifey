@@ -75,7 +75,7 @@ export function ClientListModal({ clients, onClose }: ClientListModalProps) {
           <Link
             href="/admin/invites"
             className="flex items-center gap-2 rounded-2xl px-4.5 py-2.5 text-sm font-extrabold"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-xl">person_add</span>
             {t("inviteClient")}

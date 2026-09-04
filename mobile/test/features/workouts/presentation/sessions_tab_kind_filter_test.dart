@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/core/sync/sync_status_provider.dart';
 import 'package:lifey/features/settings/application/settings_controller.dart';
 import 'package:lifey/features/settings/domain/user_settings.dart';
@@ -130,6 +131,11 @@ void main() {
             workoutTemplateControllerProvider.overrideWith(_FakeTemplates.new),
             settingsControllerProvider.overrideWith(_FakeSettings.new),
             syncStatusByClientIdProvider.overrideWithValue(const {}),
+            // SessionsTab now reads the entitlement's history cutoff
+            // (`67` §3.2) — unrelated to this file's kind-filter assertions,
+            // and `null` (unlimited) keeps every session visible as before
+            // that existed, without needing a real/fake database here.
+            historyCutoffProvider.overrideWithValue(null),
           ],
           child: MaterialApp(
             locale: const Locale('en'),

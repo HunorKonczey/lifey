@@ -30,6 +30,7 @@ import '../application/avatar_controller.dart';
 import '../application/settings_controller.dart';
 import '../domain/user_settings.dart';
 import 'notification_settings_screen.dart';
+import 'widgets/subscription_tile.dart';
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -832,6 +833,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                 // ── My trainers (hidden entirely when there are none) ───────
                 const _MyTrainersSection(),
+
+                // ── Subscription (docs/landing_page/67-mobile-free-pro-plan.md
+                // §4.4, frame P14) ───────────────────────────────────────────
+                const SubscriptionSection(),
+                const SizedBox(height: 20),
 
                 // ── Account ────────────────────────────────────────────────
                 _GroupLabel(l10n.accountLabel),

@@ -37,7 +37,7 @@ class ResendMailServiceTest {
 
     @Test
     void send_disabled_logsAndNeverCallsApi() {
-        MailProperties properties = new MailProperties("lifey@example.com", false, "");
+        MailProperties properties = new MailProperties("lifey@example.com", false, "", "team@example.com");
         ResendMailService service = new ResendMailService(properties, templateRenderer,
                 new MailLanguageResolver(userSettingsRepository), mailMessages, weeklyReportFormatting);
 
@@ -50,7 +50,7 @@ class ResendMailServiceTest {
         // No real Resend API key/network available in unit tests — enabling
         // without a reachable endpoint exercises the failure path, which must
         // never propagate to the caller.
-        MailProperties properties = new MailProperties("lifey@example.com", true, "test-key");
+        MailProperties properties = new MailProperties("lifey@example.com", true, "test-key", "team@example.com");
         ResendMailService service = new ResendMailService(properties, templateRenderer,
                 new MailLanguageResolver(userSettingsRepository), mailMessages, weeklyReportFormatting);
         when(userSettingsRepository.findByUserId(1L)).thenReturn(Optional.empty());
@@ -61,7 +61,7 @@ class ResendMailServiceTest {
 
     @Test
     void send_enabled_resolvesUserLanguageBeforeSending() {
-        MailProperties properties = new MailProperties("lifey@example.com", true, "test-key");
+        MailProperties properties = new MailProperties("lifey@example.com", true, "test-key", "team@example.com");
         ResendMailService service = new ResendMailService(properties, templateRenderer,
                 new MailLanguageResolver(userSettingsRepository), mailMessages, weeklyReportFormatting);
         User user = user(1L, "new@example.com");
@@ -74,8 +74,29 @@ class ResendMailServiceTest {
     }
 
     @Test
+    void sendContactMessage_disabled_logsAndNeverCallsApi() {
+        MailProperties properties = new MailProperties("lifey@example.com", false, "", "team@example.com");
+        ResendMailService service = new ResendMailService(properties, templateRenderer,
+                new MailLanguageResolver(userSettingsRepository), mailMessages, weeklyReportFormatting);
+
+        assertThatCode(() -> service.sendContactMessage("Anna", "anna@example.com", "Hi there.", com.lifey.mail.MailLanguage.EN))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void sendContactMessage_enabled_apiCallFails_isCaughtAndNotPropagated() {
+        MailProperties properties = new MailProperties("lifey@example.com", true, "test-key", "team@example.com");
+        ResendMailService service = new ResendMailService(properties, templateRenderer,
+                new MailLanguageResolver(userSettingsRepository), mailMessages, weeklyReportFormatting);
+
+        assertThatCode(() -> service.sendContactMessage("Szabó Anna", "anna@example.com",
+                "<script>alert(1)</script> and a\nmulti-line message", com.lifey.mail.MailLanguage.HU))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     void sendWeeklyTrainerReport_disabled_logsAndNeverCallsApi() {
-        MailProperties properties = new MailProperties("lifey@example.com", false, "");
+        MailProperties properties = new MailProperties("lifey@example.com", false, "", "team@example.com");
         ResendMailService service = new ResendMailService(properties, templateRenderer,
                 new MailLanguageResolver(userSettingsRepository), mailMessages, weeklyReportFormatting);
 
@@ -85,7 +106,7 @@ class ResendMailServiceTest {
 
     @Test
     void sendWeeklyTrainerReport_enabled_apiCallFails_isCaughtAndNotPropagated() {
-        MailProperties properties = new MailProperties("lifey@example.com", true, "test-key");
+        MailProperties properties = new MailProperties("lifey@example.com", true, "test-key", "team@example.com");
         ResendMailService service = new ResendMailService(properties, templateRenderer,
                 new MailLanguageResolver(userSettingsRepository), mailMessages, weeklyReportFormatting);
         when(userSettingsRepository.findByUserId(1L)).thenReturn(Optional.empty());
@@ -96,7 +117,7 @@ class ResendMailServiceTest {
 
     @Test
     void sendWeeklyTrainerReport_emptyClientList_doesNotThrow() {
-        MailProperties properties = new MailProperties("lifey@example.com", true, "test-key");
+        MailProperties properties = new MailProperties("lifey@example.com", true, "test-key", "team@example.com");
         ResendMailService service = new ResendMailService(properties, templateRenderer,
                 new MailLanguageResolver(userSettingsRepository), mailMessages, weeklyReportFormatting);
         when(userSettingsRepository.findByUserId(1L)).thenReturn(Optional.empty());

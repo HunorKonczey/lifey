@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
               type="submit"
               disabled={emailForm.formState.isSubmitting}
               className="mt-2 h-11 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-              style={{ background: "var(--primary)", color: "#1E1F18" }}
+              style={{ background: "var(--primary)", color: "var(--bg)" }}
             >
               {emailForm.formState.isSubmitting ? t("sending") : t("sendCode")}
             </button>
@@ -185,7 +185,7 @@ export default function ForgotPasswordPage() {
               type="submit"
               disabled={resetForm.formState.isSubmitting}
               className="mt-2 h-11 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-              style={{ background: "var(--primary)", color: "#1E1F18" }}
+              style={{ background: "var(--primary)", color: "var(--bg)" }}
             >
               {resetForm.formState.isSubmitting ? t("resetting") : t("resetPassword")}
             </button>

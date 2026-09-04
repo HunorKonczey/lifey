@@ -121,7 +121,7 @@ export function Sidebar() {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--r-card)] transition-colors"
                 style={{
                   background: active ? "var(--primary)" : "transparent",
-                  color: active ? "#1E1F18" : "var(--on-surface-variant)",
+                  color: active ? "var(--bg)" : "var(--on-surface-variant)",
                 }}
                 title={collapsed ? label : undefined}
               >
@@ -145,7 +145,7 @@ export function Sidebar() {
             className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--r-card)] transition-colors"
             style={{
               background: pathname.startsWith("/settings") ? "var(--primary)" : "transparent",
-              color: pathname.startsWith("/settings") ? "#1E1F18" : "var(--on-surface-variant)",
+              color: pathname.startsWith("/settings") ? "var(--bg)" : "var(--on-surface-variant)",
             }}
             title={collapsed ? t("settings") : undefined}
           >
@@ -191,7 +191,7 @@ export function Sidebar() {
             >
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden"
-                style={{ background: "var(--primary)", color: "#1E1F18" }}
+                style={{ background: "var(--primary)", color: "var(--bg)" }}
               >
                 {avatarUrl ? (
                   // Blob object URLs aren't compatible with next/image's optimizer.

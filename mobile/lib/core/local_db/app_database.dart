@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../sync/client_ref.dart';
 import 'tables/cardio_interval_plan_tables.dart';
 import 'tables/chat_tables.dart';
+import 'tables/entitlement_cache_table.dart';
 import 'tables/exercise_table.dart';
 import 'tables/food_table.dart';
 import 'tables/meal_tables.dart';
@@ -60,12 +61,13 @@ part 'app_database.g.dart';
   SyncCursors,
   ChatConversations,
   ChatMessages,
+  EntitlementCacheTable,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 43;
+  int get schemaVersion => 44;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -377,6 +379,14 @@ class AppDatabase extends _$AppDatabase {
           // most sessions this old have already had pruned after 90 days).
           if (from < 43) {
             await _addColumnIfMissing(m, cardioDetails, cardioDetails.avgGapSecondsPerKm);
+          }
+          // V44: the mobile entitlement cache (docs/landing_page/67-mobile-free-pro-plan.md
+          // §2, D-P2) — a brand-new, single-row table outside the sync engine.
+          // Empty until the first successful `GET /me/entitlements`, which
+          // `EntitlementRepository` resolves as the "no cache yet" open
+          // default (D-P4) in the meantime.
+          if (from < 44) {
+            await m.createTable(entitlementCacheTable);
           }
         },
       );

@@ -123,7 +123,7 @@ export function ProgramGridEditor({
           disabled={!isProgramValid(validation) || saving}
           data-testid="program-save-button"
           className="h-11 px-6 rounded-2xl text-[13.5px] font-extrabold disabled:opacity-40"
-          style={{ background: "var(--tertiary)", color: "#161611" }}
+          style={{ background: "var(--tertiary)", color: "var(--bg)" }}
         >
           {saving ? savingLabel : saveLabel}
         </button>
@@ -382,7 +382,7 @@ function SlotEditorDialog({
               onSave({ weekNumber: week, dayOfWeek: day, templateId: templateId as number, timeOfDay: timeOfDay || null, note: note || null })
             }
             className="flex-[2] text-center rounded-2xl py-3 text-[13.5px] font-extrabold disabled:opacity-40"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             {t("save")}
           </button>

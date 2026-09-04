@@ -48,6 +48,7 @@ public class AuthServiceImpl implements AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setFirstName(request.firstName().trim());
         user.setLastName(request.lastName().trim());
+        user.setSignupSource(request.signupSource());
         user.setCreatedAt(Instant.now());
         user.setRoles(Set.of(Role.ROLE_USER));
         userUtcOffsetUpdater.apply(user, utcOffsetMinutes);

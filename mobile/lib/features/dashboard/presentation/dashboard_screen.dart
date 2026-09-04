@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/ads/banner_ad_slot.dart';
+import '../../../core/ads/nav_reserved_space.dart';
 import '../../../core/sync/pull_engine.dart';
 import '../../../core/sync/sync_engine_provider.dart';
 import '../../../core/theme/app_tokens.dart';
@@ -42,6 +44,7 @@ import '../domain/dashboard_data.dart';
 import '../domain/recent_workout.dart';
 import '../domain/today_meal_group.dart';
 import 'widgets/calorie_sparkline_card.dart';
+import 'widgets/sponsorship_ended_card.dart';
 import 'widgets/stat_card.dart';
 
 // Vertical layout constants shared between DashboardScreen and _DashboardBody.
@@ -230,6 +233,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsB
                 ],
               ),
             ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: bannerBottom(MediaQuery.paddingOf(context).bottom),
+              child: const BannerAdSlot(tabIndex: 0),
+            ),
           ],
         ),
       ),
@@ -237,7 +246,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsB
   }
 }
 
-class _DashboardBody extends StatelessWidget {
+class _DashboardBody extends ConsumerWidget {
   const _DashboardBody({
     required this.data,
     required this.settings,
@@ -266,7 +275,7 @@ class _DashboardBody extends StatelessWidget {
       (goal == null || goal <= 0) ? null : actual / goal;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final stats = data.stats;
     final weight = stats.latestWeight;
     final l10n = AppLocalizations.of(context)!;
@@ -293,7 +302,8 @@ class _DashboardBody extends StatelessWidget {
 
     final statusTop = MediaQuery.paddingOf(context).top;
     final contentTop = statusTop + _kBarTopGap + _kBarHeight + _kBarBotGap;
-    final bottomPad = MediaQuery.paddingOf(context).bottom + 16;
+    final bannerHeight = ref.watch(bannerAdSlotHeightProvider(0));
+    final bottomPad = MediaQuery.paddingOf(context).bottom + bannerHeight + 16;
 
     return ListView(
       padding: EdgeInsets.fromLTRB(16, contentTop, 16, bottomPad),
@@ -309,6 +319,11 @@ class _DashboardBody extends StatelessWidget {
 
         // ── Onboarding banner (hidden once onboarded or dismissed) ─────────
         const OnboardingBanner(),
+
+        // ── "Your coach's Pro has ended" — shown once, then never again
+        // (`69` §12.1). Above the fold on purpose: it explains why features
+        // the user had yesterday are gone today. ─────────────────────────
+        const SponsorshipEndedCard(),
 
         // ── Water ────────────────────────────────────────────────────────
         WaterCard(
@@ -454,7 +469,7 @@ class _DashboardBody extends StatelessWidget {
             '${stats.strengthWorkoutCount} ${l10n.activityTypeStrength} · '
             '${stats.cardioWorkoutCount} ${l10n.sessionKindCardioLabel}',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
           ),
         ],
@@ -580,7 +595,7 @@ class _WorkoutTile extends StatelessWidget {
                       Text(
                         statsLine,
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],

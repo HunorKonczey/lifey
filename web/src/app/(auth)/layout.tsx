@@ -1,13 +1,17 @@
 "use client";
 
+import { Providers } from "@/lib/providers";
+
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg px-4">
-      {children}
-    </div>
+    <Providers>
+      <div className="min-h-screen flex items-center justify-center bg-bg px-4">
+        {children}
+      </div>
+    </Providers>
   );
 }

@@ -1,19 +1,37 @@
 "use client";
 
+import { Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { track } from "@vercel/analytics";
 import { registerSchema, type RegisterFormValues } from "@/features/auth/schemas";
 import { authApi } from "@/features/auth/api";
 import { useSessionStore } from "@/features/auth/store";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { ApiError } from "@/lib/api/client";
+import { extractAttribution, readAttributionCookie } from "@/lib/attribution";
+
+/** A relative, same-origin path only — guards against an open-redirect via `?next=`. */
+function safeNextPath(value: string | null): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
   const t = useTranslations("auth");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const applyAccessToken = useSessionStore((s) => s.applyAccessToken);
 
   const {
@@ -26,6 +44,14 @@ export default function RegisterPage() {
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
+    // First-touch (65 D-W8): the lifey_attrib cookie a marketing page wrote
+    // on the visitor's *original* touch, days or clicks before this one.
+    // Falls back to this page's own current `?src=` — last-touch — only if
+    // the cookie is missing entirely (e.g. cookies blocked), so a signup
+    // still carries *some* attribution rather than none.
+    const signupSource =
+      readAttributionCookie(document.cookie) ?? extractAttribution(window.location.search) ?? undefined;
+
     try {
       // Register returns no tokens — log in immediately afterwards.
       await authApi.register({
@@ -33,10 +59,15 @@ export default function RegisterPage() {
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
+        signupSource,
       });
+      track("trainer_request_submitted", { src: signupSource ?? "none" });
       const res = await authApi.login({ email: data.email, password: data.password });
       applyAccessToken(res.accessToken);
-      router.push("/onboarding");
+      // 66 D-T1: the trainer-request CTA sends visitors here with
+      // ?next=/admin/pending so they land straight on the request form
+      // instead of the regular onboarding flow.
+      router.push(safeNextPath(searchParams.get("next")) ?? "/onboarding");
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : t("registrationFailed");
@@ -100,7 +131,7 @@ export default function RegisterPage() {
           type="submit"
           disabled={isSubmitting}
           className="mt-2 h-11 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-          style={{ background: "var(--primary)", color: "#1E1F18" }}
+          style={{ background: "var(--primary)", color: "var(--bg)" }}
         >
           {isSubmitting ? t("creating") : t("register")}
         </button>

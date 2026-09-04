@@ -1,6 +1,7 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.billing.service.SeatLimitService;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.trainer.ProgramAssignmentRepository;
 import com.lifey.trainer.Recurrence;
@@ -62,10 +63,13 @@ public class WorkoutScheduleServiceImpl implements WorkoutScheduleService {
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ProgramAssignmentRepository programAssignmentRepository;
+    private final SeatLimitService seatLimitService;
 
     @Override
     public ScheduleResponse create(ScheduleRequest request) {
         Long trainerId = currentUserProvider.getUserId();
+        // Creating a new schedule is blocked whenever billing state != OK (64 §4.3).
+        seatLimitService.assertActiveState(trainerId);
         trainerAccessService.requireActiveClient(trainerId, request.clientId());
 
         WorkoutTemplate sourceTemplate = workoutTemplateRepository.findByIdAndUserId(request.templateId(), trainerId)

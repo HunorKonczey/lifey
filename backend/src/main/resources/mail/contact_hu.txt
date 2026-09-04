@@ -1,0 +1,7 @@
+Név: {{name}}
+E-mail: {{email}}
+
+Üzenet:
+{{message}}
+
+— A lifey.hu kapcsolatfelvételi űrlapján keresztül. Válaszra a "Válasz" gomb a feladónak megy.

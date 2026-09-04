@@ -154,7 +154,7 @@ export function ChatComposer({
           aria-label={t("send")}
           title={t("send")}
           className="w-[46px] h-[46px] shrink-0 rounded-[15px] flex items-center justify-center transition-opacity disabled:opacity-40"
-          style={{ background: "var(--primary)", color: "#161611" }}
+          style={{ background: "var(--primary)", color: "var(--bg)" }}
         >
           <span className="material-symbols-rounded text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
             send

@@ -1,6 +1,7 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.billing.service.SeatLimitService;
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.push.service.PushMessage;
 import com.lifey.push.service.PushService;
@@ -61,10 +62,13 @@ public class ProgramAssignmentServiceImpl implements ProgramAssignmentService {
     private final UserSettingsRepository userSettingsRepository;
     private final PushService pushService;
     private final CurrentUserProvider currentUserProvider;
+    private final SeatLimitService seatLimitService;
 
     @Override
     public ProgramAssignmentResponse assign(Long programId, ProgramAssignmentRequest request) {
         Long trainerId = currentUserProvider.getUserId();
+        // Starting a client on a program is blocked whenever billing state != OK (64 §4.3).
+        seatLimitService.assertActiveState(trainerId);
         trainerAccessService.requireActiveClient(trainerId, request.clientId());
 
         TrainingProgram program = trainingProgramRepository.findByIdAndUserIdAndDeletedAtIsNull(programId, trainerId)

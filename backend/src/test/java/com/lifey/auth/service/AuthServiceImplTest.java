@@ -69,7 +69,7 @@ class AuthServiceImplTest {
 
     @Test
     void register_savesUserWithHashedPasswordAndDefaultRole() {
-        RegisterRequest request = new RegisterRequest("new@example.com", "password123", "Jane", "Doe");
+        RegisterRequest request = new RegisterRequest("new@example.com", "password123", "Jane", "Doe", null);
         when(userRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
@@ -92,8 +92,35 @@ class AuthServiceImplTest {
     }
 
     @Test
+    void register_storesSignupSourceForAttribution() {
+        RegisterRequest request = new RegisterRequest(
+                "new@example.com", "password123", "Jane", "Doe", "src=pricing-pro");
+        when(userRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        when(userRepository.save(captor.capture())).thenAnswer(inv -> withId(inv.getArgument(0), 1L));
+
+        authService.register(request, null);
+
+        assertThat(captor.getValue().getSignupSource()).isEqualTo("src=pricing-pro");
+    }
+
+    @Test
+    void register_noSignupSource_leavesItNull() {
+        RegisterRequest request = new RegisterRequest("new@example.com", "password123", "Jane", "Doe", null);
+        when(userRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("hashed-password");
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        when(userRepository.save(captor.capture())).thenAnswer(inv -> withId(inv.getArgument(0), 1L));
+
+        authService.register(request, null);
+
+        assertThat(captor.getValue().getSignupSource()).isNull();
+    }
+
+    @Test
     void register_duplicateEmailThrowsAndDoesNotSave() {
-        RegisterRequest request = new RegisterRequest("taken@example.com", "password123", "Jane", "Doe");
+        RegisterRequest request = new RegisterRequest("taken@example.com", "password123", "Jane", "Doe", null);
         when(userRepository.existsByEmailIgnoreCase("taken@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request, null))
