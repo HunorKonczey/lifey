@@ -4,10 +4,12 @@ This folder plans how Lifey **makes money** and how it **presents itself in publ
 **both designs done; the marketing web app (`65`) and the mobile free/Pro app (`67`) are both
 fully implemented** — see each plan's own reading-order row below for what that covers.
 **What is still missing across all of them is collected in
-[`72-monetization-followup-plan.md`](72-monetization-followup-plan.md)** — including the items
-this page's own status paragraphs are now out of date about (the 19 remaining light-theme
-contrast instances mentioned below were closed by commit `1c252fd`; two remain, both on
-`/hu/alkalmazas`).
+[`72-monetization-followup-plan.md`](72-monetization-followup-plan.md)**, and the two
+verification passes that need a Stripe account and two phones are in
+[`73-billing-verification-runbook.md`](73-billing-verification-runbook.md). `72`'s milestones **F1–F5 have landed**
+(F5 as far as it can go without store accounts), and what is left is tracked in
+[`REMAINING-WORK.md`](REMAINING-WORK.md) — the store launch is **parked until the company
+exists**, and the rest is listed there by whether it is blocked or simply not done yet.
 
 **Design status: both canvases are done — implementation is unblocked.** The mobile canvas is
 delivered ([`design/Lifey Paywall.dc.html`](design/Lifey%20Paywall.dc.html), **P01–P27**), with
@@ -64,14 +66,13 @@ measurements (with buffer) rather than the unmet literal targets, and verified b
 catch a regression by deliberately importing `recharts` into the home page (JS: 283 KB → 379 KB;
 Lighthouse performance: 93 → 89) before reverting it. Other open items carried forward: the
 hero/value-block "screenshots" are **reproduced UI**, not photographic captures — no seeded
-demo backend exists yet to capture from; a real accessibility bug (light-mode text contrast on
-several accent-colored badges/CTAs, found while building the pricing page) turned out to
-already be shipped in 23 places across Prompts 3–5 — flagged as its own follow-up rather than
-fixed all at once (`65` Prompt 6 landed notes); four of those 23 were fixed in passing across
-Prompts 10–11 (`Fork.tsx`, `SponsoredBand.tsx`'s PRO badge in Prompt 10; `ChatMock.tsx`'s two
-instances in Prompt 11, caught by the Lighthouse run above), 19 still open; and the download
-page's `lifey://invite/<token>` deep link has not been
-checked against a real device with the app installed (`65` Prompt 7's own *Verify* line asks
+demo backend exists yet to capture from; the light-mode contrast bug that ran through
+23 places across Prompts 3–5 is **closed**: four were fixed in passing in Prompts 10–11, and
+commit `1c252fd` swept the rest of the palette in both products. `72` F1 then ran axe-core over
+all 12 marketing routes in both themes and at mobile width, found the last two (on
+`/hu/alkalmazas`), fixed them, and wired that sweep into CI so the next one cannot ship — the
+suite is green at zero violations today; and the download page's `lifey://invite/<token>` deep
+link has not been checked against a real device with the app installed (`65` Prompt 7's own *Verify* line asks
 for this, and nothing in this environment can register that URL scheme to test it). The
 for-trainers, pricing, app and download pages all shipped without their own design frames for
 some or all of their content — each reuses the home page's own components rather than inventing
@@ -128,6 +129,8 @@ trainer uses the app free with ads and can buy Pro through the App Store or Play
 | [71-mobile-paywall-design-prompt.md](71-mobile-paywall-design-prompt.md) | The narrowed prompt that produced the mobile canvas. **Already run** — do not re-run it | Design (historical) |
 | [72-monetization-followup-plan.md](72-monetization-followup-plan.md) | **Read this before calling any of the above finished.** The closing pass: everything `63`–`71` left behind — 21 steps in 6 milestones. **F1 (web launch blockers) is done bar its legal-content step** — the branded localized 404, the broken Apple badge glyph, two measured axe failures, a WCAG gate over every marketing route in both themes in CI, the six marketing e2e specs `65` §12 asked for — and **F2 (mobile) is done**: the banner's "Reklám" label with its remove-ads button moved off the creative, the locked-row and plan-card accessibility fixes, the 200 % text-scale paywall, the sponsorship-ended card, and the AdMob ids behind defines with a release checker. Still open: the real store/AdMob ids themselves, the unverified Stripe and store-sandbox paths, both uncorrected canvas defects, M5 in full, and the eight documentation updates the original prompts owed but never made | Everyone |
 | [73-billing-verification-runbook.md](73-billing-verification-runbook.md) | **The two verification passes no test in this repo can run.** §1 is a 12-step Stripe test-mode round trip (do the price ids exist, does the withdrawal-waiver checkbox actually render, portal → cancellation → downgrade), with the SQL to run at each step. §2 is a 15-row store sandbox matrix, a column per platform — sandbox purchase, second-device restore, UMP consent, offline grace expiry, ad slot, Play acknowledgement. Fill in the result columns and paste them back into `72` §4 | Whoever has the Stripe account and two phones |
+| [74-store-listing-and-aso.md](74-store-listing-and-aso.md) | **What goes in the store listing boxes.** Title, subtitle, keywords, promo text and the full description in HU and EN with every character count verified; the App Privacy / Data Safety / Health Connect answers derived from the app's actual SDKs; and the screenshot export (`node devops/export-store-screenshots.mjs`, straight from the canvas at each store's exact size). §5 is the list of things only the account holder can do | Whoever owns the store accounts |
+| [REMAINING-WORK.md](REMAINING-WORK.md) | **Start here to pick something up.** The living list of what is left: the whole store-launch section parked until the company is registered (§1), what is developable today with no external dependency (§2), what is blocked on a device / a deployed URL / design time (§3), and the decisions not to re-raise (§4). Unnumbered because it shrinks as work lands, unlike the plans around it | Everyone |
 | [`design/Lifey Landing.dc.html`](design/Lifey%20Landing.dc.html) | **The finished marketing web design — frames L01–L21**: token sheet, header/footer/sticky-CTA states, the full home page (desktop + mobile, dark + light), the pricing page. Frame map: [68 §12.1](68-web-landing-design-plan.md) | **Web implementation works from this** |
 | [`design/Lifey Paywall.dc.html`](design/Lifey%20Paywall.dc.html) | **The finished mobile design — frames P01–P27**: paywall (5 triggers, 4 edge states, 320 pt + 200 % scale), the three gated surfaces, the Settings tile, both ad-slot variants + the Pro no-slot render, the store screenshot set. Frame map: [69 §11.1](69-mobile-paywall-design-plan.md) | **Mobile implementation works from this** |
 

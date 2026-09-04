@@ -21,10 +21,17 @@ Cél: a Lifey-be bekerül egy **személyi edző (trainer)** szerepkör. A kliens
 | [`12-edzo-naptar-terv.md`](12-edzo-naptar-terv.md) | **Edző-naptár** (PT6): új sidebar-menüpont + `/admin/calendar` — az összes kliens ütemezett edzései egy naptárban (hét/hónap nézet, peek, szűrők), aggregált backend-végpont |
 | [`13-edzo-naptar-design-prompt.md`](13-edzo-naptar-design-prompt.md) | Edző-naptár: design prompt (Claude Designnak) + a funkció **döntés-naplója** |
 
+A modul **pénzügyi oldala** külön mappában él: [`docs/landing_page/`](../landing_page/README.md) —
+csomagok és árazás (`63`), a billing backend és a `SeatLimitService` (`64`), az `/admin/billing`
++ `/admin/pending` + az igénylési sor (`66`). Ez a mappa a funkciót írja le, az pedig azt, hogy
+ki fizet érte.
+
 ## A legfontosabb döntések (összefoglaló)
 
 1. **Admin az URL-ben, nem state-ben:** az edző felület a web app `/admin/...` útvonalcsoportja. Linkelhető, a middleware szerepkör alapján védi, a "melyik nézetben vagyok" kérdés a route-ból egyértelmű.
 2. **`ROLE_TRAINER` szerepkör, kézi kiosztással:** a meglévő szerepkör-modell (JWT `roles` claim) bővítése. Nincs önkiszolgáló "edzővé válok" flow — a kiosztást az új **`ROLE_SUPER_ADMIN`** végzi a saját webes felületén (`/superadmin/users`: user-lista, Edzővé tétel/visszavonás, audit-napló). A super admin szerepkör maga egyszeri kézi SQL bootstrap, API-ból nem osztható; API-ból kizárólag a `ROLE_TRAINER` kezelhető.
+
+   **Kiegészítés (`docs/landing_page/66-trainer-billing-web-plan.md`):** a szerepkör kiosztása azóta **két további dolgot is elintéz ugyanabban a tranzakcióban** — lezárja a `trainer_request` sort (az igénylő `/admin/pending` oldala innen tudja meg, hogy jóváhagyták), és elindítja a 14 napos próbaidőt (`TrainerTrialListener` → `subscription` sor `TRIALING` állapotban). A kézi jóváhagyás elve nem változott, csak az igénylésnek lett saját felülete.
 3. **Meghívó = e-mail alapú, 24 órás életciklussal:** egy edző egy adott e-mail címet **24 óránként legfeljebb egyszer** hívhat meg. A függő meghívó 24 óra után lejár, és **eltűnik mind az edző listájából, mind a mobil appból** — utána újra meghívható.
 4. **Mobil értesítés = polling, nem push:** nincs push infrastruktúra; az app indításkor/előtérbe kerüléskor lekéri a függő meghívókat, és **lebegő kártyán** mutatja (elfogad / elutasít).
 5. **`foods` és `exercises` user-tulajdonúvá válik:** a ma globális katalógusok minden meglévő user számára lemásolódnak, a hivatkozások átíródnak (Flyway migráció). Ez a modul **előfeltétele** és egyben a legnagyobb kockázatú lépése (delta sync!).

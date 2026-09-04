@@ -220,6 +220,28 @@ expected value (and it's not shown before the tap).
 
 ---
 
+## 4.5 The free-tier history window (added later)
+
+`docs/landing_page/67-mobile-free-pro-plan.md` §3.2–3.3 put a limit on top of this screen: a
+free account sees the **last 30 days**, and the number comes from the server
+(`entitlement.historyDays`), never from a constant here.
+
+Two things this changed on the statistics screen specifically:
+
+- **The range popup marks rather than hides.** With a 30-day window, "90 days" and "All" stay in
+  the menu, at full opacity, with a `lock` glyph where the check mark sits — tapping one opens
+  the paywall instead of selecting it. A two-item menu would teach the user nothing and would
+  remove the only place the limit is visible at all.
+- **The cutoff is applied where the chart data is built** (`stat_chart_data.dart` combines the
+  selected range's cutoff with the entitlement's), not in any query. The window is a
+  presentation filter: sync still stores everything, which is why the boundary row's promise
+  that older data is still there is literally true.
+
+`historyCutoffProvider` is the single source for it; the enumerated list of files allowed to
+read it lives in `test/core/entitlements/gated_surfaces_test.dart`.
+
+---
+
 ## 5. Affected / reference files
 
 - Pattern: `mobile/lib/features/weight/presentation/weight_screen.dart`

@@ -380,6 +380,16 @@ slot the code already reserves. The locked rows keep their `lock` glyph in that 
 is the frame's genuinely good idea and it should survive. `67` Prompt 3 owns the fix, and the
 frame should be corrected in the same change.
 
+**✅ Fixed in code, `67` Prompt 3; canvas corrected in `72` Prompt 17 — and the correction is
+smaller than this entry claimed.** Opening the markup to fix it showed the "7 nap" row's `check`
+glyph was **coloured to match the popup's own background** (`#2A2C20` in the dark frame,
+`#FFFFFF` in the light one), i.e. an invisible spacer holding the 20 px slot. The frame therefore
+*rendered* one check mark all along; what was wrong was the markup, which reads as two — and that
+is precisely how it was read here, and how an implementer working from the file would read it.
+Both instances are now a genuinely empty `<span>` of the same width, so the pixels are unchanged
+and the trap is gone. Worth remembering when auditing a canvas: grepping its source is not the
+same as looking at it.
+
 **DV-10 The ad recommendation is variant A, conditioned.** The canvas recommends the **anchored**
 banner (P15) over in-scroll (P16), on the grounds that on a dashboard the user rarely reaches the
 bottom of the list, so B loses most of the impressions rather than some — but **only on the four

@@ -487,8 +487,12 @@ change so the two do not drift.
 and Pro's own third bullet rather than a new Studio-only line, so all three cards' feature lists
 are now provably the same by construction (`lib/pricing.ts`'s `PLANS`, one shared array). Landed
 one prompt early, in Prompt 4's home-page pricing preview, which already reused the same
-constant — Prompt 6 inherited the fix rather than having to make it. The canvas frame itself
-(`design/Lifey Landing.dc.html` L19) has not been redrawn; this note is the correction record.
+constant — Prompt 6 inherited the fix rather than having to make it.
+
+**✅ Canvas corrected too, `72` Prompt 17.** L19's Studio bullet now reads *"Korlátlan program és
+időpont"*, identical to Starter's and Pro's third bullet — the frame and `lib/pricing.ts` finally
+say the same thing, and the phantom feature cannot be reintroduced by someone implementing from
+the canvas.
 
 **DV-6 The sponsored band (L13/L14) also delivers a mobile surface.** It renders the dashboard
 twice — free with a labelled 320 × 50 banner slot, and sponsored with the slot absent and the

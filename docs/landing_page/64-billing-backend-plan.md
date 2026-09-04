@@ -1,6 +1,8 @@
 # 64 – Billing Backend
 
-Status: proposed
+Status: **done** — 12 prompts, 11 complete; Prompt 12 is the AI credit counter only (the gate
+half waits on `docs/23`, specified in `72` Prompt 14). Stripe request shapes are verified
+against stripe-mock; the real test-mode round trip is [`73`](73-billing-verification-runbook.md) §1
 Scope: backend — domain, migrations, entitlement resolver, Stripe adapter, store IAP adapter,
 seat enforcement, reconciliation
 Depends on: `docs/landing_page/63-monetization-strategy-plan.md` (all `D-M*` decisions),

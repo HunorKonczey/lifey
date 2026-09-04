@@ -1,6 +1,7 @@
 # 66 – Trainer Billing on the Web
 
-Status: proposed
+Status: **done** — all 10 prompts. One end-to-end Stripe test-mode pass is still owed:
+[`73`](73-billing-verification-runbook.md) §1
 Scope: web (`/admin`) + a small backend annex (trainer access requests)
 Depends on: `docs/landing_page/63-monetization-strategy-plan.md` (D-M2, D-M3, D-M8, D-M12),
 `docs/landing_page/64-billing-backend-plan.md` (entitlements, checkout, seat limits),

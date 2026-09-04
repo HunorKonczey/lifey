@@ -19,10 +19,29 @@ web/src/app/
     workouts/page.tsx          # SAJÁT sablonok + gyakorlatok (Add to user gombbal)
     nutrition/page.tsx         # SAJÁT ételek + receptek (recepten Add to user gomb)
     assignments/page.tsx       # kiosztott tartalmak listája (minden kliens)
+    billing/page.tsx           # előfizetés (66) — csomag, kliens-keret, Stripe portál
+    pending/page.tsx           # edzői hozzáférés igénylése + várakozó állapot (66)
   (superadmin)/superadmin/
     layout.tsx                 # minimál shell + ROLE_SUPER_ADMIN guard
     users/page.tsx             # user-lista + ROLE_TRAINER kiosztás/visszavonás
+    trainer-requests/page.tsx  # edzői igénylések sora: jóváhagyás/elutasítás (66)
 ```
+
+**A `/admin/billing` és `/admin/pending` utólag került ide**
+(`docs/landing_page/66-trainer-billing-web-plan.md`), és a modul két eredeti feltevését
+árnyalja:
+
+- A README 2. döntése („nincs önkiszolgáló edzővé válok flow") **változatlanul igaz** — a
+  jóváhagyás továbbra is emberi, super adminnál. Ami változott: az igénylés maga már nem
+  e-mailben történik, hanem a `/admin/pending` oldalon, és a super admin
+  `/superadmin/trainer-requests` alatt látja a sort. A landing oldal „14 nap ingyen" CTA-ja
+  ide fut be, nem egy azonnali edzővé válásba.
+- `/admin/pending` az **egyetlen** `/admin/**` útvonal, amit `ROLE_TRAINER` nélkül is el lehet
+  érni — különben az igénylőnek nem lenne hol megnéznie, hol tart a kérése.
+- A `/admin/billing` a `GET /api/v1/me/entitlements` első valódi web-oldali fogyasztója. A
+  lejárt/keret feletti állapotokat nem itt tiltja le a rendszer: a blokkolt műveletek
+  (meghívó, hozzárendelés, ütemezés) a saját drawerjeikben állnak meg, a szabályt pedig a
+  backend `SeatLimitService`-e mondja ki (`03-backend-terv.md`).
 
 Döntés (a felhasználói kérdésre "URL vagy state"): **URL**. A `/admin` prefix linkelhető, frissítés-álló, a middleware-ben szerepkörrel védhető, és a "melyik nézetben vagyok" állapot nem tud elcsúszni.
 

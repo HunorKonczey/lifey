@@ -2,7 +2,10 @@
 
 Status: **F1 done bar Prompt 6 (blocked on company data) · F2 done · F3 done as far as this
 environment reaches** (Prompt 14 complete; Prompts 12–13 automated where possible, the rest
-handed to [`73`](73-billing-verification-runbook.md)); F4–F6 proposed
+handed to [`73`](73-billing-verification-runbook.md)) **· F4 done · F5 prepared** (copy,
+privacy answers and the screenshot export are done in
+[`74`](74-store-listing-and-aso.md); the consoles themselves need the account holder); F6
+proposed
 Scope: web · mobile · backend · design · docs — the closing pass over `63`–`71`
 Depends on: `63`–`71` (all implemented; `64` Prompt 12 partial, see §1)
 
@@ -21,13 +24,13 @@ one-line fix or a documentation update that should have travelled with the origi
 
 | Doc | Prompts | Real status |
 |---|---|---|
-| `63` monetization strategy | — | Decisions live; `Status:` header still says *proposed* |
-| `64` billing backend | 12 | 11 done, **Prompt 12 half-done** (counter infra only; the 402 gate has no AI call path to sit in). Header still *proposed* |
-| `65` web landing page | 11 | All done. Header still *proposed* |
-| `66` trainer billing web | 10 | All done. Header still *proposed* |
-| `67` mobile free/Pro | 11 | All done. Header correct (*done*) |
-| `68` web design | — | Canvas L01–L21 delivered; 5 items in §13 never drawn; DV-5 fixed in code, not in the canvas |
-| `69` mobile design | — | Canvas P01–P27 delivered; §13's 4 items open; DV-9 fixed in code, not in the canvas |
+| `63` monetization strategy | — | Decisions live. Header fixed in F4 |
+| `64` billing backend | 12 | 11 done, **Prompt 12 half-done** (counter infra only; the 402 gate has no AI call path to sit in — specified for it in F3). Header fixed in F4 |
+| `65` web landing page | 11 | All done; F1 closed its follow-ups. Header fixed in F4 |
+| `66` trainer billing web | 10 | All done. Header fixed in F4 |
+| `67` mobile free/Pro | 11 | All done; F2 closed its follow-ups. Header was already correct |
+| `68` web design | — | Canvas L01–L21 delivered; 5 items in §13 never drawn. **DV-5 now fixed in the canvas too** (F4 Prompt 17) |
+| `69` mobile design | — | Canvas P01–P27 delivered; §13's 4 items open. **DV-9 now fixed in the canvas too** — and turned out to be a markup trap, not a rendering defect (F4 Prompt 17) |
 
 Milestones (`63` §9): **M0, M1, M2, M3, M4 are built**. **M5 (store & polish) does not exist
 at all** — there is no store listing, no ASO text, no exported screenshot set, and both the ad
@@ -229,8 +232,8 @@ the first paying customer · **S3** = correctness of the record, or polish.
 
 | # | Finding | Evidence | Sev |
 |---|---|---|---|
-| D1 | L19 still sells "Több edző egy stúdióban" | one occurrence in `design/Lifey Landing.dc.html`; fixed in `lib/pricing.ts`, never redrawn (DV-5) | S2 |
-| D2 | P11 still draws two check marks | `design/Lifey Paywall.dc.html` marks both "7 nap" and "30 nap"; fixed in code, never redrawn (DV-9) | S2 |
+| D1 | ✅ **Fixed (Prompt 17).** L19 sold "Több edző egy stúdióban", a feature that does not exist | was one occurrence in `design/Lifey Landing.dc.html`; the canvas now carries the same third bullet as the other two tiers | S2 |
+| D2 | ✅ **Fixed (Prompt 17), and it was a markup trap rather than a rendering defect** | the "7 nap" check was coloured to the popup's own background — invisible, but readable as a second check by anyone (or any audit) working from the source. Both instances are now empty spans | S2 |
 | D3 | Never drawn: for-trainers page, app page, download page, the web state frames (form submitting/success/error, failed image, 404), the motion + open-questions addendum | `68` §13 items 1–5 | S3 |
 | D4 | Never drawn: the sponsorship-ended card, the price-loading skeleton (built in code from the spec text) | `69` §13 items 2–3 | S3 |
 | D5 | `68` §2.2–2.3's marketing type scale and `--mkt-*` tokens exist in neither `globals.css` nor `docs/web/06-design-system-web.md` — the shipped pages use Tailwind arbitrary values plus the app's own tokens | grep: zero `--mkt-` under `web/src` | S3 |
@@ -240,16 +243,18 @@ the first paying customer · **S3** = correctness of the record, or polish.
 Every one of these was on an "After implementation" checklist in `64`/`65`/`66`/`67`, and none
 of them happened:
 
+All of these landed in F4 (Prompts 15–16) unless the row says otherwise.
+
 | # | Owed by | What |
 |---|---|---|
-| X1 | `63`–`66` | `Status:` headers still say *proposed* |
-| X2 | `README.md` | The "19 still open" light-theme contrast instances were closed by `1c252fd`; two remain, both on `/hu/alkalmazas` |
-| X3 | `64` §15 | `docs/05-backend-api.md` has no billing endpoints; `docs/postman/lifey.postman_collection.json` has no entitlement/checkout calls |
-| X4 | `64` §15 | `docs/personal_trainer/03-backend-terv.md` has no `SeatLimitService` note |
-| X5 | `65` §15 | `docs/web/01-feature-inventory.md` (marketing surface) and `docs/web/04-frontend-architecture.md` (D-W6's providers move, `src/proxy.ts`) both untouched |
-| X6 | `66` §13 | `docs/personal_trainer/04-web-admin-terv.md` (`/admin/billing`, `/admin/pending`), `docs/personal_trainer/README.md` §2, `docs/web/07-screen-specifications.md` |
-| X7 | `67` §14 | `docs/04-mobile-app.md` (free/Pro split), `docs/23-ai-calorie-estimation-plan.md` (credit gate), `docs/17-statistics-page-plan.md` (history window) |
-| X8 | `68` DV-9 | `63` §5 still lists two legal documents; four shipped (ÁSZF, Adatkezelés, Elállás, Impresszum) |
+| X1 | `63`–`66` | ✅ `Status:` headers said *proposed* after every prompt in them had landed |
+| X2 | `README.md` | ✅ The "19 still open" contrast claim is gone — the paragraph now says what is true: the sweep is closed, axe runs over all 12 routes in both themes in CI, zero violations |
+| X3 | `64` §15 | ✅ `docs/05-backend-api.md` gained a *Billing & entitlements* section (six endpoints + why the webhooks are unauthenticated); the Postman collection gained a *Billing & Entitlements* folder with four requests and a `storePurchaseToken` variable |
+| X4 | `64` §15 | ✅ `docs/personal_trainer/03-backend-terv.md` gained a `SeatLimitService` section — the four call sites are all in *that* module's services, which is why it belongs there and not only in `64` |
+| X5 | `65` §15 | ✅ `01-feature-inventory.md` gained the public marketing surface (route table + the three ways it differs from the app); `04-frontend-architecture.md` gained §5.5 (providers moved out of the root layout, D-W6) and §5.6 (`proxy.ts`), plus the marketing rows in its rendering table and folder tree |
+| X6 | `66` §13 | ✅ All three: the admin plan's route tree gained both pages (and the note that `/admin/pending` is the one `/admin/**` route reachable without `ROLE_TRAINER`); the module README's decision 2 now says role-granting also closes the request row and starts the trial; the screen specs gained §10.5 |
+| X7 | `67` §14 | ✅ `docs/04-mobile-app.md` gained the free/Pro table and the four rules any new screen has to respect; `docs/17` gained §4.5 (why the range menu marks rather than hides, and why the cutoff lives in the presentation layer); `docs/23`'s credit-gate section landed earlier, in F3 Prompt 14 |
+| X8 | `68` DV-9 | ⚠️ **This row was wrong.** `63` §5 already listed all four documents — the withdrawal-notice and Impresszum paragraphs were added while `65` Prompt 3 was landing the footer links. Nothing to do; recorded here rather than deleted, since a follow-up plan that quietly drops its own items is not one worth trusting |
 
 ---
 
@@ -567,35 +572,105 @@ include the feature) with the mobile trigger each maps to.
 
 ### Milestone F4 — the record matches reality
 
-**Prompt 15 — Docs: statuses and the README**
+**Prompt 15 — Docs: statuses and the README — ✅ done**
 `Status:` on `63`–`66`; `README.md`'s contrast paragraph corrected to the measured state; this
 document added to the reading-order table.
 *Verify:* read it back against §1 of this doc.
 
-**Prompt 16 — Docs: the seven downstream documents (X3–X8)**
+The four headers say what is true now, and each carries the caveat that matters rather than a
+bare word: `64` names the one half-prompt and points at `73` for the Stripe pass, `65` names the
+legal review still owed, `66` names the same Stripe pass, `63` says M0–M4 are built and M5 is
+not. The README's contrast paragraph was the worst of the stale text — it claimed 19 open
+instances that commit `1c252fd` and F1 had already closed — and now describes the measured
+state, including that the axe sweep runs in CI at zero violations.
+
+**Prompt 16 — Docs: the seven downstream documents (X3–X8) — ✅ done, and one item was a false
+alarm**
 One commit, small edits: API doc, Postman collection, trainer backend/admin plans, web
 inventory/architecture/screen specs, mobile app doc, `docs/23`, `docs/17`, and `63` §5's legal
 list.
 *Verify:* each file mentions the thing it was supposed to gain — e.g. `grep -i billing
 docs/05-backend-api.md` returns hits.
 
-**Prompt 17 — Design: correct the two canvas defects**
+Eight files edited (X8 turned out not to need anything — see the table above). Two notes worth
+keeping:
+
+- **Language follows the file, not the author.** `docs/personal_trainer/**` is Hungarian, so its
+  two additions are Hungarian; everything else in `docs/` is English and stayed English. A
+  bilingual document would be worse than an out-of-date one.
+- **The Postman collection is hand-formatted**, with one-line objects for variables, headers and
+  URLs. Re-serialising it with `json.dumps` produced a 2810-line diff for a 51-line change, so
+  the folder was inserted as text matching the surrounding style — and the file is re-parsed
+  afterwards to prove it is still valid JSON. Worth knowing before the next edit to it.
+
+**Prompt 17 — Design: correct the two canvas defects — ✅ done, and one of them was not what
+this plan said it was**
 Redraw L19's Studio bullet to match `lib/pricing.ts`, and P11 with one check mark. Both are
 already fixed in code; this closes the drift so the canvases stay trustworthy as references.
 *Verify:* grep both `.dc.html` files for the offending strings.
 
+L19 was exactly as described: the Studio card's third bullet now reads *"Korlátlan program és
+időpont"*, the same string Starter and Pro carry, so the phantom multi-trainer feature is gone
+from the canvas as well as from the code.
+
+**P11 was a markup trap, not a rendering defect.** Opening it showed the "7 nap" row's `check`
+glyph was **coloured to match the popup's own background** — `#2A2C20` in the dark frame,
+`#FFFFFF` in the light one — an invisible spacer holding the 20 px slot. The frame always
+*rendered* one check mark; only its source reads as two, which is precisely how this document's
+own audit read it (§1.1 lists that audit as "read off the code", and this is where that method
+shows its edge). Both instances are now an empty `<span>` of the same width: identical pixels,
+no trap. `69` §11.2's DV-9 entry records the correction.
+
+Total diff across both canvases: three lines.
+
 ### Milestone F5 — store & polish (`63` M5)
 
-**Prompt 18 — Design: export the store screenshot set**
+**Prompt 18 — Design: export the store screenshot set — ✅ done for Hungarian; English needs a
+decision**
 P18–P25 exported per platform and per language (6 phone frames × 2 languages × 2 platforms,
 plus the 1024 × 500 Play feature graphic).
 
-**Prompt 19 — Store: listings and ASO text**
+`devops/export-store-screenshots.mjs` renders the frames **out of the canvas itself** at each
+store's exact pixel size — 19 files today (Apple 6.9" and 6.5", Play phone, plus the feature
+graphic). Rendering beats cropping here: the frames are HTML, so a 440 px design becomes a
+sharp 1290 px screenshot instead of an upscaled bitmap. Output goes to `devops/store-assets/`,
+gitignored, because it is derived and regenerating takes seconds.
+
+Two things the exporter has to do that are not obvious, both found by looking at the output
+rather than trusting the script: the canvas keeps its font `<link>`s inside a `<helmet>` element
+that a missing `support.js` normally hoists (without hoisting them by hand, every icon renders
+as its ligature text — the same failure mode as `68` DV-11), and the frames inherit their
+typeface from the canvas wrapper they are lifted out of, so the body needs the font set
+explicitly or every screenshot ships in Times.
+
+**The English set does not exist.** `69` §5.1 asks for six frames per language; the canvas has
+six at full size in Hungarian and English only as **P24, a contact sheet** — thumbnails with
+simplified content, nothing exportable. `74` §4 lays out the three ways forward and recommends
+shipping Hungarian screenshots in both storefronts for the first submission, then drawing six
+real EN frames before any English-language push.
+
+**Prompt 19 — Store: listings and ASO text — ✅ written, needs pasting into the consoles**
 Title, subtitle, keywords, description and promo text in both languages (`69` §5.2), the privacy
 policy URL, Apple's privacy nutrition labels and Play's Data Safety form — both of which must
 declare AdMob and the entitlement calls.
 
-**Prompt 20 — Web + mobile: swap the placeholders once the listings exist**
+All of it is [`74`](74-store-listing-and-aso.md) §1–§3. Notes:
+
+- **Every character count in it was verified with a script**, not eyeballed — three were wrong
+  on the first pass (two by one character, one by two), which is exactly the kind of error that
+  survives review and then truncates a subtitle in search results.
+- The privacy answers are derived from `mobile/pubspec.yaml` and the two native manifests, not
+  from a template. The useful finding: there is **no analytics or crash SDK in the app at all**,
+  so a whole column of "diagnostics" answers is a clean *no* — worth keeping true, and worth
+  updating the day someone adds Sentry.
+- The tracking answers (advertising ID, usage data) are what make the ATT prompt mandatory.
+  They apply to the free tier only, but App Privacy describes the app as shipped, so they are
+  declared as yes.
+- Both stores reject a subscription listing without renewal terms and both legal links; those
+  are the closing block of each description and must not be trimmed to fit.
+
+**Prompt 20 — Web + mobile: swap the placeholders once the listings exist** — blocked on the
+consoles; `74` §5 lists what has to happen first, in order
 Real store URLs into `StoreBadges.tsx` (`variant="disabled"` becomes `"link"`), real AdMob ids
 through Prompt 11's defines, and the device check of `lifey://invite/<token>` — noting the token
 is deliberately inert on the app side (the invite matches server-side by e-mail, `69` D-DM5;

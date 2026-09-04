@@ -61,6 +61,30 @@ com.lifey.superadmin/
 
 A projektszabály ("controller sosem fogad userId-t") a **saját** adatokra vonatkozik. A trainer végpontok definíció szerint **másik** user adatáról szólnak, ezért ott a `{clientId}` path-változó legitim — de **minden** ilyen hívást a `TrainerAccessService.requireActiveClient(trainerId, clientId)` őriz, ami a `trainer_clients` táblában ACTIVE kapcsolatot követel, különben 403 (`NotYourClientException`). Ezt a kivételt a `docs/06-development-rules.md`-ben dokumentálni kell.
 
+### SeatLimitService — a fizetős csomag férőhely-korlátja
+
+Utólag került a modul mellé (`docs/landing_page/64-billing-backend-plan.md` §4, Prompt 6), és
+azért tartozik ide, mert **ennek a doksinak a végpontjait fogja meg**, nem a billing sajátjait.
+
+- Az edző csomagja adja a keretet (`63` D-M2: Starter 5, Pro 25, Studio korlátlan), az „aktív
+  kliens" pedig egyszerűen a `trainer_clients` `ACTIVE` sorainak száma — egy szám, ami triviálisan
+  ellenőrizhető.
+- Négy ponton szólal meg, mind a `com.lifey.trainer` service-eiből hívva:
+
+  | Hívás | Hol | Mit tilt |
+  |---|---|---|
+  | `assertCanSendInvite` | `TrainerInviteServiceImpl.send` | új meghívó, ha a függő meghívók + aktív kliensek már kitöltik a keretet |
+  | `assertCanAcquireClientForAccept` | `TrainerInviteServiceImpl.respond` | a **kliens** elfogadása, ha időközben betelt a keret (a versenyhelyzet itt valós: két kliens egyszerre fogad el) |
+  | `assertActiveState` | `ContentAssignmentServiceImpl`, `ProgramAssignmentServiceImpl`, `WorkoutScheduleServiceImpl` | új tartalom/időpont kiosztása lejárt vagy törölt előfizetéssel |
+
+- A `SeatLimitExceededException` **409**-cé képződik le a `GlobalExceptionHandler`-ben.
+- **Minden olvasás érintetlen marad**, és a chat is: egy lejárt előfizetésű edző látja a
+  klienseit, az adataikat és a beszélgetéseket, csak új kapcsolatot/tartalmat nem hoz létre
+  (`64` Prompt 6). Ez szándékos: az adat elzárása a kliensét is bünteti, aki nem fizet semmiért.
+- Az egész a `lifey.billing.enabled` kapcsoló mögött van, ami **alapból `false`** — akkor minden
+  seat-ellenőrzés átenged, tehát a modul a billing bekapcsolása előtt is pontosan úgy működik,
+  ahogy ez a doksi eredetileg leírta.
+
 ## Végpontok
 
 ### Edző oldal (web admin) — mind `ROLE_TRAINER` + kapcsolat-guard

@@ -1,6 +1,7 @@
 # 63 – Monetization Strategy
 
-Status: proposed
+Status: **live** — M0–M4 built; M5 (store & polish) not started. Decisions here are in force;
+where a later doc corrected one, that doc says so (`72` D-F6 for the free AI allowance)
 Scope: product · backend · mobile · web · design — umbrella doc for `docs/landing_page/`
 Depends on: `docs/personal_trainer/01-koncepcio-es-folyamatok.md` (`ROLE_TRAINER`, trainer↔client
 relationships), `docs/personal_trainer/03-backend-terv.md` (`/api/v1/trainer/**` authorization),

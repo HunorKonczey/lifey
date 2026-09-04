@@ -1,6 +1,7 @@
 # 65 – Web Landing Page
 
-Status: proposed
+Status: **done** — all 11 prompts. Follow-ups (the branded 404, the store-badge glyph, two axe
+failures, the marketing e2e suite) landed in `72` F1; the legal pages still need real review
 Scope: web — routing, i18n + SEO, page inventory, content, analytics, performance
 Depends on: `docs/landing_page/63-monetization-strategy-plan.md` (pricing, funnel, legal),
 `docs/web/04-frontend-architecture.md` (rendering, folder structure, providers),
@@ -160,9 +161,12 @@ consent banner — it does not get to arrive as a one-line addition.
 
 ### D-W8 Every CTA carries its attribution into registration
 
-CTA links append `?src=<page>-<slot>` and any inbound `utm_*` is preserved. A tiny client
-component writes the first-touch value to a `lifey_attrib` cookie (30 days, `SameSite=Lax`,
-no personal data — 63 §5 privacy rules), which `(auth)/register` reads and sends as
+CTA links append `?src=<page>-<slot>` and any inbound `utm_*` is preserved. `src/proxy.ts`
+writes the first-touch value to a `lifey_attrib` cookie (30 days, `SameSite=Lax`, no personal
+data — 63 §5 privacy rules) on the response itself, so a visitor who leaves before hydration
+is still attributed; `AttributionCapture.tsx` — the client island that was the only writer
+until Prompt 10's note 9 — stays as the fallback for a marketing page the proxy's deliberately
+narrow matcher (D-W3) doesn't cover. `(auth)/register` reads the cookie and sends it as
 `signupSource` on the register call. Without this, "which page produced paying trainers" is
 unanswerable and the landing page cannot be improved on evidence.
 
@@ -907,6 +911,22 @@ whoever touches this next:
    have — landing with a UTM param, clicking through, and confirming the registration request
    carries the source — just via manual + `psql` verification instead of an automated browser
    test.
+9. **The cookie writer later moved from the client island into `src/proxy.ts`** — the island
+   stays as the fallback, but the proxy is the one that normally writes now. What forced it:
+   `72` Prompt 5's e2e test failed in CI and only in CI, because it read the cookie straight
+   after `page.goto()` and a loaded CI runner beats the `useEffect` that wrote it. The flake
+   was pointing at a real hole rather than a bad test — a visitor who bounces before
+   hydration was attributed to nothing at all — so the cookie is now set on the navigation's
+   own response instead of the test merely being taught to wait. The proxy appends the same
+   `buildAttributionCookieString()` output the island assigns to `document.cookie`, so the
+   two writers produce a byte-identical cookie and note 1's first-touch rule is unchanged:
+   the proxy skips writing whenever the request already carries one. It also lands on the
+   `/` → `/hu|/en` locale *redirect*, one response earlier than any client code could run.
+   Covered by six unit tests in `proxy.test.ts` and two `javaScriptEnabled: false` e2e tests
+   — with the bundle running, a passing cookie read cannot tell the two writers apart, so
+   disabling JS is the only way to assert the server-side one from outside. The matcher was
+   **not** widened (D-W3): `/register?src=…` reached directly still gets no cookie and falls
+   to the register form's own last-touch fallback.
 
 **Prompt 11 — Web: performance budget in CI — ✅ done**
 Lighthouse CI + a first-load-JS assertion on the marketing routes, wired into the existing
@@ -1013,6 +1033,12 @@ happened. Notes for whoever touches this next:
 6. **Print / reader mode** on the legal pages — plain semantic HTML, no layout tricks.
 7. **A crawler on `/en/arak`** (an English visitor hitting the Hungarian path) → 404, and the
    `hreflang` graph must not point at it.
+
+   **Corrected against the shipped behaviour (`72` W14):** it is a **307 to the canonical
+   `/en/pricing`**, not a 404 — that is what next-intl's `pathnames` map does for every
+   cross-locale path. The requirement behind this line (one piece of content, one indexable
+   URL) holds either way, and a redirect additionally keeps the link usable. Asserted in
+   `web/e2e/marketing/locale-routing.spec.ts`.
 
 ---
 

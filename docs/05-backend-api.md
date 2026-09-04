@@ -79,6 +79,44 @@ GET /api/v1/statistics/weekly
 
 GET /api/v1/statistics/monthly
 
+## Billing & entitlements
+
+Full design: [docs/landing_page/64-billing-backend-plan.md](landing_page/64-billing-backend-plan.md).
+Everything here is behind `lifey.billing.enabled` (default **false**, which resolves an open
+entitlement for everyone and passes every seat check — that is what makes the feature deployable
+before any client understands it).
+
+GET /api/v1/me/entitlements
+* The one endpoint every client reads to decide what a user may do (`64` §3): tier, source, the
+  free-tier limits (`historyDays`, `aiCreditsRemaining`), `adsEnabled`, an optional `trainer`
+  block, and `graceUntil` for the offline ladder. `Cache-Control: max-age=60, private`.
+* Resolution order is server-side and fixed (`63` §3): own paid → trainer-sponsored → trainer
+  trial. Clients gate on the *fields*, never on `tier`/`source`, which exist for copy only.
+
+POST /api/v1/billing/checkout-session
+* `ROLE_TRAINER` only. Body `{plan, interval}` → a Stripe Checkout URL. Sets
+  `client_reference_id` to the trainer's user id (how the webhook finds them back), turns on
+  Stripe Tax and promotion codes, and collects the EU 14-day withdrawal waiver as a real consent
+  checkbox (`63` §5).
+
+POST /api/v1/billing/portal-session
+* `ROLE_TRAINER` only. → a Stripe billing-portal URL. 404 if the trainer has no linked customer
+  yet (nothing writes that column before the first webhook).
+
+POST /api/v1/billing/store-purchase
+* The mobile purchase path (`64` §6). Body `{platform, productId, purchaseToken}`; verifies the
+  receipt with Apple/Google and returns the freshly resolved `EntitlementResponse`. The client
+  only calls the store's own `completePurchase` **after** this answers 200 — a 409/422 is
+  terminal and completes anyway, anything else leaves the transaction pending for redelivery.
+
+POST /api/v1/webhooks/stripe · /api/v1/webhooks/app-store · /api/v1/webhooks/play
+* Unauthenticated by design — each verifies its provider's own signature instead (Stripe's
+  `Webhook.constructEvent` over the raw body, Apple's JWS chain, Google's Pub/Sub OIDC token),
+  and all three fail closed with no secret configured. Idempotent: `processed_billing_event`
+  makes a replayed event a no-op (`64` Prompt 5).
+* These are the **source of truth** for subscription state (D-B5). The browser redirect after
+  Checkout is a UI convenience and never writes anything.
+
 ## Technical Requirements
 
 * OpenAPI documentation
