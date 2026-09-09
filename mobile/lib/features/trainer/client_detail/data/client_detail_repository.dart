@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/network/dio_client.dart';
 import '../domain/client_data.dart';
+import '../domain/client_workout_session.dart';
 
 /// Read-only access to one client's data, for the trainer viewing it
 /// (docs/chat/41-trainer-mobile-v2-plan.md T2).
@@ -80,6 +81,46 @@ class ClientDetailRepository {
       ApiEndpoints.trainerClientNutritionGoals(clientId),
     );
     return ClientNutritionGoals.fromJson(response.data ?? const {});
+  }
+
+  /// One page of the client's finished sessions, newest first — the order the
+  /// backend already sorts by, so no `sort` parameter is sent.
+  Future<ClientSessionPage> fetchWorkoutSessions(
+    int clientId, {
+    int page = 0,
+    int size = 20,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiEndpoints.trainerClientWorkoutSessions(clientId),
+      queryParameters: {'page': page, 'size': size},
+    );
+    return ClientSessionPage.fromJson(response.data ?? const {});
+  }
+
+  /// Writes (or rewrites) the trainer's comment. Returns the session the
+  /// server ended up with, so the caller shows what was actually stored
+  /// rather than what it hoped to store — this surface has no optimistic UI
+  /// (docs/chat/41 §2.2).
+  Future<ClientWorkoutSession> putSessionComment(
+    int clientId,
+    int sessionId,
+    String comment,
+  ) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      ApiEndpoints.trainerClientSessionComment(clientId, sessionId),
+      data: {'comment': comment},
+    );
+    return ClientWorkoutSession.fromJson(response.data ?? const {});
+  }
+
+  Future<ClientWorkoutSession> deleteSessionComment(
+    int clientId,
+    int sessionId,
+  ) async {
+    final response = await _dio.delete<Map<String, dynamic>>(
+      ApiEndpoints.trainerClientSessionComment(clientId, sessionId),
+    );
+    return ClientWorkoutSession.fromJson(response.data ?? const {});
   }
 
   Map<String, String> _dateRange(DateTime? from, DateTime? to) => {

@@ -142,8 +142,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/chat', builder: (context, state) => const ConversationListScreen()),
       GoRoute(
         path: '/chat/:conversationId',
+        // `extra` carries an optional opening draft — see
+        // ChatThreadScreen.initialDraft. Anything else passed here is
+        // ignored rather than crashing the route.
         builder: (context, state) => ChatThreadScreen(
           conversationId: int.parse(state.pathParameters['conversationId']!),
+          initialDraft: state.extra is String ? state.extra as String : null,
         ),
       ),
       // Its own route rather than a mode on the thread: results read

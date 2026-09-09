@@ -5047,5 +5047,164 @@
   "trainerViewClientDataAction": "View their data",
   "@trainerViewClientDataAction": {
     "description": "Tooltip of the chat thread action that takes a trainer from a conversation to that client's detail screen (docs/chat/41 T2). Only shown to a trainer viewing a client's thread"
+  },
+  "trainerTabWorkoutsLabel": "Workouts",
+  "@trainerTabWorkoutsLabel": {
+    "description": "Client detail tab: the client's session history, and the only tab where the trainer writes anything (docs/chat/41 T3)"
+  },
+  "trainerNoSessionsTitle": "No workouts yet",
+  "@trainerNoSessionsTitle": {
+    "description": "Empty state title on the client's workouts tab"
+  },
+  "trainerNoSessionsMessage": "Your client hasn't finished a workout yet. Sessions show up here as soon as they do.",
+  "@trainerNoSessionsMessage": {
+    "description": "Empty state body on the client's workouts tab"
+  },
+  "trainerFreeWorkoutLabel": "Free workout",
+  "@trainerFreeWorkoutLabel": {
+    "description": "Title of a strength session the client logged without picking a template"
+  },
+  "trainerNoSessionDetailsLabel": "No details recorded",
+  "@trainerNoSessionDetailsLabel": {
+    "description": "Shown in place of a session's summary line, or its exercise list, when nothing was logged beyond the session itself"
+  },
+  "trainerNoSetsLoggedLabel": "No sets logged",
+  "@trainerNoSetsLoggedLabel": {
+    "description": "Shown under an exercise the client planned but recorded no sets for"
+  },
+  "trainerExerciseCountLabel": "{count, plural, one{1 exercise} other{{count} exercises}}",
+  "@trainerExerciseCountLabel": {
+    "description": "Part of a session's summary line: how many distinct exercises it covered",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerSetCountLabel": "{count, plural, one{1 set} other{{count} sets}}",
+  "@trainerSetCountLabel": {
+    "description": "Part of a session's summary line: how many sets were logged in total",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerDurationMinutesLabel": "{minutes} min",
+  "@trainerDurationMinutesLabel": {
+    "description": "A session length under an hour",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerDurationHoursMinutesLabel": "{hours} h {minutes} min",
+  "@trainerDurationHoursMinutesLabel": {
+    "description": "A session length of an hour or more",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerKmValue": "{value} km",
+  "@trainerKmValue": {
+    "description": "A cardio distance with its unit. {value} is already formatted",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerSetLabel": "{reps} × {weight} kg",
+  "@trainerSetLabel": {
+    "description": "One logged set in the session detail: repetitions and the weight used. Weight is in kilograms, as everywhere else in the app's strength logging",
+    "placeholders": {
+      "reps": {
+        "type": "int"
+      },
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerRpeShortLabel": "RPE {rpe}",
+  "@trainerRpeShortLabel": {
+    "description": "Compact chip on a session card carrying the client's own difficulty rating (1-10)",
+    "placeholders": {
+      "rpe": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerRpeLabel": "Difficulty: {rpe}/10",
+  "@trainerRpeLabel": {
+    "description": "The client's difficulty rating, spelled out in the session detail",
+    "placeholders": {
+      "rpe": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerClientNoteLabel": "Note",
+  "@trainerClientNoteLabel": {
+    "description": "Chip on a session card meaning the client wrote a note about this workout"
+  },
+  "trainerClientFeedbackTitle": "What your client said",
+  "@trainerClientFeedbackTitle": {
+    "description": "Heading of the block in the session detail holding the client's own rating and note (docs/31: this is the half the trainer is answering)"
+  },
+  "trainerYourCommentLabel": "Your comment",
+  "@trainerYourCommentLabel": {
+    "description": "Chip on a session card, and heading of the comment block in the session detail, for the trainer's own comment on that session"
+  },
+  "trainerNoCommentYetMessage": "You haven't commented on this workout.",
+  "@trainerNoCommentYetMessage": {
+    "description": "Shown in the session detail's comment block before the trainer has written anything"
+  },
+  "trainerAddCommentTitle": "Add comment",
+  "@trainerAddCommentTitle": {
+    "description": "Button that opens the comment editor for a session with no comment yet, and that sheet's title"
+  },
+  "trainerEditCommentTitle": "Edit comment",
+  "@trainerEditCommentTitle": {
+    "description": "Button that opens the comment editor for a session that already has one, and that sheet's title"
+  },
+  "trainerCommentSheetSubtitle": "Your client sees this on the workout itself.",
+  "@trainerCommentSheetSubtitle": {
+    "description": "Subtitle of the comment editor, saying where the comment ends up. Deliberately does not promise a notification — that only goes out for a brand-new comment (docs/31 B3)"
+  },
+  "trainerCommentHint": "How did this session go?",
+  "@trainerCommentHint": {
+    "description": "Placeholder in the comment editor's text field"
+  },
+  "trainerCommentSavedNotifiedMessage": "Comment saved — your client was notified.",
+  "@trainerCommentSavedNotifiedMessage": {
+    "description": "Confirmation after writing a comment where there was none. The push is real (docs/31 B3), and the trainer should know another person's phone just rang"
+  },
+  "trainerCommentSavedMessage": "Comment saved.",
+  "@trainerCommentSavedMessage": {
+    "description": "Confirmation after editing an existing comment. No notification is sent for an edit, so none is claimed"
+  },
+  "trainerCommentDeletedMessage": "Comment removed.",
+  "@trainerCommentDeletedMessage": {
+    "description": "Confirmation after clearing a comment from a session"
+  },
+  "trainerMessageThemTooAction": "Message them too",
+  "@trainerMessageThemTooAction": {
+    "description": "Button in the session detail that opens the chat thread with this client, with a draft already naming the session (docs/chat/41 T3, frame D4)"
+  },
+  "trainerSessionChatDraft": "About your workout on {date}: ",
+  "@trainerSessionChatDraft": {
+    "description": "The text the chat composer opens with after \"message them too\". Ends with a space so the trainer keeps typing where it left off; {date} is already formatted for the locale",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   }
 }

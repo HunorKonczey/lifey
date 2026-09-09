@@ -12,6 +12,7 @@ import '../domain/client_detail_tab.dart';
 import 'tabs/nutrition_tab.dart';
 import 'tabs/overview_tab.dart';
 import 'tabs/statistics_tab.dart';
+import 'tabs/workouts_tab.dart';
 import 'tabs/steps_tab.dart';
 import 'tabs/weight_tab.dart';
 import 'widgets/client_detail_header.dart';
@@ -102,17 +103,19 @@ class _LoadedState extends ConsumerState<_Loaded>
     String label(ClientDetailTab tab) => switch (tab) {
           ClientDetailTab.overview => l10n.trainerTabOverviewLabel,
           ClientDetailTab.statistics => l10n.trainerTabStatisticsLabel,
+          ClientDetailTab.workouts => l10n.trainerTabWorkoutsLabel,
+          ClientDetailTab.nutrition => l10n.trainerTabNutritionLabel,
           ClientDetailTab.steps => l10n.trainerTabStepsLabel,
           ClientDetailTab.weight => l10n.trainerTabWeightLabel,
-          ClientDetailTab.nutrition => l10n.trainerTabNutritionLabel,
         };
 
     const icons = {
       ClientDetailTab.overview: Icons.dashboard_outlined,
       ClientDetailTab.statistics: Icons.bar_chart,
+      ClientDetailTab.workouts: Icons.fitness_center,
+      ClientDetailTab.nutrition: Icons.restaurant_outlined,
       ClientDetailTab.steps: Icons.directions_walk,
       ClientDetailTab.weight: Icons.monitor_weight_outlined,
-      ClientDetailTab.nutrition: Icons.restaurant_outlined,
     };
 
     return Column(
@@ -144,9 +147,10 @@ class _LoadedState extends ConsumerState<_Loaded>
                 offline: offline,
               ),
               ClientStatisticsTab(clientId: clientId, offline: offline),
+              ClientWorkoutsTab(clientId: clientId, offline: offline),
+              ClientNutritionTab(clientId: clientId, offline: offline),
               ClientStepsTab(clientId: clientId, offline: offline),
               ClientWeightTab(clientId: clientId, offline: offline),
-              ClientNutritionTab(clientId: clientId, offline: offline),
             ],
           ),
         ),

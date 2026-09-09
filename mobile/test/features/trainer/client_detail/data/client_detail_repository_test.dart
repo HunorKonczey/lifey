@@ -8,8 +8,10 @@ import 'package:lifey/features/trainer/client_detail/data/client_detail_reposito
 import 'package:lifey/features/trainer/client_detail/domain/client_data.dart';
 
 class _FakeAdapter implements HttpClientAdapter {
+  final List<String> methods = [];
   final List<String> paths = [];
   final List<Map<String, dynamic>> queries = [];
+  final List<Object?> bodies = [];
   Object body = <Object>[];
 
   @override
@@ -21,8 +23,10 @@ class _FakeAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    methods.add(options.method);
     paths.add(options.path);
     queries.add(Map<String, dynamic>.from(options.queryParameters));
+    bodies.add(options.data);
     return ResponseBody.fromString(
       jsonEncode(body),
       200,
@@ -180,6 +184,129 @@ void main() {
       final meals = await repo.fetchMealsForDay(4, DateTime(2026, 7, 8));
 
       expect(meals.single.mealType, MealType.snack);
+    });
+  });
+
+  group('workout sessions', () {
+    test('asks for one page and reads the Spring page envelope', () async {
+      adapter.body = {
+        'content': [
+          {
+            'id': 31,
+            'startedAt': '2026-07-08T17:00:00Z',
+            'finishedAt': '2026-07-08T18:05:00Z',
+            'templateName': 'Push day',
+            'sessionKind': 'STRENGTH',
+            'exercises': [
+              {'exerciseId': 1, 'exerciseName': 'Bench press', 'targetSets': 3},
+            ],
+            'sets': [
+              {'exerciseId': 1, 'exerciseName': 'Bench press', 'reps': 10, 'weight': 60.0},
+              {'exerciseId': 1, 'exerciseName': 'Bench press', 'reps': 8, 'weight': 65.0},
+            ],
+            'rpe': 8,
+            'feedbackNote': 'Tough one',
+            'trainerComment': null,
+            'trainerCommentAt': null,
+          },
+        ],
+        'last': false,
+      };
+
+      final page = await repo.fetchWorkoutSessions(9, page: 2, size: 20);
+
+      expect(adapter.paths.single, '/trainer/clients/9/workout-sessions');
+      expect(adapter.queries.single['page'], 2);
+      expect(adapter.queries.single['size'], 20);
+      expect(page.isLast, isFalse);
+
+      final session = page.sessions.single;
+      expect(session.templateName, 'Push day');
+      expect(session.duration, const Duration(hours: 1, minutes: 5));
+      expect(session.exerciseCount, 1);
+      expect(session.rpe, 8);
+      expect(session.feedbackNote, 'Tough one');
+      expect(session.hasTrainerComment, isFalse);
+      expect(session.setsOf(1).length, 2);
+    });
+
+    test('a cardio session carries no sets, and its distance comes from cardio',
+        () async {
+      adapter.body = {
+        'content': [
+          {
+            'id': 32,
+            'startedAt': '2026-07-09T06:00:00Z',
+            'finishedAt': '2026-07-09T06:40:00Z',
+            'sessionKind': 'CARDIO',
+            'activityType': 'RUNNING',
+            'movingSeconds': 2280,
+            'exercises': <Object>[],
+            'sets': <Object>[],
+            'cardio': {'distanceMeters': 7400.0},
+          },
+        ],
+        'last': true,
+      };
+
+      final session = (await repo.fetchWorkoutSessions(9)).sessions.single;
+
+      expect(session.isCardio, isTrue);
+      expect(session.activityType, 'RUNNING');
+      expect(session.distanceMeters, 7400.0);
+      expect(session.sets, isEmpty);
+    });
+
+    test('an empty envelope reads as a last page with nothing in it', () async {
+      adapter.body = <String, dynamic>{};
+
+      final page = await repo.fetchWorkoutSessions(9);
+
+      expect(page.sessions, isEmpty);
+      expect(page.isLast, isTrue);
+    });
+  });
+
+  group('session comment', () {
+    test('PUTs the comment and returns the session the server stored',
+        () async {
+      adapter.body = {
+        'id': 31,
+        'startedAt': '2026-07-08T17:00:00Z',
+        'sessionKind': 'STRENGTH',
+        'exercises': <Object>[],
+        'sets': <Object>[],
+        'trainerComment': 'Nice pace',
+        'trainerCommentAt': '2026-07-09T09:00:00Z',
+      };
+
+      final session = await repo.putSessionComment(9, 31, 'Nice pace');
+
+      expect(adapter.methods.single, 'PUT');
+      expect(
+        adapter.paths.single,
+        '/trainer/clients/9/workout-sessions/31/comment',
+      );
+      expect(adapter.bodies.single, {'comment': 'Nice pace'});
+      expect(session.trainerComment, 'Nice pace');
+      expect(session.trainerCommentAt, DateTime.utc(2026, 7, 9, 9));
+    });
+
+    test('DELETE clears it and returns the session without one', () async {
+      adapter.body = {
+        'id': 31,
+        'startedAt': '2026-07-08T17:00:00Z',
+        'sessionKind': 'STRENGTH',
+        'exercises': <Object>[],
+        'sets': <Object>[],
+        'trainerComment': null,
+        'trainerCommentAt': null,
+      };
+
+      final session = await repo.deleteSessionComment(9, 31);
+
+      expect(adapter.methods.single, 'DELETE');
+      expect(session.hasTrainerComment, isFalse);
     });
   });
 

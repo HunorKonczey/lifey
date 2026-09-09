@@ -36,6 +36,13 @@ class ApiEndpoints {
   static String trainerClientMeals(int clientId) => '/trainer/clients/$clientId/meals';
   static String trainerClientNutritionGoals(int clientId) =>
       '/trainer/clients/$clientId/nutrition-goals';
+  static String trainerClientWorkoutSessions(int clientId) =>
+      '/trainer/clients/$clientId/workout-sessions';
+
+  /// The trainer's one editable comment on a client's session — PUT upserts
+  /// it, DELETE clears it (docs/31-session-feedback-loop-plan.md B2).
+  static String trainerClientSessionComment(int clientId, int sessionId) =>
+      '/trainer/clients/$clientId/workout-sessions/$sessionId/comment';
 
   // Chat (docs/chat/40-trainer-chat-plan.md §4). Under `/chat`, not
   // `/trainer`, because both sides of a conversation call these.

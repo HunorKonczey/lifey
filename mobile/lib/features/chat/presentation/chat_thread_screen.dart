@@ -28,9 +28,19 @@ import 'widgets/message_bubble.dart';
 /// One conversation. Identical for both roles — nothing on this screen knows
 /// whether the person on the other side is a trainer or a client.
 class ChatThreadScreen extends ConsumerStatefulWidget {
-  const ChatThreadScreen({super.key, required this.conversationId});
+  const ChatThreadScreen({
+    super.key,
+    required this.conversationId,
+    this.initialDraft,
+  });
 
   final int conversationId;
+
+  /// Text the composer opens with. Set when the thread is entered with
+  /// something already to say — today only the trainer's "message them too"
+  /// about a session (docs/chat/41 T3, frame D4). Nothing is sent on the
+  /// trainer's behalf: the draft is theirs to edit or discard.
+  final String? initialDraft;
 
   @override
   ConsumerState<ChatThreadScreen> createState() => _ChatThreadScreenState();
@@ -262,6 +272,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
             child: conversation?.isArchived ?? false
                 ? const ArchivedComposerNotice()
                 : ChatComposer(
+                    initialText: widget.initialDraft,
                     onSend: _send,
                     onTyping: () =>
                         ref.read(chatTypingReporterProvider).report(widget.conversationId),

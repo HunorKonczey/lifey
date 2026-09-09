@@ -1,7 +1,7 @@
 /// The tabs of the client detail screen (docs/chat/41 T2, frame C1).
 ///
-/// The web has six; T2 ships the five read-only data views. Workouts arrives
-/// with T3 (it is the first *writing* surface) and Schedule with T5 — each
+/// The web has six; T2 shipped the five read-only data views and T3 added
+/// Workouts, the first *writing* surface. Schedule arrives with T5 — each tab
 /// appears here on the iteration that makes it real, never before.
 ///
 /// The stored name is part of a persisted preference (the last tab per
@@ -12,9 +12,10 @@
 enum ClientDetailTab {
   overview('overview'),
   statistics('statistics'),
+  workouts('workouts'),
+  nutrition('nutrition'),
   steps('steps'),
-  weight('weight'),
-  nutrition('nutrition');
+  weight('weight');
 
   const ClientDetailTab(this.storageKey);
 
