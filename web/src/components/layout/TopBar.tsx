@@ -69,7 +69,7 @@ export function TopBar() {
           className="px-3 py-1 rounded-[var(--r-sm)] text-sm font-semibold tabular transition-colors"
           style={{
             background: isToday ? "var(--primary)" : "var(--surface-container)",
-            color: isToday ? "#1E1F18" : "var(--on-surface)",
+            color: isToday ? "var(--bg)" : "var(--on-surface)",
           }}
         >
           {isToday ? common("today") : format(date, "MMM d")}

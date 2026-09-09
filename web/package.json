@@ -11,7 +11,10 @@
     "format": "prettier --write src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:js-budget": "node scripts/check-js-budget.mjs",
+    "lhci": "lhci autorun",
+    "test:e2e:marketing": "playwright test --project=marketing"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -33,6 +36,8 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

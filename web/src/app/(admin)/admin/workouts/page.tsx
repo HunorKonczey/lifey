@@ -35,7 +35,7 @@ export default function AdminWorkoutsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <SegmentedControl options={TABS} value={tab} onChange={setTab} activeBackground="var(--tertiary)" activeColor="#161611" />
+      <SegmentedControl options={TABS} value={tab} onChange={setTab} activeBackground="var(--tertiary)" activeColor="var(--bg)" />
 
       {tab === "templates" && <TemplatesView onAssign={setAssignTarget} onSchedule={setScheduleTarget} />}
       {tab === "exercises" && <ExercisesView />}

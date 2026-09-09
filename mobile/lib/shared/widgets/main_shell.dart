@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/ads/banner_ad_slot.dart';
+import '../../core/ads/nav_reserved_space.dart';
 import '../../features/trainer_invite/presentation/trainer_invite_card.dart';
 import '../../features/workouts/presentation/widgets/upcoming_workout_card.dart';
 import '../../l10n/app_localizations.dart';
@@ -40,8 +42,11 @@ class _MainShellState extends ConsumerState<MainShell> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final safeBottom = MediaQuery.paddingOf(context).bottom;
-    // Nav bar = 84 dp fixed + safeBottom; sit 16 dp above it.
-    final fabBottom = 84.0 + safeBottom + 16.0;
+    // Above the nav, and above the active tab's banner too if one is
+    // showing (`67` §5.2: "Never over a FAB") — see core/ads/nav_reserved_space.dart.
+    final activeTab = ref.watch(activeShellTabProvider);
+    final bannerHeight = ref.watch(bannerAdSlotHeightProvider(activeTab));
+    final fabBottomValue = fabBottom(safeBottom, bannerHeight: bannerHeight);
 
     return NavCollapseScope(
       controller: _collapseController,
@@ -80,7 +85,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                       );
                 return Positioned(
                   right: 16,
-                  bottom: fabBottom,
+                  bottom: fabBottomValue,
                   // GestureDetector sits *above* the FAB's own InkWell in the
                   // gesture arena — a plain tap still reaches
                   // `config.onPressed` untouched, a long-press (when the
@@ -98,13 +103,13 @@ class _MainShellState extends ConsumerState<MainShell> {
             Positioned(
               left: 0,
               right: 0,
-              bottom: fabBottom,
+              bottom: fabBottomValue,
               child: const TrainerInviteCard(),
             ),
             Positioned(
               left: 0,
               right: 0,
-              bottom: fabBottom,
+              bottom: fabBottomValue,
               child: const UpcomingWorkoutCard(),
             ),
           ],

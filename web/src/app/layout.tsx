@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
-import { Providers } from "@/lib/providers";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -13,6 +13,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Lifey",
   description: "Personal fitness and nutrition tracker",
 };
@@ -49,7 +50,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full antialiased bg-bg text-on-surface" suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        {children}
         <SpeedInsights />
         <Analytics />
       </body>

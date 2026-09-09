@@ -1,6 +1,7 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.billing.service.SeatLimitService;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.trainer.ProgramAssignmentRepository;
 import com.lifey.trainer.Recurrence;
@@ -79,6 +80,10 @@ class WorkoutScheduleServiceImplTest {
 
     @Mock
     ProgramAssignmentRepository programAssignmentRepository;
+
+    /** Unstubbed: void, so every seat check is a no-op — these tests aren't about billing enforcement. */
+    @Mock
+    SeatLimitService seatLimitService;
 
     @InjectMocks
     WorkoutScheduleServiceImpl service;

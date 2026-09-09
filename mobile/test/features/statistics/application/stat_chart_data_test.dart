@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/features/nutrition/application/meal_controller.dart';
 import 'package:lifey/features/nutrition/domain/meal.dart';
 import 'package:lifey/features/statistics/application/stat_chart_data.dart';
@@ -178,6 +179,12 @@ ProviderContainer _buildContainer({
       if (weights != null)
         weightControllerProvider.overrideWith(() => _FakeWeightController(weights)),
       if (steps != null) allStepCountsProvider.overrideWith((ref) => Stream.value(steps)),
+      // This file's tests are about the range cutoff itself, not the
+      // entitlement one it's now intersected with (`67` §3.2, D-P6) — that
+      // combination has its own coverage in stat_chart_data_history_window_test.dart.
+      // Unlimited (`null`) here means the range cutoff alone decides what's
+      // visible, exactly as before that intersection existed.
+      historyCutoffProvider.overrideWithValue(null),
     ],
   );
 }

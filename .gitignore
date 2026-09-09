@@ -33,3 +33,7 @@ replay_pid*
 .env
 .env.local
 !.env.example
+
+# Generated store assets — `node devops/export-store-screenshots.mjs` rebuilds
+# them from the design canvas, so the PNGs themselves are not history.
+/devops/store-assets/

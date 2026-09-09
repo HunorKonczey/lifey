@@ -5,6 +5,7 @@ import '../storage/token_storage.dart';
 import 'api_config.dart';
 import 'auth_interceptor.dart';
 import 'client_config.dart';
+import 'gate_rejection_interceptor.dart';
 import 'session_events.dart';
 import 'token_refresher.dart';
 
@@ -50,6 +51,9 @@ Dio _authenticatedDio(Ref ref, String baseUrl) {
     // host. Late-bound because `dio` is still being built here.
     retryDio: () => dio,
     onSessionExpired: () => ref.read(sessionExpiredProvider.notifier).notify(),
+  ));
+  dio.interceptors.add(GateRejectionInterceptor(
+    onGateRejection: () => ref.read(gateRejectionProvider.notifier).notify(),
   ));
 
   return dio;

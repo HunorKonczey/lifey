@@ -2,6 +2,7 @@ package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
 import com.lifey.auth.TokenHasher;
+import com.lifey.billing.service.SeatLimitService;
 import com.lifey.mail.service.MailService;
 import com.lifey.trainer.TrainerClientMapper;
 import com.lifey.trainer.TrainerClientRepository;
@@ -53,10 +54,16 @@ public class TrainerInviteServiceImpl implements TrainerInviteService {
     private final CurrentUserProvider currentUserProvider;
     private final MailService mailService;
     private final TrainerInviteProperties trainerInviteProperties;
+    private final SeatLimitService seatLimitService;
 
     @Override
     public TrainerInviteResponse invite(TrainerInviteRequest request) {
         Long trainerId = currentUserProvider.getUserId();
+        // Pending invites count toward the limit too (64 §4.3) — checked before
+        // the email lookup so a trainer at capacity gets one consistent error
+        // regardless of who they tried to invite.
+        seatLimitService.assertCanSendInvite(trainerId);
+
         User client = userRepository.findByEmailIgnoreCase(request.email().trim())
                 .orElseThrow(() -> new UserNotFoundForInviteException(
                         "No user with email: " + request.email()));
@@ -169,8 +176,7 @@ public class TrainerInviteServiceImpl implements TrainerInviteService {
                 .filter(tc -> tc.getExpiresAt().isAfter(Instant.now()))
                 .orElseThrow(() -> new InviteNotFoundException("Invite not found: " + inviteId));
 
-        invite.setStatus(request.accept() ? TrainerClientStatus.ACTIVE : TrainerClientStatus.DECLINED);
-        invite.setRespondedAt(Instant.now());
+        applyResponse(invite, request.accept());
     }
 
     @Override
@@ -180,6 +186,20 @@ public class TrainerInviteServiceImpl implements TrainerInviteService {
                 .filter(tc -> tc.getExpiresAt().isAfter(Instant.now()))
                 .orElseThrow(() -> new InviteNotFoundException("Invite not found or already responded to"));
 
+        applyResponse(invite, accept);
+    }
+
+    /**
+     * Shared by both accept paths ({@link #respond} and {@link
+     * #respondViaEmailToken}): the seat re-check (64 §4.3, 63 §7.6) happens
+     * inside this same transaction, right before the mutation, so the
+     * {@code SELECT … FOR UPDATE} it takes is actually held across both — a
+     * concurrent accept racing for the last seat gets a 409, not a 13th seat.
+     */
+    private void applyResponse(TrainerClient invite, boolean accept) {
+        if (accept) {
+            seatLimitService.assertCanAcquireClientForAccept(invite.getTrainer().getId());
+        }
         invite.setStatus(accept ? TrainerClientStatus.ACTIVE : TrainerClientStatus.DECLINED);
         invite.setRespondedAt(Instant.now());
     }

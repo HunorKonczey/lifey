@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/admin/calendar", icon: "calendar_month", key: "calendar" },
   { href: "/admin/chat", icon: "chat_bubble", key: "chat" },
   { href: "/admin/invites", icon: "mail", key: "invites" },
+  { href: "/admin/billing", icon: "credit_card", key: "billing" },
   { href: "/admin/workouts", icon: "fitness_center", key: "workouts" },
   { href: "/admin/programs", icon: "event_repeat", key: "programs" },
   { href: "/admin/nutrition", icon: "restaurant", key: "nutrition" },
@@ -103,7 +104,7 @@ export function AdminSidebar() {
         <div className="flex items-center gap-2.5 px-2 pb-[22px]">
           <div
             className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "var(--primary)", color: "#161611" }}
+            style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
               eco
@@ -116,7 +117,7 @@ export function AdminSidebar() {
               </span>
               <span
                 className="flex items-center gap-1 rounded-[var(--r-pill)] text-[10px] font-extrabold tracking-wide px-2.5 py-1"
-                style={{ background: "var(--tertiary)", color: "#161611" }}
+                style={{ background: "var(--tertiary)", color: "var(--bg)" }}
               >
                 <span className="material-symbols-rounded text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                   fitness_center
@@ -160,7 +161,7 @@ export function AdminSidebar() {
                 className="flex items-center gap-[13px] px-3.5 py-[11px] rounded-[14px] transition-colors relative"
                 style={{
                   background: active ? "var(--tertiary)" : "transparent",
-                  color: active ? "#161611" : "var(--on-surface-variant)",
+                  color: active ? "var(--bg)" : "var(--on-surface-variant)",
                 }}
                 title={collapsed ? label : undefined}
               >
@@ -175,15 +176,15 @@ export function AdminSidebar() {
                   (collapsed ? (
                     <span
                       className="absolute top-1.5 right-2 w-2 h-2 rounded-full"
-                      style={{ background: active ? "#161611" : "var(--primary)" }}
+                      style={{ background: active ? "var(--bg)" : "var(--primary)" }}
                       aria-label={chat("unreadCount", { count: unread })}
                     />
                   ) : (
                     <span
                       className="ml-auto min-w-[20px] h-5 rounded-[10px] px-1.5 flex items-center justify-center text-[11px] font-extrabold"
                       style={{
-                        background: active ? "#161611" : "var(--primary)",
-                        color: active ? "var(--on-surface)" : "#161611",
+                        background: active ? "var(--bg)" : "var(--primary)",
+                        color: active ? "var(--on-surface)" : "var(--bg)",
                       }}
                       aria-label={chat("unreadCount", { count: unread })}
                     >
@@ -225,7 +226,7 @@ export function AdminSidebar() {
             >
               <div
                 className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-sm font-extrabold shrink-0 overflow-hidden"
-                style={{ background: "var(--tertiary)", color: "#161611" }}
+                style={{ background: "var(--tertiary)", color: "var(--bg)" }}
               >
                 {avatarUrl ? (
                   // Blob object URLs aren't compatible with next/image's optimizer.

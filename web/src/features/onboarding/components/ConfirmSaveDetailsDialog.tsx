@@ -171,7 +171,7 @@ export function ConfirmSaveDetailsDialog({
               onClick={() => onConfirm([...selected])}
               disabled={saving || selected.size === 0}
               className="h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-              style={{ background: "var(--primary)", color: "#1E1F18" }}>
+              style={{ background: "var(--primary)", color: "var(--bg)" }}>
               {saving ? t("saving") : t("confirmSaveConfirm")}
             </button>
           )}

@@ -70,7 +70,7 @@ export function ClientStatisticsTab({ clientId }: ClientStatisticsTabProps) {
         value={period}
         onChange={setPeriod}
         activeBackground="var(--tertiary)"
-        activeColor="#161611"
+        activeColor="var(--bg)"
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">

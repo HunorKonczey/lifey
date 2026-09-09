@@ -66,6 +66,12 @@ export const queryKeys = {
   trainerInvites: {
     all: () => ["trainer-invites"] as const,
   },
+  trainerRequests: {
+    /** This user's own most-recent request (docs/landing_page/66 §2) — there's only ever one row worth polling. */
+    mine: () => ["trainer-requests", "me"] as const,
+    /** The superadmin queue (66 §7 Prompt 3). */
+    pending: (params: { page: number; size?: number }) => ["trainer-requests", "pending", params] as const,
+  },
   trainerAssignments: {
     forClient: (clientId: number) => ["trainer-assignments", "client", clientId] as const,
     assignedClients: (contentType: string, sourceId: number) =>
@@ -125,6 +131,10 @@ export const queryKeys = {
     search: (conversationId: number, query: string) =>
       ["chat", "search", conversationId, query] as const,
   },
+  billing: {
+    /** GET /api/v1/me/entitlements (64 §3.1) — one row, no arguments. */
+    entitlements: () => ["billing", "entitlements"] as const,
+  },
   superAdminUsers: {
     page: (params: { page: number; size?: number; search?: string }) =>
       ["superadmin-users", "page", params] as const,
@@ -150,4 +160,11 @@ export const invalidationMap = {
   steps: [queryKeys.steps.all()],
   settings: [queryKeys.settings.all()],
   userDetails: [queryKeys.userDetails.all()],
+  // Every mutation that can change a trainer's seat count invalidates
+  // entitlements too — 64 §4.3's seat meter otherwise goes stale with nothing
+  // reporting it (66 §9.1). Sending/revoking an invite changes the *pending*
+  // count (pending invites count toward the limit, 64 §4.3); ending a client
+  // relationship changes the *active* count.
+  trainerInvite: [queryKeys.trainerInvites.all(), queryKeys.billing.entitlements()],
+  trainerClient: [queryKeys.trainerClients.all(), queryKeys.billing.entitlements()],
 } as const;

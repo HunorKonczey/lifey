@@ -50,6 +50,14 @@ public class User extends BaseEntity {
     @Column(name = "utc_offset_minutes", nullable = false)
     private int utcOffsetMinutes = 0;
 
+    /**
+     * First-touch marketing attribution (docs/landing_page/65 D-W8) — set once,
+     * at registration, from the {@code lifey_attrib} cookie the marketing site
+     * writes on a visitor's first page load. Never updated afterwards.
+     */
+    @Column(name = "signup_source")
+    private String signupSource;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)

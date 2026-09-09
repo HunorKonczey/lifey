@@ -8,6 +8,8 @@ import { queryKeys } from "@/lib/api/queryKeys";
 import { useToast } from "@/lib/hooks/useToast";
 import { ErrorState } from "@/components/status/ErrorState";
 import { normalizeForSearch } from "@/lib/utils/search";
+import { useTrainerBillingGate } from "@/features/billing/hooks";
+import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import type { ContentType } from "../types";
 
@@ -31,6 +33,7 @@ export function AssignToClientDrawer({
   const t = useTranslations("admin.assignDrawer");
   const queryClient = useQueryClient();
   const { show } = useToast();
+  const gate = useTrainerBillingGate();
   const [search, setSearch] = useState("");
   const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
   const hasSeededSelection = useRef(false);
@@ -94,6 +97,22 @@ export function AssignToClientDrawer({
       show(t("assignFailed"), "error");
     },
   });
+
+  // D-T5: the trigger button that opens this drawer stays visible and
+  // enabled-looking; a blocked trainer sees this dialog the moment it would
+  // have opened, instead of filling out a form that can only fail.
+  if (gate.state !== "OK") {
+    return (
+      <BillingBlockedDialog
+        open
+        onClose={onClose}
+        reason={gate.state === "RESTRICTED" ? "restricted" : "overLimit"}
+        currentPlan={gate.currentPlan}
+        activeClients={gate.activeClients}
+        maxClients={gate.maxClients}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" data-testid="assign-to-client-drawer">
@@ -196,7 +215,7 @@ export function AssignToClientDrawer({
             disabled={newClientIds.length === 0 || assignMutation.isPending}
             data-testid="assign-drawer-submit"
             className="flex-[2] text-center rounded-2xl py-3 text-[13.5px] font-extrabold disabled:opacity-40"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             {assignMutation.isPending
               ? t("assigning")

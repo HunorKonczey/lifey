@@ -17,11 +17,13 @@ import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/statistics/presentation/statistics_screen.dart';
 import '../../features/streaks/presentation/weekly_recap_screen.dart';
+import '../../features/subscription/presentation/paywall_screen.dart';
 import '../../features/weight/presentation/weight_screen.dart';
 import '../../features/workouts/application/activity_ranking.dart';
 import '../../features/workouts/application/workout_resume_prompt.dart';
 import '../../features/workouts/presentation/workouts_screen.dart';
 import '../../shared/widgets/main_shell.dart';
+import '../entitlements/paywall_trigger.dart';
 
 /// Notifies GoRouter to re-run its redirect whenever the signed-in user changes.
 class _AuthRefreshListenable extends ChangeNotifier {
@@ -116,6 +118,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/recap', builder: (context, state) => const WeeklyRecapScreen()),
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
+      // A [PaywallTrigger] (docs/landing_page/67-mobile-free-pro-plan.md §4.3)
+      // is passed as `extra` by every gated surface via `openPaywall()`.
+      GoRoute(
+        path: '/paywall',
+        builder: (context, state) =>
+            PaywallScreen(trigger: state.extra as PaywallTrigger? ?? PaywallTrigger.settings),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             MainShell(navigationShell: navigationShell),

@@ -211,7 +211,7 @@ export function AddMealEntryDialog({ mealType, date, onClose, meal }: AddMealEnt
               className="flex-1 py-1 rounded-[var(--r-pill)] text-xs font-semibold transition-colors"
               style={{
                 background: mode === m ? "var(--primary)" : "transparent",
-                color: mode === m ? "#1E1F18" : "var(--on-surface-variant)",
+                color: mode === m ? "var(--bg)" : "var(--on-surface-variant)",
               }}>
               {m === "search" ? t("searchFood") : t("enterMacros")}
             </button>
@@ -413,7 +413,7 @@ function SearchMode({
 
       <button onClick={addAndReset} disabled={grams <= 0}
         className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-50"
-        style={{ background: "var(--primary)", color: "#1E1F18" }}>
+        style={{ background: "var(--primary)", color: "var(--bg)" }}>
         {t("addItem")}
       </button>
     </>
@@ -531,7 +531,7 @@ function MacrosMode({ onAdd }: { onAdd: (item: DraftItem) => void }) {
 
       <button onClick={() => createFoodMutation.mutate()} disabled={!canSubmit}
         className="h-10 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-        style={{ background: "var(--primary)", color: "#1E1F18" }}>
+        style={{ background: "var(--primary)", color: "var(--bg)" }}>
         {createFoodMutation.isPending ? t("adding") : t("addItem")}
       </button>
     </>

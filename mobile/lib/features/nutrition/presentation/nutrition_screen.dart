@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ads/banner_ad_slot.dart';
+import '../../../core/ads/nav_reserved_space.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -314,6 +316,12 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
                   ),
                 ],
               ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: bannerBottom(MediaQuery.paddingOf(context).bottom),
+              child: const BannerAdSlot(tabIndex: 1),
             ),
           ],
         ),

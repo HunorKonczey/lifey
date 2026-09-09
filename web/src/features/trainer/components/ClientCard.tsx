@@ -17,13 +17,18 @@ interface ClientCardProps {
   client: TrainerClientResponse;
   onRevoke: (clientId: number) => void;
   revoking?: boolean;
+  /** 66 §4.1 — the seat-limit archiving flow. Renders an inline "Archive"
+   *  action alongside the always-available "End relationship" menu item,
+   *  with copy that reassures the client keeps everything they have. */
+  overLimit?: boolean;
 }
 
-export function ClientCard({ client, onRevoke, revoking }: ClientCardProps) {
+export function ClientCard({ client, onRevoke, revoking, overLimit }: ClientCardProps) {
   const t = useTranslations("admin.dashboard");
   const dateLocale = DATE_LOCALES[useLocale((s) => s.locale)];
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+  const [confirmingArchive, setConfirmingArchive] = useState(false);
 
   return (
     <div
@@ -78,6 +83,19 @@ export function ClientCard({ client, onRevoke, revoking }: ClientCardProps) {
       </div>
 
       <ComplianceBadges client={client} />
+
+      {overLimit && (
+        <button
+          onClick={() => setConfirmingArchive(true)}
+          disabled={revoking}
+          data-testid="archive-client-inline"
+          className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12.5px] font-bold transition-colors disabled:opacity-60"
+          style={{ background: "color-mix(in srgb, var(--error) 12%, transparent)", color: "var(--error)" }}
+        >
+          <span className="material-symbols-rounded text-base">archive</span>
+          {t("archiveClient")}
+        </button>
+      )}
 
       {menuOpen && (
         <>
@@ -144,6 +162,49 @@ export function ClientCard({ client, onRevoke, revoking }: ClientCardProps) {
                 style={{ background: "var(--error)", color: "#161611" }}
               >
                 {t("endRelationshipConfirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmingArchive && (
+        <div
+          data-testid="archive-client-confirm"
+          className="fixed inset-0 z-30 flex items-center justify-center p-4"
+          style={{ background: "rgba(8,9,6,.6)" }}
+          onClick={() => setConfirmingArchive(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-[var(--r-lg)] p-6"
+            style={{ background: "var(--surface-container)", boxShadow: "0 18px 44px rgba(0,0,0,.4)" }}
+          >
+            <p className="text-base font-extrabold mb-2" style={{ color: "var(--on-surface)" }}>
+              {t("archiveClientConfirmTitle", { name: nameFor(client.clientEmail) })}
+            </p>
+            <p className="text-[12.5px] leading-relaxed mb-5" style={{ color: "var(--on-surface-variant)" }}>
+              {t("archiveClientConfirmBody", { name: nameFor(client.clientEmail) })}
+            </p>
+            <div className="flex gap-2.5 justify-end">
+              <button
+                onClick={() => setConfirmingArchive(false)}
+                className="text-sm font-bold px-4 py-2.5"
+                style={{ color: "var(--on-surface-variant)" }}
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmingArchive(false);
+                  onRevoke(client.clientId);
+                }}
+                disabled={revoking}
+                data-testid="archive-client-confirm-submit"
+                className="rounded-xl px-4.5 py-2.5 text-sm font-extrabold disabled:opacity-60"
+                style={{ background: "var(--error)", color: "#161611" }}
+              >
+                {t("archiveClientConfirm")}
               </button>
             </div>
           </div>

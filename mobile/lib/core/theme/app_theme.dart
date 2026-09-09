@@ -226,11 +226,17 @@ final class _LightColors {
   /// Deeper olive for light-mode primary (contrast on white)
   Color get primary => const Color(0xFF586E38);
 
-  /// Deep warm brown
-  Color get secondary => const Color(0xFF8A6A42);
+  /// Deep warm brown.
+  ///
+  /// Was 0xFF8A6A42, which as text measured 4.42:1 on [bg] and 4.15:1 on
+  /// [container] — below WCAG AA's 4.5:1. Darkened ~3% lightness at the same
+  /// hue and saturation; same value as web's `--secondary`, which was fixed
+  /// for the same reason (the two products share this palette).
+  Color get secondary => const Color(0xFF7E613C);
 
-  /// Forest green
-  Color get tertiary => const Color(0xFF4A7A52);
+  /// Forest green. Darkened from 0xFF4A7A52 for the same reason as
+  /// [secondary] (4.45:1 / 4.17:1 as text before, 5.09-5.73:1 now).
+  Color get tertiary => const Color(0xFF44704C);
 
   /// Near-black primary text
   Color get onSurface => const Color(0xFF1E1F18);

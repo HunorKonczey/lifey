@@ -1,6 +1,9 @@
 package com.lifey.common.exception;
 
 import com.lifey.auth.exception.*;
+import com.lifey.billing.exception.InvalidReceiptException;
+import com.lifey.billing.exception.SeatLimitExceededException;
+import com.lifey.billing.exception.SubscriptionAlreadyLinkedException;
 import com.lifey.superadmin.exception.CannotModifySelfException;
 import com.lifey.superadmin.exception.RoleNotManageableException;
 import com.lifey.trainer.exception.AlreadyClientException;
@@ -19,6 +22,7 @@ import com.lifey.trainer.exception.ScheduleInPastException;
 import com.lifey.trainer.exception.ScheduleNotFoundException;
 import com.lifey.trainer.exception.SelfInviteException;
 import com.lifey.trainer.exception.UserNotFoundForInviteException;
+import com.lifey.trainer.request.exception.TrainerRequestAlreadyDecidedException;
 import com.lifey.workout.session.cardio.InvalidCardioRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +38,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -133,6 +136,24 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request, List.of(), ex);
     }
 
+    /** 64 §4.3, 63 §7.6 — SEAT_LIMIT_EXCEEDED: over the seat limit, or billing isn't in an entitling state. */
+    @ExceptionHandler(SeatLimitExceededException.class)
+    public ResponseEntity<ApiError> handleSeatLimitExceeded(SeatLimitExceededException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
+    }
+
+    /** 64 §6.1, 63 §7.7: SUBSCRIPTION_ALREADY_LINKED — a store purchase's identity already belongs to another account. */
+    @ExceptionHandler(SubscriptionAlreadyLinkedException.class)
+    public ResponseEntity<ApiError> handleSubscriptionAlreadyLinked(SubscriptionAlreadyLinkedException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
+    }
+
+    /** 64 §6.1: INVALID_RECEIPT — a store purchase's signature could not be verified. */
+    @ExceptionHandler(InvalidReceiptException.class)
+    public ResponseEntity<ApiError> handleInvalidReceipt(InvalidReceiptException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), request, List.of(), ex);
+    }
+
     @ExceptionHandler(NotYourClientException.class)
     public ResponseEntity<ApiError> handleNotYourClient(NotYourClientException ex, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, ex.getMessage(), request, List.of(), ex);
@@ -181,6 +202,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({RoleNotManageableException.class, CannotModifySelfException.class})
     public ResponseEntity<ApiError> handleRoleManagementRejection(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of(), ex);
+    }
+
+    /** 66 §2 — a decision (approve/reject) was attempted on a request that isn't PENDING any more. */
+    @ExceptionHandler(TrainerRequestAlreadyDecidedException.class)
+    public ResponseEntity<ApiError> handleTrainerRequestAlreadyDecided(TrainerRequestAlreadyDecidedException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of(), ex);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

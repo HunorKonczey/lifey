@@ -46,7 +46,12 @@
   /* Workout-success celebration dialog */
   --success-icon-tint: 16%;
   --success-chip-bg: rgba(76, 175, 80, .15);
-  --success-chip-text: #4CAF50;
+  /* Was #4CAF50 / #388E3C (light, below) — measured against their own tint
+     these gave 4.77:1 here and 3.54:1 in the light theme, the latter under
+     AA. One step out from Material's green in each direction clears both
+     (5.61:1 / 4.95:1); the mobile app's copy of this dialog carries the
+     same two values. */
+  --success-chip-text: #66BB6A;
   --scrim-celebration: rgba(8, 9, 6, .66);
 
   /* Radius scale */
@@ -76,8 +81,14 @@
   --surface-high:       #FFFFFF;
   --surface-highest:    #ECEBDE;
   --primary:            #586E38;
-  --secondary:          #8A6A42;
-  --tertiary:           #4A7A52;
+  /* Secondary was #8A6A42 and tertiary #4A7A52 — both below WCAG AA 4.5:1
+     as text on the light surfaces they sit on (4.42/4.15 and 4.45/4.17
+     against --bg/--surface-container, verified), which Lighthouse only
+     catches on a runner whose prefers-color-scheme is light. Darkened ~3%
+     lightness at the same hue and saturation, landing both in the same
+     contrast band as --primary (4.7-4.8 against --surface-container). */
+  --secondary:          #7E613C;
+  --tertiary:           #44704C;
   --on-surface:         #1E1F18;
   --on-surface-variant: #5C5C50;
   /* Was #9A9A8C — below WCAG AA 4.5:1 against every surface tone it's
@@ -100,12 +111,14 @@
   --metric-water:   #4E8AA8;
   --metric-hr:      #C46A6A;
 
-  --goal-positive: #4A7A52;
+  /* Same darkening as --tertiary above — this is used as text (weight
+     delta, KPI cards), so it needs the same 4.5:1 on light surfaces. */
+  --goal-positive: #44704C;
   --goal-negative: #E08A52;
 
   --success-icon-tint: 12%;
   --success-chip-bg: rgba(76, 175, 80, .16);
-  --success-chip-text: #388E3C;
+  --success-chip-text: #2C7430;
   --scrim-celebration: rgba(28, 29, 24, .45);
 }
 

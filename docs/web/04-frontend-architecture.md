@@ -61,7 +61,8 @@ A védett app **kliensoldali** (`"use client"` a data-komponenseknél), mert:
 | `(auth)/login`, `register` | SSR shell + CSR form | publikus, statikusan kiszolgálható váz |
 | `(app)/layout` (sidebar+topbar) | SSR shell, CSR data | a navigáció statikus, a user-menü adata kliensből |
 | `(app)/**` oldalak | CSR + TanStack Query | skeleton SSR-ből, adat hidráció után |
-| `middleware.ts` | Edge | csak a refresh-cookie **jelenlétét** nézi → guard (lásd §5.4) |
+| `(marketing)/[locale]/**` | **SSG** | teljesen szerver-renderelt, `force-static`; kliens-JS csak a fejléc auth-állapotára, az ár-kapcsolóra és a kapcsolatűrlapre (`docs/landing_page/65`) |
+| `proxy.ts` | Edge | locale-egyeztetés a marketing fára + a first-touch attribúciós süti (lásd alább) |
 
 **Streaming/Suspense:** a lista- és grafikon-szekciókat `Suspense` + skeleton fallback alá tesszük,
 hogy a shell azonnal megjelenjen, az adatpanelok pedig fokozatosan töltsenek.
@@ -90,7 +91,10 @@ web/
         steps/page.tsx
         statistics/page.tsx
         settings/[section]/page.tsx
-      layout.tsx                 # <html>, providerek, téma, i18n
+      (marketing)/[locale]/      # publikus landing (65) — SSG, saját fejléc/lábléc
+      (marketing-bare)/[locale]/ # a letöltő oldal: ugyanaz a [locale], króm nélkül
+      layout.tsx                 # <html>, téma-szkript, fontok — providerek NEM itt (lásd alább)
+    proxy.ts                     # Edge: locale-egyeztetés + attribúciós süti (65)
       globals.css                # @theme tokenek (lásd 06)
     features/
       <feature>/                 # auth, dashboard, nutrition, workouts,
@@ -162,6 +166,32 @@ A `lib/api/client.ts` minden választ figyel:
   `useSession()` + a 401→refresh ciklus adja.
 - **Kliens guard:** `(app)/layout.tsx` a mountkor megpróbál refresh-elni; siker → render, bukás →
   redirect. A `useSession()` adja a `user`-t és a `roles`-t (RBAC-hoz, F10).
+
+### 5.5 A providerek nem a gyökér-layoutban élnek (`65` D-W6)
+
+Eredetileg a gyökér `app/layout.tsx` tartotta a provider-stacket (TanStack Query, i18n, téma).
+A landing oldal ezt megfordította: **minden route group a saját `layout.tsx`-ében húzza be a
+`<Providers>`-t** (`(app)`, `(admin)`, `(superadmin)`, `(auth)`), a gyökér pedig csak a
+`<html>`-t, a FOUC-elhárító téma-szkriptet és a fontokat adja.
+
+Az ok mérhető: a marketing oldalaknak semmi szükségük az app provider-stackjére, és amíg a
+gyökérben volt, minden publikus oldal kifizette a kliens-bundle-jét. A marketing fa saját,
+könnyű `NextIntlClientProvider`-t kap — csak azért, hogy a next-intl `Link`/`usePathname`
+működjön a fejléc/lábléc kliens-szigetein; **látható szöveg egyik islandbe sem megy propként
+lefordítatlanul**, így üzenet-payload nem kerül a kliensre.
+
+### 5.6 `proxy.ts` (Next.js 16-ban ez a `middleware.ts` új neve)
+
+Két dolgot csinál, és mindkettő a marketing fára szól:
+
+1. **Locale-egyeztetés/átirányítás** a `next-intl` middleware-ével (`/` → `/hu` vagy `/en`,
+   lokalizált útvonalnevek).
+2. **First-touch attribúciós süti** (`lifey_attrib`): az első *válaszban* íródik, nem kliens
+   effektből, különben a hidráció előtt távozó látogató attribúció nélkül maradna.
+
+A `matcher` (`["/", "/(hu|en)/:path*"]`) **korrektségi kérdés**: kiszélesítése minden
+hitelesített kérés elé odatenné ezt a réteget. Saját tesztje van (`src/proxy.test.ts`), ami
+tételesen felsorolja azokat az útvonalakat, amikhez nem szabad hozzáérnie.
 
 ---
 

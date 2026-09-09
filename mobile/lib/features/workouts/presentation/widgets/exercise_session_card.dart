@@ -301,7 +301,7 @@ class _ColumnHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
+          color: scheme.onSurfaceVariant,
           letterSpacing: 0.5,
         );
     return Padding(
@@ -398,7 +398,7 @@ class _SetRowTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDone = row.isDone;
-    final dimmed = scheme.onSurfaceVariant.withValues(alpha: 0.6);
+    final dimmed = scheme.onSurfaceVariant;
     final setNumColor = isDone ? scheme.primary : dimmed;
     final valueColor = isDone ? scheme.onSurface : dimmed;
     final weightText = row.weight != null ? _formatWeight(row.weight!) : '—';

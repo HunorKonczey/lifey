@@ -9,6 +9,8 @@ import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/lib/hooks/useToast";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { ErrorState } from "@/components/status/ErrorState";
+import { useTrainerBillingGate } from "@/features/billing/hooks";
+import { BillingBlockedDialog } from "@/features/billing/components/BillingBlockedDialog";
 import { ClientAvatar, nameFor } from "./ClientAvatar";
 import { nextOrSameMonday, isValidProgramStartDate, programEndDate } from "../program";
 import { format } from "date-fns";
@@ -31,6 +33,7 @@ export function AssignProgramDrawer({
   const t = useTranslations("admin.programs");
   const queryClient = useQueryClient();
   const { show } = useToast();
+  const gate = useTrainerBillingGate();
 
   const [programSearch, setProgramSearch] = useState("");
   const [clientSearch, setClientSearch] = useState("");
@@ -90,6 +93,22 @@ export function AssignProgramDrawer({
       }
     },
   });
+
+  // D-T5: the trigger button that opens this drawer stays visible and
+  // enabled-looking; a blocked trainer sees this dialog the moment it would
+  // have opened, instead of filling out a form that can only fail.
+  if (gate.state !== "OK") {
+    return (
+      <BillingBlockedDialog
+        open
+        onClose={onClose}
+        reason={gate.state === "RESTRICTED" ? "restricted" : "overLimit"}
+        currentPlan={gate.currentPlan}
+        activeClients={gate.activeClients}
+        maxClients={gate.maxClients}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" data-testid="assign-program-drawer">
@@ -255,7 +274,7 @@ export function AssignProgramDrawer({
             disabled={!isValid || assignMutation.isPending}
             data-testid="assign-drawer-submit"
             className="flex-[2] text-center rounded-2xl py-3 text-[13.5px] font-extrabold disabled:opacity-40"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             {assignMutation.isPending ? t("assigning") : t("assignAction")}
           </button>

@@ -1,6 +1,7 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.billing.service.SeatLimitService;
 import com.lifey.common.domain.BaseEntity;
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
@@ -83,6 +84,10 @@ class ContentAssignmentServiceImplTest {
 
     @Mock
     MailLanguageResolver mailLanguageResolver;
+
+    /** Unstubbed: void, so every seat check is a no-op — these tests aren't about billing enforcement. */
+    @Mock
+    SeatLimitService seatLimitService;
 
     @InjectMocks
     ContentAssignmentServiceImpl service;

@@ -39,6 +39,20 @@
 	<!-- Zenevezérlés edzés közben, Apple Music ág (docs/music/46-workout-music-controls-plan.md §2.2, M3). -->
 	<key>NSAppleMusicUsageDescription</key>
 	<string>A Lifey a Zene könyvtáradhoz fér hozzá, hogy edzés közben megjelenítse a szóló számot, és app-váltás nélkül vezérelhesd a lejátszást (lejátszás, szüneteltetés, következő/előző szám).</string>
+	<!-- AdMob (docs/landing_page/67-mobile-free-pro-plan.md §5, Prompt 8).
+	     Google's public TEST app id — swap for the real AdMob App ID from
+	     the AdMob console before this ships ads (Prompt 9/10). -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<!-- ATT prompt for personalized-ads tracking (63 D-M7, 67 §5.1) — shown
+	     by the UMP/AdMob SDK itself, not a custom pre-prompt (69 §4.6). -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>A Lifey ezt az azonosítót releváns reklámok megjelenítésére használja. Pro előfizetéssel ez teljesen kikapcsolható.</string>
+	<!-- TODO (before Prompt 9/10 ships ads): SKAdNetworkItems — Apple's
+	     ad-network attribution list, published by Google at
+	     https://developers.google.com/admob/ios/quick-start#update_your_infoplist
+	     and required for AdMob to attribute installs correctly on iOS 14+.
+	     Not needed for Prompt 8 (SDK init + consent only, no ad request). -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

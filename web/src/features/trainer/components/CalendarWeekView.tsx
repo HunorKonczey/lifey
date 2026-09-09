@@ -74,7 +74,7 @@ export function CalendarWeekView({ weekStart, sessions, onScheduleDay, onSelectS
               {dayIsToday ? (
                 <span
                   className="rounded-full px-2.5 py-0.5 text-[9.5px] font-extrabold tracking-wide"
-                  style={{ background: "var(--tertiary)", color: "#161611" }}
+                  style={{ background: "var(--tertiary)", color: "var(--bg)" }}
                 >
                   {t("today").toUpperCase()}
                 </span>

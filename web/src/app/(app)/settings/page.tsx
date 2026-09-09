@@ -203,7 +203,7 @@ export default function SettingsPage() {
             className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--r-card)] text-left transition-colors"
             style={{
               background: section === s.value ? "var(--primary)" : "transparent",
-              color: section === s.value ? "#1E1F18" : "var(--on-surface-variant)",
+              color: section === s.value ? "var(--bg)" : "var(--on-surface-variant)",
             }}>
             <span className="material-symbols-rounded text-xl">{s.icon}</span>
             <span className="text-sm font-semibold">{s.label}</span>
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                 </p>
                 <button onClick={() => router.push("/onboarding")}
                   className="h-10 px-5 w-fit rounded-[var(--r-input)] font-semibold text-sm"
-                  style={{ background: "var(--primary)", color: "#1E1F18" }}>
+                  style={{ background: "var(--primary)", color: "var(--bg)" }}>
                   {t("startOnboarding")}
                 </button>
               </div>
@@ -253,7 +253,7 @@ export default function SettingsPage() {
                 <button
                   onClick={() => setShowConfirmDialog(true)}
                   className="mt-1 h-10 px-6 w-fit rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-                  style={{ background: "var(--primary)", color: "#1E1F18" }}>
+                  style={{ background: "var(--primary)", color: "var(--bg)" }}>
                   {t("saveChanges")}
                 </button>
                 <ConfirmSaveDetailsDialog
@@ -288,7 +288,7 @@ export default function SettingsPage() {
             </div>
             <button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending}
               className="mt-5 h-10 px-6 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-              style={{ background: "var(--primary)", color: "#1E1F18" }}>
+              style={{ background: "var(--primary)", color: "var(--bg)" }}>
               {saveMutation.isPending ? t("saving") : t("saveChanges")}
             </button>
           </Panel>
@@ -415,7 +415,7 @@ export default function SettingsPage() {
               ))}
               <button type="submit" disabled={isChangingPassword}
                 className="h-10 px-6 w-fit rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-                style={{ background: "var(--primary)", color: "#1E1F18" }}>
+                style={{ background: "var(--primary)", color: "var(--bg)" }}>
                 {t("changePassword")}
               </button>
             </form>

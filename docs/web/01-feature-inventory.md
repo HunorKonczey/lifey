@@ -79,6 +79,35 @@ Szerepkörök ma: `ROLE_USER`, `ROLE_ADMIN`. (Bővíthető — lásd jövőbeli 
 
 ---
 
+## Publikus marketing felület (`(marketing)`) — utólag került a webre
+
+Ez a leltár a **bejelentkezett** app funkcióit sorolja. A web azóta kapott egy második, teljesen
+publikus felületet is: `docs/landing_page/65-web-landing-page-plan.md`.
+
+| Útvonal (HU / EN) | Mit csinál |
+|---|---|
+| `/hu` · `/en` | Főoldal — az edzői termék eladása, 12 szekció |
+| `/hu/edzoknek` · `/en/for-trainers` | Edzőknek szóló oldal |
+| `/hu/alkalmazas` · `/en/app` | A mobilapp mint önálló termék |
+| `/hu/arak` · `/en/pricing` | Csomagok, éves/havi kapcsoló |
+| `/hu/gyik` · `/en/faq` | 20 kérdés, négy kategóriában |
+| `/hu/kapcsolat` · `/en/contact` | Űrlap + közvetlen e-mail |
+| `/hu/letoltes` · `/en/download` | Letöltés + a meghívó deep-link átadása (saját, króm nélküli route group) |
+| `/hu/jogi/*` · `/en/legal/*` | ÁSZF, Adatkezelés, Elállási jog, Impresszum |
+
+Három dolog, ami eltér a fenti app-funkcióktól, és ezért itt is le van írva:
+
+- **Nyelvváltás az URL-ben.** A marketing fa `[locale]` prefixet használ (`always`), lokalizált
+  útvonalnevekkel. A bejelentkezett app ettől függetlenül továbbra is a `settings.language`-ből
+  old fel nyelvet, kliensoldalon (`65` D-W3) — a két mechanizmus szándékosan nem közös.
+- **Külön üzenetfájlok.** `messages/marketing.{hu,en}.json`, nem az app `{hu,en}.json`-ja
+  (`65` D-W5).
+- **Szerver-renderelt, kliens-JS nélkül.** Minden szöveg szerveroldalon renderelődik; kliens
+  komponens csak ott van, ahol tényleg kell (auth-állapot a fejlécben, ár-kapcsoló,
+  kapcsolatűrlap).
+
+---
+
 ## Mobil-only marad (weben nincs vagy csak olvasható)
 
 - **Kamerás vonalkód-szkennelés** — weben helyette kézi beírás + `foods/barcode` lekérés.

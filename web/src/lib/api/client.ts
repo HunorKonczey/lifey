@@ -158,7 +158,7 @@ function chatRequest<T>(path: string, init: RequestInit = {}, config: RequestCon
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path, { method: "GET" }),
+  get: <T>(path: string, init?: RequestInit) => request<T>(path, { method: "GET", ...init }),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: JSON.stringify(body) }),
   put: <T>(path: string, body?: unknown) =>

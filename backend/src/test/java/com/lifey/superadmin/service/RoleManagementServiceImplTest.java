@@ -5,6 +5,7 @@ import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.superadmin.RoleAuditAction;
 import com.lifey.superadmin.RoleAuditLog;
 import com.lifey.superadmin.RoleAuditLogRepository;
+import com.lifey.superadmin.TrainerRoleGrantedEvent;
 import com.lifey.superadmin.dto.RoleAuditLogResponse;
 import com.lifey.superadmin.dto.SuperAdminUserResponse;
 import com.lifey.superadmin.exception.CannotModifySelfException;
@@ -21,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -54,6 +56,9 @@ class RoleManagementServiceImplTest {
 
     @Mock
     CurrentUserProvider currentUserProvider;
+
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     RoleManagementServiceImpl service;
@@ -135,6 +140,17 @@ class RoleManagementServiceImplTest {
     }
 
     @Test
+    void grant_publishesTrainerRoleGrantedEvent_soTheTrialCanStart() {
+        // 64 §4.1: the trial starts at grant, not registration.
+        User target = user(TARGET_ID, "client@example.com", Role.ROLE_USER);
+        when(userRepository.findById(TARGET_ID)).thenReturn(Optional.of(target));
+
+        service.grant(TARGET_ID, Role.ROLE_TRAINER);
+
+        verify(eventPublisher).publishEvent(new TrainerRoleGrantedEvent(TARGET_ID, ACTOR_ID));
+    }
+
+    @Test
     void grant_isIdempotentAndSkipsAuditWhenAlreadyGranted() {
         User target = user(TARGET_ID, "client@example.com", Role.ROLE_USER, Role.ROLE_TRAINER);
         when(userRepository.findById(TARGET_ID)).thenReturn(Optional.of(target));
@@ -142,6 +158,7 @@ class RoleManagementServiceImplTest {
         service.grant(TARGET_ID, Role.ROLE_TRAINER);
 
         verify(roleAuditLogRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

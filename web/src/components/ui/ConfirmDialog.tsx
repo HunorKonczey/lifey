@@ -31,7 +31,7 @@ export function ConfirmDialog({
           </button>
           <button onClick={onConfirm} disabled={confirming}
             className="h-10 px-5 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-            style={{ background: "var(--primary)", color: "#1E1F18" }}>
+            style={{ background: "var(--primary)", color: "var(--bg)" }}>
             {confirmLabel}
           </button>
         </div>

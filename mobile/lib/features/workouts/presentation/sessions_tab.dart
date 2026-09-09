@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/ads/banner_ad_slot.dart';
+import '../../../core/entitlements/entitlement_providers.dart';
 import '../../../core/workout_session_notifier/workout_session_notifier_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
@@ -13,6 +15,7 @@ import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
+import '../../../shared/widgets/history_boundary_row.dart';
 import '../../../shared/widgets/sync_status_indicator.dart';
 import '../../settings/application/settings_controller.dart';
 import '../../settings/domain/user_settings.dart';
@@ -138,7 +141,8 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
     final state = ref.watch(workoutSessionControllerProvider);
     final recommended = ref.watch(recommendedTemplateProvider);
     final l10n = AppLocalizations.of(context)!;
-    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final bottomPad =
+        MediaQuery.paddingOf(context).bottom + ref.watch(bannerAdSlotHeightProvider(2));
     final unitSystem =
         (ref.watch(settingsControllerProvider).value ?? const UserSettings.defaults())
             .unitSystem;
@@ -173,6 +177,16 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
             .where(matchesKind)
             .toList();
 
+        // The free history window (`67` §3.2, D-P6) — a presentation filter
+        // applied on top of the today/week/all filter above, never a change
+        // to the `workoutSessionControllerProvider` query itself. `filtered`
+        // is already newest-first, so anything cut off is a contiguous tail.
+        final cutoff = ref.watch(historyCutoffProvider);
+        final visible = cutoff == null
+            ? filtered
+            : filtered.where((s) => !s.startedAt!.toLocal().isBefore(cutoff)).toList();
+        final truncated = visible.length < filtered.length;
+
         if (sessions.isEmpty || (filtered.isEmpty && upcoming.isEmpty)) {
           return RefreshIndicator(
             displacement: refreshDisplacement,
@@ -191,13 +205,14 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
         }
 
         final hasUpcoming = upcoming.isNotEmpty;
+        final leadingCount = hasUpcoming ? 1 : 0;
         return RefreshIndicator(
           displacement: refreshDisplacement,
           onRefresh: () =>
               ref.read(workoutSessionControllerProvider.notifier).refresh(),
           child: ListView.builder(
             padding: EdgeInsets.fromLTRB(12, listTopPadding, 12, bottomPad + 88),
-            itemCount: (hasUpcoming ? 1 : 0) + filtered.length,
+            itemCount: leadingCount + visible.length + (truncated ? 1 : 0),
             itemBuilder: (context, index) {
               if (hasUpcoming && index == 0) {
                 return UpcomingSessionsSection(
@@ -206,14 +221,15 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
                   onDelete: (s) => _confirmDelete(context, ref, s),
                 );
               }
-              final i = hasUpcoming ? index - 1 : index;
+              final i = index - leadingCount;
+              if (i >= visible.length) return const HistoryBoundaryRow();
               return _SessionCard(
-                session: filtered[i],
-                categoryCode: _dominantCategory(filtered[i], categoryByExercise),
+                session: visible[i],
+                categoryCode: _dominantCategory(visible[i], categoryByExercise),
                 dateLabel: _dateLabel,
                 unitSystem: unitSystem,
-                onEdit: () => _edit(context, filtered[i]),
-                onDelete: () => _confirmDelete(context, ref, filtered[i]),
+                onEdit: () => _edit(context, visible[i]),
+                onDelete: () => _confirmDelete(context, ref, visible[i]),
               );
             },
           ),

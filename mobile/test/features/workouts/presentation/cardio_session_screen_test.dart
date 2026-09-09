@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifey/core/entitlements/entitlement_providers.dart';
 import 'package:lifey/core/local_db/app_database.dart';
 import 'package:lifey/core/local_db/database_provider.dart';
 import 'package:lifey/core/location/location_service.dart';
@@ -262,6 +263,9 @@ Future<_RecordingSessionController> _pump(WidgetTester tester, WorkoutSession se
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // See cardio_session_screen_machine_test.dart's own comment on this
+        // override — InterstitialManager (67 Prompt 10) needs it here too.
+        adsEnabledProvider.overrideWithValue(false),
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         locationServiceProvider.overrideWithValue(_grantedLocationStub()),
@@ -292,6 +296,9 @@ Future<(_RecordingSessionController, _RecordingNotifierService)> _pumpWithNotifi
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // See cardio_session_screen_machine_test.dart's own comment on this
+        // override — InterstitialManager (67 Prompt 10) needs it here too.
+        adsEnabledProvider.overrideWithValue(false),
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         workoutSessionNotifierServiceProvider.overrideWithValue(notifier),
@@ -322,6 +329,9 @@ Future<(_RecordingSessionController, _RecordingWatchService)> _pumpWithWatch(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // See cardio_session_screen_machine_test.dart's own comment on this
+        // override — InterstitialManager (67 Prompt 10) needs it here too.
+        adsEnabledProvider.overrideWithValue(false),
         workoutSessionControllerProvider.overrideWith(() => controller),
         settingsControllerProvider.overrideWith(_MetricSettings.new),
         watchWorkoutServiceProvider.overrideWithValue(watch),
@@ -735,6 +745,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            // InterstitialManager (67 Prompt 10) needs this — see
+            // cardio_session_screen_machine_test.dart.
+            adsEnabledProvider.overrideWithValue(false),
             workoutSessionControllerProvider.overrideWith(() => controller),
             settingsControllerProvider.overrideWith(
               () => _DisabledWatchSettings(),

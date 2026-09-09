@@ -94,7 +94,7 @@ export function CalendarMonthView({ monthAnchor, sessions, onSelectDay, onSelect
               {dayIsToday ? (
                 <span
                   className="self-start rounded-full px-2 text-[10px] font-extrabold"
-                  style={{ background: "var(--tertiary)", color: "#161611" }}
+                  style={{ background: "var(--tertiary)", color: "var(--bg)" }}
                 >
                   {compact ? format(day, "d") : `${format(day, "d")} · ${t("today").toUpperCase()}`}
                 </span>

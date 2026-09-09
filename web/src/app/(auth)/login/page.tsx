@@ -106,7 +106,7 @@ export default function LoginPage() {
           type="submit"
           disabled={isSubmitting}
           className="mt-2 h-11 rounded-[var(--r-input)] font-semibold text-sm transition-opacity disabled:opacity-60"
-          style={{ background: "var(--primary)", color: "#1E1F18" }}
+          style={{ background: "var(--primary)", color: "var(--bg)" }}
         >
           {isSubmitting ? t("signingIn") : t("signIn")}
         </button>

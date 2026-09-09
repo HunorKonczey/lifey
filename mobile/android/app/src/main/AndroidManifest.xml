@@ -113,6 +113,12 @@
         <meta-data
             android:name="flutter_deeplinking_enabled"
             android:value="true" />
+        <!-- AdMob (docs/landing_page/67-mobile-free-pro-plan.md §5, Prompt 8).
+             Google's public TEST app id — swap for the real AdMob App ID
+             from the AdMob console before this ships ads (Prompt 9/10). -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
         <!-- Today's calories home screen widget (docs/25-android-widget-ongoing-notification-plan.md). -->
         <receiver
             android:name=".TodaySummaryWidgetProvider"

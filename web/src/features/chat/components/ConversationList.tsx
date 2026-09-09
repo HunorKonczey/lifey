@@ -216,7 +216,7 @@ function ConversationRow({
           {unread && (
             <span
               className="min-w-[18px] h-[18px] rounded-[9px] px-1.5 flex items-center justify-center text-[10px] font-extrabold"
-              style={{ background: "var(--primary)", color: "#161611" }}
+              style={{ background: "var(--primary)", color: "var(--bg)" }}
               aria-label={t("unreadCount", { count: unreadCount })}
             >
               {unreadBadgeLabel(unreadCount)}

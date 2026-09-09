@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/ads/interstitial_manager.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
@@ -196,8 +198,19 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
           entries: entries,
           name: widget.meal?.name);
     } else {
+      final isFirstSave = _mealClientId == null;
       _mealClientId = await notifier.logMeal(
           dateTime: _dateTime, mealType: _mealType, entries: entries);
+      // `67` §5.3: only the meal's creation counts as "successfully
+      // logged" — the auto-save on every subsequent edit must not re-trigger
+      // this (it isn't a new meal, and it would also blow past the
+      // once-per-session limit on the very first screen that logs anything).
+      if (isFirstSave && mounted) {
+        unawaited(ref.read(interstitialManagerProvider).maybeShow(
+              context,
+              InterstitialReason.mealLogged,
+            ));
+      }
     }
   }
 

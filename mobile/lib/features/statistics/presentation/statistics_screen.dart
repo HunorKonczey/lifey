@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/ads/banner_ad_slot.dart';
+import '../../../core/ads/nav_reserved_space.dart';
+import '../../../core/entitlements/entitlement_providers.dart';
+import '../../../core/entitlements/paywall_navigation.dart';
+import '../../../core/entitlements/paywall_trigger.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
@@ -60,6 +65,12 @@ class StatisticsScreen extends ConsumerWidget {
                   const _StatsFilterStrip(),
                 ],
               ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: bannerBottom(MediaQuery.paddingOf(context).bottom),
+              child: const BannerAdSlot(tabIndex: 4),
             ),
           ],
         ),
@@ -203,33 +214,46 @@ class _StatsRangeButton extends ConsumerWidget {
         StatsRange.all => l10n.statRangeAllLabel,
       };
 
+  /// Whether [r] would show data older than the current entitlement's
+  /// history window (`67` §3.3, `69` §4.1) — `entitlementCutoff == null`
+  /// means unlimited (Pro, or unresolved and fail-open, D-P4).
+  bool _isLocked(StatsRange r, DateTime? entitlementCutoff) {
+    if (entitlementCutoff == null) return false;
+    final rangeCutoff = r.cutoff();
+    if (rangeCutoff == null) return true; // "all" always exceeds a real cutoff
+    return rangeCutoff.isBefore(entitlementCutoff);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final range = ref.watch(statsRangeControllerProvider);
     final collapsed = NavCollapseScope.collapsedOf(context);
     final scheme = Theme.of(context).colorScheme;
+    final entitlementCutoff = ref.watch(historyCutoffProvider);
 
     return PopupMenuButton<StatsRange>(
       initialValue: range,
-      onSelected: (r) =>
-          ref.read(statsRangeControllerProvider.notifier).select(r),
+      onSelected: (r) {
+        if (_isLocked(r, entitlementCutoff)) {
+          openPaywall(context, PaywallTrigger.historyRange);
+        } else {
+          ref.read(statsRangeControllerProvider.notifier).select(r);
+        }
+      },
       padding: EdgeInsets.zero,
       itemBuilder: (context) => [
         for (final r in StatsRange.values)
           PopupMenuItem(
+            // The row stays tappable even when locked (D-DM1) — `onSelected`
+            // above is what decides whether that opens the paywall instead
+            // of selecting the range.
             value: r,
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 20,
-                  child: r == range
-                      ? Icon(Icons.check, size: 16, color: scheme.primary)
-                      : null,
-                ),
-                const SizedBox(width: 4),
-                Text(_label(l10n, r)),
-              ],
+            child: _RangeMenuRow(
+              label: _label(l10n, r),
+              selected: r == range,
+              locked: _isLocked(r, entitlementCutoff),
+              scheme: scheme,
             ),
           ),
       ],
@@ -238,6 +262,63 @@ class _StatsRangeButton extends ConsumerWidget {
         collapsed: collapsed,
         scheme: scheme,
       ),
+    );
+  }
+}
+
+/// One row in the range popup. Exactly one of [selected]/[locked] ever draws
+/// in the leading 20 px slot — a check for the selected range (fixing `69`
+/// DV-9, which drew two checks), a `lock` glyph for a range beyond the free
+/// history window, or nothing.
+class _RangeMenuRow extends StatelessWidget {
+  const _RangeMenuRow({
+    required this.label,
+    required this.selected,
+    required this.locked,
+    required this.scheme,
+  });
+
+  final String label;
+  final bool selected;
+  final bool locked;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    final row = Row(
+      children: [
+        SizedBox(
+          width: 20,
+          child: selected
+              ? Icon(Icons.check, size: 16, color: scheme.primary)
+              : locked
+                  ? Icon(Icons.lock, size: 16, color: scheme.secondary)
+                  : null,
+        ),
+        const SizedBox(width: 4),
+        // Full alpha, locked or not. `69` §4.1 asks for the locked label at
+        // 60 % opacity, but that is the exact pattern commit 1c252fd removed
+        // from 15 other places in this app after measuring 0.6–0.8 alpha
+        // secondary text at 2.9–3.9:1 — below WCAG AA. This row escaped that
+        // sweep only because it dimmed with `Opacity()` around a subtree
+        // instead of an alpha'd colour. The `lock` glyph in the slot on the
+        // left and the row's own semantics label already say "locked"
+        // without leaning on contrast (`69` §8: no gate by colour alone).
+        // Deviation recorded in `72` D-F4.
+        Text(label),
+      ],
+    );
+
+    if (!locked) return row;
+
+    // The reason *replaces* what the row would otherwise read out: without
+    // `ExcludeSemantics` the child `Text` merges into the node and a screen
+    // reader says "90 days — Pro required, 90 days" (`69` §8).
+    return Semantics(
+      label: l10n.statRangeLockedSemanticsLabel(label),
+      child: ExcludeSemantics(child: row),
     );
   }
 }
@@ -321,7 +402,8 @@ class _StatisticsBody extends ConsumerWidget {
     final goalValue = metric == StatMetric.steps && settings.dailyStepGoal != null
         ? settings.dailyStepGoal!.toDouble()
         : null;
-    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final bannerHeight = ref.watch(bannerAdSlotHeightProvider(4));
+    final bottomPad = MediaQuery.paddingOf(context).bottom + bannerHeight;
 
     return chartData.when(
       data: (points) => points.isEmpty

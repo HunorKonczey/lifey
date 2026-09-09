@@ -73,7 +73,7 @@ export function AvatarUploader() {
     <div className="flex items-center gap-4">
       <div
         className="relative w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold shrink-0 overflow-hidden"
-        style={{ background: "var(--primary)", color: "#1E1F18" }}
+        style={{ background: "var(--primary)", color: "var(--bg)" }}
       >
         {objectUrl ? (
           // Blob object URLs aren't compatible with next/image's optimizer.

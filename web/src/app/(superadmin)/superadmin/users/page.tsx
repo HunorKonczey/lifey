@@ -195,7 +195,7 @@ export default function SuperAdminUsersPage() {
                         <button
                           onClick={() => setConfirmTarget({ user: u, grant: true })}
                           className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold"
-                          style={{ background: "var(--primary)", color: "#161611" }}
+                          style={{ background: "var(--primary)", color: "var(--bg)" }}
                         >
                           <span className="material-symbols-rounded text-base">add_moderator</span>
                           {t("makeTrainer")}

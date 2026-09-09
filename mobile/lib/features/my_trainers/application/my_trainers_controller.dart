@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/entitlements/entitlement_refresher.dart';
 import '../data/my_trainers_repository.dart';
 import '../domain/my_trainer.dart';
 
@@ -17,6 +20,10 @@ class MyTrainersController extends AsyncNotifier<List<MyTrainer>> {
     await _repo.leave(trainerId);
     final current = state.value ?? [];
     state = AsyncData(current.where((t) => t.trainerId != trainerId).toList());
+    // Leaving ends this trainer's sponsorship — a D-M4 transition; refresh
+    // immediately rather than waiting for the next stale app-resume check
+    // (D-P3).
+    unawaited(ref.read(entitlementRefresherProvider).refreshNow());
   }
 }
 

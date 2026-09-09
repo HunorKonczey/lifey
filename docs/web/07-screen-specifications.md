@@ -195,6 +195,39 @@ paraméterezve (ikon, szöveg, akció).
 
 ---
 
+## 10.5 Billing képernyők (`docs/landing_page/66`)
+
+Két admin oldal, amit ez a doksi eredetileg nem ismert. Mindkettő a
+`GET /api/v1/me/entitlements` válaszából él, és mindkettőnek az **állapotai** a lényege, nem a
+layoutja.
+
+### 10.5.1 `/admin/billing` — előfizetés
+
+- **Négy állapot:** próbaidő (hátralévő napok), aktív csomag (keret + felhasznált hely),
+  fizetési gond (`PAST_DUE`), lejárt/lemondott. Az állapot dönti el a fejléc-sáv sürgősségét is
+  (`AdminBillingBanner`) — egy szabálytábla, egy tiszta függvényben, hogy a négy hívási hely ne
+  tudjon négyfelé csúszni.
+- **Checkout körút:** a csomagválasztás Stripe Checkoutra visz, a visszatérés után az oldal
+  **pollozza** az entitlementet, mert az igazságot a webhook írja, nem a böngésző. 30 másodperc
+  után feladja, és felajánl egy frissítést — sosem állítja, hogy megtörtént, amiről nem tud.
+- **Számlák, adószám, dunning:** nincs saját felület, a Stripe portál csinálja (D-T2).
+
+### 10.5.2 `/admin/pending` — edzői hozzáférés igénylése
+
+- Az **egyetlen** `/admin/**` oldal, ami `ROLE_TRAINER` nélkül is elérhető: itt igényel az
+  érdeklődő, és itt látja, hogy hol tart (nincs kérés / függőben / elutasítva → újra kérhet).
+- A jóváhagyás pillanatában a szerepkör, a `trainer_request` lezárása és a 14 napos próbaidő
+  egyszerre keletkezik — a kliens csak akkor lép tovább, ha a friss tokenben már ott a szerepkör.
+
+### 10.5.3 Blokkolt műveletek
+
+Lejárt előfizetésnél nem az oldalak tűnnek el, hanem a **négy író művelet** áll meg a saját
+drawerjében (meghívó, tartalom-hozzárendelés, program-hozzárendelés, ütemezés), egy közös
+dialógussal. Olvasás és chat végig működik — `docs/personal_trainer/03-backend-terv.md`
+`SeatLimitService`.
+
+---
+
 ## 11. Jövőbeli — Személyi edző (vázlat, nem F1)
 
 A sidebar/topbar úgy készül, hogy beférjen: **szerepkör-váltó** a user-menüben (Saját ↔ Edző nézet,

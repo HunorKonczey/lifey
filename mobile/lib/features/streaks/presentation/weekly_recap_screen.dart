@@ -374,7 +374,7 @@ class _NutritionSection extends StatelessWidget {
           Text(
             l10n.recapLoggedDaysCaption(recap.loggedDayCount),
             style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 12),

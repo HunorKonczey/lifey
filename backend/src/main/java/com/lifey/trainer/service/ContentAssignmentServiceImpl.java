@@ -1,6 +1,7 @@
 package com.lifey.trainer.service;
 
 import com.lifey.auth.CurrentUserProvider;
+import com.lifey.billing.service.SeatLimitService;
 import com.lifey.common.exception.DuplicateResourceException;
 import com.lifey.common.exception.ResourceNotFoundException;
 import com.lifey.mail.MailLanguage;
@@ -57,10 +58,14 @@ public class ContentAssignmentServiceImpl implements ContentAssignmentService {
     private final TrainerAccessService trainerAccessService;
     private final CurrentUserProvider currentUserProvider;
     private final MailLanguageResolver mailLanguageResolver;
+    private final SeatLimitService seatLimitService;
 
     @Override
     public BulkAssignmentResponse assign(AssignmentRequest request) {
         Long trainerId = currentUserProvider.getUserId();
+        // New content assignment is blocked whenever billing state != OK (64 §4.3);
+        // read endpoints and unassign are untouched.
+        seatLimitService.assertActiveState(trainerId);
         List<Long> clientIds = request.clientIds().stream().distinct().toList();
 
         // Guard the whole batch before any copying: one revoked client fails

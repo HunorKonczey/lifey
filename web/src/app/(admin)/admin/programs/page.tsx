@@ -51,7 +51,7 @@ export default function AdminProgramsPage() {
           href="/admin/programs/new"
           data-testid="new-program-cta"
           className="h-10 px-4 rounded-2xl flex items-center gap-1.5 text-[13px] font-extrabold"
-          style={{ background: "var(--tertiary)", color: "#161611" }}
+          style={{ background: "var(--tertiary)", color: "var(--bg)" }}
         >
           <span className="material-symbols-rounded text-lg">add</span>
           {t("newProgram")}

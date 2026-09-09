@@ -142,7 +142,7 @@ class _DayRow extends StatelessWidget {
                       Text(
                         l10n.copyDayAppendsNote,
                         style: theme.textTheme.labelSmall
-                            ?.copyWith(color: scheme.onSurfaceVariant.withValues(alpha: 0.7)),
+                            ?.copyWith(color: scheme.onSurfaceVariant),
                       ),
                     ],
                   ],

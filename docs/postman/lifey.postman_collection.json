@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Lifey API",
-    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Cardio Interval Plans*, *Weight Tracking*, *Statistics*, *Settings*, *Water Tracking*, *Steps*, *User Details*, *User Avatar*, *Trainer Invites*, *Client Invites*, *My Trainers*, *Trainer Clients*, *Trainer Client Data*, *Trainer Schedules*, *Trainer Assignments*, *Chat*, *Super Admin*.\n\nAll `/api/v1/**` routes require a JWT access token except `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/social/google`, `/api/v1/auth/refresh`, `/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`, and the public `/api/v1/trainer-invites/email/**` invite-response link — note `/api/v1/auth/logout` requires auth too, it is NOT public. `/api/v1/trainer/**` additionally requires `ROLE_TRAINER` and `/api/v1/superadmin/**` requires `ROLE_SUPER_ADMIN`. The collection is set up to send the bearer token automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nFoods and exercises are per-user (see V40__foods_exercises_ownership.sql): the first real user in the database keeps the original seeded exercise rows (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank), every other user gets their own copy with different ids. Both are managed via their CRUD endpoints; deletes are soft (tombstoned) and no longer return 409 when still referenced.\n\nMany list endpoints additionally support a mobile offline delta-sync feed via `?updatedSince=<ISO-8601 instant>` (see docs/16-delta-sync-rollout.md) and/or pagination via `?page=`; see the 'Delta sync ...' / '... (paged...)' requests in each folder.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall; `totalWater` sums water entries over the same period.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace). `unitSystem`, `theme` and `language` are all required.\n\nWater Tracking has two parts: *Water Sources* (reusable presets like \"Creatine Shake\" = 0.9L, full CRUD) and *Water Entries* (logged intake, list/create/delete only — like Weight Tracking). An entry's `volumeLiters` is always client-supplied (picking a source just pre-fills it); `sourceId` is optional and purely informational.\n\nThe *Trainer ...* / *Super Admin* folders are the personal-trainer module (docs/personal_trainer/): a `ROLE_TRAINER` account manages invites/clients/schedules/assignments under `/api/v1/trainer/**`, clients respond to invites and view their trainers under `/api/v1/trainer-invites/**` and `/api/v1/my-trainers`, and a `ROLE_SUPER_ADMIN` account grants/revokes `ROLE_TRAINER` under `/api/v1/superadmin/**`.\n\nThe *Chat* folder (docs/chat/40-trainer-chat-plan.md) is the one trainer-module surface that is deliberately NOT role-gated: both sides of a conversation call the same `/api/v1/chat/**` endpoints, and access is decided by participation in the thread, so a non-participant gets 404 rather than 403.",
+    "description": "REST API collection for the Lifey fitness & nutrition tracker.\n\nBase path: `/api/v1`. Set the `baseUrl` collection variable (default `http://localhost:8080`).\n\n**Implementation status:** All endpoints implemented: *Auth*, *Nutrition - Foods*, *Nutrition - Recipes*, *Nutrition - Meals*, *Exercises*, *Workouts*, *Cardio Interval Plans*, *Weight Tracking*, *Statistics*, *Settings*, *Water Tracking*, *Steps*, *User Details*, *User Avatar*, *Trainer Invites*, *Client Invites*, *My Trainers*, *Trainer Clients*, *Trainer Client Data*, *Trainer Schedules*, *Trainer Assignments*, *Chat*, *Billing \u0026 Entitlements*, *Super Admin*.\n\nAll `/api/v1/**` routes require a JWT access token except `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/social/google`, `/api/v1/auth/refresh`, `/api/v1/auth/forgot-password`, `/api/v1/auth/reset-password`, and the public `/api/v1/trainer-invites/email/**` invite-response link — note `/api/v1/auth/logout` requires auth too, it is NOT public. `/api/v1/trainer/**` additionally requires `ROLE_TRAINER` and `/api/v1/superadmin/**` requires `ROLE_SUPER_ADMIN`. The collection is set up to send the bearer token automatically: run *Auth > Register* once and then *Auth > Login* — the login request's test script stores the returned tokens in the `accessToken`/`refreshToken` collection variables, which the collection-level Bearer auth then attaches to every other request. When the access token expires (15 min), run *Auth > Refresh* to rotate both tokens.\n\nFoods and exercises are per-user (see V40__foods_exercises_ownership.sql): the first real user in the database keeps the original seeded exercise rows (ids 1-8: Bench Press, Squat, Deadlift, Overhead Press, Barbell Row, Pull Up, Bicep Curl, Plank), every other user gets their own copy with different ids. Both are managed via their CRUD endpoints; deletes are soft (tombstoned) and no longer return 409 when still referenced.\n\nMany list endpoints additionally support a mobile offline delta-sync feed via `?updatedSince=<ISO-8601 instant>` (see docs/16-delta-sync-rollout.md) and/or pagination via `?page=`; see the 'Delta sync ...' / '... (paged...)' requests in each folder.\n\nStatistics use rolling periods ending now: daily = today, weekly = last 7 days, monthly = last 30 days. `latestWeight` is the most recent weight entry overall; `totalWater` sums water entries over the same period.\n\nSettings is a per-user singleton: there's no create/delete, just *Get* (creates the row with defaults on first access) and *Update* (full replace). `unitSystem`, `theme` and `language` are all required.\n\nWater Tracking has two parts: *Water Sources* (reusable presets like \"Creatine Shake\" = 0.9L, full CRUD) and *Water Entries* (logged intake, list/create/delete only — like Weight Tracking). An entry's `volumeLiters` is always client-supplied (picking a source just pre-fills it); `sourceId` is optional and purely informational.\n\nThe *Trainer ...* / *Super Admin* folders are the personal-trainer module (docs/personal_trainer/): a `ROLE_TRAINER` account manages invites/clients/schedules/assignments under `/api/v1/trainer/**`, clients respond to invites and view their trainers under `/api/v1/trainer-invites/**` and `/api/v1/my-trainers`, and a `ROLE_SUPER_ADMIN` account grants/revokes `ROLE_TRAINER` under `/api/v1/superadmin/**`.\n\nThe *Chat* folder (docs/chat/40-trainer-chat-plan.md) is the one trainer-module surface that is deliberately NOT role-gated: both sides of a conversation call the same `/api/v1/chat/**` endpoints, and access is decided by participation in the thread, so a non-participant gets 404 rather than 403.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -34,7 +34,8 @@
     { "key": "assignmentId", "value": "", "type": "string" },
     { "key": "conversationId", "value": "", "type": "string" },
     { "key": "chatMessageId", "value": "", "type": "string" },
-    { "key": "superAdminUserId", "value": "", "type": "string" }
+    { "key": "superAdminUserId", "value": "", "type": "string" },
+    { "key": "storePurchaseToken", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -2264,6 +2265,54 @@
             "body": { "mode": "raw", "raw": "{\n  \"conversationId\": {{conversationId}}\n}" },
             "url": { "raw": "{{baseUrl}}/api/v1/chat/typing", "host": ["{{baseUrl}}"], "path": ["api", "v1", "chat", "typing"] },
             "description": "Sends the *other* participant a `typing` frame on their open stream, and nobody else — not even the caller's own second device. Returns 204 whether or not anything was delivered: it is dropped when the peer has no live stream, when the thread is archived, and when it arrives inside `lifey.chat.typing-throttle` of the previous one. Nothing is stored and it never produces a push; the indicator expires on the receiving client after `lifey.chat.typing-ttl`. 404 for a thread the caller is not in.\n\nTo see it: open *Subscribe to the caller's chat events* as the peer (or run the app), then fire this."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Billing \u0026 Entitlements",
+      "description": "Implemented feature (docs/landing_page/64-billing-backend-plan.md). Subscriptions, entitlements and store purchases.\n\n**Set `lifey.billing.enabled=true` before using these.** The default is `false`, which makes every user resolve an open entitlement and every seat check pass \u2014 that switch is what makes the feature deployable before any client understands it, and it also means nothing here shows real behaviour until you flip it.\n\nThe three webhook endpoints (`/api/v1/webhooks/stripe`, `/api/v1/webhooks/app-store`, `/api/v1/webhooks/play`) are deliberately absent: each verifies a provider signature over the raw request body, so a hand-made Postman call can only ever produce a 400. Use `stripe listen --forward-to ...` and the store consoles instead \u2014 the full procedure is docs/landing_page/73-billing-verification-runbook.md.",
+      "item": [
+        {
+          "name": "Get my entitlement",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/me/entitlements", "host": ["{{baseUrl}}"], "path": ["api", "v1", "me", "entitlements"] },
+            "description": "What this user may do right now \u2014 the one endpoint both mobile and web gate on. Returns `tier`, `source`, the free-tier limits (`historyDays`, `aiCreditsRemaining`), `adsEnabled`, `graceUntil` for the offline ladder, and an optional `trainer` block. The resolution order (own paid \u2192 trainer-sponsored \u2192 trainer trial) is decided server-side; clients gate on the *fields*, never on `tier`/`source`, which exist for copy only. Cached `max-age=60, private`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create checkout session (trainer)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"plan\": \"PRO\",\n  \"interval\": \"YEARLY\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/billing/checkout-session", "host": ["{{baseUrl}}"], "path": ["api", "v1", "billing", "checkout-session"] },
+            "description": "ROLE_TRAINER only. Returns a Stripe Checkout URL for `plan` \u00d7 `interval`. `plan`: STARTER | PRO | STUDIO; `interval`: MONTHLY | YEARLY. Sets `client_reference_id` to the trainer's own user id (that is how the webhook finds them back) and collects the EU 14-day withdrawal waiver as a real consent checkbox. Fails loudly with no `STRIPE_SECRET_KEY` or price ids configured \u2014 all seven are empty by default."
+          },
+          "response": []
+        },
+        {
+          "name": "Create billing portal session (trainer)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/v1/billing/portal-session", "host": ["{{baseUrl}}"], "path": ["api", "v1", "billing", "portal-session"] },
+            "description": "ROLE_TRAINER only. Returns a Stripe billing-portal URL for the trainer's linked customer. **404 until a Checkout webhook has landed** \u2014 nothing writes `provider_customer_id` before that, so this failing on a fresh trainer is expected, not a bug."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify store purchase (mobile)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"platform\": \"ANDROID\",\n  \"productId\": \"lifey.pro.monthly\",\n  \"purchaseToken\": \"{{storePurchaseToken}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/billing/store-purchase", "host": ["{{baseUrl}}"], "path": ["api", "v1", "billing", "store-purchase"] },
+            "description": "The mobile purchase path. `platform`: IOS | ANDROID. `purchaseToken` is the StoreKit 2 signed JWSTransaction on iOS and the Play purchase token on Android \u2014 one field, verified differently per platform. Returns the freshly resolved entitlement.\n\n409 and 422 are *terminal* rejections: the app completes the store transaction on those (so the store stops redelivering something the backend will never accept) and leaves it pending on anything else."
           },
           "response": []
         }

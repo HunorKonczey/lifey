@@ -1,18 +1,37 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { Providers } from "@/lib/providers";
 import { useSessionStore } from "@/features/auth/store";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { ErrorBoundary } from "@/components/status/ErrorBoundary";
 import { avatarApi } from "@/features/settings/api";
 import { queryKeys } from "@/lib/api/queryKeys";
 
+// `<Providers>` has to wrap this shell rather than the other way round —
+// SuperAdminShell calls hooks (useQuery, useTranslations, ...) that need to
+// be a *descendant* of QueryClientProvider/I18nProvider, not their own
+// ancestor.
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Providers>
+      <SuperAdminShell>{children}</SuperAdminShell>
+    </Providers>
+  );
+}
+
+const TABS = [
+  { href: "/superadmin/users", labelKey: "usersTitle" as const, icon: "group" },
+  { href: "/superadmin/trainer-requests", labelKey: "trainerRequestsTitle" as const, icon: "how_to_reg" },
+];
+
+function SuperAdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isLoading, initialize } = useSessionStore();
   const superadmin = useTranslations("superadmin");
 
@@ -65,7 +84,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         <div className="flex items-center gap-2.5">
           <div
             className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center"
-            style={{ background: "var(--primary)", color: "#161611" }}
+            style={{ background: "var(--primary)", color: "var(--bg)" }}
           >
             <span className="material-symbols-rounded text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
               eco
@@ -93,7 +112,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           <ThemeToggle />
           <div
             className="w-[38px] h-[38px] rounded-xl flex items-center justify-center text-sm font-extrabold overflow-hidden"
-            style={{ background: "var(--tertiary)", color: "#161611" }}
+            style={{ background: "var(--tertiary)", color: "var(--bg)" }}
           >
             {avatarUrl ? (
               // Blob object URLs aren't compatible with next/image's optimizer.
@@ -105,6 +124,27 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           </div>
         </div>
       </header>
+      <nav className="flex gap-1 mb-4" role="tablist">
+        {TABS.map((tab) => {
+          const active = pathname === tab.href;
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              role="tab"
+              aria-selected={active}
+              className="flex items-center gap-1.5 rounded-[var(--r-pill)] px-4 py-1.5 text-sm font-semibold transition-colors"
+              style={{
+                background: active ? "var(--surface-high)" : "transparent",
+                color: active ? "var(--on-surface)" : "var(--on-surface-variant)",
+              }}
+            >
+              <span className="material-symbols-rounded text-base">{tab.icon}</span>
+              {superadmin(tab.labelKey)}
+            </Link>
+          );
+        })}
+      </nav>
       <main>
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>

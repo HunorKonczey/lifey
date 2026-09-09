@@ -127,7 +127,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
           </button>
           <button onClick={() => setFeedbackContext("finish")} disabled={saveMutation.isPending}
             className="px-4 h-10 rounded-[var(--r-input)] font-semibold text-sm"
-            style={{ background: "var(--primary)", color: "#1E1F18" }}>
+            style={{ background: "var(--primary)", color: "var(--bg)" }}>
             {t("finishShort")}
           </button>
         </div>
@@ -144,7 +144,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
           {rpe != null ? (
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold flex-none"
-              style={{ background: "var(--primary)", color: "#1E1F18" }}
+              style={{ background: "var(--primary)", color: "var(--bg)" }}
             >
               {rpe}
             </div>
@@ -234,7 +234,7 @@ export function SessionLogger({ session, history, onFinished }: SessionLoggerPro
                   className="w-8 h-8 rounded-[var(--r-sm)] flex items-center justify-center transition-colors"
                   style={{
                     background: d.done ? "var(--primary)" : "var(--surface-container)",
-                    color: d.done ? "#1E1F18" : "var(--muted)",
+                    color: d.done ? "var(--bg)" : "var(--muted)",
                   }} aria-label={t("markSetDoneAria")}>
                   <span className="material-symbols-rounded text-lg">check</span>
                 </button>

@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/entitlements/entitlement_providers.dart';
+import '../../../core/entitlements/history_cutoff.dart';
 import '../../../shared/widgets/charts/stats_range.dart';
 import '../../../shared/widgets/charts/time_series_chart.dart';
 import '../../nutrition/application/meal_controller.dart';
@@ -30,13 +32,19 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
   final metric = ref.watch(statMetricControllerProvider);
   final range = ref.watch(statsRangeControllerProvider);
   final kindFilter = ref.watch(statKindFilterControllerProvider);
+  // The entitlement cutoff (`67` §3.2, D-P6) applies regardless of which
+  // range is selected — the range popup already locks a range beyond it
+  // (statistics_screen.dart), but a selection made before the entitlement
+  // decayed to free must not keep showing gated data for the rest of the
+  // session (D-P5: the gate reads the field, not the UI's own state).
+  final cutoff = combineHistoryCutoffs(range.cutoff(), ref.watch(historyCutoffProvider));
 
   switch (metric) {
     case StatMetric.calories:
     case StatMetric.protein:
     case StatMetric.carbs:
     case StatMetric.fat:
-      return ref.watch(mealControllerProvider).whenData((all) => _mealPoints(all, metric, range));
+      return ref.watch(mealControllerProvider).whenData((all) => _mealPoints(all, metric, cutoff));
     // "edzés jellegű" (D-C3.4) — re-scoped to whichever kind is selected,
     // not just filtered out entirely under `strength`/`cardio` like the six
     // cardio-only metrics below are.
@@ -44,7 +52,7 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
     case StatMetric.workoutCount:
     case StatMetric.activeCalories:
       return ref.watch(workoutSessionControllerProvider).whenData(
-          (all) => _sessionPoints(_filterByKind(all, kindFilter), metric, range));
+          (all) => _sessionPoints(_filterByKind(all, kindFilter), metric, cutoff));
     // Cardio-only metrics only ever contain cardio sessions regardless of
     // the filter — under `strength` there's nothing to show at all.
     case StatMetric.cardioDistance:
@@ -53,22 +61,22 @@ final statChartDataProvider = Provider<AsyncValue<List<TimeSeriesPoint>>>((ref) 
     case StatMetric.cardioSessions:
     case StatMetric.cardioHardZoneMinutes:
       return ref.watch(workoutSessionControllerProvider).whenData((all) =>
-          kindFilter == StatKindFilter.strength ? const [] : _sessionPoints(all, metric, range));
+          kindFilter == StatKindFilter.strength ? const [] : _sessionPoints(all, metric, cutoff));
     case StatMetric.cardioAvgPace:
       return ref.watch(workoutSessionControllerProvider).whenData((all) =>
-          kindFilter == StatKindFilter.strength ? const [] : _cardioAvgPacePoints(all, range));
+          kindFilter == StatKindFilter.strength ? const [] : _cardioAvgPacePoints(all, cutoff));
     case StatMetric.maxHeartRate:
       return ref.watch(workoutSessionControllerProvider).whenData((all) =>
-          kindFilter == StatKindFilter.strength ? const [] : _maxHeartRatePoints(all, range));
+          kindFilter == StatKindFilter.strength ? const [] : _maxHeartRatePoints(all, cutoff));
     case StatMetric.cardioMaxAltitude:
       return ref.watch(workoutSessionControllerProvider).whenData((all) =>
-          kindFilter == StatKindFilter.strength ? const [] : _maxAltitudePoints(all, range));
+          kindFilter == StatKindFilter.strength ? const [] : _maxAltitudePoints(all, cutoff));
     case StatMetric.water:
-      return ref.watch(allWaterEntriesProvider).whenData((all) => _waterPoints(all, range));
+      return ref.watch(allWaterEntriesProvider).whenData((all) => _waterPoints(all, cutoff));
     case StatMetric.weight:
-      return ref.watch(weightControllerProvider).whenData((all) => _weightPoints(all, range));
+      return ref.watch(weightControllerProvider).whenData((all) => _weightPoints(all, cutoff));
     case StatMetric.steps:
-      return ref.watch(allStepCountsProvider).whenData((all) => _stepsPoints(all, range));
+      return ref.watch(allStepCountsProvider).whenData((all) => _stepsPoints(all, cutoff));
   }
 });
 
@@ -153,8 +161,7 @@ List<TimeSeriesPoint> _pointsFromSums(Map<DateTime, double> sumsByDay) {
   return [for (final day in days) TimeSeriesPoint(date: day, value: sumsByDay[day]!)];
 }
 
-List<TimeSeriesPoint> _mealPoints(List<Meal> meals, StatMetric metric, StatsRange range) {
-  final cutoff = range.cutoff();
+List<TimeSeriesPoint> _mealPoints(List<Meal> meals, StatMetric metric, DateTime? cutoff) {
   final sumsByDay = <DateTime, double>{};
   for (final meal in meals) {
     final day = _localDay(meal.dateTime);
@@ -174,9 +181,8 @@ List<TimeSeriesPoint> _mealPoints(List<Meal> meals, StatMetric metric, StatsRang
 List<TimeSeriesPoint> _sessionPoints(
   List<WorkoutSession> sessions,
   StatMetric metric,
-  StatsRange range,
+  DateTime? cutoff,
 ) {
-  final cutoff = range.cutoff();
   final sumsByDay = <DateTime, double>{};
   for (final session in sessions) {
     // Upcoming (not-yet-started) sessions aren't "workouts that happened" —
@@ -257,8 +263,7 @@ double? _hardZoneMinutes(WorkoutSession session) {
   return (breakdown.secondsIn(4) + breakdown.secondsIn(5)) / 60.0;
 }
 
-List<TimeSeriesPoint> _cardioAvgPacePoints(List<WorkoutSession> sessions, StatsRange range) {
-  final cutoff = range.cutoff();
+List<TimeSeriesPoint> _cardioAvgPacePoints(List<WorkoutSession> sessions, DateTime? cutoff) {
   final secondsByDay = <DateTime, double>{};
   final metersByDay = <DateTime, double>{};
   for (final session in sessions) {
@@ -287,8 +292,7 @@ List<TimeSeriesPoint> _cardioAvgPacePoints(List<WorkoutSession> sessions, StatsR
 /// then means "average of daily maximums" (56 §3) for free, once the
 /// statistics screen's generic sum/average/min/max summary
 /// (`stat_summary_data.dart`) runs over these already-per-day-maxed points.
-List<TimeSeriesPoint> _maxHeartRatePoints(List<WorkoutSession> sessions, StatsRange range) {
-  final cutoff = range.cutoff();
+List<TimeSeriesPoint> _maxHeartRatePoints(List<WorkoutSession> sessions, DateTime? cutoff) {
   final maxByDay = <DateTime, double>{};
   for (final session in sessions) {
     if (session.isUpcoming || !session.isCardio) continue;
@@ -307,8 +311,7 @@ List<TimeSeriesPoint> _maxHeartRatePoints(List<WorkoutSession> sessions, StatsRa
 /// DISTANCE-family sessions (matching `cardio_personal_record.dart`'s own
 /// `greatestMaxAltitude` gating, and `stat_metric.dart`'s `cardioMaxAltitude`
 /// doc for why this is a max, not a sum).
-List<TimeSeriesPoint> _maxAltitudePoints(List<WorkoutSession> sessions, StatsRange range) {
-  final cutoff = range.cutoff();
+List<TimeSeriesPoint> _maxAltitudePoints(List<WorkoutSession> sessions, DateTime? cutoff) {
   final maxByDay = <DateTime, double>{};
   for (final session in sessions) {
     if (session.isUpcoming || !session.isCardio) continue;
@@ -323,8 +326,7 @@ List<TimeSeriesPoint> _maxAltitudePoints(List<WorkoutSession> sessions, StatsRan
   return _pointsFromSums(maxByDay);
 }
 
-List<TimeSeriesPoint> _waterPoints(List<WaterEntry> entries, StatsRange range) {
-  final cutoff = range.cutoff();
+List<TimeSeriesPoint> _waterPoints(List<WaterEntry> entries, DateTime? cutoff) {
   final sumsByDay = <DateTime, double>{};
   for (final entry in entries) {
     final day = _localDay(entry.consumedAt);
@@ -334,8 +336,7 @@ List<TimeSeriesPoint> _waterPoints(List<WaterEntry> entries, StatsRange range) {
   return _pointsFromSums(sumsByDay);
 }
 
-List<TimeSeriesPoint> _stepsPoints(List<DailyStepCount> counts, StatsRange range) {
-  final cutoff = range.cutoff();
+List<TimeSeriesPoint> _stepsPoints(List<DailyStepCount> counts, DateTime? cutoff) {
   final days = counts
       .where((c) => cutoff == null || !c.date.isBefore(cutoff))
       .toList()
@@ -346,8 +347,7 @@ List<TimeSeriesPoint> _stepsPoints(List<DailyStepCount> counts, StatsRange range
 /// One point per calendar day — the most recently recorded entry that day —
 /// matching `weight_chart_data.dart`'s `_toChartPoints` (kept separate since
 /// the weight chart still drives off the weight-specific [WeightRange]).
-List<TimeSeriesPoint> _weightPoints(List<WeightEntry> entries, StatsRange range) {
-  final cutoff = range.cutoff();
+List<TimeSeriesPoint> _weightPoints(List<WeightEntry> entries, DateTime? cutoff) {
   final inRange =
       cutoff == null ? entries : entries.where((e) => !e.date.isBefore(cutoff)).toList();
 
