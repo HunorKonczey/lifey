@@ -14,6 +14,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/activity_chip.dart';
 import '../../../shared/widgets/adaptive_app_bar.dart';
 import '../../../shared/widgets/nav_collapse_controller.dart';
+import '../../../shared/widgets/trainer_view_menu.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../chat/application/conversation_list_controller.dart';
 import '../../settings/application/settings_controller.dart';
@@ -231,6 +232,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with WidgetsB
                     onPressed: () => ref.read(authControllerProvider.notifier).logout(),
                   ),
                 ],
+                // Renders nothing unless the signed-in user is a trainer —
+                // for everyone else this app bar is unchanged (docs/chat/41
+                // §2.1, T1).
+                trailing: const TrainerViewMenu(inTrainerView: false),
               ),
             ),
             Positioned(

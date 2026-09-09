@@ -39,8 +39,13 @@ A `V40` migráció (lásd `02-domain-es-migraciok.md`) miatt a foods/exercises *
 
 ## 5. Nem változik
 
+> ⚠ **Felülírva: lásd [docs/chat/41-trainer-mobile-v2-plan.md](../chat/41-trainer-mobile-v2-plan.md).**
+> Az alábbi második pont **elavult**. A 40-es terv (chat mindkét szerepkörben) megbontotta,
+> a 41-es terv pedig rögzítette a szándékos irányváltást: a mobil appban **van** edzői nézet,
+> saját `TrainerShell`-lel a `/trainer/...` útvonalakon. A T1 (edzői váz + kliens-lista) leszállítva.
+
 - Navigáció, tabok, offline-first működés, meglévő képernyők.
-- A kliens appban **nincs** edző-funkció (az edző a webet használja; a mobil app edző-nézete nem cél, még ha az edzőnek van is ROLE_TRAINER-e).
+- ~~A kliens appban **nincs** edző-funkció (az edző a webet használja; a mobil app edző-nézete nem cél, még ha az edzőnek van is ROLE_TRAINER-e).~~
 
 ## Lokalizáció
 

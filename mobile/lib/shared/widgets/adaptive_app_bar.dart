@@ -51,6 +51,7 @@ class AdaptiveAppBar extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.onBack,
+    this.titleBadge,
     this.actions = const [],
     this.trailing,
     this.searching = false,
@@ -68,6 +69,12 @@ class AdaptiveAppBar extends StatelessWidget {
 
   /// If non-null, a back-arrow button is rendered as the leading widget.
   final VoidCallback? onBack;
+
+  /// Optional compact badge shown immediately after the title, on the same
+  /// line — the trainer view's "context chip"
+  /// (docs/chat/43-trainer-mobile-v2-design-prompt.md, frame A1). Hidden in
+  /// the collapsed state, where there is no room for it.
+  final Widget? titleBadge;
 
   /// Right-side icon actions. Same icons in both states, size animates.
   final List<AdaptiveAppBarAction> actions;
@@ -164,6 +171,7 @@ class AdaptiveAppBar extends StatelessWidget {
                     : _TitleBlock(
                         title: title,
                         subtitle: subtitle,
+                        titleBadge: titleBadge,
                         collapsed: collapsed,
                         scheme: scheme,
                       ),
@@ -211,12 +219,14 @@ class _TitleBlock extends StatelessWidget {
   const _TitleBlock({
     required this.title,
     required this.subtitle,
+    required this.titleBadge,
     required this.collapsed,
     required this.scheme,
   });
 
   final String title;
   final String? subtitle;
+  final Widget? titleBadge;
   final bool collapsed;
   final ColorScheme scheme;
 
@@ -265,11 +275,30 @@ class _TitleBlock extends StatelessWidget {
             color: scheme.onSurface,
             letterSpacing: -0.3,
           ),
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: titleBadge == null
+              ? Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // The chip is the first thing to go when the bar
+                    // collapses — the title has to stay readable.
+                    if (!collapsed) ...[
+                      const SizedBox(width: 8),
+                      titleBadge!,
+                    ],
+                  ],
+                ),
         ),
       ],
     );

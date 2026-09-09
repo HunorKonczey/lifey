@@ -18,11 +18,16 @@ import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/statistics/presentation/statistics_screen.dart';
 import '../../features/streaks/presentation/weekly_recap_screen.dart';
 import '../../features/subscription/presentation/paywall_screen.dart';
+import '../../features/trainer/application/trainer_view_preference.dart';
+import '../../features/trainer/clients/presentation/trainer_clients_screen.dart';
 import '../../features/weight/presentation/weight_screen.dart';
 import '../../features/workouts/application/activity_ranking.dart';
 import '../../features/workouts/application/workout_resume_prompt.dart';
 import '../../features/workouts/presentation/workouts_screen.dart';
 import '../../shared/widgets/main_shell.dart';
+import '../../shared/widgets/trainer_shell.dart';
+import '../../shared/widgets/trainer_view_menu.dart';
+import '../auth/current_roles_provider.dart';
 import '../entitlements/paywall_trigger.dart';
 
 /// Notifies GoRouter to re-run its redirect whenever the signed-in user changes.
@@ -36,6 +41,21 @@ class _AuthRefreshListenable extends ChangeNotifier {
 /// tree reach a [BuildContext] via `rootNavigatorKey.currentContext` if needed.
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Where a signed-in user belongs: the trainer shell only for a trainer who
+/// last worked there (docs/chat/41-trainer-mobile-v2-plan.md §2.1 — "az
+/// utolsó választás megjegyződik ... nem lát fölösleges lépést"), the
+/// dashboard for everyone else.
+///
+/// A remembered trainer view does not survive losing the role: a revoked
+/// trainer goes back to their own dashboard rather than to a screen that
+/// could only show them an error.
+String homeLocationFor({
+  required bool isTrainer,
+  required bool lastViewWasTrainer,
+}) {
+  return isTrainer && lastViewWasTrainer ? trainerShellLocation : '/dashboard';
+}
+
 /// Provides the application's GoRouter configuration: public `/login` and
 /// `/register` routes, plus a bottom-navigation shell (one branch per
 /// top-level tab) that's gated behind being signed in.
@@ -43,9 +63,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final authRefresh = _AuthRefreshListenable(ref);
   ref.onDispose(authRefresh.dispose);
 
+  // Read, never watched: rebuilding the GoRouter on a view switch would
+  // throw away the navigation state the switch exists to preserve.
+  // `app.dart` holds the splash until both values have resolved, so neither
+  // read is a guess.
+  String homeLocation() => homeLocationFor(
+        isTrainer: ref.read(isTrainerProvider),
+        lastViewWasTrainer: ref.read(lastViewIsTrainerProvider).value ?? false,
+      );
+
   return GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: '/dashboard',
+    initialLocation: homeLocation(),
     refreshListenable: authRefresh,
     // The iOS widget/Live Activity deep links are `lifey://today` and
     // `lifey://workout` (plus, since C2.11a, `lifey://workout/start?...` —
@@ -84,7 +113,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/forgot-password';
 
       if (!isLoggedIn && !isAuthRoute) return '/login';
-      if (isLoggedIn && isAuthRoute) return '/dashboard';
+      if (isLoggedIn && isAuthRoute) return homeLocation();
+      // Every /trainer route is ROLE_TRAINER-only. This is a navigation
+      // guard, not a security one — the API rejects the calls anyway — but
+      // it keeps a revoked trainer, or a stale remembered view, from landing
+      // on a screen that can only ever show them an error.
+      if (isLoggedIn &&
+          state.matchedLocation.startsWith('/trainer') &&
+          !ref.read(isTrainerProvider)) {
+        return '/dashboard';
+      }
       return null;
     },
     routes: [
@@ -166,6 +204,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/statistics',
                 builder: (context, state) => const StatisticsScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+      // The trainer's shell, beside the client's rather than inside it
+      // (docs/chat/41-trainer-mobile-v2-plan.md §2.1). T1 registers the one
+      // branch it delivers; T2/T4/T6 each add theirs here and in
+      // TrainerShell's destination list.
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            TrainerShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: trainerShellLocation,
+                builder: (context, state) => const TrainerClientsScreen(),
               ),
             ],
           ),

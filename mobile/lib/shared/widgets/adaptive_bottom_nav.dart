@@ -43,11 +43,18 @@ class AdaptiveBottomNav extends StatelessWidget {
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.destinations,
+    this.accentColor,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<AdaptiveNavDestination> destinations;
+
+  /// Colour of the active destination. Defaults to `colorScheme.primary`;
+  /// the trainer shell passes `tertiary` so the two shells read as siblings
+  /// rather than as one shell in a mode
+  /// (docs/chat/43-trainer-mobile-v2-design-prompt.md, frame A1).
+  final Color? accentColor;
 
   static const double _navHeight = 58.0;
   static const double _bottomGap = 26.0;
@@ -57,6 +64,7 @@ class AdaptiveBottomNav extends StatelessWidget {
     final collapsed = NavCollapseScope.collapsedOf(context);
     final safeBottom = MediaQuery.paddingOf(context).bottom;
     final scheme = Theme.of(context).colorScheme;
+    final accent = accentColor ?? scheme.primary;
 
     return SizedBox(
       height: _navHeight + _bottomGap + safeBottom,
@@ -86,6 +94,7 @@ class AdaptiveBottomNav extends StatelessWidget {
                       selectedIndex: selectedIndex,
                       onTap: onDestinationSelected,
                       scheme: scheme,
+                      accent: accent,
                     ),
                   ),
                 ),
@@ -108,6 +117,7 @@ class AdaptiveBottomNav extends StatelessWidget {
                     selectedIndex: selectedIndex,
                     onTap: onDestinationSelected,
                     scheme: scheme,
+                    accent: accent,
                   ),
                 ),
               ),
@@ -129,12 +139,14 @@ class _ExpandedBar extends StatelessWidget {
     required this.selectedIndex,
     required this.onTap,
     required this.scheme,
+    required this.accent,
   });
 
   final List<AdaptiveNavDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onTap;
   final ColorScheme scheme;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -164,6 +176,7 @@ class _ExpandedBar extends StatelessWidget {
                   selected: i == selectedIndex,
                   onTap: () => onTap(i),
                   scheme: scheme,
+                  accent: accent,
                 ),
             ],
           ),
@@ -183,12 +196,14 @@ class _CollapsedPill extends StatelessWidget {
     required this.selectedIndex,
     required this.onTap,
     required this.scheme,
+    required this.accent,
   });
 
   final List<AdaptiveNavDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onTap;
   final ColorScheme scheme;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -223,7 +238,7 @@ class _CollapsedPill extends StatelessWidget {
                         : destinations[i].icon,
                     size: 25,
                     color: i == selectedIndex
-                        ? scheme.primary
+                        ? accent
                         : scheme.onSurfaceVariant,
                   ),
                 ),
@@ -246,16 +261,18 @@ class _NavItem extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.scheme,
+    required this.accent,
   });
 
   final AdaptiveNavDestination destination;
   final bool selected;
   final VoidCallback onTap;
   final ColorScheme scheme;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? scheme.primary : scheme.onSurfaceVariant;
+    final color = selected ? accent : scheme.onSurfaceVariant;
 
     return GestureDetector(
       onTap: onTap,

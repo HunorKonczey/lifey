@@ -4739,5 +4739,127 @@
   "bannerRemoveAdsTooltip": "Remove ads",
   "@bannerRemoveAdsTooltip": {
     "description": "Tooltip/semantics label for the small affix on BannerAdSlot that opens the paywall with the adRemoval trigger (67 §5.2)"
+  },
+  "trainerViewBadgeLabel": "TRAINER",
+  "@trainerViewBadgeLabel": {
+    "description": "Compact chip next to the app-bar title while the trainer shell is showing - the \"you are not looking at your own data\" marker (docs/chat/43-trainer-mobile-v2-design-prompt.md frame A1, mirroring the web admin's EDZO chip). Uppercase on purpose; keep it to one short word"
+  },
+  "trainerViewSwitchTooltip": "Switch view",
+  "@trainerViewSwitchTooltip": {
+    "description": "Tooltip/semantics label of the avatar button in the app bar that opens the trainer/client view switch menu (docs/chat/41 T1). Only shown to ROLE_TRAINER users"
+  },
+  "trainerViewSwitchToTrainerLabel": "Trainer view",
+  "@trainerViewSwitchToTrainerLabel": {
+    "description": "Menu item in the client-side app bar that takes a trainer to their trainer shell (docs/chat/41 2.1). It is navigation, not a mode toggle - word it as a place, not as a switch"
+  },
+  "trainerViewSwitchToClientLabel": "My own log",
+  "@trainerViewSwitchToClientLabel": {
+    "description": "Menu item in the trainer app bar that takes the trainer back to their own client-side dashboard (docs/chat/41 2.1)"
+  },
+  "trainerClientsTitle": "My clients",
+  "@trainerClientsTitle": {
+    "description": "Title of the trainer shell's client list screen, and the label of its bottom-nav branch (docs/chat/41 T1)"
+  },
+  "trainerClientsNeedsAttentionTitle": "Needs attention",
+  "@trainerClientsNeedsAttentionTitle": {
+    "description": "Heading of the highlighted block at the top of the trainer's client list holding clients with at least one compliance flag (docs/29-compliance-overview-plan.md). The whole block is hidden when nobody is flagged"
+  },
+  "trainerClientsAllClientsTitle": "All clients",
+  "@trainerClientsAllClientsTitle": {
+    "description": "Heading of the rest of the trainer's client list, below the \"needs attention\" block. Only shown when that block is present"
+  },
+  "trainerClientsSortRecentLabel": "Recent activity",
+  "@trainerClientsSortRecentLabel": {
+    "description": "Sort chip: keeps the backend order, newest relationship first (docs/chat/41 T1; matches the web's \"recent\" option)"
+  },
+  "trainerClientsSortLeastActiveLabel": "Least active",
+  "@trainerClientsSortLeastActiveLabel": {
+    "description": "Sort chip: clients who have logged nothing for the longest come first"
+  },
+  "trainerClientsSortMostMissedLabel": "Most missed",
+  "@trainerClientsSortMostMissedLabel": {
+    "description": "Sort chip: clients with the most missed scheduled workouts come first"
+  },
+  "trainerClientsSortWeightOverdueLabel": "Weigh-in due",
+  "@trainerClientsSortWeightOverdueLabel": {
+    "description": "Sort chip: clients whose last weight entry is oldest come first"
+  },
+  "trainerClientsEmptyTitle": "No clients yet",
+  "@trainerClientsEmptyTitle": {
+    "description": "Empty state of the trainer's client list, shown when the trainer has no active client relationships (docs/chat/41 T1)"
+  },
+  "trainerClientsEmptyMessage": "Send an invite from the web trainer area and your client will show up here.",
+  "@trainerClientsEmptyMessage": {
+    "description": "Body of the client-list empty state. Points at the web until the mobile invite screen ships in T7 (docs/chat/41 T1/T7)"
+  },
+  "trainerOfflineTitle": "No connection",
+  "@trainerOfflineTitle": {
+    "description": "Title of the full-screen offline state in the trainer view (docs/chat/41 2.2: the trainer surface is online-first, so offline is a first-class state here, not an edge case)"
+  },
+  "trainerOfflineMessage": "The trainer view works with live data, so it needs a connection to show your clients.",
+  "@trainerOfflineMessage": {
+    "description": "Body of the trainer view's full-screen offline state. Explains why, unlike the rest of the app, this screen cannot fall back to a local copy"
+  },
+  "trainerClientActiveTodayLabel": "Active today",
+  "@trainerClientActiveTodayLabel": {
+    "description": "Client card subtitle when the client logged something today"
+  },
+  "trainerClientActiveDaysAgoLabel": "{days, plural, one{Active 1 day ago} other{Active {days} days ago}}",
+  "@trainerClientActiveDaysAgoLabel": {
+    "description": "Client card subtitle giving how long ago the client last logged anything (meal, water, workout or weight)",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerClientNoActivityLabel": "No activity yet",
+  "@trainerClientNoActivityLabel": {
+    "description": "Client card subtitle for a client who has never logged anything since accepting the invite"
+  },
+  "trainerComplianceDaysShortLabel": "{days}d",
+  "@trainerComplianceDaysShortLabel": {
+    "description": "Very short text inside a compliance badge on the client card, next to the icon that says which kind of gap it is (no logging, or no weigh-in). Keep it short - the icon carries the meaning and the full sentence is on the badge's semantics label (frame B1)",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerComplianceMissedShortLabel": "{count}x",
+  "@trainerComplianceMissedShortLabel": {
+    "description": "Very short text inside the missed-workouts compliance badge on the client card, next to the dumbbell icon (frame B1)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerComplianceInactiveSemanticsLabel": "{days, plural, one{No log for 1 day} other{No log for {days} days}}",
+  "@trainerComplianceInactiveSemanticsLabel": {
+    "description": "Screen-reader label of the inactivity compliance badge, spelling out what its icon and short number mean",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerComplianceWeightStaleSemanticsLabel": "{days, plural, one{No weigh-in for 1 day} other{No weigh-in for {days} days}}",
+  "@trainerComplianceWeightStaleSemanticsLabel": {
+    "description": "Screen-reader label of the stale-weight compliance badge",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerComplianceMissedSemanticsLabel": "{count, plural, one{1 missed workout} other{{count} missed workouts}}",
+  "@trainerComplianceMissedSemanticsLabel": {
+    "description": "Screen-reader label of the missed-workouts compliance badge",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

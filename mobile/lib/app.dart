@@ -19,6 +19,7 @@ import 'features/auth/application/auth_controller.dart';
 import 'features/chat/application/chat_stream_controller.dart';
 import 'features/settings/application/settings_controller.dart';
 import 'features/settings/domain/user_settings.dart';
+import 'features/trainer/application/trainer_view_preference.dart';
 import 'features/workouts/application/workout_resume_prompt.dart';
 import 'l10n/app_localizations.dart';
 import 'shared/widgets/offline_banner.dart';
@@ -31,8 +32,13 @@ class LifeyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Wait for the stored token to be read before handing off to the router,
     // so the redirect doesn't briefly flash the dashboard or login screen.
+    // The remembered trainer/client view is gated the same way and for the
+    // same reason: the router picks its initial location from it, and a
+    // trainer who works in the trainer view should not see their own
+    // dashboard appear and then jump (docs/chat/41 §2.1).
     final authLoading = ref.watch(authControllerProvider).isLoading;
-    if (authLoading) {
+    final lastViewLoading = ref.watch(lastViewIsTrainerProvider).isLoading;
+    if (authLoading || lastViewLoading) {
       return MaterialApp(
         theme: AppTheme.light,
         home: const Scaffold(body: Center(child: CircularProgressIndicator())),
