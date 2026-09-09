@@ -4861,5 +4861,191 @@
         "type": "int"
       }
     }
+  },
+  "trainerReadOnlyLabel": "Read-only",
+  "@trainerReadOnlyLabel": {
+    "description": "Badge at the top of the trainer's pure data tabs for a client (statistics, steps, weight, nutrition), naming the deliberate absence of any edit control (docs/chat/43 frame C2, mirroring the web admin)"
+  },
+  "trainerClientActionsTooltip": "More actions",
+  "@trainerClientActionsTooltip": {
+    "description": "Tooltip of the overflow (...) button in the client detail header, which opens the actions menu (frame C1)"
+  },
+  "trainerMessageClientAction": "Send a message",
+  "@trainerMessageClientAction": {
+    "description": "Menu item in the client detail header that opens the chat thread with this client, creating it if there isn't one yet (frame C1)"
+  },
+  "trainerClientSinceLabel": "Client since {date}",
+  "@trainerClientSinceLabel": {
+    "description": "Line under the client's name in the detail header, giving when the coaching relationship started. {date} is already formatted for the locale",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerClientNotFoundTitle": "Not your client",
+  "@trainerClientNotFoundTitle": {
+    "description": "Shown when the client detail screen is opened for someone who isn't on the trainer's active client list — typically an old notification or link after the relationship ended (docs/chat/41 T2)"
+  },
+  "trainerClientNotFoundMessage": "The coaching relationship may have ended. Your current clients are on the client list.",
+  "@trainerClientNotFoundMessage": {
+    "description": "Body of the 'not your client' state. Says why without implying something went wrong"
+  },
+  "trainerTabOverviewLabel": "Overview",
+  "@trainerTabOverviewLabel": {
+    "description": "Client detail tab: the at-a-glance metric cards (frame C3)"
+  },
+  "trainerTabStatisticsLabel": "Statistics",
+  "@trainerTabStatisticsLabel": {
+    "description": "Client detail tab: totals for a chosen period plus the weight trend"
+  },
+  "trainerTabStepsLabel": "Steps",
+  "@trainerTabStepsLabel": {
+    "description": "Client detail tab: the client's daily step history"
+  },
+  "trainerTabWeightLabel": "Weight",
+  "@trainerTabWeightLabel": {
+    "description": "Client detail tab: the client's weigh-in history"
+  },
+  "trainerTabNutritionLabel": "Nutrition",
+  "@trainerTabNutritionLabel": {
+    "description": "Client detail tab: one day of the client's food log against their goals"
+  },
+  "trainerMetricAvgCaloriesLabel": "Avg. daily calories",
+  "@trainerMetricAvgCaloriesLabel": {
+    "description": "Overview metric card: the client's average calorie intake per day over the last week (frame C3)"
+  },
+  "trainerMetricCurrentWeightLabel": "Current weight",
+  "@trainerMetricCurrentWeightLabel": {
+    "description": "Overview metric card: the client's most recent weigh-in"
+  },
+  "trainerMetricWorkoutsThisWeekLabel": "Workouts this week",
+  "@trainerMetricWorkoutsThisWeekLabel": {
+    "description": "Overview metric card: how many sessions the client logged in the last 7 days"
+  },
+  "trainerMetricAvgStepsLabel": "Avg. daily steps",
+  "@trainerMetricAvgStepsLabel": {
+    "description": "Overview metric card: the client's average step count per day over the last week"
+  },
+  "trainerOverviewPeriodHint": "Figures cover the last 7 days.",
+  "@trainerOverviewPeriodHint": {
+    "description": "Footnote under the overview metric cards, naming the window they are calculated over so the numbers can't be misread as all-time"
+  },
+  "trainerPeriodDailyLabel": "Today",
+  "@trainerPeriodDailyLabel": {
+    "description": "Statistics tab period chip: today's totals only"
+  },
+  "trainerPeriodWeeklyLabel": "7 days",
+  "@trainerPeriodWeeklyLabel": {
+    "description": "Statistics tab period chip: totals over the last 7 days"
+  },
+  "trainerPeriodMonthlyLabel": "30 days",
+  "@trainerPeriodMonthlyLabel": {
+    "description": "Statistics tab period chip: totals over the last 30 days"
+  },
+  "trainerWeightTrendTitle": "Weight trend",
+  "@trainerWeightTrendTitle": {
+    "description": "Title of the weight chart card on the client's statistics tab"
+  },
+  "trainerNoWeightEntriesMessage": "No weigh-ins yet",
+  "@trainerNoWeightEntriesMessage": {
+    "description": "Shown in place of the weight chart when the client logged no weight in the selected window"
+  },
+  "trainerNoWeightEntriesHint": "Your client hasn't logged their weight in this period.",
+  "@trainerNoWeightEntriesHint": {
+    "description": "Body of the weight tab's empty state"
+  },
+  "trainerNotEnoughDataForTrendMessage": "One reading so far — not enough for a trend.",
+  "@trainerNotEnoughDataForTrendMessage": {
+    "description": "Shown instead of a chart when there is exactly one data point. Drawing a line through a single reading would suggest a trend that isn't there (frame C4)"
+  },
+  "trainerNoStepsTitle": "No steps recorded",
+  "@trainerNoStepsTitle": {
+    "description": "Empty state title on the client's steps tab"
+  },
+  "trainerNoStepsMessage": "Your client hasn't synced step data for this period.",
+  "@trainerNoStepsMessage": {
+    "description": "Empty state body on the client's steps tab — the data comes from their phone's health source, so 'not synced' is the accurate reason"
+  },
+  "trainerLast30DaysTitle": "Last 30 days",
+  "@trainerLast30DaysTitle": {
+    "description": "Title of the step chart card on the client's steps tab"
+  },
+  "trainerLast90DaysTitle": "Last 90 days",
+  "@trainerLast90DaysTitle": {
+    "description": "Title of the weight chart card on the client's weight tab"
+  },
+  "trainerHistoryTitle": "History",
+  "@trainerHistoryTitle": {
+    "description": "Title of the dated reading list under the chart on the client's steps and weight tabs"
+  },
+  "trainerPreviousDayTooltip": "Previous day",
+  "@trainerPreviousDayTooltip": {
+    "description": "Tooltip of the back arrow in the nutrition tab's day navigator"
+  },
+  "trainerNextDayTooltip": "Next day",
+  "@trainerNextDayTooltip": {
+    "description": "Tooltip of the forward arrow in the nutrition tab's day navigator; disabled on today"
+  },
+  "trainerNoMealsLoggedMessage": "Nothing logged on this day.",
+  "@trainerNoMealsLoggedMessage": {
+    "description": "Shown at the bottom of the client's nutrition tab when they logged no meals for the selected day"
+  },
+  "trainerNothingLoggedLabel": "Nothing logged",
+  "@trainerNothingLoggedLabel": {
+    "description": "Placeholder under one meal group (breakfast/lunch/dinner/snack) that the client left empty on the selected day"
+  },
+  "trainerDayTotalLabel": "Day total: {total}",
+  "@trainerDayTotalLabel": {
+    "description": "Footnote under the client's meals for the selected day. {total} is an already-formatted calorie figure",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerNoNutritionGoalsMessage": "No daily goals set for this client yet.",
+  "@trainerNoNutritionGoalsMessage": {
+    "description": "Note under the nutrition totals when the client has no macro targets. Setting them is a trainer action that ships later (docs/chat/41 T7)"
+  },
+  "trainerKcalValue": "{value} kcal",
+  "@trainerKcalValue": {
+    "description": "A calorie figure with its unit. {value} is already formatted for the locale",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerKgValue": "{value} kg",
+  "@trainerKgValue": {
+    "description": "A body-weight figure with its unit. {value} is already formatted",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerKgDeltaValue": "{delta} kg",
+  "@trainerKgDeltaValue": {
+    "description": "The change since the previous weigh-in, on the overview card. {delta} already carries its sign (e.g. '+0.3', '-1.2')",
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerGramsValue": "{value} g",
+  "@trainerGramsValue": {
+    "description": "A macro or portion figure in grams. {value} is already formatted",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerViewClientDataAction": "View their data",
+  "@trainerViewClientDataAction": {
+    "description": "Tooltip of the chat thread action that takes a trainer from a conversation to that client's detail screen (docs/chat/41 T2). Only shown to a trainer viewing a client's thread"
   }
 }

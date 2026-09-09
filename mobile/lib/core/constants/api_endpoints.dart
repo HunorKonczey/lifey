@@ -21,9 +21,21 @@ class ApiEndpoints {
   /// `docs/landing_page/64-billing-backend-plan.md` §6.1.
   static const storePurchase = '/billing/store-purchase';
 
-  /// The trainer's own client list — used by the chat "new conversation"
-  /// picker. Requires ROLE_TRAINER, unlike everything under `/chat`.
+  /// The trainer's own client list — the trainer view's entry point, and the
+  /// chat "new conversation" picker. Requires ROLE_TRAINER, unlike everything
+  /// under `/chat`.
   static const trainerClients = '/trainer/clients';
+
+  // One client's data, read-only, for the client detail screen
+  // (docs/chat/41-trainer-mobile-v2-plan.md T2). Every one of these is
+  // guarded server-side by an active trainer-client relationship.
+  static String trainerClientStatistics(int clientId, String period) =>
+      '/trainer/clients/$clientId/statistics/$period';
+  static String trainerClientSteps(int clientId) => '/trainer/clients/$clientId/steps';
+  static String trainerClientWeights(int clientId) => '/trainer/clients/$clientId/weights';
+  static String trainerClientMeals(int clientId) => '/trainer/clients/$clientId/meals';
+  static String trainerClientNutritionGoals(int clientId) =>
+      '/trainer/clients/$clientId/nutrition-goals';
 
   // Chat (docs/chat/40-trainer-chat-plan.md §4). Under `/chat`, not
   // `/trainer`, because both sides of a conversation call these.

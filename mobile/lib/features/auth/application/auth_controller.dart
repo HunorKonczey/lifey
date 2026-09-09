@@ -8,6 +8,7 @@ import '../../../core/health/health_preferences.dart';
 import '../../../core/local_db/database_provider.dart';
 import '../../../core/location/location_permission_preferences.dart';
 import '../../trainer/application/trainer_view_preference.dart';
+import '../../trainer/client_detail/application/client_detail_tab_preference.dart';
 import '../../trainer/clients/application/trainer_clients_controller.dart';
 import '../../../core/music/music_controller.dart';
 import '../../../core/music/music_preferences.dart';
@@ -156,6 +157,8 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     // land on their own home, not inherit a trainer's remembered view — and
     // most of them have no trainer view to land in at all (docs/chat/41 §2.1).
     await ref.read(trainerViewPreferenceProvider).clear();
+    // Per-client keys, so this one sweeps rather than removing a single name.
+    await ref.read(clientDetailTabPreferenceProvider).clear();
     await ref.read(avatarRepositoryProvider).clearCache();
     await ref.read(recipeImageRepositoryProvider).clearCache();
     // Chat pictures and anything still queued to upload — same reasoning, and

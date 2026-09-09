@@ -25,9 +25,8 @@ class ClientCard extends StatelessWidget {
   /// instant as the list's sort — and so tests don't depend on wall clock.
   final DateTime now;
 
-  /// The client detail screen is T2's deliverable; until it exists there is
-  /// nowhere honest for a tap to go, so the list passes null and the card
-  /// renders without a tap affordance.
+  /// Opens the client detail screen. Nullable so the card can be rendered in
+  /// contexts that are only showing a client rather than offering one.
   final VoidCallback? onTap;
 
   @override

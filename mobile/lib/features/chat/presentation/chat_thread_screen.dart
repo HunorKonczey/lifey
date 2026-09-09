@@ -12,6 +12,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../shared/widgets/empty_view.dart';
+import '../../../shared/widgets/trainer_view_menu.dart';
+import '../domain/chat_peer.dart';
 import '../application/chat_thread_controller.dart';
 import '../data/chat_repository.dart';
 import '../application/chat_stream_controller.dart';
@@ -205,6 +207,19 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> with Widget
         // (§5.1) but never reported back, and a fabricated "online" would be
         // a lie the design explicitly rules out.
         actions: [
+          // The bridge from the conversation to the numbers behind it
+          // (docs/chat/41 T2). Only for a trainer looking at a *client*: the
+          // same thread seen from the client's side has no such screen, and
+          // /trainer/... would bounce them straight back.
+          if (conversation != null &&
+              conversation.peer.role == ChatPeerRole.client &&
+              ref.watch(isTrainerProvider))
+            IconButton(
+              icon: const Icon(Icons.insights_outlined),
+              tooltip: l10n.trainerViewClientDataAction,
+              onPressed: () =>
+                  context.push('$trainerShellLocation/${conversation.peer.userId}'),
+            ),
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: l10n.chatSearchInThread,

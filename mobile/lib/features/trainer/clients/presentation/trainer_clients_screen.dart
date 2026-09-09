@@ -120,7 +120,11 @@ class _ClientList extends ConsumerWidget {
 
     Widget card(TrainerClient client) => Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: ClientCard(client: client, now: now),
+          child: ClientCard(
+            client: client,
+            now: now,
+            onTap: () => context.push('$trainerShellLocation/${client.userId}'),
+          ),
         );
 
     return ListView(

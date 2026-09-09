@@ -19,6 +19,7 @@ import '../../features/statistics/presentation/statistics_screen.dart';
 import '../../features/streaks/presentation/weekly_recap_screen.dart';
 import '../../features/subscription/presentation/paywall_screen.dart';
 import '../../features/trainer/application/trainer_view_preference.dart';
+import '../../features/trainer/client_detail/presentation/client_detail_screen.dart';
 import '../../features/trainer/clients/presentation/trainer_clients_screen.dart';
 import '../../features/weight/presentation/weight_screen.dart';
 import '../../features/workouts/application/activity_ranking.dart';
@@ -222,6 +223,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: trainerShellLocation,
                 builder: (context, state) => const TrainerClientsScreen(),
+                routes: [
+                  // A child of the branch, so pushing it keeps the trainer
+                  // shell around it — and so a deep link from a chat thread
+                  // or a notification lands somewhere with a way back
+                  // (docs/chat/41 T2).
+                  GoRoute(
+                    path: ':clientId',
+                    builder: (context, state) => ClientDetailScreen(
+                      clientId: int.parse(state.pathParameters['clientId']!),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
