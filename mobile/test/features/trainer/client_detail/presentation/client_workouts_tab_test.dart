@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lifey/core/local_db/app_database.dart';
 import 'package:lifey/features/chat/data/chat_repository.dart';
-import 'package:lifey/features/trainer/client_detail/application/client_sessions_controller.dart';
 import 'package:lifey/features/trainer/client_detail/data/client_detail_repository.dart';
 import 'package:lifey/features/trainer/client_detail/domain/client_workout_session.dart';
 import 'package:lifey/features/trainer/client_detail/presentation/tabs/workouts_tab.dart';

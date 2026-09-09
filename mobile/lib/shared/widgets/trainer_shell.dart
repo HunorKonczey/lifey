@@ -14,10 +14,10 @@ import 'nav_collapse_controller.dart';
 /// coexist and the avatar menu moves between them.
 ///
 /// The plan's target is four branches (Clients · Calendar · Assignments ·
-/// Programs). T1 ships the first one only, and the rule is that a branch
-/// appears in the navigation on the iteration that makes it real — never as a
-/// half-finished tab. Until there are at least two, the bar itself would say
-/// nothing, so it stays hidden.
+/// Programs); T1 shipped Clients and T4 added Assignments. A branch appears
+/// in the navigation on the iteration that makes it real — never as a
+/// half-finished tab — and the bar itself stays hidden while there is only
+/// one destination, because it would have nothing to say.
 class TrainerShell extends ConsumerStatefulWidget {
   const TrainerShell({super.key, required this.navigationShell});
 
@@ -50,13 +50,18 @@ class _TrainerShellState extends ConsumerState<TrainerShell> {
     final scheme = Theme.of(context).colorScheme;
 
     // One entry per registered branch, in the same order as the router's
-    // `branches` list — T2 (calendar), T4 (assignments) and T6 (programs)
-    // each add one here and one there.
+    // `branches` list — T5 (calendar) and T6 (programs) each add one here and
+    // one there.
     final destinations = <AdaptiveNavDestination>[
       AdaptiveNavDestination(
         icon: Icons.group_outlined,
         selectedIcon: Icons.group,
         label: l10n.trainerClientsTitle,
+      ),
+      AdaptiveNavDestination(
+        icon: Icons.assignment_outlined,
+        selectedIcon: Icons.assignment,
+        label: l10n.trainerAssignmentsTitle,
       ),
     ];
 

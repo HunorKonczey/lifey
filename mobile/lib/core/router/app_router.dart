@@ -19,6 +19,7 @@ import '../../features/statistics/presentation/statistics_screen.dart';
 import '../../features/streaks/presentation/weekly_recap_screen.dart';
 import '../../features/subscription/presentation/paywall_screen.dart';
 import '../../features/trainer/application/trainer_view_preference.dart';
+import '../../features/trainer/assignments/presentation/assignments_screen.dart';
 import '../../features/trainer/client_detail/presentation/client_detail_screen.dart';
 import '../../features/trainer/clients/presentation/trainer_clients_screen.dart';
 import '../../features/weight/presentation/weight_screen.dart';
@@ -239,6 +240,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: trainerAssignmentsLocation,
+                builder: (context, state) => const AssignmentsScreen(),
               ),
             ],
           ),

@@ -44,6 +44,18 @@ class ApiEndpoints {
   static String trainerClientSessionComment(int clientId, int sessionId) =>
       '/trainer/clients/$clientId/workout-sessions/$sessionId/comment';
 
+  // Content assignments (docs/35-bulk-assignment-plan.md). POST takes a list
+  // of client ids and is one all-or-nothing transaction.
+  static const trainerAssignments = '/trainer/assignments';
+  static String trainerClientAssignments(int clientId) =>
+      '/trainer/clients/$clientId/assignments';
+  static String trainerAssignment(int assignmentId) =>
+      '/trainer/assignments/$assignmentId';
+
+  /// Which clients already hold a given template/recipe — lets the picker
+  /// lock those rows instead of letting the trainer assign a duplicate.
+  static const trainerAssignmentClients = '/trainer/assignments/clients';
+
   // Chat (docs/chat/40-trainer-chat-plan.md §4). Under `/chat`, not
   // `/trainer`, because both sides of a conversation call these.
   static const chatConversations = '/chat/conversations';

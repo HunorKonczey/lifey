@@ -5206,5 +5206,128 @@
         "type": "String"
       }
     }
+  },
+  "trainerAssignmentsTitle": "Assigned",
+  "@trainerAssignmentsTitle": {
+    "description": "Title of the trainer shell's assignments screen, and the label of its bottom-nav branch (docs/chat/41 T4)"
+  },
+  "trainerNoAssignmentsTitle": "Nothing assigned yet",
+  "@trainerNoAssignmentsTitle": {
+    "description": "Empty state title on the assignments screen, when this trainer has given no content to any client"
+  },
+  "trainerNoAssignmentsMessage": "Hand a template or a recipe to a client and it shows up here.",
+  "@trainerNoAssignmentsMessage": {
+    "description": "Empty state body on the assignments screen"
+  },
+  "trainerNoAssignmentsForFilterMessage": "Nothing matches these filters.",
+  "@trainerNoAssignmentsForFilterMessage": {
+    "description": "Shown when the trainer has assignments but the chosen client/type filters hide all of them. Distinct from the empty state: the fix is to change a filter, not to assign something"
+  },
+  "trainerFilterAllTypesLabel": "All types",
+  "@trainerFilterAllTypesLabel": {
+    "description": "Filter chip on the assignments screen: show both templates and recipes"
+  },
+  "trainerFilterAllClientsLabel": "All clients",
+  "@trainerFilterAllClientsLabel": {
+    "description": "Filter chip on the assignments screen: show every client's assignments"
+  },
+  "trainerContentTypeTemplateLabel": "Workout template",
+  "@trainerContentTypeTemplateLabel": {
+    "description": "Names the kind of content in the picker and the type filter"
+  },
+  "trainerContentTypeRecipeLabel": "Recipe",
+  "@trainerContentTypeRecipeLabel": {
+    "description": "Names the kind of content in the picker and the type filter"
+  },
+  "trainerDeletedContentLabel": "Deleted content",
+  "@trainerDeletedContentLabel": {
+    "description": "Stands in for an assignment whose source template/recipe the trainer has since deleted. The row stays, because the client still has their copy and the trainer can still revoke it"
+  },
+  "trainerAssignButton": "Assign",
+  "@trainerAssignButton": {
+    "description": "The button that opens the assign sheet, and the one that submits it"
+  },
+  "trainerAssignPickContentTitle": "What are you assigning?",
+  "@trainerAssignPickContentTitle": {
+    "description": "Title of the assign sheet's first step, the content picker (frame E2)"
+  },
+  "trainerAssignPickClientsTitle": "Who gets {content}?",
+  "@trainerAssignPickClientsTitle": {
+    "description": "Title of the assign sheet's second step, the client picker. {content} is the template or recipe chosen in the first step",
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerAssignSearchHint": "Search your templates and recipes",
+  "@trainerAssignSearchHint": {
+    "description": "Placeholder in the assign sheet's content search field"
+  },
+  "trainerNoAssignableContentMessage": "You have no templates or recipes to assign yet. Create one first — and if you just made one, it becomes assignable once it has synced.",
+  "@trainerNoAssignableContentMessage": {
+    "description": "Shown in the assign sheet when the trainer has nothing to hand out. The sync half matters: content that has not reached the server yet cannot be assigned, because the API addresses it by server id"
+  },
+  "trainerAlreadyHasItLabel": "Already has it",
+  "@trainerAlreadyHasItLabel": {
+    "description": "Shown under a client in the assign sheet who already holds the chosen content. Their row is locked rather than hidden, so the trainer can see they are covered"
+  },
+  "trainerSelectedClientsCount": "{count, plural, =0{No one selected} one{1 client selected} other{{count} clients selected}}",
+  "@trainerSelectedClientsCount": {
+    "description": "Running count at the bottom of the assign sheet's client step (frame E2)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerAssignResultTitle": "{assigned} of {total} assigned",
+  "@trainerAssignResultTitle": {
+    "description": "Headline of the assign result sheet (frame E3). Both numbers count clients",
+    "placeholders": {
+      "assigned": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerAssignSkippedTitle": "{count, plural, one{1 client was skipped} other{{count} clients were skipped}}",
+  "@trainerAssignSkippedTitle": {
+    "description": "Heading of the skipped list on the assign result sheet",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerAssignSkippedExplanation": "They already had this content, so nothing was changed for them.",
+  "@trainerAssignSkippedExplanation": {
+    "description": "Explains the skipped list. A skip is a result, not a failure — the backend runs the whole batch as one transaction and reports duplicates this way (docs/35)"
+  },
+  "trainerUnassignTooltip": "Remove assignment",
+  "@trainerUnassignTooltip": {
+    "description": "Tooltip of the revoke button on an assignment row"
+  },
+  "trainerUnassignConfirmTitle": "Remove this assignment?",
+  "@trainerUnassignConfirmTitle": {
+    "description": "Title of the confirmation asked before revoking an assignment"
+  },
+  "trainerUnassignConfirmMessage": "{content} will be removed from {client}'s account too.",
+  "@trainerUnassignConfirmMessage": {
+    "description": "Body of the unassign confirmation. Says the second consequence out loud: revoking does not only untie the row, it deletes the client's own copy",
+    "placeholders": {
+      "content": {
+        "type": "String"
+      },
+      "client": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerUnassignedMessage": "Assignment removed.",
+  "@trainerUnassignedMessage": {
+    "description": "Confirmation after revoking an assignment"
   }
 }

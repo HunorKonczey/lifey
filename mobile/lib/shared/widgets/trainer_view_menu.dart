@@ -11,6 +11,9 @@ import '../../l10n/app_localizations.dart';
 /// there so the two never drift apart.
 const String trainerShellLocation = '/trainer/clients';
 
+/// The shell's second branch (T4).
+const String trainerAssignmentsLocation = '/trainer/assignments';
+
 /// The avatar menu that moves a trainer between their two homes:
 /// "Trainer view" from the client side, "My own log" from the trainer side
 /// (docs/chat/41-trainer-mobile-v2-plan.md §2.1).
