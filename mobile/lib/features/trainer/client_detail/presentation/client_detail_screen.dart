@@ -10,6 +10,7 @@ import '../application/client_detail_entry.dart';
 import '../application/client_detail_tab_preference.dart';
 import '../domain/client_detail_tab.dart';
 import 'tabs/nutrition_tab.dart';
+import 'tabs/schedule_tab.dart';
 import 'tabs/overview_tab.dart';
 import 'tabs/statistics_tab.dart';
 import 'tabs/workouts_tab.dart';
@@ -107,6 +108,7 @@ class _LoadedState extends ConsumerState<_Loaded>
           ClientDetailTab.nutrition => l10n.trainerTabNutritionLabel,
           ClientDetailTab.steps => l10n.trainerTabStepsLabel,
           ClientDetailTab.weight => l10n.trainerTabWeightLabel,
+          ClientDetailTab.schedule => l10n.trainerTabScheduleLabel,
         };
 
     const icons = {
@@ -116,6 +118,7 @@ class _LoadedState extends ConsumerState<_Loaded>
       ClientDetailTab.nutrition: Icons.restaurant_outlined,
       ClientDetailTab.steps: Icons.directions_walk,
       ClientDetailTab.weight: Icons.monitor_weight_outlined,
+      ClientDetailTab.schedule: Icons.event_outlined,
     };
 
     return Column(
@@ -151,6 +154,7 @@ class _LoadedState extends ConsumerState<_Loaded>
               ClientNutritionTab(clientId: clientId, offline: offline),
               ClientStepsTab(clientId: clientId, offline: offline),
               ClientWeightTab(clientId: clientId, offline: offline),
+              ClientScheduleTab(clientId: clientId, offline: offline),
             ],
           ),
         ),

@@ -5329,5 +5329,263 @@
   "trainerUnassignedMessage": "Assignment removed.",
   "@trainerUnassignedMessage": {
     "description": "Confirmation after revoking an assignment"
+  },
+  "trainerCalendarTitle": "Calendar",
+  "@trainerCalendarTitle": {
+    "description": "Title of the trainer calendar screen and the label of its bottom-nav branch (docs/chat/41 T5)"
+  },
+  "trainerTabScheduleLabel": "Schedule",
+  "@trainerTabScheduleLabel": {
+    "description": "Client detail tab holding that client's schedules and what is coming up for them"
+  },
+  "trainerOccurrenceUpcomingLabel": "Upcoming",
+  "@trainerOccurrenceUpcomingLabel": {
+    "description": "Status of a scheduled session that has not happened yet"
+  },
+  "trainerOccurrenceDoneLabel": "Done",
+  "@trainerOccurrenceDoneLabel": {
+    "description": "Status of a scheduled session the client completed"
+  },
+  "trainerOccurrenceMissedLabel": "Missed",
+  "@trainerOccurrenceMissedLabel": {
+    "description": "Status of a scheduled session whose day passed without the client doing it"
+  },
+  "trainerOccurrenceCancelledLabel": "Cancelled",
+  "@trainerOccurrenceCancelledLabel": {
+    "description": "Status of a scheduled session that was called off"
+  },
+  "trainerNoSessionsThisWeekTitle": "Nothing scheduled",
+  "@trainerNoSessionsThisWeekTitle": {
+    "description": "Empty state on the calendar agenda when the shown week has no sessions"
+  },
+  "trainerNoSessionsThisWeekMessage": "No sessions this week. Swipe the week strip to look further ahead.",
+  "@trainerNoSessionsThisWeekMessage": {
+    "description": "Body of the calendar's empty week state, pointing at how to move between weeks"
+  },
+  "trainerDuringTheDayLabel": "During the day",
+  "@trainerDuringTheDayLabel": {
+    "description": "Quiet divider above the occurrences of a day that carry no time of day. They sort last, rather than being given a time they do not have (frame F1)"
+  },
+  "trainerUnknownClientLabel": "Unknown client",
+  "@trainerUnknownClientLabel": {
+    "description": "Stands in for the name of a client the calendar knows only by id — e.g. an occurrence left by someone no longer on the roster"
+  },
+  "trainerFromProgramLabel": "From a program",
+  "@trainerFromProgramLabel": {
+    "description": "Marks a calendar occurrence that came from a multi-week program assignment rather than from a schedule"
+  },
+  "trainerMonthViewTooltip": "Month view",
+  "@trainerMonthViewTooltip": {
+    "description": "Tooltip of the calendar's view switch when the agenda is showing"
+  },
+  "trainerAgendaViewTooltip": "Agenda view",
+  "@trainerAgendaViewTooltip": {
+    "description": "Tooltip of the calendar's view switch when the month is showing. The agenda is the default: a month grid of 30-odd cells with several sessions each does not fit a phone (frame F2)"
+  },
+  "trainerCalendarFilterTooltip": "Filter by client",
+  "@trainerCalendarFilterTooltip": {
+    "description": "Tooltip of the calendar's client-filter button"
+  },
+  "trainerCalendarFilterTitle": "Show which clients?",
+  "@trainerCalendarFilterTitle": {
+    "description": "Title of the calendar's client filter sheet"
+  },
+  "trainerCalendarFilterClearAction": "Show all",
+  "@trainerCalendarFilterClearAction": {
+    "description": "Clears the calendar's client filter"
+  },
+  "trainerCalendarFilterChipLabel": "{count, plural, one{1 client} other{{count} clients}}",
+  "@trainerCalendarFilterChipLabel": {
+    "description": "Chip in the calendar header showing how many clients the filter narrows to. Tapping it clears the filter (frame F5)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerOpenClientAction": "Open client",
+  "@trainerOpenClientAction": {
+    "description": "Action in the occurrence peek sheet that opens that client's detail screen"
+  },
+  "trainerCancelOccurrenceAction": "Cancel this session",
+  "@trainerCancelOccurrenceAction": {
+    "description": "Action in the occurrence peek sheet that calls off this one occurrence, leaving the rest of the series running"
+  },
+  "trainerCancelOccurrenceConfirmTitle": "Cancel this session?",
+  "@trainerCancelOccurrenceConfirmTitle": {
+    "description": "Title of the confirmation before calling off one occurrence"
+  },
+  "trainerCancelOccurrenceConfirmMessage": "Only this one session is cancelled. The rest of the schedule stays.",
+  "@trainerCancelOccurrenceConfirmMessage": {
+    "description": "Body of the single-occurrence cancel confirmation. Says the boundary out loud, because the series-level cancel sits one screen away and does something else"
+  },
+  "trainerNoSchedulesTitle": "Nothing scheduled yet",
+  "@trainerNoSchedulesTitle": {
+    "description": "Empty state on a client's schedule tab"
+  },
+  "trainerNoSchedulesMessage": "Book them in for a workout and it shows up here and on your calendar.",
+  "@trainerNoSchedulesMessage": {
+    "description": "Body of the client schedule tab's empty state"
+  },
+  "trainerSchedulesSectionTitle": "Schedules",
+  "@trainerSchedulesSectionTitle": {
+    "description": "Heading of the series list on the client's schedule tab"
+  },
+  "trainerUpcomingSectionTitle": "Coming up",
+  "@trainerUpcomingSectionTitle": {
+    "description": "Heading of the upcoming-occurrences list on the client's schedule tab"
+  },
+  "trainerScheduleCountsLabel": "{done} done · {missed} missed · {remaining} to go",
+  "@trainerScheduleCountsLabel": {
+    "description": "Progress line under a schedule: how its occurrences have gone so far",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "missed": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerCancelScheduleTooltip": "Cancel schedule",
+  "@trainerCancelScheduleTooltip": {
+    "description": "Tooltip of the button that calls off a whole series"
+  },
+  "trainerCancelScheduleConfirmTitle": "Cancel this schedule?",
+  "@trainerCancelScheduleConfirmTitle": {
+    "description": "Title of the confirmation before calling off a whole series"
+  },
+  "trainerCancelScheduleConfirmMessage": "{count, plural, one{The 1 session still to come is cancelled. What already happened stays.} other{The {count} sessions still to come are cancelled. What already happened stays.}}",
+  "@trainerCancelScheduleConfirmMessage": {
+    "description": "Body of the series cancel confirmation. Names the boundary: only future occurrences go, past ones remain on the record",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerScheduleCancelledMessage": "Schedule cancelled.",
+  "@trainerScheduleCancelledMessage": {
+    "description": "Confirmation after calling off a series"
+  },
+  "trainerScheduleWorkoutAction": "Schedule",
+  "@trainerScheduleWorkoutAction": {
+    "description": "Button on the client's schedule tab that opens the create-schedule form"
+  },
+  "trainerScheduleWorkoutTitle": "Schedule a workout",
+  "@trainerScheduleWorkoutTitle": {
+    "description": "Title of the create-schedule sheet (frame F4)"
+  },
+  "trainerScheduleTemplateLabel": "Workout template",
+  "@trainerScheduleTemplateLabel": {
+    "description": "Field label for the template being scheduled"
+  },
+  "trainerNoTemplatesToScheduleMessage": "You have no workout templates yet. Create one first — and if you just made one, it becomes schedulable once it has synced.",
+  "@trainerNoTemplatesToScheduleMessage": {
+    "description": "Shown in the create-schedule sheet when the trainer has no templates. The sync half matters: the API refers to a template by its server id"
+  },
+  "trainerScheduleRepeatLabel": "Repeat",
+  "@trainerScheduleRepeatLabel": {
+    "description": "Label above the recurrence chips in the create-schedule sheet"
+  },
+  "trainerScheduleStartsLabel": "Starts",
+  "@trainerScheduleStartsLabel": {
+    "description": "Field label for a schedule's first date"
+  },
+  "trainerScheduleUntilLabel": "Until",
+  "@trainerScheduleUntilLabel": {
+    "description": "Field label for a recurring schedule's last date"
+  },
+  "trainerScheduleTimeLabel": "Time",
+  "@trainerScheduleTimeLabel": {
+    "description": "Field label for a schedule's optional time of day"
+  },
+  "trainerScheduleNoTimeLabel": "No set time",
+  "@trainerScheduleNoTimeLabel": {
+    "description": "Value shown for a schedule with no time of day. Those sessions sort to the end of their day in the agenda"
+  },
+  "trainerScheduleCreateButton": "Create schedule",
+  "@trainerScheduleCreateButton": {
+    "description": "Submit button of the create-schedule sheet"
+  },
+  "trainerRecurrenceOnceLabel": "Once",
+  "@trainerRecurrenceOnceLabel": {
+    "description": "Recurrence option: a single session on one date"
+  },
+  "trainerRecurrenceDailyLabel": "Every day",
+  "@trainerRecurrenceDailyLabel": {
+    "description": "Recurrence option: one session every day of the range"
+  },
+  "trainerRecurrenceWeeklyLabel": "Weekly",
+  "@trainerRecurrenceWeeklyLabel": {
+    "description": "Recurrence option: sessions on chosen weekdays"
+  },
+  "trainerRecurrenceOnDaysLabel": "Every {days}",
+  "@trainerRecurrenceOnDaysLabel": {
+    "description": "How a weekly recurrence reads once days are chosen. {days} is an already-joined list of short weekday names, e.g. \"Mon, Thu\"",
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerDateRangeLabel": "{from} – {to}",
+  "@trainerDateRangeLabel": {
+    "description": "A date range in a recurrence summary. Both dates are already formatted",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerOccurrenceCountSummary": "This creates {count} sessions, {from} – {to}",
+  "@trainerOccurrenceCountSummary": {
+    "description": "The create-schedule form's answer to \"how many sessions is this\", shown before anything is sent (frame F4). Dates are already formatted",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerOneOccurrenceSummary": "This creates one session on {date}",
+  "@trainerOneOccurrenceSummary": {
+    "description": "The single-session variant of the create-schedule summary",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerPickAtLeastOneDayMessage": "Pick at least one day of the week.",
+  "@trainerPickAtLeastOneDayMessage": {
+    "description": "Shown in place of the create-schedule summary when a weekly recurrence has no weekday selected"
+  },
+  "trainerNoOccurrencesInRangeMessage": "No sessions fall in this range. Try different days or a later end date.",
+  "@trainerNoOccurrencesInRangeMessage": {
+    "description": "Shown when the chosen recurrence matches no date between the start and end dates"
+  },
+  "trainerTooManyOccurrencesMessage": "That would create {count} sessions — more than the {max} allowed. Shorten the range.",
+  "@trainerTooManyOccurrencesMessage": {
+    "description": "Shown when the recurrence would exceed the backend's occurrence cap. Stopping here is friendlier than a rejected request",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
   }
 }

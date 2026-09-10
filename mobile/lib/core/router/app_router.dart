@@ -22,6 +22,7 @@ import '../../features/trainer/application/trainer_view_preference.dart';
 import '../../features/trainer/assignments/presentation/assignments_screen.dart';
 import '../../features/trainer/client_detail/presentation/client_detail_screen.dart';
 import '../../features/trainer/clients/presentation/trainer_clients_screen.dart';
+import '../../features/trainer/schedule/presentation/calendar_screen.dart';
 import '../../features/weight/presentation/weight_screen.dart';
 import '../../features/workouts/application/activity_ranking.dart';
 import '../../features/workouts/application/workout_resume_prompt.dart';
@@ -240,6 +241,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: trainerCalendarLocation,
+                builder: (context, state) => const TrainerCalendarScreen(),
               ),
             ],
           ),

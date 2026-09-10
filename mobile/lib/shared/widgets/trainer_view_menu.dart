@@ -11,7 +11,8 @@ import '../../l10n/app_localizations.dart';
 /// there so the two never drift apart.
 const String trainerShellLocation = '/trainer/clients';
 
-/// The shell's second branch (T4).
+/// The shell's other branches, in navigation order.
+const String trainerCalendarLocation = '/trainer/calendar';
 const String trainerAssignmentsLocation = '/trainer/assignments';
 
 /// The avatar menu that moves a trainer between their two homes:

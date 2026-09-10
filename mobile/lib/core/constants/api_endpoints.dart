@@ -56,6 +56,21 @@ class ApiEndpoints {
   /// lock those rows instead of letting the trainer assign a duplicate.
   static const trainerAssignmentClients = '/trainer/assignments/clients';
 
+  // Scheduling (docs/personal_trainer/09..12). Creating a schedule
+  // materializes every occurrence at once; the calendar reads them back by
+  // date range, capped server-side at 62 days.
+  static const trainerSchedules = '/trainer/schedules';
+  static String trainerSchedule(int scheduleId) => '/trainer/schedules/$scheduleId';
+  static String trainerClientSchedules(int clientId) =>
+      '/trainer/clients/$clientId/schedules';
+  static String trainerClientScheduledSessions(int clientId) =>
+      '/trainer/clients/$clientId/scheduled-sessions';
+
+  /// Every active client's occurrences in a range — the trainer calendar.
+  static const trainerScheduledSessions = '/trainer/scheduled-sessions';
+  static String trainerScheduledSession(int sessionId) =>
+      '/trainer/scheduled-sessions/$sessionId';
+
   // Chat (docs/chat/40-trainer-chat-plan.md §4). Under `/chat`, not
   // `/trainer`, because both sides of a conversation call these.
   static const chatConversations = '/chat/conversations';
