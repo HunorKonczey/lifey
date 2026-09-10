@@ -99,7 +99,9 @@ class _ClientDetailHeaderState extends ConsumerState<ClientDetailHeader> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                ClientAvatar(client: client, size: 52),
+                // The one screen that is about this person and nobody else,
+                // so it is where their face belongs.
+                ClientAvatar(client: client, size: 52, showPhoto: true),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
