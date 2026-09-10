@@ -8,6 +8,9 @@ import '../../../../../l10n/app_localizations.dart';
 import '../../../../../shared/widgets/app_snackbar.dart';
 import '../../../../../shared/widgets/confirm_delete_dialog.dart';
 import '../../../../../shared/widgets/empty_view.dart';
+import '../../../programs/application/programs_controller.dart';
+import '../../../programs/domain/program.dart';
+import '../../../programs/domain/program_dates.dart';
 import '../../../schedule/application/client_schedules_controller.dart';
 import '../../../schedule/application/recurrence_text.dart';
 import '../../../schedule/domain/schedule.dart';
@@ -38,27 +41,31 @@ class ClientScheduleTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final schedules = ref.watch(clientSchedulesProvider(clientId));
     final upcoming = ref.watch(clientUpcomingOccurrencesProvider(clientId));
+    final programs = ref.watch(clientProgramAssignmentsProvider(clientId));
 
     Future<void> refresh() async {
       ref.invalidate(clientSchedulesProvider(clientId));
       ref.invalidate(clientUpcomingOccurrencesProvider(clientId));
+      ref.invalidate(clientProgramAssignmentsProvider(clientId));
       await Future.wait([
         ref.read(clientSchedulesProvider(clientId).future),
         ref.read(clientUpcomingOccurrencesProvider(clientId).future),
+        ref.read(clientProgramAssignmentsProvider(clientId).future),
       ]);
     }
 
     return Stack(
       children: [
         ClientTabBody(
-          states: [schedules, upcoming],
+          states: [schedules, upcoming, programs],
           offline: offline,
           onRefresh: refresh,
           builder: (context) {
             final series = schedules.requireValue;
             final occurrences = upcoming.requireValue;
+            final runs = programs.requireValue;
 
-            if (series.isEmpty && occurrences.isEmpty) {
+            if (series.isEmpty && occurrences.isEmpty && runs.isEmpty) {
               return EmptyView(
                 icon: Icons.event_outlined,
                 title: l10n.trainerNoSchedulesTitle,
@@ -70,6 +77,15 @@ class ClientScheduleTab extends ConsumerWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
               children: [
+                // Program runs first: they are the bigger commitment, and
+                // the loose schedules below them are usually the extras
+                // hung around one.
+                if (runs.isNotEmpty) ...[
+                  _SectionHeader(title: l10n.trainerProgramsSectionTitle),
+                  for (final run in runs)
+                    _ProgramRunCard(run: run, onCancelled: refresh),
+                  const SizedBox(height: 12),
+                ],
                 if (series.isNotEmpty) ...[
                   _SectionHeader(title: l10n.trainerSchedulesSectionTitle),
                   for (final schedule in series)
@@ -247,6 +263,127 @@ class _ScheduleCard extends ConsumerWidget {
               icon: const Icon(Icons.event_busy),
               color: scheme.error,
               tooltip: l10n.trainerCancelScheduleTooltip,
+              onPressed: () => _cancel(context, ref, l10n),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One client's run of a multi-week program (docs/chat/41 T6).
+///
+/// Cancelling stops what has not happened yet; the sessions the client already
+/// did stay on their record, same boundary as a schedule.
+class _ProgramRunCard extends ConsumerWidget {
+  const _ProgramRunCard({required this.run, required this.onCancelled});
+
+  final ProgramAssignmentSummary run;
+  final Future<void> Function() onCancelled;
+
+  Future<void> _cancel(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
+    final confirmed = await showConfirmDeleteDialog(
+      context,
+      title: l10n.trainerCancelProgramRunConfirmTitle,
+      message: l10n.trainerCancelProgramRunConfirmMessage(run.remainingCount),
+    );
+    if (!confirmed || !context.mounted) return;
+    try {
+      await ref.read(cancelProgramAssignmentProvider)(run.clientId, run.id);
+      await onCancelled();
+      if (context.mounted) {
+        AppSnackbar.showSuccess(
+          context,
+          title: l10n.trainerProgramRunCancelledMessage,
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        AppSnackbar.showError(context, title: friendlyError(error));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
+    final dateFormat = DateFormat.MMMd(locale);
+    final weeks = weeksBetween(run.startDate, run.endDate);
+    final currentWeek = currentProgramWeek(run.startDate, weeks);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: AppRadius.cardAll,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2, right: 10),
+            child: Icon(Icons.calendar_view_week, size: 18, color: scheme.tertiary),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        run.programName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    if (run.isCancelled) ...[
+                      const SizedBox(width: 8),
+                      const OccurrenceStatusChip(status: OccurrenceStatus.cancelled),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  [
+                    if (!run.isCancelled)
+                      l10n.trainerProgramWeekOfLabel(currentWeek, weeks),
+                    l10n.trainerDateRangeLabel(
+                      dateFormat.format(run.startDate),
+                      dateFormat.format(run.endDate),
+                    ),
+                  ].join(' · '),
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.trainerScheduleCountsLabel(
+                    run.doneCount,
+                    run.missedCount,
+                    run.remainingCount,
+                  ),
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          if (!run.isCancelled)
+            IconButton(
+              icon: const Icon(Icons.event_busy),
+              color: scheme.error,
+              tooltip: l10n.trainerCancelProgramRunTooltip,
               onPressed: () => _cancel(context, ref, l10n),
             ),
         ],

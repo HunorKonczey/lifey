@@ -22,6 +22,8 @@ import '../../features/trainer/application/trainer_view_preference.dart';
 import '../../features/trainer/assignments/presentation/assignments_screen.dart';
 import '../../features/trainer/client_detail/presentation/client_detail_screen.dart';
 import '../../features/trainer/clients/presentation/trainer_clients_screen.dart';
+import '../../features/trainer/programs/presentation/program_detail_screen.dart';
+import '../../features/trainer/programs/presentation/programs_screen.dart';
 import '../../features/trainer/schedule/presentation/calendar_screen.dart';
 import '../../features/weight/presentation/weight_screen.dart';
 import '../../features/workouts/application/activity_ranking.dart';
@@ -257,6 +259,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: trainerAssignmentsLocation,
                 builder: (context, state) => const AssignmentsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: trainerProgramsLocation,
+                builder: (context, state) => const ProgramsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':programId',
+                    builder: (context, state) => ProgramDetailScreen(
+                      programId: int.parse(state.pathParameters['programId']!),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

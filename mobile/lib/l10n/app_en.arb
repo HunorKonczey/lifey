@@ -5587,5 +5587,160 @@
         "type": "int"
       }
     }
+  },
+  "trainerProgramsTitle": "Programs",
+  "@trainerProgramsTitle": {
+    "description": "Title of the trainer's program library and the label of its bottom-nav branch (docs/chat/41 T6)"
+  },
+  "trainerNoProgramsTitle": "No programs yet",
+  "@trainerNoProgramsTitle": {
+    "description": "Empty state title on the program library"
+  },
+  "trainerNoProgramsMessage": "A program is a multi-week plan you can start clients on. They are built on the web.",
+  "@trainerNoProgramsMessage": {
+    "description": "Empty state body on the program library, saying what a program is and where it comes from"
+  },
+  "trainerProgramWeeksLabel": "{count, plural, one{1 week} other{{count} weeks}}",
+  "@trainerProgramWeeksLabel": {
+    "description": "How long a program is",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramPerWeekLabel": "{count, plural, =0{no sessions a week} one{1 session a week} other{{count} sessions a week}}",
+  "@trainerProgramPerWeekLabel": {
+    "description": "How many distinct days of the week a program uses — \"how often\" at a glance",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramActiveCountLabel": "{count, plural, one{1 running} other{{count} running}}",
+  "@trainerProgramActiveCountLabel": {
+    "description": "Badge on a program card: how many clients are currently on it",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramWeekLabel": "Week {number}",
+  "@trainerProgramWeekLabel": {
+    "description": "Header of one collapsible week section in a program (frame G2)",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramSessionCountLabel": "{count, plural, one{1 session} other{{count} sessions}}",
+  "@trainerProgramSessionCountLabel": {
+    "description": "Subtitle of a week section: how many sessions that week holds",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramRestWeekLabel": "Rest week",
+  "@trainerProgramRestWeekLabel": {
+    "description": "Subtitle of a week section with no sessions in it. A deliberate rest week is a real answer, not missing data"
+  },
+  "trainerProgramRestWeekMessage": "Nothing planned this week.",
+  "@trainerProgramRestWeekMessage": {
+    "description": "Body shown inside an opened week section that holds no sessions"
+  },
+  "trainerProgramsEditOnWebTitle": "Programs are built on the web",
+  "@trainerProgramsEditOnWebTitle": {
+    "description": "Heading of the notice explaining where program authoring lives (frame G4). Stated plainly, not apologetically"
+  },
+  "trainerProgramsEditOnWebMessage": "A twelve-week grid needs a bigger screen than this. Here you can read a program and start a client on it — building and editing one happens on a computer.",
+  "@trainerProgramsEditOnWebMessage": {
+    "description": "Body of the edit-on-web notice. Says what the phone is for and what the desk is for, without treating the phone as a lesser version"
+  },
+  "trainerOpenOnWebAction": "Open on the web",
+  "@trainerOpenOnWebAction": {
+    "description": "Link in the edit-on-web notice that opens the program (or the library) in a browser"
+  },
+  "trainerAssignProgramTitle": "Start someone on {program}",
+  "@trainerAssignProgramTitle": {
+    "description": "Title of the sheet that puts a client on a program (frame G3)",
+    "placeholders": {
+      "program": {
+        "type": "String"
+      }
+    }
+  },
+  "trainerProgramStartsLabel": "Starts on",
+  "@trainerProgramStartsLabel": {
+    "description": "Field label for a program run's first day. Only Mondays are offered — a program's weeks are Monday-anchored"
+  },
+  "trainerProgramRunSummary": "{weeks, plural, one{Runs {from} to {to}, one week} other{Runs {from} to {to}, {weeks} weeks}}",
+  "@trainerProgramRunSummary": {
+    "description": "The sentence under the start-date field saying what the run will cover. Dates are already formatted",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerStartProgramButton": "Start program",
+  "@trainerStartProgramButton": {
+    "description": "Button that opens the assign sheet on a program, and the one that submits it"
+  },
+  "trainerProgramStartedMessage": "{count, plural, one{1 session added to their calendar} other{{count} sessions added to their calendar}}",
+  "@trainerProgramStartedMessage": {
+    "description": "Confirmation after starting a client on a program. Says what was actually written — sessions in another person's calendar",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramsSectionTitle": "Programs",
+  "@trainerProgramsSectionTitle": {
+    "description": "Heading of the program-runs list on a client's schedule tab"
+  },
+  "trainerProgramWeekOfLabel": "Week {current} of {total}",
+  "@trainerProgramWeekOfLabel": {
+    "description": "Where a client currently is in their program run",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerCancelProgramRunTooltip": "Stop program",
+  "@trainerCancelProgramRunTooltip": {
+    "description": "Tooltip of the button that stops a client's program run"
+  },
+  "trainerCancelProgramRunConfirmTitle": "Stop this program?",
+  "@trainerCancelProgramRunConfirmTitle": {
+    "description": "Title of the confirmation before stopping a client's program run"
+  },
+  "trainerCancelProgramRunConfirmMessage": "{count, plural, one{The 1 session still to come is cancelled. What already happened stays.} other{The {count} sessions still to come are cancelled. What already happened stays.}}",
+  "@trainerCancelProgramRunConfirmMessage": {
+    "description": "Body of the program-run stop confirmation. Same boundary as cancelling a schedule: only future sessions go",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trainerProgramRunCancelledMessage": "Program stopped.",
+  "@trainerProgramRunCancelledMessage": {
+    "description": "Confirmation after stopping a client's program run"
   }
 }

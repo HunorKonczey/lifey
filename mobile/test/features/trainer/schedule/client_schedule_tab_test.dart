@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifey/features/trainer/client_detail/presentation/tabs/schedule_tab.dart';
+import 'package:lifey/features/trainer/programs/data/programs_repository.dart';
+import 'package:lifey/features/trainer/programs/domain/program.dart';
 import 'package:lifey/features/trainer/schedule/application/calendar_controller.dart';
 import 'package:lifey/features/trainer/schedule/data/schedule_repository.dart';
 import 'package:lifey/features/trainer/schedule/domain/schedule.dart';
@@ -52,6 +54,44 @@ class _FakeTemplateController extends WorkoutTemplateController {
 
   @override
   Stream<List<WorkoutTemplate>> build() => Stream.value(_templates);
+}
+
+/// The tab also reads the client's program runs (T6), so a test of it needs
+/// this even when the story under test is about schedules.
+class _FakeProgramsRepository extends ProgramsRepository {
+  _FakeProgramsRepository({this.runs = const []}) : super(Dio());
+
+  final List<ProgramAssignmentSummary> runs;
+
+  final List<int> cancelledRuns = [];
+
+  @override
+  Future<List<ProgramAssignmentSummary>> findAssignmentsForClient(int clientId) async =>
+      runs;
+
+  @override
+  Future<void> cancelAssignment(int assignmentId) async =>
+      cancelledRuns.add(assignmentId);
+}
+
+ProgramAssignmentSummary _run({
+  int id = 11,
+  int remaining = 9,
+  DateTime? cancelledAt,
+}) {
+  final monday = DateTime(2026, 8, 3);
+  return ProgramAssignmentSummary(
+    id: id,
+    clientId: 7,
+    programId: 1,
+    programName: '12-week base',
+    startDate: monday,
+    endDate: DateTime(2026, 8, 30),
+    doneCount: 3,
+    missedCount: 0,
+    remainingCount: remaining,
+    cancelledAt: cancelledAt,
+  );
 }
 
 class _FakeScheduleRepository extends ScheduleRepository {
@@ -107,6 +147,7 @@ class _FakeScheduleRepository extends ScheduleRepository {
 Future<void> _pump(
   WidgetTester tester, {
   required _FakeScheduleRepository repo,
+  _FakeProgramsRepository? programs,
   List<WorkoutTemplate> templates = const [],
 }) async {
   tester.view.physicalSize = const Size(420, 1000);
@@ -117,6 +158,8 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         scheduleRepositoryProvider.overrideWithValue(repo),
+        programsRepositoryProvider
+            .overrideWithValue(programs ?? _FakeProgramsRepository()),
         workoutTemplateControllerProvider
             .overrideWith(() => _FakeTemplateController(templates)),
       ],
@@ -167,6 +210,64 @@ void main() {
 
       expect(find.text('Cancelled'), findsOneWidget);
       expect(find.byTooltip('Cancel schedule'), findsNothing);
+    });
+  });
+
+  group('program runs', () {
+    testWidgets('lead the tab, with where the client is in them',
+        (tester) async {
+      await _pump(
+        tester,
+        repo: _FakeScheduleRepository(schedules: [_schedule()]),
+        programs: _FakeProgramsRepository(runs: [_run()]),
+      );
+
+      expect(find.text('Programs'), findsOneWidget);
+      expect(find.text('12-week base'), findsOneWidget);
+      expect(find.textContaining('of 4'), findsOneWidget);
+      // The bigger commitment reads first; the loose schedules follow.
+      final programsY = tester.getTopLeft(find.text('Programs')).dy;
+      final schedulesY = tester.getTopLeft(find.text('Schedules')).dy;
+      expect(programsY, lessThan(schedulesY));
+    });
+
+    testWidgets('stopping one names the same boundary as a schedule',
+        (tester) async {
+      final programs = _FakeProgramsRepository(runs: [_run(remaining: 9)]);
+      await _pump(
+        tester,
+        repo: _FakeScheduleRepository(),
+        programs: programs,
+      );
+
+      await tester.tap(find.byTooltip('Stop program'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The 9 sessions still to come are cancelled. '
+            'What already happened stays.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      expect(programs.cancelledRuns, [11]);
+      expect(find.text('Program stopped.'), findsOneWidget);
+    });
+
+    testWidgets('a stopped run is shown but cannot be stopped again',
+        (tester) async {
+      await _pump(
+        tester,
+        repo: _FakeScheduleRepository(),
+        programs: _FakeProgramsRepository(
+          runs: [_run(cancelledAt: DateTime(2026, 8, 10))],
+        ),
+      );
+
+      expect(find.text('12-week base'), findsOneWidget);
+      expect(find.byTooltip('Stop program'), findsNothing);
     });
   });
 

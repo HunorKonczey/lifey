@@ -14,6 +14,7 @@ const String trainerShellLocation = '/trainer/clients';
 /// The shell's other branches, in navigation order.
 const String trainerCalendarLocation = '/trainer/calendar';
 const String trainerAssignmentsLocation = '/trainer/assignments';
+const String trainerProgramsLocation = '/trainer/programs';
 
 /// The avatar menu that moves a trainer between their two homes:
 /// "Trainer view" from the client side, "My own log" from the trainer side

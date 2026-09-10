@@ -71,6 +71,18 @@ class ApiEndpoints {
   static String trainerScheduledSession(int sessionId) =>
       '/trainer/scheduled-sessions/$sessionId';
 
+  // Multi-week programs (docs/34-multi-week-program-plan.md). PUT is a full
+  // overwrite of the grid, which is part of why authoring stays on the web
+  // (docs/chat/41 T6).
+  static const trainerPrograms = '/trainer/programs';
+  static String trainerProgram(int programId) => '/trainer/programs/$programId';
+  static String trainerProgramAssignments(int programId) =>
+      '/trainer/programs/$programId/assignments';
+  static String trainerClientProgramAssignments(int clientId) =>
+      '/trainer/clients/$clientId/program-assignments';
+  static String trainerProgramAssignment(int assignmentId) =>
+      '/trainer/program-assignments/$assignmentId';
+
   // Chat (docs/chat/40-trainer-chat-plan.md §4). Under `/chat`, not
   // `/trainer`, because both sides of a conversation call these.
   static const chatConversations = '/chat/conversations';
